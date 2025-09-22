@@ -190,7 +190,15 @@ const Scholarships: React.FC = () => {
       if (uniId && !approvedUniversityIds.has(uniId)) return false;
     }
     
-    const matchesSearch = scholarship.title.toLowerCase().includes(searchTerm.toLowerCase());
+    const allowUniSearch = isAuthenticated
+      ? (user?.role !== 'student' || !!userProfile?.has_paid_selection_process_fee)
+      : false;
+    const term = (searchTerm || '').toLowerCase().trim();
+    const uniName = (scholarship.university_name || (scholarship as any).universities?.name || '').toLowerCase();
+    const matchesSearch =
+      term.length === 0 ||
+      scholarship.title.toLowerCase().includes(term) ||
+      (allowUniSearch && uniName.includes(term));
     const value = scholarship.annual_value_with_scholarship ?? 0;
     const matchesRange = (minPrice === 0 || value >= minPrice) && (maxPrice === 0 || value <= maxPrice);
     const matchesLevel = selectedLevel === 'all' || (scholarship.level && scholarship.level.toLowerCase() === selectedLevel);
@@ -212,7 +220,15 @@ const Scholarships: React.FC = () => {
       const uniId = scholarship.university_id ?? scholarship.universities?.id ?? scholarship.university_id;
       if (uniId && !approvedUniversityIds.has(uniId)) return false;
     }
-    const matchesSearch = scholarship.title.toLowerCase().includes(searchTerm.toLowerCase());
+    const allowUniSearch = isAuthenticated
+      ? (user?.role !== 'student' || !!userProfile?.has_paid_selection_process_fee)
+      : false;
+    const term = (searchTerm || '').toLowerCase().trim();
+    const uniName = (scholarship.university_name || (scholarship as any).universities?.name || '').toLowerCase();
+    const matchesSearch =
+      term.length === 0 ||
+      scholarship.title.toLowerCase().includes(term) ||
+      (allowUniSearch && uniName.includes(term));
     const value = scholarship.annual_value_with_scholarship ?? 0;
     const matchesRange = (minPrice === 0 || value >= minPrice) && (maxPrice === 0 || value <= maxPrice);
     const matchesLevel = selectedLevel === 'all' || (scholarship.level && scholarship.level.toLowerCase() === selectedLevel);
