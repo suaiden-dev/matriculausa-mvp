@@ -29,7 +29,6 @@ export default function AIManager() {
   const [recentEmails, setRecentEmails] = useState<ProcessedEmail[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [, setWebhookStatus] = useState<any>(null);
-  const [autoStarted, setAutoStarted] = useState(false);
   
   // Usar o hook de autenticação
   const authData = useAuthToken();
@@ -88,14 +87,14 @@ export default function AIManager() {
       const userToken = await getToken();
 
       console.log('AIManager - Token obtido, fazendo requisição...');
-      console.log('AIManager - Usando servidor local na porta 3001');
+      console.log('AIManager - Usando Netlify Functions');
       
-      // Usar servidor local em vez da Edge Function
-      const API_BASE_URL = 'http://localhost:3001';
+      // Usar Netlify Functions em vez do servidor local
+      const API_BASE_URL = window.location.origin; // Usar a URL atual do Netlify
       
       // Teste simples primeiro - GET
       console.log('AIManager - Testando GET primeiro...');
-      const testResponse = await fetch(`${API_BASE_URL}/api/polling-user`, {
+      const testResponse = await fetch(`${API_BASE_URL}/.netlify/functions/api`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json'
@@ -106,8 +105,8 @@ export default function AIManager() {
       const testData = await testResponse.json();
       console.log('AIManager - Test GET response:', testData);
 
-      const response = await fetch(`${API_BASE_URL}/api/polling-user`, {
-        method: 'PUT',
+      const response = await fetch(`${API_BASE_URL}/.netlify/functions/api`, {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${userToken}`
@@ -156,7 +155,7 @@ export default function AIManager() {
       }
       const userToken = await getToken();
 
-      const response = await fetch(`http://localhost:3001/api/polling-user`, {
+      const response = await fetch(`${window.location.origin}/.netlify/functions/api`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -206,14 +205,14 @@ export default function AIManager() {
 
     try {
       console.log('AIManager - Fazendo requisição GET...');
-      console.log('AIManager - URL completa:', `http://localhost:3001/api/polling-user`);
+      console.log('AIManager - URL completa:', `${window.location.origin}/.netlify/functions/api`);
       console.log('AIManager - VITE_SUPABASE_URL:', import.meta.env.VITE_SUPABASE_URL);
       
       // Adicionar timeout de 10 segundos
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000);
       
-      const response = await fetch(`http://localhost:3001/api/polling-user`, {
+      const response = await fetch(`${window.location.origin}/.netlify/functions/api`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json'
@@ -317,7 +316,6 @@ export default function AIManager() {
 
           <button
             onClick={() => {
-              setAutoStarted(false);
               setStatus('idle');
               setMessage('Sistema resetado');
             }}
