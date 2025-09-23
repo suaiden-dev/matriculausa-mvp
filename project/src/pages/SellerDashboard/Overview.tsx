@@ -35,6 +35,26 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
   const [studentPackageFees, setStudentPackageFees] = useStateReact<{[key: string]: any}>({});
   const [studentDependents, setStudentDependents] = useStateReact<{[key: string]: number}>({});
 
+  // Debug específico para investigar discrepância de receita
+  useEffect(() => {
+    const target = students.find((s: any) => s?.email === 'irving1745@uorak.com');
+    if (target) {
+      const packageFees = studentPackageFees[target.id];
+      const deps = studentDependents[target.id] || 0;
+      console.log('[OVERVIEW][DEBUG] Irving student data:', {
+        id: target.id,
+        email: target.email,
+        has_paid_selection_process_fee: target.has_paid_selection_process_fee,
+        has_paid_i20_control_fee: target.has_paid_i20_control_fee,
+        is_scholarship_fee_paid: target.is_scholarship_fee_paid,
+        is_application_fee_paid: target.is_application_fee_paid,
+        dependents: deps,
+        packageFees
+      });
+      console.log('[OVERVIEW][DEBUG] Irving calculated total:', calculateStudentAdjustedPaid(target));
+    }
+  }, [students, studentPackageFees, studentDependents]);
+
   // Carregar taxas do pacote (RPC) e dependentes do perfil
   const loadStudentPackageFees = async (studentUserId: string) => {
     if (!studentUserId || studentPackageFees[studentUserId]) return;
@@ -98,9 +118,9 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
   };
 
   const adjustedTotalRevenue = React.useMemo(() => {
-    if (!students || students.length === 0) return stats.totalRevenue || 0;
+    if (!students || students.length === 0) return 0;
     return students.reduce((sum: number, s: any) => sum + calculateStudentAdjustedPaid(s), 0);
-  }, [students, studentPackageFees, studentDependents, stats.totalRevenue]);
+  }, [students, studentPackageFees, studentDependents]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -188,7 +208,7 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
               <div className="flex items-center mt-2">
                 <TrendingUp className="h-4 w-4 text-emerald-500 mr-1" />
                 <span className="text-sm font-medium text-emerald-600">
-                  {stats.totalStudents > 0 ? (stats.totalRevenue / stats.totalStudents).toFixed(2) : 0} per student
+                  {students.length > 0 ? (adjustedTotalRevenue / students.length).toFixed(2) : 0} per student
                 </span>
               </div>
             </div>

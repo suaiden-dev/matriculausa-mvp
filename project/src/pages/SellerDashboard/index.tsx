@@ -419,7 +419,7 @@ const SellerDashboard: React.FC = () => {
           <Overview 
             stats={stats}
             sellerProfile={sellerProfile}
-            students={students.slice(0, 5)}
+            students={students}
             onRefresh={handleRefresh}
             onNavigate={handleNavigation}
           />
@@ -477,7 +477,7 @@ const SellerDashboard: React.FC = () => {
           <Overview 
             stats={stats}
             sellerProfile={sellerProfile}
-            students={students.slice(0, 5)}
+            students={students}
             onRefresh={handleRefresh}
             onNavigate={handleNavigation}
           />
