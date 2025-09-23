@@ -206,25 +206,9 @@ const Performance: React.FC<PerformanceProps> = ({ stats, sellerProfile, student
           setRpcTotalRevenue(rpcRevenue);
           const rpcMonthly = getSafeArray(data[0], 'monthly_data', []);
           setOriginalMonthlyData(rpcMonthly);
-
-          // Substituir total_revenue pelo valor ajustado calculado via alunos quando disponível
-          let adjustedRevenue = rpcRevenue;
-          try {
-            if (Array.isArray(students) && students.length > 0) {
-              adjustedRevenue = students.reduce((sum: number, s: any) => sum + calculateStudentAdjustedPaid(s), 0);
-            }
-          } catch (e) {
-            // fallback mantém o valor original
-          }
-          setPerformanceData({ ...data[0], total_revenue: adjustedRevenue });
-
-          // Ajustar monthly_data proporcionalmente ao fator de ajuste de receita
-          const factor = rpcRevenue > 0 ? (adjustedRevenue / rpcRevenue) : 1;
-          const adjustedMonthly = (rpcMonthly || []).map((m: any) => ({
-            ...m,
-            revenue: Number(m?.revenue || 0) * factor
-          }));
-          setAdjustedMonthlyData(adjustedMonthly);
+          // Inicialmente usa o valor original e ajusta depois em outro efeito quando taxas/dependentes carregarem
+          setPerformanceData({ ...data[0], total_revenue: rpcRevenue });
+          setAdjustedMonthlyData(rpcMonthly);
         } else {
           throw new Error('No performance data found');
         }
@@ -238,6 +222,49 @@ const Performance: React.FC<PerformanceProps> = ({ stats, sellerProfile, student
 
     loadPerformanceData();
   }, [sellerProfile?.referral_code]);
+
+  // Recalcular receita ajustada e monthly_data quando tivermos taxas/dependentes carregados
+  useEffect(() => {
+    if (!performanceData) return;
+    try {
+      const adjustedRevenue = (Array.isArray(students) && students.length > 0)
+        ? students.reduce((sum: number, s: any) => sum + calculateStudentAdjustedPaid(s), 0)
+        : 0;
+      // Atualizar total_revenue
+      setPerformanceData(prev => prev ? { ...prev, total_revenue: adjustedRevenue } : prev);
+      // Ajustar monthly_data proporcionalmente ao fator de ajuste
+      const base = rpcTotalRevenue || 0;
+      const factor = base > 0 ? (adjustedRevenue / base) : 1;
+      const adjustedMonthly = (originalMonthlyData || []).map((m: any) => ({
+        ...m,
+        revenue: Number(m?.revenue || 0) * factor
+      }));
+      setAdjustedMonthlyData(adjustedMonthly);
+    } catch (e) {
+      // Ignorar e manter dados originais
+    }
+  }, [students, studentPackageFees, studentDependents, rpcTotalRevenue, originalMonthlyData, performanceData]);
+
+  // Debug específico para checar discrepância do Irving
+  useEffect(() => {
+    const target = (students || []).find((s: any) => s?.email === 'irving1745@uorak.com');
+    if (target) {
+      const packageFees = studentPackageFees[target.id];
+      const deps = studentDependents[target.id] || 0;
+      // eslint-disable-next-line no-console
+      console.log('[PERFORMANCE][DEBUG] Irving student data:', {
+        id: target.id,
+        email: target.email,
+        has_paid_selection_process_fee: target.has_paid_selection_process_fee,
+        has_paid_i20_control_fee: target.has_paid_i20_control_fee,
+        is_scholarship_fee_paid: target.is_scholarship_fee_paid,
+        is_application_fee_paid: target.is_application_fee_paid,
+        dependents: deps,
+        packageFees,
+        calculated: calculateStudentAdjustedPaid(target)
+      });
+    }
+  }, [students, studentPackageFees, studentDependents]);
 
   if (loading) {
     return (
