@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { UserCheck, CheckCircle, X, Target, ArrowLeft, ArrowRight } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
-// import { useScholarshipPackages } from '../hooks/useScholarshipPackages';
+import { useScholarshipPackages } from '../hooks/useScholarshipPackages';
 import { supabase } from '../lib/supabase';
 import PhoneInput from 'react-phone-number-input';
 
@@ -19,6 +19,7 @@ const SellerStudentRegistration: React.FC = () => {
     sellerReferralCode: sellerCode,
     // Selecionar por padrão o pacote principal fixo
     selectedPackage: '1',
+    desiredScholarshipRange: 3800, // Default value
     dependents: 0
   });
   
@@ -34,7 +35,7 @@ const SellerStudentRegistration: React.FC = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const { register } = useAuth();
-  // Pacotes dinâmicos descontinuados temporariamente
+  const { packages, loading: packagesLoading } = useScholarshipPackages();
   const navigate = useNavigate();
 
   // Validar código do vendedor ao carregar a página
@@ -77,7 +78,31 @@ const SellerStudentRegistration: React.FC = () => {
     setFormData(prev => ({ ...prev, [name]: name === 'dependents' ? Math.max(0, parseInt(value || '0', 10)) : value }));
   };
 
-  // Seleção de pacote desnecessária pois há apenas um pacote fixo
+  // Função para seleção de pacote
+  const handlePackageSelect = (packageNumber: number) => {
+    // Mapear package_number para desired_scholarship_range
+    const rangeMapping: { [key: number]: number } = {
+      1: 3800,
+      2: 4200,
+      3: 4500,
+      4: 5000,
+      5: 5500
+    };
+    
+    const desiredRange = rangeMapping[packageNumber] || 3800;
+    
+    console.log('🔍 [SellerStudentRegistration] Package selected:', packageNumber, 'Range:', desiredRange);
+    
+    setFormData(prev => {
+      const newData = { 
+        ...prev, 
+        selectedPackage: packageNumber.toString(),
+        desiredScholarshipRange: desiredRange
+      };
+      console.log('🔍 [SellerStudentRegistration] New form data:', newData);
+      return newData;
+    });
+  };
 
   // Validation function for each step
   const validateStep = (step: number) => {
@@ -127,26 +152,30 @@ const SellerStudentRegistration: React.FC = () => {
     setError('');
 
     try {
+      console.log('🔍 [SellerStudentRegistration] Submitting with formData:', formData);
+      
       // Usar o hook useAuth para registrar o usuário
-      const userData = {
+      // Simplificar os dados para evitar conflitos
+      const registerData = {
         full_name: formData.full_name,
-        email: formData.email,
         phone: formData.phone,
         role: 'student' as const,
-        status: 'active',
         seller_referral_code: formData.sellerReferralCode,
-        // Com padronização, não usamos mais IDs de pacotes dinâmicos
-        scholarship_package_id: null,
-        dependents: formData.dependents
+        dependents: formData.dependents,
+        scholarship_package_number: parseInt(formData.selectedPackage),
+        desired_scholarship_range: formData.desiredScholarshipRange
       };
 
+      console.log('🔍 [SellerStudentRegistration] Dados que serão enviados:', registerData);
       
-      // Também enviar a versão "plain" para o user_metadata esperada no trigger/backend
-      await register(formData.email, formData.password, {
-        ...userData,
-        dependents: formData.dependents,
-        scholarship_package_number: parseInt(formData.selectedPackage)
-      });
+      // Verificar se os dados são válidos
+      if (!registerData.full_name || !formData.email || !formData.password) {
+        throw new Error('Dados obrigatórios não fornecidos');
+      }
+      
+      console.log('🔍 [SellerStudentRegistration] Register data:', registerData);
+      
+      await register(formData.email, formData.password, registerData);
       
       setShowVerificationModal(true);
     } catch (err: any) {
@@ -157,19 +186,8 @@ const SellerStudentRegistration: React.FC = () => {
     }
   };
 
-  // Pacote principal fixo padronizado
-  const FIXED_MAIN_PACKAGE = {
-    id: 'main-fixed',
-    name: 'Main Package',
-    selection_process_fee: 400,
-    scholarship_fee: 900,
-    i20_control_fee: 900,
-    // scholarships starting from: não especificado; manter como total por simplicidade
-    scholarship_amount: 2200,
-    total_paid: 2200
-  } as const;
-
-  const selectedPackage = formData.selectedPackage ? FIXED_MAIN_PACKAGE : null;
+  // Obter pacote selecionado
+  const selectedPackage = packages.find(pkg => pkg.package_number.toString() === formData.selectedPackage);
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
@@ -339,24 +357,29 @@ const SellerStudentRegistration: React.FC = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Dependents
                     </label>
-                    <input
-                      type="number"
+                    <select
                       name="dependents"
-                      min={0}
                       value={formData.dependents}
                       onChange={handleInputChange}
                       className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                         errors.dependents ? 'border-red-300' : 'border-gray-300'
                       }`}
-                      placeholder="0"
-                    />
-                    {/* <p className="text-xs text-gray-500 mt-1">
-                      $150 per dependent will be added and split between Selection Process Fee and I-20 Control Fee.
-                    </p> */}
+                    >
+                      <option value={0}>0 Dependents</option>
+                      <option value={1}>1 Dependent</option>
+                      <option value={2}>2 Dependents</option>
+                      <option value={3}>3 Dependents</option>
+                      <option value={4}>4 Dependents</option>
+                      <option value={5}>5 Dependents</option>
+                    </select>
+                    <p className="text-xs text-gray-500 mt-1">
+                      $150 per dependent will be added to the Selection Process Fee.
+                    </p>
                     {errors.dependents && (
                       <p className="mt-1 text-sm text-red-600">{errors.dependents}</p>
                     )}
                   </div>
+
                 </div>
 
                 {/* Password Fields */}
@@ -477,46 +500,37 @@ const SellerStudentRegistration: React.FC = () => {
                 </div>
               )}
 
-              {/* BLOCO ORIGINAL DE LISTA DE PACOTES DESCONTINUADO TEMPORARIAMENTE */}
-              {false && (
+              {/* Lista de pacotes com visualização original */}
+              {packagesLoading ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                  <p className="mt-2 text-gray-600">Loading packages...</p>
+                </div>
+              ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-                  {/* Conteúdo antigo comentado */}
+                  {packages.map((pkg) => (
+                    <div
+                      key={pkg.id}
+                      className={`p-6 border-2 rounded-xl cursor-pointer transition-all hover:shadow-lg ${
+                        formData.selectedPackage === pkg.package_number.toString()
+                          ? 'border-blue-500 bg-blue-50 shadow-lg'
+                          : 'border-gray-200 hover:border-gray-300 bg-white'
+                      }`}
+                      onClick={() => handlePackageSelect(pkg.package_number)}
+                    >
+                      <div className="text-center mb-4">
+                        <h3 className="font-bold text-xl text-gray-900 mb-2">{pkg.name}</h3>
+                        <div className="text-3xl font-bold text-blue-600 mb-1">${pkg.scholarship_amount}</div>
+                        <p className="text-sm text-gray-500">Scholarships starting from</p>
+                      </div>
+                      
+                      {pkg.description && (
+                        <p className="mt-2 text-xs text-gray-500">{pkg.description}</p>
+                      )}
+                    </div>
+                  ))}
                 </div>
               )}
-
-              {/* Cartão único do pacote principal fixo */}
-              <div className="grid grid-cols-1 gap-6 mb-6">
-                <div
-                  className={`p-6 border-2 rounded-xl transition-all ${
-                    formData.selectedPackage === '1'
-                      ? 'border-blue-500 bg-blue-50 shadow-lg'
-                      : 'border-gray-200 bg-white'
-                  }`}
-                >
-                  <div className="text-center mb-4">
-                    <h3 className="font-bold text-xl text-gray-900 mb-2">{FIXED_MAIN_PACKAGE.name}</h3>
-                  </div>
-
-                  <div className="space-y-3 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Selection Process Fee:</span>
-                      <span className="font-semibold">${(FIXED_MAIN_PACKAGE.selection_process_fee + (formData.dependents * 150)).toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Scholarship Fee:</span>
-                      <span className="font-semibold">${FIXED_MAIN_PACKAGE.scholarship_fee.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">I-20 Control Fee:</span>
-                      <span className="font-semibold">${(FIXED_MAIN_PACKAGE.i20_control_fee).toFixed(2)}</span>
-                    </div>
-                    <div className="border-t pt-2 flex justify-between">
-                      <span className="text-gray-600 font-medium">Total Paid:</span>
-                      <span className="font-bold text-green-600 text-lg">${(FIXED_MAIN_PACKAGE.total_paid + (formData.dependents * 150)).toFixed(2)}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
 
               {/* Dependents input has been moved to Step 1 */}
 
@@ -525,8 +539,9 @@ const SellerStudentRegistration: React.FC = () => {
                   <h4 className="font-semibold text-blue-900 mb-2">Selected Package Summary</h4>
                   <div className="space-y-1 text-sm">
                     <p><strong>Package:</strong> {selectedPackage.name}</p>
-                    <p><strong>Total Investment:</strong> ${selectedPackage.total_paid}</p>
-                    <p><strong>Scholarships starting from:</strong> ${selectedPackage.total_paid}</p>
+                    <p><strong>Total Investment:</strong> ${(2200 + (formData.dependents * 150)).toFixed(2)}</p>
+                    <p><strong>Scholarships starting from:</strong> ${selectedPackage.scholarship_amount}</p>
+                    <p><strong>Net Savings:</strong> ${(selectedPackage.scholarship_amount - (2200 + (formData.dependents * 150))).toFixed(2)}</p>
                   </div>
                 </div>
               )}
