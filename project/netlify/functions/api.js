@@ -30,26 +30,27 @@ export const handler = async (event, context) => {
     const { httpMethod, path, headers, body } = event;
     
     // Extrair o endpoint da URL
-    const endpoint = path.replace('/api/', '');
+    const endpoint = path.replace('/.netlify/functions/api', '').replace('/api/', '');
     
     console.log(`🚀 API Request: ${httpMethod} /${endpoint}`);
+    console.log(`🚀 Full path: ${path}`);
 
     // Roteamento baseado no método HTTP e endpoint
     switch (httpMethod) {
       case 'GET':
-        if (endpoint === 'polling-user') {
+        if (endpoint === 'polling-user' || endpoint === '') {
           return await handleGetPollingStatus(corsHeaders);
         }
         break;
         
       case 'POST':
-        if (endpoint === 'polling-user') {
+        if (endpoint === 'polling-user' || endpoint === '') {
           return await handleStartPolling(headers, body, corsHeaders);
         }
         break;
         
       case 'PUT':
-        if (endpoint === 'polling-user') {
+        if (endpoint === 'polling-user' || endpoint === '') {
           return await handleProcessEmails(headers, body, corsHeaders);
         }
         break;
@@ -59,7 +60,12 @@ export const handler = async (event, context) => {
     return {
       statusCode: 404,
       headers: corsHeaders,
-      body: JSON.stringify({ error: 'Endpoint not found' }),
+      body: JSON.stringify({ 
+        error: 'Endpoint not found',
+        availableEndpoints: ['/api/polling-user'],
+        currentPath: path,
+        extractedEndpoint: endpoint
+      }),
     };
 
   } catch (error) {
@@ -174,9 +180,11 @@ async function handleStartPolling(headers, body, corsHeaders) {
     const supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY);
     
     const { data: config } = await supabase
-      .from('email_processing_configs')
+      .from('email_configurations')
       .select('email_address')
       .eq('user_id', userId)
+      .eq('provider_type', 'microsoft')
+      .eq('is_active', true)
       .single();
     
     const userEmail = config?.email_address || null;
@@ -280,9 +288,11 @@ async function handleProcessEmails(headers, body, corsHeaders) {
       const supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY);
       
       const { data: config } = await supabase
-        .from('email_processing_configs')
+        .from('email_configurations')
         .select('email_address')
         .eq('user_id', userId)
+        .eq('provider_type', 'microsoft')
+        .eq('is_active', true)
         .single();
       
       const userEmail = config?.email_address || null;

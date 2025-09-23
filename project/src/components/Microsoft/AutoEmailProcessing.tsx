@@ -77,9 +77,12 @@ const AutoEmailProcessing: React.FC = () => {
       if (!user) return;
 
       const { data, error } = await supabase
-        .from('email_processing_configs')
-        .select('*')
+        .from('email_configurations')
+        .select('is_active, updated_at')
         .eq('user_id', user.id)
+        .eq('provider_type', 'microsoft')
+        .order('updated_at', { ascending: false })
+        .limit(1)
         .single();
 
       if (error && error.code !== 'PGRST116') {
@@ -89,10 +92,10 @@ const AutoEmailProcessing: React.FC = () => {
 
       if (data) {
         setStatus({
-          isActive: data.is_active,
-          lastProcessed: data.last_processed_email_id,
-          totalProcessed: data.total_processed || 0,
-          totalReplied: data.total_replied || 0,
+          isActive: (data as any).is_active,
+          lastProcessed: (data as any).updated_at || null,
+          totalProcessed: 0,
+          totalReplied: 0,
           error: null
         });
       }
@@ -126,15 +129,16 @@ const AutoEmailProcessing: React.FC = () => {
       console.log('📧 Email obtido do token:', email);
       
       const { data, error } = await supabase
-        .from('email_processing_configs')
+        .from('email_configurations')
         .upsert({
           user_id: user.id,
-          access_token: token,
-          refresh_token: 'msal_token', // MSAL gerencia tokens automaticamente
-          email_address: email, // NOVO: Salvar email do usuário
+          name: 'Microsoft Account',
+          email_address: email,
+          provider_type: 'microsoft',
+          oauth_access_token: token,
           is_active: !status.isActive
         }, {
-          onConflict: 'user_id,email_address' // Usar o índice único para upsert
+          onConflict: 'user_id,email_address'
         })
         .select();
 
@@ -218,9 +222,9 @@ const AutoEmailProcessing: React.FC = () => {
           <div className="space-y-1">
             {microsoftConnections.map((conn) => (
               <div key={conn.id} className="flex items-center justify-between">
-                <span className="text-xs text-blue-600 truncate">{conn.email}</span>
+                <span className="text-xs text-blue-600 truncate">{conn.email_address}</span>
                 <div className={`w-2 h-2 rounded-full ${
-                  activeConnection?.email === conn.email ? 'bg-green-500' : 'bg-gray-400'
+                  activeConnection?.email_address === conn.email_address ? 'bg-green-500' : 'bg-gray-400'
                 }`}></div>
               </div>
             ))}

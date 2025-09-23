@@ -4,7 +4,7 @@ export class EmailPollingService {
   constructor(accessToken, aiApiKey, userId = null, userEmail = null, config = {}) {
     this.processor = new EmailProcessor(accessToken, aiApiKey, userId, userEmail);
     this.config = {
-      intervalMinutes: 2, // Verificar a cada 2 minutos
+      intervalMinutes: 0.5, // Verificar a cada 30 segundos
       maxRetries: 3,
       retryDelayMs: 5000,
       ...config
@@ -13,6 +13,7 @@ export class EmailPollingService {
     this.isRunning = false;
     this.lastCheckTime = null;
     this.processedEmails = new Set();
+    this.processedCount = 0;
   }
 
   async start() {
@@ -73,6 +74,9 @@ export class EmailPollingService {
           this.processedEmails.add(email.id);
         });
 
+        // Atualizar contador
+        this.processedCount += newEmails.length;
+
         // Log detalhado
         newEmails.forEach(email => {
           console.log(`📧 EmailPollingService - Email: ${email.subject} | Status: ${email.status} | Resposta: ${email.response ? 'Sim' : 'Não'}`);
@@ -103,13 +107,23 @@ export class EmailPollingService {
     return {
       isRunning: this.isRunning,
       lastCheckTime: this.lastCheckTime,
-      processedCount: this.processedEmails.size,
+      processedCount: this.processedCount,
       config: this.config
     };
   }
 
   async getStats() {
-    return await this.processor.getEmailStats();
+    try {
+      return await this.processor.getEmailStats();
+    } catch (error) {
+      console.error('Erro ao obter estatísticas:', error);
+      return {
+        total: this.processedCount,
+        processed: this.processedCount,
+        errors: 0,
+        replied: 0
+      };
+    }
   }
 
   clearProcessedEmails() {
