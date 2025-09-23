@@ -50,9 +50,9 @@ Deno.serve(async (req) => {
 
     console.log('[stripe-checkout-selection-process-fee] ✅ Variáveis de ambiente verificadas');
 
-    const { price_id, success_url, cancel_url, mode, metadata } = await req.json();
+    const { price_id, amount, success_url, cancel_url, mode, metadata } = await req.json();
     
-    console.log('[stripe-checkout-selection-process-fee] 📥 Payload recebido:', { price_id, success_url, cancel_url, mode, metadata });
+    console.log('[stripe-checkout-selection-process-fee] 📥 Payload recebido:', { price_id, amount, success_url, cancel_url, mode, metadata });
     
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
@@ -162,8 +162,29 @@ Deno.serve(async (req) => {
       metadata: sessionMetadata,
     };
 
-    // Se o usuário tem pacote, usar preço dinâmico
-    if (userPackageFees) {
+    // Se o frontend enviou um amount específico (incluindo dependentes), usar esse valor
+    if (amount && typeof amount === 'number' && amount > 0) {
+      const finalAmount = Math.round(amount * 100); // Converter para centavos
+      sessionConfig.line_items = [
+        {
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: 'Selection Process Fee',
+              description: userPackageFees ? `Selection Process Fee - ${userPackageFees.package_name}` : 'Selection Process Fee',
+            },
+            unit_amount: finalAmount,
+          },
+          quantity: 1,
+        },
+      ];
+      console.log('[stripe-checkout-selection-process-fee] 💰 USANDO VALOR ENVIADO PELO FRONTEND');
+      console.log('[stripe-checkout-selection-process-fee] 💰 Valor enviado:', amount);
+      console.log('[stripe-checkout-selection-process-fee] 💰 Valor em centavos:', finalAmount);
+      console.log('[stripe-checkout-selection-process-fee] 💰 Inclui dependentes: SIM');
+    }
+    // Se o usuário tem pacote mas não foi enviado amount, usar preço dinâmico do pacote
+    else if (userPackageFees) {
       const dynamicAmount = Math.round(userPackageFees.selection_process_fee * 100); // Converter para centavos
       sessionConfig.line_items = [
         {
@@ -182,6 +203,7 @@ Deno.serve(async (req) => {
       console.log('[stripe-checkout-selection-process-fee] 💰 Valor do pacote:', userPackageFees.selection_process_fee);
       console.log('[stripe-checkout-selection-process-fee] 💰 Valor em centavos:', dynamicAmount);
       console.log('[stripe-checkout-selection-process-fee] 💰 Nome do pacote:', userPackageFees.package_name);
+      console.log('[stripe-checkout-selection-process-fee] ⚠️ ATENÇÃO: Não inclui dependentes - usar amount do frontend');
     } else {
       // Usar preço fixo do Stripe
       sessionConfig.line_items = [

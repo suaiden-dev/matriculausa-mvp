@@ -17,7 +17,8 @@ const SellerStudentRegistration: React.FC = () => {
     confirmPassword: '',
     phone: '',
     sellerReferralCode: sellerCode,
-    selectedPackage: ''
+    selectedPackage: '',
+    dependents: 0
   });
   
   const [error, setError] = useState('');
@@ -72,7 +73,7 @@ const SellerStudentRegistration: React.FC = () => {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData(prev => ({ ...prev, [name]: name === 'dependents' ? Math.max(0, parseInt(value || '0', 10)) : value }));
   };
 
   const handlePackageSelect = (packageNumber: number) => {
@@ -95,6 +96,7 @@ const SellerStudentRegistration: React.FC = () => {
         else if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = 'Passwords do not match';
         if (!termsAccepted) newErrors.terms = 'You must accept the terms and conditions';
         if (!sellerReferralCodeValid) newErrors.sellerCode = 'Invalid seller referral code';
+        if (formData.dependents < 0) newErrors.dependents = 'Dependents cannot be negative';
         break;
       case 2:
         if (!formData.selectedPackage) newErrors.package = 'Please select a scholarship package';
@@ -134,11 +136,17 @@ const SellerStudentRegistration: React.FC = () => {
         role: 'student' as const,
         status: 'active',
         seller_referral_code: formData.sellerReferralCode,
-        scholarship_package_id: packages.find(p => p.package_number === parseInt(formData.selectedPackage))?.id
+        scholarship_package_id: packages.find(p => p.package_number === parseInt(formData.selectedPackage))?.id,
+        dependents: formData.dependents
       };
 
       
-      await register(formData.email, formData.password, userData);
+      // Também enviar a versão "plain" para o user_metadata esperada no trigger/backend
+      await register(formData.email, formData.password, {
+        ...userData,
+        dependents: formData.dependents,
+        scholarship_package_number: parseInt(formData.selectedPackage)
+      });
       
       setShowVerificationModal(true);
     } catch (err: any) {
@@ -313,6 +321,30 @@ const SellerStudentRegistration: React.FC = () => {
                       <p className="mt-1 text-sm text-red-600">{errors.phone}</p>
                     )}
                   </div>
+
+                  {/* Dependents Input - moved to Step 1 */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Dependents
+                    </label>
+                    <input
+                      type="number"
+                      name="dependents"
+                      min={0}
+                      value={formData.dependents}
+                      onChange={handleInputChange}
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                        errors.dependents ? 'border-red-300' : 'border-gray-300'
+                      }`}
+                      placeholder="0"
+                    />
+                    {/* <p className="text-xs text-gray-500 mt-1">
+                      $150 per dependent will be added and split between Selection Process Fee and I-20 Control Fee.
+                    </p> */}
+                    {errors.dependents && (
+                      <p className="mt-1 text-sm text-red-600">{errors.dependents}</p>
+                    )}
+                  </div>
                 </div>
 
                 {/* Password Fields */}
@@ -459,7 +491,7 @@ const SellerStudentRegistration: React.FC = () => {
                       <div className="space-y-3 text-sm">
                         <div className="flex justify-between">
                           <span className="text-gray-600">Selection Process Fee:</span>
-                          <span className="font-semibold">${pkg.selection_process_fee}</span>
+                          <span className="font-semibold">${(pkg.selection_process_fee + (formData.dependents * 150) / 2).toFixed(2)}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-600">Scholarship Fee:</span>
@@ -467,11 +499,11 @@ const SellerStudentRegistration: React.FC = () => {
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-600">I-20 Control Fee:</span>
-                          <span className="font-semibold">${pkg.i20_control_fee}</span>
+                          <span className="font-semibold">${(pkg.i20_control_fee + (formData.dependents * 150) / 2).toFixed(2)}</span>
                         </div>
                         <div className="border-t pt-2 flex justify-between">
                           <span className="text-gray-600 font-medium">Total Paid:</span>
-                          <span className="font-bold text-green-600 text-lg">${pkg.total_paid}</span>
+                          <span className="font-bold text-green-600 text-lg">${(pkg.total_paid + formData.dependents * 150).toFixed(2)}</span>
                         </div>
                       </div>
 
@@ -482,6 +514,8 @@ const SellerStudentRegistration: React.FC = () => {
                   ))}
                 </div>
               )}
+
+              {/* Dependents input has been moved to Step 1 */}
 
               {selectedPackage && (
                 <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">

@@ -195,6 +195,13 @@ const ApplicationChatPage: React.FC = () => {
         const token = (await supabase.auth.getSession()).data.session?.access_token;
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
         const apiUrl = `${supabaseUrl}/functions/v1/stripe-checkout-i20-control-fee`;
+        
+        // Calcular amount com dependentes
+        const dependents = Number(userProfile?.dependents) || 0;
+        const dependentCost = dependents * 75;
+        const baseAmount = getFeeAmount('i20_control_fee');
+        const finalAmount = baseAmount + dependentCost;
+        
         const res = await fetch(apiUrl, {
           method: 'POST',
           headers: {
@@ -205,6 +212,7 @@ const ApplicationChatPage: React.FC = () => {
             success_url: window.location.origin + '/student/dashboard/i20-control-fee-success?session_id={CHECKOUT_SESSION_ID}',
             cancel_url: window.location.origin + '/student/dashboard/i20-control-fee-error',
             price_id: STRIPE_PRODUCTS.controlFee.priceId,
+            amount: finalAmount, // ✅ Incluir amount com dependentes
           }),
         });
         const data = await res.json();

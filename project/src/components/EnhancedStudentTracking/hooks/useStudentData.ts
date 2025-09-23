@@ -40,9 +40,9 @@ export const useStudentData = (userId?: string) => {
         try {
           console.log('🔍 Attempting to load data using SQL functions for admin user:', userId);
           
-          // Buscar dados reais usando funções SQL corrigidas
+          // Buscar dados reais usando função SQL com dependentes
           const { data: realSellersData, error: realSellersError } = await supabase
-            .rpc('get_admin_sellers_analytics_fixed', { admin_user_id: userId });
+            .rpc('get_admin_sellers_analytics_with_dependents', { admin_user_id: userId });
 
           console.log('🔍 SQL sellers response:', { data: realSellersData, error: realSellersError });
 
@@ -66,9 +66,9 @@ export const useStudentData = (userId?: string) => {
             console.log('🔍 SQL sellers function failed or returned no data, will use fallback');
           }
 
-          // Buscar dados reais dos estudantes usando a função existente
+          // Buscar dados reais dos estudantes usando função com dependentes
           const { data: realStudentsData, error: realStudentsError } = await supabase
-            .rpc('get_admin_students_analytics', { admin_user_id: userId });
+            .rpc('get_admin_students_analytics_with_dependents', { admin_user_id: userId });
 
           console.log('🔍 SQL students response:', { data: realStudentsData, error: realStudentsError });
 

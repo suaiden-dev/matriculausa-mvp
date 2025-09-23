@@ -21,7 +21,7 @@ interface Term {
 interface PreCheckoutModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onProceedToCheckout: (discountCode?: string) => void;
+  onProceedToCheckout: (finalAmount: number, discountCode?: string) => void;
   feeType: 'selection_process' | 'application_fee' | 'enrollment_fee' | 'scholarship_fee';
   productName: string;
   productPrice: number;
@@ -530,7 +530,8 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
     // ✅ CORREÇÃO: Para usuários com seller_referral_code, não precisa de código de desconto
     if (hasSellerReferralCode) {
       console.log('🔍 [PreCheckoutModal] ✅ Usuário com seller_referral_code - prosseguindo sem validação de código');
-      onProceedToCheckout();
+      const finalAmount = productPrice; // preço já deve vir calculado (inclui dependentes)
+      onProceedToCheckout(finalAmount);
       onClose();
       return;
     }
@@ -538,7 +539,9 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
     // ✅ Para usuários sem seller_referral_code: só permite prosseguir se tiver código válido aplicado
     if (validationResult?.isValid && discountCode.trim() && codeApplied) {
       console.log('🔍 [PreCheckoutModal] ✅ Aplicando código e continuando para checkout');
-      onProceedToCheckout(discountCode.trim().toUpperCase());
+      const discount = validationResult?.discountAmount || 0;
+      const finalAmount = Math.max(productPrice - discount, 0);
+      onProceedToCheckout(finalAmount, discountCode.trim().toUpperCase());
       onClose();
     } else {
       console.log('🔍 [PreCheckoutModal] ❌ Código não válido ou não aplicado - não pode prosseguir');
@@ -554,7 +557,8 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
     }
 
     console.log('🔍 [PreCheckoutModal] handleSkip chamado - prosseguindo sem código');
-    onProceedToCheckout();
+    const finalAmount = productPrice; // preço já deve vir calculado (inclui dependentes)
+    onProceedToCheckout(finalAmount);
     onClose();
   };
 

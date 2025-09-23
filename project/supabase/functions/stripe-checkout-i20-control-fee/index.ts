@@ -35,9 +35,10 @@ Deno.serve(async (req) => {
       return corsResponse(null, 204);
     }
 
-    const { success_url, cancel_url, price_id: incomingPriceId, metadata } = await req.json();
+    const { success_url, cancel_url, price_id: incomingPriceId, amount, metadata } = await req.json();
     const price_id = incomingPriceId;
     const mode = 'payment';
+    
 
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
@@ -97,8 +98,25 @@ Deno.serve(async (req) => {
       metadata: sessionMetadata,
     };
 
-    // Se o usuário tem pacote, usar preço dinâmico
-    if (userPackageFees) {
+    // Se o frontend enviou um amount específico (incluindo dependentes), usar esse valor
+    if (amount && typeof amount === 'number' && amount > 0) {
+      const finalAmount = Math.round(amount * 100); // Converter para centavos
+      sessionConfig.line_items = [
+        {
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: 'I-20 Control Fee',
+              description: userPackageFees ? `I-20 Control Fee - ${userPackageFees.package_name}` : 'I-20 Control Fee',
+            },
+            unit_amount: finalAmount,
+          },
+          quantity: 1,
+        },
+      ];
+    }
+    // Se o usuário tem pacote mas não foi enviado amount, usar preço dinâmico do pacote
+    else if (userPackageFees) {
       const dynamicAmount = Math.round(userPackageFees.i20_control_fee * 100); // Converter para centavos
       sessionConfig.line_items = [
         {
@@ -113,7 +131,6 @@ Deno.serve(async (req) => {
           quantity: 1,
         },
       ];
-      console.log('[stripe-checkout-i20-control-fee] ✅ Usando valor dinâmico do pacote:', userPackageFees.i20_control_fee);
     } else {
       // Usar price_id padrão se não tiver pacote
       sessionConfig.line_items = [

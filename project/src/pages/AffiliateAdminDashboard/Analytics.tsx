@@ -50,7 +50,7 @@ const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], userId }) =>
     try {
       setLoadingMonthly(true);
       const { data, error } = await supabase
-        .rpc('get_admin_monthly_performance_fixed', { 
+        .rpc('get_admin_monthly_performance_with_dependents', { 
           admin_user_id: userId,
           months_back: 12 
         });

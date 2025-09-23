@@ -18,6 +18,8 @@ const EmailManagement = () => {
   const [loadingStats, setLoadingStats] = useState(true);
   const [syncing, setSyncing] = useState({});
   const [stats, setStats] = useState({});
+  const [notification, setNotification] = useState(null); // { type: 'success'|'error'|'info', message: string }
+  const [confirmDialog, setConfirmDialog] = useState(null); // { title, message, onConfirm, onCancel }
   const [actionLoading, setActionLoading] = useState({});
   const [lastSyncUpdate, setLastSyncUpdate] = useState({});
 
@@ -98,7 +100,7 @@ const EmailManagement = () => {
       
       // Show error to user only if not authentication error
       if (!error.message.includes('authenticated') && !error.message.includes('Authentication')) {
-        alert('Error loading configurations: ' + (error.message || 'Unknown error'));
+        setNotification({ type: 'error', message: 'Error loading configurations: ' + (error.message || 'Unknown error') });
       }
     } finally {
       setLoading(false);
@@ -286,7 +288,7 @@ const EmailManagement = () => {
       console.log(`✅ Sync completed for ${config.email_address}`);
       
       // Show success message with provider-specific details
-      alert(`✅ Synchronization completed successfully for ${config.name}!\n\nProvider: ${config.provider_type === 'microsoft' ? 'Microsoft' : 'Gmail'}\nAccount: ${config.email_address}`);
+      setNotification({ type: 'success', message: `Synchronization completed successfully for ${config.name}` });
       
     } catch (error) {
       console.error('❌ Sync error:', error);
@@ -304,7 +306,7 @@ const EmailManagement = () => {
         errorMessage += error.message || 'Unknown error occurred';
       }
       
-      alert(errorMessage);
+      setNotification({ type: 'error', message: errorMessage });
     } finally {
       setSyncing(prev => ({ ...prev, [configId]: false }));
     }
@@ -315,25 +317,22 @@ const EmailManagement = () => {
       // Find the configuration to show details in confirmation
       const config = configurations.find(c => c.id === configId);
       if (!config) {
-        alert('Configuration not found. Please refresh the page.');
+        setNotification({ type: 'error', message: 'Configuration not found. Please refresh the page.' });
         return;
       }
 
       // Enhanced confirmation dialog
-      const confirmed = window.confirm(
-        `⚠️ Are you sure you want to delete this email account?\n\n` +
-        `Account: ${config.name}\n` +
-        `Email: ${config.email_address}\n` +
-        `Provider: ${config.provider_type === 'microsoft' ? 'Microsoft' : 'Gmail'}\n\n` +
-        `⚠️ This action cannot be undone!\n` +
-        `• All email data will be removed\n` +
-        `• Sync settings will be lost\n` +
-        `• You'll need to reconfigure if you want to add this account again`
-      );
-      
-      if (!confirmed) {
-        return;
-      }
+      // Open custom confirm modal
+      await new Promise((resolve) => {
+        setConfirmDialog({
+          title: 'Delete account',
+          message: `Are you sure you want to delete ${config.name}? This action cannot be undone.`,
+          onConfirm: () => { setConfirmDialog(null); resolve(true); },
+          onCancel: () => { setConfirmDialog(null); resolve(false); }
+        });
+      }).then(async (confirmed) => {
+        if (!confirmed) throw new Error('USER_CANCELLED');
+      });
 
       setActionLoading(prev => ({ ...prev, [`delete_${configId}`]: true }));
 
@@ -353,7 +352,7 @@ const EmailManagement = () => {
       await loadConfigurations();
       await loadStats();
       
-      alert(`✅ Account "${config.name}" has been successfully deleted!\n\nThe account has been removed from your email management system.`);
+      setNotification({ type: 'success', message: `Account "${config.name}" deleted successfully` });
       
     } catch (error) {
       console.error('❌ Delete error:', error);
@@ -368,7 +367,7 @@ const EmailManagement = () => {
         errorMessage += error.message || 'Unknown error occurred';
       }
       
-      alert(errorMessage);
+      if (error.message !== 'USER_CANCELLED') setNotification({ type: 'error', message: errorMessage });
     } finally {
       setActionLoading(prev => ({ ...prev, [`delete_${configId}`]: false }));
     }
@@ -378,7 +377,7 @@ const EmailManagement = () => {
     try {
       const config = configurations.find(c => c.id === configId);
       if (!config) {
-        alert('Configuration not found. Please refresh the page.');
+        setNotification({ type: 'error', message: 'Configuration not found. Please refresh the page.' });
         return;
       }
 
@@ -404,7 +403,7 @@ const EmailManagement = () => {
       const statusText = newStatus ? 'enabled' : 'disabled';
       const statusEmoji = newStatus ? '✅' : '⏸️';
       
-      alert(`${statusEmoji} Sync ${statusText} successfully!\n\nAccount: ${config.name}\nEmail: ${config.email_address}\n\n${newStatus ? 'Your emails will now be automatically synchronized.' : 'Automatic email synchronization has been disabled.'}`);
+      setNotification({ type: 'success', message: `Sync ${statusText} successfully for ${config.name}` });
       
     } catch (error) {
       let errorMessage = 'Failed to update sync settings: ';
@@ -415,7 +414,7 @@ const EmailManagement = () => {
         errorMessage += error.message || 'Unknown error occurred';
       }
       
-      alert(errorMessage);
+      setNotification({ type: 'error', message: errorMessage });
     } finally {
       setActionLoading(prev => ({ ...prev, [`toggle_${configId}`]: false }));
     }
@@ -425,7 +424,7 @@ const EmailManagement = () => {
     try {
       const config = configurations.find(c => c.id === configId);
       if (!config) {
-        alert('Configuration not found. Please refresh the page.');
+        setNotification({ type: 'error', message: 'Configuration not found. Please refresh the page.' });
         return;
       }
 
@@ -452,7 +451,7 @@ const EmailManagement = () => {
       const statusText = newStatus ? 'activated' : 'deactivated';
       const statusEmoji = newStatus ? '🟢' : '🔴';
       
-      alert(`${statusEmoji} Account ${statusText} successfully!\n\nAccount: ${config.name}\nEmail: ${config.email_address}\n\n${newStatus ? 'The account is now active and ready to use.' : 'The account has been deactivated and will not be used for email operations.'}`);
+      setNotification({ type: 'success', message: `Account ${statusText} successfully` });
       
     } catch (error) {
       let errorMessage = 'Failed to update account status: ';
@@ -463,7 +462,7 @@ const EmailManagement = () => {
         errorMessage += error.message || 'Unknown error occurred';
       }
       
-      alert(errorMessage);
+      setNotification({ type: 'error', message: errorMessage });
     } finally {
       setActionLoading(prev => ({ ...prev, [`status_${configId}`]: false }));
     }
@@ -477,7 +476,7 @@ const EmailManagement = () => {
         navigate(`/school/dashboard/inbox?config=${config.id}`);
       }
     } catch (error) {
-      alert('Failed to open inbox. Please try again.');
+      setNotification({ type: 'error', message: 'Failed to open inbox. Please try again.' });
     }
   };
 
@@ -487,15 +486,25 @@ const EmailManagement = () => {
       navigate(`/school/dashboard/email/compose?config=${config.id}`);
 
     } catch (error) {
-      alert('Failed to open compose. Please try again.');
+      setNotification({ type: 'error', message: 'Failed to open compose. Please try again.' });
     }
   };
 
   const handleSettingsNavigation = (configId) => {
     try {
-      navigate(`/school/dashboard/email/config/${configId}`);
+      const config = configurations.find(c => c.id === configId);
+      const params = new URLSearchParams();
+      // Forçar provider na tela de configuração para qualquer tipo
+      if (config?.provider_type === 'microsoft') {
+        params.set('provider', 'microsoft');
+      } else {
+        params.set('provider', 'gmail');
+      }
+      if (config?.name) params.set('name', config.name);
+      const query = params.toString();
+      navigate(`/school/dashboard/email/config/${configId}${query ? `?${query}` : ''}`);
     } catch (error) {
-      alert('Failed to open settings. Please try again.');
+      setNotification({ type: 'error', message: 'Failed to open settings. Please try again.' });
     }
   };
 
@@ -512,6 +521,20 @@ const EmailManagement = () => {
 
   return (
     <div className="space-y-4 lg:space-y-8">
+      {notification && (
+        <div>
+          <div className={`rounded-xl p-3 sm:p-4 border mx-0 sm:mx-0 ${
+            notification.type === 'success' ? 'bg-green-50 border-green-200 text-green-800' :
+            notification.type === 'error' ? 'bg-red-50 border-red-200 text-red-800' :
+            'bg-blue-50 border-blue-200 text-blue-800'
+          }`}>
+            <div className="flex items-start justify-between">
+              <p className="text-sm sm:text-base font-medium">{notification.message}</p>
+              <button onClick={() => setNotification(null)} className="text-current opacity-70 hover:opacity-100">×</button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Header + Actions Section */}
       <div className="w-full">
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-4 lg:mb-6">
@@ -635,6 +658,34 @@ const EmailManagement = () => {
           </div>
         </div>
       </div>
+
+      {/* Confirm Dialog */}
+      {confirmDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-md w-full shadow-lg">
+            <div className="p-5 border-b border-slate-200">
+              <h3 className="text-lg font-semibold text-slate-900">{confirmDialog.title}</h3>
+            </div>
+            <div className="p-5">
+              <p className="text-slate-700 text-sm">{confirmDialog.message}</p>
+            </div>
+            <div className="p-4 border-t border-slate-200 flex justify-end space-x-2">
+              <button
+                onClick={confirmDialog.onCancel}
+                className="px-4 py-2 rounded-lg text-slate-600 hover:text-slate-800 hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDialog.onConfirm}
+                className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700"
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
         {/* Email Configurations List */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200">

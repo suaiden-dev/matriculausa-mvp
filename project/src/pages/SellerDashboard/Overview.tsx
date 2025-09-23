@@ -1,15 +1,13 @@
 import React from 'react';
+import { supabase } from '../../lib/supabase';
+import { useState as useStateReact, useEffect } from 'react';
+import { useFeeConfig } from '../../hooks/useFeeConfig';
 import {
-  Users,
   GraduationCap,
   DollarSign,
   TrendingUp,
-  Eye,
   ArrowUpRight,
-  CheckCircle,
   Activity,
-  Star,
-  Crown,
   Target
 } from 'lucide-react';
 
@@ -28,6 +26,102 @@ interface OverviewProps {
 
 const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = [], onRefresh, onNavigate }) => {
   const recentStudents = students.slice(0, 5);
+  const { getFeeAmount } = useFeeConfig();
+  const [studentPackageFees, setStudentPackageFees] = useStateReact<{[key: string]: any}>({});
+  const [studentDependents, setStudentDependents] = useStateReact<{[key: string]: number}>({});
+  const [loadingCalc, setLoadingCalc] = useStateReact<boolean>(false);
+
+  // Debug específico para investigar discrepância de receita
+  useEffect(() => {
+    const target = students.find((s: any) => s?.email === 'irving1745@uorak.com');
+    if (target) {
+      const packageFees = studentPackageFees[target.id];
+      const deps = studentDependents[target.id] || 0;
+      console.log('[OVERVIEW][DEBUG] Irving student data:', {
+        id: target.id,
+        email: target.email,
+        has_paid_selection_process_fee: target.has_paid_selection_process_fee,
+        has_paid_i20_control_fee: target.has_paid_i20_control_fee,
+        is_scholarship_fee_paid: target.is_scholarship_fee_paid,
+        is_application_fee_paid: target.is_application_fee_paid,
+        dependents: deps,
+        packageFees
+      });
+      console.log('[OVERVIEW][DEBUG] Irving calculated total:', calculateStudentAdjustedPaid(target));
+    }
+  }, [students, studentPackageFees, studentDependents]);
+
+  // Carregar taxas do pacote (RPC) e dependentes do perfil em lote para reduzir latência e flicker
+  useEffect(() => {
+    const preload = async () => {
+      const ids = (students || []).map((s: any) => s.id).filter(Boolean);
+      const idsToLoadFees = ids.filter((id: string) => studentPackageFees[id] === undefined);
+      const idsToLoadDeps = ids.filter((id: string) => studentDependents[id] === undefined);
+      if (ids.length === 0 || (idsToLoadFees.length === 0 && idsToLoadDeps.length === 0)) return;
+      setLoadingCalc(true);
+      try {
+        // Dependentes em lote
+        if (idsToLoadDeps.length > 0) {
+          const { data: depsRows, error: depsError } = await supabase
+            .from('user_profiles')
+            .select('user_id, dependents')
+            .in('user_id', idsToLoadDeps);
+          if (!depsError) {
+            const newDeps: {[key: string]: number} = {};
+            idsToLoadDeps.forEach((id: string) => { newDeps[id] = 0; });
+            (depsRows || []).forEach((r: any) => { newDeps[r.user_id] = Number(r.dependents || 0); });
+            setStudentDependents(prev => ({ ...prev, ...newDeps }));
+          }
+        }
+
+        // Taxas do pacote (sem endpoint em lote: paralelizar por aluno e consolidar setState)
+        if (idsToLoadFees.length > 0) {
+          const results = await Promise.allSettled(idsToLoadFees.map((id: string) =>
+            supabase.rpc('get_user_package_fees', { user_id_param: id })
+          ));
+          const newFees: {[key: string]: any} = {};
+          results.forEach((res: any, idx: number) => {
+            const id = idsToLoadFees[idx];
+            if (res.status === 'fulfilled' && res.value && !res.value.error) {
+              const arr = res.value.data;
+              newFees[id] = (arr && arr.length > 0) ? arr[0] : null;
+            } else {
+              newFees[id] = null;
+            }
+          });
+          setStudentPackageFees(prev => ({ ...prev, ...newFees }));
+        }
+      } finally {
+        setLoadingCalc(false);
+      }
+    };
+    preload();
+  }, [students]);
+
+  const calculateStudentAdjustedPaid = (student: any): number => {
+    let total = 0;
+    const packageFees = studentPackageFees[student.id];
+    const deps = studentDependents[student.id] || 0;
+    if (student.has_paid_selection_process_fee) {
+      const baseSel = packageFees ? packageFees.selection_process_fee : getFeeAmount('selection_process');
+      total += Number(baseSel) + (deps * 150) / 2;
+    }
+    if (student.is_scholarship_fee_paid) {
+      const baseSch = packageFees ? packageFees.scholarship_fee : getFeeAmount('scholarship_fee');
+      total += Number(baseSch);
+    }
+    if (student.has_paid_i20_control_fee) {
+      const baseI20 = packageFees ? packageFees.i20_control_fee : getFeeAmount('i20_control_fee');
+      total += Number(baseI20) + (deps * 150) / 2;
+    }
+    // Application fee não entra na receita do seller
+    return total;
+  };
+
+  const adjustedTotalRevenue = React.useMemo(() => {
+    if (!students || students.length === 0) return 0;
+    return students.reduce((sum: number, s: any) => sum + calculateStudentAdjustedPaid(s), 0);
+  }, [students, studentPackageFees, studentDependents]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -69,7 +163,7 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
       description: 'Analyze metrics and performance',
       icon: TrendingUp,
       color: 'bg-blue-700',
-      count: formatCurrency(stats.totalRevenue),
+      count: formatCurrency(adjustedTotalRevenue),
       view: 'performance'
     }
   ];
@@ -111,11 +205,11 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-500 mb-1">Total Revenue</p>
-              <p className="text-3xl font-bold text-slate-900">{formatCurrency(stats.totalRevenue)}</p>
+              <p className="text-3xl font-bold text-slate-900">{formatCurrency(adjustedTotalRevenue)}</p>
               <div className="flex items-center mt-2">
                 <TrendingUp className="h-4 w-4 text-emerald-500 mr-1" />
                 <span className="text-sm font-medium text-emerald-600">
-                  {stats.totalStudents > 0 ? (stats.totalRevenue / stats.totalStudents).toFixed(2) : 0} per student
+                  {students.length > 0 ? (adjustedTotalRevenue / students.length).toFixed(2) : 0} per student
                 </span>
               </div>
             </div>
@@ -214,8 +308,8 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
           <div className="p-4 sm:p-6">
             <div className="space-y-4">
               {/* Top 3 Students by Revenue */}
-              {students
-                .sort((a, b) => (b.total_paid || 0) - (a.total_paid || 0))
+              {(loadingCalc ? students : students)
+                .sort((a, b) => (calculateStudentAdjustedPaid(b) || 0) - (calculateStudentAdjustedPaid(a) || 0))
                 .slice(0, 3)
                 .map((student, index) => (
                   <div 
@@ -242,7 +336,7 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
                         <div className="space-y-1">
                           <div className="flex items-center sm:justify-end space-x-2">
                             <span className="text-2xl font-bold text-slate-900 whitespace-nowrap">
-                              {formatCurrency(student.total_paid || 0)}
+                              {loadingCalc ? 'Calculating...' : formatCurrency(calculateStudentAdjustedPaid(student) || 0)}
                             </span>
                             <span className="text-sm text-slate-500">revenue</span>
                           </div>
@@ -260,8 +354,8 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
                 <div className="pt-4 border-t border-slate-200">
                   <h4 className="text-sm font-medium text-slate-600 mb-3">Other Top Performers</h4>
                   <div className="space-y-3">
-                    {students
-                      .sort((a, b) => (b.total_paid || 0) - (a.total_paid || 0))
+                    {(loadingCalc ? students : students)
+                      .sort((a, b) => (calculateStudentAdjustedPaid(b) || 0) - (calculateStudentAdjustedPaid(a) || 0))
                       .slice(3, 6)
                       .map((student, index) => (
                         <div 
@@ -281,7 +375,7 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
                             <div className="text-left sm:text-right">
                               <div className="flex items-center sm:justify-end space-x-4">
                                 <span className="text-sm text-slate-700 font-medium whitespace-nowrap">
-                                  {formatCurrency(student.total_paid || 0)}
+                                  {loadingCalc ? 'Calculating...' : formatCurrency(calculateStudentAdjustedPaid(student) || 0)}
                                 </span>
                                 <span className="text-xs text-slate-500">
                                   {formatDate(student.created_at)}

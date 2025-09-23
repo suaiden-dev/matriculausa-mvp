@@ -475,6 +475,12 @@ const EmailCompose = () => {
   };
 
   const sendEmailViaSmtp = async (config: EmailConfiguration, toEmails: string[], ccEmails: string[], bccEmails: string[]) => {
+    // Get Supabase session for authentication
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      throw new Error('User not authenticated');
+    }
+
     // Prepare data for SMTP endpoint
     const emailData: any = {
       host: config.smtp_host,
@@ -496,24 +502,26 @@ const EmailCompose = () => {
       emailData.bcc = bccEmails.join(', ');
     }
 
-    console.log('📤 SMTP Email data:', emailData);
+    console.log('📤 SMTP Email data:', { ...emailData, password: '***' });
 
-    // Send email via SMTP endpoint
-    const response = await fetch('https://4a7505bb5c9f.ngrok-free.app/send-smtp?key=7D127C861C1D6CB5B12C3FE3189D8', {
+    // Send email via Supabase Edge Function to avoid CORS issues
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const response = await fetch(`${supabaseUrl}/functions/v1/send-smtp-email`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'ngrok-skip-browser-warning': 'true'
+        'Authorization': `Bearer ${session.access_token}`,
       },
       body: JSON.stringify(emailData)
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`SMTP Server error: ${response.status} - ${errorText}`);
+      const errorData = await response.json();
+      throw new Error(errorData.error || `SMTP Server error: ${response.status}`);
     }
 
     await response.json();
+    console.log('✅ Email sent successfully via SMTP Edge Function');
     return true;
   };
 
