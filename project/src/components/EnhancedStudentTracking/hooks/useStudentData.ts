@@ -57,7 +57,7 @@ export const useStudentData = (userId?: string) => {
               referral_code: seller.referral_code || '',
               is_active: seller.is_active,
               created_at: seller.last_referral_date || new Date().toISOString(),
-              students_count: seller.students_count || 0,
+              students_count: Number(seller.students_count) || 0,
               total_revenue: Number(seller.total_revenue) || 0
             }));
             
@@ -86,7 +86,7 @@ export const useStudentData = (userId?: string) => {
                 seller_name: student.seller_name,
                 seller_referral_code: student.seller_referral_code,
                 referral_code_used: student.referral_code_used,
-                total_paid: student.total_paid, // Usar receita já calculada pela função RPC
+                total_paid: Number(student.total_paid) || 0, // Normalizar número
                 created_at: student.created_at,
                 status: student.status,
                 application_status: student.application_status,

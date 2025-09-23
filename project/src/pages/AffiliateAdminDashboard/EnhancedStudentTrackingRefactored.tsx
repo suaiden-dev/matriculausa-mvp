@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useAuth } from '../../hooks/useAuth';
 import {
   useStudentData,
   useStudentDetails,
@@ -14,11 +15,13 @@ import {
 } from '../../components/EnhancedStudentTracking';
 
 const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
+  const { user } = useAuth();
   const [expandedSellers, setExpandedSellers] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState<'details' | 'documents'>('details');
 
   // Hooks personalizados
-  const { sellers, students, universities, loading } = useStudentData(userId);
+  const effectiveUserId = userId || user?.id;
+  const { sellers, students, universities, loading } = useStudentData(effectiveUserId);
   const {
     selectedStudent,
     studentDetails,

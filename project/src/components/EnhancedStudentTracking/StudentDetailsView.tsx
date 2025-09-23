@@ -37,11 +37,16 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
   // Estado para armazenar os dependentes do estudante
   const [studentDependents, setStudentDependents] = useState<number>(0);
   
-  // Função para calcular valor com dependentes
+  // Função para calcular valor com dependentes (regra nova):
+  // - Selection Process: +150 por dependente
+  // - I-20: sem adicionais
   const calculateFeeWithDependents = (baseFee: number, dependents: number = 0, feeType: 'selection_process' | 'i20_control_fee') => {
-    if (feeType === 'selection_process' || feeType === 'i20_control_fee') {
-      const dependentCost = dependents * 75; // $75 por dependente para cada taxa
+    if (feeType === 'selection_process') {
+      const dependentCost = dependents * 150;
       return baseFee + dependentCost;
+    }
+    if (feeType === 'i20_control_fee') {
+      return baseFee;
     }
     return baseFee;
   };
