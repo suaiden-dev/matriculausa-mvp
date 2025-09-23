@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { UserCheck, CheckCircle, X, Target, ArrowLeft, ArrowRight } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
-import { useScholarshipPackages } from '../hooks/useScholarshipPackages';
+// import { useScholarshipPackages } from '../hooks/useScholarshipPackages';
 import { supabase } from '../lib/supabase';
 import PhoneInput from 'react-phone-number-input';
 
@@ -17,7 +17,8 @@ const SellerStudentRegistration: React.FC = () => {
     confirmPassword: '',
     phone: '',
     sellerReferralCode: sellerCode,
-    selectedPackage: '',
+    // Selecionar por padrão o pacote principal fixo
+    selectedPackage: '1',
     dependents: 0
   });
   
@@ -33,7 +34,7 @@ const SellerStudentRegistration: React.FC = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const { register } = useAuth();
-  const { packages, loading: packagesLoading } = useScholarshipPackages();
+  // Pacotes dinâmicos descontinuados temporariamente
   const navigate = useNavigate();
 
   // Validar código do vendedor ao carregar a página
@@ -76,9 +77,7 @@ const SellerStudentRegistration: React.FC = () => {
     setFormData(prev => ({ ...prev, [name]: name === 'dependents' ? Math.max(0, parseInt(value || '0', 10)) : value }));
   };
 
-  const handlePackageSelect = (packageNumber: number) => {
-    setFormData(prev => ({ ...prev, selectedPackage: packageNumber.toString() }));
-  };
+  // Seleção de pacote desnecessária pois há apenas um pacote fixo
 
   // Validation function for each step
   const validateStep = (step: number) => {
@@ -136,7 +135,8 @@ const SellerStudentRegistration: React.FC = () => {
         role: 'student' as const,
         status: 'active',
         seller_referral_code: formData.sellerReferralCode,
-        scholarship_package_id: packages.find(p => p.package_number === parseInt(formData.selectedPackage))?.id,
+        // Com padronização, não usamos mais IDs de pacotes dinâmicos
+        scholarship_package_id: null,
         dependents: formData.dependents
       };
 
@@ -157,7 +157,19 @@ const SellerStudentRegistration: React.FC = () => {
     }
   };
 
-  const selectedPackage = packages.find(p => p.package_number === parseInt(formData.selectedPackage));
+  // Pacote principal fixo padronizado
+  const FIXED_MAIN_PACKAGE = {
+    id: 'main-fixed',
+    name: 'Main Package',
+    selection_process_fee: 400,
+    scholarship_fee: 900,
+    i20_control_fee: 900,
+    // scholarships starting from: não especificado; manter como total por simplicidade
+    scholarship_amount: 2200,
+    total_paid: 2200
+  } as const;
+
+  const selectedPackage = formData.selectedPackage ? FIXED_MAIN_PACKAGE : null;
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
@@ -447,7 +459,7 @@ const SellerStudentRegistration: React.FC = () => {
             </>
           )}
 
-          {/* Step 2: Package Selection */}
+              {/* Step 2: Package Selection */}
           {currentStep === 2 && (
             <>
               <h2 className="text-2xl font-bold text-gray-900 mb-6">Choose Your Package</h2>
@@ -465,55 +477,46 @@ const SellerStudentRegistration: React.FC = () => {
                 </div>
               )}
 
-              {packagesLoading ? (
-                <div className="text-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                  <p className="mt-2 text-gray-600">Loading packages...</p>
-                </div>
-              ) : (
+              {/* BLOCO ORIGINAL DE LISTA DE PACOTES DESCONTINUADO TEMPORARIAMENTE */}
+              {false && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-                  {packages.map((pkg) => (
-                    <div
-                      key={pkg.id}
-                      className={`p-6 border-2 rounded-xl cursor-pointer transition-all hover:shadow-lg ${
-                        formData.selectedPackage === pkg.package_number.toString()
-                          ? 'border-blue-500 bg-blue-50 shadow-lg'
-                          : 'border-gray-200 hover:border-gray-300 bg-white'
-                      }`}
-                      onClick={() => handlePackageSelect(pkg.package_number)}
-                    >
-                      <div className="text-center mb-4">
-                        <h3 className="font-bold text-xl text-gray-900 mb-2">{pkg.name}</h3>
-                        <div className="text-3xl font-bold text-blue-600 mb-1">${pkg.scholarship_amount}</div>
-                        <p className="text-sm text-gray-500">Scholarships starting from</p>
-                      </div>
-                      
-                      <div className="space-y-3 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Selection Process Fee:</span>
-                          <span className="font-semibold">${(pkg.selection_process_fee + (formData.dependents * 150) / 2).toFixed(2)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Scholarship Fee:</span>
-                          <span className="font-semibold">${pkg.scholarship_fee}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">I-20 Control Fee:</span>
-                          <span className="font-semibold">${(pkg.i20_control_fee + (formData.dependents * 150) / 2).toFixed(2)}</span>
-                        </div>
-                        <div className="border-t pt-2 flex justify-between">
-                          <span className="text-gray-600 font-medium">Total Paid:</span>
-                          <span className="font-bold text-green-600 text-lg">${(pkg.total_paid + formData.dependents * 150).toFixed(2)}</span>
-                        </div>
-                      </div>
-
-                      {pkg.description && (
-                        <p className="mt-2 text-xs text-gray-500">{pkg.description}</p>
-                      )}
-                    </div>
-                  ))}
+                  {/* Conteúdo antigo comentado */}
                 </div>
               )}
+
+              {/* Cartão único do pacote principal fixo */}
+              <div className="grid grid-cols-1 gap-6 mb-6">
+                <div
+                  className={`p-6 border-2 rounded-xl transition-all ${
+                    formData.selectedPackage === '1'
+                      ? 'border-blue-500 bg-blue-50 shadow-lg'
+                      : 'border-gray-200 bg-white'
+                  }`}
+                >
+                  <div className="text-center mb-4">
+                    <h3 className="font-bold text-xl text-gray-900 mb-2">{FIXED_MAIN_PACKAGE.name}</h3>
+                  </div>
+
+                  <div className="space-y-3 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Selection Process Fee:</span>
+                      <span className="font-semibold">${(FIXED_MAIN_PACKAGE.selection_process_fee + (formData.dependents * 150)).toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Scholarship Fee:</span>
+                      <span className="font-semibold">${FIXED_MAIN_PACKAGE.scholarship_fee.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">I-20 Control Fee:</span>
+                      <span className="font-semibold">${(FIXED_MAIN_PACKAGE.i20_control_fee).toFixed(2)}</span>
+                    </div>
+                    <div className="border-t pt-2 flex justify-between">
+                      <span className="text-gray-600 font-medium">Total Paid:</span>
+                      <span className="font-bold text-green-600 text-lg">${(FIXED_MAIN_PACKAGE.total_paid + (formData.dependents * 150)).toFixed(2)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
               {/* Dependents input has been moved to Step 1 */}
 
@@ -523,8 +526,7 @@ const SellerStudentRegistration: React.FC = () => {
                   <div className="space-y-1 text-sm">
                     <p><strong>Package:</strong> {selectedPackage.name}</p>
                     <p><strong>Total Investment:</strong> ${selectedPackage.total_paid}</p>
-                    <p><strong>Scholarships starting from:</strong> ${selectedPackage.scholarship_amount}</p>
-                    <p><strong>Net Savings:</strong> ${selectedPackage.scholarship_amount - selectedPackage.total_paid}</p>
+                    <p><strong>Scholarships starting from:</strong> ${selectedPackage.total_paid}</p>
                   </div>
                 </div>
               )}
