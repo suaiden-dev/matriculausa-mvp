@@ -14,19 +14,24 @@ interface KnowledgeDocument {
 }
 
 interface AIAgentKnowledgeUploadProps {
-  aiConfigurationId: string;
+  aiConfigurationId: string; // backward compat: foreign id value
   onDocumentsChange: (documents: KnowledgeDocument[]) => void;
   onPendingFilesChange?: (files: File[]) => void;
   existingDocuments?: KnowledgeDocument[];
   isCreating?: boolean;
+  // Optional overrides to support other targets (e.g., email agents)
+  foreignTable?: string; // default: 'ai_agent_knowledge_documents'
+  foreignKey?: string;   // default: 'ai_configuration_id'
 }
 
-const AIAgentKnowledgeUpload = forwardRef<{ uploadPendingFiles: (aiConfigId: string) => Promise<KnowledgeDocument[]> }, AIAgentKnowledgeUploadProps>(({
+const AIAgentKnowledgeUpload = forwardRef<{ uploadPendingFiles: (aiConfigId: string) => Promise<KnowledgeDocument[]> }, AIAgentKnowledgeUploadProps>(({ 
   aiConfigurationId,
   onDocumentsChange,
   onPendingFilesChange,
   existingDocuments = [],
-  isCreating = false
+  isCreating = false,
+  foreignTable = 'ai_agent_knowledge_documents',
+  foreignKey = 'ai_configuration_id'
 }, ref) => {
   const { user } = useAuth();
   const [uploading, setUploading] = useState(false);
@@ -88,9 +93,9 @@ const AIAgentKnowledgeUpload = forwardRef<{ uploadPendingFiles: (aiConfigId: str
 
         // Insert into database
         const { data: docData, error: insertError } = await supabase
-          .from('ai_agent_knowledge_documents')
+          .from(foreignTable)
           .insert({
-            ai_configuration_id: aiConfigId,
+            [foreignKey]: aiConfigId,
             document_name: file.name,
             file_url: fileUrl,
             file_size: file.size,
@@ -105,34 +110,37 @@ const AIAgentKnowledgeUpload = forwardRef<{ uploadPendingFiles: (aiConfigId: str
         console.log('✅ Documento pendente salvo no banco com ID:', docData.id);
         uploadedDocs.push(docData);
 
-        // Atualizar prompt com base de conhecimento para este documento específico
+        // Atualizar prompt para agentes padrão (WhatsApp) e agentes de e-mail
         try {
           const { data: { session } } = await supabase.auth.getSession();
           const accessToken = session?.access_token;
-          
           const SUPABASE_FUNCTIONS_URL = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL || 'https://fitpynguasqqutuhzifx.supabase.co/functions/v1';
           
-          console.log('🔄 Atualizando prompt para documento pendente:', docData.id);
-          
-          const updateResponse = await fetch(`${SUPABASE_FUNCTIONS_URL}/update-prompt-with-knowledge`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${accessToken}`,
-            },
-            body: JSON.stringify({
-              ai_configuration_id: aiConfigId
-            }),
-          });
-          
-          const updateResult = await updateResponse.json();
-          console.log('✅ Prompt atualizado para documento pendente:', docData.id, updateResult);
-          
-          // Removido: Enviar webhook para este documento específico
-          // await sendDocumentWebhook(docData.id, file.name, fileUrl, file.type);
+          let endpoint, payload;
+          if (foreignTable === 'ai_agent_knowledge_documents') {
+            // Para agentes WhatsApp
+            endpoint = `${SUPABASE_FUNCTIONS_URL}/update-prompt-with-knowledge`;
+            payload = { ai_configuration_id: aiConfigId };
+          } else if (foreignTable === 'ai_email_agent_knowledge_documents') {
+            // Para agentes de e-mail
+            endpoint = `${SUPABASE_FUNCTIONS_URL}/update-email-agent-prompt-with-knowledge`;
+            payload = { agent_id: aiConfigId };
+          }
+
+          if (endpoint && payload) {
+            const updateResponse = await fetch(endpoint, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${accessToken}`,
+              },
+              body: JSON.stringify(payload),
+            });
+            const updateResult = await updateResponse.json();
+            console.log('✅ Prompt atualizado para documento pendente:', docData.id, updateResult);
+          }
         } catch (updateError) {
           console.error('❌ Erro ao atualizar prompt para documento pendente:', docData.id, updateError);
-          // Não falhar o processo se a atualização do prompt falhar
         }
       }
 
@@ -244,15 +252,30 @@ const AIAgentKnowledgeUpload = forwardRef<{ uploadPendingFiles: (aiConfigId: str
       
       console.log('🔄 Atualizando prompt para documento específico:', documentId);
       
-      const updateResponse = await fetch(`${SUPABASE_FUNCTIONS_URL}/update-prompt-with-knowledge`, {
+      // Determinar endpoint e payload baseado na tabela
+      let endpoint, payload;
+      if (foreignTable === 'ai_agent_knowledge_documents') {
+        // Para agentes WhatsApp
+        endpoint = `${SUPABASE_FUNCTIONS_URL}/update-prompt-with-knowledge`;
+        payload = { ai_configuration_id: aiConfigurationId };
+      } else if (foreignTable === 'ai_email_agent_knowledge_documents') {
+        // Para agentes de e-mail
+        endpoint = `${SUPABASE_FUNCTIONS_URL}/update-email-agent-prompt-with-knowledge`;
+        payload = { agent_id: aiConfigurationId };
+      }
+
+      if (!endpoint || !payload) {
+        console.log('⚠️ Endpoint não configurado para esta tabela:', foreignTable);
+        return;
+      }
+
+      const updateResponse = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${accessToken}`,
         },
-        body: JSON.stringify({
-          ai_configuration_id: aiConfigurationId
-        }),
+        body: JSON.stringify(payload),
       });
       
       const updateResult = await updateResponse.json();
@@ -354,9 +377,9 @@ const AIAgentKnowledgeUpload = forwardRef<{ uploadPendingFiles: (aiConfigId: str
 
         // Insert into database
         const { data: docData, error: insertError } = await supabase
-          .from('ai_agent_knowledge_documents')
+          .from(foreignTable)
           .insert({
-            ai_configuration_id: aiConfigurationId,
+            [foreignKey]: aiConfigurationId,
             document_name: file.name,
             file_url: fileUrl,
             file_size: file.size,
@@ -371,35 +394,38 @@ const AIAgentKnowledgeUpload = forwardRef<{ uploadPendingFiles: (aiConfigId: str
         console.log('✅ Documento salvo no banco com ID:', docData.id);
         uploadedDocs.push(docData);
 
-        // Atualizar prompt com base de conhecimento para este documento específico
+        // Atualizar prompt para agentes padrão (WhatsApp) e agentes de e-mail
         try {
           const { data: { session } } = await supabase.auth.getSession();
           const accessToken = session?.access_token;
-          
           const SUPABASE_FUNCTIONS_URL = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL || 'https://fitpynguasqqutuhzifx.supabase.co/functions/v1';
           
-          console.log('🔄 Atualizando prompt para documento:', docData.id);
-          
-          const updateResponse = await fetch(`${SUPABASE_FUNCTIONS_URL}/update-prompt-with-knowledge`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${accessToken}`,
-            },
-            body: JSON.stringify({
-              ai_configuration_id: aiConfigurationId
-            }),
-          });
-          
-                  const updateResult = await updateResponse.json();
-        console.log('✅ Prompt atualizado para documento:', docData.id, updateResult);
-        
-        // Removido: Enviar webhook para este documento específico
-        // await sendDocumentWebhook(docData.id, file.name, fileUrl, file.type);
-      } catch (updateError) {
-        console.error('❌ Erro ao atualizar prompt para documento:', docData.id, updateError);
-        // Não falhar o processo se a atualização do prompt falhar
-      }
+          let endpoint, payload;
+          if (foreignTable === 'ai_agent_knowledge_documents') {
+            // Para agentes WhatsApp
+            endpoint = `${SUPABASE_FUNCTIONS_URL}/update-prompt-with-knowledge`;
+            payload = { ai_configuration_id: aiConfigurationId };
+          } else if (foreignTable === 'ai_email_agent_knowledge_documents') {
+            // Para agentes de e-mail
+            endpoint = `${SUPABASE_FUNCTIONS_URL}/update-email-agent-prompt-with-knowledge`;
+            payload = { agent_id: aiConfigurationId };
+          }
+
+          if (endpoint && payload) {
+            const updateResponse = await fetch(endpoint, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${accessToken}`,
+              },
+              body: JSON.stringify(payload),
+            });
+            const updateResult = await updateResponse.json();
+            console.log('✅ Prompt atualizado para documento:', docData.id, updateResult);
+          }
+        } catch (updateError) {
+          console.error('❌ Erro ao atualizar prompt para documento:', docData.id, updateError);
+        }
     }
 
       const newDocuments = [...documents, ...uploadedDocs];
@@ -448,7 +474,7 @@ const AIAgentKnowledgeUpload = forwardRef<{ uploadPendingFiles: (aiConfigId: str
 
       // Se é um documento real, deletar do banco
       const { error } = await supabase
-        .from('ai_agent_knowledge_documents')
+        .from(foreignTable)
         .delete()
         .eq('id', documentId);
 
@@ -461,17 +487,19 @@ const AIAgentKnowledgeUpload = forwardRef<{ uploadPendingFiles: (aiConfigId: str
         
         const SUPABASE_FUNCTIONS_URL = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL || 'https://fitpynguasqqutuhzifx.supabase.co/functions/v1';
         
-        await fetch(`${SUPABASE_FUNCTIONS_URL}/remove-document-from-knowledge`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${accessToken}`,
-          },
-          body: JSON.stringify({
-            ai_configuration_id: aiConfigurationId,
-            document_id: documentId
-          }),
-        });
+        if (foreignTable === 'ai_agent_knowledge_documents') {
+          await fetch(`${SUPABASE_FUNCTIONS_URL}/remove-document-from-knowledge`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${accessToken}`,
+            },
+            body: JSON.stringify({
+              ai_configuration_id: aiConfigurationId,
+              document_id: documentId
+            }),
+          });
+        }
         
         console.log('✅ Documento removido da base de conhecimento');
       } catch (removeError) {

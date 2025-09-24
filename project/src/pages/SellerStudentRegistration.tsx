@@ -34,9 +34,13 @@ const SellerStudentRegistration: React.FC = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const { register } = useAuth();
+  const { register, user, userProfile } = useAuth();
   const { packages, loading: packagesLoading } = useScholarshipPackages();
   const navigate = useNavigate();
+
+  // Guardar acesso: apenas equipe interna (admin/affiliate_admin)
+  const allowedRoles = new Set(['admin', 'affiliate_admin', 'seller']);
+  const isAllowed = !!user && allowedRoles.has(String(userProfile?.role || '').toLowerCase());
 
   // Validar código do vendedor ao carregar a página
   useEffect(() => {
@@ -188,6 +192,35 @@ const SellerStudentRegistration: React.FC = () => {
 
   // Obter pacote selecionado
   const selectedPackage = packages.find(pkg => pkg.package_number.toString() === formData.selectedPackage);
+
+  // Bloqueio de acesso para usuários não autorizados
+  if (!isAllowed) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-20 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-lg mx-auto bg-white rounded-2xl shadow-sm border border-slate-200 p-8 text-center">
+          <div className="mx-auto mb-4 w-12 h-12 rounded-full bg-red-50 flex items-center justify-center">
+            <span className="text-red-600 text-2xl">!</span>
+          </div>
+          <h1 className="text-2xl font-bold text-slate-900 mb-2">Acesso restrito</h1>
+          <p className="text-slate-600 mb-6">Esta página é exclusiva para a equipe interna.</p>
+          <div className="flex justify-center gap-3">
+            <button
+              onClick={() => navigate('/login')}
+              className="bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Ir para Login
+            </button>
+            <button
+              onClick={() => navigate('/')}
+              className="bg-slate-100 text-slate-800 py-2 px-4 rounded-lg hover:bg-slate-200 transition-colors"
+            >
+              Voltar ao início
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
