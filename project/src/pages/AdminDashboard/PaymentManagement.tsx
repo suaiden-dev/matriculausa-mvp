@@ -1143,6 +1143,9 @@ const PaymentManagement = (): React.JSX.Element => {
         }
 
         if (sellerData && !sellerError) {
+          const { data: sellerProfile, error: sellerProfileError } = await supabase.from('user_profiles').select('phone').eq('user_id', sellerData.user_id).single();
+          const sellerPhone = sellerProfile?.phone;
+
           console.log(`📤 [approveZellePayment] Seller encontrado:`, sellerData);
 
           // NOTIFICAÇÃO PARA ADMIN
@@ -1157,7 +1160,7 @@ const PaymentManagement = (): React.JSX.Element => {
               nome_seller: sellerData.name,
               email_affiliate_admin: affiliateAdminData?.user_profiles?.email || "",
               nome_affiliate_admin: affiliateAdminData?.user_profiles?.full_name || "Affiliate Admin",
-              o_que_enviar: `Pagamento de ${payment.fee_type} no valor de $${payment.amount} do aluno ${payment.student_name} foi aprovado. Seller responsável: ${sellerData.name} (${sellerData.referral_code})`,
+              o_que_enviar: `Pagamento de ${payment.fee_type} no valor de ${payment.amount} do aluno ${payment.student_name} foi aprovado. Seller responsável: ${sellerData.name} (${sellerData.referral_code})`,
               payment_id: paymentId,
               fee_type: payment.fee_type,
               amount: payment.amount,
@@ -1195,7 +1198,7 @@ const PaymentManagement = (): React.JSX.Element => {
                 nome_aluno: payment.student_name,
                 email_seller: sellerData.email,
                 nome_seller: sellerData.name,
-                o_que_enviar: `Pagamento de ${payment.fee_type} no valor de $${payment.amount} do aluno ${payment.student_name} foi aprovado. Seller responsável: ${sellerData.name} (${sellerData.referral_code})`,
+                o_que_enviar: `Pagamento de ${payment.fee_type} no valor de ${payment.amount} do aluno ${payment.student_name} foi aprovado. Seller responsável: ${sellerData.name} (${sellerData.referral_code})`,
                 payment_id: paymentId,
                 fee_type: payment.fee_type,
                 amount: payment.amount,
@@ -1229,9 +1232,10 @@ const PaymentManagement = (): React.JSX.Element => {
               tipo_notf: "Pagamento do seu aluno aprovado",
               email_seller: sellerData.email,
               nome_seller: sellerData.name,
+              phone_seller: sellerPhone || "",
               email_aluno: payment.student_email,
               nome_aluno: payment.student_name,
-              o_que_enviar: `Parabéns! O pagamento de ${payment.fee_type} no valor de $${payment.amount} do seu aluno ${payment.student_name} foi aprovado. Você ganhará comissão sobre este pagamento!`,
+              o_que_enviar: `Parabéns! O pagamento de ${payment.fee_type} no valor de ${payment.amount} do seu aluno ${payment.student_name} foi aprovado. Você ganhará comissão sobre este pagamento!`,
               payment_id: paymentId,
               fee_type: payment.fee_type,
               amount: payment.amount,

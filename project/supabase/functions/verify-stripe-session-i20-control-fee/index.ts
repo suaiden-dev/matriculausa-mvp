@@ -73,7 +73,7 @@ Deno.serve(async (req)=>{
       try {
         console.log(`📤 [verify-stripe-session-i20-control-fee] Iniciando notificações...`);
         // Buscar dados do aluno (incluindo seller_referral_code)
-        const { data: alunoData, error: alunoError } = await supabase.from('user_profiles').select('full_name, email, seller_referral_code').eq('user_id', userId).single();
+        const { data: alunoData, error: alunoError } = await supabase.from('user_profiles').select('full_name, email, phone, seller_referral_code').eq('user_id', userId).single();
         if (alunoError || !alunoData) {
           console.error('[NOTIFICAÇÃO] Erro ao buscar dados do aluno:', alunoError);
           return corsResponse({
@@ -126,6 +126,9 @@ Deno.serve(async (req)=>{
             sellerError
           });
           if (sellerData && !sellerError) {
+            const { data: sellerProfile, error: sellerProfileError } = await supabase.from('user_profiles').select('phone').eq('user_id', sellerData.user_id).single();
+            const sellerPhone = sellerProfile?.phone;
+
             console.log(`📤 [verify-stripe-session-i20-control-fee] ✅ SELLER ENCONTRADO! Dados:`, sellerData);
             // Buscar dados do affiliate_admin se houver
             let affiliateAdminData = {
@@ -154,7 +157,7 @@ Deno.serve(async (req)=>{
               nome_admin: "Admin MatriculaUSA",
               email_aluno: alunoData.email,
               nome_aluno: alunoData.full_name,
-              o_que_enviar: `Pagamento Stripe de I-20 control fee no valor de $${(session.amount_total / 100).toFixed(2)} do aluno ${alunoData.full_name} foi processado com sucesso. Seller responsável: ${sellerData.name} (${sellerData.referral_code}). Affiliate: ${affiliateAdminData.name}`,
+              o_que_enviar: `Pagamento Stripe de I-20 control fee no valor de ${(session.amount_total / 100).toFixed(2)} do aluno ${alunoData.full_name} foi processado com sucesso. Seller responsável: ${sellerData.name} (${sellerData.referral_code}). Affiliate: ${affiliateAdminData.name}`,
               payment_id: sessionId,
               fee_type: 'i20_control_fee',
               amount: session.amount_total / 100,
@@ -187,7 +190,8 @@ Deno.serve(async (req)=>{
               nome_seller: sellerData.name,
               email_aluno: alunoData.email,
               nome_aluno: alunoData.full_name,
-              o_que_enviar: `Parabéns! Seu aluno ${alunoData.full_name} pagou a taxa de I-20 control fee no valor de $${(session.amount_total / 100).toFixed(2)}. O documento I-20 será processado em breve.`,
+              phone_aluno: alunoData.phone || "",
+              o_que_enviar: `Parabéns! Seu aluno ${alunoData.full_name} pagou a taxa de I-20 control fee no valor de ${(session.amount_total / 100).toFixed(2)}. O documento I-20 será processado em breve.`,
               payment_id: sessionId,
               fee_type: 'i20_control_fee',
               amount: session.amount_total / 100,
@@ -223,7 +227,7 @@ Deno.serve(async (req)=>{
                 nome_aluno: alunoData.full_name,
                 email_seller: sellerData.email,
                 nome_seller: sellerData.name,
-                o_que_enviar: `O seller ${sellerData.name} (${sellerData.referral_code}) do seu afiliado teve um pagamento de I-20 control fee no valor de $${(session.amount_total / 100).toFixed(2)} do aluno ${alunoData.full_name}.`,
+                o_que_enviar: `O seller ${sellerData.name} (${sellerData.referral_code}) do seu afiliado teve um pagamento de I-20 control fee no valor de ${(session.amount_total / 100).toFixed(2)} do aluno ${alunoData.full_name}.`,
                 payment_id: sessionId,
                 fee_type: 'i20_control_fee',
                 amount: session.amount_total / 100,
