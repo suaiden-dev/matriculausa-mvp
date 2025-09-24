@@ -40,9 +40,9 @@ export const useStudentData = (userId?: string) => {
         try {
           console.log('🔍 Attempting to load data using SQL functions for admin user:', userId);
           
-          // Buscar dados reais usando funções SQL corrigidas
+          // Buscar dados reais usando função SQL com dependentes
           const { data: realSellersData, error: realSellersError } = await supabase
-            .rpc('get_admin_sellers_analytics_fixed', { admin_user_id: userId });
+            .rpc('get_admin_sellers_analytics_with_dependents', { admin_user_id: userId });
 
           console.log('🔍 SQL sellers response:', { data: realSellersData, error: realSellersError });
 
@@ -57,7 +57,7 @@ export const useStudentData = (userId?: string) => {
               referral_code: seller.referral_code || '',
               is_active: seller.is_active,
               created_at: seller.last_referral_date || new Date().toISOString(),
-              students_count: seller.students_count || 0,
+              students_count: Number(seller.students_count) || 0,
               total_revenue: Number(seller.total_revenue) || 0
             }));
             
@@ -66,9 +66,9 @@ export const useStudentData = (userId?: string) => {
             console.log('🔍 SQL sellers function failed or returned no data, will use fallback');
           }
 
-          // Buscar dados reais dos estudantes usando a função existente
+          // Buscar dados reais dos estudantes usando função com dependentes
           const { data: realStudentsData, error: realStudentsError } = await supabase
-            .rpc('get_admin_students_analytics', { admin_user_id: userId });
+            .rpc('get_admin_students_analytics_with_dependents', { admin_user_id: userId });
 
           console.log('🔍 SQL students response:', { data: realStudentsData, error: realStudentsError });
 
@@ -86,7 +86,7 @@ export const useStudentData = (userId?: string) => {
                 seller_name: student.seller_name,
                 seller_referral_code: student.seller_referral_code,
                 referral_code_used: student.referral_code_used,
-                total_paid: student.total_paid, // Usar receita já calculada pela função RPC
+                total_paid: Number(student.total_paid) || 0, // Normalizar número
                 created_at: student.created_at,
                 status: student.status,
                 application_status: student.application_status,

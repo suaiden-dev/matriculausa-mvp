@@ -1,4 +1,6 @@
 import React from 'react';
+import { useState as useStateReact, useEffect } from 'react';
+import { supabase } from '../../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { 
   Users, 
@@ -47,6 +49,106 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellers = [], onRefresh }) =
       currency: 'USD'
     }).format(amount);
   };
+
+  // Receita derivada: prioriza um possível campo ajustado vindo do backend;
+  // fallback: soma de sellers.total_revenue; fallback final: stats.totalRevenue
+  const derivedTotalRevenue = (() => {
+    const adjustedFromStats = (stats as any)?.totalRevenueAdjusted;
+    if (typeof adjustedFromStats === 'number' && !isNaN(adjustedFromStats)) return adjustedFromStats;
+    if (Array.isArray(sellers) && sellers.length > 0) {
+      const sum = sellers.reduce((acc, s) => acc + (Number(s?.total_revenue) || 0), 0);
+      if (!isNaN(sum)) return sum;
+    }
+    return safeStats.totalRevenue;
+  })();
+
+  // Receita ajustada calculada no cliente (inclui dependentes) para o admin logado
+  const [clientAdjustedRevenue, setClientAdjustedRevenue] = useStateReact<number | null>(null);
+  const [loadingAdjusted, setLoadingAdjusted] = useStateReact<boolean>(false);
+
+  useEffect(() => {
+    let mounted = true;
+    const loadAdjusted = async () => {
+      try {
+        setLoadingAdjusted(true);
+        const { data: userData } = await supabase.auth.getUser();
+        const currentUserId = userData?.user?.id;
+        if (!currentUserId) {
+          if (mounted) setClientAdjustedRevenue(null);
+          return;
+        }
+        // Descobrir affiliate_admin_id
+        const { data: aaList, error: aaErr } = await supabase
+          .from('affiliate_admins')
+          .select('id')
+          .eq('user_id', currentUserId)
+          .limit(1);
+        if (aaErr || !aaList || aaList.length === 0) {
+          if (mounted) setClientAdjustedRevenue(null);
+          return;
+        }
+        const affiliateAdminId = aaList[0].id;
+
+        // Buscar sellers vinculados a este affiliate admin
+        const { data: sellers, error: sellersErr } = await supabase
+          .from('sellers')
+          .select('referral_code')
+          .eq('affiliate_admin_id', affiliateAdminId);
+        
+        if (sellersErr || !sellers || sellers.length === 0) {
+          if (mounted) setClientAdjustedRevenue(null);
+          return;
+        }
+        
+        const referralCodes = sellers.map(s => s.referral_code);
+        
+        // Buscar perfis de estudantes vinculados via seller_referral_code
+        const { data: profiles, error: profilesErr } = await supabase
+          .from('user_profiles')
+          .select(`
+            id,
+            has_paid_selection_process_fee, 
+            has_paid_i20_control_fee, 
+            dependents,
+            scholarship_applications(is_scholarship_fee_paid)
+          `)
+          .in('seller_referral_code', referralCodes);
+        if (profilesErr || !profiles) {
+          if (mounted) setClientAdjustedRevenue(null);
+          return;
+        }
+
+        // Usando valores fixos: Selection Process (400 + 150/dependente), Scholarship (900), I-20 (900)
+
+        // Calcular total ajustado considerando dependentes com valores fixos
+        const total = profiles.reduce((sum: number, p: any) => {
+          const deps = Number(p?.dependents || 0);
+          
+          // Selection Process: 400 + (dependents × 150) - valores fixos
+          const selPaid = p?.has_paid_selection_process_fee ? (400 + (deps * 150)) : 0;
+          
+          // Scholarship Fee: 900 (sem dependentes) - valores fixos
+          const hasAnyScholarshipPaid = Array.isArray(p?.scholarship_applications)
+            ? p.scholarship_applications.some((a: any) => !!a?.is_scholarship_fee_paid)
+            : false;
+          const schPaid = hasAnyScholarshipPaid ? 900 : 0;
+          
+          // I-20 Control: 900 (sem dependentes) - valores fixos
+          const i20Paid = p?.has_paid_i20_control_fee ? 900 : 0;
+          
+          return sum + selPaid + schPaid + i20Paid;
+        }, 0);
+
+        if (mounted) setClientAdjustedRevenue(total);
+      } catch {
+        if (mounted) setClientAdjustedRevenue(null);
+      } finally {
+        if (mounted) setLoadingAdjusted(false);
+      }
+    };
+    loadAdjusted();
+    return () => { mounted = false; };
+  }, []);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US');
@@ -151,7 +253,11 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellers = [], onRefresh }) =
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-500 mb-1">Total Revenue</p>
-                <p className="text-3xl font-bold text-slate-900">{formatCurrency(safeStats.totalRevenue)}</p>
+                <p className="text-3xl font-bold text-slate-900">{formatCurrency(Math.max(
+                  typeof clientAdjustedRevenue === 'number' ? clientAdjustedRevenue : -Infinity,
+                  typeof derivedTotalRevenue === 'number' ? derivedTotalRevenue : -Infinity,
+                  0
+                ))}</p>
                 <div className="flex items-center mt-2">
                   <TrendingUp className="h-4 w-4 text-emerald-500 mr-1" />
                   <span className="text-sm font-medium text-emerald-600">

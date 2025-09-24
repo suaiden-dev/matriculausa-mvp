@@ -357,7 +357,7 @@ serve(async (req) => {
       // Buscar dados do usuário para o webhook
       const { data: userProfile, error: userError } = await supabaseClient
         .from('user_profiles')
-        .select('full_name, email')
+        .select('full_name, email, phone')
         .eq('user_id', user_id)
         .single()
 
@@ -424,6 +424,9 @@ serve(async (req) => {
       if (sellerData && !sellerError) {
         console.log(`📤 [approve-zelle-payment-automatic] Seller encontrado:`, sellerData)
 
+        const { data: sellerProfile, error: sellerProfileError } = await supabaseClient.from('user_profiles').select('phone').eq('user_id', sellerData.user_id).single();
+        const sellerPhone = sellerProfile?.phone;
+
         // NOTIFICAÇÃO PARA ADMIN
         try {
           const adminNotificationPayload = {
@@ -436,7 +439,7 @@ serve(async (req) => {
             nome_seller: sellerData.name,
             email_affiliate_admin: sellerData.affiliate_admin?.user_profiles?.email || "",
             nome_affiliate_admin: sellerData.affiliate_admin?.user_profiles?.full_name || "Affiliate Admin",
-            o_que_enviar: `Pagamento de ${normalizedFeeTypeGlobal} no valor de $${amount} do aluno ${userProfile?.full_name || "Aluno"} foi aprovado automaticamente pelo sistema. Seller responsável: ${sellerData.name} (${sellerData.referral_code})`,
+            o_que_enviar: `Pagamento de ${normalizedFeeTypeGlobal} no valor de ${amount} do aluno ${userProfile?.full_name || "Aluno"} foi aprovado automaticamente pelo sistema. Seller responsável: ${sellerData.name} (${sellerData.referral_code})`,
             payment_id: paymentId,
             fee_type: normalizedFeeTypeGlobal,
             amount: amount,
@@ -476,7 +479,7 @@ serve(async (req) => {
               nome_aluno: userProfile?.full_name || "Aluno",
               email_seller: sellerData.email,
               nome_seller: sellerData.name,
-              o_que_enviar: `Pagamento de ${normalizedFeeTypeGlobal} no valor de $${amount} do aluno ${userProfile?.full_name || "Aluno"} foi aprovado automaticamente pelo sistema. Seller responsável: ${sellerData.name} (${sellerData.referral_code})`,
+              o_que_enviar: `Pagamento de ${normalizedFeeTypeGlobal} no valor de ${amount} do aluno ${userProfile?.full_name || "Aluno"} foi aprovado automaticamente pelo sistema. Seller responsável: ${sellerData.name} (${sellerData.referral_code})`,
               payment_id: paymentId,
               fee_type: normalizedFeeTypeGlobal,
               amount: amount,
@@ -514,7 +517,8 @@ serve(async (req) => {
             nome_seller: sellerData.name,
             email_aluno: userProfile?.email || "",
             nome_aluno: userProfile?.full_name || "Aluno",
-            o_que_enviar: `Parabéns! O pagamento de ${normalizedFeeTypeGlobal} no valor de $${amount} do seu aluno ${userProfile?.full_name || "Aluno"} foi aprovado automaticamente pelo sistema. Você ganhará comissão sobre este pagamento!`,
+            phone_aluno: userProfile?.phone || "",
+            o_que_enviar: `Parabéns! O pagamento de ${normalizedFeeTypeGlobal} no valor de ${amount} do seu aluno ${userProfile?.full_name || "Aluno"} foi aprovado automaticamente pelo sistema. Você ganhará comissão sobre este pagamento!`,
             payment_id: paymentId,
             fee_type: normalizedFeeTypeGlobal,
             amount: amount,

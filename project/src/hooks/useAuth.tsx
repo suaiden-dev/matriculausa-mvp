@@ -30,6 +30,7 @@ export interface UserProfile {
   updated_at: string | null;
   is_application_fee_paid: boolean;
   has_paid_selection_process_fee: boolean;
+  has_paid_i20_control_fee?: boolean; // adicionada para refletir Overview
   is_admin: boolean; // legado: mantido por compatibilidade
   role?: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller';
   stripe_customer_id: string | null;
@@ -45,6 +46,10 @@ export interface UserProfile {
   // Referral codes
   affiliate_code?: string | null; // Matricula Rewards code
   seller_referral_code?: string | null; // Seller referral code
+  scholarship_package_id?: string | null; // Package ID for seller students
+
+  // Dependentes (campo adicionado no schema user_profiles)
+  dependents?: number;
 
   // ... outras colunas se existirem
 }
@@ -209,6 +214,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             }
           } else {
             profile = data || null;
+            // Ensure dependents persists from metadata if profile exists without correct value
+            const mdDependentsVal = Number(session.user.user_metadata?.dependents ?? NaN);
+            if (
+              profile &&
+              !Number.isNaN(mdDependentsVal) &&
+              (profile as any).dependents !== mdDependentsVal
+            ) {
+              try {
+                const { data: updatedProfile, error: depUpdateError } = await supabase
+                  .from('user_profiles')
+                  .update({ dependents: mdDependentsVal })
+                  .eq('user_id', session.user.id)
+                  .select()
+                  .single();
+                if (!depUpdateError && updatedProfile) {
+                  profile = updatedProfile as any;
+                }
+              } catch (_) {}
+            }
           }
         } catch (error) {
           console.log("🔍 [USEAUTH] Erro geral ao buscar perfil:", error);
@@ -232,7 +256,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             const fullName = pendingFullName || 
               session.user.user_metadata?.full_name || 
               session.user.user_metadata?.name || 
-              session.user.email?.split('@')[0] || 
               'User';
             const phone = pendingPhone || 
               session.user.user_metadata?.phone || 
@@ -278,13 +301,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             const profileData = {
               user_id: session.user.id,
               full_name: fullName,
+              email: session.user.email, // Adicionar o email do usuário
               phone: phone,
               status: 'active',
               role: finalRole,
               // Include referral codes if provided
               affiliate_code: session.user.user_metadata?.affiliate_code || null,
               seller_referral_code: session.user.user_metadata?.seller_referral_code || null,
-              scholarship_package_id: scholarshipPackageId
+              scholarship_package_id: scholarshipPackageId,
+              // Persist dependents if provided during sign up
+              dependents: typeof session.user.user_metadata?.dependents !== 'undefined'
+                ? Number(session.user.user_metadata?.dependents) || 0
+                : 0,
+              // Add desired_scholarship_range if provided
+              desired_scholarship_range: session.user.user_metadata?.desired_scholarship_range 
+                ? Number(session.user.user_metadata?.desired_scholarship_range) 
+                : null
             };
             
             console.log('🔍 [USEAUTH] profileData que será inserido:', profileData);
@@ -314,12 +346,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                     console.log('❌ [USEAUTH] Erro ao buscar perfil existente:', fetchError);
                   } else if (existingProfile) {
                     profile = existingProfile;
-                    // Atualizar telefone se estiver diferente
+                    // Atualizar telefone e dependents se estiverem diferentes
+                    const updates: any = {};
                     if (existingProfile.phone !== phone) {
+                      updates.phone = phone;
+                    }
+                    const mdDependents = Number(session.user.user_metadata?.dependents || 0);
+                    if (
+                      typeof session.user.user_metadata?.dependents !== 'undefined' &&
+                      (existingProfile as any).dependents !== mdDependents
+                    ) {
+                      updates.dependents = mdDependents;
+                    }
+                    if (Object.keys(updates).length > 0) {
                       console.log('🔄 [USEAUTH] Atualizando telefone do perfil existente:', { antigo: existingProfile.phone, novo: phone });
                       const { data: updatedProfile, error: updateError } = await supabase
                         .from('user_profiles')
-                        .update({ phone })
+                        .update(updates)
                         .eq('user_id', session.user.id)
                         .select()
                         .single();
@@ -742,6 +785,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Normaliza o e-mail para evitar duplicidade por case/espacos
     const normalizedEmail = (email || '').trim().toLowerCase();
 
+    console.log('🔍 [USEAUTH] Tentando signUp com:', {
+      email: normalizedEmail,
+      userData: signUpData
+    });
+
     const { error, data } = await supabase.auth.signUp({
       email: normalizedEmail,
       password,
@@ -752,6 +800,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     if (error) {
       console.log('❌ [USEAUTH] Erro no signUp:', error);
+      console.log('❌ [USEAUTH] Detalhes do erro:', {
+        message: error.message,
+        status: error.status,
+        name: error.name
+      });
       throw error;
     }
     

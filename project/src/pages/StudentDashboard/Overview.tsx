@@ -11,10 +11,7 @@ import {
   ArrowUpRight,
   Calendar,
   Building,
-  Eye,
   CreditCard,
-  Gift,
-  X,
   Tag
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -106,13 +103,27 @@ const Overview: React.FC<OverviewProps> = ({
   const hasApplicationFeePaid = recentApplications.some(app => app.is_application_fee_paid);
   const hasScholarshipFeePaid = recentApplications.some(app => app.is_scholarship_fee_paid);
 
-  // Valores das taxas para o ProgressBar
-  // A application fee agora é variável, então não mostramos um valor específico
+  // Dependents impact: $150 por dependente somente no Selection Process
+  const dependents = (userProfile?.dependents as number) || 0;
+  const dependentsExtra = dependents * 150;
+  const selectionExtra = dependentsExtra; // 100% no Selection Process
+  const i20Extra = 0; // 0% no I-20
+
+  // Base fee amounts
+  const selectionBase = Number(getFeeAmount('selection_process')) || 0;
+  const scholarshipBase = Number(getFeeAmount('scholarship_fee')) || 0;
+  const i20Base = Number(getFeeAmount('i20_control_fee')) || 0;
+
+  // Display amounts including dependents
+  const selectionWithDependents = selectionBase + selectionExtra;
+  const i20WithDependents = i20Base + i20Extra;
+
+  // Valores das taxas para o ProgressBar (Application fee é variável)
   const dynamicFeeValues = [
-    `$${getFeeAmount('selection_process')}`, // Selection Process Fee
+    `$${selectionWithDependents}`, // Selection Process Fee (inclui dependentes)
     'As per university', // Application Fee (variável - não mostra valor específico)
-    `$${getFeeAmount('scholarship_fee')}`, // Scholarship Fee
-    `$${getFeeAmount('i20_control_fee')}`, // I-20 Control Fee
+    `$${scholarshipBase}`, // Scholarship Fee (sem dependentes)
+    `$${i20WithDependents}`, // I-20 Control Fee (inclui dependentes)
   ];
 
   // Lógica da barra de progresso dinâmica
@@ -305,9 +316,9 @@ const Overview: React.FC<OverviewProps> = ({
                 <div className="text-left sm:text-right">
                   {activeDiscount?.has_discount ? (
                     <div className="flex flex-col sm:text-center">
-                      <div className="text-lg sm:text-xl md:text-2xl font-bold text-white line-through">${getFeeAmount('selection_process')}</div>
+                      <div className="text-lg sm:text-xl md:text-2xl font-bold text-white line-through">${selectionWithDependents}</div>
                       <div className="text-base sm:text-lg md:text-xl font-bold text-green-300">
-                        ${getFeeAmount('selection_process') - (activeDiscount.discount_amount || 0)}
+                        ${Math.max(selectionWithDependents - (activeDiscount.discount_amount || 0), 0)}
                       </div>
                       <div className="flex items-center sm:justify-center mt-1">
                         <Tag className="h-3 w-3 text-green-300 mr-1" />
@@ -317,7 +328,7 @@ const Overview: React.FC<OverviewProps> = ({
                       </div>
                     </div>
                   ) : (
-                    <div className="text-lg sm:text-xl md:text-2xl font-bold text-white">${getFeeAmount('selection_process')}</div>
+                  <div className="text-lg sm:text-xl md:text-2xl font-bold text-white">${selectionWithDependents}</div>
                   )}
                 </div>
               </div>
@@ -331,11 +342,11 @@ const Overview: React.FC<OverviewProps> = ({
               </p>
               
               {/* Botão de pagamento sempre visível */}
-              <StripeCheckout 
+          <StripeCheckout 
                 productId="selectionProcess"
                 feeType="selection_process"
                 paymentType="selection_process"
-                buttonText={t('studentDashboard.selectionProcess.startButton')}
+            buttonText={t('studentDashboard.selectionProcess.startButton')}
                 className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 sm:py-3 px-4 sm:px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 cursor-pointer border-2 border-white text-sm sm:text-base"
                 successUrl={`${window.location.origin}/student/dashboard/selection-process-fee-success?session_id={CHECKOUT_SESSION_ID}`}
                 cancelUrl={`${window.location.origin}/student/dashboard/selection-process-fee-error`}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { 
   ArrowLeftIcon,
@@ -36,6 +36,8 @@ const EmailConfigurationContent = () => {
   const [microsoftAccount, setMicrosoftAccount] = useState(null);
   const [microsoftAuthenticating, setMicrosoftAuthenticating] = useState(false);
   const [editMode, setEditMode] = useState(false);
+  const restoredFromRedirectRef = useRef(false);
+  const forcedNameRef = useRef('');
 
   const [formData, setFormData] = useState({
     name: '',
@@ -44,6 +46,7 @@ const EmailConfigurationContent = () => {
   });
 
   const [errors, setErrors] = useState({});
+  const [notification, setNotification] = useState(null); // { type: 'success'|'error'|'info', message: string }
   
   // Check Microsoft configuration
   const isMicrosoftConfigured = !!(
@@ -54,6 +57,22 @@ const EmailConfigurationContent = () => {
   useEffect(() => {
     checkAuth();
     
+    // Forçar provider via query param (ex.: ?provider=microsoft)
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const qp = params.get('provider');
+      const qn = params.get('name');
+      if (qp === 'microsoft') {
+        setProvider('microsoft');
+      } else if (qp === 'gmail') {
+        setProvider('gmail');
+      }
+      if (qn) {
+        forcedNameRef.current = qn;
+        setFormData(prev => ({ ...prev, name: qn }));
+      }
+    } catch (_) {}
+
     // Se temos configId, significa que estamos em modo de edição
     if (configId) {
       setEditMode(true);
@@ -65,12 +84,55 @@ const EmailConfigurationContent = () => {
       try {
         const response = await instance.handleRedirectPromise();
         if (response) {
+          restoredFromRedirectRef.current = true;
+          // Restaurar contexto salvo antes do redirect (provider e nome)
+          let restoredName = '';
+          try {
+            const draftStr = localStorage.getItem('emailConfigDraft');
+            if (draftStr) {
+              const draft = JSON.parse(draftStr);
+              if (draft?.provider) {
+                setProvider(draft.provider);
+              }
+              if (draft?.formName) {
+                restoredName = draft.formName;
+              }
+            }
+          } catch (_) {
+            // ignore parse errors
+          } finally {
+            localStorage.removeItem('emailConfigDraft');
+          }
+
+          // Forçar a visualização da Microsoft após autenticação
+          setProvider('microsoft');
+
+          // Se houver origem salva, navegar de volta
+          const originPath = sessionStorage.getItem('msalRedirectOrigin');
+          if (originPath && window.location.pathname !== originPath) {
+            navigate(originPath, { replace: true });
+          }
+
           setMicrosoftAccount(response.account);
           
-          // Auto-fill form data
+          // Tentar extrair formName também do estado do MSAL, se disponível
+          if (!restoredName && response.state) {
+            try {
+              const stateObj = JSON.parse(response.state);
+              if (stateObj?.formName) {
+                restoredName = stateObj.formName;
+              }
+            } catch (_) {
+              // ignore
+            }
+          }
+
+          // Auto-fill form data (usar local-part do email como sugestão)
+          const localPart = response.account.username?.split('@')[0] || response.account.name || '';
           setFormData(prev => ({
             ...prev,
-            name: prev.name || `Microsoft - ${response.account.name}`,
+            // Priorizar nome restaurado; se ausente, manter o existente; por fim, usar sugestão baseada no e-mail
+            name: restoredName || prev.name || (localPart ? `Microsoft - ${localPart}` : prev.name),
             email_address: response.account.username
           }));
           
@@ -104,8 +166,8 @@ const EmailConfigurationContent = () => {
     // Verificar se já existe uma conta Microsoft autenticada
     if (accounts.length > 0) {
       setMicrosoftAccount(accounts[0]);
-      // Auto-preencher nome se vazio
-      if (!formData.name && accounts[0].name) {
+      // Auto-preencher nome apenas se não acabamos de restaurar via redirect e se o usuário não digitou
+      if (!restoredFromRedirectRef.current && !formData.name && accounts[0].name) {
         setFormData(prev => ({
           ...prev,
           name: `Microsoft - ${accounts[0].name}`
@@ -113,6 +175,15 @@ const EmailConfigurationContent = () => {
       }
     }
   }, [accounts, instance]);
+
+  // Se provider vier via query ou carregamento da config, não permitir fallback automático para Gmail nesta sessão
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const forcedProvider = params.get('provider');
+    if (forcedProvider === 'microsoft' && provider !== 'microsoft') {
+      setProvider('microsoft');
+    }
+  }, [provider]);
 
   const handleMicrosoftAuth = async () => {
     setMicrosoftAuthenticating(true);
@@ -164,9 +235,25 @@ const EmailConfigurationContent = () => {
       } catch (silentError) {
         // Store current location to return after redirect
         sessionStorage.setItem('msalRedirectOrigin', window.location.pathname);
+        // Salvar contexto atual para restaurar após o redirect
+        try {
+          localStorage.setItem('emailConfigDraft', JSON.stringify({
+            provider: 'microsoft',
+            formName: formData.name || ''
+          }));
+        } catch (_) {
+          // ignore storage errors
+        }
         
         // Use redirect instead of popup
-        await instance.loginRedirect(loginRequest);
+        await instance.loginRedirect({
+          ...loginRequest,
+          state: JSON.stringify({
+            provider: 'microsoft',
+            origin: window.location.pathname,
+            formName: formData.name || ''
+          })
+        });
       }
       
     } catch (error) {
@@ -236,11 +323,19 @@ const EmailConfigurationContent = () => {
       
       if (config) {
         setFormData({
-          name: config.configuration_name || '',
+          name: (config.name || config.configuration_name) || '',
           email_address: config.email_address || '',
-          app_password: '' // For security, we don't pre-fill the password
+          app_password: '' // do not prefill app password for Gmail
         });
-        setProvider(config.provider || 'gmail');
+        const providerValue =
+          config.provider ||
+          config.provider_type ||
+          (config.oauth_access_token ? 'microsoft' : 'gmail');
+        setProvider(providerValue);
+        // If a name was forced via query, override after loading from DB
+        if (forcedNameRef.current) {
+          setFormData(prev => ({ ...prev, name: forcedNameRef.current }));
+        }
       }
     } catch (error) {
       setErrors({ general: 'Unexpected error loading configuration' });
@@ -301,31 +396,63 @@ const EmailConfigurationContent = () => {
     setTestResults(null);
     
     try {
-      // Teste básico de validação de formato e provedor
+      // 1) validações básicas de formato
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       const isValidEmail = emailRegex.test(formData.email_address);
-      
       if (!isValidEmail) {
-        setTestResults({
-          success: false, 
-          error: 'Invalid email format' 
-        });
+        setTestResults({ success: false, error: 'Invalid email format' });
         return;
       }
 
-      // Connectivity test simulation
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      setTestResults({
-        success: true, 
-        message: 'Configuration validated successfully!'
+      // 2) montar payload SMTP padrão Gmail
+      if (provider !== 'gmail') {
+        setTestResults({ success: false, error: 'Only Gmail accounts support SMTP verification here.' });
+        return;
+      }
+
+      const host = 'smtp.gmail.com';
+      const port = 587; // STARTTLS
+      const secure = false; // STARTTLS
+      const user = formData.email_address.trim();
+      const password = formData.app_password.trim();
+
+      if (!password) {
+        setTestResults({ success: false, error: 'App password is required for Gmail' });
+        return;
+      }
+
+      // 3) obter sessão do Supabase para autenticar na Edge Function
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setTestResults({ success: false, error: 'User not authenticated' });
+        return;
+      }
+
+      // 4) chamar a Edge Function de verificação
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const verifyResp = await fetch(`${supabaseUrl}/functions/v1/verify-smtp-email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ host, port, secure, user, password })
       });
-      
+
+      if (!verifyResp.ok) {
+        const err = await verifyResp.json().catch(() => ({}));
+        const details = (err && (err.details?.message || err.details)) || err?.error || `Status ${verifyResp.status}`;
+        const hint = 'Hint: Enable 2FA and use a Gmail App Password; port 465 with secure=true (SSL) or 587 with secure=false (STARTTLS).';
+        setTestResults({ success: false, error: `${details}. ${hint}` });
+        return;
+      }
+
+      const data = await verifyResp.json().catch(() => ({}));
+      setTestResults({ success: true, message: 'SMTP credentials verified successfully!' });
+
     } catch (error) {
-      setTestResults({
-        success: false, 
-        error: 'Validation error'
-      });
+      const msg = error?.message || 'Validation error';
+      setTestResults({ success: false, error: msg });
     } finally {
       setTesting(false);
     }
@@ -467,7 +594,10 @@ const EmailConfigurationContent = () => {
       }
 
       // Success
-      alert(editMode ? 'Configuration updated successfully!' : 'Email account configured successfully!');
+      setNotification({
+        type: 'success',
+        message: editMode ? 'Configuration updated successfully!' : 'Email account configured successfully!'
+      });
       navigate('/school/dashboard/email');
       
     } catch (error) {
@@ -483,7 +613,7 @@ const EmailConfigurationContent = () => {
         errorMessage = error.message;
       }
       
-      alert(errorMessage);
+      setNotification({ type: 'error', message: errorMessage });
     } finally {
       setLoading(false);
     }
@@ -492,6 +622,20 @@ const EmailConfigurationContent = () => {
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="space-y-4 lg:space-y-8">
+      {notification && (
+        <div className={`mx-auto max-w-4xl px-3 sm:px-6 lg:px-8`}>
+          <div className={`rounded-xl p-3 sm:p-4 border ${
+            notification.type === 'success' ? 'bg-green-50 border-green-200 text-green-800' :
+            notification.type === 'error' ? 'bg-red-50 border-red-200 text-red-800' :
+            'bg-blue-50 border-blue-200 text-blue-800'
+          }`}>
+            <div className="flex items-start justify-between">
+              <p className="text-sm sm:text-base font-medium">{notification.message}</p>
+              <button onClick={() => setNotification(null)} className="text-current opacity-70 hover:opacity-100">×</button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Header + Actions Section */}
       <div className="w-full">
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-4 lg:mb-6">
@@ -646,30 +790,7 @@ const EmailConfigurationContent = () => {
             </div>
             
             <div className="space-y-4 sm:space-y-6">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Account name
-                </label>
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  placeholder={`My ${provider === 'gmail' ? 'Gmail' : 'Microsoft'} account`}
-                  className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
-                    errors.name ? 'border-red-300 bg-red-50' : 'border-slate-200 hover:border-slate-300'
-                  }`}
-                />
-                {errors.name && (
-                  <p className="text-red-500 text-sm mt-1 flex items-center">
-                    <ExclamationTriangleIcon className="h-4 w-4 mr-1" />
-                    {errors.name}
-                  </p>
-                )}
-                <p className="text-xs text-slate-500 mt-1">
-                  Display name to identify this account in the system
-                </p>
-              </div>
+              {/* Account name field moved to after Microsoft section; will render only when applicable */}
 
               {provider === 'microsoft' ? (
                 // Microsoft Authentication Section
@@ -711,12 +832,8 @@ const EmailConfigurationContent = () => {
                         disabled={microsoftAuthenticating}
                         className="w-full flex items-center justify-center space-x-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-3 rounded-xl font-medium transition-colors shadow-sm"
                       >
-                        {microsoftAuthenticating ? (
+                        {microsoftAuthenticating && (
                           <ArrowPathIcon className="h-5 w-5 animate-spin" />
-                        ) : (
-                          <div className="w-5 h-5 bg-white rounded flex items-center justify-center">
-                            <span className="text-blue-600 font-bold text-xs">M</span>
-                          </div>
                         )}
                         <span>
                           {microsoftAuthenticating ? 'Authenticating...' : 'Connect with Microsoft'}
@@ -778,10 +895,64 @@ const EmailConfigurationContent = () => {
                       </div>
                     </div>
                   )}
+                  {/* Microsoft: Account name appears after successful authentication inside Account Information */}
+                  {microsoftAccount && (
+                    <div className="mt-6">
+                      <label className="block text-sm font-medium text-slate-700 mb-2">
+                        Account name
+                      </label>
+                      <input
+                        type="text"
+                        name="name"
+                        value={formData.name}
+                        onChange={handleChange}
+                        placeholder={`My Microsoft account`}
+                        className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
+                          errors.name ? 'border-red-300 bg-red-50' : 'border-slate-200 hover:border-slate-300'
+                        }`}
+                      />
+                      {errors.name && (
+                        <p className="text-red-500 text-sm mt-1 flex items-center">
+                          <ExclamationTriangleIcon className="h-4 w-4 mr-1" />
+                          {errors.name}
+                        </p>
+                      )}
+                      <p className="text-xs text-slate-500 mt-1">
+                        Display name to identify this account in the system
+                      </p>
+                    </div>
+                  )}
                 </div>
               ) : (
                 // Gmail Fields Section
                 <>
+                  {/* Gmail: Account name in original position, before credentials */}
+                  {provider === 'gmail' && (
+                    <div className="mb-6">
+                      <label className="block text-sm font-medium text-slate-700 mb-2">
+                        Account name
+                      </label>
+                      <input
+                        type="text"
+                        name="name"
+                        value={formData.name}
+                        onChange={handleChange}
+                        placeholder={`My Gmail account`}
+                        className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
+                          errors.name ? 'border-red-300 bg-red-50' : 'border-slate-200 hover:border-slate-300'
+                        }`}
+                      />
+                      {errors.name && (
+                        <p className="text-red-500 text-sm mt-1 flex items-center">
+                          <ExclamationTriangleIcon className="h-4 w-4 mr-1" />
+                          {errors.name}
+                        </p>
+                      )}
+                      <p className="text-xs text-slate-500 mt-1">
+                        Display name to identify this account in the system
+                      </p>
+                    </div>
+                  )}
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-2">
                       Email address
@@ -870,7 +1041,60 @@ const EmailConfigurationContent = () => {
                 </>
               )}
             </div>
+            {/* Actions inside Account Information */}
+            <div className="pt-4 mt-2">
+              <div className="flex flex-col space-y-3 sm:space-y-0 sm:flex-row sm:items-center sm:justify-between gap-4">
+                {provider === 'gmail' && (
+                  <button
+                    type="button"
+                    onClick={handleTest}
+                    disabled={testing}
+                    className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 border border-blue-600 text-blue-600 hover:bg-blue-50 rounded-xl transition-colors disabled:opacity-50 font-medium flex items-center justify-center space-x-2 text-sm sm:text-base"
+                  >
+                    {testing ? (
+                      <>
+                        <ArrowPathIcon className="h-4 w-4 animate-spin" />
+                        <span>Validating...</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircleIcon className="h-4 w-4" />
+                        <span>Test configuration</span>
+                      </>
+                    )}
+                  </button>
+                )}
+
+                <div>
+                  
+                </div>
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-3 w-full sm:w-auto">
+                  <button
+                    type="button"
+                    onClick={() => navigate('/school/dashboard/email')}
+                    className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 text-slate-600 hover:text-slate-800 hover:bg-slate-50 rounded-xl font-medium transition-colors text-sm sm:text-base"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full sm:w-auto bg-gradient-to-r from-[#D0151C] to-red-600 hover:from-[#B01218] hover:to-red-700 disabled:from-slate-300 disabled:to-slate-400 disabled:cursor-not-allowed text-white px-4 sm:px-6 py-2 sm:py-3 rounded-xl transition-all duration-300 font-bold flex items-center justify-center space-x-2 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none text-sm sm:text-base"
+                  >
+                    {loading && <ArrowPathIcon className="h-4 w-4 animate-spin" />}
+                    <span>
+                      {loading 
+                        ? (editMode ? 'Updating account...' : 'Adding account...') 
+                        : (editMode ? 'Update account' : 'Add account')
+                      }
+                    </span>
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
+
+          
 
           {/* Test Results */}
           {testResults && (
@@ -897,53 +1121,7 @@ const EmailConfigurationContent = () => {
             </div>
           )}
 
-          {/* Actions */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6">
-            <div className="flex flex-col space-y-3 sm:space-y-0 sm:flex-row sm:items-center sm:justify-between gap-4">
-              <button
-                type="button"
-                onClick={handleTest}
-                disabled={testing}
-                className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 border border-blue-600 text-blue-600 hover:bg-blue-50 rounded-xl transition-colors disabled:opacity-50 font-medium flex items-center justify-center space-x-2 text-sm sm:text-base"
-              >
-                {testing ? (
-                  <>
-                    <ArrowPathIcon className="h-4 w-4 animate-spin" />
-                    <span>Validating...</span>
-                  </>
-                ) : (
-                  <>
-                    <CheckCircleIcon className="h-4 w-4" />
-                    <span>Test configuration</span>
-                  </>
-                )}
-              </button>
-
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-3 w-full sm:w-auto">
-                <button
-                  type="button"
-                  onClick={() => navigate('/school/dashboard/email')}
-                  className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 text-slate-600 hover:text-slate-800 hover:bg-slate-50 rounded-xl font-medium transition-colors text-sm sm:text-base"
-                >
-                  Cancel
-                </button>
-                
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full sm:w-auto bg-gradient-to-r from-[#D0151C] to-red-600 hover:from-[#B01218] hover:to-red-700 disabled:from-slate-300 disabled:to-slate-400 disabled:cursor-not-allowed text-white px-4 sm:px-6 py-2 sm:py-3 rounded-xl transition-all duration-300 font-bold flex items-center justify-center space-x-2 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none text-sm sm:text-base"
-                >
-                  {loading && <ArrowPathIcon className="h-4 w-4 animate-spin" />}
-                  <span>
-                    {loading 
-                      ? (editMode ? 'Updating account...' : 'Adding account...') 
-                      : (editMode ? 'Update account' : 'Add account')
-                    }
-                  </span>
-                </button>
-              </div>
-            </div>
-          </div>
+          
         </form>
       </div>
 

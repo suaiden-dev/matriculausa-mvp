@@ -62,6 +62,12 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
     loading: packageFilterLoading 
   } = usePackageScholarshipFilter();
   
+  // Obter dados do usuário primeiro
+  const { userProfile, user, refetchUserProfile } = useAuth();
+  
+  // Obter faixa de bolsa desejada do perfil do usuário
+  const desiredScholarshipRange = userProfile?.desired_scholarship_range || 3800;
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLevel, setSelectedLevel] = useState('all');
   const [selectedField, setSelectedField] = useState('all');
@@ -69,7 +75,6 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
   const [selectedWorkPermission, setSelectedWorkPermission] = useState('all');
   const [sortBy] = useState('deadline');
   const [filtersExpanded, setFiltersExpanded] = useState(false);
-  const { userProfile, user, refetchUserProfile } = useAuth();
   const navigate = useNavigate();
   const { cart, addToCart, removeFromCart } = useCartStore();
   const [minValue, setMinValue] = useState('');
@@ -475,16 +480,15 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
       const deadlineDaysNum = appliedDeadlineDays && appliedDeadlineDays !== '' && !isNaN(Number(appliedDeadlineDays)) ? Number(appliedDeadlineDays) : null;
       const matchesDeadline = deadlineDaysNum === null || daysLeft >= deadlineDaysNum;
       
-      // Filtro automático baseado no pacote do usuário
-      // Se usuário tem pacote, só mostrar bolsas >= valor mínimo do pacote
-      const matchesPackageFilter = minScholarshipValue === null || 
-        (scholarshipValue >= minScholarshipValue);
+      // Filtro automático baseado na faixa de bolsa desejada do usuário
+      // Mostrar apenas bolsas com valor >= valor selecionado pelo seller
+      const matchesDesiredRange = scholarshipValue >= desiredScholarshipRange;
       
   // Exclude scholarships from universities that are not approved (if we have an approved set)
   const universityId = scholarship.universities?.id ?? scholarship.university_id ?? null;
   const fromApprovedUniversity = approvedUniversityIds.size === 0 ? true : (universityId !== null && approvedUniversityIds.has(universityId));
 
-  const passes = matchesSearch && matchesLevel && matchesField && matchesDeliveryMode && matchesWorkPermission && matchesMin && matchesMax && matchesDeadline && matchesPackageFilter && fromApprovedUniversity;
+  const passes = matchesSearch && matchesLevel && matchesField && matchesDeliveryMode && matchesWorkPermission && matchesMin && matchesMax && matchesDeadline && matchesDesiredRange && fromApprovedUniversity;
       
       // Log detalhado para a primeira bolsa que não passa nos filtros (debug)
       if (!passes && scholarships.indexOf(scholarship) === 0) {
@@ -521,7 +525,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
     });
     
     return sorted;
-  }, [scholarships, appliedSearch, appliedLevel, appliedField, appliedDeliveryMode, appliedWorkPermission, appliedMinValue, appliedMaxValue, appliedDeadlineDays, sortBy, minScholarshipValue]);
+  }, [scholarships, appliedSearch, appliedLevel, appliedField, appliedDeliveryMode, appliedWorkPermission, appliedMinValue, appliedMaxValue, appliedDeadlineDays, sortBy, desiredScholarshipRange]);
 
   // Memoização dos IDs aplicados e no carrinho
   const appliedScholarshipIds = useMemo(() => new Set(applications.map(app => app.scholarship_id)), [applications]);
@@ -563,16 +567,16 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
       const deadlineDaysNum = appliedDeadlineDays && appliedDeadlineDays !== '' && !isNaN(Number(appliedDeadlineDays)) ? Number(appliedDeadlineDays) : null;
   const matchesDeadline = deadlineDaysNum === null || daysLeft >= deadlineDaysNum;
 
-      // Filtro automático baseado no pacote do usuário (mesmo filtro das bolsas normais)
-      const matchesPackageFilter = minScholarshipValue === null || 
-        (scholarshipValue >= minScholarshipValue);
+      // Filtro automático baseado na faixa de bolsa desejada do usuário
+      // Mostrar apenas bolsas com valor >= valor selecionado pelo seller
+      const matchesDesiredRange = scholarshipValue >= desiredScholarshipRange;
 
   const universityId = scholarship.universities?.id ?? scholarship.university_id ?? null;
   const fromApprovedUniversity = approvedUniversityIds.size === 0 ? true : (universityId !== null && approvedUniversityIds.has(universityId));
 
-  return matchesSearch && matchesLevel && matchesField && matchesDeliveryMode && matchesWorkPermission && matchesMin && matchesMax && matchesDeadline && matchesPackageFilter && fromApprovedUniversity;
+  return matchesSearch && matchesLevel && matchesField && matchesDeliveryMode && matchesWorkPermission && matchesMin && matchesMax && matchesDeadline && matchesDesiredRange && fromApprovedUniversity;
     });
-  }, [featuredScholarships, appliedSearch, appliedLevel, appliedField, appliedDeliveryMode, appliedWorkPermission, appliedMinValue, appliedMaxValue, appliedDeadlineDays, showOnlyFavorites, isFavorite, minScholarshipValue]);
+  }, [featuredScholarships, appliedSearch, appliedLevel, appliedField, appliedDeliveryMode, appliedWorkPermission, appliedMinValue, appliedMaxValue, appliedDeadlineDays, showOnlyFavorites, isFavorite, desiredScholarshipRange]);
 
 
 

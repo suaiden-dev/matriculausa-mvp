@@ -225,6 +225,7 @@ const FinancialAnalytics: React.FC = () => {
             is_scholarship_fee_paid,
             has_paid_i20_control_fee,
             scholarship_package_id,
+            dependents,
             created_at
           ),
           scholarships (
@@ -256,6 +257,7 @@ const FinancialAnalytics: React.FC = () => {
             is_scholarship_fee_paid,
             has_paid_i20_control_fee,
             scholarship_package_id,
+            dependents,
             created_at
           ),
           scholarships (
@@ -423,17 +425,27 @@ const FinancialAnalytics: React.FC = () => {
 
       // Obter valores dinâmicos do pacote ou usar valores padrão (igual ao PaymentManagement)
       const packageData = packageDataMap[student?.scholarship_package_id];
+      const dependents = Number(student?.dependents) || 0;
+      const dependentCost = dependents * 75; // $75 por dependente para cada taxa (em centavos)
+      
       const selectionProcessFee = packageData?.selection_process_fee ? 
-        Math.round(packageData.selection_process_fee * 100) : Math.round(feeConfig.selection_process_fee * 100);
+        Math.round((packageData.selection_process_fee + dependentCost) * 100) : Math.round((feeConfig.selection_process_fee + dependentCost) * 100);
       const i20ControlFee = packageData?.i20_control_fee ? 
-        Math.round(packageData.i20_control_fee * 100) : Math.round(feeConfig.i20_control_fee * 100);
+        Math.round((packageData.i20_control_fee + dependentCost) * 100) : Math.round((feeConfig.i20_control_fee + dependentCost) * 100);
       const scholarshipFee = packageData?.scholarship_fee ? 
-        Math.round(packageData.scholarship_fee * 100) : Math.round(feeConfig.scholarship_fee_default * 100);
+        Math.round(packageData.scholarship_fee * 100) : Math.round(feeConfig.scholarship_fee_default * 100); // Scholarship fee não tem dependentes
       // Application Fee dinâmico baseado na bolsa específica
       let applicationFee: number;
       if (app.scholarships?.application_fee_amount) {
-        // O valor no banco está em centavos, usar diretamente
-        applicationFee = app.scholarships.application_fee_amount;
+        const rawValue = parseFloat(app.scholarships.application_fee_amount);
+        // Detectar se o valor já está em centavos (valores muito altos) ou em dólares
+        if (rawValue > 1000) {
+          // Valor já está em centavos, usar diretamente
+          applicationFee = Math.round(rawValue);
+        } else {
+          // Valor está em dólares, converter para centavos
+          applicationFee = Math.round(rawValue * 100);
+        }
       } else {
         // Fallback para valor padrão do sistema (converter dólares para centavos)
         applicationFee = Math.round(feeConfig.application_fee_default * 100);
@@ -455,7 +467,7 @@ const FinancialAnalytics: React.FC = () => {
       }
 
       // Application Fee (valor fixo em centavos)
-      if (student.is_application_fee_paid && !zelleApprovedSet.has(zellePaidKey(student.id, 'application'))) {
+      if (app.is_application_fee_paid && !zelleApprovedSet.has(zellePaidKey(student.id, 'application'))) {
         const revenue = applicationFee;
         paidPayments++;
         paymentsByMethod.stripe.count++;
@@ -468,7 +480,7 @@ const FinancialAnalytics: React.FC = () => {
       }
 
       // Scholarship Fee (valor dinâmico em centavos)
-      if (student.is_scholarship_fee_paid && !zelleApprovedSet.has(zellePaidKey(student.id, 'scholarship'))) {
+      if (app.is_scholarship_fee_paid && !zelleApprovedSet.has(zellePaidKey(student.id, 'scholarship'))) {
         const revenue = scholarshipFee;
         paidPayments++;
         paymentsByMethod.stripe.count++;
@@ -496,8 +508,8 @@ const FinancialAnalytics: React.FC = () => {
       // Considera conversão por universidade: se houve qualquer pagamento neste app
       if (
         student.has_paid_selection_process_fee ||
-        student.is_application_fee_paid ||
-        student.is_scholarship_fee_paid
+        app.is_application_fee_paid ||
+        app.is_scholarship_fee_paid
       ) {
         universityRevenue[universityKey].paidStudents++;
       }
@@ -618,17 +630,27 @@ const FinancialAnalytics: React.FC = () => {
       const packageData = packageDataMap[student?.scholarship_package_id];
 
       // Obter valores dinâmicos do pacote ou usar valores padrão (igual ao PaymentManagement)
+      const dependents = Number(student?.dependents) || 0;
+      const dependentCost = dependents * 75; // $75 por dependente para cada taxa (em centavos)
+      
       const selectionProcessFee = packageData?.selection_process_fee ? 
-        Math.round(packageData.selection_process_fee * 100) : Math.round(feeConfig.selection_process_fee * 100);
+        Math.round((packageData.selection_process_fee + dependentCost) * 100) : Math.round((feeConfig.selection_process_fee + dependentCost) * 100);
       const i20ControlFee = packageData?.i20_control_fee ? 
-        Math.round(packageData.i20_control_fee * 100) : Math.round(feeConfig.i20_control_fee * 100);
+        Math.round((packageData.i20_control_fee + dependentCost) * 100) : Math.round((feeConfig.i20_control_fee + dependentCost) * 100);
       const scholarshipFee = packageData?.scholarship_fee ? 
-        Math.round(packageData.scholarship_fee * 100) : Math.round(feeConfig.scholarship_fee_default * 100);
+        Math.round(packageData.scholarship_fee * 100) : Math.round(feeConfig.scholarship_fee_default * 100); // Scholarship fee não tem dependentes
       // Application Fee dinâmico baseado na bolsa específica
       let applicationFee: number;
       if (app.scholarships?.application_fee_amount) {
-        // O valor no banco está em centavos, usar diretamente
-        applicationFee = app.scholarships.application_fee_amount;
+        const rawValue = parseFloat(app.scholarships.application_fee_amount);
+        // Detectar se o valor já está em centavos (valores muito altos) ou em dólares
+        if (rawValue > 1000) {
+          // Valor já está em centavos, usar diretamente
+          applicationFee = Math.round(rawValue);
+        } else {
+          // Valor está em dólares, converter para centavos
+          applicationFee = Math.round(rawValue * 100);
+        }
       } else {
         // Fallback para valor padrão do sistema (converter dólares para centavos)
         applicationFee = Math.round(feeConfig.application_fee_default * 100);
@@ -640,12 +662,12 @@ const FinancialAnalytics: React.FC = () => {
         dayBuckets[key].payments += 1;
       }
       // Application Fee (valor fixo em centavos)
-      if (app.user_profiles?.is_application_fee_paid) {
+      if (app.is_application_fee_paid) {
         dayBuckets[key].revenue += applicationFee;
         dayBuckets[key].payments += 1;
       }
       // Scholarship Fee (valor dinâmico em centavos)
-      if (app.user_profiles?.is_scholarship_fee_paid) {
+      if (app.is_scholarship_fee_paid) {
         dayBuckets[key].revenue += scholarshipFee;
         dayBuckets[key].payments += 1;
       }
@@ -723,8 +745,8 @@ const FinancialAnalytics: React.FC = () => {
       const applicationFee = Number(app.scholarships?.application_fee_amount ?? app.application_fee_amount ?? 350);
       const scholarshipFee = Number(app.scholarships?.scholarship_fee_amount ?? app.scholarship_fee_amount ?? 400);
       if (app.user_profiles?.has_paid_selection_process_fee) previousPeriodRevenue += 999, previousPaidPayments += 1;
-      if (app.user_profiles?.is_application_fee_paid) previousPeriodRevenue += applicationFee, previousPaidPayments += 1;
-      if (app.user_profiles?.is_scholarship_fee_paid) previousPeriodRevenue += scholarshipFee, previousPaidPayments += 1;
+      if (app.is_application_fee_paid) previousPeriodRevenue += applicationFee, previousPaidPayments += 1;
+      if (app.is_scholarship_fee_paid) previousPeriodRevenue += scholarshipFee, previousPaidPayments += 1;
     });
     zellePaymentsPrev.forEach((zp: any) => {
       const s = (zp.status || zp.zelle_status || '').toString();

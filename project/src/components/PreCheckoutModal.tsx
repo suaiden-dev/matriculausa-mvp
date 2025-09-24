@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { useTermsAcceptance } from '../hooks/useTermsAcceptance';
+import { useFeeConfig } from '../hooks/useFeeConfig';
 
 interface Term {
   id: string;
@@ -21,7 +22,7 @@ interface Term {
 interface PreCheckoutModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onProceedToCheckout: (discountCode?: string) => void;
+  onProceedToCheckout: (finalAmount: number, discountCode?: string) => void;
   feeType: 'selection_process' | 'application_fee' | 'enrollment_fee' | 'scholarship_fee';
   productName: string;
   productPrice: number;
@@ -41,6 +42,7 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
   
   const { t } = useTranslation();
   const { user, userProfile } = useAuth();
+  const { getFeeAmount } = useFeeConfig(user?.id);
   const { recordTermAcceptance } = useTermsAcceptance();
   const [discountCode, setDiscountCode] = useState('');
   const [isValidating, setIsValidating] = useState(false);
@@ -52,6 +54,21 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
   } | null>(null);
   const [hasUsedReferralCode, setHasUsedReferralCode] = useState(false);
   const [codeApplied, setCodeApplied] = useState(false);
+  // Preço calculado conforme feeType e dependentes (Selection Process inclui dependentes)
+  const computedBasePrice = (() => {
+    const dependents = Number(userProfile?.dependents) || 0;
+    switch (feeType) {
+      case 'selection_process':
+        return Number(getFeeAmount('selection_process')) + dependents * 150;
+      case 'application_fee':
+        return Number(getFeeAmount('application_fee'));
+      case 'scholarship_fee':
+        return Number(getFeeAmount('scholarship_fee'));
+      case 'enrollment_fee':
+      default:
+        return productPrice;
+    }
+  })();
   
   // Terms acceptance states
   const [termsAccepted, setTermsAccepted] = useState(false);
@@ -530,7 +547,8 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
     // ✅ CORREÇÃO: Para usuários com seller_referral_code, não precisa de código de desconto
     if (hasSellerReferralCode) {
       console.log('🔍 [PreCheckoutModal] ✅ Usuário com seller_referral_code - prosseguindo sem validação de código');
-      onProceedToCheckout();
+      const finalAmount = computedBasePrice; // calculado localmente
+      onProceedToCheckout(finalAmount);
       onClose();
       return;
     }
@@ -538,7 +556,9 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
     // ✅ Para usuários sem seller_referral_code: só permite prosseguir se tiver código válido aplicado
     if (validationResult?.isValid && discountCode.trim() && codeApplied) {
       console.log('🔍 [PreCheckoutModal] ✅ Aplicando código e continuando para checkout');
-      onProceedToCheckout(discountCode.trim().toUpperCase());
+      const discount = validationResult?.discountAmount || 0;
+      const finalAmount = Math.max(productPrice - discount, 0);
+      onProceedToCheckout(finalAmount, discountCode.trim().toUpperCase());
       onClose();
     } else {
       console.log('🔍 [PreCheckoutModal] ❌ Código não válido ou não aplicado - não pode prosseguir');
@@ -554,7 +574,8 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
     }
 
     console.log('🔍 [PreCheckoutModal] handleSkip chamado - prosseguindo sem código');
-    onProceedToCheckout();
+    const finalAmount = computedBasePrice; // calculado localmente
+    onProceedToCheckout(finalAmount);
     onClose();
   };
 

@@ -102,9 +102,9 @@ const AffiliateAdminDashboard: React.FC = () => {
         throw new Error(`Failed to load analytics data: ${analyticsError.message}`);
       }
 
-      // Buscar dados detalhados de vendedores usando a função corrigida
+      // Buscar dados detalhados de vendedores usando a função com dependentes
       const { data: sellersData, error: sellersError } = await supabase
-        .rpc('get_admin_sellers_analytics_fixed', { admin_user_id: userId });
+        .rpc('get_admin_sellers_analytics_with_dependents', { admin_user_id: userId });
 
       if (sellersError) {
         console.error('❌ Error loading sellers data:', sellersError);
