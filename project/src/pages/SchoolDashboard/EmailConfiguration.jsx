@@ -14,6 +14,8 @@ import { supabase } from '../../lib/supabase';
 import MsalProviderWrapper from '../../providers/MsalProvider';
 import { useMsal } from '@azure/msal-react';
 import { loginRequest } from '../../lib/msalConfig';
+import { useCustomAgentTypes } from '../../hooks/useCustomAgentTypes';
+import AIAgentKnowledgeUpload from '../../components/AIAgentKnowledgeUpload';
 
 const EmailConfiguration = () => {
   return (
@@ -39,6 +41,16 @@ const EmailConfigurationContent = () => {
   const restoredFromRedirectRef = useRef(false);
   const forcedNameRef = useRef('');
 
+  // Personality options (mirror WhatsAppConnection)
+  const personalityOptions = [
+    { value: 'Friendly', label: 'Friendly' },
+    { value: 'Professional', label: 'Professional' },
+    { value: 'Motivational', label: 'Motivational' },
+    { value: 'Polite', label: 'Polite' },
+    { value: 'Academic', label: 'Academic' },
+    { value: 'Supportive', label: 'Supportive' }
+  ];
+
   const [formData, setFormData] = useState({
     name: '',
     email_address: '',
@@ -47,6 +59,21 @@ const EmailConfigurationContent = () => {
 
   const [errors, setErrors] = useState({});
   const [notification, setNotification] = useState(null); // { type: 'success'|'error'|'info', message: string }
+  
+  // AI Agent configuration (optional)
+  const [aiEnabled, setAiEnabled] = useState(false);
+  const [aiAgentId, setAiAgentId] = useState(null);
+  const [aiForm, setAiForm] = useState({
+    ai_name: '',
+    agent_type: '',
+    personality: '',
+    custom_prompt: ''
+  });
+  const [pendingKnowledgeFiles, setPendingKnowledgeFiles] = useState([]);
+  const knowledgeUploadRef = useRef(null);
+
+  // Custom Agent Type support (mirror WhatsAppConnection)
+  const { getAllAgentTypes, addCustomAgentType, isAgentTypeExists } = useCustomAgentTypes();
   
   // Check Microsoft configuration
   const isMicrosoftConfigured = !!(
@@ -336,6 +363,23 @@ const EmailConfigurationContent = () => {
         if (forcedNameRef.current) {
           setFormData(prev => ({ ...prev, name: forcedNameRef.current }));
         }
+
+        // Load AI agent (if any) linked to this email configuration
+        const { data: existingAgent, error: agentErr } = await supabase
+          .from('ai_email_agents')
+          .select('*')
+          .eq('email_configuration_id', configId)
+          .single();
+        if (!agentErr && existingAgent) {
+          setAiEnabled(true);
+          setAiAgentId(existingAgent.id);
+          setAiForm({
+            ai_name: existingAgent.ai_name || '',
+            agent_type: existingAgent.agent_type || '',
+            personality: existingAgent.personality || '',
+            custom_prompt: existingAgent.custom_prompt || ''
+          });
+        }
       }
     } catch (error) {
       setErrors({ general: 'Unexpected error loading configuration' });
@@ -373,15 +417,28 @@ const EmailConfigurationContent = () => {
       }
 
       // Validate if email is from Gmail
-      if (formData.email_address) {
-        const domain = formData.email_address.split('@')[1]?.toLowerCase();
-        if (!['gmail.com', 'googlemail.com'].includes(domain)) {
-          newErrors.email_address = 'Email must be from Gmail';
-        }
-      }
+      // if (formData.email_address) {
+      //   const domain = formData.email_address.split('@')[1]?.toLowerCase();
+      //   if (!['gmail.com', 'googlemail.com'].includes(domain)) {
+      //     newErrors.email_address = 'Email must be from Gmail';
+      //   }
+      // }
     } else if (provider === 'microsoft') {
       if (!microsoftAccount) {
         newErrors.microsoft = 'Microsoft authentication required';
+      }
+    }
+
+    // AI agent minimal validation when enabled
+    if (aiEnabled) {
+      if (!aiForm.ai_name.trim()) {
+        newErrors.ai_name = 'Agent name is required';
+      }
+      if (!aiForm.agent_type.trim()) {
+        newErrors.agent_type = 'Agent type is required';
+      }
+      if (!aiForm.personality.trim()) {
+        newErrors.personality = 'Personality is required';
       }
     }
     
@@ -562,6 +619,58 @@ const EmailConfigurationContent = () => {
 
       if (result.error) {
         throw result.error;
+      }
+
+      // Handle AI Agent upsert/delete if needed
+      const savedEmailConfigId = editMode && configId ? configId : result.data?.id;
+      if (savedEmailConfigId) {
+        if (aiEnabled) {
+          // Upsert agent
+          const agentPayload = {
+            email_configuration_id: savedEmailConfigId,
+            user_id: user.id,
+            ai_name: aiForm.ai_name.trim(),
+            agent_type: aiForm.agent_type?.trim() || null,
+            personality: aiForm.personality?.trim() || null,
+            custom_prompt: aiForm.custom_prompt?.trim() || null,
+            is_active: true
+          };
+          let agentResult;
+          if (aiAgentId) {
+            agentResult = await supabase
+              .from('ai_email_agents')
+              .update(agentPayload)
+              .eq('id', aiAgentId)
+              .eq('user_id', user.id)
+              .select()
+              .single();
+          } else {
+            agentResult = await supabase
+              .from('ai_email_agents')
+              .insert([agentPayload])
+              .select()
+              .single();
+          }
+          if (agentResult.error) throw agentResult.error;
+          setAiAgentId(agentResult.data.id);
+
+          // Upload pending knowledge files if any
+          if (knowledgeUploadRef.current && pendingKnowledgeFiles.length > 0) {
+            try {
+              await knowledgeUploadRef.current.uploadPendingFiles(agentResult.data.id);
+            } catch (_) {}
+          }
+        } else if (!aiEnabled && aiAgentId) {
+          // If disabled and had one, delete it
+          const del = await supabase
+            .from('ai_email_agents')
+            .delete()
+            .eq('id', aiAgentId)
+            .eq('user_id', user.id);
+          if (del.error) throw del.error;
+          setAiAgentId(null);
+          setPendingKnowledgeFiles([]);
+        }
       }
 
       // Success
@@ -1012,8 +1121,162 @@ const EmailConfigurationContent = () => {
                 </>
               )}
             </div>
+            {/* AI Agent Optional Configuration - moved before actions */}
+            <div className="mt-6">
+              <div className="border-b border-slate-200 pb-4 mb-4 sm:mb-6 flex items-start justify-between gap-4">
+                <div>
+                  <h2 className="text-lg font-medium text-slate-900">AI Agent (optional)</h2>
+                  <p className="text-sm text-slate-600 mt-1">Create an AI agent linked to this email account</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="text-sm text-slate-700">Enable</label>
+                  <input
+                    type="checkbox"
+                    checked={aiEnabled}
+                    onChange={(e) => setAiEnabled(e.target.checked)}
+                    className="h-5 w-5"
+                  />
+                </div>
+              </div>
+
+              {aiEnabled && (
+                <div className="space-y-4 sm:space-y-6">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Agent Name</label>
+                    <input
+                      type="text"
+                      value={aiForm.ai_name}
+                      onChange={(e) => setAiForm(prev => ({ ...prev, ai_name: e.target.value }))}
+                      placeholder="e.g. Maria Assistant"
+                      className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
+                        errors.ai_name ? 'border-red-300 bg-red-50' : 'border-slate-200 hover:border-slate-300'
+                      }`}
+                    />
+                    {errors.ai_name && (
+                      <p className="text-red-500 text-sm mt-1 flex items-center">
+                        <ExclamationTriangleIcon className="h-4 w-4 mr-1" />
+                        {errors.ai_name}
+                      </p>
+                    )}
+                  </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Agent Type</label>
+                  <select
+                    value={aiForm.agent_type}
+                    onChange={(e) => setAiForm(prev => ({ ...prev, agent_type: e.target.value }))}
+                    className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
+                      errors.agent_type ? 'border-red-300 bg-red-50' : 'border-slate-200 hover:border-slate-300'
+                    }`}
+                  >
+                    <option value="">Select agent type</option>
+                    {getAllAgentTypes().map((option) => (
+                      <option key={option} value={option}>{option}</option>
+                    ))}
+                    <option value="custom">Custom...</option>
+                  </select>
+                  {aiForm.agent_type === 'custom' && (
+                    <div className="mt-2">
+                      <input
+                        type="text"
+                        placeholder="Enter custom agent type..."
+                        className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors border-slate-200 hover:border-slate-300"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            const customType = e.currentTarget.value.trim();
+                            if (customType && !isAgentTypeExists(customType)) {
+                              addCustomAgentType(customType);
+                              setAiForm(prev => ({ ...prev, agent_type: customType }));
+                              e.currentTarget.value = '';
+                            }
+                          }
+                        }}
+                        onBlur={(e) => {
+                          const customType = e.target.value.trim();
+                          if (customType && !isAgentTypeExists(customType)) {
+                            addCustomAgentType(customType);
+                            setAiForm(prev => ({ ...prev, agent_type: customType }));
+                            e.target.value = '';
+                          }
+                        }}
+                      />
+                    </div>
+                  )}
+                  {errors.agent_type && (
+                    <p className="text-red-500 text-sm mt-1 flex items-center">
+                      <ExclamationTriangleIcon className="h-4 w-4 mr-1" />
+                      {errors.agent_type}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Personality</label>
+                  <select
+                    value={aiForm.personality}
+                    onChange={(e) => setAiForm(prev => ({ ...prev, personality: e.target.value }))}
+                    className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
+                      errors.personality ? 'border-red-300 bg-red-50' : 'border-slate-200 hover:border-slate-300'
+                    }`}
+                  >
+                    <option value="">Select personality</option>
+                    {personalityOptions.map(opt => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                  {errors.personality && (
+                    <p className="text-red-500 text-sm mt-1 flex items-center">
+                      <ExclamationTriangleIcon className="h-4 w-4 mr-1" />
+                      {errors.personality}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-sm font-medium text-slate-700">Custom Instructions</label>
+                      <span className="text-xs text-slate-500">Optional</span>
+                    </div>
+                    <textarea
+                      rows={4}
+                      value={aiForm.custom_prompt}
+                      onChange={(e) => setAiForm(prev => ({ ...prev, custom_prompt: e.target.value }))}
+                      placeholder="e.g. Always respond politely, prioritize enrollment questions, escalate complex issues."
+                      className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors border-slate-200 hover:border-slate-300 resize-none"
+                    />
+                    <p className="text-xs text-slate-500 mt-1">These instructions will guide your agent’s behavior.</p>
+                  </div>
+
+                  {/* Knowledge Base Documents (Optional) */}
+                  <div className="bg-white p-4 sm:p-4 rounded-lg border border-slate-200">
+                    <div className="flex items-center gap-2 mb-3">
+                      <svg className="w-4 h-4 text-blue-600" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 19.5V6.6c0-.84 0-1.26.164-1.58.145-.285.376-.516.661-.661C5.136 4.2 5.556 4.2 6.4 4.2h9.2c.84 0 1.26 0 1.58.164.285.145.516.376.661.661.164.32.164.74.164 1.58V18M4 19.5c0-.84.34-1.26.76-1.58.35-.26.82-.42 1.34-.42h10.8c.52 0 .99.16 1.34.42.42.32.76.74.76 1.58M4 19.5c0 .84.34 1.26.76 1.58.35.26.82.42 1.34.42h10.8c.52 0 .99-.16 1.34-.42.42-.32.76-.74.76-1.58" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                      <label className="text-sm font-medium text-slate-700">
+                        Knowledge Base Documents (Optional)
+                      </label>
+                    </div>
+                    <AIAgentKnowledgeUpload
+                      ref={knowledgeUploadRef}
+                      aiConfigurationId={aiAgentId || ''}
+                      onDocumentsChange={() => {}}
+                      onPendingFilesChange={(files) => setPendingKnowledgeFiles(files)}
+                      existingDocuments={[]}
+                      isCreating={!aiAgentId}
+                      foreignTable="ai_email_agent_knowledge_documents"
+                      foreignKey="ai_email_agent_id"
+                    />
+                    <p className="text-xs text-slate-500 mt-2">
+                      Upload documents that will be used as knowledge base for your AI agent.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Actions inside Account Information */}
-            <div className="pt-4 mt-2">
+            <div className="pt-4 mt-4">
               <div className="flex flex-col space-y-3 sm:space-y-0 sm:flex-row sm:items-center sm:justify-between gap-4">
                 {provider === 'gmail' && (
                   <button
