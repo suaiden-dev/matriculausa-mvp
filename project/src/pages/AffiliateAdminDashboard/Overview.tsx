@@ -109,9 +109,8 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellers = [], onRefresh }) =
             id,
             has_paid_selection_process_fee, 
             has_paid_i20_control_fee, 
-            dependents, 
-            scholarship_package_id,
-            scholarship_applications!inner(is_scholarship_fee_paid)
+            dependents,
+            scholarship_applications(is_scholarship_fee_paid)
           `)
           .in('seller_referral_code', referralCodes);
         if (profilesErr || !profiles) {
@@ -119,36 +118,24 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellers = [], onRefresh }) =
           return;
         }
 
-        // Buscar todos os packages necessários
-        const packageIds = Array.from(new Set((profiles || []).map(p => p.scholarship_package_id).filter(Boolean)));
-        let packagesMap: Record<string, any> = {};
-        if (packageIds.length > 0) {
-          const { data: packages, error: pkgErr } = await supabase
-            .from('scholarship_packages')
-            .select('id, selection_process_fee, i20_control_fee, scholarship_fee')
-            .in('id', packageIds as string[]);
-          if (!pkgErr && Array.isArray(packages)) {
-            packagesMap = (packages as any[]).reduce((acc, pkg) => {
-              acc[pkg.id] = pkg;
-              return acc;
-            }, {} as Record<string, any>);
-          }
-        }
+        // Usando valores fixos: Selection Process (400 + 150/dependente), Scholarship (900), I-20 (900)
 
-        // Função auxiliar para obter valores base quando não há pacote
-        const getDefaultFees = () => ({ selection_process_fee: 0, i20_control_fee: 0, scholarship_fee: 0 });
-
-        // Calcular total ajustado considerando dependentes
+        // Calcular total ajustado considerando dependentes com valores fixos
         const total = profiles.reduce((sum: number, p: any) => {
           const deps = Number(p?.dependents || 0);
-          const pkg = p?.scholarship_package_id ? packagesMap[p.scholarship_package_id] : null;
-          const base = pkg || getDefaultFees();
-          // Selection Process: base + (dependents × 75)
-          const selPaid = p?.has_paid_selection_process_fee ? (Number(base.selection_process_fee || 0) + (deps * 75)) : 0;
-          // Scholarship Fee: base (sem dependentes)
-          const schPaid = p?.scholarship_applications?.[0]?.is_scholarship_fee_paid ? Number(base.scholarship_fee || 0) : 0;
-          // I-20 Control: base + (dependents × 75)
-          const i20Paid = p?.has_paid_i20_control_fee ? (Number(base.i20_control_fee || 0) + (deps * 75)) : 0;
+          
+          // Selection Process: 400 + (dependents × 150) - valores fixos
+          const selPaid = p?.has_paid_selection_process_fee ? (400 + (deps * 150)) : 0;
+          
+          // Scholarship Fee: 900 (sem dependentes) - valores fixos
+          const hasAnyScholarshipPaid = Array.isArray(p?.scholarship_applications)
+            ? p.scholarship_applications.some((a: any) => !!a?.is_scholarship_fee_paid)
+            : false;
+          const schPaid = hasAnyScholarshipPaid ? 900 : 0;
+          
+          // I-20 Control: 900 (sem dependentes) - valores fixos
+          const i20Paid = p?.has_paid_i20_control_fee ? 900 : 0;
+          
           return sum + selPaid + schPaid + i20Paid;
         }, 0);
 
@@ -266,7 +253,11 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellers = [], onRefresh }) =
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-500 mb-1">Total Revenue</p>
-                <p className="text-3xl font-bold text-slate-900">{formatCurrency((clientAdjustedRevenue ?? derivedTotalRevenue) as number)}</p>
+                <p className="text-3xl font-bold text-slate-900">{formatCurrency(Math.max(
+                  typeof clientAdjustedRevenue === 'number' ? clientAdjustedRevenue : -Infinity,
+                  typeof derivedTotalRevenue === 'number' ? derivedTotalRevenue : -Infinity,
+                  0
+                ))}</p>
                 <div className="flex items-center mt-2">
                   <TrendingUp className="h-4 w-4 text-emerald-500 mr-1" />
                   <span className="text-sm font-medium text-emerald-600">

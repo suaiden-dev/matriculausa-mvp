@@ -396,31 +396,63 @@ const EmailConfigurationContent = () => {
     setTestResults(null);
     
     try {
-      // Teste básico de validação de formato e provedor
+      // 1) validações básicas de formato
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       const isValidEmail = emailRegex.test(formData.email_address);
-      
       if (!isValidEmail) {
-        setTestResults({
-          success: false, 
-          error: 'Invalid email format' 
-        });
+        setTestResults({ success: false, error: 'Invalid email format' });
         return;
       }
 
-      // Connectivity test simulation
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      setTestResults({
-        success: true, 
-        message: 'Configuration validated successfully!'
+      // 2) montar payload SMTP padrão Gmail
+      if (provider !== 'gmail') {
+        setTestResults({ success: false, error: 'Only Gmail accounts support SMTP verification here.' });
+        return;
+      }
+
+      const host = 'smtp.gmail.com';
+      const port = 587; // STARTTLS
+      const secure = false; // STARTTLS
+      const user = formData.email_address.trim();
+      const password = formData.app_password.trim();
+
+      if (!password) {
+        setTestResults({ success: false, error: 'App password is required for Gmail' });
+        return;
+      }
+
+      // 3) obter sessão do Supabase para autenticar na Edge Function
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setTestResults({ success: false, error: 'User not authenticated' });
+        return;
+      }
+
+      // 4) chamar a Edge Function de verificação
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const verifyResp = await fetch(`${supabaseUrl}/functions/v1/verify-smtp-email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ host, port, secure, user, password })
       });
-      
+
+      if (!verifyResp.ok) {
+        const err = await verifyResp.json().catch(() => ({}));
+        const details = (err && (err.details?.message || err.details)) || err?.error || `Status ${verifyResp.status}`;
+        const hint = 'Hint: Enable 2FA and use a Gmail App Password; port 465 with secure=true (SSL) or 587 with secure=false (STARTTLS).';
+        setTestResults({ success: false, error: `${details}. ${hint}` });
+        return;
+      }
+
+      const data = await verifyResp.json().catch(() => ({}));
+      setTestResults({ success: true, message: 'SMTP credentials verified successfully!' });
+
     } catch (error) {
-      setTestResults({
-        success: false, 
-        error: 'Validation error'
-      });
+      const msg = error?.message || 'Validation error';
+      setTestResults({ success: false, error: msg });
     } finally {
       setTesting(false);
     }

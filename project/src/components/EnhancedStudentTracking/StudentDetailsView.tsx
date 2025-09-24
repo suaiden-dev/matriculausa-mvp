@@ -1,14 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { User, FileText } from 'lucide-react';
+import { User, FileText, Edit3, Check, X } from 'lucide-react';
 import { getDocumentStatusDisplay } from '../../utils/documentStatusMapper';
-import { StudentInfo, ScholarshipApplication } from './types';
+import { StudentInfo } from './types';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
 import { supabase } from '../../lib/supabase';
 import I20DeadlineTimer from './I20DeadlineTimer';
 
 export interface StudentDetailsViewProps {
   studentDetails: StudentInfo;
-  scholarshipApplication: ScholarshipApplication | null;
   studentDocuments: any[];
   i20ControlFeeDeadline: Date | null;
   onBack: () => void;
@@ -20,7 +19,6 @@ export interface StudentDetailsViewProps {
 
 const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
   studentDetails,
-  scholarshipApplication,
   studentDocuments,
   i20ControlFeeDeadline,
   activeTab,
@@ -31,29 +29,40 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
   // Hook para configurações dinâmicas de taxas
   const { getFeeAmount, formatFeeAmount } = useFeeConfig();
   
+  
   // Estado para armazenar as taxas do pacote do estudante
   const [studentPackageFees, setStudentPackageFees] = useState<any>(null);
   
   // Estado para armazenar os dependentes do estudante
   const [studentDependents, setStudentDependents] = useState<number>(0);
   
-  // Função para calcular valor com dependentes
+  // Estados para edição de pacote
+  const [isEditingPackage, setIsEditingPackage] = useState(false);
+  const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
+  const [isUpdatingPackage, setIsUpdatingPackage] = useState(false);
+  
+  // Função para calcular valor com dependentes (regra nova):
+  // - Selection Process: +150 por dependente
+  // - I-20: sem adicionais
   const calculateFeeWithDependents = (baseFee: number, dependents: number = 0, feeType: 'selection_process' | 'i20_control_fee') => {
-    if (feeType === 'selection_process' || feeType === 'i20_control_fee') {
-      const dependentCost = dependents * 75; // $75 por dependente para cada taxa
+    if (feeType === 'selection_process') {
+      const dependentCost = dependents * 150;
       return baseFee + dependentCost;
+    }
+    if (feeType === 'i20_control_fee') {
+      return baseFee;
     }
     return baseFee;
   };
   
-  // Função para buscar as taxas do pacote do estudante
+  // Função para buscar o desired_scholarship_range do estudante
   const loadStudentPackageFees = async (profileId: string) => {
     if (!profileId) return;
     try {
-      // Primeiro, buscar o perfil do estudante
+      // Buscar o perfil do estudante com desired_scholarship_range
       const { data: profileData, error: profileError } = await supabase
         .from('user_profiles')
-        .select('scholarship_package_id, dependents')
+        .select('desired_scholarship_range, dependents')
         .eq('id', profileId)
         .single();
 
@@ -68,42 +77,27 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
       // Atualizar dependentes
       setStudentDependents(Number(profileData.dependents) || 0);
       
-      // Se não tem pacote, retornar null
-      if (!profileData.scholarship_package_id) {
-        console.log('🔍 [StudentDetailsView] No scholarship package assigned');
+      // Se não tem desired_scholarship_range, retornar null
+      if (!profileData.desired_scholarship_range) {
+        console.log('🔍 [StudentDetailsView] No desired scholarship range set');
         setStudentPackageFees(null);
         return;
       }
 
-      // Buscar os dados do pacote de bolsa
-      const { data: packageData, error: packageError } = await supabase
-        .from('scholarship_packages')
-        .select('selection_process_fee, i20_control_fee, scholarship_fee, total_paid, scholarship_amount, name')
-        .eq('id', profileData.scholarship_package_id)
-        .eq('is_active', true)
-        .single();
-
-      if (packageError) {
-        console.error('Error loading scholarship package:', packageError);
-        setStudentPackageFees(null);
-        return;
-      }
-
-      if (packageData) {
-        const packageFees = {
-          selection_process_fee: packageData.selection_process_fee,
-          i20_control_fee: packageData.i20_control_fee,
-          scholarship_fee: packageData.scholarship_fee,
-          total_paid: packageData.total_paid,
-          scholarship_amount: packageData.scholarship_amount,
-          package_name: packageData.name
-        };
-        console.log('🔍 [StudentDetailsView] Package fees set:', packageFees);
-        setStudentPackageFees(packageFees);
-      } else {
-        console.log('🔍 [StudentDetailsView] No package data found');
-        setStudentPackageFees(null);
-      }
+      // Criar dados do pacote baseado no desired_scholarship_range
+      const desiredRange = Number(profileData.desired_scholarship_range);
+      const packageFees = {
+        id: `range-${desiredRange}`, // ID baseado no range
+        selection_process_fee: 400,
+        i20_control_fee: 900,
+        scholarship_fee: 900,
+        total_paid: 2200,
+        scholarship_amount: desiredRange,
+        package_name: `Scholarship Range $${desiredRange}+`
+      };
+      
+      console.log('🔍 [StudentDetailsView] Package fees set:', packageFees);
+      setStudentPackageFees(packageFees);
     } catch (error) {
       console.error('Error loading student package fees:', error);
       setStudentPackageFees(null);
@@ -116,6 +110,50 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
       loadStudentPackageFees(studentDetails.profile_id);
     }
   }, [studentDetails?.profile_id]);
+
+  // Função para iniciar edição de pacote
+  const handleStartEditPackage = () => {
+    setIsEditingPackage(true);
+    setSelectedPackageId(studentPackageFees?.id || null);
+  };
+
+  // Função para cancelar edição
+  const handleCancelEditPackage = () => {
+    setIsEditingPackage(false);
+    setSelectedPackageId(studentPackageFees?.id || null);
+  };
+
+  // Função para salvar alteração de pacote
+  const handleSavePackageChange = async () => {
+    if (!selectedPackageId || !studentDetails?.profile_id) return;
+
+    setIsUpdatingPackage(true);
+    try {
+      // Extrair o valor do range do ID selecionado (formato: range-3800)
+      const rangeValue = selectedPackageId.replace('range-', '');
+      
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({ desired_scholarship_range: Number(rangeValue) })
+        .eq('id', studentDetails.profile_id);
+
+      if (error) {
+        console.error('Error updating package:', error);
+        alert('Error updating package. Please try again.');
+        return;
+      }
+
+      // Recarregar os dados do pacote
+      await loadStudentPackageFees(studentDetails.profile_id);
+      setIsEditingPackage(false);
+      alert('Package updated successfully!');
+    } catch (error) {
+      console.error('Error updating package:', error);
+      alert('Error updating package. Please try again.');
+    } finally {
+      setIsUpdatingPackage(false);
+    }
+  };
   
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US');
@@ -553,6 +591,102 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                       <div className="w-2 h-2 bg-slate-400 rounded-full"></div>
                     </button>
                   </div>
+                </div>
+              </div>
+
+              {/* Package Management Card */}
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
+                <div className="bg-gradient-to-r rounded-t-2xl from-[#05294E] to-[#0a4a7a] px-6 py-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-white">Scholarship Range</h3>
+                    {!isEditingPackage && (
+                      <button
+                        onClick={handleStartEditPackage}
+                        className="p-1.5 rounded-lg bg-white/20 hover:bg-white/30 transition-colors"
+                        title="Edit package"
+                      >
+                        <Edit3 className="w-4 h-4 text-white" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <div className="p-6">
+                  {isEditingPackage ? (
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Select Scholarship Range
+                        </label>
+                        <div className="space-y-2">
+                          {[3800, 4200, 4500, 5000, 5500].map((range) => (
+                            <div
+                              key={`range-${range}`}
+                              className={`p-3 border-2 rounded-lg cursor-pointer transition-all ${
+                                selectedPackageId === `range-${range}`
+                                  ? 'border-blue-500 bg-blue-50'
+                                  : 'border-gray-200 hover:border-gray-300'
+                              }`}
+                              onClick={() => setSelectedPackageId(`range-${range}`)}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <h4 className="font-semibold text-slate-900">Scholarship Range ${range}+</h4>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={handleSavePackageChange}
+                          disabled={isUpdatingPackage || !selectedPackageId}
+                          className="flex-1 flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          {isUpdatingPackage ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                              Saving...
+                            </>
+                          ) : (
+                            <>
+                              <Check className="w-4 h-4 mr-2" />
+                              Save
+                            </>
+                          )}
+                        </button>
+                        <button
+                          onClick={handleCancelEditPackage}
+                          disabled={isUpdatingPackage}
+                          className="flex-1 flex items-center justify-center px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 disabled:opacity-50 transition-colors"
+                        >
+                          <X className="w-4 h-4 mr-2" />
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {studentPackageFees ? (
+                        <>
+                          <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                            <div className="flex items-center justify-between mb-2">
+                              <h4 className="font-semibold text-blue-900">{studentPackageFees.package_name}</h4>
+                              <span className="text-sm text-blue-600">Current</span>
+                            </div>
+                          </div>
+                          <div className="text-xs text-slate-500 text-center">
+                            Click edit to change scholarship range
+                          </div>
+                        </>
+                      ) : (
+                        <div className="text-center py-4">
+                          <div className="text-slate-400 mb-2">No scholarship range set</div>
+                          <div className="text-sm text-slate-500">Click edit to set scholarship range</div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 

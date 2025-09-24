@@ -31,7 +31,7 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
   productId,
   buttonText = 'Checkout',
   className = '',
-  onSuccess,
+  // onSuccess,
   onError,
   paymentType,
   feeType,
@@ -46,7 +46,7 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
   const [showPreCheckoutModal, setShowPreCheckoutModal] = useState(false);
   const [showScholarshipFeeModal, setShowScholarshipFeeModal] = useState(false);
 
-  const [showI20ControlFeeModal, setShowI20ControlFeeModal] = useState(false);
+  const [showI20ControlFeeModal] = useState(false);
 
   // Hide floating elements when any modal is open
   useEffect(() => {
@@ -67,7 +67,7 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
   const [error, setError] = useState<string | null>(null);
 
   const { t } = useTranslation();
-  const { isAuthenticated, updateUserProfile, user, userProfile } = useAuth();
+  const { isAuthenticated, user, userProfile } = useAuth();
   const { getFeeAmount } = useFeeConfig(user?.id);
   const { selectionProcessFee, scholarshipFee, i20ControlFee, hasSellerPackage } = useDynamicFees();
   const { isBlocked, pendingPayment, loading: paymentBlockedLoading } = usePaymentBlocked();
@@ -94,16 +94,7 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
     setShowPaymentMethodSelector(true);
   };
 
-  const handleScholarshipFeeSuccess = () => {
-    console.log('🔍 [StripeCheckout] handleScholarshipFeeSuccess chamado');
-    if (!isAuthenticated) {
-      console.error('🔍 [StripeCheckout] Usuário não autenticado');
-      onError?.('You must be logged in to checkout');
-      return;
-    }
-    // Para scholarship fee, ir direto para seleção de método de pagamento
-    setShowPaymentMethodSelector(true);
-  };
+  // Removido fluxo alternativo não utilizado para Scholarship; modal já chama seleção
 
   const checkActiveDiscount = async () => {
     console.log('🔍 [StripeCheckout] Verificando desconto ativo...');
@@ -170,59 +161,7 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
     }
   };
 
-  const handlePreCheckoutProceed = async (discountCode?: string) => {
-    console.log('🔍 [StripeCheckout] handlePreCheckoutProceed chamado com código:', discountCode);
-    console.log('🔍 [StripeCheckout] Estado atual - showPaymentMethodSelector:', showPaymentMethodSelector);
-    console.log('🔍 [StripeCheckout] Estado atual - selectedPaymentMethod:', selectedPaymentMethod);
-    
-    // Se há código de desconto, aplicar via edge function
-    if (discountCode) {
-      try {
-        console.log('🔍 [StripeCheckout] Aplicando código de desconto via edge function...');
-        const { data: sessionData } = await supabase.auth.getSession();
-        const token = sessionData.session?.access_token;
-        
-        if (!token) {
-          throw new Error('Usuário não autenticado');
-        }
-
-        // Aplicar código de desconto
-        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/validate-referral-code`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-          body: JSON.stringify({ affiliate_code: discountCode }),
-        });
-
-        const result = await response.json();
-        console.log('🔍 [StripeCheckout] Resultado da aplicação do código:', result);
-        
-        if (!result.success) {
-          console.error('🔍 [StripeCheckout] ❌ Erro ao aplicar código:', result.error);
-          onError?.(result.error || 'Erro ao aplicar código de desconto');
-          return;
-        }
-        
-        console.log('🔍 [StripeCheckout] ✅ Código aplicado com sucesso');
-      } catch (error) {
-        console.error('🔍 [StripeCheckout] ❌ Erro ao aplicar código:', error);
-        onError?.(error instanceof Error ? error.message : 'Erro ao aplicar código de desconto');
-        return;
-      }
-    } else {
-      console.log('🔍 [StripeCheckout] Nenhum código de desconto fornecido');
-    }
-
-    // IMPORTANTE: Sempre mostrar o seletor de método de pagamento
-    console.log('🔍 [StripeCheckout] 🎯 Mostrando seletor de método de pagamento...');
-    setShowPaymentMethodSelector(true);
-    console.log('🔍 [StripeCheckout] ✅ showPaymentMethodSelector definido como true');
-    
-    // NÃO continuar com checkout aqui - aguardar seleção do método
-    console.log('🔍 [StripeCheckout] ⏳ Aguardando usuário selecionar método de pagamento...');
-  };
+  // Removido fluxo legado de aplicação de código aqui; agora o código é tratado no PreCheckoutModal
 
   const handlePaymentMethodSelect = async (method: string) => {
     console.log('🔍 [StripeCheckout] handlePaymentMethodSelect chamado com método:', method);
@@ -251,7 +190,7 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
           // Usar valores do useDynamicFees que já incluem dependentes
           return hasSellerPackage ? selectionProcessFee.replace('$', '') : (() => {
             const dependents = Number(userProfile?.dependents) || 0;
-            const dependentCost = dependents * 75;
+            const dependentCost = dependents * 150; // $150 por dependente apenas no Selection Process
             return (getFeeAmount('selection_process') + dependentCost).toString();
           })();
         } else if (feeType === 'application_fee') {
@@ -261,9 +200,8 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
         } else if (feeType === 'enrollment_fee' || feeType === 'i20_control_fee') {
           // Usar valores do useDynamicFees que já incluem dependentes
           return hasSellerPackage ? i20ControlFee.replace('$', '') : (() => {
-            const dependents = Number(userProfile?.dependents) || 0;
-            const dependentCost = dependents * 75;
-            return (getFeeAmount('i20_control_fee') + dependentCost).toString();
+            // Novo modelo: I-20 não recebe adicionais por dependentes
+            return (getFeeAmount('i20_control_fee')).toString();
           })();
         }
         return getFeeAmount('selection_process').toString();
@@ -338,15 +276,14 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
           // Usar valores do useDynamicFees que já incluem dependentes
           finalAmount = hasSellerPackage ? parseFloat(selectionProcessFee.replace('$', '')) : (() => {
             const dependents = Number(userProfile?.dependents) || 0;
-            const dependentCost = dependents * 75;
+            const dependentCost = dependents * 150; // $150 por dependente apenas no Selection Process
             return getFeeAmount('selection_process') + dependentCost;
           })();
         } else if (feeType === 'i20_control_fee') {
           // Usar valores do useDynamicFees que já incluem dependentes
           finalAmount = hasSellerPackage ? parseFloat(i20ControlFee.replace('$', '')) : (() => {
-            const dependents = Number(userProfile?.dependents) || 0;
-            const dependentCost = dependents * 75;
-            return getFeeAmount('i20_control_fee') + dependentCost;
+            // Novo modelo: I-20 não recebe adicionais por dependentes
+            return getFeeAmount('i20_control_fee');
           })();
         } else if (feeType === 'scholarship_fee') {
           finalAmount = hasSellerPackage ? parseFloat(scholarshipFee.replace('$', '')) : getFeeAmount('scholarship_fee');
@@ -420,13 +357,13 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
         <PreCheckoutModal
           isOpen={showPreCheckoutModal}
           onClose={() => setShowPreCheckoutModal(false)}
-          onProceedToCheckout={(amount, code) => handlePreCheckoutSuccess(amount)}
+          onProceedToCheckout={(amount) => handlePreCheckoutSuccess(amount)}
           feeType={feeType === 'i20_control_fee' ? 'application_fee' : feeType}
           productName={product.name}
           productPrice={(feeType === 'selection_process'
             ? (() => {
                 const dependents = Number(userProfile?.dependents) || 0;
-                const dependentCost = dependents * 75; // $75 por dependente para cada taxa
+                const dependentCost = dependents * 150; // $150 por dependente no Selection Process
                 return getFeeAmount('selection_process') + dependentCost;
               })()
             : getFeeAmount('application_fee'))}
@@ -548,17 +485,13 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
                   amount={(window as any).__checkout_final_amount || (feeType === 'selection_process'
                     ? (() => {
                         const dependents = Number(userProfile?.dependents) || 0;
-                        const dependentCost = dependents * 75; // $75 por dependente para cada taxa
+                        const dependentCost = dependents * 150; // $150 por dependente no Selection Process
                         return getFeeAmount('selection_process') + dependentCost;
                       })()
                     : feeType === 'scholarship_fee'
                     ? getFeeAmount('scholarship_fee')
                     : feeType === 'i20_control_fee'
-                    ? (() => {
-                        const dependents = Number(userProfile?.dependents) || 0;
-                        const dependentCost = dependents * 75; // $75 por dependente para cada taxa
-                        return getFeeAmount('i20_control_fee') + dependentCost;
-                      })()
+                    ? getFeeAmount('i20_control_fee') // I-20 não tem dependentes
                     : getFeeAmount('application_fee'))}
                 />
               </div>

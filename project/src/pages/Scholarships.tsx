@@ -34,6 +34,11 @@ const Scholarships: React.FC = () => {
     loading: packageFilterLoading 
   } = usePackageScholarshipFilter();
   
+  // Obter faixa de bolsa desejada do perfil do usuário (quando logado)
+  const desiredScholarshipRange = isAuthenticated && userProfile?.desired_scholarship_range 
+    ? userProfile.desired_scholarship_range 
+    : null;
+  
   // TODOS OS HOOKS DEVEM VIR ANTES DE QUALQUER LÓGICA CONDICIONAL
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLevel, setSelectedLevel] = useState('all');
@@ -206,11 +211,13 @@ const Scholarships: React.FC = () => {
     const matchesDeliveryMode = selectedStudyMode === 'all' || (scholarship.delivery_mode && scholarship.delivery_mode === selectedStudyMode);
     const matchesWorkPermission = selectedWorkAuth === 'all' || (scholarship.work_permissions && scholarship.work_permissions.includes(selectedWorkAuth));
     
-    // Filtro automático baseado no pacote do usuário
-    const matchesPackageFilter = minScholarshipValue === null || 
-      (value >= minScholarshipValue);
+    // Filtro automático baseado na faixa de bolsa desejada (quando logado) ou pacote do usuário
+    // Mostrar apenas bolsas com valor >= valor selecionado pelo seller
+    const matchesDesiredRange = desiredScholarshipRange !== null 
+      ? (value >= desiredScholarshipRange)
+      : (minScholarshipValue === null || (value >= minScholarshipValue));
     
-    return matchesSearch && matchesRange && matchesLevel && matchesField && matchesDeliveryMode && matchesWorkPermission && matchesPackageFilter;
+    return matchesSearch && matchesRange && matchesLevel && matchesField && matchesDeliveryMode && matchesWorkPermission && matchesDesiredRange;
   });
 
   // Apply the same filter logic to featured scholarships so the featureds respect the page filters
@@ -236,11 +243,13 @@ const Scholarships: React.FC = () => {
     const matchesDeliveryMode = selectedStudyMode === 'all' || (scholarship.delivery_mode && scholarship.delivery_mode === selectedStudyMode);
     const matchesWorkPermission = selectedWorkAuth === 'all' || (scholarship.work_permissions && scholarship.work_permissions.includes(selectedWorkAuth));
     
-    // Filtro automático baseado no pacote do usuário (mesmo filtro das bolsas normais)
-    const matchesPackageFilter = minScholarshipValue === null || 
-      (value >= minScholarshipValue);
+    // Filtro automático baseado na faixa de bolsa desejada (quando logado) ou pacote do usuário
+    // Mostrar apenas bolsas com valor >= valor selecionado pelo seller
+    const matchesDesiredRange = desiredScholarshipRange !== null 
+      ? (value >= desiredScholarshipRange)
+      : (minScholarshipValue === null || (value >= minScholarshipValue));
     
-    return matchesSearch && matchesRange && matchesLevel && matchesField && matchesDeliveryMode && matchesWorkPermission && matchesPackageFilter;
+    return matchesSearch && matchesRange && matchesLevel && matchesField && matchesDeliveryMode && matchesWorkPermission && matchesDesiredRange;
   };
 
   const filteredFeaturedScholarships = featuredScholarships.filter(matchesFilters);

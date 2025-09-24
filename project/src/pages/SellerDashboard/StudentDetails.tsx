@@ -1448,7 +1448,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                              <span className="text-xs text-slate-500">
                                {(() => {
                                  const base = studentPackageFees ? Number(studentPackageFees.selection_process_fee) : Number(getFeeAmount('selection_process'));
-                                 const total = base + (dependents * 150) / 2;
+                                 const total = base + (dependents * 150); // 100% dos dependentes no Selection Process
                                  return formatFeeAmount(total);
                                })()}
                              </span>
@@ -1529,7 +1529,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                              <span className="text-xs text-slate-500">
                                {(() => {
                                  const base = studentPackageFees ? Number(studentPackageFees.i20_control_fee) : Number(getFeeAmount('i-20_control_fee'));
-                                 const total = base + (dependents * 150) / 2;
+                                 const total = base; // Sem dependentes no I-20
                                  return formatFeeAmount(total);
                                })()}
                              </span>
