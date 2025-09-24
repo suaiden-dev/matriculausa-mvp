@@ -1,3 +1,4 @@
+// @ts-nocheck
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import Stripe from 'npm:stripe@17.7.0';
 import { createClient } from 'npm:@supabase/supabase-js@2.49.1';
@@ -36,7 +37,7 @@ Deno.serve(async (req) => {
     }
 
     // scholarships_ids pode vir como array (frontend envia string[])
-    const { price_id, success_url, cancel_url, mode, metadata, scholarships_ids } = await req.json();
+    const { price_id, success_url, cancel_url, mode, metadata, scholarships_ids, amount } = await req.json();
     
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
@@ -53,7 +54,13 @@ Deno.serve(async (req) => {
     console.log('[stripe-checkout-scholarship-fee] Received payload:', { price_id, success_url, cancel_url, mode, metadata });
 
     // Buscar taxas do pacote do usuário
-    let userPackageFees = null;
+    type UserPackageFees = {
+      package_name: string;
+      selection_process_fee: number;
+      scholarship_fee: number;
+      i20_control_fee: number;
+    };
+    let userPackageFees: UserPackageFees | null = null;
     try {
       const { data: packageData, error: packageError } = await supabase
         .rpc('get_user_package_fees', {
@@ -104,9 +111,29 @@ Deno.serve(async (req) => {
       metadata: sessionMetadata,
     };
 
-    // Se o usuário tem pacote, usar preço dinâmico
-    if (userPackageFees) {
-      const dynamicAmount = Math.round(userPackageFees.scholarship_fee * 100); // Converter para centavos
+    // Definição das line_items priorizando amount explícito ou valor do pacote.
+    // 1) Se veio amount no payload/metadata, usa price_data com esse valor (centavos)
+    // 2) Senão, se usuário tem pacote, usa o scholarship_fee do pacote
+    // 3) Senão, fallback para price_id (mantém compatibilidade)
+    const explicitAmount = Number(metadata?.final_amount ?? amount);
+    if (!Number.isNaN(explicitAmount) && explicitAmount > 0) {
+      const unitAmountCents = Math.round(explicitAmount * 100);
+      sessionConfig.line_items = [
+        {
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: 'Scholarship Fee',
+              description: 'Scholarship application processing fee',
+            },
+            unit_amount: unitAmountCents,
+          },
+          quantity: 1,
+        },
+      ];
+      console.log('[stripe-checkout-scholarship-fee] ✅ Usando amount explícito (USD):', explicitAmount);
+    } else if (userPackageFees && typeof userPackageFees.scholarship_fee === 'number') {
+      const dynamicAmount = Math.round(userPackageFees.scholarship_fee * 100);
       sessionConfig.line_items = [
         {
           price_data: {
@@ -120,16 +147,15 @@ Deno.serve(async (req) => {
           quantity: 1,
         },
       ];
-      console.log('[stripe-checkout-scholarship-fee] ✅ Usando valor dinâmico do pacote:', userPackageFees.scholarship_fee);
+      console.log('[stripe-checkout-scholarship-fee] ✅ Usando valor do pacote (USD):', userPackageFees.scholarship_fee);
     } else {
-      // Usar price_id padrão se não tiver pacote
       sessionConfig.line_items = [
         {
           price: price_id,
           quantity: 1,
         },
       ];
-      console.log('[stripe-checkout-scholarship-fee] ⚠️ Usando price_id padrão:', price_id);
+      console.log('[stripe-checkout-scholarship-fee] ⚠️ Fallback usando price_id:', price_id);
     }
 
     const session = await stripe.checkout.sessions.create(sessionConfig);
