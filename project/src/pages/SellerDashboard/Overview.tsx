@@ -103,8 +103,9 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
     const packageFees = studentPackageFees[student.id];
     const deps = studentDependents[student.id] || 0;
     if (student.has_paid_selection_process_fee) {
-      const baseSel = packageFees ? packageFees.selection_process_fee : getFeeAmount('selection_process');
-      total += Number(baseSel) + (deps * 150) / 2;
+      // Sempre usar a taxa padrão do Selection Process e somar dependentes
+      const baseSel = getFeeAmount('selection_process');
+      total += Number(baseSel) + (deps * 150);
     }
     if (student.is_scholarship_fee_paid) {
       const baseSch = packageFees ? packageFees.scholarship_fee : getFeeAmount('scholarship_fee');
@@ -112,7 +113,8 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
     }
     if (student.has_paid_i20_control_fee) {
       const baseI20 = packageFees ? packageFees.i20_control_fee : getFeeAmount('i20_control_fee');
-      total += Number(baseI20) + (deps * 150) / 2;
+      // Não somar dependentes no I-20 para evitar dupla cobrança
+      total += Number(baseI20);
     }
     // Application fee não entra na receita do seller
     return total;
@@ -205,12 +207,20 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-500 mb-1">Total Revenue</p>
+              {loadingCalc ? (
+                <div className="h-8 w-40 bg-slate-200 rounded animate-pulse" />
+              ) : (
               <p className="text-3xl font-bold text-slate-900">{formatCurrency(adjustedTotalRevenue)}</p>
+              )}
               <div className="flex items-center mt-2">
                 <TrendingUp className="h-4 w-4 text-emerald-500 mr-1" />
+                {loadingCalc ? (
+                  <div className="h-4 w-24 bg-slate-200 rounded animate-pulse" />
+                ) : (
                 <span className="text-sm font-medium text-emerald-600">
                   {students.length > 0 ? (adjustedTotalRevenue / students.length).toFixed(2) : 0} per student
                 </span>
+                )}
               </div>
             </div>
             <div className="w-14 h-14 bg-emerald-500 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
@@ -270,7 +280,11 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
                   <action.icon className="h-6 w-6 text-white" />
                 </div>
                 <div className="flex items-center">
+                  {action.view === 'performance' && loadingCalc ? (
+                    <div className="h-6 w-20 bg-slate-200 rounded animate-pulse" />
+                  ) : (
                   <span className="text-2xl font-bold text-slate-900">{action.count}</span>
+                  )}
                 </div>
               </div>
               <h3 className="text-lg font-semibold text-slate-900 mb-2">{action.title}</h3>
@@ -335,13 +349,21 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
                       <div className="text-left sm:text-right">
                         <div className="space-y-1">
                           <div className="flex items-center sm:justify-end space-x-2">
+                            {loadingCalc ? (
+                              <div className="h-6 w-28 bg-slate-200 rounded animate-pulse" />
+                            ) : (
                             <span className="text-2xl font-bold text-slate-900 whitespace-nowrap">
-                              {loadingCalc ? 'Calculating...' : formatCurrency(calculateStudentAdjustedPaid(student) || 0)}
+                                {formatCurrency(calculateStudentAdjustedPaid(student) || 0)}
                             </span>
-                            <span className="text-sm text-slate-500">revenue</span>
+                            )}
+                            {!loadingCalc && <span className="text-sm text-slate-500">revenue</span>}
                           </div>
                           <div className="text-sm font-medium text-slate-700">
-                            {formatDate(student.created_at)}
+                            {loadingCalc ? (
+                              <div className="h-4 w-24 bg-slate-200 rounded animate-pulse" />
+                            ) : (
+                              formatDate(student.created_at)
+                            )}
                           </div>
                         </div>
                       </div>
@@ -374,12 +396,20 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
                             </div>
                             <div className="text-left sm:text-right">
                               <div className="flex items-center sm:justify-end space-x-4">
+                                {loadingCalc ? (
+                                  <div className="h-4 w-20 bg-slate-200 rounded animate-pulse" />
+                                ) : (
                                 <span className="text-sm text-slate-700 font-medium whitespace-nowrap">
-                                  {loadingCalc ? 'Calculating...' : formatCurrency(calculateStudentAdjustedPaid(student) || 0)}
+                                    {formatCurrency(calculateStudentAdjustedPaid(student) || 0)}
                                 </span>
+                                )}
+                                {loadingCalc ? (
+                                  <div className="h-3 w-16 bg-slate-200 rounded animate-pulse" />
+                                ) : (
                                 <span className="text-xs text-slate-500">
                                   {formatDate(student.created_at)}
                                 </span>
+                                )}
                               </div>
                             </div>
                           </div>

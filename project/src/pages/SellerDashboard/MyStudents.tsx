@@ -418,8 +418,9 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
     const deps = studentDependents[student.id] || 0;
 
     if (student.has_paid_selection_process_fee) {
-      const baseSel = packageFees ? packageFees.selection_process_fee : getFeeAmount('selection_process');
-      total += baseSel + (deps * 150); // 100% no Selection Process
+      // Sempre usar taxa padrão para Selection e somar dependentes
+      const baseSel = getFeeAmount('selection_process');
+      total += baseSel + (deps * 150); // Dependentes todos no Selection Process
     }
     
     if (student.has_paid_i20_control_fee) {
@@ -538,7 +539,12 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-600">Total Revenue</p>
-              <p className="text-3xl font-bold text-green-600 mt-1">{formatCurrency(stats.totalRevenue)}</p>
+              {/* Skeleton enquanto dependents/fees não carregaram completamente */}
+              {Object.keys(studentDependents).length === 0 && Object.keys(studentPackageFees).length === 0 ? (
+                <div className="h-8 w-40 bg-slate-200 rounded animate-pulse mt-1" />
+              ) : (
+                <p className="text-3xl font-bold text-green-600 mt-1">{formatCurrency(stats.totalRevenue)}</p>
+              )}
             </div>
             <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
               <DollarSign className="h-6 w-6 text-green-600" />
@@ -820,7 +826,11 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
                     
                     <div className="flex items-center text-sm font-medium text-green-600">
                       <DollarSign className="h-4 w-4 mr-1" />
-                      {formatCurrency(calculateStudentTotalPaid(student))}
+                      {studentDependents[student.id] === undefined ? (
+                        <div className="h-4 w-16 bg-slate-200 rounded animate-pulse" />
+                      ) : (
+                        formatCurrency(calculateStudentTotalPaid(student))
+                      )}
                     </div>
                   </div>
                 </div>

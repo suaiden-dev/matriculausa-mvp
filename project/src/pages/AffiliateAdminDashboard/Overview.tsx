@@ -110,7 +110,7 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellers = [], onRefresh }) =
             has_paid_selection_process_fee, 
             has_paid_i20_control_fee, 
             dependents,
-            scholarship_applications!inner(is_scholarship_fee_paid)
+            scholarship_applications(is_scholarship_fee_paid)
           `)
           .in('seller_referral_code', referralCodes);
         if (profilesErr || !profiles) {
@@ -128,7 +128,10 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellers = [], onRefresh }) =
           const selPaid = p?.has_paid_selection_process_fee ? (400 + (deps * 150)) : 0;
           
           // Scholarship Fee: 900 (sem dependentes) - valores fixos
-          const schPaid = p?.scholarship_applications?.[0]?.is_scholarship_fee_paid ? 900 : 0;
+          const hasAnyScholarshipPaid = Array.isArray(p?.scholarship_applications)
+            ? p.scholarship_applications.some((a: any) => !!a?.is_scholarship_fee_paid)
+            : false;
+          const schPaid = hasAnyScholarshipPaid ? 900 : 0;
           
           // I-20 Control: 900 (sem dependentes) - valores fixos
           const i20Paid = p?.has_paid_i20_control_fee ? 900 : 0;
@@ -250,7 +253,11 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellers = [], onRefresh }) =
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-500 mb-1">Total Revenue</p>
-                <p className="text-3xl font-bold text-slate-900">{formatCurrency((clientAdjustedRevenue ?? derivedTotalRevenue) as number)}</p>
+                <p className="text-3xl font-bold text-slate-900">{formatCurrency(Math.max(
+                  typeof clientAdjustedRevenue === 'number' ? clientAdjustedRevenue : -Infinity,
+                  typeof derivedTotalRevenue === 'number' ? derivedTotalRevenue : -Infinity,
+                  0
+                ))}</p>
                 <div className="flex items-center mt-2">
                   <TrendingUp className="h-4 w-4 text-emerald-500 mr-1" />
                   <span className="text-sm font-medium text-emerald-600">
