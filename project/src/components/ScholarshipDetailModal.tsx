@@ -183,7 +183,7 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
                         <div className="text-center text-white">
                           <GraduationCap className="h-16 w-16 mx-auto mb-2 text-white/60" />
                           <p className="text-sm font-medium opacity-80">
-                            {t('scholarshipsPage.modal.unlockImage')}
+                            {t('scholarshipsPage.modal.unlockImage', { defaultValue: 'Faça login para desbloquear a imagem' })}
                           </p>
                         </div>
                       </div>
