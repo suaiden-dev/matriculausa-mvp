@@ -110,27 +110,37 @@ const AIAgentKnowledgeUpload = forwardRef<{ uploadPendingFiles: (aiConfigId: str
         console.log('✅ Documento pendente salvo no banco com ID:', docData.id);
         uploadedDocs.push(docData);
 
-        // Atualizar prompt (apenas para agentes padrão)
-        if (foreignTable === 'ai_agent_knowledge_documents') {
-          try {
-            const { data: { session } } = await supabase.auth.getSession();
-            const accessToken = session?.access_token;
-            const SUPABASE_FUNCTIONS_URL = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL || 'https://fitpynguasqqutuhzifx.supabase.co/functions/v1';
-            const updateResponse = await fetch(`${SUPABASE_FUNCTIONS_URL}/update-prompt-with-knowledge`, {
+        // Atualizar prompt para agentes padrão (WhatsApp) e agentes de e-mail
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          const accessToken = session?.access_token;
+          const SUPABASE_FUNCTIONS_URL = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL || 'https://fitpynguasqqutuhzifx.supabase.co/functions/v1';
+          
+          let endpoint, payload;
+          if (foreignTable === 'ai_agent_knowledge_documents') {
+            // Para agentes WhatsApp
+            endpoint = `${SUPABASE_FUNCTIONS_URL}/update-prompt-with-knowledge`;
+            payload = { ai_configuration_id: aiConfigId };
+          } else if (foreignTable === 'ai_email_agent_knowledge_documents') {
+            // Para agentes de e-mail
+            endpoint = `${SUPABASE_FUNCTIONS_URL}/update-email-agent-prompt-with-knowledge`;
+            payload = { agent_id: aiConfigId };
+          }
+
+          if (endpoint && payload) {
+            const updateResponse = await fetch(endpoint, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${accessToken}`,
               },
-              body: JSON.stringify({
-                ai_configuration_id: aiConfigId
-              }),
+              body: JSON.stringify(payload),
             });
             const updateResult = await updateResponse.json();
             console.log('✅ Prompt atualizado para documento pendente:', docData.id, updateResult);
-          } catch (updateError) {
-            console.error('❌ Erro ao atualizar prompt para documento pendente:', docData.id, updateError);
           }
+        } catch (updateError) {
+          console.error('❌ Erro ao atualizar prompt para documento pendente:', docData.id, updateError);
         }
       }
 
@@ -242,15 +252,30 @@ const AIAgentKnowledgeUpload = forwardRef<{ uploadPendingFiles: (aiConfigId: str
       
       console.log('🔄 Atualizando prompt para documento específico:', documentId);
       
-      const updateResponse = await fetch(`${SUPABASE_FUNCTIONS_URL}/update-prompt-with-knowledge`, {
+      // Determinar endpoint e payload baseado na tabela
+      let endpoint, payload;
+      if (foreignTable === 'ai_agent_knowledge_documents') {
+        // Para agentes WhatsApp
+        endpoint = `${SUPABASE_FUNCTIONS_URL}/update-prompt-with-knowledge`;
+        payload = { ai_configuration_id: aiConfigurationId };
+      } else if (foreignTable === 'ai_email_agent_knowledge_documents') {
+        // Para agentes de e-mail
+        endpoint = `${SUPABASE_FUNCTIONS_URL}/update-email-agent-prompt-with-knowledge`;
+        payload = { agent_id: aiConfigurationId };
+      }
+
+      if (!endpoint || !payload) {
+        console.log('⚠️ Endpoint não configurado para esta tabela:', foreignTable);
+        return;
+      }
+
+      const updateResponse = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${accessToken}`,
         },
-        body: JSON.stringify({
-          ai_configuration_id: aiConfigurationId
-        }),
+        body: JSON.stringify(payload),
       });
       
       const updateResult = await updateResponse.json();
@@ -369,27 +394,37 @@ const AIAgentKnowledgeUpload = forwardRef<{ uploadPendingFiles: (aiConfigId: str
         console.log('✅ Documento salvo no banco com ID:', docData.id);
         uploadedDocs.push(docData);
 
-        // Atualizar prompt apenas para agentes padrão
-        if (foreignTable === 'ai_agent_knowledge_documents') {
-          try {
-            const { data: { session } } = await supabase.auth.getSession();
-            const accessToken = session?.access_token;
-            const SUPABASE_FUNCTIONS_URL = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL || 'https://fitpynguasqqutuhzifx.supabase.co/functions/v1';
-            const updateResponse = await fetch(`${SUPABASE_FUNCTIONS_URL}/update-prompt-with-knowledge`, {
+        // Atualizar prompt para agentes padrão (WhatsApp) e agentes de e-mail
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          const accessToken = session?.access_token;
+          const SUPABASE_FUNCTIONS_URL = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL || 'https://fitpynguasqqutuhzifx.supabase.co/functions/v1';
+          
+          let endpoint, payload;
+          if (foreignTable === 'ai_agent_knowledge_documents') {
+            // Para agentes WhatsApp
+            endpoint = `${SUPABASE_FUNCTIONS_URL}/update-prompt-with-knowledge`;
+            payload = { ai_configuration_id: aiConfigurationId };
+          } else if (foreignTable === 'ai_email_agent_knowledge_documents') {
+            // Para agentes de e-mail
+            endpoint = `${SUPABASE_FUNCTIONS_URL}/update-email-agent-prompt-with-knowledge`;
+            payload = { agent_id: aiConfigurationId };
+          }
+
+          if (endpoint && payload) {
+            const updateResponse = await fetch(endpoint, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${accessToken}`,
               },
-              body: JSON.stringify({
-                ai_configuration_id: aiConfigurationId
-              }),
+              body: JSON.stringify(payload),
             });
             const updateResult = await updateResponse.json();
             console.log('✅ Prompt atualizado para documento:', docData.id, updateResult);
-          } catch (updateError) {
-            console.error('❌ Erro ao atualizar prompt para documento:', docData.id, updateError);
           }
+        } catch (updateError) {
+          console.error('❌ Erro ao atualizar prompt para documento:', docData.id, updateError);
         }
     }
 
