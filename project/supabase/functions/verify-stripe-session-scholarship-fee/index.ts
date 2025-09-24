@@ -84,6 +84,9 @@ Deno.serve(async (req)=>{
         console.log(`📤 [verify-stripe-session-scholarship-fee] Iniciando notificações...`);
         // Buscar dados do aluno (incluindo seller_referral_code e phone)
         const { data: alunoData, error: alunoError } = await supabase.from('user_profiles').select('full_name, email, phone, seller_referral_code').eq('user_id', userId).single();
+        // Buscar telefone do admin
+        const { data: adminProfile, error: adminProfileError } = await supabase.from('user_profiles').select('phone').eq('email', 'admin@matriculausa.com').single();
+        const adminPhone = adminProfile?.phone || "";
         if (alunoError || !alunoData) {
           console.error('[NOTIFICAÇÃO] Erro ao buscar dados do aluno:', alunoError);
           return corsResponse({
@@ -108,6 +111,7 @@ Deno.serve(async (req)=>{
               tipo_notf: 'Pagamento de taxa de bolsa confirmado',
               email_aluno: alunoData.email,
               nome_aluno: alunoData.full_name,
+              phone_aluno: alunoData.phone || "",
               nome_bolsa: scholarship.title,
               nome_universidade: universidade.name,
               email_universidade: emailUniversidade,
@@ -176,20 +180,25 @@ Deno.serve(async (req)=>{
               });
               if (sellerData && !sellerError) {
                 console.log(`📤 [verify-stripe-session-scholarship-fee] Seller encontrado:`, sellerData);
+                // Buscar telefone do seller
+                const { data: sellerProfile, error: sellerProfileError } = await supabase.from('user_profiles').select('phone').eq('user_id', sellerData.user_id).single();
+                const sellerPhone = sellerProfile?.phone || "";
                 // Buscar dados do affiliate_admin se houver
                 let affiliateAdminData = {
                   email: "",
-                  name: "Affiliate Admin"
+                  name: "Affiliate Admin",
+                  phone: ""
                 };
                 if (sellerData.affiliate_admin_id) {
                   console.log(`📤 [verify-stripe-session-scholarship-fee] Buscando affiliate_admin: ${sellerData.affiliate_admin_id}`);
                   const { data: affiliateData, error: affiliateError } = await supabase.from('affiliate_admins').select('user_id').eq('id', sellerData.affiliate_admin_id).single();
                   if (affiliateData && !affiliateError) {
-                    const { data: affiliateProfile, error: profileError } = await supabase.from('user_profiles').select('email, full_name').eq('user_id', affiliateData.user_id).single();
+                    const { data: affiliateProfile, error: profileError } = await supabase.from('user_profiles').select('email, full_name, phone').eq('user_id', affiliateData.user_id).single();
                     if (affiliateProfile && !profileError) {
                       affiliateAdminData = {
                         email: affiliateProfile.email || "",
-                        name: affiliateProfile.full_name || "Affiliate Admin"
+                        name: affiliateProfile.full_name || "Affiliate Admin",
+                        phone: affiliateProfile.phone || ""
                       };
                       console.log(`📤 [verify-stripe-session-scholarship-fee] Affiliate admin encontrado:`, affiliateAdminData);
                     }
@@ -200,8 +209,10 @@ Deno.serve(async (req)=>{
                   tipo_notf: "Pagamento Stripe de scholarship fee confirmado - Seller",
                   email_seller: sellerData.email,
                   nome_seller: sellerData.name,
+                  phone_seller: sellerPhone,
                   email_aluno: alunoData.email,
                   nome_aluno: alunoData.full_name,
+                  phone_aluno: alunoData.phone || "",
                   nome_bolsa: scholarship.title,
                   nome_universidade: universidade.name,
                   o_que_enviar: `Pagamento Stripe de scholarship fee no valor de $${(session.amount_total / 100).toFixed(2)} do aluno ${alunoData.full_name} foi processado com sucesso para a bolsa "${scholarship.title}" da universidade ${universidade.name}. Seu código de referência: ${sellerData.referral_code}`,
@@ -236,10 +247,13 @@ Deno.serve(async (req)=>{
                     tipo_notf: "Pagamento Stripe de scholarship fee confirmado - Affiliate Admin",
                     email_affiliate_admin: affiliateAdminData.email,
                     nome_affiliate_admin: affiliateAdminData.name,
+                    phone_affiliate_admin: affiliateAdminData.phone,
                     email_aluno: alunoData.email,
                     nome_aluno: alunoData.full_name,
+                    phone_aluno: alunoData.phone || "",
                     email_seller: sellerData.email,
                     nome_seller: sellerData.name,
+                    phone_seller: sellerPhone,
                     nome_bolsa: scholarship.title,
                     nome_universidade: universidade.name,
                     o_que_enviar: `Pagamento Stripe de scholarship fee no valor de $${(session.amount_total / 100).toFixed(2)} do aluno ${alunoData.full_name} foi processado com sucesso para a bolsa "${scholarship.title}" da universidade ${universidade.name}. Seller responsável: ${sellerData.name} (${sellerData.referral_code})`,
@@ -274,12 +288,16 @@ Deno.serve(async (req)=>{
                   tipo_notf: "Pagamento Stripe de scholarship fee confirmado - Admin",
                   email_admin: "admin@matriculausa.com",
                   nome_admin: "Admin MatriculaUSA",
+                  phone_admin: adminPhone,
                   email_aluno: alunoData.email,
                   nome_aluno: alunoData.full_name,
+                  phone_aluno: alunoData.phone || "",
                   email_seller: sellerData.email,
                   nome_seller: sellerData.name,
+                  phone_seller: sellerPhone,
                   email_affiliate_admin: affiliateAdminData.email,
                   nome_affiliate_admin: affiliateAdminData.name,
+                  phone_affiliate_admin: affiliateAdminData.phone,
                   nome_bolsa: scholarship.title,
                   nome_universidade: universidade.name,
                   o_que_enviar: `Pagamento Stripe de scholarship fee no valor de $${(session.amount_total / 100).toFixed(2)} do aluno ${alunoData.full_name} foi processado com sucesso para a bolsa "${scholarship.title}" da universidade ${universidade.name}. Seller responsável: ${sellerData.name} (${sellerData.referral_code})`,
