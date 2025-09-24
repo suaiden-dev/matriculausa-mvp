@@ -181,17 +181,19 @@ Deno.serve(async (req)=>{
             // Buscar dados do affiliate_admin se houver
             let affiliateAdminData = {
               email: "",
-              name: "Affiliate Admin"
+              name: "Affiliate Admin",
+              phone: ""
             };
             if (sellerData.affiliate_admin_id) {
               console.log(`📤 [verify-stripe-session-selection-process-fee] Buscando affiliate_admin: ${sellerData.affiliate_admin_id}`);
               const { data: affiliateData, error: affiliateError } = await supabase.from('affiliate_admins').select('user_id').eq('id', sellerData.affiliate_admin_id).single();
               if (affiliateData && !affiliateError) {
-                const { data: affiliateProfile, error: profileError } = await supabase.from('user_profiles').select('email, full_name').eq('user_id', affiliateData.user_id).single();
+                const { data: affiliateProfile, error: profileError } = await supabase.from('user_profiles').select('email, full_name, phone').eq('user_id', affiliateData.user_id).single();
                 if (affiliateProfile && !profileError) {
                   affiliateAdminData = {
                     email: affiliateProfile.email || "",
-                    name: affiliateProfile.full_name || "Affiliate Admin"
+                    name: affiliateProfile.full_name || "Affiliate Admin",
+                    phone: affiliateProfile.phone || ""
                   };
                   console.log(`📤 [verify-stripe-session-selection-process-fee] Affiliate admin encontrado:`, affiliateAdminData);
                 }
@@ -199,10 +201,15 @@ Deno.serve(async (req)=>{
             }
             // NOTIFICAÇÕES SEPARADAS PARA ADMIN, SELLER E AFFILIATE ADMIN
             // 1. NOTIFICAÇÃO PARA ADMIN
+            // Buscar telefone do admin (usando email admin@matriculausa.com)
+            const { data: adminProfile, error: adminProfileError } = await supabase.from('user_profiles').select('phone').eq('email', 'admin@matriculausa.com').single();
+            const adminPhone = adminProfile?.phone || "";
+            
             const adminNotificationPayload = {
               tipo_notf: "Pagamento Stripe de selection process confirmado - Admin",
               email_admin: "admin@matriculausa.com",
               nome_admin: "Admin MatriculaUSA",
+              phone_admin: adminPhone,
               email_aluno: alunoData.email,
               nome_aluno: alunoData.full_name,
               o_que_enviar: `Pagamento Stripe de selection process no valor de $${(session.amount_total / 100).toFixed(2)} do aluno ${alunoData.full_name} foi processado com sucesso. Seller responsável: ${sellerData.name} (${sellerData.referral_code}). Affiliate: ${affiliateAdminData.name}`,
@@ -232,10 +239,15 @@ Deno.serve(async (req)=>{
               console.error('📧 [verify-stripe-session-selection-process-fee] Erro ao enviar notificação para ADMIN:', adminError);
             }
             // 2. NOTIFICAÇÃO PARA SELLER
+            // Buscar telefone do seller
+            const { data: sellerProfile, error: sellerProfileError } = await supabase.from('user_profiles').select('phone').eq('user_id', sellerData.user_id).single();
+            const sellerPhone = sellerProfile?.phone || "";
+            
             const sellerNotificationPayload = {
               tipo_notf: "Pagamento Stripe de selection process confirmado - Seller",
               email_seller: sellerData.email,
               nome_seller: sellerData.name,
+              phone_seller: sellerPhone,
               email_aluno: alunoData.email,
               nome_aluno: alunoData.full_name,
               o_que_enviar: `Parabéns! Seu aluno ${alunoData.full_name} pagou a taxa de selection process no valor de $${(session.amount_total / 100).toFixed(2)}. Sua comissão será calculada em breve.`,
@@ -270,6 +282,7 @@ Deno.serve(async (req)=>{
                 tipo_notf: "Pagamento Stripe de selection process confirmado - Affiliate Admin",
                 email_affiliate_admin: affiliateAdminData.email,
                 nome_affiliate_admin: affiliateAdminData.name,
+                phone_affiliate_admin: affiliateAdminData.phone,
                 email_aluno: alunoData.email,
                 nome_aluno: alunoData.full_name,
                 email_seller: sellerData.email,

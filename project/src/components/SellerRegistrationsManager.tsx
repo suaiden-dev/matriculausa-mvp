@@ -400,6 +400,7 @@ const SellerRegistrationsManager: React.FC<SellerRegistrationsManagerProps> = ({
             tipo_notf: "Seu registro de seller foi aprovado",
             email_seller: userProfile.email,
             nome_seller: userProfile.full_name || "Seller",
+            phone_seller: userProfile.phone || "",
             email_affiliate_admin: affiliateAdminData?.email || "",
             nome_affiliate_admin: affiliateAdminData?.full_name || "Affiliate Admin",
             o_que_enviar: `Parabéns! Seu registro de seller foi aprovado pelo affiliate admin ${affiliateAdminData?.full_name || "Affiliate Admin"}. Seu código de referência é: ${sellerData?.referral_code || "N/A"}. Use este código para indicar alunos e ganhar comissões!`,
