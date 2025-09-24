@@ -92,7 +92,7 @@ const SellerManagement: React.FC = () => {
       // Buscar o user_profile_id pelo user_id
       const { data: userProfile, error: profileError } = await supabase
         .from('user_profiles')
-        .select('id, email, full_name')
+        .select('id, email, full_name, phone')
         .eq('user_id', userId)
         .single();
 
@@ -165,6 +165,7 @@ const SellerManagement: React.FC = () => {
           tipo_notf: "Você foi promovido a seller",
           email_seller: userProfile.email,
           nome_seller: userProfile.full_name || userName,
+          phone_seller: userProfile.phone || "",
           email_affiliate_admin: affiliateAdmin?.email || "",
           nome_affiliate_admin: affiliateAdmin?.full_name || "Affiliate Admin",
           o_que_enviar: `Parabéns! Você foi promovido a seller pelo affiliate admin ${affiliateAdmin?.full_name || "Affiliate Admin"}. Seu código de referência é: ${sellerData?.referral_code || "N/A"}. Use este código para indicar alunos e ganhar comissões!`,

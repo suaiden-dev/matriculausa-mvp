@@ -73,7 +73,10 @@ Deno.serve(async (req)=>{
       try {
         console.log(`📤 [verify-stripe-session-i20-control-fee] Iniciando notificações...`);
         // Buscar dados do aluno (incluindo seller_referral_code)
-        const { data: alunoData, error: alunoError } = await supabase.from('user_profiles').select('full_name, email, seller_referral_code').eq('user_id', userId).single();
+        const { data: alunoData, error: alunoError } = await supabase.from('user_profiles').select('full_name, email, phone, seller_referral_code').eq('user_id', userId).single();
+        // Buscar telefone do admin
+        const { data: adminProfile, error: adminProfileError } = await supabase.from('user_profiles').select('phone').eq('email', 'admin@matriculausa.com').single();
+        const adminPhone = adminProfile?.phone || "";
         if (alunoError || !alunoData) {
           console.error('[NOTIFICAÇÃO] Erro ao buscar dados do aluno:', alunoError);
           return corsResponse({
@@ -87,6 +90,7 @@ Deno.serve(async (req)=>{
           tipo_notf: 'Pagamento de I-20 control fee confirmado',
           email_aluno: alunoData.email,
           nome_aluno: alunoData.full_name,
+          phone_aluno: alunoData.phone || "",
           o_que_enviar: `O pagamento da taxa de controle I-20 foi confirmado para ${alunoData.full_name}. Seu documento I-20 será processado e enviado em breve.`,
           payment_id: sessionId,
           fee_type: 'i20_control_fee',
@@ -126,6 +130,9 @@ Deno.serve(async (req)=>{
             sellerError
           });
           if (sellerData && !sellerError) {
+            const { data: sellerProfile, error: sellerProfileError } = await supabase.from('user_profiles').select('phone').eq('user_id', sellerData.user_id).single();
+            const sellerPhone = sellerProfile?.phone;
+
             console.log(`📤 [verify-stripe-session-i20-control-fee] ✅ SELLER ENCONTRADO! Dados:`, sellerData);
             // Buscar dados do affiliate_admin se houver
             let affiliateAdminData = {
@@ -152,9 +159,17 @@ Deno.serve(async (req)=>{
               tipo_notf: "Pagamento Stripe de I-20 control fee confirmado - Admin",
               email_admin: "admin@matriculausa.com",
               nome_admin: "Admin MatriculaUSA",
+              phone_admin: adminPhone,
+              email_seller: sellerData.email,
+              nome_seller: sellerData.name,
+              phone_seller: sellerPhone || "",
               email_aluno: alunoData.email,
               nome_aluno: alunoData.full_name,
-              o_que_enviar: `Pagamento Stripe de I-20 control fee no valor de $${(session.amount_total / 100).toFixed(2)} do aluno ${alunoData.full_name} foi processado com sucesso. Seller responsável: ${sellerData.name} (${sellerData.referral_code}). Affiliate: ${affiliateAdminData.name}`,
+              phone_aluno: alunoData.phone || "",
+              email_affiliate_admin: affiliateAdminData.email,
+              nome_affiliate_admin: affiliateAdminData.name,
+              phone_affiliate_admin: (await (async ()=>{ try { const { data: a, error: e } = await supabase.from('user_profiles').select('phone').eq('email', affiliateAdminData.email).single(); return a?.phone || "" } catch { return "" } })()),
+              o_que_enviar: `Pagamento Stripe de I-20 control fee no valor de ${(session.amount_total / 100).toFixed(2)} do aluno ${alunoData.full_name} foi processado com sucesso. Seller responsável: ${sellerData.name} (${sellerData.referral_code}). Affiliate: ${affiliateAdminData.name}`,
               payment_id: sessionId,
               fee_type: 'i20_control_fee',
               amount: session.amount_total / 100,
@@ -185,9 +200,11 @@ Deno.serve(async (req)=>{
               tipo_notf: "Pagamento Stripe de I-20 control fee confirmado - Seller",
               email_seller: sellerData.email,
               nome_seller: sellerData.name,
+              phone_seller: sellerPhone || "",
               email_aluno: alunoData.email,
               nome_aluno: alunoData.full_name,
-              o_que_enviar: `Parabéns! Seu aluno ${alunoData.full_name} pagou a taxa de I-20 control fee no valor de $${(session.amount_total / 100).toFixed(2)}. O documento I-20 será processado em breve.`,
+              phone_aluno: alunoData.phone || "",
+              o_que_enviar: `Parabéns! Seu aluno ${alunoData.full_name} pagou a taxa de I-20 control fee no valor de ${(session.amount_total / 100).toFixed(2)}. O documento I-20 será processado em breve.`,
               payment_id: sessionId,
               fee_type: 'i20_control_fee',
               amount: session.amount_total / 100,
@@ -219,11 +236,14 @@ Deno.serve(async (req)=>{
                 tipo_notf: "Pagamento Stripe de I-20 control fee confirmado - Affiliate Admin",
                 email_affiliate_admin: affiliateAdminData.email,
                 nome_affiliate_admin: affiliateAdminData.name,
+                phone_affiliate_admin: (await (async ()=>{ try { const { data: a, error: e } = await supabase.from('user_profiles').select('phone').eq('email', affiliateAdminData.email).single(); return a?.phone || "" } catch { return "" } })()),
                 email_aluno: alunoData.email,
                 nome_aluno: alunoData.full_name,
+                phone_aluno: alunoData.phone || "",
                 email_seller: sellerData.email,
                 nome_seller: sellerData.name,
-                o_que_enviar: `O seller ${sellerData.name} (${sellerData.referral_code}) do seu afiliado teve um pagamento de I-20 control fee no valor de $${(session.amount_total / 100).toFixed(2)} do aluno ${alunoData.full_name}.`,
+                phone_seller: sellerPhone || "",
+                o_que_enviar: `O seller ${sellerData.name} (${sellerData.referral_code}) do seu afiliado teve um pagamento de I-20 control fee no valor de ${(session.amount_total / 100).toFixed(2)} do aluno ${alunoData.full_name}.`,
                 payment_id: sessionId,
                 fee_type: 'i20_control_fee',
                 amount: session.amount_total / 100,
