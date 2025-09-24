@@ -256,7 +256,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             const fullName = pendingFullName || 
               session.user.user_metadata?.full_name || 
               session.user.user_metadata?.name || 
-              session.user.email?.split('@')[0] || 
               'User';
             const phone = pendingPhone || 
               session.user.user_metadata?.phone || 
@@ -302,6 +301,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             const profileData = {
               user_id: session.user.id,
               full_name: fullName,
+              email: session.user.email, // Adicionar o email do usuário
               phone: phone,
               status: 'active',
               role: finalRole,
@@ -312,7 +312,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               // Persist dependents if provided during sign up
               dependents: typeof session.user.user_metadata?.dependents !== 'undefined'
                 ? Number(session.user.user_metadata?.dependents) || 0
-                : undefined
+                : 0,
+              // Add desired_scholarship_range if provided
+              desired_scholarship_range: session.user.user_metadata?.desired_scholarship_range 
+                ? Number(session.user.user_metadata?.desired_scholarship_range) 
+                : null
             };
             
             console.log('🔍 [USEAUTH] profileData que será inserido:', profileData);
@@ -781,6 +785,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Normaliza o e-mail para evitar duplicidade por case/espacos
     const normalizedEmail = (email || '').trim().toLowerCase();
 
+    console.log('🔍 [USEAUTH] Tentando signUp com:', {
+      email: normalizedEmail,
+      userData: signUpData
+    });
+
     const { error, data } = await supabase.auth.signUp({
       email: normalizedEmail,
       password,
@@ -791,6 +800,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     if (error) {
       console.log('❌ [USEAUTH] Erro no signUp:', error);
+      console.log('❌ [USEAUTH] Detalhes do erro:', {
+        message: error.message,
+        status: error.status,
+        name: error.name
+      });
       throw error;
     }
     

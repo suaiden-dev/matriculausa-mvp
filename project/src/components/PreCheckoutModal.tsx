@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { useTermsAcceptance } from '../hooks/useTermsAcceptance';
+import { useFeeConfig } from '../hooks/useFeeConfig';
 
 interface Term {
   id: string;
@@ -41,6 +42,7 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
   
   const { t } = useTranslation();
   const { user, userProfile } = useAuth();
+  const { getFeeAmount } = useFeeConfig(user?.id);
   const { recordTermAcceptance } = useTermsAcceptance();
   const [discountCode, setDiscountCode] = useState('');
   const [isValidating, setIsValidating] = useState(false);
@@ -52,6 +54,21 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
   } | null>(null);
   const [hasUsedReferralCode, setHasUsedReferralCode] = useState(false);
   const [codeApplied, setCodeApplied] = useState(false);
+  // Preço calculado conforme feeType e dependentes (Selection Process inclui dependentes)
+  const computedBasePrice = (() => {
+    const dependents = Number(userProfile?.dependents) || 0;
+    switch (feeType) {
+      case 'selection_process':
+        return Number(getFeeAmount('selection_process')) + dependents * 150;
+      case 'application_fee':
+        return Number(getFeeAmount('application_fee'));
+      case 'scholarship_fee':
+        return Number(getFeeAmount('scholarship_fee'));
+      case 'enrollment_fee':
+      default:
+        return productPrice;
+    }
+  })();
   
   // Terms acceptance states
   const [termsAccepted, setTermsAccepted] = useState(false);
@@ -530,7 +547,7 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
     // ✅ CORREÇÃO: Para usuários com seller_referral_code, não precisa de código de desconto
     if (hasSellerReferralCode) {
       console.log('🔍 [PreCheckoutModal] ✅ Usuário com seller_referral_code - prosseguindo sem validação de código');
-      const finalAmount = productPrice; // preço já deve vir calculado (inclui dependentes)
+      const finalAmount = computedBasePrice; // calculado localmente
       onProceedToCheckout(finalAmount);
       onClose();
       return;
@@ -557,7 +574,7 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
     }
 
     console.log('🔍 [PreCheckoutModal] handleSkip chamado - prosseguindo sem código');
-    const finalAmount = productPrice; // preço já deve vir calculado (inclui dependentes)
+    const finalAmount = computedBasePrice; // calculado localmente
     onProceedToCheckout(finalAmount);
     onClose();
   };

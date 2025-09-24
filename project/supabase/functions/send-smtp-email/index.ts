@@ -1,8 +1,10 @@
+// @ts-ignore - Deno std import resolved at runtime in Edge Functions
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
 serve(async (req) => {
@@ -27,7 +29,7 @@ serve(async (req) => {
     } = await req.json()
 
     // Prepare data for SMTP endpoint
-    const emailData = {
+    const emailData: any = {
       host,
       port,
       secure,

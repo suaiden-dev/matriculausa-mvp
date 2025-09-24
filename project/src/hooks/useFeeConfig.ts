@@ -10,9 +10,9 @@ export interface FeeConfig {
 }
 
 const DEFAULT_FEE_CONFIG: FeeConfig = {
-  selection_process_fee: 350,
-  application_fee_default: 350,
-  scholarship_fee_default: 550,
+  selection_process_fee: 400,
+  application_fee_default: 400,
+  scholarship_fee_default: 900,
   i20_control_fee: 900
 };
 
@@ -37,52 +37,8 @@ export const useFeeConfig = (userId?: string) => {
       setLoading(true);
       setError(null);
 
-      // Buscar configurações de taxas do banco de dados
-      const { data: systemSettings, error: settingsError } = await supabase
-        .from('system_settings')
-        .select('key, value')
-        .in('key', [
-          'selection_process_fee',
-          'application_fee_default', 
-          'scholarship_fee_default',
-          'i20_control_fee'
-        ]);
-
-      if (settingsError) {
-        console.warn('⚠️ [useFeeConfig] Erro ao carregar configurações do banco, usando valores padrão:', settingsError);
-        setFeeConfig(DEFAULT_FEE_CONFIG);
-        return;
-      }
-
-      // Converter dados do banco para o formato esperado
-      const configFromDB: Partial<FeeConfig> = {};
-      systemSettings?.forEach(setting => {
-        const value = parseFloat(setting.value);
-        if (!isNaN(value)) {
-          switch (setting.key) {
-            case 'selection_process_fee':
-              configFromDB.selection_process_fee = value;
-              break;
-            case 'application_fee_default':
-              configFromDB.application_fee_default = value;
-              break;
-            case 'scholarship_fee_default':
-              configFromDB.scholarship_fee_default = value;
-              break;
-            case 'i20_control_fee':
-              configFromDB.i20_control_fee = value;
-              break;
-          }
-        }
-      });
-
-      // Mesclar com valores padrão
-      const finalConfig: FeeConfig = {
-        ...DEFAULT_FEE_CONFIG,
-        ...configFromDB
-      };
-
-      setFeeConfig(finalConfig);
+      // Novo modelo: valores fixos. Ignorar overrides do banco.
+      setFeeConfig(DEFAULT_FEE_CONFIG);
 
     } catch (err) {
       console.error('❌ [useFeeConfig] Erro inesperado:', err);
@@ -151,25 +107,7 @@ export const useFeeConfig = (userId?: string) => {
       return customAmount;
     }
 
-    // Se o usuário tem um pacote atribuído, usar as taxas do pacote
-    if (userPackageFees) {
-      switch (feeType) {
-        case 'selection_process':
-          return userPackageFees.selection_process_fee;
-         case 'application_fee':
-           // Application fee sempre usa o valor fixo do sistema (não muda com pacotes)
-           return feeConfig.application_fee_default;
-        case 'scholarship_fee':
-          return userPackageFees.scholarship_fee;
-        case 'i-20_control_fee':
-        case 'i20_control_fee':
-          return userPackageFees.i20_control_fee;
-        default:
-          return userPackageFees.selection_process_fee;
-      }
-    }
-
-    // Fallback para taxas padrão do sistema
+    // Novo modelo: sempre usar valores do sistema (fixos)
     switch (feeType) {
       case 'selection_process':
         return feeConfig.selection_process_fee;

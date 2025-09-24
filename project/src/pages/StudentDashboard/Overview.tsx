@@ -11,10 +11,7 @@ import {
   ArrowUpRight,
   Calendar,
   Building,
-  Eye,
   CreditCard,
-  Gift,
-  X,
   Tag
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -106,11 +103,11 @@ const Overview: React.FC<OverviewProps> = ({
   const hasApplicationFeePaid = recentApplications.some(app => app.is_application_fee_paid);
   const hasScholarshipFeePaid = recentApplications.some(app => app.is_scholarship_fee_paid);
 
-  // Dependents impact (each dependent adds $150, split between selection_process and i20)
+  // Dependents impact: $150 por dependente somente no Selection Process
   const dependents = (userProfile?.dependents as number) || 0;
   const dependentsExtra = dependents * 150;
-  const selectionExtra = dependentsExtra / 2;
-  const i20Extra = dependentsExtra / 2;
+  const selectionExtra = dependentsExtra; // 100% no Selection Process
+  const i20Extra = 0; // 0% no I-20
 
   // Base fee amounts
   const selectionBase = Number(getFeeAmount('selection_process')) || 0;

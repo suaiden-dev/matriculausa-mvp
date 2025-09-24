@@ -38,7 +38,7 @@ export const ZellePaymentFlow: React.FC<ZellePaymentFlowProps> = ({
   const [discountApplied, setDiscountApplied] = useState(false);
   const [finalAmount, setFinalAmount] = useState<number | null>(null);
 
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, userProfile } = useAuth();
 
   const handleStartPayment = () => {
     if (!isAuthenticated) {
@@ -150,7 +150,12 @@ export const ZellePaymentFlow: React.FC<ZellePaymentFlowProps> = ({
   };
 
   const getAmount = () => {
-    return feeType === 'selection_process' ? getFeeAmount('selection_process') : getFeeAmount('application_fee');
+    if (feeType === 'selection_process') {
+      const dependents = Number(userProfile?.dependents) || 0;
+      const dependentsCost = dependents * 150; // $150 por dependente apenas no Selection Process
+      return getFeeAmount('selection_process') + dependentsCost;
+    }
+    return getFeeAmount('application_fee');
   };
 
   const getProductName = () => {

@@ -89,8 +89,9 @@ const Performance: React.FC<PerformanceProps> = ({ stats, sellerProfile, student
     const packageFees = studentPackageFees[student.id];
     const deps = studentDependents[student.id] || 0;
     if (student.has_paid_selection_process_fee) {
-      const baseSel = packageFees ? packageFees.selection_process_fee : getFeeAmount('selection_process');
-      total += Number(baseSel) + (deps * 150) / 2;
+      // Usar taxa padrão do Selection e somar todos os dependentes
+      const baseSel = getFeeAmount('selection_process');
+      total += Number(baseSel) + (deps * 150);
     }
     if (student.is_scholarship_fee_paid) {
       const baseSch = packageFees ? packageFees.scholarship_fee : getFeeAmount('scholarship_fee');
@@ -98,7 +99,8 @@ const Performance: React.FC<PerformanceProps> = ({ stats, sellerProfile, student
     }
     if (student.has_paid_i20_control_fee) {
       const baseI20 = packageFees ? packageFees.i20_control_fee : getFeeAmount('i20_control_fee');
-      total += Number(baseI20) + (deps * 150) / 2;
+      // Não somar dependentes no I-20
+      total += Number(baseI20);
     }
     return total;
   };
