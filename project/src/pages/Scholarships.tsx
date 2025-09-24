@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Search, DollarSign, Award, Clock, GraduationCap, Star, CheckCircle, Building, Users, ArrowRight, Sparkles, AlertTriangle, Monitor, MapPin, Briefcase, Globe, Eye, Lock } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth';
@@ -56,6 +56,7 @@ const Scholarships: React.FC = () => {
   const [featuredScholarships, setFeaturedScholarships] = useState<Scholarship[]>([]);
   // Approved universities ids cache
   const [approvedUniversityIds, setApprovedUniversityIds] = useState<Set<number | string>>(new Set());
+  const scholarshipsSectionRef = useRef<HTMLDivElement | null>(null);
 
   // Estados para o modal de detalhes
   const [selectedScholarshipForModal, setSelectedScholarshipForModal] = useState<any>(null);
@@ -382,8 +383,10 @@ const Scholarships: React.FC = () => {
     setSelectedScholarshipForModal(null);
   };
 
-  const PAGE_SIZE = 20;
+  const DEFAULT_PAGE_SIZE = 21;
+  const MOBILE_PAGE_SIZE = 10;
   const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE);
   const [totalCount, setTotalCount] = useState(0);
 
   // Atualizar totalCount sempre que scholarships mudar
@@ -391,14 +394,53 @@ const Scholarships: React.FC = () => {
     setTotalCount(filteredScholarships.length);
   }, [filteredScholarships]);
 
-  // Display all filtered scholarships
-  const visibleScholarships = filteredScholarships;
-  const paginatedScholarships = visibleScholarships.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  // Ajustar quantidade por página conforme viewport (mobile vs desktop)
+  useEffect(() => {
+    const computePageSize = () => {
+      try {
+        const isMobile = typeof window !== 'undefined' && window.innerWidth < 640; // breakpoint ~sm
+        const newSize = isMobile ? MOBILE_PAGE_SIZE : DEFAULT_PAGE_SIZE;
+        setPageSize(prev => (prev !== newSize ? newSize : prev));
+      } catch {}
+    };
+    computePageSize();
+    if (typeof window !== 'undefined') {
+      window.addEventListener('resize', computePageSize);
+      return () => window.removeEventListener('resize', computePageSize);
+    }
+  }, []);
+
+  // Priorizar Caroline University e Oikos na listagem geral
+  const paginatedScholarships = useMemo(() => {
+    const priorityMatch = (name: string | undefined | null): boolean => {
+      if (!name) return false;
+      const n = String(name).toLowerCase();
+      return n.includes('caroline') || n.includes('oikos');
+    };
+    const withIndex = filteredScholarships.map((s, idx) => ({ s, idx }));
+    withIndex.sort((a, b) => {
+      const aName = a.s.university_name || (a.s as any).universities?.name || '';
+      const bName = b.s.university_name || (b.s as any).universities?.name || '';
+      const aPr = priorityMatch(aName) ? 0 : 1;
+      const bPr = priorityMatch(bName) ? 0 : 1;
+      if (aPr !== bPr) return aPr - bPr; // prioriza prioridade 0
+      return a.idx - b.idx; // estabilidade
+    });
+    const sorted = withIndex.map(x => x.s);
+    return sorted.slice(page * pageSize, (page + 1) * pageSize);
+  }, [filteredScholarships, page, pageSize]);
 
   // Reset page when filters change
   useEffect(() => {
     setPage(0);
   }, [searchTerm, selectedLevel, selectedField, selectedStudyMode, selectedWorkAuth, minPrice, maxPrice]);
+
+  // Scroll para a seção de bolsas quando a página mudar
+  useEffect(() => {
+    if (scholarshipsSectionRef.current) {
+      scholarshipsSectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [page]);
 
   // Se usuário já tem application fee paga, mostrar mensagem de bloqueio
   if (isAuthenticated && !applicationFeeLoading && hasPaidApplicationFee) {
@@ -814,7 +856,7 @@ const Scholarships: React.FC = () => {
         )}
 
                  {/* All Scholarships Section */}
-         <div className="mb-12">
+         <div className="mb-12" ref={scholarshipsSectionRef}>
            <div className="text-center mb-8">
              <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
                <span className="text-[#05294E]">{t('scholarshipsPage.allScholarships.title')}</span>
@@ -828,7 +870,7 @@ const Scholarships: React.FC = () => {
            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
              {scholarshipsLoading ? (
                // Skeleton cards during loading
-               Array.from({ length: PAGE_SIZE }).map((_, i) => (
+              Array.from({ length: pageSize }).map((_, i) => (
                  <div key={i} className="bg-white rounded-3xl shadow-lg border border-slate-200 p-6 animate-pulse">
                    <div className="h-6 bg-slate-200 rounded w-3/4 mb-4"></div>
                    <div className="h-4 bg-slate-200 rounded w-1/2 mb-8"></div>
@@ -909,20 +951,20 @@ const Scholarships: React.FC = () => {
                        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-red-500 to-red-600 z-10 animate-pulse"></div>
                      )}
 
-                     {/* Scholarship Image */}
-                     <div className="relative h-48 w-full overflow-hidden flex items-center justify-center">
-                       {scholarship.image_url && (user?.role !== 'student' || (isAuthenticated && userProfile?.has_paid_selection_process_fee)) ? (
-                         <img
-                           src={scholarship.image_url}
-                           alt={scholarship.title}
-                           className={`w-full h-full object-contain group-hover:scale-110 transition-transform duration-700`}
-                         />
-                       ) : (
-                         <div className="flex items-center justify-center w-full h-full text-slate-400 bg-gradient-to-br from-[#05294E]/5 to-slate-100">
-                           <Building className="h-16 w-16 text-[#05294E]/30" />
-                         </div>
-                       )}
-                       
+                    {/* Scholarship Image */}
+                    <div className="relative h-48 w-full overflow-hidden flex items-center justify-center">
+                      {scholarship.image_url && canViewSensitive ? (
+                        <img
+                          src={scholarship.image_url}
+                          alt={scholarship.title}
+                          className={`w-full h-full object-contain group-hover:scale-110 transition-transform duration-700`}
+                        />
+                      ) : (
+                        <div className="flex items-center justify-center w-full h-full text-slate-400 bg-gradient-to-br from-[#05294E]/5 to-slate-100">
+                          <Building className="h-16 w-16 text-[#05294E]/30" />
+                        </div>
+                      )}
+                      
                        {/* Gradient Overlay for better text contrast */}
                        <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent"></div>
                        
@@ -1135,43 +1177,7 @@ const Scholarships: React.FC = () => {
          </div>
 
         {/* Call to Action */}
-        <div className="mt-20 bg-gradient-to-br from-[#05294E] via-slate-800 to-[#05294E] rounded-3xl p-12 text-white text-center relative overflow-hidden shadow-2xl">
-          <div className="absolute inset-0">
-            <div className="absolute top-0 left-0 w-64 h-64 bg-white/5 rounded-full blur-3xl"></div>
-            <div className="absolute bottom-0 right-0 w-96 h-96 bg-[#D0151C]/10 rounded-full blur-3xl"></div>
-          </div>
-          
-          <div className="relative">
-            <div className="inline-flex items-center bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-6 py-2 mb-6">
-              <Sparkles className="h-4 w-4 mr-2" />
-              <span className="text-sm font-medium">{t('scholarshipsPage.callToAction.readyToStart')}</span>
-            </div>
-            
-            <h2 className="text-4xl md:text-5xl font-black mb-6 leading-tight">
-              {t('scholarshipsPage.callToAction.title')}
-            </h2>
-            <p className="text-xl text-slate-200 mb-10 max-w-3xl mx-auto leading-relaxed">
-              {t('scholarshipsPage.callToAction.description')}
-            </p>
-            <div className="flex flex-col sm:flex-row gap-6 justify-center">
-              <button 
-                onClick={() => navigate('/register')}
-                className="bg-[#D0151C] text-white px-10 py-5 rounded-2xl hover:bg-[#B01218] transition-all duration-300 font-bold text-lg shadow-2xl transform hover:scale-105 flex items-center justify-center"
-              >
-                {t('scholarshipsPage.callToAction.getStartedToday')}
-                <ArrowRight className="ml-3 h-5 w-5" />
-              </button>
-              <button 
-                onClick={() => navigate('/how-it-works')}
-                className="bg-white/10 backdrop-blur-sm border border-white/20 text-white px-10 py-5 rounded-2xl hover:bg-white/20 transition-all duration-300 font-bold text-lg flex items-center justify-center"
-              >
-                <Award className="mr-3 h-5 w-5" />
-                {t('scholarshipsPage.callToAction.learnMore')}
-              </button>
-            </div>
-          </div>
-        </div>
-
+        
         {/* Paginação */}
         <div className="flex justify-center items-center gap-4 mt-10">
           <button
@@ -1182,12 +1188,12 @@ const Scholarships: React.FC = () => {
             {t('scholarshipsPage.pagination.previous')}
           </button>
           <span className="text-slate-600 font-medium">
-            {t('scholarshipsPage.pagination.page')} {page + 1} {t('scholarshipsPage.pagination.of')} {Math.ceil(totalCount / PAGE_SIZE) || 1}
+            {t('scholarshipsPage.pagination.page')} {page + 1} {t('scholarshipsPage.pagination.of')} {Math.ceil(totalCount / pageSize) || 1}
           </span>
           <button
             className="px-4 py-2 rounded bg-[#05294E] text-white font-semibold disabled:opacity-50"
             onClick={() => setPage((p) => p + 1)}
-            disabled={(page + 1) * PAGE_SIZE >= totalCount}
+            disabled={(page + 1) * pageSize >= totalCount}
           >
             {t('scholarshipsPage.pagination.next')}
           </button>
