@@ -44,7 +44,7 @@ const Overview: React.FC<OverviewProps> = ({
   const { t } = useTranslation();
   const { user, userProfile } = useAuth();
   const { activeDiscount } = useReferralCode();
-  const { getFeeAmount } = useFeeConfig(user?.id);
+  const { getFeeAmount, userFeeOverrides } = useFeeConfig(user?.id);
   const [visibleApplications, setVisibleApplications] = useState(5); // Mostrar 5 inicialmente
   
   const hasMoreApplications = recentApplications.length > visibleApplications;
@@ -103,18 +103,21 @@ const Overview: React.FC<OverviewProps> = ({
   const hasApplicationFeePaid = recentApplications.some(app => app.is_application_fee_paid);
   const hasScholarshipFeePaid = recentApplications.some(app => app.is_scholarship_fee_paid);
 
-  // Dependents impact: $150 por dependente somente no Selection Process
-  const dependents = (userProfile?.dependents as number) || 0;
-  const dependentsExtra = dependents * 150;
-  const selectionExtra = dependentsExtra; // 100% no Selection Process
-  const i20Extra = 0; // 0% no I-20
-
-  // Base fee amounts
+  // Base fee amounts with user overrides
   const selectionBase = Number(getFeeAmount('selection_process')) || 0;
   const scholarshipBase = Number(getFeeAmount('scholarship_fee')) || 0;
   const i20Base = Number(getFeeAmount('i20_control_fee')) || 0;
 
-  // Display amounts including dependents
+  // Dependents impact: $150 por dependente somente no Selection Process
+  // APENAS se não há override personalizado (override já inclui dependentes se necessário)
+  const dependents = (userProfile?.dependents as number) || 0;
+  const hasSelectionOverride = userFeeOverrides?.selection_process_fee !== undefined;
+  const hasI20Override = userFeeOverrides?.i20_control_fee !== undefined;
+  
+  const selectionExtra = hasSelectionOverride ? 0 : (dependents * 150); // Só soma dependentes se não tem override
+  const i20Extra = hasI20Override ? 0 : 0; // I-20 nunca tem dependentes
+
+  // Display amounts
   const selectionWithDependents = selectionBase + selectionExtra;
   const i20WithDependents = i20Base + i20Extra;
 

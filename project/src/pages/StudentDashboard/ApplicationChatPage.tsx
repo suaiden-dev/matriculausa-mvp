@@ -221,14 +221,17 @@ const ApplicationChatPage: React.FC = () => {
         }
       } else if (selectedPaymentMethod === 'zelle') {
         // Redirecionar para a página de pagamento Zelle (mesma rota das outras taxas)
+        // Usar valor dinâmico do I-20 Control Fee (com overrides se aplicável)
+        const i20Amount = getFeeAmount('i20_control_fee').toString();
+        
         const params = new URLSearchParams({
           feeType: 'i20_control_fee',
-          amount: '1250',
+          amount: i20Amount,
           scholarshipsIds: applicationDetails?.scholarships?.id || ''
         });
         
         // Adicionar campo específico para I-20 Control Fee
-        params.append('i20ControlFeeAmount', '1250');
+        params.append('i20ControlFeeAmount', i20Amount);
         
         window.location.href = `/checkout/zelle?${params.toString()}`;
       }

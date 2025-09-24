@@ -107,8 +107,8 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
   const [realScholarshipApplication, setRealScholarshipApplication] = useState<any>(null);
   const [loadingApplication, setLoadingApplication] = useState(false);
   
-  // Hook para configurações dinâmicas de taxas
-  const { getFeeAmount, formatFeeAmount } = useFeeConfig();
+  // Hook para configurações dinâmicas de taxas (usando studentId para ver overrides do estudante)
+  const { getFeeAmount, formatFeeAmount } = useFeeConfig(studentId);
   
   // Estados para taxas dinâmicas do estudante
   const [studentPackageFees, setStudentPackageFees] = useState<any>(null);
@@ -1528,7 +1528,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                            {studentInfo?.has_paid_i20_control_fee && (
                              <span className="text-xs text-slate-500">
                                {(() => {
-                                 const base = studentPackageFees ? Number(studentPackageFees.i20_control_fee) : Number(getFeeAmount('i-20_control_fee'));
+                                 const base = studentPackageFees ? Number(studentPackageFees.i20_control_fee) : Number(getFeeAmount('i20_control_fee'));
                                  const total = base; // Sem dependentes no I-20
                                  return formatFeeAmount(total);
                                })()}

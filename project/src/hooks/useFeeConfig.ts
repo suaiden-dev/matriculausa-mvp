@@ -16,9 +16,17 @@ const DEFAULT_FEE_CONFIG: FeeConfig = {
   i20_control_fee: 900
 };
 
+interface UserFeeOverrides {
+  selection_process_fee?: number;
+  application_fee?: number;
+  scholarship_fee?: number;
+  i20_control_fee?: number;
+}
+
 export const useFeeConfig = (userId?: string) => {
   const [feeConfig, setFeeConfig] = useState<FeeConfig>(DEFAULT_FEE_CONFIG);
   const [userPackageFees, setUserPackageFees] = useState<UserPackageFees | null>(null);
+  const [userFeeOverrides, setUserFeeOverrides] = useState<UserFeeOverrides | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -29,6 +37,7 @@ export const useFeeConfig = (userId?: string) => {
   useEffect(() => {
     if (userId) {
       loadUserPackageFees();
+      loadUserFeeOverrides();
     }
   }, [userId]);
 
@@ -71,6 +80,29 @@ export const useFeeConfig = (userId?: string) => {
     }
   };
 
+  const loadUserFeeOverrides = async () => {
+    if (!userId) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('user_fee_overrides')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+
+      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+        console.warn('⚠️ [useFeeConfig] Erro ao carregar overrides de taxas do usuário:', error);
+        setUserFeeOverrides(null);
+        return;
+      }
+
+      setUserFeeOverrides(data || null);
+    } catch (err) {
+      console.error('❌ [useFeeConfig] Erro inesperado ao carregar overrides de taxas:', err);
+      setUserFeeOverrides(null);
+    }
+  };
+
   const updateFeeConfig = async (newConfig: Partial<FeeConfig>) => {
     try {
       setLoading(true);
@@ -107,7 +139,34 @@ export const useFeeConfig = (userId?: string) => {
       return customAmount;
     }
 
-    // Novo modelo: sempre usar valores do sistema (fixos)
+    // Verificar se há override personalizado para este usuário
+    if (userFeeOverrides) {
+      switch (feeType) {
+        case 'selection_process':
+          if (userFeeOverrides.selection_process_fee !== undefined) {
+            return userFeeOverrides.selection_process_fee;
+          }
+          break;
+        case 'application_fee':
+          if (userFeeOverrides.application_fee !== undefined) {
+            return userFeeOverrides.application_fee;
+          }
+          break;
+        case 'scholarship_fee':
+          if (userFeeOverrides.scholarship_fee !== undefined) {
+            return userFeeOverrides.scholarship_fee;
+          }
+          break;
+        case 'i-20_control_fee':
+        case 'i20_control_fee':
+          if (userFeeOverrides.i20_control_fee !== undefined) {
+            return userFeeOverrides.i20_control_fee;
+          }
+          break;
+      }
+    }
+
+    // Usar valores padrão do sistema se não há override
     switch (feeType) {
       case 'selection_process':
         return feeConfig.selection_process_fee;
@@ -151,10 +210,12 @@ export const useFeeConfig = (userId?: string) => {
   return {
     feeConfig,
     userPackageFees,
+    userFeeOverrides,
     loading,
     error,
     loadFeeConfig,
     loadUserPackageFees,
+    loadUserFeeOverrides,
     updateFeeConfig,
     getFeeAmount,
     formatFeeAmount,

@@ -68,7 +68,7 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
 
   const { t } = useTranslation();
   const { isAuthenticated, user, userProfile } = useAuth();
-  const { getFeeAmount } = useFeeConfig(user?.id);
+  const { getFeeAmount, userFeeOverrides } = useFeeConfig(user?.id);
   const { selectionProcessFee, scholarshipFee, i20ControlFee, hasSellerPackage } = useDynamicFees();
   const { isBlocked, pendingPayment, loading: paymentBlockedLoading } = usePaymentBlocked();
 
@@ -189,9 +189,16 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
         if (feeType === 'selection_process') {
           // Usar valores do useDynamicFees que já incluem dependentes
           return hasSellerPackage ? selectionProcessFee.replace('$', '') : (() => {
-            const dependents = Number(userProfile?.dependents) || 0;
-            const dependentCost = dependents * 150; // $150 por dependente apenas no Selection Process
-            return (getFeeAmount('selection_process') + dependentCost).toString();
+            const hasOverride = userFeeOverrides?.selection_process_fee !== undefined;
+            if (hasOverride) {
+              // Se há override, usar apenas o valor do override (já inclui dependentes se necessário)
+              return getFeeAmount('selection_process').toString();
+            } else {
+              // Se não há override, aplicar lógica de dependentes aos valores padrão
+              const dependents = Number(userProfile?.dependents) || 0;
+              const dependentCost = dependents * 150; // $150 por dependente apenas no Selection Process
+              return (getFeeAmount('selection_process') + dependentCost).toString();
+            }
           })();
         } else if (feeType === 'application_fee') {
           return getFeeAmount('application_fee').toString(); // Application Fee sempre usa valor da universidade
@@ -275,9 +282,16 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
         if (feeType === 'selection_process') {
           // Usar valores do useDynamicFees que já incluem dependentes
           finalAmount = hasSellerPackage ? parseFloat(selectionProcessFee.replace('$', '')) : (() => {
-            const dependents = Number(userProfile?.dependents) || 0;
-            const dependentCost = dependents * 150; // $150 por dependente apenas no Selection Process
-            return getFeeAmount('selection_process') + dependentCost;
+            const hasOverride = userFeeOverrides?.selection_process_fee !== undefined;
+            if (hasOverride) {
+              // Se há override, usar apenas o valor do override (já inclui dependentes se necessário)
+              return getFeeAmount('selection_process');
+            } else {
+              // Se não há override, aplicar lógica de dependentes aos valores padrão
+              const dependents = Number(userProfile?.dependents) || 0;
+              const dependentCost = dependents * 150; // $150 por dependente apenas no Selection Process
+              return getFeeAmount('selection_process') + dependentCost;
+            }
           })();
         } else if (feeType === 'i20_control_fee') {
           // Usar valores do useDynamicFees que já incluem dependentes
@@ -362,9 +376,16 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
           productName={product.name}
           productPrice={(feeType === 'selection_process'
             ? (() => {
-                const dependents = Number(userProfile?.dependents) || 0;
-                const dependentCost = dependents * 150; // $150 por dependente no Selection Process
-                return getFeeAmount('selection_process') + dependentCost;
+                const hasOverride = userFeeOverrides?.selection_process_fee !== undefined;
+                if (hasOverride) {
+                  // Se há override, usar apenas o valor do override (já inclui dependentes se necessário)
+                  return getFeeAmount('selection_process');
+                } else {
+                  // Se não há override, aplicar lógica de dependentes aos valores padrão
+                  const dependents = Number(userProfile?.dependents) || 0;
+                  const dependentCost = dependents * 150; // $150 por dependente no Selection Process
+                  return getFeeAmount('selection_process') + dependentCost;
+                }
               })()
             : getFeeAmount('application_fee'))}
         />
@@ -484,9 +505,16 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
                   feeType={feeType}
                   amount={(window as any).__checkout_final_amount || (feeType === 'selection_process'
                     ? (() => {
-                        const dependents = Number(userProfile?.dependents) || 0;
-                        const dependentCost = dependents * 150; // $150 por dependente no Selection Process
-                        return getFeeAmount('selection_process') + dependentCost;
+                        const hasOverride = userFeeOverrides?.selection_process_fee !== undefined;
+                        if (hasOverride) {
+                          // Se há override, usar apenas o valor do override (já inclui dependentes se necessário)
+                          return getFeeAmount('selection_process');
+                        } else {
+                          // Se não há override, aplicar lógica de dependentes aos valores padrão
+                          const dependents = Number(userProfile?.dependents) || 0;
+                          const dependentCost = dependents * 150; // $150 por dependente no Selection Process
+                          return getFeeAmount('selection_process') + dependentCost;
+                        }
                       })()
                     : feeType === 'scholarship_fee'
                     ? getFeeAmount('scholarship_fee')
