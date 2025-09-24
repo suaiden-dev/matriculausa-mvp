@@ -378,26 +378,55 @@ const EmailConfigurationContent = () => {
           sync_interval_minutes: 3
         };
       } else if (provider === 'microsoft') {
-        // Microsoft settings (OAuth)
-        if (!microsoftAccount) {
-          throw new Error('Microsoft account not authenticated');
+        // Microsoft settings (OAuth) - USANDO BFF (Backend for Frontend)
+        console.log('🚀 Usando Microsoft BFF Auth para obter refresh token de 90 dias...');
+        
+        // Importar BFF Auth
+        const { openMicrosoftAuthPopup, validateBFFEnvironment } = await import('../../lib/microsoftBFFAuth');
+        
+        // Validar configuração
+        const validation = validateBFFEnvironment();
+        if (!validation.isValid) {
+          throw new Error(`Configuração BFF inválida: ${validation.errors.join(', ')}`);
         }
-
-        // Get access token
-        const tokenResponse = await instance.acquireTokenSilent({
-          ...loginRequest,
-          account: microsoftAccount
+        
+        // Usar BFF popup para obter refresh token
+        const authResult = await openMicrosoftAuthPopup();
+        
+        if (!authResult.success) {
+          throw new Error(`Falha na autorização BFF: ${authResult.error}`);
+        }
+        
+        console.log('✅ Autorização Microsoft BFF bem-sucedida:', authResult.email);
+        
+        // Buscar tokens salvos pela Edge Function
+        const { data: savedConfig, error: fetchError } = await supabase
+          .from('email_configurations')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('provider_type', 'microsoft')
+          .eq('email_address', authResult.email)
+          .single();
+          
+        if (fetchError || !savedConfig) {
+          throw new Error('Tokens não foram salvos pela Edge Function');
+        }
+        
+        console.log('✅ Tokens BFF carregados do banco:', {
+          hasAccessToken: !!savedConfig.oauth_access_token,
+          hasRefreshToken: !!savedConfig.oauth_refresh_token,
+          expiresAt: savedConfig.oauth_token_expires_at
         });
-
+        
         configData = {
           user_id: user.id,
           name: formData.name.trim(),
-          email_address: microsoftAccount.username,
+          email_address: authResult.email,
           provider_type: 'microsoft',
-          oauth_access_token: tokenResponse.accessToken,
-          oauth_refresh_token: tokenResponse.refreshToken || '',
-          oauth_token_expires_at: new Date(tokenResponse.expiresOn).toISOString(),
-          microsoft_account_id: microsoftAccount.homeAccountId,
+          oauth_access_token: savedConfig.oauth_access_token,
+          oauth_refresh_token: savedConfig.oauth_refresh_token,
+          oauth_token_expires_at: savedConfig.oauth_token_expires_at,
+          microsoft_account_id: savedConfig.microsoft_account_id,
           is_active: true,
           sync_enabled: true,
           sync_interval_minutes: 3

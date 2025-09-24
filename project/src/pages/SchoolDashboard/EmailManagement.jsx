@@ -7,9 +7,13 @@ import {
   TrashIcon,
   CheckCircleIcon,
   XCircleIcon,
-  ArrowPathIcon
+  ArrowPathIcon,
+  BookOpenIcon
 } from '@heroicons/react/24/outline';
 import { supabase } from '../../lib/supabase';
+import MicrosoftTokenDiagnostic from '../../components/MicrosoftTokenDiagnostic';
+import MicrosoftBFFTest from '../../components/MicrosoftBFFTest';
+import TokenRenewalTest from '../../components/TokenRenewalTest';
 
 const EmailManagement = () => {
   const navigate = useNavigate();
@@ -910,6 +914,21 @@ const EmailManagement = () => {
               ))}
             </div>
           )}
+        </div>
+        
+        {/* Microsoft Token Diagnostic */}
+        <div className="mt-8">
+          <MicrosoftTokenDiagnostic />
+        </div>
+
+        {/* Microsoft BFF Test */}
+        <div className="mt-8">
+          <MicrosoftBFFTest />
+        </div>
+
+        {/* Token Renewal Test */}
+        <div className="mt-8">
+          <TokenRenewalTest />
         </div>
       </div>
     );

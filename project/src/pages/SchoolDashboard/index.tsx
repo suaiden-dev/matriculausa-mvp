@@ -1,7 +1,7 @@
 import React, { Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import { UniversityProvider } from '../../context/UniversityContext';
+import { UniversityProvider, useUniversity } from '../../context/UniversityContext';
 import SchoolDashboardLayout from './SchoolDashboardLayout';
 import Overview from './Overview';
 import ScholarshipManagement from './ScholarshipManagement';
@@ -18,6 +18,7 @@ import AISolutions from './AISolutions';
 
 import EmailManagement from './EmailManagement';
 import EmailConfiguration from './EmailConfiguration';
+import EmailAgentManagement from './EmailAgentManagement';
 import InboxRouter from './InboxRouter';
 import EmailCompose from './EmailCompose';
 import WhatsAppConnection from './WhatsAppConnection';
@@ -53,6 +54,7 @@ export const SchoolDashboard: React.FC = () => {
             <Route path="email" element={<EmailManagement />} />
             <Route path="email/config" element={<EmailConfiguration />} />
             <Route path="email/config/:configId" element={<EmailConfiguration />} />
+            <Route path="email/agents" element={<EmailAgentManagement />} />
             <Route path="email/inbox" element={<InboxRouter />} />
             <Route path="email/microsoft" element={<MicrosoftEmailIntegration />} />
             <Route path="email/compose" element={<EmailCompose />} />

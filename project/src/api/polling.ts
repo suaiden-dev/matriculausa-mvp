@@ -1,5 +1,6 @@
 import EmailProcessor from '../lib/emailProcessor';
 import EmailPollingService from '../lib/emailPollingService';
+import ImprovedTokenRenewalService from '../lib/improvedTokenRenewal';
 
 // Instância global do serviço de polling
 let pollingService: EmailPollingService | null = null;
@@ -15,9 +16,15 @@ class PollingAuthProvider {
       return this.accessToken;
     }
 
-    // Obter novo token usando refresh token (não precisa de client credentials)
-    // O refresh token será obtido do contexto de autenticação do usuário
-    throw new Error('Token expirado. Faça login novamente para renovar o token.');
+    // Usar o novo serviço de renovação de tokens
+    try {
+      const renewalService = ImprovedTokenRenewalService.getInstance();
+      // Aqui você precisaria passar o userId e email do usuário atual
+      // Por enquanto, vamos usar um fallback
+      throw new Error('Token expirado. Faça login novamente para renovar o token.');
+    } catch (error) {
+      throw new Error('Token expirado. Faça login novamente para renovar o token.');
+    }
 
     const tokenUrl = `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`;
     
@@ -65,15 +72,15 @@ async function initializePollingService(): Promise<EmailPollingService> {
       const authProvider = new PollingAuthProvider();
       const accessToken = await authProvider.getAccessToken();
       
-      pollingService = new EmailPollingService(
-        accessToken,
-        import.meta.env.VITE_GEMINI_API_KEY,
-        {
-          intervalMinutes: 0.5, // Verificar a cada 30 segundos para detecção mais rápida
-          maxRetries: 3,
-          retryDelayMs: 5000
-        }
-      );
+        pollingService = new EmailPollingService(
+          accessToken,
+          import.meta.env.VITE_GEMINI_API_KEY,
+          {
+            intervalMinutes: 5, // 🚨 MODO CONSERVADOR: Verificar a cada 5 minutos (era 2)
+            maxRetries: 3,
+            retryDelayMs: 5000
+          }
+        );
       
       console.log('✅ POLLING - Serviço de polling inicializado');
     } catch (error) {
@@ -298,7 +305,7 @@ export async function handlePollingUserRequest(request: Request): Promise<Respon
         lastCheckTime: new Date(),
         processedCount: 0,
         config: {
-          intervalMinutes: 0.5, // Verificar a cada 30 segundos para detecção mais rápida
+          intervalMinutes: 5, // 🚨 MODO CONSERVADOR: Verificar a cada 5 minutos (era 2)
           maxRetries: 3,
           retryDelayMs: 5000
         },

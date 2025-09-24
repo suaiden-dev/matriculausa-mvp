@@ -8,16 +8,21 @@ export const msalConfig: Configuration = {
     redirectUri: import.meta.env.VITE_AZURE_REDIRECT_URI || window.location.origin,
     postLogoutRedirectUri: window.location.origin,
     navigateToLoginRequestUrl: false,
+    // Configurações para reduzir bloqueios de segurança
+    knownAuthorities: ['https://login.microsoftonline.com/common'],
+    cloudDiscoveryMetadata: '',
+    validateAuthority: true,
   },
   cache: {
-    cacheLocation: 'sessionStorage',
-    storeAuthStateInCookie: false,
+    cacheLocation: 'localStorage', // Mudança para localStorage para persistir tokens
+    storeAuthStateInCookie: true, // Habilitar cookies para melhor persistência
     secureCookies: false,
   },
   system: {
     windowHashTimeout: 60000,
     iframeHashTimeout: 6000,
     loadFrameTimeout: 0,
+    allowNativeBroker: false,
     loggerOptions: {
       loggerCallback: (level, message, containsPii) => {
         if (containsPii) {
@@ -46,7 +51,9 @@ export const msalConfig: Configuration = {
 // Add scopes here for ID token to be used at Microsoft identity platform endpoints.
 export const loginRequest: RedirectRequest = {
   scopes: ['User.Read', 'Mail.Read', 'Mail.Send', 'Mail.ReadWrite', 'offline_access'],
-  prompt: 'select_account'
+  prompt: 'select_account',
+  responseType: 'code', // FORÇAR FLUXO DE CÓDIGO PARA OBTER REFRESH TOKEN
+  responseMode: 'query' // Usar query em vez de fragment
 };
 
 // Add the endpoints here for Microsoft Graph API services you'd like to use.

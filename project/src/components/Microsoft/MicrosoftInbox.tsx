@@ -6,7 +6,7 @@ import {
   Send as SendIcon, Star as StarIcon, FileText, AlertTriangle, Trash,
   Bot, Play, BarChart3, Loader2, XCircle,
   Search, MoreVertical, Reply, Forward, User,
-  Plus, Archive, Settings, Folder, FolderOpen
+  Plus, Archive, Settings, Folder, FolderOpen, BookOpen
 } from 'lucide-react';
 import { useAuthToken } from '../../hooks/useAuthToken';
 import { useMicrosoftConnection } from '../../hooks/useMicrosoftConnection';
@@ -14,6 +14,9 @@ import { formatDateUS } from '../../lib/dateUtils';
 import GraphService from '../../lib/graphService';
 import AutoEmailProcessing from './AutoEmailProcessing';
 import MicrosoftAccountSelector from './MicrosoftAccountSelector';
+import EmailKnowledgeManagement from '../../pages/SchoolDashboard/EmailKnowledgeManagement';
+import EmailAgentManagement from '../../pages/SchoolDashboard/EmailAgentManagement';
+import { useUniversity } from '../../context/UniversityContext';
 
 // Interfaces
 
@@ -62,6 +65,8 @@ export default function MicrosoftInbox() {
   const { getToken, accounts } = useAuthToken();
   // Hook para gerenciar múltiplas conexões Microsoft (usado pelo MicrosoftAccountSelector)
   const { activeConnection, connections } = useMicrosoftConnection();
+  // Hook para obter o universityId
+  const { university } = useUniversity();
   
 
   // Estados do AIManager
@@ -82,6 +87,7 @@ export default function MicrosoftInbox() {
   const [folderErrors, setFolderErrors] = useState<{ [key: string]: string }>({});
   const [folderCache, setFolderCache] = useState<{ [key: string]: { data: MicrosoftGraphEmail[], timestamp: number } }>({});
   const [newEmailNotification, setNewEmailNotification] = useState<{ show: boolean, count: number }>({ show: false, count: 0 });
+  const [showKnowledgeBase, setShowKnowledgeBase] = useState(false);
   
   // Cache duration: 5 minutes
   const CACHE_DURATION = 5 * 60 * 1000;
@@ -195,7 +201,6 @@ export default function MicrosoftInbox() {
         if (activeConnection?.access_token && !looksLikeJwt(activeConnection.access_token)) {
           console.warn('MicrosoftInbox - Token salvo não possui formato JWT. Fallback para MSAL.');
         } else {
-          console.log('MicrosoftInbox - Usando token padrão do MSAL');
         }
         token = await getToken();
       }
@@ -203,7 +208,6 @@ export default function MicrosoftInbox() {
       const graphService = new GraphService(token);
       const folders = await graphService.getMailFolders();
       setMailFolders(folders.value || []);
-      console.log('MicrosoftInbox - Pastas carregadas:', folders.value?.length || 0);
       return folders.value || [];
     } catch (error) {
       console.error('MicrosoftInbox - Erro ao buscar pastas:', error);
@@ -226,7 +230,6 @@ export default function MicrosoftInbox() {
     
     // Verificar cache se não for refresh forçado
     if (!forceRefresh && isCacheValid(folderKey)) {
-      console.log(`MicrosoftInbox - Usando cache para pasta ${folderKey}`);
       setFolderEmails(prev => ({
         ...prev,
         [folderKey]: folderCache[folderKey].data
@@ -248,7 +251,6 @@ export default function MicrosoftInbox() {
         if (activeConnection?.access_token && !looksLikeJwt(activeConnection.access_token)) {
           console.warn(`MicrosoftInbox - Token salvo inválido para ${folderKey}. Fallback para MSAL.`);
         } else {
-          console.log(`MicrosoftInbox - Usando token padrão do MSAL para pasta ${folderKey}`);
         }
         token = await getToken();
       }
@@ -272,7 +274,6 @@ export default function MicrosoftInbox() {
         [folderKey]: emailData
       }));
       
-      console.log(`MicrosoftInbox - Emails da pasta ${folderKey}:`, emailData.length);
       return emailData;
     } catch (error) {
       console.error(`MicrosoftInbox - Erro ao buscar emails da pasta ${folderKey}:`, error);
@@ -303,11 +304,9 @@ export default function MicrosoftInbox() {
       // Processar pastas uma por vez com delay entre elas
       for (const [key, folderId] of Object.entries(folderMapping)) {
         try {
-          console.log(`MicrosoftInbox - Processando pasta ${key}...`);
           
           // Adicionar delay entre requisições para evitar rate limiting
           if (Object.values(newCounts).some(count => count > 0)) {
-            console.log('MicrosoftInbox - Aguardando 2 segundos para evitar rate limiting...');
             await new Promise(resolve => setTimeout(resolve, 2000)); // 2 segundos de delay
           }
           
@@ -318,7 +317,6 @@ export default function MicrosoftInbox() {
             newCounts[key as keyof typeof newCounts] = count;
           }
           
-          console.log(`MicrosoftInbox - Pasta ${key} processada: ${count} emails`);
         } catch (error) {
           console.error(`MicrosoftInbox - Erro ao processar pasta ${key}:`, error);
           if (key in newCounts) {
@@ -328,7 +326,6 @@ export default function MicrosoftInbox() {
       }
       
       setEmailCounts(newCounts);
-      console.log('MicrosoftInbox - Contadores atualizados:', newCounts);
       
     } catch (error) {
       console.error('MicrosoftInbox - Erro ao carregar pastas:', error);
@@ -340,7 +337,6 @@ export default function MicrosoftInbox() {
   // Recarregar emails quando activeConnection muda
   useEffect(() => {
     if (activeConnection) {
-      console.log('MicrosoftInbox - activeConnection changed, recarregando emails para:', activeConnection.email_address);
       // Limpar cache e recarregar
       setFolderCache({});
       setFolderEmails({});
@@ -357,26 +353,22 @@ export default function MicrosoftInbox() {
     // console.log('MicrosoftInbox - useEffect executado, accounts.length:', accounts.length);
     
     if (!getToken) {
-      console.log('MicrosoftInbox - Dados de autenticação não disponíveis, aguardando...');
       setStatus('idle');
       return;
     }
 
     if (accounts.length === 0) {
-      console.log('MicrosoftInbox - Nenhuma conta encontrada, aguardando...');
       setStatus('idle');
       return;
     }
 
     // Usuário logado, sistema pronto para uso manual
-    console.log('MicrosoftInbox - Usuário logado, sistema pronto');
     setStatus('idle');
     
     // Carregar todas as pastas e emails quando o usuário fizer login
     loadAllFolders();
     
     // Iniciar polling automático quando o usuário faz login
-    console.log('MicrosoftInbox - Iniciando polling automático após login...');
     startProcessing();
   }, [getToken, accounts.length]);
 
@@ -384,12 +376,10 @@ export default function MicrosoftInbox() {
   useEffect(() => {
     if (!getToken || accounts.length === 0) return;
 
-    console.log('MicrosoftInbox - Iniciando polling automático para novos emails...');
     
-    // Verificar novos emails a cada 30 segundos
+    // Verificar novos emails a cada 2 minutos (otimizado)
     const pollingInterval = setInterval(async () => {
       try {
-        console.log('MicrosoftInbox - Verificando novos emails automaticamente...');
         
         // Buscar apenas emails da caixa de entrada (inbox) para detecção de novos
         const folders = await fetchMailFolders();
@@ -401,12 +391,10 @@ export default function MicrosoftInbox() {
           const newCount = emails.length;
           const currentCount = emailCounts.inbox || 0;
           
-          console.log(`MicrosoftInbox - Emails na inbox: ${newCount} (anterior: ${currentCount})`);
           
           // Se há novos emails, ativar IA automaticamente
           if (newCount > currentCount) {
             const newEmailsCount = newCount - currentCount;
-            console.log(`MicrosoftInbox - ${newEmailsCount} novos emails detectados! Ativando IA automaticamente...`);
             
             // Mostrar notificação
             setNewEmailNotification({ show: true, count: newEmailsCount });
@@ -423,20 +411,40 @@ export default function MicrosoftInbox() {
             }, 5000);
           }
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('MicrosoftInbox - Erro no polling automático:', error);
+        
+        // Verificar se é erro de token expirado
+        if (error.message?.includes('token') || 
+            error.message?.includes('expired') || 
+            error.message?.includes('unauthorized') ||
+            error.status === 401) {
+          console.log('🔄 Token expirado detectado, tentando renovação...');
+          
+          try {
+            // Tentar renovar token
+            const newToken = await getToken();
+            console.log('✅ Token renovado com sucesso');
+          } catch (renewError) {
+            console.error('❌ Falha ao renovar token:', renewError);
+            // Mostrar notificação para o usuário fazer login novamente
+            setNewEmailNotification({ 
+              show: true, 
+              count: 0,
+              message: 'Sessão expirada. Faça login novamente.' 
+            });
+          }
+        }
       }
-    }, 30000); // 30 segundos
+    }, 300000); // 🚨 MODO CONSERVADOR: 5 minutos (era 2min)
 
     return () => {
-      console.log('MicrosoftInbox - Parando polling automático...');
       clearInterval(pollingInterval);
     };
   }, [getToken, accounts.length, emailCounts.inbox]);
 
   // Funções do AIManager
   const checkPollingStatus = async () => {
-    console.log('MicrosoftInbox - checkPollingStatus iniciado');
     setLoading(true);
 
     try {
@@ -452,7 +460,6 @@ export default function MicrosoftInbox() {
       }
 
       const data = await response.json();
-      console.log('MicrosoftInbox - Status recebido:', data);
 
       if (data.success) {
         setStatus(data.isRunning ? 'active' : 'idle');
@@ -469,18 +476,15 @@ export default function MicrosoftInbox() {
   };
 
   const startProcessing = async () => {
-    console.log('MicrosoftInbox - startProcessing iniciado (modo local)');
     setLoading(true);
 
     try {
       // Simular processamento local sem depender da API externa
-      console.log('MicrosoftInbox - Iniciando processamento local...');
       
       // Simular delay de inicialização
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       setStatus('active');
-      console.log('MicrosoftInbox - Processamento local iniciado com sucesso');
     } catch (error) {
       console.error('MicrosoftInbox - Erro ao iniciar processamento local:', error);
       setStatus('error');
@@ -708,6 +712,17 @@ export default function MicrosoftInbox() {
             </button>
           </div>
 
+                {/* Create AI Agent Button */}
+                <div className="px-4 pb-3">
+                  <button
+                    onClick={() => setShowKnowledgeBase(true)}
+                    className="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors text-sm"
+                  >
+                    <Bot className="h-4 w-4" />
+                    Criar Agente de IA
+                  </button>
+                </div>
+
           {/* AI Assistant - Minimalista */}
           <div className="px-3 pb-3">
             <AutoEmailProcessing />
@@ -819,7 +834,7 @@ export default function MicrosoftInbox() {
         {/* Content Area */}
         <div className="flex-1 flex min-h-0">
           {/* Email List */}
-          <div className="w-1/2 border-r border-gray-200 flex flex-col bg-white">
+          <div className="flex-1 border-r border-gray-200 flex flex-col bg-white">
             {/* Email List Header */}
             <div className="h-12 bg-white border-b border-gray-200 flex items-center justify-between px-4">
               <div className="flex items-center gap-4">
@@ -957,7 +972,7 @@ export default function MicrosoftInbox() {
           </div>
 
           {/* Email Viewer */}
-          <div className="w-1/2 flex flex-col bg-white">
+          <div className="flex-1 flex flex-col bg-white">
             {selectedEmail ? (
               <>
                 {/* Email Header */}
@@ -1059,6 +1074,34 @@ export default function MicrosoftInbox() {
           </div>
         </div>
       </div>
+
+             {/* AI Agent Creation Modal */}
+             {showKnowledgeBase && (
+               <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                 <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full mx-4 max-h-[90vh] overflow-hidden">
+                   <div className="flex items-center justify-between p-6 border-b">
+                     <div>
+                       <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+                         <Bot className="h-5 w-5 text-green-600" />
+                         Criar Agente de IA para Emails
+                       </h2>
+                       <p className="text-sm text-gray-600 mt-1">
+                         Configure seu agente de IA e adicione documentos para a base de conhecimento
+                       </p>
+                     </div>
+                     <button
+                       onClick={() => setShowKnowledgeBase(false)}
+                       className="text-gray-400 hover:text-gray-600"
+                     >
+                       <XCircle className="h-6 w-6" />
+                     </button>
+                   </div>
+                   <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+                     <EmailAgentManagement />
+                   </div>
+                 </div>
+               </div>
+             )}
     </div>
   );
 }

@@ -42,6 +42,7 @@ import ForUniversities from './pages/ForUniversities';
 import ForStudents from './pages/ForStudents';
 import EmailOAuthCallback from './pages/EmailOAuthCallback';
 import AuthCallback from './pages/AuthCallback';
+import MicrosoftCallback from './pages/MicrosoftCallback';
 import { useReferralCodeCapture } from './hooks/useReferralCodeCapture';
 import { ZelleCheckoutPage } from './components/ZelleCheckoutPage';
 import { ZelleWaitingPage } from './components/ZelleWaitingPage';
@@ -128,6 +129,7 @@ const AppContent = () => {
           <Route path="/scholarship-fee-success" element={<ScholarshipFeeSuccess />} />
           <Route path="/email-oauth-callback" element={<EmailOAuthCallback />} />
           <Route path="/auth-callback" element={<AuthCallback />} />
+          <Route path="/microsoft-email" element={<MicrosoftCallback />} />
           
           
           {/* Microsoft Email Integration */}

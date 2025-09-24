@@ -138,7 +138,7 @@ const AutoEmailProcessing: React.FC = () => {
           oauth_access_token: token,
           is_active: !status.isActive
         }, {
-          onConflict: 'user_id,email_address'
+          onConflict: 'user_id,provider_type,email_address'
         })
         .select();
 

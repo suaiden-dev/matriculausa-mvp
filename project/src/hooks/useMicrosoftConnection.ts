@@ -31,6 +31,8 @@ export interface UseMicrosoftConnectionReturn {
   disconnectMicrosoft: (email: string) => Promise<void>;
   setActiveConnection: (email: string) => void;
   clearError: () => void;
+  showSecurityWarning: boolean;
+  setShowSecurityWarning: (show: boolean) => void;
 }
 
 export const useMicrosoftConnection = (): UseMicrosoftConnectionReturn => {
@@ -38,6 +40,7 @@ export const useMicrosoftConnection = (): UseMicrosoftConnectionReturn => {
   const [activeConnection, setActiveConnectionState] = useState<MicrosoftConnection | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showSecurityWarning, setShowSecurityWarning] = useState(false);
 
   const clearError = useCallback(() => {
     setError(null);
@@ -172,7 +175,7 @@ export const useMicrosoftConnection = (): UseMicrosoftConnectionReturn => {
           console.log('👤 Conta já logada encontrada, tentando token silencioso...');
           try {
             const silentResponse = await msalInstance.acquireTokenSilent({
-              scopes: ['User.Read', 'Mail.Read', 'Mail.ReadWrite', 'Mail.Send'],
+              scopes: ['User.Read', 'Mail.Read', 'Mail.ReadWrite', 'Mail.Send', 'offline_access'],
               account: accounts[0]
             });
             
@@ -190,14 +193,108 @@ export const useMicrosoftConnection = (): UseMicrosoftConnectionReturn => {
       // Fazer login com popup para evitar redirecionamento
       console.log('🔐 Iniciando login interativo...');
       const loginResponse = await msalInstance.loginPopup({
-        scopes: ['User.Read', 'Mail.Read', 'Mail.ReadWrite', 'Mail.Send'],
-        prompt: 'select_account',
+        scopes: ['User.Read', 'Mail.Read', 'Mail.ReadWrite', 'Mail.Send', 'offline_access'],
+        prompt: 'consent', // FORÇAR CONSENTIMENTO para obter refresh token
         extraQueryParameters: {
-          'prompt': 'consent'
+          'prompt': 'consent', // Forçar consentimento para obter refresh token
+          'response_mode': 'query',
+          'scope': 'User.Read Mail.Read Mail.ReadWrite Mail.Send offline_access' // Adicionar scope explicitamente
         }
+      }).catch(async (error: any) => {
+        console.error('❌ Erro no login popup:', error);
+        
+        // Se popup falhar, tentar redirect
+        if (error.errorCode === 'popup_window_error' || error.errorCode === 'user_cancelled') {
+          console.log('🔄 Popup falhou, tentando redirect...');
+          return await msalInstance.loginRedirect({
+            scopes: ['User.Read', 'Mail.Read', 'Mail.ReadWrite', 'Mail.Send', 'offline_access'],
+            prompt: 'consent', // FORÇAR CONSENTIMENTO para obter refresh token
+            extraQueryParameters: {
+              'prompt': 'consent',
+              'scope': 'User.Read Mail.Read Mail.ReadWrite Mail.Send offline_access'
+            }
+          });
+        }
+        throw error;
       });
 
       console.log('✅ Microsoft login successful:', loginResponse.account?.username);
+      console.log('🔑 Refresh token disponível:', loginResponse.refreshToken ? 'SIM' : 'NÃO');
+      console.log('🔍 DEBUG - loginResponse completo:', {
+        hasAccessToken: !!loginResponse.accessToken,
+        hasRefreshToken: !!loginResponse.refreshToken,
+        hasExpiresOn: !!loginResponse.expiresOn,
+        account: loginResponse.account?.username,
+        scopes: loginResponse.scopes
+      });
+      
+      // Log detalhado do refresh token
+      if (loginResponse.refreshToken) {
+        console.log('🎉 REFRESH TOKEN OBTIDO:', loginResponse.refreshToken.substring(0, 50) + '...');
+      } else {
+        console.log('❌ REFRESH TOKEN NÃO OBTIDO - Verificando configuração MSAL...');
+      }
+
+      // Mostrar aviso de segurança após login bem-sucedido
+      setShowSecurityWarning(true);
+      
+      // Verificar se temos refresh token
+      if (loginResponse.refreshToken) {
+        console.log('🔑 Refresh token (primeiros 20 chars):', loginResponse.refreshToken.substring(0, 20) + '...');
+      } else {
+        console.log('⚠️ MSAL não retornou refresh token - tentando obter via acquireTokenSilent...');
+        
+        // Tentar obter refresh token via acquireTokenSilent
+        try {
+          const tokenResponse = await msalInstance.acquireTokenSilent({
+            scopes: ['User.Read', 'Mail.Read', 'Mail.ReadWrite', 'Mail.Send', 'offline_access'],
+            account: loginResponse.account,
+            forceRefresh: false
+          });
+          
+          console.log('🔍 DEBUG - tokenResponse do acquireTokenSilent:', {
+            hasAccessToken: !!tokenResponse.accessToken,
+            hasRefreshToken: !!tokenResponse.refreshToken,
+            hasExpiresOn: !!tokenResponse.expiresOn
+          });
+          
+          if (tokenResponse.refreshToken) {
+            console.log('✅ Refresh token obtido via acquireTokenSilent');
+            loginResponse.refreshToken = tokenResponse.refreshToken;
+          } else {
+            console.log('⚠️ Ainda não foi possível obter refresh token');
+          }
+        } catch (tokenError) {
+          console.log('⚠️ Erro ao obter refresh token via acquireTokenSilent:', tokenError);
+        }
+      }
+      
+      // SOLUÇÃO ALTERNATIVA: Tentar obter refresh token via acquireTokenPopup
+      if (!loginResponse.refreshToken) {
+        console.log('🔄 Tentando obter refresh token via acquireTokenPopup...');
+        try {
+          const popupResponse = await msalInstance.acquireTokenPopup({
+            scopes: ['User.Read', 'Mail.Read', 'Mail.ReadWrite', 'Mail.Send', 'offline_access'],
+            account: loginResponse.account,
+            prompt: 'consent'
+          });
+          
+          console.log('🔍 DEBUG - popupResponse:', {
+            hasAccessToken: !!popupResponse.accessToken,
+            hasRefreshToken: !!popupResponse.refreshToken,
+            hasExpiresOn: !!popupResponse.expiresOn
+          });
+          
+          if (popupResponse.refreshToken) {
+            console.log('✅ Refresh token obtido via acquireTokenPopup');
+            loginResponse.refreshToken = popupResponse.refreshToken;
+          } else {
+            console.log('❌ acquireTokenPopup também não retornou refresh token');
+          }
+        } catch (popupError) {
+          console.log('❌ Erro ao obter refresh token via acquireTokenPopup:', popupError);
+        }
+      }
       await handleSuccessfulLogin(loginResponse);
 
     } catch (err: any) {
@@ -257,8 +354,15 @@ export const useMicrosoftConnection = (): UseMicrosoftConnectionReturn => {
       
       console.log('✅ Usuário autenticado:', session.user.id);
 
-      // Salvar tokens na tabela
+      // Salvar tokens na tabela COM REFRESH TOKEN
       console.log('💾 Salvando conexão no banco de dados...');
+      console.log('🔍 DEBUG - Dados para salvar:', {
+        accessToken: loginResponse.accessToken ? 'PRESENTE' : 'AUSENTE',
+        refreshToken: loginResponse.refreshToken ? 'PRESENTE' : 'AUSENTE',
+        refreshTokenValue: loginResponse.refreshToken ? loginResponse.refreshToken.substring(0, 20) + '...' : 'VAZIO',
+        expiresOn: loginResponse.expiresOn?.toISOString() || 'FALLBACK'
+      });
+      
       const { data: existingConfig } = await supabase
         .from('email_configurations')
         .select('id')
@@ -269,11 +373,13 @@ export const useMicrosoftConnection = (): UseMicrosoftConnectionReturn => {
 
       let connectionData;
       if (existingConfig?.id) {
+        console.log('🔄 Atualizando configuração existente...');
         const { data: updated, error: updateError } = await supabase
           .from('email_configurations')
           .update({
             oauth_access_token: loginResponse.accessToken,
-            oauth_token_expires_at: null,
+            oauth_refresh_token: loginResponse.refreshToken || '', // SALVAR REFRESH TOKEN
+            oauth_token_expires_at: loginResponse.expiresOn?.toISOString() || new Date(Date.now() + 3600 * 1000).toISOString(),
             is_active: true
           })
           .eq('id', existingConfig.id)
@@ -281,7 +387,13 @@ export const useMicrosoftConnection = (): UseMicrosoftConnectionReturn => {
           .single();
         if (updateError) throw updateError;
         connectionData = updated;
+        console.log('✅ Configuração atualizada:', {
+          hasAccessToken: !!connectionData.oauth_access_token,
+          hasRefreshToken: !!connectionData.oauth_refresh_token,
+          refreshTokenValue: connectionData.oauth_refresh_token ? connectionData.oauth_refresh_token.substring(0, 20) + '...' : 'VAZIO'
+        });
       } else {
+        console.log('🆕 Criando nova configuração...');
         const { data: inserted, error: insertError } = await supabase
           .from('email_configurations')
           .insert([{
@@ -290,13 +402,19 @@ export const useMicrosoftConnection = (): UseMicrosoftConnectionReturn => {
             email_address: userEmail,
             provider_type: 'microsoft',
             oauth_access_token: loginResponse.accessToken,
-            oauth_refresh_token: '',
+            oauth_refresh_token: loginResponse.refreshToken || '', // SALVAR REFRESH TOKEN
+            oauth_token_expires_at: loginResponse.expiresOn?.toISOString() || new Date(Date.now() + 3600 * 1000).toISOString(),
             is_active: true
           }])
           .select()
           .single();
         if (insertError) throw insertError;
         connectionData = inserted;
+        console.log('✅ Nova configuração criada:', {
+          hasAccessToken: !!connectionData.oauth_access_token,
+          hasRefreshToken: !!connectionData.oauth_refresh_token,
+          refreshTokenValue: connectionData.oauth_refresh_token ? connectionData.oauth_refresh_token.substring(0, 20) + '...' : 'VAZIO'
+        });
       }
 
       // conexão salva/atualizada com sucesso
@@ -386,6 +504,8 @@ export const useMicrosoftConnection = (): UseMicrosoftConnectionReturn => {
     connectMicrosoft,
     disconnectMicrosoft,
     setActiveConnection,
-    clearError
+    clearError,
+    showSecurityWarning,
+    setShowSecurityWarning
   };
 };
