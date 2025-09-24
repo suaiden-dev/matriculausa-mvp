@@ -68,6 +68,9 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     lastCheckedPath.current = currentPath;
 
     const checkAndRedirect = async () => {
+      // Whitelist: permitir acesso explícito à página interna de cadastro de estudante
+      const isWhitelistedInternalRegister = location.pathname === '/student/register';
+      
       
       // REDIRECIONAMENTO APÓS LOGIN - verificar se usuário está na página de login/auth
       if (currentPath === '/login' || currentPath === '/auth' || currentPath === '/register') {
@@ -146,20 +149,20 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
       // Estudantes não precisam mais verificar termos aceitos
       // Eles aceitam automaticamente durante o registro
       
-      // Se usuário é admin e está tentando acessar áreas restritas de outros roles
-      if (user.role === 'admin' && (currentPath.startsWith('/student/') || currentPath.startsWith('/school/') || currentPath.startsWith('/affiliate-admin') || currentPath.startsWith('/seller/'))) {
+      // Se usuário é admin e está tentando acessar áreas restritas de outros roles (exceto a rota interna liberada)
+      if (user.role === 'admin' && ((currentPath.startsWith('/student/') && !isWhitelistedInternalRegister) || currentPath.startsWith('/school/') || currentPath.startsWith('/affiliate-admin') || currentPath.startsWith('/seller/'))) {
         navigate('/admin/dashboard', { replace: true });
         return;
       }
       
-      // Se usuário é affiliate_admin e está tentando acessar áreas restritas de outros roles
-      if (user.role === 'affiliate_admin' && (currentPath.startsWith('/student/') || currentPath.startsWith('/school/') || currentPath.startsWith('/admin/dashboard'))) {
+      // Se usuário é affiliate_admin e está tentando acessar áreas restritas de outros roles (exceto a rota interna liberada)
+      if (user.role === 'affiliate_admin' && ((currentPath.startsWith('/student/') && !isWhitelistedInternalRegister) || currentPath.startsWith('/school/') || currentPath.startsWith('/admin/dashboard'))) {
         navigate('/affiliate-admin/dashboard', { replace: true });
         return;
       }
       
-      // Se usuário é seller e está tentando acessar áreas restritas de outros roles
-      if (user.role === 'seller' && (currentPath.startsWith('/student/') || currentPath.startsWith('/school/') || currentPath.startsWith('/admin/') || currentPath.startsWith('/affiliate-admin/'))) {
+      // Se usuário é seller e está tentando acessar áreas restritas de outros roles (exceto a rota interna liberada)
+      if (user.role === 'seller' && ((currentPath.startsWith('/student/') && !isWhitelistedInternalRegister) || currentPath.startsWith('/school/') || currentPath.startsWith('/admin/') || currentPath.startsWith('/affiliate-admin/'))) {
         navigate('/seller/dashboard', { replace: true });
         return;
       }
