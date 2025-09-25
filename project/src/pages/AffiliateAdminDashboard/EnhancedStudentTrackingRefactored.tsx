@@ -44,8 +44,10 @@ function EnhancedStudentTracking(props) {
     toggleAdvancedFilters
   } = useFilters();
 
-  // Obter dados filtrados e ordenados
-  const { filteredSellers, filteredStudents } = getFilteredAndSortedData(sellers, students, filters);
+  // Obter dados filtrados e ordenados com memoização para evitar recálculos desnecessários
+  const { filteredSellers, filteredStudents } = useMemo(() => {
+    return getFilteredAndSortedData(sellers, students, filters);
+  }, [sellers, students, filters]);
 
   // Carregar defaults de taxas (sem userId) para usar quando não houver override
   const { feeConfig } = useFeeConfig();
@@ -55,11 +57,11 @@ function EnhancedStudentTracking(props) {
   // Map de dependentes por profile_id
   const [dependentsMap, setDependentsMap] = useState({});
 
-  // Buscar overrides para os estudantes atualmente filtrados
+  // Buscar overrides para os estudantes (baseado nos students originais, não filtrados)
   useEffect(() => {
     const loadOverrides = async () => {
       try {
-        const uniqueIds = Array.from(new Set((filteredStudents || []).map((s) => s.id).filter(Boolean)));
+        const uniqueIds = Array.from(new Set((students || []).map((s) => s.id).filter(Boolean)));
         if (uniqueIds.length === 0) {
           setOverridesMap({});
           return;
@@ -95,13 +97,13 @@ function EnhancedStudentTracking(props) {
       }
     };
     loadOverrides();
-  }, [filteredStudents]);
+  }, [students]);
 
-  // Buscar dependentes para os estudantes filtrados (via profile_id)
+  // Buscar dependentes para os estudantes (baseado nos students originais, não filtrados)
   useEffect(() => {
     const loadDependents = async () => {
       try {
-        const profileIds = Array.from(new Set((filteredStudents || []).map((s) => s.profile_id).filter(Boolean)));
+        const profileIds = Array.from(new Set((students || []).map((s) => s.profile_id).filter(Boolean)));
         if (profileIds.length === 0) {
           setDependentsMap({});
           return;
@@ -127,7 +129,7 @@ function EnhancedStudentTracking(props) {
       }
     };
     loadDependents();
-  }, [filteredStudents]);
+  }, [students]);
 
   // Calcular receita ajustada por estudante usando overrides quando existirem
   const adjustedStudents = useMemo(() => {
