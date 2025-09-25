@@ -243,6 +243,20 @@ const SellerRegistrationsManager: React.FC<SellerRegistrationsManagerProps> = ({
 
   const approveRegistration = async (userId: string) => {
     try {
+      // 0. First try to sync any missing emails from auth.users
+      try {
+        const { data: syncResult, error: syncError } = await supabase
+          .rpc('sync_missing_emails');
+        
+        if (syncError) {
+          console.warn('⚠️ [SellerApproval] Erro ao sincronizar emails:', syncError);
+        } else {
+          console.log('🔄 [SellerApproval] Sincronização de emails concluída. Registros atualizados:', syncResult);
+        }
+      } catch (syncErr) {
+        console.warn('⚠️ [SellerApproval] Função sync_missing_emails não disponível:', syncErr);
+      }
+
       // 1. Get the user profile to obtain details
       const { data: userProfile, error: profileError } = await supabase
         .from('user_profiles')
@@ -261,51 +275,84 @@ const SellerRegistrationsManager: React.FC<SellerRegistrationsManagerProps> = ({
  
       // Se o email não estiver no user_profiles, buscar através de métodos alternativos
       let userEmail = userProfile.email;
+      console.log('🔍 [SellerApproval] Email inicial do user_profile:', userEmail);
+      
       if (!userEmail) {
-        try {
-          // Primeiro, tentar usar auth.admin
-          const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(userId);
-          
-          if (authError) {
-            console.error('Error fetching auth user:', authError);
-          } else if (authUser?.user?.email) {
-            userEmail = authUser.user.email;
-            console.log('🔍 [SellerApproval] Email encontrado no auth.users:', userEmail);
+        console.log('🔍 [SellerApproval] Email não encontrado no user_profiles, buscando alternativas...');
+        
+        // Primeiro, tentar buscar na registration atual (mais confiável)
+        const currentRegistration = registrations.find(r => r.id === userId);
+        if (currentRegistration?.email) {
+          userEmail = currentRegistration.email;
+          console.log('🔍 [SellerApproval] Email encontrado na registration:', userEmail);
+        }
+        
+        // Se ainda não encontrou, tentar usar auth.admin
+        if (!userEmail) {
+          try {
+            const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(userId);
+            
+            if (authError) {
+              console.error('Error fetching auth user:', authError);
+            } else if (authUser?.user?.email) {
+              userEmail = authUser.user.email;
+              console.log('🔍 [SellerApproval] Email encontrado no auth.users:', userEmail);
+            }
+          } catch (authErr) {
+            console.warn('⚠️ [SellerApproval] Método auth.admin não disponível:', authErr);
           }
-        } catch (authErr) {
-          console.warn('⚠️ [SellerApproval] Método auth.admin não disponível:', authErr);
         }
 
-        // Se ainda não encontrou o email, tentar buscar na registration que está sendo processada
+        // Se ainda não encontrou, tentar buscar diretamente do auth.users via RPC
         if (!userEmail) {
-          const currentRegistration = registrations.find(r => r.id === userId);
-          if (currentRegistration?.email) {
-            userEmail = currentRegistration.email;
+          try {
+            const { data: rpcResult, error: rpcError } = await supabase
+              .rpc('get_auth_user_email', { target_user_id: userId });
+            
+            if (!rpcError && rpcResult) {
+              userEmail = rpcResult;
+              console.log('🔍 [SellerApproval] Email encontrado via RPC:', userEmail);
+            }
+          } catch (rpcErr) {
+            console.warn('⚠️ [SellerApproval] RPC get_auth_user_email não disponível:', rpcErr);
           }
         }
         
         // Se encontrou o email, atualizar o user_profiles
         if (userEmail) {
+          console.log('🔄 [SellerApproval] Atualizando user_profiles com email:', userEmail);
           const { error: updateError } = await supabase
             .from('user_profiles')
-            .update({ email: userEmail })
+            .update({ 
+              email: userEmail,
+              updated_at: new Date().toISOString()
+            })
             .eq('user_id', userId);
             
           if (updateError) {
             console.warn('⚠️ [SellerApproval] Não foi possível atualizar o email no user_profiles:', updateError);
           } else {
-            console.log('✅ [SellerApproval] Email atualizado no user_profiles');
+            console.log('✅ [SellerApproval] Email atualizado no user_profiles com sucesso');
+            // Atualizar o userProfile local também
+            userProfile.email = userEmail;
           }
         }
       }
       
-      // Validar se email existe
-      if (!userEmail) {
+      // Validar se email existe e é válido
+      if (!userEmail || userEmail.trim() === '') {
         throw new Error('User email is required but not found in profile or auth');
+      }
+
+      // Validar formato do email
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(userEmail)) {
+        throw new Error(`Invalid email format: ${userEmail}`);
       }
 
       // Atualizar userProfile com o email correto
       userProfile.email = userEmail;
+      console.log('✅ [SellerApproval] Email validado e confirmado:', userEmail);
 
       // 2. Update the user's role from student to seller
       // Update user role to 'seller' using RPC function to avoid RLS recursion
@@ -366,10 +413,20 @@ const SellerRegistrationsManager: React.FC<SellerRegistrationsManagerProps> = ({
           notes: 'Approved from registration'
         };
 
+        // Validação final dos dados antes da inserção
+        if (!sellerData.email || sellerData.email.trim() === '') {
+          throw new Error('Email is required for seller creation but is missing');
+        }
+        
+        if (!sellerData.name || sellerData.name.trim() === '') {
+          throw new Error('Name is required for seller creation but is missing');
+        }
+
         // Log para debug dos dados que serão inseridos
         console.log('🔍 [SellerApproval] Dados para inserir na tabela sellers:', sellerData);
         console.log('🔍 [SellerApproval] Email especificamente:', sellerData.email);
         console.log('🔍 [SellerApproval] Tipo do email:', typeof sellerData.email);
+        console.log('🔍 [SellerApproval] Nome especificamente:', sellerData.name);
 
         const { error: sellerError } = await supabase
           .from('sellers')
