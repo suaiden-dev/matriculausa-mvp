@@ -30,33 +30,20 @@ export default function MicrosoftEmailList({ onEmailSelect }: EmailListProps) {
   const [error, setError] = useState<string | null>(null);
 
   const getEmails = async () => {
-    console.log('=== getEmails chamada ===');
     if (accounts.length === 0) {
-      console.log('Nenhuma conta encontrada');
       return;
     }
-
-    console.log('Iniciando busca de emails...');
     setLoading(true);
     setError(null);
 
     try {
-      console.log('Obtendo token...');
       const accessToken = await getToken();
-
-      console.log('Token obtido, criando serviço Graph...');
       const graphService = new GraphService(accessToken);
-      
-      console.log('Buscando emails...');
       const emailData = await graphService.getEmails(50);
-      
-      console.log('Dados recebidos:', emailData);
-      console.log('Quantidade de emails recebidos:', emailData.value?.length || 0);
       
       // Validar e filtrar emails com estrutura válida
       const validEmails = (emailData.value || []).filter((email: any) => {
         const isValid = email && email.id && email.subject !== undefined;
-        console.log('Email válido:', email.id, 'Subject:', email.subject, 'Válido:', isValid);
         return isValid;
       }).map((email: any) => ({
         ...email,
@@ -67,9 +54,6 @@ export default function MicrosoftEmailList({ onEmailSelect }: EmailListProps) {
         receivedDateTime: email.receivedDateTime || new Date().toISOString()
       }));
       
-      console.log('Emails válidos após filtro:', validEmails.length);
-      console.log('Emails finais:', validEmails);
-      console.log('=== Atualizando estado emails ===');
       setEmails(validEmails);
     } catch (error) {
       console.error('Error fetching emails:', error);
@@ -82,13 +66,11 @@ export default function MicrosoftEmailList({ onEmailSelect }: EmailListProps) {
 
   useEffect(() => {
     if (accounts.length > 0 && !loading) {
-      console.log('Executando useEffect - accounts.length:', accounts.length, 'loading:', loading);
       getEmails();
     }
   }, [accounts.length]); // Dependência específica para evitar loops
 
   useEffect(() => {
-    console.log('=== Estado emails atualizado ===', emails.length, 'emails');
   }, [emails]);
 
   const getSenderName = (email: Email) => {

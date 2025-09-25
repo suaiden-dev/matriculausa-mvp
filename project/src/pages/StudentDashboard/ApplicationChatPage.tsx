@@ -61,11 +61,11 @@ const ApplicationChatPage: React.FC = () => {
     }
   }, [applicationId]);
 
-  // Polling para atualizar o perfil do usuário a cada 3 segundos
+  // Polling para atualizar o perfil do usuário a cada 2 minutos (modo conservador)
   useEffect(() => {
     const interval = setInterval(() => {
       refetchUserProfile && refetchUserProfile();
-    }, 3000);
+    }, 120000); // Reduzido de 3s para 2 minutos
     return () => clearInterval(interval);
   }, [refetchUserProfile]);
 

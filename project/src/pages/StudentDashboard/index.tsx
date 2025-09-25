@@ -186,10 +186,10 @@ const StudentDashboard: React.FC = () => {
   }, [user, userProfile, hasLoadedData]);
 
   useEffect(() => {
-    if (user && userProfile) {
+    if (user && userProfile && !hasLoadedData) {
       loadDashboardData();
     }
-  }, [user, userProfile, loadDashboardData]);
+  }, [user, userProfile, hasLoadedData]);
 
   // Fase 5: Aplicar código de referência da URL automaticamente
   useEffect(() => {

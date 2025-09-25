@@ -138,7 +138,7 @@ const AutoEmailProcessing: React.FC = () => {
           oauth_access_token: token,
           is_active: !status.isActive
         }, {
-          onConflict: 'user_id,email_address'
+          onConflict: 'user_id,provider_type,email_address'
         })
         .select();
 
@@ -181,16 +181,22 @@ const AutoEmailProcessing: React.FC = () => {
     }
   };
 
-  if (!accounts.length) {
+  // Debug logs removidos para evitar spam no console
+
+  // Verificar se há conexões Microsoft reais (não apenas contas MSAL)
+  if (!microsoftConnections || microsoftConnections.length === 0) {
+    // Nenhuma conexão Microsoft encontrada
     return (
       <div className="bg-white rounded-lg shadow p-6">
         <div className="flex items-center space-x-3 text-gray-500">
           <Mail className="h-6 w-6" />
-          <span>Faça login para ativar o processamento automático</span>
+          <span>Conecte uma conta Microsoft para ativar o processamento automático</span>
         </div>
       </div>
     );
   }
+
+  // Conexões Microsoft encontradas
 
   return (
     <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">

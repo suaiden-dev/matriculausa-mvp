@@ -182,11 +182,11 @@ export class RateLimiter {
 
 // Instância global do rate limiter
 export const rateLimiter = new RateLimiter({
-  maxRequestsPerMinute: 30, // Mais conservador para evitar 429
-  maxConcurrentRequests: 2, // Apenas 2 requisições simultâneas
-  retryDelayMs: 2000, // 2 segundos de delay inicial
-  backoffMultiplier: 1.5, // Backoff mais suave
-  maxRetries: 3
+  maxRequestsPerMinute: 50, // Aumentado para melhor performance
+  maxConcurrentRequests: 3, // 3 requisições simultâneas
+  retryDelayMs: 1000, // 1 segundo de delay inicial
+  backoffMultiplier: 1.2, // Backoff mais suave
+  maxRetries: 2 // Reduzido para evitar delays excessivos
 });
 
 export default rateLimiter;

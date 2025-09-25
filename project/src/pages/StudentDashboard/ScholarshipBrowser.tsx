@@ -308,13 +308,13 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
   //   }
   // }, []);
 
-  // Polling para atualizar o perfil do usuário apenas enquanto o pagamento está pendente
+  // Polling para atualizar o perfil do usuário apenas enquanto o pagamento está pendente (reduzido para 30s)
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
     if (userProfile && !userProfile.has_paid_selection_process_fee) {
       interval = setInterval(() => {
         refetchUserProfile && refetchUserProfile();
-      }, 3000);
+      }, 30000); // Reduzido de 3s para 30s
     }
     return () => { if (interval) clearInterval(interval); };
   }, [refetchUserProfile, userProfile]);

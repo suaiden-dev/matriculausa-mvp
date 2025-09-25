@@ -32,9 +32,6 @@ function MicrosoftEmailContent() {
   const [mounted, setMounted] = useState(false);
   const isAuthenticated = accounts.length > 0;
   
-  console.log('MicrosoftEmailIntegration - accounts.length:', accounts.length);
-  console.log('MicrosoftEmailIntegration - accounts:', accounts);
-  console.log('MicrosoftEmailIntegration - isAuthenticated:', isAuthenticated);
 
   useEffect(() => {
     setMounted(true);

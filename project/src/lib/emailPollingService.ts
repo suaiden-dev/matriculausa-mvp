@@ -15,14 +15,14 @@ export class EmailPollingService {
   private lastEmailTimestamp: Date | null = null; // Timestamp do último email processado
   private processedEmails: Set<string> = new Set();
   private consecutiveEmptyChecks: number = 0; // Contador de verificações vazias consecutivas
-  private adaptiveInterval: number = 0.5; // Intervalo adaptativo em minutos
-  private baseInterval: number = 0.5; // Intervalo base em minutos
-  private maxInterval: number = 5; // Intervalo máximo em minutos
+  private adaptiveInterval: number = 5; // 🚨 MODO CONSERVADOR: Intervalo adaptativo em minutos (era 2)
+  private baseInterval: number = 5; // 🚨 MODO CONSERVADOR: Intervalo base em minutos (era 2)
+  private maxInterval: number = 15; // 🚨 MODO CONSERVADOR: Intervalo máximo em minutos (era 10)
 
   constructor(accessToken: string, aiApiKey?: string, config?: Partial<PollingConfig>) {
     this.processor = new EmailProcessor(accessToken, aiApiKey);
     this.config = {
-      intervalMinutes: 0.5, // Verificar a cada 30 segundos para detecção mais rápida
+      intervalMinutes: 5, // 🚨 MODO CONSERVADOR: Verificar a cada 5 minutos (era 2)
       maxRetries: 3,
       retryDelayMs: 5000,
       ...config

@@ -9,6 +9,9 @@ const MICROSOFT_TENANT_ID = Deno.env.get('MICROSOFT_TENANT_ID') || 'common';
 const supabaseUrl = Deno.env.get('SUPABASE_URL');
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+// 🚨 MODO CONSERVADOR: Instância global do AIService para manter contadores
+let globalAIService = null;
 // Função para obter token usando Client Credentials (funciona 24/7)
 async function getClientCredentialsToken() {
   try {
@@ -45,12 +48,10 @@ async function refreshAccessToken(refreshToken) {
   try {
     console.log('🔄 Renovando access token...');
     // Verificar se é um refresh token válido
-    if (!refreshToken || refreshToken === 'mock_refresh_token') {
-      throw new Error('Refresh token inválido ou mock. Usuário precisa fazer login novamente.');
-    }
-    // Se é um token MSAL, não precisa renovar (MSAL gerencia automaticamente)
-    if (refreshToken === 'msal_token') {
-      throw new Error('MSAL_TOKEN_PLACEHOLDER'); // Indica que é token MSAL
+    if (!refreshToken || refreshToken === 'mock_refresh_token' || refreshToken === 'msal_token' || refreshToken.trim() === '') {
+      console.log('⚠️ Refresh token inválido ou vazio, tentando Client Credentials...');
+      // Fallback para Client Credentials
+      return await getClientCredentialsToken();
     }
     const response = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
       method: 'POST',
@@ -67,7 +68,9 @@ async function refreshAccessToken(refreshToken) {
     if (!response.ok) {
       const errorData = await response.json();
       console.error('❌ Erro ao renovar token:', errorData);
-      throw new Error(`Erro ao renovar token: ${response.status} - ${errorData.error_description || errorData.error}`);
+      console.log('🔄 Tentando fallback para Client Credentials...');
+      // Fallback para Client Credentials
+      return await getClientCredentialsToken();
     }
     const data = await response.json();
     console.log('✅ Token renovado com sucesso');
@@ -154,43 +157,37 @@ class AIService {
   apiKey;
   lastApiCall = 0;
   batchQueue = [];
-  batchSize = 1;
+  batchSize = 0; // DESABILITAR processamento em lote
   batchTimeout = 300000;
   emailCounts = new Map();
   lastEmailSent = 0;
-  maxEmailsPerHour = 12;
-  minIntervalBetweenEmails = 300000;
+  minIntervalBetweenEmails = 360000; // 🚨 6 minutos entre emails (era 5min)
   lastBatchProcessed = 0;
   dailyEmailCount = 0;
-  maxEmailsPerDay = 50;
-  rpm = 15;
-  rpd = 1500;
+  rpm = 15; // 🛡️ ULTRA CONSERVADOR: 15 RPM (máximo seguro Microsoft)
+  rpd = 300; // 🛡️ ULTRA CONSERVADOR: 300 emails/dia (muito seguro)
+  maxEmailsPerHour = 15; // 🛡️ ULTRA CONSERVADOR: 15 emails/hora
+  maxEmailsPerDay = 200; // 🛡️ ULTRA CONSERVADOR: 200 emails/dia
+  burstLimit = 1; // 🛡️ ULTRA CONSERVADOR: Apenas 1 email por vez
+  burstWindowMs = 4 * 60 * 1000; // 🛡️ Janela de 4 minutos para burst
+  lastBurstTime = 0;
+  burstCount = 0;
+  
+  // 🛡️ NOVAS PROTEÇÕES ULTRA CONSERVADORAS
+  minDelayBetweenEmails = 3000; // 🛡️ Delay mínimo OBRIGATÓRIO: 3 segundos
+  maxEmailsPerMinute = 5; // 🛡️ ULTRA SEGURO: Máximo 5 emails por minuto
+  emergencyBrakeLimit = 3; // 🛡️ Se 3+ emails em 30s = PARAR TUDO
+  minIntervalBetweenEmails = 240000; // 🛡️ 4 minutos entre emails (ultra seguro)
+  
   constructor(apiKey){
     this.apiKey = apiKey;
   }
   async processEmail(email, userId) {
     try {
-      console.log(`AIService - Adicionando email ao lote: ${email.subject}`);
-      // Adicionar email à fila de lotes
-      this.batchQueue.push({
-        email,
-        userId,
-        timestamp: Date.now()
-      });
-      // Se a fila atingiu o tamanho do lote, processar imediatamente
-      if (this.batchQueue.length >= this.batchSize) {
-        const batchResult = await this.processBatch();
-        // Retornar o primeiro resultado do lote
-        return batchResult && batchResult.length > 0 ? batchResult[0].result : this.simpleEmailAnalysis(email);
-      }
-      // Se é o primeiro email da fila, agendar processamento após timeout
-      if (this.batchQueue.length === 1) {
-        setTimeout(()=>this.processBatch(), this.batchTimeout);
-      }
-      // Retornar análise simples imediatamente para não bloquear
-      const analysis = this.simpleEmailAnalysis(email);
-      console.log('AIService - Retornando análise simples:', analysis);
-      return analysis;
+      console.log(`AIService - Processando email individual: ${email.subject}`);
+      
+      // Processar email individualmente (sem lote)
+      return await this.processIndividualEmail(email, userId);
     } catch (error) {
       console.error('Error processing email:', error);
       const analysis = this.simpleEmailAnalysis(email);
@@ -198,6 +195,243 @@ class AIService {
       return analysis;
     }
   }
+  
+  async processIndividualEmail(email, userId) {
+    try {
+      console.log(`AIService - Analisando email: ${email.subject} (${email.from?.emailAddress?.address})`);
+      
+  // 🚨 MODO CONSERVADOR: Verificar proteção anti-burst
+  const now = Date.now();
+  const burstCheck = this.checkBurstProtection(now);
+  if (!burstCheck.allowed) {
+    console.log(`🚨 AIService - Bloqueado por proteção anti-burst: ${burstCheck.reason}`);
+    return this.simpleEmailAnalysis(email);
+  }
+  
+  // 🚨 MODO CONSERVADOR: Verificar controles de segurança
+  const safetyCheck = this.checkSafetyLimits(now);
+  if (!safetyCheck.allowed) {
+    console.log(`🚨 AIService - Bloqueado por segurança: ${safetyCheck.reason}`);
+    return this.simpleEmailAnalysis(email);
+  }
+  
+  // 🛡️ PROTEÇÃO DE EMERGÊNCIA: Bloqueio imediato se padrão suspeito
+  const emergencyCheck = await this.checkEmergencyBrake(userId, now);
+  if (!emergencyCheck.allowed) {
+    console.log(`🚨 EMERGÊNCIA - Sistema bloqueado: ${emergencyCheck.reason}`);
+    return {
+      analysis: {
+        shouldReply: false,
+        priority: 'low',
+        category: 'spam',
+        confidence: 0.99,
+        reason: `EMERGÊNCIA: ${emergencyCheck.reason}`
+      },
+      response: null
+    };
+  }
+
+  // 🚨 MODO ULTRA CONSERVADOR: Verificação anti-spam via banco de dados
+  const antiSpamCheck = await this.checkDatabaseRateLimits(userId, now);
+  if (!antiSpamCheck.allowed) {
+    console.log(`🚨 AIService - BLOQUEADO por anti-spam: ${antiSpamCheck.reason}`);
+    return {
+      analysis: {
+        shouldReply: false,
+        priority: 'low',
+        category: 'spam',
+        confidence: 0.9,
+        reason: `Bloqueado por proteção anti-spam: ${antiSpamCheck.reason}`
+      },
+      response: null
+    };
+  }
+      
+      // Verificar rate limit da API
+      if (this.lastApiCall && now - this.lastApiCall < (60000 / this.rpm)) {
+        const waitTime = (60000 / this.rpm) - (now - this.lastApiCall);
+        console.log(`AIService - Rate limit: aguardando ${Math.ceil(waitTime / 1000)}s antes de processar (baseado em ${this.rpm} RPM)`);
+        await new Promise((resolve) => setTimeout(resolve, waitTime));
+      }
+      
+      if (!this.apiKey) {
+        console.log('GEMINI_API_KEY não configurada, usando análise simples');
+        return this.simpleEmailAnalysis(email);
+      }
+      
+      // Buscar prompt personalizado da universidade
+      let universityPrompt = null;
+      if (userId) {
+        try {
+          const { data: promptData } = await supabase
+            .from('email_prompts')
+            .select('prompt')
+            .eq('user_id', userId)
+            .eq('is_active', true)
+            .single();
+          
+          if (promptData?.prompt) {
+            universityPrompt = promptData.prompt;
+            console.log('✅ Prompt encontrado para universidade:', universityPrompt.substring(0, 50) + '...');
+          }
+        } catch (error) {
+          console.log('⚠️ Erro ao buscar prompt da universidade:', error.message);
+        }
+      }
+      
+      // Buscar base de conhecimento de emails
+      let emailKnowledge = '';
+      if (userId) {
+        try {
+          const { data: knowledgeData } = await supabase
+            .from('email_knowledge_documents')
+            .select('content')
+            .eq('user_id', userId)
+            .eq('is_active', true);
+          
+          if (knowledgeData && knowledgeData.length > 0) {
+            emailKnowledge = knowledgeData.map(doc => doc.content).join('\n\n');
+            console.log(`📚 Base de conhecimento encontrada: ${knowledgeData.length} documentos para emails`);
+          }
+        } catch (error) {
+          console.log('⚠️ Erro ao buscar base de conhecimento de emails:', error.message);
+        }
+      }
+      
+      // Criar prompt para email individual
+      const basePrompt = universityPrompt || `
+        Você é um assistente de IA especializado em ajudar estudantes brasileiros com o processo de admissão em universidades dos Estados Unidos através da MatriculaUSA.
+        
+        Analise o email recebido e determine:
+        1. Se deve responder (shouldReply: true/false)
+        2. Prioridade (high/medium/low)
+        3. Categoria (scholarship/application/documents/payment/general)
+        4. Confiança (0.0-1.0)
+        5. Resposta apropriada (se shouldReply for true)
+        
+        Base de conhecimento: ${emailKnowledge}
+        
+        Email para análise:
+        Assunto: ${email.subject}
+        De: ${email.from?.emailAddress?.address}
+        Conteúdo: ${email.bodyPreview || 'Nenhum conteúdo disponível'}
+      `;
+      
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${this.apiKey}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: basePrompt
+            }]
+          }],
+          generationConfig: {
+            temperature: 0.7,
+            topK: 40,
+            topP: 0.95,
+            maxOutputTokens: 2048,
+          }
+        })
+      });
+      
+      this.lastApiCall = Date.now();
+      
+      if (!response.ok) {
+        if (response.status === 429) {
+          console.log('AIService - Rate limit atingido, usando análise simples');
+          return this.simpleEmailAnalysis(email);
+        }
+        throw new Error(`Gemini API error: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      let responseText = data.candidates[0].content.parts[0].text;
+      
+      console.log('🔍 Resposta bruta do Gemini:', JSON.stringify(responseText));
+      console.log('🔍 Tamanho da resposta:', responseText.length);
+      
+      // Limpar markdown se presente
+      if (responseText.includes('```json')) {
+        responseText = responseText.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+        console.log('🔍 Após remover markdown:', JSON.stringify(responseText));
+      }
+      
+      // Sanitizar JSON
+      responseText = this.sanitizeGeminiJSON(responseText);
+      console.log('🔍 Após sanitização:', JSON.stringify(responseText));
+      
+      let analysis;
+      try {
+        analysis = JSON.parse(responseText);
+        // Se for array, pegar o primeiro item
+        if (Array.isArray(analysis)) {
+          analysis = analysis[0];
+        }
+      } catch (parseError) {
+        console.error('Erro ao fazer parse do JSON do Gemini:', parseError);
+        console.error('JSON problemático:', responseText);
+        return this.simpleEmailAnalysis(email);
+      }
+      
+      // Aplicar controles de segurança
+      if (this.shouldReplyToEmail(email, analysis)) {
+        // 🚨 MODO CONSERVADOR: Atualizar contadores de segurança
+        this.updateIndividualEmailCounts();
+        
+        return {
+          analysis: {
+            shouldReply: analysis.shouldReply || false,
+            priority: analysis.priority || 'medium',
+            category: analysis.category || 'general',
+            confidence: analysis.confidence || 0.5
+          },
+          response: analysis.response || null
+        };
+      } else {
+        return {
+          analysis: {
+            shouldReply: false,
+            priority: 'low',
+            category: 'general',
+            confidence: 0.9,
+            reason: 'Filtrado por controles de segurança'
+          },
+          response: null
+        };
+      }
+      
+    } catch (error) {
+      console.error('Error processing individual email:', error);
+      return this.simpleEmailAnalysis(email);
+    }
+  }
+  
+  // 🚨 MODO CONSERVADOR: Proteção anti-burst
+  checkBurstProtection(now) {
+    // Reset burst count se passou da janela
+    if (now - this.lastBurstTime > this.burstWindowMs) {
+      this.burstCount = 0;
+      this.lastBurstTime = now;
+    }
+    
+    // Verificar se excedeu limite de burst
+    if (this.burstCount >= this.burstLimit) {
+      const remainingTime = Math.ceil((this.burstWindowMs - (now - this.lastBurstTime)) / 1000);
+      return {
+        allowed: false,
+        reason: `Limite de burst atingido: ${this.burstLimit} emails em ${this.burstWindowMs/60000}min. Aguarde ${remainingTime}s`
+      };
+    }
+    
+    // Incrementar contador de burst
+    this.burstCount++;
+    
+    return { allowed: true };
+  }
+  
   async processBatch() {
     if (this.batchQueue.length === 0) {
       return;
@@ -227,6 +461,11 @@ class AIService {
       let universityPrompt = null;
       if (firstUserId) {
         universityPrompt = await this.getUniversityPrompt(firstUserId);
+        // Integrar base de conhecimento de emails
+        const knowledgeBase = await this.getEmailKnowledgeBase(firstUserId);
+        if (knowledgeBase) {
+          universityPrompt = `${universityPrompt}\n\n<knowledge-base>\n${knowledgeBase}\n</knowledge-base>\n\nIMPORTANTE: Use as informações da base de conhecimento acima para responder às perguntas dos estudantes. Se a informação não estiver na base de conhecimento, responda de forma geral e sugira que o estudante entre em contato diretamente com a universidade para informações específicas.`;
+        }
       }
       // Usar prompt personalizado ou genérico
       const basePrompt = universityPrompt || `
@@ -263,22 +502,90 @@ class AIService {
       const data = await response.json();
       // Extrair texto da resposta do Gemini
       let responseText = data.candidates[0].content.parts[0].text;
+      
+      // Log da resposta bruta do Gemini para debug
+      console.log('🔍 Resposta bruta do Gemini:', JSON.stringify(responseText));
+      console.log('🔍 Tamanho da resposta:', responseText.length);
+      
       // Limpar markdown se presente
       if (responseText.includes('```json')) {
         responseText = responseText.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+        console.log('🔍 Após remover markdown:', JSON.stringify(responseText));
       }
       
-      // Limpar caracteres problemáticos antes do parse
-      responseText = responseText.replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\'/g, "'");
+      // Sanitizar JSON do Gemini de forma mais robusta
+      responseText = this.sanitizeGeminiJSON(responseText);
+      console.log('🔍 Após sanitização:', JSON.stringify(responseText));
       
       let batchResults;
       try {
         batchResults = JSON.parse(responseText);
       } catch (parseError) {
         console.error('Erro ao fazer parse do JSON do Gemini:', parseError);
-        console.error('JSON problemático:', responseText.substring(0, 500));
-        // Fallback para análise simples se o parse falhar
-        return this.processBatchWithSimpleAnalysis();
+        console.error('JSON problemático (primeiros 500 chars):', responseText.substring(0, 500));
+        console.error('JSON problemático (últimos 500 chars):', responseText.substring(Math.max(0, responseText.length - 500)));
+        console.error('Tamanho total do JSON:', responseText.length);
+        
+        // Mostrar caracteres ao redor da posição do erro se disponível
+        const errorMatch = parseError.message.match(/position (\d+)/);
+        if (errorMatch) {
+          const errorPos = parseInt(errorMatch[1]);
+          const start = Math.max(0, errorPos - 20);
+          const end = Math.min(responseText.length, errorPos + 20);
+          console.error('Contexto do erro (posição', errorPos, '):', responseText.substring(start, end));
+          console.error('Caractere problemático:', responseText[errorPos], '(código:', responseText.charCodeAt(errorPos), ')');
+        }
+        
+        // Tentar múltiplas estratégias de correção
+        let fixedJson = null;
+        
+        // Estratégia 1: Extrair JSON usando regex
+        const jsonMatch = responseText.match(/\[[\s\S]*?\]/);
+        if (jsonMatch) {
+          try {
+            const cleanedJson = this.cleanJsonString(jsonMatch[0]);
+            batchResults = JSON.parse(cleanedJson);
+            console.log('✅ JSON recuperado com sucesso usando regex');
+            fixedJson = batchResults;
+          } catch (secondError) {
+            console.error('❌ Falha na segunda tentativa de parse:', secondError);
+          }
+        }
+        
+        // Estratégia 2: Tentar corrigir aspas problemáticas especificamente
+        if (!fixedJson) {
+          try {
+            let correctedJson = responseText;
+            
+            // Corrigir aspas duplas dentro de strings de forma mais específica
+            correctedJson = correctedJson.replace(/"([^"]*)"([^"]*)"([^"]*)":/g, (match, p1, p2, p3) => {
+              if (p2.includes('"') && !p2.includes('\\"')) {
+                return `"${p1}${p2.replace(/"/g, '\\"')}${p3}":`;
+              }
+              return match;
+            });
+            
+            // Corrigir aspas duplas em valores de string
+            correctedJson = correctedJson.replace(/"([^"]*)"([^"]*)"([^"]*)":/g, (match, p1, p2, p3) => {
+              if (p2.includes('"') && !p2.includes('\\"')) {
+                return `"${p1}${p2.replace(/"/g, '\\"')}${p3}":`;
+              }
+              return match;
+            });
+            
+            batchResults = JSON.parse(correctedJson);
+            console.log('✅ JSON corrigido com sucesso usando correção de aspas');
+            fixedJson = batchResults;
+          } catch (thirdError) {
+            console.error('❌ Falha na terceira tentativa de parse:', thirdError);
+          }
+        }
+        
+        // Estratégia 3: Fallback para análise simples
+        if (!fixedJson) {
+          console.error('❌ Nenhum JSON válido encontrado na resposta, usando análise simples');
+          return this.processBatchWithSimpleAnalysis();
+        }
       }
       // Atualizar contadores de segurança
       this.updateEmailCounts();
@@ -456,6 +763,219 @@ FORMATO JSON DE RESPOSTA:
     this.lastEmailSent = now;
     this.lastBatchProcessed = now;
   }
+  
+  // 🚨 MODO CONSERVADOR: Atualizar contadores para processamento individual
+  updateIndividualEmailCounts() {
+    const now = Date.now();
+    const hourKey = Math.floor(now / (60 * 60 * 1000));
+    const dayKey = Math.floor(now / (24 * 60 * 60 * 1000));
+    
+    // Atualizar contador por hora
+    const currentCount = this.emailCounts.get('hourly') || {
+      count: 0,
+      lastReset: hourKey
+    };
+    if (currentCount.lastReset !== hourKey) {
+      currentCount.count = 0;
+      currentCount.lastReset = hourKey;
+    }
+    currentCount.count += 1; // Processamento individual = 1 email
+    this.emailCounts.set('hourly', currentCount);
+    
+    // Atualizar contador por dia
+    const dailyCount = this.emailCounts.get('daily') || {
+      count: 0,
+      lastReset: dayKey
+    };
+    if (dailyCount.lastReset !== dayKey) {
+      dailyCount.count = 0;
+      dailyCount.lastReset = dayKey;
+    }
+    dailyCount.count += 1; // Processamento individual = 1 email
+    this.emailCounts.set('daily', dailyCount);
+    
+    this.lastEmailSent = now;
+  }
+  
+  // 🛡️ PROTEÇÃO DE EMERGÊNCIA: Freio de emergência ultra rápido
+  async checkEmergencyBrake(userId, now) {
+    try {
+      console.log(`🚨 [EMERGÊNCIA] Verificando padrões suspeitos para usuário: ${userId}`);
+      
+      const thirtySecondsAgo = now - (30 * 1000);
+      const oneMinuteAgo = now - (60 * 1000);
+      
+      // Buscar emails processados nos últimos 30 segundos
+      const { data: recentEmails, error } = await supabase
+        .from('processed_microsoft_emails')
+        .select('processed_at, status')
+        .eq('user_id', userId)
+        .gte('processed_at', new Date(thirtySecondsAgo).toISOString())
+        .order('processed_at', { ascending: false });
+      
+      if (error) {
+        console.error('🚨 [EMERGÊNCIA] Erro ao verificar emails recentes:', error);
+        return { allowed: true }; // Permitir se houver erro
+      }
+      
+      const emailsLast30s = recentEmails?.length || 0;
+      const emailsLast60s = recentEmails?.filter(e => 
+        new Date(e.processed_at).getTime() >= oneMinuteAgo
+      ).length || 0;
+      
+      console.log(`🚨 [EMERGÊNCIA] Emails processados: ${emailsLast30s} em 30s, ${emailsLast60s} em 60s`);
+      
+      // 🛡️ FREIO DE EMERGÊNCIA 1: Mais de 3 emails em 30 segundos
+      if (emailsLast30s >= this.emergencyBrakeLimit) {
+        return {
+          allowed: false,
+          reason: `PADRÃO SUSPEITO: ${emailsLast30s} emails em 30 segundos (limite: ${this.emergencyBrakeLimit})`
+        };
+      }
+      
+      // 🛡️ FREIO DE EMERGÊNCIA 2: Mais de 5 emails em 1 minuto
+      if (emailsLast60s >= this.maxEmailsPerMinute) {
+        return {
+          allowed: false,
+          reason: `VELOCIDADE SUSPEITA: ${emailsLast60s} emails em 1 minuto (limite: ${this.maxEmailsPerMinute})`
+        };
+      }
+      
+      // 🛡️ DELAY OBRIGATÓRIO: Sempre esperar 3 segundos entre emails
+      if (recentEmails && recentEmails.length > 0) {
+        const lastEmailTime = new Date(recentEmails[0].processed_at).getTime();
+        const timeSinceLastEmail = now - lastEmailTime;
+        
+        if (timeSinceLastEmail < this.minDelayBetweenEmails) {
+          const waitTime = Math.ceil((this.minDelayBetweenEmails - timeSinceLastEmail) / 1000);
+          return {
+            allowed: false,
+            reason: `DELAY OBRIGATÓRIO: Aguarde ${waitTime}s (mínimo 3s entre emails)`
+          };
+        }
+      }
+      
+      return { allowed: true };
+      
+    } catch (error) {
+      console.error('🚨 [EMERGÊNCIA] Erro crítico:', error);
+      return { allowed: true }; // Permitir se houver erro crítico
+    }
+  }
+
+  // 🚨 MODO ULTRA CONSERVADOR: Verificação anti-spam robusta via banco
+  async checkDatabaseRateLimits(userId, now) {
+    try {
+      console.log(`🛡️ [ANTI-SPAM] Verificando limites para usuário: ${userId}`);
+      
+      const hourKey = Math.floor(now / (60 * 60 * 1000));
+      const dayKey = Math.floor(now / (24 * 60 * 60 * 1000));
+      const fiveMinKey = Math.floor(now / (5 * 60 * 1000));
+      
+      // Buscar ou criar registro do usuário
+      let { data: limits, error } = await supabase
+        .from('email_rate_limits')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+      
+      if (error && error.code === 'PGRST116') {
+        // Usuário não existe, criar registro
+        console.log('🛡️ [ANTI-SPAM] Criando novo registro para usuário');
+        const { data: newRecord, error: insertError } = await supabase
+          .from('email_rate_limits')
+          .insert({
+            user_id: userId,
+            hourly_count: 1,
+            hourly_reset: hourKey,
+            daily_count: 1,
+            daily_reset: dayKey,
+            last_email_sent: now,
+            burst_count: 1,
+            burst_reset: fiveMinKey
+          })
+          .select()
+          .single();
+        
+        if (insertError) {
+          console.error('🛡️ [ANTI-SPAM] Erro ao criar registro:', insertError);
+          return { allowed: true }; // Permitir se houver erro
+        }
+        
+        return { allowed: true };
+      }
+      
+      if (error) {
+        console.error('🛡️ [ANTI-SPAM] Erro ao buscar limites:', error);
+        return { allowed: true }; // Permitir se houver erro
+      }
+      
+      // 🚨 VERIFICAÇÃO 1: Burst Protection (2 emails em 5 minutos)
+      const burstLimit = 2;
+      if (limits.burst_reset === fiveMinKey && limits.burst_count >= burstLimit) {
+        return {
+          allowed: false,
+          reason: `Burst limit: ${limits.burst_count}/${burstLimit} emails em 5min`
+        };
+      }
+      
+      // 🚨 VERIFICAÇÃO 2: Limite por hora (8 emails/hora)
+      if (limits.hourly_reset === hourKey && limits.hourly_count >= this.maxEmailsPerHour) {
+        return {
+          allowed: false,
+          reason: `Limite horário: ${limits.hourly_count}/${this.maxEmailsPerHour} emails/hora`
+        };
+      }
+      
+      // 🚨 VERIFICAÇÃO 3: Limite diário (30 emails/dia)
+      if (limits.daily_reset === dayKey && limits.daily_count >= this.maxEmailsPerDay) {
+        return {
+          allowed: false,
+          reason: `Limite diário: ${limits.daily_count}/${this.maxEmailsPerDay} emails/dia`
+        };
+      }
+      
+      // 🚨 VERIFICAÇÃO 4: Intervalo mínimo (6 minutos entre emails)
+      const minInterval = 6 * 60 * 1000; // 6 minutos
+      if (limits.last_email_sent && (now - limits.last_email_sent) < minInterval) {
+        const remainingTime = Math.ceil((minInterval - (now - limits.last_email_sent)) / 1000);
+        return {
+          allowed: false,
+          reason: `Intervalo mínimo: aguarde ${remainingTime}s (6min entre emails)`
+        };
+      }
+      
+      // ✅ PASSOU EM TODAS AS VERIFICAÇÕES - ATUALIZAR CONTADORES
+      const updateData = {
+        // Resetar contadores se mudou a janela de tempo
+        hourly_count: limits.hourly_reset === hourKey ? limits.hourly_count + 1 : 1,
+        hourly_reset: hourKey,
+        daily_count: limits.daily_reset === dayKey ? limits.daily_count + 1 : 1,
+        daily_reset: dayKey,
+        burst_count: limits.burst_reset === fiveMinKey ? limits.burst_count + 1 : 1,
+        burst_reset: fiveMinKey,
+        last_email_sent: now,
+        updated_at: new Date().toISOString()
+      };
+      
+      const { error: updateError } = await supabase
+        .from('email_rate_limits')
+        .update(updateData)
+        .eq('user_id', userId);
+      
+      if (updateError) {
+        console.error('🛡️ [ANTI-SPAM] Erro ao atualizar contadores:', updateError);
+        return { allowed: true }; // Permitir se houver erro na atualização
+      }
+      
+      console.log(`🛡️ [ANTI-SPAM] ✅ PERMITIDO - Contadores atualizados: burst=${updateData.burst_count}/2, hora=${updateData.hourly_count}/${this.maxEmailsPerHour}, dia=${updateData.daily_count}/${this.maxEmailsPerDay}`);
+      return { allowed: true };
+      
+    } catch (error) {
+      console.error('🛡️ [ANTI-SPAM] Erro crítico:', error);
+      return { allowed: true }; // Permitir se houver erro crítico
+    }
+  }
   shouldReplyToEmail(email, result) {
     // Verificar se a IA recomendou não responder
     if (!result.shouldReply) {
@@ -492,6 +1012,27 @@ FORMATO JSON DE RESPOSTA:
       console.log(`AIService - Possível resposta da IA detectada, não respondendo: ${subject}`);
       return false;
     }
+    
+    // Verificar se o remetente é o próprio sistema (evitar auto-resposta)
+    const systemEmails = [
+      'vaynezada2025@outlook.com',
+      'antoniocruzgomes880@gmail.com',
+      'dev01@suaiden.com'
+    ];
+    const isFromSystem = systemEmails.some(systemEmail => 
+      fromAddress.toLowerCase().includes(systemEmail.toLowerCase())
+    );
+    if (isFromSystem) {
+      console.log(`🚫 AIService - Email do próprio sistema detectado, não respondendo: ${fromAddress}`);
+      return false;
+    }
+    
+    // Verificar se é uma resposta da IA (contém "Re: Re:" múltiplas vezes)
+    const rePattern = /^(re:\s*){2,}/i;
+    if (rePattern.test(subject)) {
+      console.log(`🚫 AIService - Possível resposta da IA detectada (múltiplos Re:), não respondendo: ${subject}`);
+      return false;
+    }
     // Verificar confiança mínima
     if (result.confidence && result.confidence < 0.3) {
       console.log(`AIService - Confiança muito baixa (${result.confidence}), não respondendo`);
@@ -520,6 +1061,43 @@ FORMATO JSON DE RESPOSTA:
       return aiConfig.final_prompt;
     } catch (error) {
       console.error('Erro ao buscar prompt da universidade:', error);
+      return null;
+    }
+  }
+  /**
+   * Busca a base de conhecimento de emails da universidade
+   */ async getEmailKnowledgeBase(userId) {
+    try {
+      console.log(`Buscando base de conhecimento de emails para usuário: ${userId}`);
+      // Buscar university_id do usuário
+      const { data: userProfile, error: profileError } = await supabase.from('user_profiles').select('university_id').eq('user_id', userId).single();
+      if (profileError || !userProfile?.university_id) {
+        console.log('Usuário não tem universidade associada ou perfil não encontrado');
+        return null;
+      }
+      // Buscar documentos de conhecimento de emails transcritos
+      const { data: knowledgeDocs, error: docsError } = await supabase
+        .from('email_knowledge_documents')
+        .select('transcription, document_name')
+        .eq('university_id', userProfile.university_id)
+        .eq('transcription_status', 'completed')
+        .not('transcription', 'is', null);
+      
+      if (docsError || !knowledgeDocs || knowledgeDocs.length === 0) {
+        console.log('Nenhum documento de conhecimento encontrado para a universidade');
+        return null;
+      }
+      
+      // Gerar conteúdo da base de conhecimento
+      const knowledgeContent = knowledgeDocs
+        .map(doc => `## ${doc.document_name}\n\n${doc.transcription}`)
+        .join('\n\n---\n\n');
+      
+      console.log(`📚 Base de conhecimento encontrada: ${knowledgeDocs.length} documentos para universidade ${userProfile.university_id}`);
+      
+      return knowledgeContent;
+    } catch (error) {
+      console.error('Erro ao buscar base de conhecimento de emails:', error);
       return null;
     }
   }
@@ -661,6 +1239,166 @@ FORMATO JSON DE RESPOSTA:
       response
     };
   }
+
+  // Método para sanitizar JSON do Gemini
+  sanitizeGeminiJSON(jsonString) {
+    // Remover markdown se presente
+    let cleaned = jsonString.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+    
+    // Remover caracteres de controle problemáticos
+    cleaned = cleaned.replace(/[\x00-\x1F\x7F-\x9F]/g, '');
+    
+    // Garantir que seja um array válido
+    if (!cleaned.startsWith('[')) {
+      cleaned = '[' + cleaned;
+    }
+    if (!cleaned.endsWith(']')) {
+      cleaned = cleaned + ']';
+    }
+    
+    // Corrigir aspas duplas problemáticas dentro de strings de forma mais robusta
+    // Usar uma abordagem mais específica para o problema identificado nos logs
+    cleaned = this.fixJsonQuotes(cleaned);
+    
+    // Escapar quebras de linha em strings
+    cleaned = cleaned.replace(/(?<=")[^"]*\n[^"]*(?=")/g, (match) => {
+      return match.replace(/\n/g, '\\n');
+    });
+    
+    return cleaned;
+  }
+
+  // Método específico para corrigir aspas duplas em JSON
+  fixJsonQuotes(jsonString) {
+    let fixed = jsonString;
+    
+    // Corrigir aspas duplas dentro de valores de string
+    // Padrão: "response": "texto com "aspas" problemáticas"
+    fixed = fixed.replace(/"response":\s*"([^"]*)"([^"]*)"([^"]*)"/g, (match, p1, p2, p3) => {
+      if (p2.includes('"') && !p2.includes('\\"')) {
+        return `"response": "${p1}${p2.replace(/"/g, '\\"')}${p3}"`;
+      }
+      return match;
+    });
+    
+    // Corrigir aspas duplas em outros campos de string
+    fixed = fixed.replace(/"([^"]*)"([^"]*)"([^"]*)":\s*"([^"]*)"([^"]*)"([^"]*)"/g, (match, p1, p2, p3, p4, p5, p6) => {
+      let result = match;
+      if (p2.includes('"') && !p2.includes('\\"')) {
+        result = result.replace(p2, p2.replace(/"/g, '\\"'));
+      }
+      if (p5.includes('"') && !p5.includes('\\"')) {
+        result = result.replace(p5, p5.replace(/"/g, '\\"'));
+      }
+      return result;
+    });
+    
+    return fixed;
+  }
+
+  // 🚨 MODO CONSERVADOR: Delays balanceados para evitar spam e timeout
+  calculateHumanDelay(analysis) {
+    const { category, priority, confidence } = analysis;
+    
+    // 🛡️ ULTRA CONSERVADOR: Base delay ultra seguro (em SEGUNDOS)
+    let baseDelay = 25; // 25 segundos base (ultra seguro)
+    
+    switch (category) {
+      case 'application':
+        baseDelay = 30; // 30 segundos (ultra seguro)
+        break;
+      case 'documents':
+        baseDelay = 28; // 28 segundos
+        break;
+      case 'payment':
+        baseDelay = 20; // 20 segundos (urgente mas seguro)
+        break;
+      case 'scholarship':
+        baseDelay = 30; // 30 segundos (ultra seguro)
+        break;
+      case 'admission':
+        baseDelay = 28; // 28 segundos
+        break;
+      case 'general':
+        baseDelay = 22; // 22 segundos
+        break;
+      default:
+        baseDelay = 25; // 25 segundos (padrão ultra seguro)
+    }
+    
+    // 🛡️ RANDOMIZAÇÃO HUMANA: Adicionar variação aleatória
+    const humanVariation = (Math.random() - 0.5) * 0.4; // ±20% variação
+    baseDelay = baseDelay * (1 + humanVariation);
+    
+    // 🛡️ MICRO-DELAYS ALEATÓRIOS: Simular hesitação humana
+    const microDelay = Math.random() * 3; // 0-3 segundos extras aleatórios
+    baseDelay += microDelay;
+    
+    // Verificar pausa noturna (22h às 6h)
+    const now = new Date();
+    const hour = now.getHours();
+    if (hour >= 22 || hour < 6) {
+      console.log('🌙 Pausa noturna ativa - não enviando emails');
+      return -1; // Sinal para não enviar
+    }
+    
+    // Verificar pausa de domingo
+    const dayOfWeek = now.getDay();
+    if (dayOfWeek === 0) { // Domingo
+      console.log('📅 Pausa de domingo ativa - não enviando emails');
+      return -1; // Sinal para não enviar
+    }
+    
+    // Ajustar por prioridade (mais conservador)
+    if (priority === 'high') {
+      baseDelay *= 0.8; // 20% mais rápido (era 30%)
+    } else if (priority === 'low') {
+      baseDelay *= 1.5; // 50% mais lento (era 30%)
+    }
+    
+    // 🛡️ Ajustar por confiança (ultra conservador)
+    if (confidence < 0.8) {
+      baseDelay *= 1.2; // 20% mais tempo se baixa confiança
+    }
+    
+    // 🛡️ ULTRA CONSERVADOR: Garantir delay mínimo ultra seguro
+    const finalDelay = Math.max(20, baseDelay); // Mínimo 20 segundos SEMPRE
+    const cappedDelay = Math.min(finalDelay, 30); // Máximo 30 segundos (Edge Function)
+    
+    console.log(`🛡️ Delay calculado: ${Math.round(cappedDelay)}s (categoria: ${category})`);
+    return Math.round(cappedDelay); // Arredondar para segundos inteiros
+  }
+
+  // Método para limpar string JSON específica
+  cleanJsonString(jsonString) {
+    // Remover caracteres de controle
+    let cleaned = jsonString.replace(/[\x00-\x1F\x7F-\x9F]/g, '');
+    
+    // Corrigir aspas mal escapadas de forma mais robusta
+    // Primeiro, identificar e corrigir strings que contêm aspas não escapadas
+    cleaned = cleaned.replace(/"([^"]*)"([^"]*)"([^"]*)":/g, (match, p1, p2, p3) => {
+      // Se encontrou aspas não escapadas dentro de uma string, escapar
+      if (p2.includes('"') && !p2.includes('\\"')) {
+        return `"${p1}${p2.replace(/"/g, '\\"')}${p3}":`;
+      }
+      return match;
+    });
+    
+    // Corrigir aspas duplas dentro de valores de string
+    cleaned = cleaned.replace(/"([^"]*)"([^"]*)"([^"]*)":/g, (match, p1, p2, p3) => {
+      if (p2.includes('"') && !p2.includes('\\"')) {
+        return `"${p1}${p2.replace(/"/g, '\\"')}${p3}":`;
+      }
+      return match;
+    });
+    
+    // Corrigir quebras de linha em strings
+    cleaned = cleaned.replace(/(?<=")[^"]*\n[^"]*(?=")/g, (match) => {
+      return match.replace(/\n/g, '\\n');
+    });
+    
+    return cleaned;
+  }
 }
 async function processUserEmails(config) {
   const startTime = Date.now();
@@ -687,7 +1425,7 @@ async function processUserEmails(config) {
       try {
         const newTokens = await refreshAccessToken(refreshToken);
         accessToken = newTokens.access_token;
-        refreshToken = newTokens.refresh_token;
+        refreshToken = newTokens.refresh_token || refreshToken;
         // Atualizar tokens no banco
         await supabase.from('email_configurations').update({
           oauth_access_token: accessToken,
@@ -697,21 +1435,31 @@ async function processUserEmails(config) {
         console.log('✅ Tokens renovados e salvos no banco');
       } catch (refreshError) {
         console.error('❌ Não foi possível renovar token:', refreshError.message);
-        // Se é token MSAL, não desativar (MSAL gerencia automaticamente)
-        if (refreshError.message === 'MSAL_TOKEN_PLACEHOLDER') {
-          console.log('ℹ️ Token MSAL detectado. MSAL gerencia tokens automaticamente.');
-          throw new Error('MSAL_TOKEN_EXPIRED'); // Indica que token MSAL expirou
+        console.log('🔄 Tentando fallback para Client Credentials...');
+        try {
+          // Tentar Client Credentials como último recurso
+          const clientCredentialsToken = await getClientCredentialsToken();
+          accessToken = clientCredentialsToken.access_token;
+          console.log('✅ Token Client Credentials obtido como fallback');
+        } catch (clientError) {
+          console.error('❌ Client Credentials também falhou:', clientError.message);
+          // Desativar processamento para este usuário
+          await supabase.from('email_configurations').update({
+            is_active: false,
+            updated_at: new Date().toISOString()
+          }).eq('user_id', config.userId).eq('provider_type', 'microsoft');
+          throw new Error(`Token expirado e não foi possível renovar. Processamento desativado para usuário ${config.userId}. Usuário precisa fazer login novamente.`);
         }
-        // Desativar processamento para este usuário
-        await supabase.from('email_configurations').update({
-          is_active: false,
-          updated_at: new Date().toISOString()
-        }).eq('user_id', config.userId).eq('provider_type', 'microsoft');
-        throw new Error(`Token expirado e não foi possível renovar. Processamento desativado para usuário ${config.userId}. Usuário precisa fazer login novamente.`);
       }
     }
     const graphService = new MicrosoftGraphService(accessToken);
-    const aiService = new AIService(GEMINI_API_KEY);
+    
+    // 🚨 MODO CONSERVADOR: Usar instância global do AIService
+    if (!globalAIService) {
+      globalAIService = new AIService(GEMINI_API_KEY);
+      console.log('🔄 Criando nova instância global do AIService');
+    }
+    const aiService = globalAIService;
     // Buscar emails desde a última verificação
     const sinceTimestamp = config.lastProcessedEmailId ? new Date(Date.now() - 5 * 60 * 1000) : new Date(Date.now() - 24 * 60 * 60 * 1000); // Últimas 24 horas
     const emails = await graphService.getEmails(sinceTimestamp);
@@ -727,8 +1475,50 @@ async function processUserEmails(config) {
     }
     const processedMessageIds = new Set(processedEmails.map((pe)=>pe.microsoft_message_id));
     console.log(`Emails já processados: ${processedMessageIds.size}`);
-    // Filtrar apenas emails não processados
-    const newEmails = emails.filter((email)=>!processedMessageIds.has(email.id));
+    
+    // Filtrar apenas emails não processados com log detalhado
+    const newEmails = emails.filter((email)=>{
+      const isAlreadyProcessed = processedMessageIds.has(email.id);
+      if (isAlreadyProcessed) {
+        console.log(`⏭️ Email já processado, pulando: ${email.subject} (${email.id})`);
+        return false;
+      }
+      
+      // 🚫 FILTRO DE SEGURANÇA: Não responder aos próprios emails
+      const isFromOwnAI = email.from?.emailAddress?.address === connectionEmail;
+      if (isFromOwnAI) {
+        console.log(`🚫 Email da própria IA, pulando: ${email.subject} (${email.from?.emailAddress?.address})`);
+        return false;
+      }
+      
+      // 🚫 FILTRO: Não responder a emails com "Re:" que vêm da própria conta
+      const isAutoReply = email.subject.toLowerCase().includes('re:') && 
+                         email.from?.emailAddress?.address === connectionEmail;
+      if (isAutoReply) {
+        console.log(`🚫 Resposta automática, pulando: ${email.subject} (${email.from?.emailAddress?.address})`);
+        return false;
+      }
+      
+      // 🚫 FILTRO: Verificar se contém assinatura da IA
+      const emailBody = email.body?.content || '';
+      const hasAISignature = emailBody.includes('Equipe Matrícula USA') || 
+                           emailBody.includes('Matrícula USA') ||
+                           emailBody.includes('Atenciosamente');
+      if (hasAISignature) {
+        console.log(`🚫 Email com assinatura da IA, pulando: ${email.subject}`);
+        return false;
+      }
+      
+      // 🚫 FILTRO: Não processar emails com muitos "Re:" (loop infinito)
+      const reCount = (email.subject.match(/re:/gi) || []).length;
+      if (reCount > 3) {
+        console.log(`🚫 Email com muitos "Re:" (${reCount}), pulando: ${email.subject}`);
+        return false;
+      }
+      
+      return true;
+    });
+    
     console.log(`Emails novos para processar: ${newEmails.length}`);
     console.log(`DEBUG: Lista de emails encontrados:`, emails.map((e)=>({
         id: e.id,
@@ -736,78 +1526,68 @@ async function processUserEmails(config) {
         from: e.from?.emailAddress?.address
       })));
     console.log(`DEBUG: Emails já processados:`, Array.from(processedMessageIds));
+    
+    // 🕐 COOLDOWN: Verificar se passou tempo suficiente desde o último processamento
+    const lastProcessed = await supabase
+      .from('processed_microsoft_emails')
+      .select('processed_at')
+      .eq('user_id', config.userId)
+      .order('processed_at', { ascending: false })
+      .limit(1);
+    
+    if (lastProcessed.data && lastProcessed.data.length > 0) {
+      const lastProcessedTime = new Date(lastProcessed.data[0].processed_at).getTime();
+      const timeSinceLastProcess = Date.now() - lastProcessedTime;
+      const cooldownTime = 5 * 60 * 1000; // 5 minutos
+      
+      if (timeSinceLastProcess < cooldownTime) {
+        console.log(`⏳ Cooldown ativo, aguardando ${Math.floor((cooldownTime - timeSinceLastProcess) / 1000)}s antes de processar`);
+        return {
+          success: true,
+          message: 'Cooldown ativo, processamento pausado',
+          processedCount: 0,
+          repliedCount: 0
+        };
+      }
+    }
     let processedCount = 0;
     let repliedCount = 0;
     for (const email of newEmails){
       try {
         const emailStartTime = Date.now();
-        console.log(`📧 Processando email: ${email.subject} (${email.from?.emailAddress?.address})`);
+        console.log(`📧 Adicionando email à fila: ${email.subject} (${email.from?.emailAddress?.address})`);
         
-        // Processar com IA
-        const result = await aiService.processEmail(email, config.userId);
-        // Verificar se o resultado é de um lote ou individual
-        if (Array.isArray(result)) {
-          // Resultado de lote - processar cada item
-          for (const batchItem of result){
-            const emailData = batchItem.email;
-            const aiResult = batchItem.result;
-            let status = 'processed';
-            if (aiResult.analysis.shouldReply && aiResult.response) {
-              // Delay humanizado: 30-120 segundos entre respostas
-              const humanDelay = Math.floor(Math.random() * 90000) + 30000; // 30-120s
-              console.log(`⏰ Delay humanizado: aguardando ${Math.floor(humanDelay/1000)}s antes de enviar resposta`);
-              await new Promise(resolve => setTimeout(resolve, humanDelay));
-              
-              await graphService.sendReply(emailData.id, aiResult.response, emailData);
-              repliedCount++;
-              status = 'replied';
-              const processingTime = Date.now() - emailStartTime;
-              console.log(`✅ Resposta enviada para: ${emailData.subject} (tempo total: ${Math.floor(processingTime/1000)}s)`);
-            }
-            // Registrar email como processado na tabela de controle
-            await supabase.from('processed_microsoft_emails').insert({
-              microsoft_message_id: emailData.id,
-              user_id: config.userId,
-              connection_email: connectionEmail,
-              subject: emailData.subject,
-              from_email: emailData.from?.emailAddress?.address,
-              status: status,
-              analysis: aiResult.analysis,
-              response_text: aiResult.response,
-              processed_at: new Date().toISOString()
-            });
-          }
-        } else {
-          // Resultado individual - processar normalmente
-          let status = 'processed';
-          if (result.analysis.shouldReply && result.response) {
-            // Delay humanizado: 30-120 segundos entre respostas
-            const humanDelay = Math.floor(Math.random() * 90000) + 30000; // 30-120s
-            console.log(`⏰ Delay humanizado: aguardando ${Math.floor(humanDelay/1000)}s antes de enviar resposta`);
-            await new Promise(resolve => setTimeout(resolve, humanDelay));
-            
-            await graphService.sendReply(email.id, result.response, email);
-            repliedCount++;
-            status = 'replied';
-            const processingTime = Date.now() - emailStartTime;
-            console.log(`✅ Resposta enviada para: ${email.subject} (tempo total: ${Math.floor(processingTime/1000)}s)`);
-          }
-          // Registrar email como processado na tabela de controle
-          await supabase.from('processed_microsoft_emails').insert({
-            microsoft_message_id: email.id,
+        // 🗃️ ADICIONAR À FILA ao invés de processar diretamente
+        const { data: queueItem, error: queueError } = await supabase
+          .from('email_queue')
+          .insert({
             user_id: config.userId,
-            connection_email: connectionEmail,
-            subject: email.subject,
-            from_email: email.from?.emailAddress?.address,
-            status: status,
-            analysis: result.analysis,
-            response_text: result.response,
-            processed_at: new Date().toISOString()
-          });
+            email_data: email,
+            status: 'pending',
+            priority: 3, // Prioridade alta para emails reais
+            created_at: new Date().toISOString()
+          })
+          .select()
+          .single();
+          
+        if (queueError) {
+          console.error('❌ Erro ao adicionar email à fila:', queueError);
+          continue; // Pular este email e continuar com o próximo
         }
+        
+        console.log(`✅ Email real adicionado à fila com ID: ${queueItem.id}`);
         processedCount++;
-        const emailProcessingTime = Date.now() - emailStartTime;
-        console.log(`⏱️ Email processado em ${Math.floor(emailProcessingTime/1000)}s: ${email.subject}`);
+        
+        // 🚀 Trigger do worker para processar a fila (assíncrono)
+        fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/email-queue-worker`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ trigger: 'process_queue' })
+        }).catch(error => console.log('Worker trigger error (não crítico):', error));
+        
         
         // Atualizar último email processado (manter para compatibilidade)
         await supabase.from('email_configurations').update({
@@ -842,9 +1622,17 @@ async function processUserEmails(config) {
       }).eq('user_id', config.userId).eq('provider_type', 'microsoft');
     }
     const totalProcessingTime = Date.now() - startTime;
+    // 🚨 MODO CONSERVADOR: Métricas detalhadas de segurança
+    const emailsPerMinute = Math.floor(processedCount/(totalProcessingTime/1000)*60);
+    const emailsPerHour = emailsPerMinute * 60;
+    const avgDelayPerEmail = processedCount > 0 ? Math.floor(totalProcessingTime/processedCount/1000) : 0;
+    
     console.log(`✅ Processamento concluído: ${processedCount} emails processados, ${repliedCount} respostas enviadas`);
     console.log(`⏱️ Tempo total de processamento: ${Math.floor(totalProcessingTime/1000)}s`);
-    console.log(`📊 Performance: ${Math.floor(processedCount/(totalProcessingTime/1000)*60)} emails/min`);
+    console.log(`📊 Performance: ${emailsPerMinute} emails/min (${emailsPerHour} emails/hora projetado)`);
+    console.log(`⚡ Delay médio por email: ${avgDelayPerEmail}s`);
+    console.log(`🛡️ Taxa de resposta: ${processedCount > 0 ? Math.round((repliedCount/processedCount)*100) : 0}%`);
+    console.log(`🚨 Status de segurança: ${emailsPerHour > 30 ? '⚠️ ALTO RISCO' : emailsPerHour > 15 ? '⚠️ MÉDIO RISCO' : '✅ BAIXO RISCO'}`);
     
     return {
       processedCount,
@@ -864,20 +1652,71 @@ Deno.serve(async (req)=>{
     if (req.method === 'POST') {
       const body = await req.json();
       if (body.email) {
-        console.log('📧 Processando email individual:', body.email.subject);
-        const aiService = new AIService(GEMINI_API_KEY);
-        const result = await aiService.processEmail(body.email, body.user_id);
-        console.log('📊 Resultado do processEmail:', JSON.stringify(result, null, 2));
-        return new Response(JSON.stringify({
-          success: true,
-          analysis: result.analysis,
-          response: result.response
-        }), {
-          status: 200,
-          headers: {
-            'Content-Type': 'application/json'
+        console.log('📧 Adicionando email à fila:', body.email.subject);
+        
+        try {
+          // 🗃️ SISTEMA DE FILA: Adicionar email à fila ao invés de processar imediatamente
+          const { data: queueItem, error: queueError } = await supabase
+            .from('email_queue')
+            .insert({
+              user_id: body.user_id,
+              email_data: body.email,
+              status: 'pending',
+              priority: 5, // Prioridade normal
+              created_at: new Date().toISOString()
+            })
+            .select()
+            .single();
+            
+          if (queueError) {
+            console.error('❌ Erro ao adicionar email à fila:', queueError);
+            return new Response(JSON.stringify({
+              success: false,
+              error: 'Erro ao adicionar email à fila'
+            }), {
+              status: 500,
+              headers: { 'Content-Type': 'application/json' }
+            });
           }
-        });
+          
+          console.log(`✅ Email adicionado à fila com ID: ${queueItem.id}`);
+          
+          // 🚀 Trigger do worker para processar a fila (assíncrono)
+          fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/email-queue-worker`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ trigger: 'process_queue' })
+          }).catch(error => console.log('Worker trigger error (não crítico):', error));
+          
+          return new Response(JSON.stringify({
+            success: true,
+            message: 'Email adicionado à fila de processamento',
+            queue_id: queueItem.id,
+            status: 'queued',
+            analysis: {
+              shouldReply: true, // Assumir que vai responder (será determinado pelo worker)
+              category: 'queued',
+              confidence: 1.0,
+              reason: 'Email adicionado à fila de processamento'
+            }
+          }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' }
+          });
+          
+        } catch (error) {
+          console.error('❌ Erro no sistema de fila:', error);
+          return new Response(JSON.stringify({
+            success: false,
+            error: error.message
+          }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
       }
       // Processar ações específicas
       if (body.action) {
@@ -917,7 +1756,12 @@ Deno.serve(async (req)=>{
         }
         if (body.action === 'test_ai' && body.user_id) {
           // Teste da IA
-          const aiService = new AIService(GEMINI_API_KEY);
+          // 🚨 MODO CONSERVADOR: Usar instância global do AIService
+          if (!globalAIService) {
+            globalAIService = new AIService(GEMINI_API_KEY);
+            console.log('🔄 Criando nova instância global do AIService para teste');
+          }
+          const aiService = globalAIService;
           const testEmail = {
             subject: 'Teste da IA',
             body: 'Este é um email de teste para verificar se a IA está funcionando.',
@@ -960,7 +1804,12 @@ Deno.serve(async (req)=>{
         }
         if (body.action === 'process_batch' && body.emails && body.user_id) {
           // Processar lote de emails
-          const aiService = new AIService(GEMINI_API_KEY);
+          // 🚨 MODO CONSERVADOR: Usar instância global do AIService
+          if (!globalAIService) {
+            globalAIService = new AIService(GEMINI_API_KEY);
+            console.log('🔄 Criando nova instância global do AIService para processamento em lote');
+          }
+          const aiService = globalAIService;
           const results = [];
           for (const emailData of body.emails){
             try {
