@@ -2308,7 +2308,7 @@
     "securePayment": "Pagamento Seguro",
     "redirectToStripe": "Redirecionando para o Stripe",
     "closeModal": "Fechar modal",
-    "securePaymentViaStripe": "Pagamento seguro via Stripe",
+    "securePaymentViaStripe": "Pagamento seguro via",
     "referralCode": "Código de Referência",
     "yourReferralCode": "Seu Código de Referência",
     "enterReferralCode": "Digite seu código de referência para obter desconto",
@@ -2930,5 +2930,40 @@
     "close": "Fechar",
     "cancel": "Cancelar",
     "processing": "Processando..."
+  },
+  "successPages": {
+    "selectionProcessFee": {
+      "title": "Pagamento da Taxa de Processo de Seleção Realizado com Sucesso!",
+      "description": "Seu pagamento de {amount} foi processado com sucesso.",
+      "message": "Agora você tem acesso a todas as bolsas e pode se candidatar livremente.",
+      "button": "Ir para Bolsas",
+      "verifying": "Verificando seu pagamento...",
+      "pleaseWait": "Aguarde enquanto confirmamos sua transação. Isso pode levar alguns instantes.",
+      "errorTitle": "Erro no Pagamento da Taxa de Processo de Seleção",
+      "errorMessage": "Houve um problema ao processar seu pagamento.",
+      "errorRetry": "Tente novamente. Se o erro persistir, entre em contato com o suporte."
+    },
+    "scholarshipFee": {
+      "title": "Pagamento da Taxa da Bolsa Realizado com Sucesso!",
+      "description": "Seu pagamento de {amount} foi processado com sucesso.",
+      "message": "Sua candidatura irá agora prosseguir para a próxima etapa.",
+      "button": "Ver Detalhes",
+      "verifying": "Verificando seu pagamento...",
+      "pleaseWait": "Aguarde enquanto confirmamos seu pagamento.",
+      "errorTitle": "Erro no Processamento do Pagamento",
+      "errorMessage": "Houve um problema ao processar seu pagamento.",
+      "errorRetry": "Tente novamente ou entre em contato com o suporte."
+    },
+    "applicationFee": {
+      "title": "Pagamento da Taxa de Candidatura Realizado com Sucesso!",
+      "description": "Seu pagamento de {amount} foi processado com sucesso.",
+      "message": "Sua candidatura irá agora prosseguir para a próxima etapa.",
+      "button": "Ir para Minhas Candidaturas",
+      "verifying": "Verificando Pagamento...",
+      "pleaseWait": "Aguarde enquanto confirmamos sua transação. Isso pode levar alguns instantes.",
+      "errorTitle": "Falha na Verificação",
+      "errorMessage": "Houve um problema ao verificar seu pagamento. Entre em contato com o suporte.",
+      "errorDetails": "Detalhes do erro:"
+    }
   }
 }

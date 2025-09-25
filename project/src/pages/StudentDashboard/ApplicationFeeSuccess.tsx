@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { CheckCircle, XCircle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import CustomLoading from '../../components/CustomLoading';
+import { useTranslation } from 'react-i18next';
 
 type VerificationStatus = 'loading' | 'success' | 'error';
 
@@ -12,6 +13,7 @@ const ApplicationFeeSuccess: React.FC = () => {
   const [status, setStatus] = useState<VerificationStatus>('loading');
   const [error, setError] = useState<string | null>(null);
   const [paymentAmount, setPaymentAmount] = useState<number>(350.00);
+  const { t } = useTranslation();
 
   useEffect(() => {
     const verifySession = async () => {
@@ -46,8 +48,8 @@ const ApplicationFeeSuccess: React.FC = () => {
               .eq('id', sessionData.applicationId)
               .single();
 
-            if (!appError && application?.scholarships?.application_fee_amount) {
-              setPaymentAmount(application.scholarships.application_fee_amount);
+            if (!appError && application?.scholarships && Array.isArray(application.scholarships) && application.scholarships[0]?.application_fee_amount) {
+              setPaymentAmount(application.scholarships[0].application_fee_amount);
             }
           } catch (fetchError) {
             console.log('Could not fetch scholarship fee amount, using default:', fetchError);
@@ -70,22 +72,26 @@ const ApplicationFeeSuccess: React.FC = () => {
     switch (status) {
       case 'loading':
         return (
-          <CustomLoading color="green" title="Verifying Payment..." message="Please wait while we confirm your transaction. This may take a moment." />
+          <CustomLoading 
+            color="green" 
+            title={t('successPages.applicationFee.verifying')} 
+            message={t('successPages.applicationFee.pleaseWait')} 
+          />
         );
       case 'success':
         return (
           <>
             <CheckCircle className="h-16 w-16 text-green-600 mb-4 mx-auto" />
-            <h1 className="text-3xl font-bold text-green-700 mb-2">Application Fee Payment Successful!</h1>
+            <h1 className="text-3xl font-bold text-green-700 mb-2">{t('successPages.applicationFee.title')}</h1>
             <p className="text-slate-700 mb-6 text-center">
-              Your payment of <span className="font-bold">${paymentAmount.toFixed(2)}</span> was processed successfully.<br/>
-              Your application will now proceed to the next step.
+              {t('successPages.applicationFee.description', { amount: `$${paymentAmount.toFixed(2)}` })}<br/>
+              {t('successPages.applicationFee.message')}
             </p>
             <button
               onClick={() => navigate('/student/dashboard/applications')}
               className="bg-green-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-green-700 transition-all duration-300"
             >
-              Go to My Applications
+              {t('successPages.applicationFee.button')}
             </button>
           </>
         );
@@ -93,11 +99,13 @@ const ApplicationFeeSuccess: React.FC = () => {
         return (
            <>
             <XCircle className="text-red-500 h-16 w-16 mx-auto mb-6" />
-            <h1 className="text-3xl font-bold text-slate-800 mb-4">Verification Failed</h1>
+            <h1 className="text-3xl font-bold text-slate-800 mb-4">{t('successPages.applicationFee.errorTitle')}</h1>
             <p className="text-slate-600 mb-6">
-              There was a problem verifying your payment. Please contact support.
+              {t('successPages.applicationFee.errorMessage')}
             </p>
-            <p className="text-sm text-red-700 bg-red-100 p-3 rounded-lg">{error}</p>
+            <p className="text-sm text-red-700 bg-red-100 p-3 rounded-lg">
+              {t('successPages.applicationFee.errorDetails')} {error}
+            </p>
           </>
         );
     }
