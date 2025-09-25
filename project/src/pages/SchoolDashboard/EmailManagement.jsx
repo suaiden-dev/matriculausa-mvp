@@ -11,6 +11,7 @@ import {
   BookOpenIcon
 } from '@heroicons/react/24/outline';
 import { supabase } from '../../lib/supabase';
+import { useMicrosoftConnection } from '../../hooks/useMicrosoftConnection';
 import MicrosoftTokenDiagnostic from '../../components/MicrosoftTokenDiagnostic';
 import MicrosoftBFFTest from '../../components/MicrosoftBFFTest';
 import TokenRenewalTest from '../../components/TokenRenewalTest';
@@ -26,10 +27,22 @@ const EmailManagement = () => {
   const [confirmDialog, setConfirmDialog] = useState(null); // { title, message, onConfirm, onCancel }
   const [actionLoading, setActionLoading] = useState({});
   const [lastSyncUpdate, setLastSyncUpdate] = useState({});
+  
+  // Use Microsoft connection hook to detect Microsoft accounts
+  const { connections: microsoftConnections, loading: microsoftLoading } = useMicrosoftConnection();
 
   useEffect(() => {
     checkAuthAndLoad();
   }, []);
+
+  // Detect Microsoft connections and reload data when they change
+  useEffect(() => {
+    if (microsoftConnections && microsoftConnections.length > 0) {
+      console.log('🔄 Microsoft connections detected, reloading data...');
+      loadConfigurations();
+      loadStats();
+    }
+  }, [microsoftConnections]);
 
   // Reload data when user returns to screen
   useEffect(() => {
@@ -74,11 +87,12 @@ const EmailManagement = () => {
         throw new Error('User not authenticated');
       }
 
-      // Get user configurations
+      // Get user configurations (exclude Microsoft - managed by useMicrosoftConnection)
       const { data, error } = await supabase
         .from('email_configurations')
         .select('*')
         .eq('user_id', user.id)
+        .neq('provider_type', 'microsoft')
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -181,7 +195,12 @@ const EmailManagement = () => {
           
           // Importar GraphService dinamicamente para evitar problemas de dependências
           const { default: GraphService } = await import('../../lib/graphService');
-          const graphService = new GraphService(microsoftConfig.oauth_access_token);
+          // Criar GraphService com refresh token e config ID para renovação automática
+          const graphService = new GraphService(
+            microsoftConfig.oauth_access_token,
+            microsoftConfig.oauth_refresh_token,
+            microsoftConfig.id
+          );
 
           // Buscar pastas de email
           const foldersResult = await graphService.getMailFolders();
@@ -316,10 +335,41 @@ const EmailManagement = () => {
     }
   };
 
+  // Função para conexão direta do Microsoft (sem popup - tudo na mesma aba)
+  const handleDirectMicrosoftConnection = async () => {
+    try {
+      setNotification({ type: 'info', message: 'Redirecionando para Microsoft...' });
+      
+      // Importar a função BFF (Backend for Frontend)
+      const { redirectToMicrosoftAuth } = await import('../../lib/microsoftBFFAuth');
+      
+      console.log('🚀 Iniciando conexão Microsoft (redirect na mesma aba)...');
+      
+      // Salvar origem para retornar após autenticação (direto para inbox)
+      sessionStorage.setItem('msalRedirectOrigin', '/school/dashboard/email/inbox');
+      
+      // Redirecionar para Microsoft (na mesma aba)
+      redirectToMicrosoftAuth();
+      
+    } catch (error) {
+      console.error('❌ Erro na conexão Microsoft:', error);
+      setNotification({ type: 'error', message: `Erro ao conectar: ${error.message}` });
+    }
+  };
+
   const handleDelete = async (configId) => {
     try {
       // Find the configuration to show details in confirmation
-      const config = configurations.find(c => c.id === configId);
+      // Check both regular configurations and Microsoft connections
+      let config = configurations.find(c => c.id === configId);
+      let isMicrosoftConnection = false;
+      
+      if (!config) {
+        // Check if it's a Microsoft connection
+        config = microsoftConnections.find(c => c.id === configId);
+        isMicrosoftConnection = true;
+      }
+      
       if (!config) {
         setNotification({ type: 'error', message: 'Configuration not found. Please refresh the page.' });
         return;
@@ -329,8 +379,8 @@ const EmailManagement = () => {
       // Open custom confirm modal
       await new Promise((resolve) => {
         setConfirmDialog({
-          title: 'Delete account',
-          message: `Are you sure you want to delete ${config.name}? This action cannot be undone.`,
+          title: isMicrosoftConnection ? 'Disconnect Microsoft account' : 'Delete account',
+          message: `Are you sure you want to ${isMicrosoftConnection ? 'disconnect' : 'delete'} ${config.email_address}? This action cannot be undone.`,
           onConfirm: () => { setConfirmDialog(null); resolve(true); },
           onCancel: () => { setConfirmDialog(null); resolve(false); }
         });
@@ -356,7 +406,38 @@ const EmailManagement = () => {
       await loadConfigurations();
       await loadStats();
       
-      setNotification({ type: 'success', message: `Account "${config.name}" deleted successfully` });
+      // Se era uma conexão Microsoft, forçar recarregamento das conexões Microsoft
+      if (isMicrosoftConnection) {
+        console.log('🔄 Forçando recarregamento das conexões Microsoft...');
+        // Forçar o useMicrosoftConnection a recarregar
+        window.dispatchEvent(new CustomEvent('microsoft-connection-updated'));
+        
+        // Também forçar recarregamento imediato das conexões Microsoft
+        setTimeout(async () => {
+          try {
+            // Recarregar as conexões Microsoft diretamente
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.user) {
+              const { data: microsoftData } = await supabase
+                .from('email_configurations')
+                .select('id, user_id, email_address, oauth_access_token, oauth_refresh_token, is_active, created_at, updated_at')
+                .eq('user_id', session.user.id)
+                .eq('provider_type', 'microsoft')
+                .order('created_at', { ascending: false });
+
+              if (microsoftData && microsoftData.length > 0) {
+                console.log('✅ Microsoft connections reloaded:', microsoftData.length);
+              } else {
+                console.log('✅ No Microsoft connections found after deletion');
+              }
+            }
+          } catch (error) {
+            console.error('❌ Error reloading Microsoft connections:', error);
+          }
+        }, 100);
+      }
+      
+      setNotification({ type: 'success', message: `Account "${config.email_address}" ${isMicrosoftConnection ? 'disconnected' : 'deleted'} successfully` });
       
     } catch (error) {
       console.error('❌ Delete error:', error);
@@ -647,14 +728,32 @@ const EmailManagement = () => {
 
                   {/* Action Buttons */}
                   <div className="flex items-center">
-                    <button
-                      onClick={() => navigate('/school/dashboard/email/config')}
-                      className="bg-gradient-to-r from-[#D0151C] to-red-600 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-xl hover:from-[#B01218] hover:to-red-700 transition-all duration-300 font-bold flex items-center shadow-lg hover:shadow-xl transform hover:scale-105 text-sm sm:text-base"
-                    >
-                      <PlusIcon className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2" />
-                      <span className="hidden sm:inline">Add Account</span>
-                      <span className="sm:hidden">Add</span>
-                    </button>
+                    <div className="flex gap-2">
+                      {/* Gmail Account */}
+                      <button
+                        onClick={() => navigate('/school/dashboard/email/config?provider=gmail')}
+                        className="bg-gradient-to-r from-red-500 to-red-600 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-xl hover:from-red-600 hover:to-red-700 transition-all duration-300 font-bold flex items-center shadow-lg hover:shadow-xl transform hover:scale-105 text-sm sm:text-base"
+                      >
+                        <EnvelopeIcon className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2" />
+                        <span className="hidden sm:inline">Gmail</span>
+                        <span className="sm:hidden">Gmail</span>
+                      </button>
+                      
+                      {/* Microsoft Account - Direct Connection */}
+                      <button
+                        onClick={handleDirectMicrosoftConnection}
+                        disabled={microsoftLoading}
+                        className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-300 font-bold flex items-center shadow-lg hover:shadow-xl transform hover:scale-105 text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <div className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2 flex items-center justify-center">
+                          <svg viewBox="0 0 24 24" className="w-full h-full">
+                            <path fill="currentColor" d="M11.4 24H0V12.6h11.4V24zM24 24H12.6V12.6H24V24zM11.4 11.4H0V0h11.4v11.4zM24 11.4H12.6V0H24v11.4z"/>
+                          </svg>
+                        </div>
+                        <span className="hidden sm:inline">Microsoft</span>
+                        <span className="sm:hidden">MS</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -695,7 +794,7 @@ const EmailManagement = () => {
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
 
 
-          {configurations.length === 0 ? (
+          {configurations.length === 0 && (!microsoftConnections || microsoftConnections.length === 0) ? (
             <div className="text-center py-16">
               <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <EnvelopeIcon className="h-8 w-8 text-slate-400" />
@@ -707,16 +806,159 @@ const EmailManagement = () => {
                 Add your first email account to start sending and receiving messages.
               </p>
               
-              <button
-                onClick={() => navigate('/school/dashboard/email/config')}
-                className="bg-gradient-to-r from-[#D0151C] to-red-600 text-white px-6 py-3 rounded-xl hover:from-[#B01218] hover:to-red-700 transition-all duration-300 font-bold flex items-center space-x-2 mx-auto shadow-lg hover:shadow-xl transform hover:scale-105"
-              >
-                <PlusIcon className="h-5 w-5" />
-                <span>Add Account</span>
-              </button>
+              <div className="flex gap-3 justify-center">
+                {/* Gmail Account */}
+                <button
+                  onClick={() => navigate('/school/dashboard/email/config?provider=gmail')}
+                  className="bg-gradient-to-r from-red-500 to-red-600 text-white px-6 py-3 rounded-xl hover:from-red-600 hover:to-red-700 transition-all duration-300 font-bold flex items-center space-x-2 shadow-lg hover:shadow-xl transform hover:scale-105"
+                >
+                  <EnvelopeIcon className="h-5 w-5" />
+                  <span>Gmail</span>
+                </button>
+                
+                {/* Microsoft Account - Direct Connection */}
+                <button
+                  onClick={handleDirectMicrosoftConnection}
+                  disabled={microsoftLoading}
+                  className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-6 py-3 rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-300 font-bold flex items-center space-x-2 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <div className="w-5 h-5 flex items-center justify-center">
+                    <svg viewBox="0 0 24 24" className="w-full h-full">
+                      <path fill="currentColor" d="M11.4 24H0V12.6h11.4V24zM24 24H12.6V12.6H24V24zM11.4 11.4H0V0h11.4v11.4zM24 11.4H12.6V0H24v11.4z"/>
+                    </svg>
+                  </div>
+                  <span>Microsoft</span>
+                </button>
+              </div>
             </div>
           ) : (
             <div className="divide-y divide-slate-100">
+              {/* Microsoft Connections */}
+              {microsoftConnections && microsoftConnections.length > 0 && (
+                <>
+                  {microsoftConnections.map((connection) => (
+                    <div key={connection.id} className="p-4 sm:p-6 hover:bg-slate-50 transition-colors">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="flex items-center space-x-3 sm:space-x-4 flex-1 min-w-0">
+                          {/* Microsoft Avatar */}
+                          <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
+                            <span className="text-white font-medium text-sm">M</span>
+                          </div>
+                          
+                          {/* Account Info */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-3 mb-1">
+                              <h3 className="text-base font-medium text-slate-900 truncate">
+                                {connection.email_address}
+                              </h3>
+                              
+                              {/* Microsoft badge */}
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium w-fit bg-blue-100 text-blue-700">
+                                Microsoft
+                              </span>
+                              
+                              {/* Connection status */}
+                              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                connection.isConnected ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+                              }`}>
+                                {connection.isConnected ? 'Connected' : 'Disconnected'}
+                              </span>
+                            </div>
+                            
+                            <p className="text-sm text-slate-500">
+                              Connected via BFF • Last updated: {new Date(connection.updated_at).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Actions - Padronizado com outras contas */}
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-2 sm:ml-4">
+                          {/* Quick Actions */}
+                          <div className="flex sm:hidden items-center space-x-2">
+                            <button
+                              onClick={() => navigate(`/school/dashboard/email/inbox?config=${connection.id}`)}
+                              className="flex-1 text-sm font-medium py-2 px-3 rounded transition-colors text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                              title="Open inbox"
+                            >
+                              Inbox
+                            </button>
+                            
+                            <button
+                              onClick={() => navigate(`/school/dashboard/email/compose?config=${connection.id}`)}
+                              className="flex-1 text-sm font-medium py-2 px-3 rounded transition-colors text-green-600 hover:text-green-800 hover:bg-green-50"
+                              title="Compose email"
+                            >
+                              Compose
+                            </button>
+                          </div>
+                          
+                          <div className="hidden sm:flex items-center space-x-2 mr-4">
+                            <button
+                              onClick={() => navigate(`/school/dashboard/email/inbox?config=${connection.id}`)}
+                              className="text-sm font-medium py-1 px-2 rounded transition-colors text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                              title="Open inbox"
+                            >
+                              Inbox
+                            </button>
+                            
+                            <button
+                              onClick={() => navigate(`/school/dashboard/email/compose?config=${connection.id}`)}
+                              className="text-sm font-medium py-1 px-2 rounded transition-colors text-green-600 hover:text-green-800 hover:bg-green-50"
+                              title="Compose email"
+                            >
+                              Compose
+                            </button>
+                          </div>
+
+                          {/* Action Buttons - Padronizados */}
+                          <div className="flex items-center space-x-1 sm:space-x-2">
+                            {/* Sync Button */}
+                            <button
+                              onClick={() => handleSync(connection.id)}
+                              disabled={syncing[connection.id]}
+                              className={`p-2 rounded-full transition-colors ${
+                                syncing[connection.id] 
+                                  ? 'bg-blue-100 text-blue-600' 
+                                  : 'hover:bg-slate-100 text-slate-600'
+                              }`}
+                              title={syncing[connection.id] ? 'Syncing...' : 'Sync now'}
+                            >
+                              <ArrowPathIcon 
+                                className={`h-4 w-4 ${syncing[connection.id] ? 'animate-spin' : ''}`} 
+                              />
+                            </button>
+
+                            {/* Settings Button */}
+                            <button
+                              onClick={() => handleSettingsNavigation(connection.id)}
+                              className="p-2 rounded-full hover:bg-slate-100 transition-colors"
+                              title="Account settings"
+                            >
+                              <Cog6ToothIcon className="h-4 w-4 text-slate-600" />
+                            </button>
+
+                            {/* Delete/Disconnect Button */}
+                            <button
+                              onClick={() => handleDelete(connection.id)}
+                              disabled={actionLoading[`delete_${connection.id}`]}
+                              className={`p-2 rounded-full transition-colors ${
+                                actionLoading[`delete_${connection.id}`] 
+                                  ? 'bg-red-100 text-red-400' 
+                                  : 'hover:bg-slate-100 text-slate-600 hover:text-red-600'
+                              }`}
+                              title={actionLoading[`delete_${connection.id}`] ? 'Disconnecting...' : 'Disconnect Microsoft account'}
+                            >
+                              <TrashIcon className={`h-4 w-4 ${actionLoading[`delete_${connection.id}`] ? 'animate-pulse' : ''}`} />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </>
+              )}
+              
+              {/* Regular Configurations */}
               {configurations.map((config) => (
                 <div key={config.id} className="p-4 sm:p-6 hover:bg-slate-50 transition-colors">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

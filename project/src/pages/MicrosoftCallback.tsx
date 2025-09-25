@@ -21,6 +21,12 @@ const MicrosoftCallback: React.FC = () => {
         const error = urlParams.get('error');
         const errorDescription = urlParams.get('error_description');
 
+        console.log('🔍 DEBUG - URL completa:', window.location.href);
+        console.log('🔍 DEBUG - Search params:', window.location.search);
+        console.log('🔍 DEBUG - Code recebido:', code ? 'PRESENTE' : 'AUSENTE');
+        console.log('🔍 DEBUG - Error recebido:', error || 'NENHUM');
+        console.log('🔍 DEBUG - Error description:', errorDescription || 'NENHUMA');
+
         if (error) {
           setStatus('error');
           setMessage(`Erro: ${error} - ${errorDescription}`);
@@ -35,35 +41,68 @@ const MicrosoftCallback: React.FC = () => {
 
         setMessage('Trocando código por tokens...');
 
-        // Obter token de autenticação do Supabase
-        const { data: { session } } = await supabase.auth.getSession();
+        // A Edge Function não precisa de autenticação do usuário
+        console.log('🔍 DEBUG - Edge Function não precisa de autenticação do usuário');
         
         // Chamar Edge Function para trocar code por tokens
-        const response = await fetch(`https://fitpynguasqqutuhzifx.supabase.co/functions/v1/microsoft-auth-callback?code=${code}&redirect_uri=${encodeURIComponent(window.location.origin + '/microsoft-email')}`, {
+        const url = `https://fitpynguasqqutuhzifx.supabase.co/functions/v1/microsoft-auth-callback?code=${code}&redirect_uri=${encodeURIComponent('http://localhost:5173/microsoft-email')}`;
+        const headers = {
+          'Content-Type': 'application/json',
+        };
+        
+        console.log('🔍 DEBUG - URL da Edge Function:', url);
+        console.log('🔍 DEBUG - Headers da requisição:', headers);
+        console.log('🔍 DEBUG - Headers simplificados (sem autenticação)');
+        console.log('🔍 DEBUG - Edge Function usará SERVICE_ROLE_KEY internamente');
+        console.log('🔍 DEBUG - Não precisa de autenticação do usuário');
+        console.log('🔍 DEBUG - Edge Function é pública e usa SERVICE_ROLE_KEY');
+        console.log('🔍 DEBUG - Code recebido:', code ? 'PRESENTE' : 'AUSENTE');
+        console.log('🔍 DEBUG - Redirect URI:', window.location.origin + '/microsoft-email');
+        
+        const response = await fetch(url, {
           method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session?.access_token || ''}`,
-          }
+          headers: headers
         });
 
+        console.log('🔍 DEBUG - Status da resposta:', response.status);
+        console.log('🔍 DEBUG - OK da resposta:', response.ok);
+        console.log('🔍 DEBUG - Headers da resposta:', Object.fromEntries(response.headers.entries()));
+
         if (!response.ok) {
-          const errorData = await response.json();
+          console.error('❌ Erro na resposta da Edge Function');
+          console.error('❌ Status:', response.status);
+          console.error('❌ StatusText:', response.statusText);
+          
+          let errorData;
+          try {
+            errorData = await response.json();
+            console.error('❌ Error data:', errorData);
+          } catch (jsonError) {
+            console.error('❌ Erro ao fazer parse do JSON:', jsonError);
+            const textResponse = await response.text();
+            console.error('❌ Resposta como texto:', textResponse);
+            throw new Error(`Erro ${response.status}: ${response.statusText}`);
+          }
+          
           throw new Error(errorData.error || 'Erro ao trocar código por tokens');
         }
 
         const result = await response.json();
+        console.log('✅ DEBUG - Resultado da Edge Function:', result);
         
         setStatus('success');
         setMessage('✅ Conta Microsoft conectada com sucesso!');
         
         // Redirecionar para gerenciamento de email após 3 segundos
         setTimeout(() => {
-          navigate('/email-management');
+          navigate('/school/dashboard/email');
         }, 3000);
 
       } catch (error: any) {
-        console.error('Erro no callback:', error);
+        console.error('❌ Erro no callback:', error);
+        console.error('❌ Error name:', error.name);
+        console.error('❌ Error message:', error.message);
+        console.error('❌ Error stack:', error.stack);
         setStatus('error');
         setMessage(`Erro: ${error.message}`);
       }

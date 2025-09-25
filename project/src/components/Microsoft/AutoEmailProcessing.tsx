@@ -181,16 +181,29 @@ const AutoEmailProcessing: React.FC = () => {
     }
   };
 
-  if (!accounts.length) {
+  // Debug: Verificar estado das conexões
+  console.log('🔍 AutoEmailProcessing - Debug:', {
+    microsoftConnections: microsoftConnections,
+    microsoftConnectionsLength: microsoftConnections?.length,
+    activeConnection: activeConnection,
+    accounts: accounts,
+    accountsLength: accounts?.length
+  });
+
+  // Verificar se há conexões Microsoft reais (não apenas contas MSAL)
+  if (!microsoftConnections || microsoftConnections.length === 0) {
+    console.log('⚠️ AutoEmailProcessing - Nenhuma conexão Microsoft encontrada');
     return (
       <div className="bg-white rounded-lg shadow p-6">
         <div className="flex items-center space-x-3 text-gray-500">
           <Mail className="h-6 w-6" />
-          <span>Faça login para ativar o processamento automático</span>
+          <span>Conecte uma conta Microsoft para ativar o processamento automático</span>
         </div>
       </div>
     );
   }
+
+  console.log('✅ AutoEmailProcessing - Conexões Microsoft encontradas:', microsoftConnections.length);
 
   return (
     <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">

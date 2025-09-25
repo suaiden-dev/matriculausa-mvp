@@ -9,10 +9,14 @@ const MicrosoftBFFTest: React.FC = () => {
   const [loading, setLoading] = useState(false);
 
   const testEnvironment = () => {
+    console.log('🧪 DEBUG - Testando configuração BFF...');
     const validation = validateEnvironment();
+    console.log('🧪 DEBUG - Resultado da validação:', validation);
+    
     if (validation.isValid) {
       setTestResult('✅ Configuração BFF válida - pronto para usar!');
     } else {
+      console.error('❌ Configuração BFF inválida:', validation.errors);
       setTestResult(`❌ Configuração BFF inválida: ${validation.errors.join(', ')}`);
     }
   };
@@ -22,13 +26,21 @@ const MicrosoftBFFTest: React.FC = () => {
     setTestResult('🔄 Testando BFF popup...');
     
     try {
+      console.log('🧪 DEBUG - Iniciando teste BFF popup...');
       const result = await connectWithPopup();
+      console.log('🧪 DEBUG - Resultado do BFF popup:', result);
+      
       if (result.success) {
         setTestResult(`✅ BFF popup bem-sucedido! Email: ${result.email}`);
       } else {
+        console.error('❌ BFF popup falhou:', result.error);
         setTestResult(`❌ BFF popup falhou: ${result.error}`);
       }
     } catch (error: any) {
+      console.error('❌ Erro no BFF popup:', error);
+      console.error('❌ Error name:', error.name);
+      console.error('❌ Error message:', error.message);
+      console.error('❌ Error stack:', error.stack);
       setTestResult(`❌ Erro no BFF popup: ${error.message}`);
     } finally {
       setLoading(false);
@@ -36,11 +48,20 @@ const MicrosoftBFFTest: React.FC = () => {
   };
 
   const testBFFRedirect = () => {
+    console.log('🧪 DEBUG - Iniciando teste BFF redirect...');
     setTestResult('🔄 Redirecionando para BFF...');
-    connectWithRedirect();
+    try {
+      connectWithRedirect();
+    } catch (error: any) {
+      console.error('❌ Erro no BFF redirect:', error);
+      console.error('❌ Error name:', error.name);
+      console.error('❌ Error message:', error.message);
+      console.error('❌ Error stack:', error.stack);
+    }
   };
 
   const showConfig = () => {
+    console.log('🧪 DEBUG - Mostrando configuração BFF:', config);
     setTestResult(`📋 Configuração BFF:
 - Client ID: ${config.clientId ? '✅ Configurado' : '❌ Não configurado'}
 - Tenant ID: ${config.tenantId}

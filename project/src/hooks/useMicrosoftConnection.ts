@@ -94,6 +94,7 @@ export const useMicrosoftConnection = (): UseMicrosoftConnectionReturn => {
           updated_at: row.updated_at,
           isConnected: !!row.oauth_access_token,
         }));
+        console.log('✅ Mapped connections:', mapped);
         setConnections(mapped);
         
         // Restaurar conta ativa do localStorage ou usar a primeira
@@ -494,6 +495,20 @@ export const useMicrosoftConnection = (): UseMicrosoftConnectionReturn => {
     }, 1000);
     
     return () => clearTimeout(timer);
+  }, [checkConnections]);
+
+  // Escutar eventos de atualização das conexões Microsoft
+  useEffect(() => {
+    const handleMicrosoftConnectionUpdate = () => {
+      console.log('🔄 useMicrosoftConnection - Evento de atualização recebido, recarregando conexões...');
+      checkConnections();
+    };
+
+    window.addEventListener('microsoft-connection-updated', handleMicrosoftConnectionUpdate);
+    
+    return () => {
+      window.removeEventListener('microsoft-connection-updated', handleMicrosoftConnectionUpdate);
+    };
   }, [checkConnections]);
 
   return {
