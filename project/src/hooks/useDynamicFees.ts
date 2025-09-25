@@ -13,7 +13,7 @@ export interface DynamicFeeValues {
 
 export const useDynamicFees = (): DynamicFeeValues => {
   const { userProfile } = useAuth();
-  const { getFeeAmount, loading: feeLoading } = useFeeConfig(userProfile?.user_id);
+  const { getFeeAmount, hasOverride, loading: feeLoading } = useFeeConfig(userProfile?.user_id);
   // Pacotes dinâmicos descontinuados com nova estrutura de preços
 
   return useMemo(() => {
@@ -28,17 +28,25 @@ export const useDynamicFees = (): DynamicFeeValues => {
         };
       }
 
-      // Calcular valores base do sistema
-      const baseSelection = Number(getFeeAmount('selection_process')) || 0;
+      // Calcular valores usando lógica de overrides
       const baseScholarship = Number(getFeeAmount('scholarship_fee')) || 0;
       const baseI20 = Number(getFeeAmount('i20_control_fee')) || 0;
 
-      // Dependentes impactam 100% apenas o Selection Process
-      const dependents = Number(userProfile?.dependents) || 0;
-      const dependentsCost = dependents * 150;
+      // Verificar se há override para Selection Process Fee
+      const hasSelectionOverride = hasOverride('selection_process');
+      const baseSelectionFee = Number(getFeeAmount('selection_process')) || 0;
+      
+      let finalSelectionFee = baseSelectionFee;
+      
+      // Se NÃO há override, adicionar dependentes; se há override, usar valor exato
+      if (!hasSelectionOverride) {
+        const dependents = Number(userProfile?.dependents) || 0;
+        const dependentsCost = dependents * 150;
+        finalSelectionFee = baseSelectionFee + dependentsCost;
+      }
 
       return {
-        selectionProcessFee: `$${(baseSelection + dependentsCost).toFixed(2)}`,
+        selectionProcessFee: `$${finalSelectionFee.toFixed(2)}`,
         scholarshipFee: `$${baseScholarship.toFixed(2)}`,
         i20ControlFee: `$${baseI20.toFixed(2)}`,
         hasSellerPackage: false
