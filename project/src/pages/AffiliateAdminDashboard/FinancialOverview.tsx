@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { AffiliatePaymentRequestService } from '../../services/AffiliatePaymentRequestService';
-import { useFeeConfig } from '../../hooks/useFeeConfig';
+
 
 // Declare Chart.js types
 declare global {
@@ -65,7 +65,7 @@ interface CalculatedMetrics {
 }
 
 const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceReloadToken }) => {
-  const { getFeeAmount } = useFeeConfig();
+
   
   // Financial statistics state
   const [financialStats, setFinancialStats] = useState<FinancialStats>({
@@ -162,47 +162,146 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
       isLoadingRef.current = true;
       setLoading(true);
       
-      // Buscar analytics de estudantes com dependentes (mesma lógica do Seller Tracking / total_paid)
-      const { data: studentsAnalytics, error: studentsError } = await supabase
-        .rpc('get_admin_students_analytics_with_dependents', { admin_user_id: userId });
+      // Usar lógica ajustada com overrides (mesmo padrão do Overview/Analytics/PaymentManagement)
+      // 1. Descobrir affiliate_admin_id
+      const { data: aaList, error: aaErr } = await supabase
+        .from('affiliate_admins')
+        .select('id')
+        .eq('user_id', userId)
+        .limit(1);
+      if (aaErr || !aaList || aaList.length === 0) {
+        console.error('No affiliate admin found for user:', userId);
+        return;
+      }
+      const affiliateAdminId = aaList[0].id;
 
-      if (studentsError) {
-        console.error('Error fetching students analytics for affiliate overview:', studentsError);
+      // 2. Buscar sellers vinculados a este affiliate admin
+      const { data: sellers, error: sellersErr } = await supabase
+        .from('sellers')
+        .select('referral_code')
+        .eq('affiliate_admin_id', affiliateAdminId);
+      
+      if (sellersErr || !sellers || sellers.length === 0) {
+        console.error('No sellers found for affiliate admin:', affiliateAdminId);
+        return;
+      }
+      
+      const referralCodes = sellers.map(s => s.referral_code);
+      
+      // 3. Buscar perfis de estudantes vinculados via seller_referral_code
+      const { data: profiles, error: profilesErr } = await supabase
+        .from('user_profiles')
+        .select(`
+          id,
+          user_id,
+          has_paid_selection_process_fee, 
+          has_paid_i20_control_fee, 
+          dependents,
+          seller_referral_code,
+          created_at,
+          scholarship_applications(is_scholarship_fee_paid)
+        `)
+        .in('seller_referral_code', referralCodes);
+      if (profilesErr || !profiles) {
+        console.error('Error fetching student profiles:', profilesErr);
         return;
       }
 
-      const rows = studentsAnalytics || [];
-      const totalRevenue = rows.reduce((sum: number, r: any) => sum + (Number(r.total_paid) || 0), 0);
+      // 4. Preparar overrides por user_id
+      const uniqueUserIds = Array.from(new Set((profiles || []).map((p) => p.user_id).filter(Boolean)));
+      const overrideEntries = await Promise.allSettled(uniqueUserIds.map(async (uid) => {
+        const { data, error } = await supabase.rpc('get_user_fee_overrides', { user_id_param: uid });
+        return [uid, error ? null : data];
+      }));
+      const overridesMap: Record<string, any> = overrideEntries.reduce((acc: Record<string, any>, res) => {
+        if (res.status === 'fulfilled') {
+          const arr = res.value;
+          const uid = arr[0];
+          const data = arr[1];
+          if (data) acc[uid] = {
+            selection_process_fee: data.selection_process_fee != null ? Number(data.selection_process_fee) : undefined,
+            scholarship_fee: data.scholarship_fee != null ? Number(data.scholarship_fee) : undefined,
+            i20_control_fee: data.i20_control_fee != null ? Number(data.i20_control_fee) : undefined,
+          };
+        }
+        return acc;
+      }, {});
+
+      // 5. Calcular total ajustado considerando dependentes quando não houver override
+      const totalRevenue = (profiles || []).reduce((sum, p) => {
+        const deps = Number(p?.dependents || 0);
+        const ov = overridesMap[p?.user_id] || {};
+
+        // Selection Process
+        let selPaid = 0;
+        if (p?.has_paid_selection_process_fee) {
+          const baseSel = ov.selection_process_fee != null ? Number(ov.selection_process_fee) : 400;
+          selPaid = ov.selection_process_fee != null ? baseSel : baseSel + (deps * 150);
+        }
+
+        // Scholarship Fee (sem dependentes)
+        const hasAnyScholarshipPaid = Array.isArray(p?.scholarship_applications)
+          ? p.scholarship_applications.some((a) => !!a?.is_scholarship_fee_paid)
+          : false;
+        const schBase = ov.scholarship_fee != null ? Number(ov.scholarship_fee) : 900;
+        const schPaid = hasAnyScholarshipPaid ? schBase : 0;
+
+        // I-20 Control (sem dependentes)
+        const i20Base = ov.i20_control_fee != null ? Number(ov.i20_control_fee) : 900;
+        const i20Paid = (hasAnyScholarshipPaid && p?.has_paid_i20_control_fee) ? i20Base : 0;
+
+        return sum + selPaid + schPaid + i20Paid;
+      }, 0);
+
+      const rows = profiles || []; // Usar profiles em vez de studentsAnalytics
       const totalReferrals = rows.length || 0;
-      // Derivar status a partir de pagamentos reais (considerando as 3 taxas: selection, i20_control, scholarship)
-      const getPaidFlags = (r: any) => {
-        const selectionFee = getFeeAmount('selection_process');
-        const i20Fee = getFeeAmount('i20_control_fee');
-        const scholarshipFee = getFeeAmount('scholarship_fee');
-        const totalFees = selectionFee + i20Fee + scholarshipFee;
-        
-        return {
-          paidSelection: !!r.has_paid_selection_process_fee || (Number(r.total_paid) || 0) >= selectionFee,
-          paidI20Control: !!r.has_paid_i20_control_fee || (Number(r.total_paid) || 0) >= (selectionFee + i20Fee),
-          paidScholarship: !!r.is_scholarship_fee_paid || (Number(r.total_paid) || 0) >= totalFees
-        };
-      };
+      
+      // Derivar status usando a lógica de overrides ajustada
       let derivedCompleted = 0;
       let derivedPending = 0;
-      rows.forEach((r: any) => {
-        const { paidSelection, paidI20Control, paidScholarship } = getPaidFlags(r);
-        const hasAnyPayment = paidSelection || paidI20Control || paidScholarship || (Number(r.total_paid) || 0) > 0;
+      rows.forEach((p: any) => {
+        // Verificar se tem algum pagamento usando a nova lógica
+        const hasSelectionPaid = !!p?.has_paid_selection_process_fee;
+        const hasScholarshipPaid = Array.isArray(p?.scholarship_applications)
+          ? p.scholarship_applications.some((a: any) => !!a?.is_scholarship_fee_paid)
+          : false;
+        const hasI20Paid = !!p?.has_paid_i20_control_fee;
+        
+        const hasAnyPayment = hasSelectionPaid || hasScholarshipPaid || hasI20Paid;
         if (hasAnyPayment) derivedCompleted += 1; else derivedPending += 1;
       });
       const completedReferrals = derivedCompleted;
       const activeReferrals = derivedPending;
 
-      // Receita últimos 7 dias baseada na data do registro
+      // Receita últimos 7 dias baseada na data do registro com lógica ajustada
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
       const last7DaysRevenue = rows
-        .filter((r: any) => r.created_at && new Date(r.created_at) >= sevenDaysAgo)
-        .reduce((sum: number, r: any) => sum + (Number(r.total_paid) || 0), 0);
+        .filter((p: any) => p.created_at && new Date(p.created_at) >= sevenDaysAgo)
+        .reduce((sum: number, p: any) => {
+          const deps = Number(p?.dependents || 0);
+          const ov = overridesMap[p?.user_id] || {};
+
+          // Selection Process
+          let selPaid = 0;
+          if (p?.has_paid_selection_process_fee) {
+            const baseSel = ov.selection_process_fee != null ? Number(ov.selection_process_fee) : 400;
+            selPaid = ov.selection_process_fee != null ? baseSel : baseSel + (deps * 150);
+          }
+
+          // Scholarship Fee (sem dependentes)
+          const hasAnyScholarshipPaid = Array.isArray(p?.scholarship_applications)
+            ? p.scholarship_applications.some((a: any) => !!a?.is_scholarship_fee_paid)
+            : false;
+          const schBase = ov.scholarship_fee != null ? Number(ov.scholarship_fee) : 900;
+          const schPaid = hasAnyScholarshipPaid ? schBase : 0;
+
+          // I-20 Control (sem dependentes)
+          const i20Base = ov.i20_control_fee != null ? Number(ov.i20_control_fee) : 900;
+          const i20Paid = (hasAnyScholarshipPaid && p?.has_paid_i20_control_fee) ? i20Base : 0;
+
+          return sum + selPaid + schPaid + i20Paid;
+        }, 0);
 
       const averageCommissionPerReferral = totalReferrals > 0 ? totalRevenue / totalReferrals : 0;
 
@@ -253,7 +352,53 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
 
   // Process detailed analytics
   const processDetailedAnalytics = async (referralsData: any[], transactionsData: any[]) => {
-    // Calcular receita diária dos últimos 30 dias
+    // Preparar overrides para cálculos
+    const uniqueUserIds = Array.from(new Set((referralsData || []).map((p) => p.user_id).filter(Boolean)));
+    const overrideEntries = await Promise.allSettled(uniqueUserIds.map(async (uid) => {
+      const { data, error } = await supabase.rpc('get_user_fee_overrides', { user_id_param: uid });
+      return [uid, error ? null : data];
+    }));
+    const overridesMap: Record<string, any> = overrideEntries.reduce((acc: Record<string, any>, res) => {
+      if (res.status === 'fulfilled') {
+        const arr = res.value;
+        const uid = arr[0];
+        const data = arr[1];
+        if (data) acc[uid] = {
+          selection_process_fee: data.selection_process_fee != null ? Number(data.selection_process_fee) : undefined,
+          scholarship_fee: data.scholarship_fee != null ? Number(data.scholarship_fee) : undefined,
+          i20_control_fee: data.i20_control_fee != null ? Number(data.i20_control_fee) : undefined,
+        };
+      }
+      return acc;
+    }, {});
+
+    // Função para calcular revenue de um perfil usando a lógica de overrides
+    const calculateProfileRevenue = (p: any) => {
+      const deps = Number(p?.dependents || 0);
+      const ov = overridesMap[p?.user_id] || {};
+
+      // Selection Process
+      let selPaid = 0;
+      if (p?.has_paid_selection_process_fee) {
+        const baseSel = ov.selection_process_fee != null ? Number(ov.selection_process_fee) : 400;
+        selPaid = ov.selection_process_fee != null ? baseSel : baseSel + (deps * 150);
+      }
+
+      // Scholarship Fee (sem dependentes)
+      const hasAnyScholarshipPaid = Array.isArray(p?.scholarship_applications)
+        ? p.scholarship_applications.some((a: any) => !!a?.is_scholarship_fee_paid)
+        : false;
+      const schBase = ov.scholarship_fee != null ? Number(ov.scholarship_fee) : 900;
+      const schPaid = hasAnyScholarshipPaid ? schBase : 0;
+
+      // I-20 Control (sem dependentes)
+      const i20Base = ov.i20_control_fee != null ? Number(ov.i20_control_fee) : 900;
+      const i20Paid = (hasAnyScholarshipPaid && p?.has_paid_i20_control_fee) ? i20Base : 0;
+
+      return selPaid + schPaid + i20Paid;
+    };
+
+    // Calcular receita diária dos últimos 30 dias usando lógica de overrides
     const dailyRevenue = [];
     for (let i = 29; i >= 0; i--) {
       const date = new Date();
@@ -263,12 +408,12 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
       const dayRevenue = referralsData?.filter((r: any) => {
         const rDate = new Date(r.created_at).toISOString().split('T')[0];
         return rDate === dateStr;
-      }).reduce((sum: number, r: any) => sum + (Number(r.total_paid) || 0), 0) || 0;
+      }).reduce((sum: number, r: any) => sum + calculateProfileRevenue(r), 0) || 0;
       
       dailyRevenue.push({ date: dateStr, amount: dayRevenue });
     }
 
-    // Calcular receita mensal dos últimos 12 meses
+    // Calcular receita mensal dos últimos 12 meses usando lógica de overrides
     const monthlyRevenue = [];
     for (let i = 11; i >= 0; i--) {
       const date = new Date();
@@ -279,37 +424,41 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
         const rDate = new Date(r.created_at);
         return rDate.getMonth() === date.getMonth() && 
                rDate.getFullYear() === date.getFullYear();
-      }).reduce((sum: number, r: any) => sum + (Number(r.total_paid) || 0), 0) || 0;
+      }).reduce((sum: number, r: any) => sum + calculateProfileRevenue(r), 0) || 0;
       
       monthlyRevenue.push({ month: monthStr, amount: monthRevenue });
     }
 
-    // Calcular tendências de referência (baseado em pagamentos, não no campo status genérico)
+    // Calcular tendências de referência usando a lógica de overrides
     const totalReferrals = referralsData?.length || 0;
     const getPaidFlags = (r: any) => {
-      const selectionFee = getFeeAmount('selection_process');
-      const scholarshipFee = getFeeAmount('scholarship_fee');
+      const hasSelectionPaid = !!r?.has_paid_selection_process_fee;
+      const hasScholarshipPaid = Array.isArray(r?.scholarship_applications)
+        ? r.scholarship_applications.some((a: any) => !!a?.is_scholarship_fee_paid)
+        : false;
+      const hasI20Paid = !!r?.has_paid_i20_control_fee;
       
       return {
-        paidSelection: !!r.has_paid_selection_process_fee || (Number(r.total_paid) || 0) >= selectionFee,
-        paidScholarship: !!r.is_scholarship_fee_paid || (Number(r.total_paid) || 0) >= (selectionFee + scholarshipFee)
+        paidSelection: hasSelectionPaid,
+        paidScholarship: hasScholarshipPaid,
+        paidI20: hasI20Paid
       };
     };
     const completedReferrals = referralsData?.filter((r: any) => {
-      const { paidSelection, paidScholarship } = getPaidFlags(r);
-      return paidSelection || paidScholarship || (Number(r.total_paid) || 0) > 0;
+      const { paidSelection, paidScholarship, paidI20 } = getPaidFlags(r);
+      return paidSelection || paidScholarship || paidI20;
     }).length || 0;
     const conversionRate = totalReferrals > 0 ? (completedReferrals / totalReferrals) * 100 : 0;
     const averageCommission = totalReferrals > 0 ? 
-      referralsData?.reduce((sum: number, r: any) => sum + (Number(r.total_paid) || 0), 0) / totalReferrals : 0;
+      referralsData?.reduce((sum: number, r: any) => sum + calculateProfileRevenue(r), 0) / totalReferrals : 0;
 
-    // Calcular breakdown por status derivado dos pagamentos
+    // Calcular breakdown por status derivado dos pagamentos usando lógica de overrides
     const totalRequests = referralsData?.length || 0;
     let derivedCompleted = 0;
     let derivedPending = 0;
     referralsData?.forEach((r: any) => {
-      const { paidSelection, paidScholarship } = getPaidFlags(r);
-      const hasAnyPayment = paidSelection || paidScholarship || (Number(r.total_paid) || 0) > 0;
+      const { paidSelection, paidScholarship, paidI20 } = getPaidFlags(r);
+      const hasAnyPayment = paidSelection || paidScholarship || paidI20;
       if (hasAnyPayment) derivedCompleted += 1; else derivedPending += 1;
     });
     const paymentMethodBreakdown = {
@@ -318,41 +467,25 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
       credits: 0
     };
 
-    // Criar atividade recente (últimos 10 eventos)
+    // Criar atividade recente (últimos 10 eventos) usando lógica de overrides
     const recentActivity: Array<{date: string, type: string, amount: number, description: string}> = [];
 
-    // Montar eventos por taxa paga usando taxas dinâmicas dos pacotes
+    // Montar eventos por taxa paga usando lógica de overrides
     referralsData?.slice(0, 10).forEach((row: any) => {
-      const totalPaid = Number(row.total_paid) || 0;
+      const deps = Number(row?.dependents || 0);
+      const ov = overridesMap[row?.user_id] || {};
       
       // Usar flags de pagamento para determinar quais taxas foram pagas
       const paidSelection = !!row.has_paid_selection_process_fee;
       const paidI20Control = !!row.has_paid_i20_control_fee;
-      const paidScholarship = !!row.is_scholarship_fee_paid;
-      const paidApplication = !!row.is_application_fee_paid;
+      const hasAnyScholarshipPaid = Array.isArray(row?.scholarship_applications)
+        ? row.scholarship_applications.some((a: any) => !!a?.is_scholarship_fee_paid)
+        : false;
 
-      // Calcular valores baseados nas taxas do pacote + dependentes
-      let selectionFeeAmount = 0;
-      let i20ControlFeeAmount = 0;
-      let scholarshipFeeAmount = 0;
-      let applicationFeeAmount = 0;
-
-      // Obter número de dependentes
-      const dependents = Number(row.dependents) || 0;
-      const dependentCost = dependents * 75; // $75 por dependente para cada taxa
-
-      // Usar taxas do pacote + dependentes se disponíveis, senão usar valores padrão + dependentes
-      const baseSelectionFee = row.selection_process_fee || getFeeAmount('selection_process');
-      const baseI20ControlFee = row.i20_control_fee || getFeeAmount('i20_control_fee');
-      const baseScholarshipFee = row.scholarship_fee || getFeeAmount('scholarship_fee');
-      
-      selectionFeeAmount = baseSelectionFee + dependentCost;
-      i20ControlFeeAmount = baseI20ControlFee + dependentCost;
-      scholarshipFeeAmount = baseScholarshipFee; // Scholarship fee não tem dependentes
-      applicationFeeAmount = 300; // Application fee fixo
-
-      // Registrar eventos baseados nos flags de pagamento
+      // Calcular valores usando a lógica de overrides
       if (paidSelection) {
+        const baseSel = ov.selection_process_fee != null ? Number(ov.selection_process_fee) : 400;
+        const selectionFeeAmount = ov.selection_process_fee != null ? baseSel : baseSel + (deps * 150);
         recentActivity.push({
           date: row.created_at,
           type: 'commission',
@@ -361,39 +494,32 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
         });
       }
 
-      if (paidI20Control) {
+      if (hasAnyScholarshipPaid) {
+        const schBase = ov.scholarship_fee != null ? Number(ov.scholarship_fee) : 900;
         recentActivity.push({
           date: row.created_at,
           type: 'commission',
-          amount: i20ControlFeeAmount,
-          description: 'I20 Control Fee paid'
-        });
-      }
-
-      if (paidScholarship) {
-        recentActivity.push({
-          date: row.created_at,
-          type: 'commission',
-          amount: scholarshipFeeAmount,
+          amount: schBase,
           description: 'Scholarship Fee paid'
         });
       }
 
-      if (paidApplication) {
+      if (hasAnyScholarshipPaid && paidI20Control) {
+        const i20Base = ov.i20_control_fee != null ? Number(ov.i20_control_fee) : 900;
         recentActivity.push({
           date: row.created_at,
           type: 'commission',
-          amount: applicationFeeAmount,
-          description: 'Application Fee paid'
+          amount: i20Base,
+          description: 'I20 Control Fee paid'
         });
       }
 
       // Se nenhum fee pago ainda, manter como pendente
-      if (!paidSelection && !paidI20Control && !paidScholarship && !paidApplication) {
+      if (!paidSelection && !hasAnyScholarshipPaid && !paidI20Control) {
         recentActivity.push({
           date: row.created_at,
           type: 'pending',
-          amount: totalPaid,
+          amount: 0,
           description: 'Pending student fees'
         });
       }

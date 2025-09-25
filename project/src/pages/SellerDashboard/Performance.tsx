@@ -28,9 +28,10 @@ const Performance: React.FC<PerformanceProps> = ({ stats, sellerProfile, student
   const [performanceData, setPerformanceData] = useState<PerformanceData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { getFeeAmount } = useFeeConfig();
+  const { getFeeAmount } = useFeeConfig(); // Para valores padrão, será usado para overrides específicos por estudante
   const [studentPackageFees, setStudentPackageFees] = useState<{[key: string]: any}>({});
   const [studentDependents, setStudentDependents] = useState<{[key: string]: number}>({});
+  const [studentFeeOverrides, setStudentFeeOverrides] = useState<{[key: string]: any}>({});
   const [originalMonthlyData, setOriginalMonthlyData] = useState<PerformanceData['monthly_data']>([]);
   const [adjustedMonthlyData, setAdjustedMonthlyData] = useState<PerformanceData['monthly_data']>([]);
   const [rpcTotalRevenue, setRpcTotalRevenue] = useState<number>(0);
@@ -77,54 +78,89 @@ const Performance: React.FC<PerformanceProps> = ({ stats, sellerProfile, student
     }
   };
 
+  const loadStudentFeeOverrides = async (studentUserId: string) => {
+    if (!studentUserId || studentFeeOverrides[studentUserId] !== undefined) return;
+    
+    try {
+      const { data: overrides, error } = await supabase
+        .from('user_fee_overrides')
+        .select('*')
+        .eq('user_id', studentUserId)
+        .single();
+      
+      if (!error && overrides) {
+        setStudentFeeOverrides(prev => ({ ...prev, [studentUserId]: overrides }));
+      } else {
+        setStudentFeeOverrides(prev => ({ ...prev, [studentUserId]: null }));
+      }
+    } catch (error) {
+      setStudentFeeOverrides(prev => ({ ...prev, [studentUserId]: null }));
+    }
+  };
+
   useEffect(() => {
     (students || []).forEach((s: any) => {
       if (s.id && !studentPackageFees[s.id]) loadStudentPackageFees(s.id);
       if (s.id && studentDependents[s.id] === undefined) loadStudentDependents(s.id);
+      if (s.id && studentFeeOverrides[s.id] === undefined) loadStudentFeeOverrides(s.id);
     });
-  }, [students, studentPackageFees, studentDependents]);
+  }, [students, studentPackageFees, studentDependents, studentFeeOverrides]);
+
+  // Função auxiliar para obter valor da taxa com override
+  const getStudentFeeAmount = (studentId: string, feeType: string): number => {
+    const overrides = studentFeeOverrides[studentId];
+    const packageFees = studentPackageFees[studentId];
+    
+    // Mapear feeType para nome correto do campo no banco
+    const fieldMapping: {[key: string]: string} = {
+      'selection_process': 'selection_process_fee',
+      'scholarship_fee': 'scholarship_fee',
+      'i20_control_fee': 'i20_control_fee'
+    };
+    const dbFieldName = fieldMapping[feeType] || feeType;
+    
+    // Primeiro, verificar se há override
+    if (overrides && overrides[dbFieldName]) {
+      return overrides[dbFieldName];
+    }
+    
+    // Segundo, verificar se há taxa personalizada do pacote
+    if (packageFees && packageFees[dbFieldName]) {
+      return packageFees[dbFieldName];
+    }
+    
+    // Por último, usar taxa padrão
+    return getFeeAmount(feeType);
+  };
 
   const calculateStudentAdjustedPaid = (student: any): number => {
     let total = 0;
-    const packageFees = studentPackageFees[student.id];
     const deps = studentDependents[student.id] || 0;
+    const overrides = studentFeeOverrides[student.id];
+
     if (student.has_paid_selection_process_fee) {
-      // Usar taxa padrão do Selection e somar todos os dependentes
-      const baseSel = getFeeAmount('selection_process');
-      total += Number(baseSel) + (deps * 150);
+      // Para Selection Process, verificar se há override primeiro
+      if (overrides && overrides.selection_process_fee) {
+        // Se há override, usar apenas o valor do override (já inclui dependentes)
+        total += overrides.selection_process_fee;
+      } else {
+        // Sem override: usar taxa padrão + dependentes
+        const baseSelectionFee = getFeeAmount('selection_process');
+        total += baseSelectionFee + (deps * 150);
+      }
     }
     if (student.is_scholarship_fee_paid) {
-      const baseSch = packageFees ? packageFees.scholarship_fee : getFeeAmount('scholarship_fee');
-      total += Number(baseSch);
+      const scholarshipFee = getStudentFeeAmount(student.id, 'scholarship_fee');
+      total += scholarshipFee;
     }
     if (student.has_paid_i20_control_fee) {
-      const baseI20 = packageFees ? packageFees.i20_control_fee : getFeeAmount('i20_control_fee');
-      // Não somar dependentes no I-20
-      total += Number(baseI20);
+      const i20Fee = getStudentFeeAmount(student.id, 'i20_control_fee');
+      total += i20Fee; // I-20 nunca tem dependentes
     }
     return total;
   };
 
-  const getIconComponent = (iconName: string) => {
-    switch (iconName) {
-      case 'Users': return Users;
-      case 'DollarSign': return DollarSign;
-      case 'Target': return Target;
-      case 'Award': return Award;
-      default: return Users;
-    }
-  };
 
-  const getColorClasses = (color: string) => {
-    switch (color) {
-      case 'yellow': return 'bg-yellow-100 text-yellow-600';
-      case 'blue': return 'bg-blue-100 text-blue-600';
-      case 'green': return 'bg-green-100 text-green-600';
-      case 'red': return 'bg-red-100 text-red-600';
-      case 'purple': return 'bg-purple-100 text-purple-600';
-      default: return 'bg-slate-100 text-slate-600';
-    }
-  };
 
   // Função para obter dados seguros com fallbacks
   const getSafeData = (data: any, field: string, fallback: any = 0) => {

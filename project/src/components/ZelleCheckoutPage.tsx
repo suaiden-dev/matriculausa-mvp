@@ -44,7 +44,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user, userProfile } = useAuth();
-  const { getFeeAmount } = useFeeConfig();
+  const { getFeeAmount, userFeeOverrides } = useFeeConfig(user?.id);
   const { selectionProcessFee, scholarshipFee, i20ControlFee, hasSellerPackage, packageName } = useDynamicFees();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -100,7 +100,16 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
     {
       type: 'selection_process',
       amount: (() => {
-        const base = hasSellerPackage ? parseFloat(selectionProcessFee.replace('$', '')) : (getFeeAmount('selection_process') + ((Number(userProfile?.dependents) || 0) * 150));
+        const base = hasSellerPackage ? parseFloat(selectionProcessFee.replace('$', '')) : (() => {
+          const hasOverride = userFeeOverrides?.selection_process_fee !== undefined;
+          if (hasOverride) {
+            // Se há override, usar apenas o valor do override (já inclui dependentes se necessário)
+            return getFeeAmount('selection_process');
+          } else {
+            // Se não há override, aplicar lógica de dependentes aos valores padrão
+            return getFeeAmount('selection_process') + ((Number(userProfile?.dependents) || 0) * 150);
+          }
+        })();
         const discount = (activeDiscount && feeType === 'selection_process') ? (activeDiscount.discount_amount || 0) : 0;
         return Math.max(0, base - discount);
       })(),

@@ -132,7 +132,17 @@ const SellersList: React.FC<SellersListProps> = ({
                   <div className="text-center">
                     <p className="text-sm text-slate-500">Revenue</p>
                     <p className="text-2xl font-bold text-green-600">
-                      {formatCurrency(seller.total_revenue)}
+                      {(() => {
+                        // Somar receita ajustada dos alunos do seller se disponível
+                        const studentsForSeller = filteredStudents.filter((student: any) => 
+                          student.referred_by_seller_id === seller.id
+                        );
+                        const adjusted = studentsForSeller.reduce((sum: number, st: any) => {
+                          const val = Number(st.total_paid_adjusted ?? st.total_paid ?? 0);
+                          return sum + (isNaN(val) ? 0 : val);
+                        }, 0);
+                        return formatCurrency(adjusted);
+                      })()}
                     </p>
                   </div>
                   <div className="text-center">
@@ -214,7 +224,7 @@ const SellersList: React.FC<SellersListProps> = ({
                               <div className="flex items-center">
                                 <DollarSign className="h-4 w-4 text-green-600 mr-1" />
                                 <span className="text-sm font-medium text-slate-900">
-                                  {formatCurrency(student.total_paid)}
+                                  {formatCurrency(Number(student.total_paid_adjusted ?? student.total_paid ?? 0))}
                                 </span>
                               </div>
                             </td>

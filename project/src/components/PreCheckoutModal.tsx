@@ -42,7 +42,7 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
   
   const { t } = useTranslation();
   const { user, userProfile } = useAuth();
-  const { getFeeAmount } = useFeeConfig(user?.id);
+  const { getFeeAmount, userFeeOverrides } = useFeeConfig(user?.id);
   const { recordTermAcceptance } = useTermsAcceptance();
   const [discountCode, setDiscountCode] = useState('');
   const [isValidating, setIsValidating] = useState(false);
@@ -59,7 +59,14 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
     const dependents = Number(userProfile?.dependents) || 0;
     switch (feeType) {
       case 'selection_process':
-        return Number(getFeeAmount('selection_process')) + dependents * 150;
+        const hasOverride = userFeeOverrides?.selection_process_fee !== undefined;
+        if (hasOverride) {
+          // Se há override, usar apenas o valor do override (já inclui dependentes se necessário)
+          return Number(getFeeAmount('selection_process'));
+        } else {
+          // Se não há override, aplicar lógica de dependentes aos valores padrão
+          return Number(getFeeAmount('selection_process')) + dependents * 150;
+        }
       case 'application_fee':
         return Number(getFeeAmount('application_fee'));
       case 'scholarship_fee':

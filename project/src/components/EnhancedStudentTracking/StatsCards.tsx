@@ -13,7 +13,11 @@ const StatsCards: React.FC<StatsCardsProps> = ({ filteredStudents }) => {
     }).format(amount || 0);
   };
 
-  const totalRevenue = filteredStudents.reduce((sum, student) => sum + (Number(student.total_paid) || 0), 0);
+  const totalRevenue = filteredStudents.reduce((sum, student) => {
+    const adjusted = Number((student as any).total_paid_adjusted);
+    if (!isNaN(adjusted)) return sum + adjusted;
+    return sum + (Number((student as any).total_paid) || 0);
+  }, 0);
   const avgRevenuePerStudent = filteredStudents.length > 0 ? totalRevenue / filteredStudents.length : 0;
 
   return (
