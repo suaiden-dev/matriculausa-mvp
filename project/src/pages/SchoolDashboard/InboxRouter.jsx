@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import EmailInbox from './EmailInbox'; // Gmail inbox
-import MicrosoftEmailIntegration from '../../components/Microsoft/MicrosoftEmailIntegration'; // Microsoft inbox
+import MicrosoftInbox from '../../components/Microsoft/MicrosoftInbox'; // Microsoft inbox com tokens salvos
 
 const InboxRouter = () => {
   const [searchParams] = useSearchParams();
@@ -25,7 +25,7 @@ const InboxRouter = () => {
 
   const loadConfigurationInfo = async () => {
     try {
-      console.log('🔍 Carregando informações da configuração:', configId);
+      // Loading configuration info
       
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       
@@ -59,7 +59,7 @@ const InboxRouter = () => {
         return;
       }
 
-      console.log('✅ Configuração carregada:', data);
+      // Configuration loaded
       setProviderType(data.provider_type);
       
     } catch (error) {
@@ -103,7 +103,7 @@ const InboxRouter = () => {
 
   // Renderizar o inbox apropriado baseado no provider
   if (providerType === 'microsoft') {
-    return <MicrosoftEmailIntegration />;
+    return <MicrosoftInbox />;
   } else if (providerType === 'gmail') {
     return <EmailInbox />;
   } else {

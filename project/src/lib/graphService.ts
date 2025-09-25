@@ -5,17 +5,149 @@ import rateLimiter from './rateLimiter';
 class GraphService {
   private graphClient: Client;
   private accessToken: string;
+  private refreshToken: string;
+  private configId: string;
 
-  constructor(accessToken: string) {
+  constructor(accessToken: string, refreshToken?: string, configId?: string) {
     const authProvider: AuthenticationProvider = {
       getAccessToken: async () => {
-        return accessToken;
+        // Verificar se token está expirado e tentar renovar
+        const validToken = await this.ensureValidToken();
+        return validToken;
       },
     };
 
     this.graphClient = Client.initWithMiddleware({ authProvider });
-    // Store token for direct HTTP calls
     this.accessToken = accessToken;
+    this.refreshToken = refreshToken || '';
+    this.configId = configId || '';
+  }
+
+  // Método para garantir que o token seja válido
+  private async ensureValidToken(): Promise<string> {
+    try {
+      // Primeiro, tentar usar o token atual
+      const testResponse = await fetch('https://graph.microsoft.com/v1.0/me', {
+        headers: {
+          'Authorization': `Bearer ${this.accessToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (testResponse.ok) {
+        console.log('✅ Token ainda válido');
+        return this.accessToken;
+      }
+
+      // Se token expirado, tentar renovar
+      if (this.refreshToken && this.configId) {
+        // Token expired, trying to renew
+        const newToken = await this.refreshAccessToken();
+        if (newToken) {
+          this.accessToken = newToken;
+          return newToken;
+        }
+      }
+
+      // Se não conseguiu renovar, marcar conta como desconectada
+      console.log('❌ Token inválido e não foi possível renovar, marcando conta como desconectada');
+      await this.markAccountAsDisconnected();
+      
+      throw new Error('Token inválido - conta precisa ser reconectada');
+    } catch (error) {
+      console.error('❌ Erro ao verificar/renovar token:', error);
+      throw error;
+    }
+  }
+
+  // Método para marcar conta como desconectada
+  private async markAccountAsDisconnected(): Promise<void> {
+    try {
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabase = createClient(
+        import.meta.env.VITE_SUPABASE_URL,
+        import.meta.env.VITE_SUPABASE_ANON_KEY
+      );
+
+      const { error } = await supabase
+        .from('email_configurations')
+        .update({
+          is_active: false
+        })
+        .eq('id', this.configId);
+
+      if (error) {
+        console.error('❌ Erro ao marcar conta como desconectada:', error);
+      } else {
+        // Account marked as disconnected
+      }
+    } catch (error) {
+      console.error('❌ Erro ao marcar conta como desconectada:', error);
+    }
+  }
+
+  // Método para renovar o token usando refresh token
+  private async refreshAccessToken(): Promise<string | null> {
+    try {
+        // Renewing token via refresh token
+      
+      const response = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          client_id: import.meta.env.VITE_AZURE_CLIENT_ID,
+          refresh_token: this.refreshToken,
+          grant_type: 'refresh_token',
+          scope: 'User.Read Mail.Read Mail.ReadWrite Mail.Send offline_access'
+        })
+      });
+
+      if (!response.ok) {
+        console.error('❌ Erro ao renovar token:', response.status, response.statusText);
+        return null;
+      }
+
+      const data = await response.json();
+        // Token renewed successfully
+      
+      // Atualizar token no banco de dados
+      await this.updateTokenInDatabase(data.access_token, data.refresh_token);
+      
+      return data.access_token;
+    } catch (error) {
+      console.error('❌ Erro ao renovar token:', error);
+      return null;
+    }
+  }
+
+  // Método para atualizar token no banco de dados
+  private async updateTokenInDatabase(accessToken: string, refreshToken: string): Promise<void> {
+    try {
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabase = createClient(
+        import.meta.env.VITE_SUPABASE_URL,
+        import.meta.env.VITE_SUPABASE_ANON_KEY
+      );
+
+      const { error } = await supabase
+        .from('email_configurations')
+        .update({
+          oauth_access_token: accessToken,
+          oauth_refresh_token: refreshToken,
+          oauth_token_expires_at: new Date(Date.now() + 3600000).toISOString() // 1 hora
+        })
+        .eq('id', this.configId);
+
+      if (error) {
+        console.error('❌ Erro ao atualizar token no banco:', error);
+      } else {
+        console.log('✅ Token atualizado no banco de dados');
+      }
+    } catch (error) {
+      console.error('❌ Erro ao atualizar token no banco:', error);
+    }
   }
 
   async getUserProfile() {
@@ -30,7 +162,7 @@ class GraphService {
 
   async getMailFolders() {
     try {
-      console.log('GraphService - Listando pastas de email...');
+      // Listing email folders
       
       const folders = await rateLimiter.executeRequest(async () => {
         return await this.graphClient

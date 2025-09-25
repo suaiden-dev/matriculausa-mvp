@@ -74,8 +74,12 @@ const EmailInbox = () => {
   useEffect(() => {
     if (selectedConfig) {
       loadEmails();
-      // Atualizar contadores quando carregar emails
-      updateEmailCounts();
+      // Atualizar contadores quando carregar emails (com debounce para evitar spam)
+      const timeoutId = setTimeout(() => {
+        updateEmailCounts();
+      }, 500); // 500ms de debounce
+      
+      return () => clearTimeout(timeoutId);
     }
   }, [selectedConfig, filter, activeTab]);
 

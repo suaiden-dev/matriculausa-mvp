@@ -350,14 +350,14 @@ const PaymentManagement: React.FC = () => {
     loadAffiliateBalance();
     loadAffiliatePaymentRequests();
 
-    // Habilita polling apenas quando a aba de payment-requests estiver ativa
+    // Habilita polling apenas quando a aba de payment-requests estiver ativa (reduzido para 5 minutos)
     let interval: number | undefined;
     if (activeTab === 'payment-requests') {
       interval = window.setInterval(() => {
         // polling mais espaçado para reduzir carga; realtime cobre mudanças rápidas
         hasLoadedRequestsForUser.current = null; // força refresh no polling
         loadAffiliatePaymentRequests();
-      }, 60000);
+      }, 300000); // Reduzido de 60s para 5 minutos
     }
     return () => {
       if (interval) clearInterval(interval);
