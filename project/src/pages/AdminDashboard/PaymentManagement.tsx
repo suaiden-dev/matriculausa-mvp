@@ -1124,7 +1124,7 @@ const PaymentManagement = (): React.JSX.Element => {
             // Depois buscar as informações do user_profiles
             const { data: userProfileData, error: userProfileError } = await supabase
               .from('user_profiles')
-              .select('full_name, email')
+              .select('full_name, email, phone')
               .eq('user_id', affiliateData.user_id)
               .single();
             
@@ -1194,10 +1194,13 @@ const PaymentManagement = (): React.JSX.Element => {
                 tipo_notf: "Pagamento de aluno do seu seller aprovado",
                 email_affiliate_admin: affiliateAdminData.user_profiles.email,
                 nome_affiliate_admin: affiliateAdminData.user_profiles.full_name || "Affiliate Admin",
+                phone_affiliate_admin: affiliateAdminData.user_profiles.phone || "",
                 email_aluno: payment.student_email,
                 nome_aluno: payment.student_name,
+                phone_aluno: payment.student_phone || "",
                 email_seller: sellerData.email,
                 nome_seller: sellerData.name,
+                phone_seller: sellerPhone || "",
                 o_que_enviar: `Pagamento de ${payment.fee_type} no valor de ${payment.amount} do aluno ${payment.student_name} foi aprovado. Seller responsável: ${sellerData.name} (${sellerData.referral_code})`,
                 payment_id: paymentId,
                 fee_type: payment.fee_type,
