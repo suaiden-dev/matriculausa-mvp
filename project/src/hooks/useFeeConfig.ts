@@ -10,15 +10,23 @@ export interface FeeConfig {
 }
 
 const DEFAULT_FEE_CONFIG: FeeConfig = {
-  selection_process_fee: 350,
-  application_fee_default: 350,
-  scholarship_fee_default: 550,
+  selection_process_fee: 400,
+  application_fee_default: 400,
+  scholarship_fee_default: 900,
   i20_control_fee: 900
 };
+
+interface UserFeeOverrides {
+  selection_process_fee?: number;
+  application_fee?: number;
+  scholarship_fee?: number;
+  i20_control_fee?: number;
+}
 
 export const useFeeConfig = (userId?: string) => {
   const [feeConfig, setFeeConfig] = useState<FeeConfig>(DEFAULT_FEE_CONFIG);
   const [userPackageFees, setUserPackageFees] = useState<UserPackageFees | null>(null);
+  const [userFeeOverrides, setUserFeeOverrides] = useState<UserFeeOverrides | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -29,6 +37,7 @@ export const useFeeConfig = (userId?: string) => {
   useEffect(() => {
     if (userId) {
       loadUserPackageFees();
+      loadUserFeeOverrides();
     }
   }, [userId]);
 
@@ -37,52 +46,8 @@ export const useFeeConfig = (userId?: string) => {
       setLoading(true);
       setError(null);
 
-      // Buscar configurações de taxas do banco de dados
-      const { data: systemSettings, error: settingsError } = await supabase
-        .from('system_settings')
-        .select('key, value')
-        .in('key', [
-          'selection_process_fee',
-          'application_fee_default', 
-          'scholarship_fee_default',
-          'i20_control_fee'
-        ]);
-
-      if (settingsError) {
-        console.warn('⚠️ [useFeeConfig] Erro ao carregar configurações do banco, usando valores padrão:', settingsError);
-        setFeeConfig(DEFAULT_FEE_CONFIG);
-        return;
-      }
-
-      // Converter dados do banco para o formato esperado
-      const configFromDB: Partial<FeeConfig> = {};
-      systemSettings?.forEach(setting => {
-        const value = parseFloat(setting.value);
-        if (!isNaN(value)) {
-          switch (setting.key) {
-            case 'selection_process_fee':
-              configFromDB.selection_process_fee = value;
-              break;
-            case 'application_fee_default':
-              configFromDB.application_fee_default = value;
-              break;
-            case 'scholarship_fee_default':
-              configFromDB.scholarship_fee_default = value;
-              break;
-            case 'i20_control_fee':
-              configFromDB.i20_control_fee = value;
-              break;
-          }
-        }
-      });
-
-      // Mesclar com valores padrão
-      const finalConfig: FeeConfig = {
-        ...DEFAULT_FEE_CONFIG,
-        ...configFromDB
-      };
-
-      setFeeConfig(finalConfig);
+      // Novo modelo: valores fixos. Ignorar overrides do banco.
+      setFeeConfig(DEFAULT_FEE_CONFIG);
 
     } catch (err) {
       console.error('❌ [useFeeConfig] Erro inesperado:', err);
@@ -112,6 +77,60 @@ export const useFeeConfig = (userId?: string) => {
     } catch (err) {
       console.error('❌ [useFeeConfig] Erro inesperado ao carregar taxas do pacote:', err);
       setUserPackageFees(null);
+    }
+  };
+
+  const loadUserFeeOverrides = async () => {
+    if (!userId) return;
+
+    try {
+      // Tentar primeiro via função SECURITY DEFINER para bypass de RLS em dashboards
+      let data: any = null;
+      let error: any = null;
+
+      try {
+        const rpc = await supabase.rpc('get_user_fee_overrides', { user_id_param: userId });
+        if (!rpc.error) {
+          data = rpc.data || null;
+        } else {
+          error = rpc.error;
+        }
+      } catch (e) {
+        error = e;
+      }
+
+      // Fallback: tentar select direto (caso o contexto atual permita SELECT)
+      if (!data) {
+        const direct = await supabase
+          .from('user_fee_overrides')
+          .select('*')
+          .eq('user_id', userId)
+          .single();
+        if (!direct.error) {
+          data = direct.data || null;
+        } else if (direct.error?.code !== 'PGRST116') {
+          error = direct.error;
+        }
+      }
+
+      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+        console.warn('⚠️ [useFeeConfig] Erro ao carregar overrides de taxas do usuário:', error);
+        setUserFeeOverrides(null);
+        return;
+      }
+
+      // Normalizar para números (podem vir como string do Postgres)
+      const normalized = data ? {
+        selection_process_fee: data.selection_process_fee != null ? Number(data.selection_process_fee) : undefined,
+        application_fee: data.application_fee != null ? Number(data.application_fee) : undefined,
+        scholarship_fee: data.scholarship_fee != null ? Number(data.scholarship_fee) : undefined,
+        i20_control_fee: data.i20_control_fee != null ? Number(data.i20_control_fee) : undefined,
+      } : null;
+
+      setUserFeeOverrides(normalized);
+    } catch (err) {
+      console.error('❌ [useFeeConfig] Erro inesperado ao carregar overrides de taxas:', err);
+      setUserFeeOverrides(null);
     }
   };
 
@@ -151,25 +170,34 @@ export const useFeeConfig = (userId?: string) => {
       return customAmount;
     }
 
-    // Se o usuário tem um pacote atribuído, usar as taxas do pacote
-    if (userPackageFees) {
+    // Verificar se há override personalizado para este usuário
+    if (userFeeOverrides) {
       switch (feeType) {
         case 'selection_process':
-          return userPackageFees.selection_process_fee;
-         case 'application_fee':
-           // Application fee sempre usa o valor fixo do sistema (não muda com pacotes)
-           return feeConfig.application_fee_default;
+          if (userFeeOverrides.selection_process_fee !== undefined) {
+            return userFeeOverrides.selection_process_fee;
+          }
+          break;
+        case 'application_fee':
+          if (userFeeOverrides.application_fee !== undefined) {
+            return userFeeOverrides.application_fee;
+          }
+          break;
         case 'scholarship_fee':
-          return userPackageFees.scholarship_fee;
+          if (userFeeOverrides.scholarship_fee !== undefined) {
+            return userFeeOverrides.scholarship_fee;
+          }
+          break;
         case 'i-20_control_fee':
         case 'i20_control_fee':
-          return userPackageFees.i20_control_fee;
-        default:
-          return userPackageFees.selection_process_fee;
+          if (userFeeOverrides.i20_control_fee !== undefined) {
+            return userFeeOverrides.i20_control_fee;
+          }
+          break;
       }
     }
 
-    // Fallback para taxas padrão do sistema
+    // Usar valores padrão do sistema se não há override
     switch (feeType) {
       case 'selection_process':
         return feeConfig.selection_process_fee;
@@ -210,16 +238,37 @@ export const useFeeConfig = (userId?: string) => {
       .replace(/\${applicationFee}/g, formatFeeAmount(feeConfig.application_fee_default));
   };
 
+  const hasOverride = (feeType: string): boolean => {
+    if (!userFeeOverrides) return false;
+    
+    switch (feeType) {
+      case 'selection_process':
+        return userFeeOverrides.selection_process_fee !== undefined && userFeeOverrides.selection_process_fee !== null;
+      case 'application_fee':
+        return userFeeOverrides.application_fee !== undefined && userFeeOverrides.application_fee !== null;
+      case 'scholarship_fee':
+        return userFeeOverrides.scholarship_fee !== undefined && userFeeOverrides.scholarship_fee !== null;
+      case 'i-20_control_fee':
+      case 'i20_control_fee':
+        return userFeeOverrides.i20_control_fee !== undefined && userFeeOverrides.i20_control_fee !== null;
+      default:
+        return false;
+    }
+  };
+
   return {
     feeConfig,
     userPackageFees,
+    userFeeOverrides,
     loading,
     error,
     loadFeeConfig,
     loadUserPackageFees,
+    loadUserFeeOverrides,
     updateFeeConfig,
     getFeeAmount,
     formatFeeAmount,
-    processTranslation
+    processTranslation,
+    hasOverride
   };
 };

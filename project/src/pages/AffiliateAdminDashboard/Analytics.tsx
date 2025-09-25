@@ -24,6 +24,11 @@ interface MonthlyPerformance {
 const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], userId }) => {
   const [monthlyData, setMonthlyData] = useState<MonthlyPerformance[]>([]);
   const [loadingMonthly, setLoadingMonthly] = useState(false);
+  
+  // Estados para receita ajustada (mesmo padrão do Overview.tsx)
+  const [clientAdjustedRevenue, setClientAdjustedRevenue] = useState<number | null>(null);
+  const [adjustedRevenueByReferral, setAdjustedRevenueByReferral] = useState<Record<string, number>>({});
+  const [loadingAdjusted, setLoadingAdjusted] = useState(false);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -40,41 +45,309 @@ const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], userId }) =>
     totalRevenue: stats?.totalRevenue || 0
   };
 
-  // Carregar dados de performance mensal
+  // Carregar dados de receita ajustada (mesmo padrão do Overview.tsx)
+  const loadAdjustedRevenue = async () => {
+    try {
+      setLoadingAdjusted(true);
+      const { data: userData } = await supabase.auth.getUser();
+      const currentUserId = userData?.user?.id;
+      if (!currentUserId) {
+        setClientAdjustedRevenue(null);
+        return;
+      }
+      
+      // Descobrir affiliate_admin_id
+      const { data: aaList, error: aaErr } = await supabase
+        .from('affiliate_admins')
+        .select('id')
+        .eq('user_id', currentUserId)
+        .limit(1);
+      if (aaErr || !aaList || aaList.length === 0) {
+        setClientAdjustedRevenue(null);
+        return;
+      }
+      const affiliateAdminId = aaList[0].id;
+
+      // Buscar sellers vinculados a este affiliate admin
+      const { data: sellers, error: sellersErr } = await supabase
+        .from('sellers')
+        .select('referral_code')
+        .eq('affiliate_admin_id', affiliateAdminId);
+      
+      if (sellersErr || !sellers || sellers.length === 0) {
+        setClientAdjustedRevenue(null);
+        return;
+      }
+      
+      const referralCodes = sellers.map(s => s.referral_code);
+      
+      // Buscar perfis de estudantes vinculados via seller_referral_code
+      const { data: profiles, error: profilesErr } = await supabase
+        .from('user_profiles')
+        .select(`
+          id,
+          user_id,
+          has_paid_selection_process_fee, 
+          has_paid_i20_control_fee, 
+          dependents,
+          seller_referral_code,
+          scholarship_applications(is_scholarship_fee_paid)
+        `)
+        .in('seller_referral_code', referralCodes);
+      if (profilesErr || !profiles) {
+        setClientAdjustedRevenue(null);
+        return;
+      }
+
+      // Preparar overrides por user_id
+      const uniqueUserIds = Array.from(new Set((profiles || []).map((p) => p.user_id).filter(Boolean)));
+      const overrideEntries = await Promise.allSettled(uniqueUserIds.map(async (uid) => {
+        const { data, error } = await supabase.rpc('get_user_fee_overrides', { user_id_param: uid });
+        return [uid, error ? null : data];
+      }));
+      const overridesMap: Record<string, any> = overrideEntries.reduce((acc: Record<string, any>, res) => {
+        if (res.status === 'fulfilled') {
+          const arr = res.value;
+          const uid = arr[0];
+          const data = arr[1];
+          if (data) acc[uid] = {
+            selection_process_fee: data.selection_process_fee != null ? Number(data.selection_process_fee) : undefined,
+            scholarship_fee: data.scholarship_fee != null ? Number(data.scholarship_fee) : undefined,
+            i20_control_fee: data.i20_control_fee != null ? Number(data.i20_control_fee) : undefined,
+          };
+        }
+        return acc;
+      }, {});
+
+      // Calcular total ajustado considerando dependentes quando não houver override e somar por referral_code
+      const revenueByReferral: Record<string, number> = {};
+      const total = (profiles || []).reduce((sum, p) => {
+        const deps = Number(p?.dependents || 0);
+        const ov = overridesMap[p?.user_id] || {};
+
+        // Selection Process
+        let selPaid = 0;
+        if (p?.has_paid_selection_process_fee) {
+          const baseSel = ov.selection_process_fee != null ? Number(ov.selection_process_fee) : 400;
+          selPaid = ov.selection_process_fee != null ? baseSel : baseSel + (deps * 150);
+        }
+
+        // Scholarship Fee (sem dependentes)
+        const hasAnyScholarshipPaid = Array.isArray(p?.scholarship_applications)
+          ? p.scholarship_applications.some((a) => !!a?.is_scholarship_fee_paid)
+          : false;
+        const schBase = ov.scholarship_fee != null ? Number(ov.scholarship_fee) : 900;
+        const schPaid = hasAnyScholarshipPaid ? schBase : 0;
+
+        // I-20 Control (sem dependentes)
+        const i20Base = ov.i20_control_fee != null ? Number(ov.i20_control_fee) : 900;
+        // Contar I-20 somente se a bolsa estiver paga (fluxo esperado)
+        const i20Paid = (hasAnyScholarshipPaid && p?.has_paid_i20_control_fee) ? i20Base : 0;
+
+        const subtotal = selPaid + schPaid + i20Paid;
+        const ref = p?.seller_referral_code || '__unknown__';
+        revenueByReferral[ref] = (revenueByReferral[ref] || 0) + subtotal;
+        return sum + subtotal;
+      }, 0);
+
+      setClientAdjustedRevenue(total);
+      setAdjustedRevenueByReferral(revenueByReferral);
+    } catch {
+      setClientAdjustedRevenue(null);
+    } finally {
+      setLoadingAdjusted(false);
+    }
+  };
+
+  // Carregar dados de performance mensal - agora calcula manualmente com overrides
   const loadMonthlyPerformance = async () => {
     if (!userId) {
+      console.warn('No user ID provided for analytics');
+      return;
+    }
+
+    // Aguardar os dados de receita ajustada serem carregados
+    if (loadingAdjusted) {
       return;
     }
 
     try {
       setLoadingMonthly(true);
-      const { data, error } = await supabase
-        .rpc('get_admin_monthly_performance_fixed', { 
-          admin_user_id: userId,
-          months_back: 12 
-        });
+      
+      // Descobrir affiliate_admin_id
+      const { data: userData } = await supabase.auth.getUser();
+      const currentUserId = userData?.user?.id;
+      if (!currentUserId) {
+        setMonthlyData([]);
+        return;
+      }
+      
+      const { data: aaList, error: aaErr } = await supabase
+        .from('affiliate_admins')
+        .select('id')
+        .eq('user_id', currentUserId)
+        .limit(1);
+      if (aaErr || !aaList || aaList.length === 0) {
+        setMonthlyData([]);
+        return;
+      }
+      const affiliateAdminId = aaList[0].id;
 
-      if (error) {
+      // Buscar sellers vinculados a este affiliate admin
+      const { data: sellers, error: sellersErr } = await supabase
+        .from('sellers')
+        .select('referral_code')
+        .eq('affiliate_admin_id', affiliateAdminId);
+      
+      if (sellersErr || !sellers || sellers.length === 0) {
+        setMonthlyData([]);
+        return;
+      }
+      
+      const referralCodes = sellers.map(s => s.referral_code);
+      
+      // Buscar perfis de estudantes vinculados via seller_referral_code com dados de criação
+      const { data: profiles, error: profilesErr } = await supabase
+        .from('user_profiles')
+        .select(`
+          id,
+          user_id,
+          has_paid_selection_process_fee, 
+          has_paid_i20_control_fee, 
+          dependents,
+          seller_referral_code,
+          created_at,
+          scholarship_applications(is_scholarship_fee_paid, created_at)
+        `)
+        .in('seller_referral_code', referralCodes)
+        .order('created_at', { ascending: false });
+        
+      if (profilesErr || !profiles) {
+        setMonthlyData([]);
         return;
       }
 
-      setMonthlyData(data || []);
+      // Preparar overrides por user_id
+      const uniqueUserIds = Array.from(new Set((profiles || []).map((p) => p.user_id).filter(Boolean)));
+      const overrideEntries = await Promise.allSettled(uniqueUserIds.map(async (uid) => {
+        const { data, error } = await supabase.rpc('get_user_fee_overrides', { user_id_param: uid });
+        return [uid, error ? null : data];
+      }));
+      const overridesMap: Record<string, any> = overrideEntries.reduce((acc: Record<string, any>, res) => {
+        if (res.status === 'fulfilled') {
+          const arr = res.value;
+          const uid = arr[0];
+          const data = arr[1];
+          if (data) acc[uid] = {
+            selection_process_fee: data.selection_process_fee != null ? Number(data.selection_process_fee) : undefined,
+            scholarship_fee: data.scholarship_fee != null ? Number(data.scholarship_fee) : undefined,
+            i20_control_fee: data.i20_control_fee != null ? Number(data.i20_control_fee) : undefined,
+          };
+        }
+        return acc;
+      }, {});
+
+      // Calcular dados mensais dos últimos 12 meses
+      const monthlyMap: Record<string, { students_count: number; total_revenue: number; active_sellers: Set<string> }> = {};
+      
+      // Inicializar últimos 12 meses
+      for (let i = 11; i >= 0; i--) {
+        const date = new Date();
+        date.setMonth(date.getMonth() - i);
+        const monthYear = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        monthlyMap[monthYear] = {
+          students_count: 0,
+          total_revenue: 0,
+          active_sellers: new Set()
+        };
+      }
+
+      // Processar cada perfil de estudante
+      (profiles || []).forEach((p) => {
+        const createdDate = new Date(p.created_at);
+        const monthYear = `${createdDate.getFullYear()}-${String(createdDate.getMonth() + 1).padStart(2, '0')}`;
+        
+        if (!monthlyMap[monthYear]) return; // Fora do range de 12 meses
+
+        const deps = Number(p?.dependents || 0);
+        const ov = overridesMap[p?.user_id] || {};
+
+        // Selection Process
+        let selPaid = 0;
+        if (p?.has_paid_selection_process_fee) {
+          const baseSel = ov.selection_process_fee != null ? Number(ov.selection_process_fee) : 400;
+          selPaid = ov.selection_process_fee != null ? baseSel : baseSel + (deps * 150);
+        }
+
+        // Scholarship Fee (sem dependentes)
+        const hasAnyScholarshipPaid = Array.isArray(p?.scholarship_applications)
+          ? p.scholarship_applications.some((a) => !!a?.is_scholarship_fee_paid)
+          : false;
+        const schBase = ov.scholarship_fee != null ? Number(ov.scholarship_fee) : 900;
+        const schPaid = hasAnyScholarshipPaid ? schBase : 0;
+
+        // I-20 Control (sem dependentes)
+        const i20Base = ov.i20_control_fee != null ? Number(ov.i20_control_fee) : 900;
+        const i20Paid = (hasAnyScholarshipPaid && p?.has_paid_i20_control_fee) ? i20Base : 0;
+
+        const totalRevenue = selPaid + schPaid + i20Paid;
+
+        monthlyMap[monthYear].students_count++;
+        monthlyMap[monthYear].total_revenue += totalRevenue;
+        if (p?.seller_referral_code) {
+          monthlyMap[monthYear].active_sellers.add(p.seller_referral_code);
+        }
+      });
+
+      // Converter para array ordenado (decrescente - mais recente primeiro)
+      const monthlyDataArray = Object.entries(monthlyMap)
+        .sort(([a], [b]) => b.localeCompare(a))
+        .map(([monthYear, data]) => ({
+          month_year: monthYear,
+          students_count: data.students_count,
+          total_revenue: data.total_revenue,
+          active_sellers: data.active_sellers.size
+        }));
+
+      setMonthlyData(monthlyDataArray);
     } catch (error) {
+      console.error('Error loading monthly performance:', error);
     } finally {
       setLoadingMonthly(false);
     }
   };
 
-  // Carregar dados mensais quando o componente montar ou userId mudar
+  // Carregar dados quando o componente montar ou userId mudar
   useEffect(() => {
     if (userId) {
-      loadMonthlyPerformance();
+      loadAdjustedRevenue();
     }
   }, [userId]);
 
+  // Carregar dados mensais após receita ajustada ser carregada
+  useEffect(() => {
+    if (userId && !loadingAdjusted && clientAdjustedRevenue !== null) {
+      loadMonthlyPerformance();
+    }
+  }, [userId, loadingAdjusted, clientAdjustedRevenue]);
+
+  // Sellers com receita ajustada (mesmo padrão do Overview.tsx)
+  const displaySellers = (sellers || []).map((s) => ({
+    ...s,
+    total_revenue: adjustedRevenueByReferral[s?.referral_code] != null
+      ? adjustedRevenueByReferral[s.referral_code]
+      : (s.total_revenue || 0)
+  }));
+
   // Top vendedores por performance
-  const topSellers = (sellers || [])
-    .sort((a, b) => (b.students_count || 0) - (a.students_count || 0))
+  const topSellers = displaySellers
+    .sort((a, b) => {
+      // Sort by number of students first, then by revenue
+      if (b.students_count !== a.students_count) {
+        return b.students_count - a.students_count;
+      }
+      return (b.total_revenue || 0) - (a.total_revenue || 0);
+    })
     .slice(0, 5);
 
   // Cálculos de crescimento mensal
@@ -194,23 +467,36 @@ const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], userId }) =>
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-600">Revenue per Student</p>
-              <p className="text-3xl font-bold text-red-600 mt-1">
-                {safeStats.totalStudents > 0 ? formatCurrency(safeStats.totalRevenue / safeStats.totalStudents) : '$0.00'}
-              </p>
+              {loadingAdjusted ? (
+                <div className="h-9 bg-slate-200 rounded animate-pulse mt-1"></div>
+              ) : (
+                <p className="text-3xl font-bold text-red-600 mt-1">
+                  {safeStats.totalStudents > 0 
+                    ? formatCurrency((clientAdjustedRevenue || safeStats.totalRevenue) / safeStats.totalStudents) 
+                    : '$0.00'
+                  }
+                </p>
+              )}
             </div>
             <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
               <DollarSign className="h-6 w-6 text-red-600" />
             </div>
           </div>
           <div className="mt-4 flex items-center text-sm">
-            <span className={`font-medium ${
-              revenueGrowthPercentage > 0 ? 'text-green-600' : 
-              revenueGrowthPercentage < 0 ? 'text-red-600' : 'text-slate-600'
-            }`}>
-              {revenueGrowthPercentage > 0 ? `+${revenueGrowthPercentage.toFixed(1)}%` : 
-               revenueGrowthPercentage < 0 ? `${revenueGrowthPercentage.toFixed(1)}%` : '0%'}
-            </span>
-            <span className="text-slate-600 ml-1">vs mês anterior</span>
+            {loadingAdjusted ? (
+              <div className="h-4 bg-slate-200 rounded animate-pulse w-24"></div>
+            ) : (
+              <>
+                <span className={`font-medium ${
+                  revenueGrowthPercentage > 0 ? 'text-green-600' : 
+                  revenueGrowthPercentage < 0 ? 'text-red-600' : 'text-slate-600'
+                }`}>
+                  {revenueGrowthPercentage > 0 ? `+${revenueGrowthPercentage.toFixed(1)}%` : 
+                   revenueGrowthPercentage < 0 ? `${revenueGrowthPercentage.toFixed(1)}%` : '0%'}
+                </span>
+                <span className="text-slate-600 ml-1">vs mês anterior</span>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -225,11 +511,22 @@ const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], userId }) =>
           </div>
           
           <div className="space-y-4">
-            {loadingMonthly ? (
-              <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-                <p className="text-slate-500 text-sm">Loading monthly data...</p>
-              </div>
+            {loadingMonthly || loadingAdjusted ? (
+              // Skeleton loading para monthly performance
+              [...Array(6)].map((_, idx) => (
+                <div key={idx} className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-20 h-4 bg-slate-200 rounded animate-pulse"></div>
+                    <div className="flex-1 bg-slate-100 rounded-full h-2 min-w-[120px]">
+                      <div className="bg-slate-200 h-2 rounded-full w-1/2 animate-pulse"></div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="h-4 bg-slate-200 rounded animate-pulse w-16 mb-1"></div>
+                    <div className="h-3 bg-slate-200 rounded animate-pulse w-12"></div>
+                  </div>
+                </div>
+              ))
             ) : monthlyData.length > 0 ? (
               monthlyData.map((data) => (
                 <div key={data.month_year} className="flex items-center justify-between">
@@ -265,7 +562,24 @@ const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], userId }) =>
           </div>
           
           <div className="space-y-4">
-            {topSellers.length > 0 ? (
+            {loadingAdjusted ? (
+              // Skeleton loading para top sellers
+              [...Array(3)].map((_, idx) => (
+                <div key={idx} className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 bg-slate-200 rounded-lg animate-pulse"></div>
+                    <div>
+                      <div className="h-4 bg-slate-200 rounded animate-pulse w-24 mb-1"></div>
+                      <div className="h-3 bg-slate-200 rounded animate-pulse w-32"></div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="h-4 bg-slate-200 rounded animate-pulse w-16 mb-1"></div>
+                    <div className="h-3 bg-slate-200 rounded animate-pulse w-12"></div>
+                  </div>
+                </div>
+              ))
+            ) : topSellers.length > 0 ? (
               topSellers.map((seller, idx) => (
                 <div key={seller.id} className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">

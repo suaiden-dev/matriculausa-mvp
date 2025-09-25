@@ -30,8 +30,6 @@ import ApplicationFeeCancel from './pages/ApplicationFeeCancel';
 import PaymentErrorPage from './pages/PaymentErrorPage';
 import ApplicationFeeError from './pages/StudentDashboard/ApplicationFeeError';
 import MatriculaRewardsLanding from './pages/MatriculaRewardsLanding';
-import EB3JobsLanding from './pages/EB3JobsLanding';
-import EB3SuccessPage from './pages/EB3SuccessPage';
 import I20ControlFeeSuccess from './pages/StudentDashboard/I20ControlFeeSuccess';
 import I20ControlFeeError from './pages/StudentDashboard/I20ControlFeeError';
 import SupportCenter from './pages/SupportCenter';
@@ -44,16 +42,14 @@ import ForUniversities from './pages/ForUniversities';
 import ForStudents from './pages/ForStudents';
 import EmailOAuthCallback from './pages/EmailOAuthCallback';
 import AuthCallback from './pages/AuthCallback';
-import EmailManagement from './components/email/EmailManagement';
-import EmailConfiguration from './components/email/EmailConfiguration';
-import EmailInbox from './components/email/EmailInbox';
-import EmailCompose from './components/email/EmailCompose';
+import MicrosoftCallback from './pages/MicrosoftCallback';
 import { useReferralCodeCapture } from './hooks/useReferralCodeCapture';
 import { ZelleCheckoutPage } from './components/ZelleCheckoutPage';
 import { ZelleWaitingPage } from './components/ZelleWaitingPage';
 import CheckoutSuccess from './pages/CheckoutSuccess';
 import ZellePaymentSuccess from './pages/ZellePaymentSuccess';
 import SmartAssistantLayout from './components/SmartAssistantLayout';
+import MicrosoftIntegrationPage from './pages/MicrosoftIntegration';
 
 // Componente interno que usa o hook dentro do contexto do Router
 const AppContent = () => {
@@ -101,8 +97,6 @@ const AppContent = () => {
           <Route path="/schools/:slug" element={<UniversityDetail />} />
           <Route path="/how-it-works" element={<HowItWorks />} />
           <Route path="/matricula-rewards" element={<MatriculaRewardsLanding />} />
-          <Route path="/eb3-jobs" element={<EB3JobsLanding />} />
-          <Route path="/eb3-success" element={<EB3SuccessPage />} />
           {/* Student Routes */}
           <Route path="/student/terms" element={<StudentTermsAcceptance />} />
           <Route path="/student/dashboard/*" element={<StudentDashboard />} />
@@ -135,12 +129,11 @@ const AppContent = () => {
           <Route path="/scholarship-fee-success" element={<ScholarshipFeeSuccess />} />
           <Route path="/email-oauth-callback" element={<EmailOAuthCallback />} />
           <Route path="/auth-callback" element={<AuthCallback />} />
+          <Route path="/microsoft-email" element={<MicrosoftCallback />} />
           
-          {/* Email Management Routes */}
-          <Route path="/email" element={<EmailManagement />} />
-          <Route path="/email/config" element={<EmailConfiguration />} />
-          <Route path="/email/inbox" element={<EmailInbox />} />
-          <Route path="/email/compose" element={<EmailCompose />} />
+          
+          {/* Microsoft Email Integration */}
+          <Route path="/microsoft-email" element={<MicrosoftIntegrationPage />} />
           
           {/* Zelle Checkout Routes */}
           <Route path="/checkout/zelle/waiting" element={<ZelleWaitingPage />} />

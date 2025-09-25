@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { TrendingUp, Users, DollarSign, Calendar, Award, Target, Loader2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { useFeeConfig } from '../../hooks/useFeeConfig';
 
 interface PerformanceProps {
   stats: any;
@@ -27,6 +28,13 @@ const Performance: React.FC<PerformanceProps> = ({ stats, sellerProfile, student
   const [performanceData, setPerformanceData] = useState<PerformanceData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { getFeeAmount } = useFeeConfig(); // Para valores padrão, será usado para overrides específicos por estudante
+  const [studentPackageFees, setStudentPackageFees] = useState<{[key: string]: any}>({});
+  const [studentDependents, setStudentDependents] = useState<{[key: string]: number}>({});
+  const [studentFeeOverrides, setStudentFeeOverrides] = useState<{[key: string]: any}>({});
+  const [originalMonthlyData, setOriginalMonthlyData] = useState<PerformanceData['monthly_data']>([]);
+  const [adjustedMonthlyData, setAdjustedMonthlyData] = useState<PerformanceData['monthly_data']>([]);
+  const [rpcTotalRevenue, setRpcTotalRevenue] = useState<number>(0);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -35,26 +43,124 @@ const Performance: React.FC<PerformanceProps> = ({ stats, sellerProfile, student
     }).format(amount || 0);
   };
 
-  const getIconComponent = (iconName: string) => {
-    switch (iconName) {
-      case 'Users': return Users;
-      case 'DollarSign': return DollarSign;
-      case 'Target': return Target;
-      case 'Award': return Award;
-      default: return Users;
+  // Helpers para carregar pacotes e dependentes
+  const loadStudentPackageFees = async (studentUserId: string) => {
+    if (!studentUserId || studentPackageFees[studentUserId]) return;
+    try {
+      const { data: packageFees, error } = await supabase.rpc('get_user_package_fees', {
+        user_id_param: studentUserId
+      });
+      if (!error && packageFees && packageFees.length > 0) {
+        setStudentPackageFees(prev => ({ ...prev, [studentUserId]: packageFees[0] }));
+      } else {
+        setStudentPackageFees(prev => ({ ...prev, [studentUserId]: null }));
+      }
+    } catch {
+      setStudentPackageFees(prev => ({ ...prev, [studentUserId]: null }));
     }
   };
 
-  const getColorClasses = (color: string) => {
-    switch (color) {
-      case 'yellow': return 'bg-yellow-100 text-yellow-600';
-      case 'blue': return 'bg-blue-100 text-blue-600';
-      case 'green': return 'bg-green-100 text-green-600';
-      case 'red': return 'bg-red-100 text-red-600';
-      case 'purple': return 'bg-purple-100 text-purple-600';
-      default: return 'bg-slate-100 text-slate-600';
+  const loadStudentDependents = async (studentUserId: string) => {
+    if (!studentUserId || studentDependents[studentUserId] !== undefined) return;
+    try {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('dependents')
+        .eq('user_id', studentUserId)
+        .single();
+      if (!error && data) {
+        setStudentDependents(prev => ({ ...prev, [studentUserId]: Number(data.dependents || 0) }));
+      } else {
+        setStudentDependents(prev => ({ ...prev, [studentUserId]: 0 }));
+      }
+    } catch {
+      setStudentDependents(prev => ({ ...prev, [studentUserId]: 0 }));
     }
   };
+
+  const loadStudentFeeOverrides = async (studentUserId: string) => {
+    if (!studentUserId || studentFeeOverrides[studentUserId] !== undefined) return;
+    
+    try {
+      const { data: overrides, error } = await supabase
+        .from('user_fee_overrides')
+        .select('*')
+        .eq('user_id', studentUserId)
+        .single();
+      
+      if (!error && overrides) {
+        setStudentFeeOverrides(prev => ({ ...prev, [studentUserId]: overrides }));
+      } else {
+        setStudentFeeOverrides(prev => ({ ...prev, [studentUserId]: null }));
+      }
+    } catch (error) {
+      setStudentFeeOverrides(prev => ({ ...prev, [studentUserId]: null }));
+    }
+  };
+
+  useEffect(() => {
+    (students || []).forEach((s: any) => {
+      if (s.id && !studentPackageFees[s.id]) loadStudentPackageFees(s.id);
+      if (s.id && studentDependents[s.id] === undefined) loadStudentDependents(s.id);
+      if (s.id && studentFeeOverrides[s.id] === undefined) loadStudentFeeOverrides(s.id);
+    });
+  }, [students, studentPackageFees, studentDependents, studentFeeOverrides]);
+
+  // Função auxiliar para obter valor da taxa com override
+  const getStudentFeeAmount = (studentId: string, feeType: string): number => {
+    const overrides = studentFeeOverrides[studentId];
+    const packageFees = studentPackageFees[studentId];
+    
+    // Mapear feeType para nome correto do campo no banco
+    const fieldMapping: {[key: string]: string} = {
+      'selection_process': 'selection_process_fee',
+      'scholarship_fee': 'scholarship_fee',
+      'i20_control_fee': 'i20_control_fee'
+    };
+    const dbFieldName = fieldMapping[feeType] || feeType;
+    
+    // Primeiro, verificar se há override
+    if (overrides && overrides[dbFieldName]) {
+      return overrides[dbFieldName];
+    }
+    
+    // Segundo, verificar se há taxa personalizada do pacote
+    if (packageFees && packageFees[dbFieldName]) {
+      return packageFees[dbFieldName];
+    }
+    
+    // Por último, usar taxa padrão
+    return getFeeAmount(feeType);
+  };
+
+  const calculateStudentAdjustedPaid = (student: any): number => {
+    let total = 0;
+    const deps = studentDependents[student.id] || 0;
+    const overrides = studentFeeOverrides[student.id];
+
+    if (student.has_paid_selection_process_fee) {
+      // Para Selection Process, verificar se há override primeiro
+      if (overrides && overrides.selection_process_fee) {
+        // Se há override, usar apenas o valor do override (já inclui dependentes)
+        total += overrides.selection_process_fee;
+      } else {
+        // Sem override: usar taxa padrão + dependentes
+        const baseSelectionFee = getFeeAmount('selection_process');
+        total += baseSelectionFee + (deps * 150);
+      }
+    }
+    if (student.is_scholarship_fee_paid) {
+      const scholarshipFee = getStudentFeeAmount(student.id, 'scholarship_fee');
+      total += scholarshipFee;
+    }
+    if (student.has_paid_i20_control_fee) {
+      const i20Fee = getStudentFeeAmount(student.id, 'i20_control_fee');
+      total += i20Fee; // I-20 nunca tem dependentes
+    }
+    return total;
+  };
+
+
 
   // Função para obter dados seguros com fallbacks
   const getSafeData = (data: any, field: string, fallback: any = 0) => {
@@ -68,6 +174,7 @@ const Performance: React.FC<PerformanceProps> = ({ stats, sellerProfile, student
       }
       return value;
     } catch (error) {
+      console.warn(`Error accessing field ${field}:`, error);
       return fallback;
     }
   };
@@ -99,6 +206,7 @@ const Performance: React.FC<PerformanceProps> = ({ stats, sellerProfile, student
   useEffect(() => {
     const loadPerformanceData = async () => {
       if (!sellerProfile?.referral_code) {
+        console.log('No referral code found:', sellerProfile);
         return;
       }
 
@@ -106,21 +214,44 @@ const Performance: React.FC<PerformanceProps> = ({ stats, sellerProfile, student
         setLoading(true);
         setError(null);
 
+        console.log('Loading performance data for referral code:', sellerProfile.referral_code);
+
         const { data, error: rpcError } = await supabase.rpc(
-          'get_seller_individual_performance',
+          'get_seller_individual_performance_with_dependents',
           { seller_referral_code_param: sellerProfile.referral_code }
         );
+
+        console.log('RPC response:', { data, error: rpcError });
 
         if (rpcError) {
           throw new Error(`Failed to load performance data: ${rpcError.message}`);
         }
 
         if (data && data.length > 0) {
-          setPerformanceData(data[0]);
+          console.log('Performance data loaded:', data[0]);
+          console.log('Data structure:', {
+            total_students: data[0].total_students,
+            total_revenue: data[0].total_revenue,
+            monthly_students: data[0].monthly_students,
+            conversion_rate: data[0].conversion_rate,
+            ranking_position: data[0].ranking_position,
+            monthly_data: data[0].monthly_data,
+            monthly_goals: data[0].monthly_goals,
+            achievements: data[0].achievements
+          });
+          // Guardar dados originais do RPC
+          const rpcRevenue = getSafeNumber(data[0], 'total_revenue', 0);
+          setRpcTotalRevenue(rpcRevenue);
+          const rpcMonthly = getSafeArray(data[0], 'monthly_data', []);
+          setOriginalMonthlyData(rpcMonthly);
+          // Inicialmente usa o valor original e ajusta depois em outro efeito quando taxas/dependentes carregarem
+          setPerformanceData({ ...data[0], total_revenue: rpcRevenue });
+          setAdjustedMonthlyData(rpcMonthly);
         } else {
           throw new Error('No performance data found');
         }
       } catch (err: any) {
+        console.error('Error loading performance data:', err);
         setError(err.message);
       } finally {
         setLoading(false);
@@ -129,6 +260,49 @@ const Performance: React.FC<PerformanceProps> = ({ stats, sellerProfile, student
 
     loadPerformanceData();
   }, [sellerProfile?.referral_code]);
+
+  // Recalcular receita ajustada e monthly_data quando tivermos taxas/dependentes carregados
+  useEffect(() => {
+    if (!performanceData) return;
+    try {
+      const adjustedRevenue = (Array.isArray(students) && students.length > 0)
+        ? students.reduce((sum: number, s: any) => sum + calculateStudentAdjustedPaid(s), 0)
+        : 0;
+      // Atualizar total_revenue
+      setPerformanceData(prev => prev ? { ...prev, total_revenue: adjustedRevenue } : prev);
+      // Ajustar monthly_data proporcionalmente ao fator de ajuste
+      const base = rpcTotalRevenue || 0;
+      const factor = base > 0 ? (adjustedRevenue / base) : 1;
+      const adjustedMonthly = (originalMonthlyData || []).map((m: any) => ({
+        ...m,
+        revenue: Number(m?.revenue || 0) * factor
+      }));
+      setAdjustedMonthlyData(adjustedMonthly);
+    } catch (e) {
+      // Ignorar e manter dados originais
+    }
+  }, [students, studentPackageFees, studentDependents, rpcTotalRevenue, originalMonthlyData, performanceData]);
+
+  // Debug específico para checar discrepância do Irving
+  useEffect(() => {
+    const target = (students || []).find((s: any) => s?.email === 'irving1745@uorak.com');
+    if (target) {
+      const packageFees = studentPackageFees[target.id];
+      const deps = studentDependents[target.id] || 0;
+      // eslint-disable-next-line no-console
+      console.log('[PERFORMANCE][DEBUG] Irving student data:', {
+        id: target.id,
+        email: target.email,
+        has_paid_selection_process_fee: target.has_paid_selection_process_fee,
+        has_paid_i20_control_fee: target.has_paid_i20_control_fee,
+        is_scholarship_fee_paid: target.is_scholarship_fee_paid,
+        is_application_fee_paid: target.is_application_fee_paid,
+        dependents: deps,
+        packageFees,
+        calculated: calculateStudentAdjustedPaid(target)
+      });
+    }
+  }, [students, studentPackageFees, studentDependents]);
 
   if (loading) {
     return (
@@ -399,7 +573,9 @@ const Performance: React.FC<PerformanceProps> = ({ stats, sellerProfile, student
 
       {/* Dados Mensais */}
       {(() => {
-        const monthlyData = getSafeArray(performanceData, 'monthly_data', []);
+        const monthlyData = (adjustedMonthlyData && adjustedMonthlyData.length > 0)
+          ? adjustedMonthlyData
+          : getSafeArray(performanceData, 'monthly_data', []);
         if (monthlyData && monthlyData.length > 0) {
           return (
             <div className="rounded-lg bg-white p-6 shadow-sm border border-gray-200">

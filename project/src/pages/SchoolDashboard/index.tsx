@@ -1,7 +1,7 @@
 import React, { Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import { UniversityProvider } from '../../context/UniversityContext';
+import { UniversityProvider, useUniversity } from '../../context/UniversityContext';
 import SchoolDashboardLayout from './SchoolDashboardLayout';
 import Overview from './Overview';
 import ScholarshipManagement from './ScholarshipManagement';
@@ -16,8 +16,13 @@ import AISolutions from './AISolutions';
 
 
 
-import Inbox from './Inbox';
+import EmailManagement from './EmailManagement';
+import EmailConfiguration from './EmailConfiguration';
+import EmailAgentManagement from './EmailAgentManagement';
+import InboxRouter from './InboxRouter';
+import EmailCompose from './EmailCompose';
 import WhatsAppConnection from './WhatsAppConnection';
+import MicrosoftEmailIntegration from '../../components/Microsoft/MicrosoftEmailIntegration';
 import ConnectWhatsApp from './ConnectWhatsApp';
 import UniversityRewardsDashboard from './UniversityRewardsDashboard';
 
@@ -45,7 +50,15 @@ export const SchoolDashboard: React.FC = () => {
             <Route path="student/:applicationId" element={<StudentDetails />} />
             <Route path="analytics" element={<PaymentManagement />} />
             <Route path="global-document-requests" element={<UniversityGlobalDocumentRequests />} />
-            <Route path="inbox" element={<Inbox />} />
+            <Route path="inbox" element={<InboxRouter />} />
+            <Route path="email" element={<EmailManagement />} />
+            <Route path="email/config" element={<EmailConfiguration />} />
+            <Route path="email/config/:configId" element={<EmailConfiguration />} />
+            <Route path="email/agents" element={<EmailAgentManagement />} />
+            <Route path="email/inbox" element={<InboxRouter />} />
+            <Route path="email/microsoft" element={<MicrosoftEmailIntegration />} />
+            <Route path="email/compose" element={<EmailCompose />} />
+            <Route path="microsoft-email" element={<MicrosoftEmailIntegration />} />
             <Route path="ai-solutions" element={<AISolutions />} />
                     <Route path="stripe-connect" element={<StripeConnect />} />
         <Route path="stripe-connect/callback" element={<StripeConnectCallback />} />

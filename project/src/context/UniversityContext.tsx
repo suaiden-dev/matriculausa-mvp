@@ -68,22 +68,28 @@ export const UniversityProvider: React.FC<UniversityProviderProps> = ({ children
 
         if (scholarshipsError) throw scholarshipsError;
         
-        // Load application counts for each scholarship
-        const scholarshipsWithCounts = await Promise.all(
-          (scholarshipsData || []).map(async (scholarship) => {
-            const { count, error: countError } = await supabase
-              .from('scholarship_applications')
-              .select('*', { count: 'exact', head: true })
-              .eq('scholarship_id', scholarship.id);
-            
-            if (countError) {
-              console.error('Error loading application count for scholarship:', scholarship.id, countError);
-              return { ...scholarship, application_count: 0 };
-            }
-            
-            return { ...scholarship, application_count: count || 0 };
-          })
-        );
+        // Load application counts for all scholarships in a single query (otimizado)
+        const scholarshipIds = (scholarshipsData || []).map(s => s.id);
+        let applicationCounts: Record<string, number> = {};
+        
+        if (scholarshipIds.length > 0) {
+          const { data: countsData, error: countsError } = await supabase
+            .from('scholarship_applications')
+            .select('scholarship_id')
+            .in('scholarship_id', scholarshipIds);
+          
+          if (!countsError && countsData) {
+            // Contar aplicações por bolsa
+            countsData.forEach(app => {
+              applicationCounts[app.scholarship_id] = (applicationCounts[app.scholarship_id] || 0) + 1;
+            });
+          }
+        }
+        
+        const scholarshipsWithCounts = (scholarshipsData || []).map(scholarship => ({
+          ...scholarship,
+          application_count: applicationCounts[scholarship.id] || 0
+        }));
         
         setScholarships(scholarshipsWithCounts);
 
@@ -275,10 +281,10 @@ export const UniversityProvider: React.FC<UniversityProviderProps> = ({ children
   };
 
   useEffect(() => {
-    if (user) {
+    if (user && !hasLoadedData) {
       loadData();
     }
-  }, [user]);
+  }, [user, hasLoadedData]);
 
   const value: UniversityContextType = {
     university,

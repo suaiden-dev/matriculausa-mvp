@@ -22,7 +22,7 @@ export const useStudentData = (userId?: string) => {
         setUniversities(universitiesData as University[]);
       }
     } catch (error) {
-      
+      console.warn('Could not load universities:', error);
     }
   }, []);
 
@@ -38,11 +38,13 @@ export const useStudentData = (userId?: string) => {
       // Se userId estiver disponível, tentar usar funções SQL corrigidas para dados reais
       if (userId) {
         try {
+          console.log('🔍 Attempting to load data using SQL functions for admin user:', userId);
           
-          // Buscar dados reais usando funções SQL corrigidas
+          // Buscar dados reais usando função SQL com dependentes
           const { data: realSellersData, error: realSellersError } = await supabase
-            .rpc('get_admin_sellers_analytics_fixed', { admin_user_id: userId });
+            .rpc('get_admin_sellers_analytics_with_dependents', { admin_user_id: userId });
 
+          console.log('🔍 SQL sellers response:', { data: realSellersData, error: realSellersError });
 
           let processedSellers: any[] = [];
           let processedStudents: any[] = [];
@@ -55,17 +57,20 @@ export const useStudentData = (userId?: string) => {
               referral_code: seller.referral_code || '',
               is_active: seller.is_active,
               created_at: seller.last_referral_date || new Date().toISOString(),
-              students_count: seller.students_count || 0,
+              students_count: Number(seller.students_count) || 0,
               total_revenue: Number(seller.total_revenue) || 0
             }));
             
+            console.log('🔍 Processed sellers from SQL:', processedSellers);
           } else {
+            console.log('🔍 SQL sellers function failed or returned no data, will use fallback');
           }
 
-          // Buscar dados reais dos estudantes usando a função existente
+          // Buscar dados reais dos estudantes usando função com dependentes
           const { data: realStudentsData, error: realStudentsError } = await supabase
-            .rpc('get_admin_students_analytics', { admin_user_id: userId });
+            .rpc('get_admin_students_analytics_with_dependents', { admin_user_id: userId });
 
+          console.log('🔍 SQL students response:', { data: realStudentsData, error: realStudentsError });
 
           if (!realStudentsError && realStudentsData && realStudentsData.length > 0) {
             // Processar estudantes usando receita já calculada pela função RPC
@@ -81,7 +86,7 @@ export const useStudentData = (userId?: string) => {
                 seller_name: student.seller_name,
                 seller_referral_code: student.seller_referral_code,
                 referral_code_used: student.referral_code_used,
-                total_paid: student.total_paid, // Usar receita já calculada pela função RPC
+                total_paid: Number(student.total_paid) || 0, // Normalizar número
                 created_at: student.created_at,
                 status: student.status,
                 application_status: student.application_status,
@@ -98,16 +103,33 @@ export const useStudentData = (userId?: string) => {
             
             processedStudents = studentsWithRevenue;
             
+            console.log('🔍 Processed students from SQL with real revenue:', processedStudents);
+            console.log('🔍 SQL Students debug - referred_by_seller_id values:', processedStudents.map((s: any) => ({
+              name: s.full_name,
+              referred_by_seller_id: s.referred_by_seller_id,
+              seller_name: s.seller_name,
+              total_paid: s.total_paid
+            })));
             
             setStudents(processedStudents);
           } else {
+            console.log('🔍 SQL students function failed or returned no data, will use fallback');
           }
 
           // Se ambas as funções SQL funcionaram (mesmo que retornem arrays vazios), não usar fallback
           if (!realSellersError && !realStudentsError) {
+            console.log('🔍 SQL functions successful, skipping fallback');
+            console.log('🔍 Final state - Students loaded via SQL:', realStudentsData?.length || 0);
+            console.log('🔍 Final state - Sellers loaded via SQL:', realSellersData?.length || 0);
+            
+            // Debug: verificar se os dados estão sendo mapeados corretamente
+            console.log('🔍 Final processed students:', processedStudents);
+            console.log('🔍 Final processed sellers:', processedSellers);
             
             // Verificar se os estudantes têm referred_by_seller_id
             const studentsWithSellerId = processedStudents.filter((s: any) => s.referred_by_seller_id);
+            console.log('🔍 Students with referred_by_seller_id:', studentsWithSellerId.length);
+            console.log('🔍 Students without referred_by_seller_id:', processedStudents.length - studentsWithSellerId.length);
             
             // Calcular receita real para vendedores SQL
             const sellersWithRealRevenue = processedSellers.map((seller: any) => {
@@ -124,21 +146,25 @@ export const useStudentData = (userId?: string) => {
               };
             });
             
+            console.log('🔍 Sellers with real revenue:', sellersWithRealRevenue);
             
             setSellers(sellersWithRealRevenue);
             setStudents(processedStudents);
             return;
           }
         } catch (error) {
+          console.warn('🔍 SQL functions exception, using fallback:', error);
         }
       }
 
       // Se chegou aqui, as funções SQL falharam - retornar dados vazios
+      console.log('🔍 SQL functions failed, returning empty data');
       setSellers([]);
       setStudents([]);
       return;
 
     } catch (error: any) {
+      console.error('Error loading data:', error);
       setError(error.message);
     } finally {
       setLoading(false);

@@ -278,15 +278,16 @@ async function handleCheckoutSessionCompleted(session) {
   const paymentType = metadata?.payment_type || metadata?.fee_type;
   console.log('[stripe-webhook] PaymentType detectado:', paymentType);
   console.log('[stripe-webhook] Metadata completo:', JSON.stringify(metadata, null, 2));
-  if (paymentType === 'application_fee') {
-    const userId = metadata.user_id || metadata.student_id;
-    const applicationId = metadata.application_id;
-    const applicationFeeAmount = metadata.application_fee_amount || '350.00';
-    const universityId = metadata.university_id;
+   if (paymentType === 'application_fee') {
+     const userId = metadata.user_id || metadata.student_id;
+     const applicationId = metadata.application_id;
+     const applicationFeeAmount = metadata.application_fee_amount || '350.00';
+     const universityId = metadata.university_id;
+     const feeType = metadata.fee_type || 'application_fee';
     if (userId && applicationId) {
       // Buscar o status atual da aplicação para preservar 'approved' se já estiver
       const { data: currentApp, error: fetchError } = await supabase.from('scholarship_applications').select('status').eq('id', applicationId).eq('student_id', userId).single();
-      const updateData = {
+      const updateData: any = {
         is_application_fee_paid: true,
         payment_status: 'paid',
         paid_at: new Date().toISOString(),
@@ -326,7 +327,7 @@ async function handleCheckoutSessionCompleted(session) {
       // --- NOTIFICAÇÃO VIA WEBHOOK N8N ---
       try {
         // Buscar dados do aluno para notificação
-        const { data: alunoData1, error: alunoError } = await supabase.from('user_profiles').select('full_name, email').eq('user_id', userId).single();
+        const { data: alunoData1, error: alunoError } = await supabase.from('user_profiles').select('full_name, email, phone').eq('user_id', userId).single();
         if (alunoError || !alunoData1) {
           console.warn('[NOTIFICAÇÃO] Aluno não encontrado para notificação:', alunoError);
         } else {
@@ -371,47 +372,104 @@ async function handleCheckoutSessionCompleted(session) {
         console.error('[NOTIFICAÇÃO] Erro ao notificar via n8n:', notifErr);
       }
       // --- FIM DA NOTIFICAÇÃO ---
-      // --- NOTIFICAÇÕES PARA ADMIN, AFFILIATE ADMIN E SELLER ---
-      try {
-        console.log(`📤 [stripe-webhook] Buscando informações do seller e affiliate admin...`);
-        // Buscar informações do seller relacionado ao pagamento
-        const { data: sellerData, error: sellerError } = await supabase.from('sellers').select(`
-              id,
-              user_id,
-              name,
-              email,
-              referral_code,
-              commission_rate,
-              affiliate_admin_id,
-              affiliate_admin:affiliate_admins!sellers_affiliate_admin_id_fkey(
-                user_id,
-                user_profiles!affiliate_admins_user_id_fkey(full_name, email)
-              )
-            `).eq('user_id', customer_id).single();
-        if (sellerData && !sellerError) {
-          console.log(`📤 [stripe-webhook] Seller encontrado:`, sellerData);
+       // --- NOTIFICAÇÕES PARA ADMIN, AFFILIATE ADMIN E SELLER ---
+       try {
+         // Buscar dados do aluno
+         const { data: alunoData, error: alunoError } = await supabase.from('user_profiles').select('full_name, email, phone').eq('user_id', userId).single();
+         if (alunoError) {
+           console.error('[stripe-webhook] Erro ao buscar dados do aluno:', alunoError);
+         }
+         
+         console.log(`📤 [stripe-webhook] Buscando informações do seller e affiliate admin...`);
+         console.log(`📤 [stripe-webhook] UserId para busca do seller: ${userId}`);
+         
+         // Buscar informações do seller relacionado ao pagamento
+         const { data: sellerData, error: sellerError } = await supabase.from('sellers').select(`
+               id,
+               user_id,
+               name,
+               email,
+               referral_code,
+               commission_rate,
+               affiliate_admin_id,
+               affiliate_admin:affiliate_admins!sellers_affiliate_admin_id_fkey(
+                 user_id,
+                 user_profiles!affiliate_admins_user_id_fkey(full_name, email)
+               )
+             `).eq('user_id', userId).single();
+             
+         console.log(`📤 [stripe-webhook] Resultado da busca do seller:`, { sellerData, sellerError });
+         
+         let finalSellerData = sellerData;
+         let finalSellerError = sellerError;
+         console.log(`🔍 [DEBUG] Inicializando finalSellerData:`, { finalSellerData, finalSellerError });
+         
+         // Se não encontrou seller, verificar se o usuário usou algum código de referência
+         if (!sellerData || sellerError) {
+           console.log(`📤 [stripe-webhook] Seller não encontrado diretamente, verificando códigos de referência...`);
+           const { data: usedCode, error: codeError } = await supabase.from('used_referral_codes').select('referrer_id, affiliate_code').eq('user_id', userId).single();
+           console.log(`📤 [stripe-webhook] Código de referência usado:`, { usedCode, codeError });
+           
+           if (usedCode && !codeError) {
+             console.log(`📤 [stripe-webhook] Usuário usou código de referência, buscando seller pelo referrer_id: ${usedCode.referrer_id}`);
+             // Buscar seller pelo referrer_id
+             const { data: sellerByReferrer, error: sellerByReferrerError } = await supabase.from('sellers').select(`
+               id,
+               user_id,
+               name,
+               email,
+               referral_code,
+               commission_rate,
+               affiliate_admin_id,
+               affiliate_admin:affiliate_admins!sellers_affiliate_admin_id_fkey(
+                 user_id,
+                 user_profiles!affiliate_admins_user_id_fkey(full_name, email)
+               )
+             `).eq('user_id', usedCode.referrer_id).single();
+             
+             console.log(`📤 [stripe-webhook] Seller encontrado pelo referrer_id:`, { sellerByReferrer, sellerByReferrerError });
+             
+             if (sellerByReferrer && !sellerByReferrerError) {
+               // Usar o seller encontrado pelo referrer_id
+               finalSellerData = sellerByReferrer;
+               finalSellerError = null;
+               console.log(`📤 [stripe-webhook] Usando seller encontrado pelo referrer_id:`, finalSellerData);
+             }
+           }
+         }
+         
+        console.log(`🔍 [DEBUG] Verificando finalSellerData e finalSellerError:`, { finalSellerData, finalSellerError });
+        if (finalSellerData && !finalSellerError) {
+          console.log(`📤 [stripe-webhook] Seller encontrado:`, finalSellerData);
           // NOTIFICAÇÃO PARA ADMIN
           try {
-            const adminNotificationPayload = {
-              tipo_notf: "Pagamento Stripe de aluno aprovado",
-              email_admin: "admin@matriculausa.com",
-              nome_admin: "Admin MatriculaUSA",
-              email_aluno: customer_email || "",
-              nome_aluno: alunoData?.full_name || "Aluno",
-              email_seller: sellerData.email,
-              nome_seller: sellerData.name,
-              email_affiliate_admin: sellerData.affiliate_admin?.user_profiles?.email || "",
-              nome_affiliate_admin: sellerData.affiliate_admin?.user_profiles?.full_name || "Affiliate Admin",
-              o_que_enviar: `Pagamento Stripe de ${feeType} no valor de $${(amount_total / 100).toFixed(2)} do aluno ${alunoData?.full_name || "Aluno"} foi processado com sucesso. Seller responsável: ${sellerData.name} (${sellerData.referral_code})`,
-              payment_id: session_id,
+            // Buscar telefone do admin
+            const { data: adminProfile, error: adminProfileError } = await supabase.from('user_profiles').select('phone').eq('email', 'admin@matriculausa.com').single();
+            const adminPhone = adminProfile?.phone || "";
+            console.log('📞 [DEBUG] Telefone do admin encontrado:', { adminPhone, adminProfile, adminProfileError });
+            
+             const adminNotificationPayload = {
+               tipo_notf: "Pagamento Stripe de application fee confirmado - Admin",
+               email_admin: "admin@matriculausa.com",
+               nome_admin: "Admin MatriculaUSA",
+               phone_admin: adminPhone,
+               email_aluno: session.customer_email || "",
+               nome_aluno: alunoData?.full_name || "Aluno",
+               phone_aluno: alunoData?.phone || "",
+              email_seller: finalSellerData.email,
+              nome_seller: finalSellerData.name,
+              email_affiliate_admin: finalSellerData.affiliate_admin?.user_profiles?.email || "",
+              nome_affiliate_admin: finalSellerData.affiliate_admin?.user_profiles?.full_name || "Affiliate Admin",
+              o_que_enviar: `Pagamento Stripe de ${feeType} no valor de ${(session.amount_total / 100).toFixed(2)} do aluno ${alunoData?.full_name || "Aluno"} foi processado com sucesso. Seller responsável: ${finalSellerData.name} (${finalSellerData.referral_code})`,
+              payment_id: session.id,
               fee_type: feeType,
-              amount: amount_total / 100,
-              seller_id: sellerData.user_id,
-              referral_code: sellerData.referral_code,
-              commission_rate: sellerData.commission_rate,
+              amount: session.amount_total / 100,
+              seller_id: finalSellerData.user_id,
+              referral_code: finalSellerData.referral_code,
+              commission_rate: finalSellerData.commission_rate,
               payment_method: "stripe"
             };
-            console.log('📧 [stripe-webhook] Enviando notificação para admin:', adminNotificationPayload);
+            console.log('📧 [stripe-webhook] Enviando notificação para admin:', JSON.stringify(adminNotificationPayload, null, 2));
             const adminNotificationResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
               method: 'POST',
               headers: {
@@ -428,26 +486,33 @@ async function handleCheckoutSessionCompleted(session) {
             console.error('❌ [stripe-webhook] Erro ao enviar notificação para admin:', adminNotificationError);
           }
           // NOTIFICAÇÃO PARA AFFILIATE ADMIN
-          if (sellerData.affiliate_admin?.user_profiles?.email) {
+          if (finalSellerData.affiliate_admin?.user_profiles?.email) {
             try {
-              const affiliateAdminNotificationPayload = {
-                tipo_notf: "Pagamento Stripe de aluno do seu seller aprovado",
-                email_affiliate_admin: sellerData.affiliate_admin.user_profiles.email,
-                nome_affiliate_admin: sellerData.affiliate_admin.user_profiles.full_name || "Affiliate Admin",
-                email_aluno: customer_email || "",
-                nome_aluno: alunoData?.full_name || "Aluno",
-                email_seller: sellerData.email,
-                nome_seller: sellerData.name,
-                o_que_enviar: `Pagamento Stripe de ${feeType} no valor de $${(amount_total / 100).toFixed(2)} do aluno ${alunoData?.full_name || "Aluno"} foi processado com sucesso. Seller responsável: ${sellerData.name} (${sellerData.referral_code})`,
-                payment_id: session_id,
+              // Buscar telefone do affiliate admin
+              const { data: affiliateAdminProfile, error: affiliateAdminProfileError } = await supabase.from('user_profiles').select('phone').eq('user_id', finalSellerData.affiliate_admin.user_id).single();
+              const affiliateAdminPhone = affiliateAdminProfile?.phone || "";
+              console.log('📞 [DEBUG] Telefone do affiliate admin encontrado:', { affiliateAdminPhone, affiliateAdminProfile, affiliateAdminProfileError });
+              
+               const affiliateAdminNotificationPayload = {
+                 tipo_notf: "Pagamento Stripe de application fee confirmado - Affiliate Admin",
+                 email_affiliate_admin: finalSellerData.affiliate_admin.user_profiles.email,
+                 nome_affiliate_admin: finalSellerData.affiliate_admin.user_profiles.full_name || "Affiliate Admin",
+                 phone_affiliate_admin: affiliateAdminPhone,
+                 email_aluno: session.customer_email || "",
+                 nome_aluno: alunoData?.full_name || "Aluno",
+                 phone_aluno: alunoData?.phone || "",
+                email_seller: finalSellerData.email,
+                nome_seller: finalSellerData.name,
+                o_que_enviar: `Pagamento Stripe de ${feeType} no valor de ${(session.amount_total / 100).toFixed(2)} do aluno ${alunoData?.full_name || "Aluno"} foi processado com sucesso. Seller responsável: ${finalSellerData.name} (${finalSellerData.referral_code})`,
+                payment_id: session.id,
                 fee_type: feeType,
-                amount: amount_total / 100,
-                seller_id: sellerData.user_id,
-                referral_code: sellerData.referral_code,
-                commission_rate: sellerData.commission_rate,
+                amount: session.amount_total / 100,
+                seller_id: finalSellerData.user_id,
+                referral_code: finalSellerData.referral_code,
+                commission_rate: finalSellerData.commission_rate,
                 payment_method: "stripe"
               };
-              console.log('📧 [stripe-webhook] Enviando notificação para affiliate admin:', affiliateAdminNotificationPayload);
+              console.log('📧 [stripe-webhook] Enviando notificação para affiliate admin:', JSON.stringify(affiliateAdminNotificationPayload, null, 2));
               const affiliateAdminNotificationResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
                 method: 'POST',
                 headers: {
@@ -466,23 +531,29 @@ async function handleCheckoutSessionCompleted(session) {
           }
           // NOTIFICAÇÃO PARA SELLER
           try {
-            const sellerNotificationPayload = {
-              tipo_notf: "Pagamento Stripe do seu aluno aprovado",
-              email_seller: sellerData.email,
-              nome_seller: sellerData.name,
-              email_aluno: customer_email || "",
-              nome_aluno: alunoData?.full_name || "Aluno",
-              o_que_enviar: `Parabéns! O pagamento Stripe de ${feeType} no valor de $${(amount_total / 100).toFixed(2)} do seu aluno ${alunoData?.full_name || "Aluno"} foi processado com sucesso. Você ganhará comissão sobre este pagamento!`,
-              payment_id: session_id,
+            const { data: sellerProfile, error: sellerProfileError } = await supabase.from('user_profiles').select('phone').eq('user_id', finalSellerData.user_id).single();
+            const sellerPhone = sellerProfile?.phone;
+            console.log('📞 [DEBUG] Telefone do seller encontrado:', { sellerPhone, sellerProfile, sellerProfileError });
+
+             const sellerNotificationPayload = {
+               tipo_notf: "Pagamento Stripe de application fee confirmado - Seller",
+               email_seller: finalSellerData.email,
+               nome_seller: finalSellerData.name,
+               phone_seller: sellerPhone || "",
+               email_aluno: session.customer_email || "",
+               nome_aluno: alunoData?.full_name || "Aluno",
+              phone_aluno: alunoData?.phone || "",
+              o_que_enviar: `Parabéns! O pagamento Stripe de ${feeType} no valor de ${(session.amount_total / 100).toFixed(2)} do seu aluno ${alunoData?.full_name || "Aluno"} foi processado com sucesso. Você ganhará comissão sobre este pagamento!`,
+              payment_id: session.id,
               fee_type: feeType,
-              amount: amount_total / 100,
-              seller_id: sellerData.user_id,
-              referral_code: sellerData.referral_code,
-              commission_rate: sellerData.commission_rate,
-              estimated_commission: amount_total / 100 * sellerData.commission_rate,
+              amount: session.amount_total / 100,
+              seller_id: finalSellerData.user_id,
+              referral_code: finalSellerData.referral_code,
+              commission_rate: finalSellerData.commission_rate,
+              estimated_commission: session.amount_total / 100 * finalSellerData.commission_rate,
               payment_method: "stripe"
             };
-            console.log('📧 [stripe-webhook] Enviando notificação para seller:', sellerNotificationPayload);
+            console.log('📧 [stripe-webhook] Enviando notificação para seller:', JSON.stringify(sellerNotificationPayload, null, 2));
             const sellerNotificationResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
               method: 'POST',
               headers: {
@@ -498,9 +569,9 @@ async function handleCheckoutSessionCompleted(session) {
           } catch (sellerNotificationError) {
             console.error('❌ [stripe-webhook] Erro ao enviar notificação para seller:', sellerNotificationError);
           }
-        } else {
-          console.log(`ℹ️ [stripe-webhook] Nenhum seller encontrado para o usuário ${customer_id}`);
-        }
+         } else {
+           console.log(`ℹ️ [stripe-webhook] Nenhum seller encontrado para o usuário ${userId}`);
+         }
       } catch (sellerLookupError) {
         console.error('❌ [stripe-webhook] Erro ao buscar informações do seller:', sellerLookupError);
       // Não falhar o processo se a busca do seller falhar
@@ -839,123 +910,6 @@ async function handleCheckoutSessionCompleted(session) {
       // A notificação será enviada apenas pela edge function verify-stripe-session-i20-control-fee
       console.log('[NOTIFICAÇÃO] Notificação de I-20 Control Fee será enviada apenas via edge function para evitar duplicação');
     // --- FIM DA NOTIFICAÇÃO ---
-    }
-  }
-  
-  // Processar pagamentos EB-3
-  if (paymentType === 'eb3_pre_candidatura') {
-    console.log('[stripe-webhook] Processando pagamento EB-3...');
-    
-    // Chamar a edge function verify-stripe-session para processar o pagamento EB-3
-    try {
-      const verifyResponse = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/verify-stripe-session`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
-        },
-        body: JSON.stringify({
-          sessionId: session.id
-        })
-      });
-      
-      if (verifyResponse.ok) {
-        const verifyResult = await verifyResponse.json();
-        console.log('[stripe-webhook] Pagamento EB-3 processado com sucesso:', verifyResult);
-        
-        // Enviar notificação para n8n após processamento bem-sucedido do EB-3
-        try {
-          const n8nPayload = {
-            tipo_notf: 'Pagamento EB-3 Pré-candidatura Processado',
-            email_aluno: session.customer_email || session.customer_details?.email || '',
-            nome_aluno: session.customer_details?.name || 'Cliente EB-3',
-            session_id: session.id,
-            payment_intent_id: session.payment_intent,
-            amount: session.amount_total ? (session.amount_total / 100).toFixed(2) : '477.00',
-            currency: session.currency || 'usd',
-            payment_status: session.payment_status,
-            payment_method: session.payment_method_types?.[0] || 'card',
-            stripe_customer_id: session.customer,
-            payment_type: 'eb3_pre_candidatura',
-            service: 'Pré Candidatura Vagas EB3',
-            source: metadata?.source || 'eb3_jobs_landing',
-            timestamp: new Date().toISOString(),
-            o_que_enviar: `Pagamento EB-3 de $${session.amount_total ? (session.amount_total / 100).toFixed(2) : '477.00'} processado com sucesso. Cliente: ${session.customer_details?.name || 'Cliente EB-3'} (${session.customer_email || session.customer_details?.email || 'email não informado'})`
-          };
-          
-          console.log('[NOTIFICAÇÃO EB-3] Enviando para webhook n8n:', n8nPayload);
-          
-          const n8nResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'User-Agent': 'PostmanRuntime/7.36.3'
-            },
-            body: JSON.stringify(n8nPayload)
-          });
-          
-          const n8nText = await n8nResponse.text();
-          console.log('[NOTIFICAÇÃO EB-3] Resposta do n8n:', n8nResponse.status, n8nText);
-          
-          if (n8nResponse.ok) {
-            console.log('[NOTIFICAÇÃO EB-3] Notificação enviada com sucesso para n8n');
-          } else {
-            console.warn('[NOTIFICAÇÃO EB-3] Erro ao enviar notificação para n8n:', n8nResponse.status);
-          }
-        } catch (n8nError) {
-          console.error('[NOTIFICAÇÃO EB-3] Erro ao enviar notificação para n8n:', n8nError);
-        }
-
-        // Enviar notificação para admin após processamento bem-sucedido do EB-3
-        try {
-          const adminNotificationPayload = {
-            tipo_notf: "Pagamento EB-3 Pré-candidatura Processado - Notificação Admin",
-            email_admin: "admin@suaiden.com",
-            nome_admin: "Admin MatriculaUSA",
-            email_aluno: session.customer_email || session.customer_details?.email || '',
-            nome_aluno: session.customer_details?.name || 'Cliente EB-3',
-            session_id: session.id,
-            payment_intent_id: session.payment_intent,
-            amount: session.amount_total ? (session.amount_total / 100).toFixed(2) : '477.00',
-            currency: session.currency || 'usd',
-            payment_status: session.payment_status,
-            payment_method: session.payment_method_types?.[0] || 'card',
-            stripe_customer_id: session.customer,
-            payment_type: 'eb3_pre_candidatura',
-            service: 'Pré Candidatura Vagas EB3',
-            source: metadata?.source || 'eb3_jobs_landing',
-            timestamp: new Date().toISOString(),
-            o_que_enviar: `Novo pagamento EB-3 de $${session.amount_total ? (session.amount_total / 100).toFixed(2) : '477.00'} processado com sucesso. Cliente: ${session.customer_details?.name || 'Cliente EB-3'} (${session.customer_email || session.customer_details?.email || 'email não informado'}) - Fonte: ${metadata?.source || 'eb3_jobs_landing'}`
-          };
-          
-          console.log('[NOTIFICAÇÃO EB-3 ADMIN] Enviando notificação para admin:', adminNotificationPayload);
-          
-          const adminResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'User-Agent': 'PostmanRuntime/7.36.3'
-            },
-            body: JSON.stringify(adminNotificationPayload)
-          });
-          
-          const adminText = await adminResponse.text();
-          console.log('[NOTIFICAÇÃO EB-3 ADMIN] Resposta do webhook admin:', adminResponse.status, adminText);
-          
-          if (adminResponse.ok) {
-            console.log('[NOTIFICAÇÃO EB-3 ADMIN] Notificação para admin enviada com sucesso');
-          } else {
-            console.warn('[NOTIFICAÇÃO EB-3 ADMIN] Erro ao enviar notificação para admin:', adminResponse.status);
-          }
-        } catch (adminError) {
-          console.error('[NOTIFICAÇÃO EB-3 ADMIN] Erro ao enviar notificação para admin:', adminError);
-        }
-      } else {
-        const errorText = await verifyResponse.text();
-        console.error('[stripe-webhook] Erro ao processar pagamento EB-3:', errorText);
-      }
-    } catch (verifyError) {
-      console.error('[stripe-webhook] Erro ao chamar verify-stripe-session para EB-3:', verifyError);
     }
   }
   return new Response(JSON.stringify({

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { useGmailConnection } from '../hooks/useGmailConnection';
+import { useMicrosoftConnection } from '../hooks/useMicrosoftConnection';
 
 interface EmailConnection {
   id: string;
@@ -11,9 +12,11 @@ interface EmailConnection {
   expires_at?: string;
 }
 
+
 const EmailConnectionManager: React.FC = () => {
   const { user } = useAuth();
   const { connections: gmailConnections, disconnectGmail, loading: gmailLoading, error: gmailError } = useGmailConnection();
+  const { connections: microsoftConnections, disconnectMicrosoft, loading: microsoftLoading, error: microsoftError } = useMicrosoftConnection();
   const [connections, setConnections] = useState<EmailConnection[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -24,22 +27,9 @@ const EmailConnectionManager: React.FC = () => {
     if (!user) return;
 
     try {
-      // Para Gmail, usar os dados do hook
+      // Para Gmail e Microsoft, usar os dados dos hooks
       const googleConnections = gmailConnections || [];
-      
-      // Para Microsoft, buscar da tabela
-      const { data: microsoftData, error } = await supabase
-        .from('email_connections')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('provider', 'microsoft');
-
-      if (error) {
-        console.error('Erro ao buscar conexões Microsoft:', error);
-        return;
-      }
-
-      const microsoftConnection = microsoftData?.[0];
+      const microsoftConnections = microsoftConnections || [];
 
       // Criar lista de conexões
       const connectionList: EmailConnection[] = [];
@@ -66,14 +56,27 @@ const EmailConnectionManager: React.FC = () => {
         });
       }
 
-      // Adicionar conexão Microsoft
-      connectionList.push({
-        id: microsoftConnection?.id || '',
-        provider: 'microsoft',
-        isConnected: !!microsoftConnection,
-        email: microsoftConnection?.email,
-        expires_at: microsoftConnection?.expires_at
-      });
+      // Adicionar conexões Microsoft
+      if (microsoftConnections.length > 0) {
+        microsoftConnections.forEach(conn => {
+          connectionList.push({
+            id: conn.id,
+            provider: 'microsoft',
+            isConnected: true,
+            email: conn.email,
+            expires_at: conn.expires_at
+          });
+        });
+      } else {
+        // Adicionar placeholder para Microsoft se não houver conexões
+        connectionList.push({
+          id: '',
+          provider: 'microsoft',
+          isConnected: false,
+          email: undefined,
+          expires_at: undefined
+        });
+      }
 
       setConnections(connectionList);
     } catch (error) {
@@ -187,10 +190,10 @@ const EmailConnectionManager: React.FC = () => {
       }
 
       // Criar URL de autorização do Microsoft manualmente
-      const microsoftClientId = import.meta.env.VITE_MICROSOFT_CLIENT_ID;
+      const microsoftClientId = import.meta.env.VITE_AZURE_CLIENT_ID;
       
-      // Usar URL dinâmica baseada no ambiente atual
-      const redirectUri = `${window.location.origin}/email-oauth-callback`;
+      // Usar o redirect URI configurado no .env
+      const redirectUri = import.meta.env.VITE_AZURE_REDIRECT_URI;
       
       console.log('🔍 DEBUG: Environment detection for Microsoft:', {
         hostname: window.location.hostname,
@@ -205,19 +208,58 @@ const EmailConnectionManager: React.FC = () => {
         'https://graph.microsoft.com/User.Read'
       ].join(' ');
 
-      const authUrl = new URL('https://login.microsoftonline.com/common/oauth2/v2.0/authorize');
-      authUrl.searchParams.set('client_id', microsoftClientId);
-      authUrl.searchParams.set('redirect_uri', redirectUri);
-      authUrl.searchParams.set('response_type', 'code');
-      authUrl.searchParams.set('scope', scopes);
-      authUrl.searchParams.set('state', state);
-      authUrl.searchParams.set('response_mode', 'query');
-
-      console.log('Microsoft OAuth URL:', authUrl.toString());
-      setDebugInfo(prev => [...prev, "✅ Redirecionando para Microsoft..."]);
+      // Usar MSAL para autorização com PKCE automático
+      const { PublicClientApplication } = await import('@azure/msal-browser');
+      const { msalConfig } = await import('../../lib/msalConfig');
       
-      // Redirecionar para Microsoft
-      window.location.href = authUrl.toString();
+      const msalInstance = new PublicClientApplication(msalConfig);
+      
+      // Inicializar MSAL
+      await msalInstance.initialize();
+      
+      // Fazer login com popup para evitar redirecionamento
+      const loginResponse = await msalInstance.loginPopup({
+        scopes: ['User.Read', 'Mail.Read', 'Mail.ReadWrite', 'Mail.Send'],
+        prompt: 'select_account'
+      });
+
+      console.log('✅ Microsoft login successful:', loginResponse.account?.username);
+      setDebugInfo(prev => [...prev, "✅ Microsoft login successful"]);
+
+      // Buscar informações do usuário
+      const userInfoResponse = await fetch('https://graph.microsoft.com/v1.0/me', {
+        headers: {
+          'Authorization': `Bearer ${loginResponse.accessToken}`,
+        },
+      });
+
+      const userInfo = await userInfoResponse.json();
+      const userEmail = userInfo.mail || userInfo.userPrincipalName;
+
+      // Salvar tokens na tabela
+      const { data: connectionData, error: insertError } = await supabase
+        .from('email_connections')
+        .upsert({
+          user_id: user!.id,
+          provider: 'microsoft',
+          email: userEmail,
+          access_token: loginResponse.accessToken,
+          refresh_token: loginResponse.refreshToken || '',
+          expires_at: loginResponse.expiresOn?.toISOString() || new Date(Date.now() + 3600 * 1000).toISOString(),
+          token_type: 'Bearer'
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        throw insertError;
+      }
+
+      console.log('✅ Microsoft connection saved:', connectionData);
+      setDebugInfo(prev => [...prev, "✅ Conexão Microsoft salva com sucesso"]);
+      
+      // Recarregar conexões
+      await checkExistingConnections();
 
     } catch (err: any) {
       console.error('Erro ao conectar Microsoft:', err);
@@ -320,7 +362,7 @@ const EmailConnectionManager: React.FC = () => {
 
       <div className="space-y-4">
         {connections.map((connection) => (
-          <div key={connection.provider} className="flex items-center justify-between p-4 rounded-xl border transition-colors bg-slate-50 border-slate-200">
+          <div key={`${connection.provider}-${connection.email || 'default'}`} className="flex items-center justify-between p-4 rounded-xl border transition-colors bg-slate-50 border-slate-200">
             <div className="flex items-center space-x-3">
               <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
                 connection.provider === 'google' 
@@ -334,10 +376,10 @@ const EmailConnectionManager: React.FC = () => {
               <div>
                 <h4 className="font-semibold text-slate-900 capitalize">
                   {connection.provider}
+                  {connection.email && (
+                    <span className="text-slate-500 font-normal"> - {connection.email}</span>
+                  )}
                 </h4>
-                {connection.email && (
-                  <p className="text-sm text-slate-600">{connection.email}</p>
-                )}
                 {connection.expires_at && (
                   <p className="text-xs text-slate-500">
                     Expira: {new Date(connection.expires_at).toLocaleDateString()}
@@ -352,7 +394,7 @@ const EmailConnectionManager: React.FC = () => {
                   <span className="text-green-700 text-sm font-medium">Conectado</span>
                   <button
                     onClick={() => handleDisconnect(connection.provider, connection.email)}
-                    disabled={loading || gmailLoading}
+                    disabled={loading || gmailLoading || microsoftLoading}
                     className="px-3 py-1 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
                   >
                     Desconectar
@@ -361,10 +403,10 @@ const EmailConnectionManager: React.FC = () => {
               ) : (
                 <button
                   onClick={connection.provider === 'google' ? handleGoogleConnect : handleMicrosoftConnect}
-                  disabled={loading || gmailLoading}
+                  disabled={loading || gmailLoading || microsoftLoading}
                   className="px-4 py-2 bg-gradient-to-r from-[#05294E] to-[#D0151C] text-white rounded-lg hover:from-[#041f3f] hover:to-[#b01218] disabled:opacity-50 transition-all duration-300 font-semibold"
                 >
-                  {loading || gmailLoading ? 'Conectando...' : 'Conectar'}
+                  {loading || gmailLoading || microsoftLoading ? 'Conectando...' : 'Conectar'}
                 </button>
               )}
             </div>
@@ -372,9 +414,9 @@ const EmailConnectionManager: React.FC = () => {
         ))}
       </div>
 
-      {(error || gmailError) && (
+      {(error || gmailError || microsoftError) && (
         <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-xl">
-          <p className="text-red-700 text-sm font-medium">{error || gmailError}</p>
+          <p className="text-red-700 text-sm font-medium">{error || gmailError || microsoftError}</p>
         </div>
       )}
 

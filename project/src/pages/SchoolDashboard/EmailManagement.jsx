@@ -1,0 +1,1245 @@
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { 
+  EnvelopeIcon, 
+  PlusIcon, 
+  Cog6ToothIcon,
+  TrashIcon,
+  CheckCircleIcon,
+  XCircleIcon,
+  ArrowPathIcon,
+  BookOpenIcon
+} from '@heroicons/react/24/outline';
+import { supabase } from '../../lib/supabase';
+import { useMicrosoftConnection } from '../../hooks/useMicrosoftConnection';
+// DISABLED FOR DEVELOPMENT
+// import MicrosoftTokenDiagnostic from '../../components/MicrosoftTokenDiagnostic';
+// DISABLED FOR DEVELOPMENT
+// import MicrosoftBFFTest from '../../components/MicrosoftBFFTest';
+// import TokenRenewalTest from '../../components/TokenRenewalTest';
+
+const EmailManagement = () => {
+  const navigate = useNavigate();
+  const [configurations, setConfigurations] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadingStats, setLoadingStats] = useState(true);
+  const [syncing, setSyncing] = useState({});
+  const [stats, setStats] = useState({});
+  const [notification, setNotification] = useState(null); // { type: 'success'|'error'|'info', message: string }
+  const [confirmDialog, setConfirmDialog] = useState(null); // { title, message, onConfirm, onCancel }
+  const [actionLoading, setActionLoading] = useState({});
+  const [lastSyncUpdate, setLastSyncUpdate] = useState({});
+  
+  // Use Microsoft connection hook to detect Microsoft accounts
+  const { connections: microsoftConnections, loading: microsoftLoading } = useMicrosoftConnection();
+
+  useEffect(() => {
+    checkAuthAndLoad();
+  }, []);
+
+  // Detect Microsoft connections and reload data when they change
+  useEffect(() => {
+    if (microsoftConnections && microsoftConnections.length > 0) {
+      console.log('🔄 Microsoft connections detected, reloading data...');
+      loadConfigurations();
+      loadStats();
+    }
+  }, [microsoftConnections]);
+
+  // Reload data when user returns to screen (com debounce para evitar spam)
+  useEffect(() => {
+    let timeoutId;
+    
+    const handleFocus = () => {
+      if (!loading) {
+        // Debounce para evitar chamadas excessivas
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => {
+          loadConfigurations();
+          loadStats();
+        }, 1000); // 1 segundo de debounce
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      clearTimeout(timeoutId);
+    };
+  }, [loading]);
+
+  const checkAuthAndLoad = async () => {
+    try {
+      // Check if user is authenticated
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        navigate('/login');
+        return;
+      }
+      
+      await loadConfigurations();
+      await loadStats();
+    } catch (error) {
+      navigate('/login');
+    }
+  };
+
+  const loadConfigurations = async () => {
+    try {
+      // Get current user
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      
+      if (authError) {
+        throw new Error('Authentication error');
+      }
+      
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
+      // Get user configurations (exclude Microsoft - managed by useMicrosoftConnection)
+      const { data, error } = await supabase
+        .from('email_configurations')
+        .select('*')
+        .eq('user_id', user.id)
+        .neq('provider_type', 'microsoft')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        throw error;
+      }
+
+      setConfigurations(data || []);
+      
+      // Additional debug: check if there are configurations for this email
+      if (!data || data.length === 0) {
+        const { data: emailConfigs, error: emailError } = await supabase
+          .from('email_configurations')
+          .select('*')
+          .eq('email_address', user.email);
+          
+        // If found configurations by email, use them
+        if (emailConfigs && emailConfigs.length > 0) {
+          setConfigurations(emailConfigs);
+        }
+      }
+    } catch (error) {
+      setConfigurations([]);
+      
+      // Show error to user only if not authentication error
+      if (!error.message.includes('authenticated') && !error.message.includes('Authentication')) {
+        setNotification({ type: 'error', message: 'Error loading configurations: ' + (error.message || 'Unknown error') });
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadStats = async () => {
+    setLoadingStats(true);
+    try {
+      // Obter o usuário atual
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        return;
+      }
+
+      // Buscar configurações do usuário para obter os IDs e tipos
+      const { data: configs } = await supabase
+        .from('email_configurations')
+        .select('id, provider_type, oauth_access_token, is_active')
+        .eq('user_id', user.id);
+
+      if (!configs || configs.length === 0) {
+        setStats({
+          total_received: 0,
+          unread_count: 0,
+          total_sent: 0
+        });
+        return;
+      }
+
+      // Separar configurações por tipo
+      const gmailConfigs = configs.filter(config => config.provider_type !== 'microsoft');
+      const microsoftConfigs = configs.filter(config => 
+        config.provider_type === 'microsoft' && 
+        config.is_active && 
+        config.oauth_access_token
+      );
+
+      // Inicializar contadores
+      let totalReceived = 0;
+      let unreadCount = 0;
+      let totalSent = 0;
+
+      // Loading stats for accounts
+
+      // Buscar estatísticas de contas Gmail/SMTP (dados locais)
+      if (gmailConfigs.length > 0) {
+        const gmailConfigIds = gmailConfigs.map(config => config.id);
+
+        // Buscar estatísticas de emails recebidos
+        const { data: receivedData } = await supabase
+          .from('received_emails')
+          .select('id, is_read')
+          .in('email_config_id', gmailConfigIds);
+
+        // Buscar estatísticas de emails enviados
+        const { data: sentData } = await supabase
+          .from('sent_emails')
+          .select('id')
+          .in('email_config_id', gmailConfigIds);
+
+        // Adicionar aos contadores
+        totalReceived += receivedData?.length || 0;
+        unreadCount += receivedData?.filter(email => !email.is_read).length || 0;
+        totalSent += sentData?.length || 0;
+
+        // Gmail stats loaded
+      }
+
+      // Buscar estatísticas de contas Microsoft (Microsoft Graph API)
+      for (const microsoftConfig of microsoftConfigs) {
+        try {
+          // Loading Microsoft stats
+          
+          // Importar GraphService dinamicamente para evitar problemas de dependências
+          const { default: GraphService } = await import('../../lib/graphService');
+          // Criar GraphService com refresh token e config ID para renovação automática
+          const graphService = new GraphService(
+            microsoftConfig.oauth_access_token,
+            microsoftConfig.oauth_refresh_token,
+            microsoftConfig.id
+          );
+
+          // Buscar pastas de email
+          const foldersResult = await graphService.getMailFolders();
+          const folders = foldersResult.value || [];
+
+          // Encontrar pasta Inbox
+          const inboxFolder = folders.find(folder => 
+            folder.displayName?.toLowerCase().includes('inbox') || 
+            folder.displayName?.toLowerCase().includes('caixa de entrada')
+          );
+
+          // Encontrar pasta Sent
+          const sentFolder = folders.find(folder => 
+            folder.displayName?.toLowerCase().includes('sent') || 
+            folder.displayName?.toLowerCase().includes('enviados')
+          );
+
+          // Buscar emails da Inbox
+          if (inboxFolder) {
+            try {
+              const inboxEmails = await graphService.getEmailsFromFolder(inboxFolder.id, 100);
+              const emails = inboxEmails.value || [];
+              
+              totalReceived += emails.length;
+              unreadCount += emails.filter(email => !email.isRead).length;
+              
+              console.log(`📊 Microsoft Inbox: ${emails.length} total, ${emails.filter(email => !email.isRead).length} unread`);
+            } catch (inboxError) {
+              console.warn(`📊 Error loading Microsoft inbox stats:`, inboxError);
+            }
+          }
+
+          // Buscar emails enviados
+          if (sentFolder) {
+            try {
+              const sentEmails = await graphService.getEmailsFromFolder(sentFolder.id, 100);
+              const sentEmailsData = sentEmails.value || [];
+              
+              totalSent += sentEmailsData.length;
+              
+              console.log(`📊 Microsoft Sent: ${sentEmailsData.length} emails`);
+            } catch (sentError) {
+              console.warn(`📊 Error loading Microsoft sent stats:`, sentError);
+            }
+          }
+
+          // Pequena pausa para evitar rate limiting
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+        } catch (error) {
+          console.warn(`📊 Error loading Microsoft stats for config ${microsoftConfig.id}:`, error);
+        }
+      }
+
+      console.log(`📊 Final stats - Received: ${totalReceived}, Unread: ${unreadCount}, Sent: ${totalSent}`);
+
+      setStats({
+        total_received: totalReceived,
+        unread_count: unreadCount,
+        total_sent: totalSent
+      });
+    } catch (error) {
+      console.error('📊 Error loading stats:', error);
+      setStats({
+        total_received: 0,
+        unread_count: 0,
+        total_sent: 0
+      });
+    } finally {
+      setLoadingStats(false);
+    }
+  };
+
+  const handleSync = async (configId) => {
+    try {
+      setSyncing(prev => ({ ...prev, [configId]: true }));
+      
+      // Find the configuration to get provider details
+      const config = configurations.find(c => c.id === configId);
+      if (!config) {
+        throw new Error('Configuration not found');
+      }
+
+      console.log(`🔄 Starting sync for ${config.provider_type} account: ${config.email_address}`);
+
+      // Atualizar timestamp da última sincronização
+      const { error } = await supabase
+        .from('email_configurations')
+        .update({ 
+          last_sync_at: new Date().toISOString() 
+        })
+        .eq('id', configId);
+
+      if (error) {
+        throw error;
+      }
+
+      // Simular processo de sincronização (em um sistema real, você chamaria APIs externas)
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // Update local state to reflect the sync time immediately
+      setLastSyncUpdate(prev => ({ ...prev, [configId]: new Date().toISOString() }));
+
+      // Recarregar configurações para mostrar o novo timestamp
+      await loadConfigurations();
+      await loadStats();
+      
+      console.log(`✅ Sync completed for ${config.email_address}`);
+      
+      // Show success message with provider-specific details
+      setNotification({ type: 'success', message: `Synchronization completed successfully for ${config.name}` });
+      
+    } catch (error) {
+      console.error('❌ Sync error:', error);
+      
+      // More detailed error messages
+      let errorMessage = 'Sync failed: ';
+      
+      if (error.message.includes('network')) {
+        errorMessage += 'Network connection issue. Please check your internet connection.';
+      } else if (error.message.includes('authentication')) {
+        errorMessage += 'Authentication failed. Please reconfigure your account.';
+      } else if (error.message.includes('Configuration not found')) {
+        errorMessage += 'Account configuration not found. Please refresh the page.';
+      } else {
+        errorMessage += error.message || 'Unknown error occurred';
+      }
+      
+      setNotification({ type: 'error', message: errorMessage });
+    } finally {
+      setSyncing(prev => ({ ...prev, [configId]: false }));
+    }
+  };
+
+  // Função para conexão direta do Microsoft (sem popup - tudo na mesma aba)
+  const handleDirectMicrosoftConnection = async () => {
+    try {
+      setNotification({ type: 'info', message: 'Redirecionando para Microsoft...' });
+      
+      // Importar a função BFF (Backend for Frontend)
+      const { redirectToMicrosoftAuth } = await import('../../lib/microsoftBFFAuth');
+      
+      console.log('🚀 Iniciando conexão Microsoft (redirect na mesma aba)...');
+      
+      // Salvar origem para retornar após autenticação (direto para inbox)
+      sessionStorage.setItem('msalRedirectOrigin', '/school/dashboard/email/inbox');
+      
+      // Redirecionar para Microsoft (na mesma aba)
+      redirectToMicrosoftAuth();
+      
+    } catch (error) {
+      console.error('❌ Erro na conexão Microsoft:', error);
+      setNotification({ type: 'error', message: `Erro ao conectar: ${error.message}` });
+    }
+  };
+
+  const handleDelete = async (configId) => {
+    try {
+      // Find the configuration to show details in confirmation
+      // Check both regular configurations and Microsoft connections
+      let config = configurations.find(c => c.id === configId);
+      let isMicrosoftConnection = false;
+      
+      if (!config) {
+        // Check if it's a Microsoft connection
+        config = microsoftConnections.find(c => c.id === configId);
+        isMicrosoftConnection = true;
+      }
+      
+      if (!config) {
+        setNotification({ type: 'error', message: 'Configuration not found. Please refresh the page.' });
+        return;
+      }
+
+      // Enhanced confirmation dialog
+      // Open custom confirm modal
+      await new Promise((resolve) => {
+        setConfirmDialog({
+          title: isMicrosoftConnection ? 'Disconnect Microsoft account' : 'Delete account',
+          message: `Are you sure you want to ${isMicrosoftConnection ? 'disconnect' : 'delete'} ${config.email_address}? This action cannot be undone.`,
+          onConfirm: () => { setConfirmDialog(null); resolve(true); },
+          onCancel: () => { setConfirmDialog(null); resolve(false); }
+        });
+      }).then(async (confirmed) => {
+        if (!confirmed) throw new Error('USER_CANCELLED');
+      });
+
+      setActionLoading(prev => ({ ...prev, [`delete_${configId}`]: true }));
+
+      // Excluir configuração
+      const { error } = await supabase
+        .from('email_configurations')
+        .delete()
+        .eq('id', configId);
+
+      if (error) {
+        throw error;
+      }
+
+      console.log(`✅ Configuration deleted: ${config.email_address}`);
+
+      // Recarregar configurações e estatísticas
+      await loadConfigurations();
+      await loadStats();
+      
+      // Se era uma conexão Microsoft, forçar recarregamento das conexões Microsoft
+      if (isMicrosoftConnection) {
+        console.log('🔄 Forçando recarregamento das conexões Microsoft...');
+        // Forçar o useMicrosoftConnection a recarregar
+        window.dispatchEvent(new CustomEvent('microsoft-connection-updated'));
+        
+        // Também forçar recarregamento imediato das conexões Microsoft
+        setTimeout(async () => {
+          try {
+            // Recarregar as conexões Microsoft diretamente
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.user) {
+              const { data: microsoftData } = await supabase
+                .from('email_configurations')
+                .select('id, user_id, email_address, oauth_access_token, oauth_refresh_token, is_active, created_at, updated_at')
+                .eq('user_id', session.user.id)
+                .eq('provider_type', 'microsoft')
+                .order('created_at', { ascending: false });
+
+              if (microsoftData && microsoftData.length > 0) {
+                console.log('✅ Microsoft connections reloaded:', microsoftData.length);
+              } else {
+                console.log('✅ No Microsoft connections found after deletion');
+              }
+            }
+          } catch (error) {
+            console.error('❌ Error reloading Microsoft connections:', error);
+          }
+        }, 100);
+      }
+      
+      setNotification({ type: 'success', message: `Account "${config.email_address}" ${isMicrosoftConnection ? 'disconnected' : 'deleted'} successfully` });
+      
+    } catch (error) {
+      console.error('❌ Delete error:', error);
+      
+      let errorMessage = 'Failed to delete account: ';
+      
+      if (error.code === '23503') {
+        errorMessage += 'Cannot delete account because it has associated data. Please remove all emails first.';
+      } else if (error.message.includes('permission')) {
+        errorMessage += 'You do not have permission to delete this account.';
+      } else {
+        errorMessage += error.message || 'Unknown error occurred';
+      }
+      
+      if (error.message !== 'USER_CANCELLED') setNotification({ type: 'error', message: errorMessage });
+    } finally {
+      setActionLoading(prev => ({ ...prev, [`delete_${configId}`]: false }));
+    }
+  };
+
+  const toggleSync = async (configId, currentStatus) => {
+    try {
+      const config = configurations.find(c => c.id === configId);
+      if (!config) {
+        setNotification({ type: 'error', message: 'Configuration not found. Please refresh the page.' });
+        return;
+      }
+
+      const newStatus = !currentStatus;
+      
+      setActionLoading(prev => ({ ...prev, [`toggle_${configId}`]: true }));
+      
+      // Update sync status
+      const { error } = await supabase
+        .from('email_configurations')
+        .update({ 
+          sync_enabled: newStatus 
+        })
+        .eq('id', configId);
+
+      if (error) {
+        throw error;
+      }
+
+      // Reload configurations to show new status
+      await loadConfigurations();
+      
+      const statusText = newStatus ? 'enabled' : 'disabled';
+      const statusEmoji = newStatus ? '✅' : '⏸️';
+      
+      setNotification({ type: 'success', message: `Sync ${statusText} successfully for ${config.name}` });
+      
+    } catch (error) {
+      let errorMessage = 'Failed to update sync settings: ';
+      
+      if (error.message.includes('permission')) {
+        errorMessage += 'You do not have permission to modify this account.';
+      } else {
+        errorMessage += error.message || 'Unknown error occurred';
+      }
+      
+      setNotification({ type: 'error', message: errorMessage });
+    } finally {
+      setActionLoading(prev => ({ ...prev, [`toggle_${configId}`]: false }));
+    }
+  };
+
+  const toggleAccountStatus = async (configId, currentStatus) => {
+    try {
+      const config = configurations.find(c => c.id === configId);
+      if (!config) {
+        setNotification({ type: 'error', message: 'Configuration not found. Please refresh the page.' });
+        return;
+      }
+
+      const newStatus = !currentStatus;
+      
+      setActionLoading(prev => ({ ...prev, [`status_${configId}`]: true }));
+      
+      // Update account status
+      const { error } = await supabase
+        .from('email_configurations')
+        .update({ 
+          is_active: newStatus 
+        })
+        .eq('id', configId);
+
+      if (error) {
+        throw error;
+      }
+
+      // Reload configurations to show new status
+      await loadConfigurations();
+      await loadStats();
+      
+      const statusText = newStatus ? 'activated' : 'deactivated';
+      const statusEmoji = newStatus ? '🟢' : '🔴';
+      
+      setNotification({ type: 'success', message: `Account ${statusText} successfully` });
+      
+    } catch (error) {
+      let errorMessage = 'Failed to update account status: ';
+      
+      if (error.message.includes('permission')) {
+        errorMessage += 'You do not have permission to modify this account.';
+      } else {
+        errorMessage += error.message || 'Unknown error occurred';
+      }
+      
+      setNotification({ type: 'error', message: errorMessage });
+    } finally {
+      setActionLoading(prev => ({ ...prev, [`status_${configId}`]: false }));
+    }
+  };
+
+  const handleInboxNavigation = (config) => {
+    // DISABLED FOR DEVELOPMENT - Inbox navigation
+    setNotification({ type: 'info', message: 'Inbox em desenvolvimento - não disponível no momento.' });
+    /*
+    try {
+      if (config.provider_type === 'microsoft') {
+        navigate('/school/dashboard/microsoft-email');
+      } else {
+        navigate(`/school/dashboard/inbox?config=${config.id}`);
+      }
+    } catch (error) {
+      setNotification({ type: 'error', message: 'Failed to open inbox. Please try again.' });
+    }
+    */
+  };
+
+  const handleComposeNavigation = (config) => {
+    try {
+
+      navigate(`/school/dashboard/email/compose?config=${config.id}`);
+
+    } catch (error) {
+      setNotification({ type: 'error', message: 'Failed to open compose. Please try again.' });
+    }
+  };
+
+  const handleSettingsNavigation = (configId) => {
+    try {
+      const config = configurations.find(c => c.id === configId);
+      const params = new URLSearchParams();
+      // Forçar provider na tela de configuração para qualquer tipo
+      if (config?.provider_type === 'microsoft') {
+        params.set('provider', 'microsoft');
+      } else {
+        params.set('provider', 'gmail');
+      }
+      if (config?.name) params.set('name', config.name);
+      const query = params.toString();
+      navigate(`/school/dashboard/email/config/${configId}${query ? `?${query}` : ''}`);
+    } catch (error) {
+      setNotification({ type: 'error', message: 'Failed to open settings. Please try again.' });
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+        <div className="ml-4">
+          <p className="text-gray-600">Loading configurations...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4 lg:space-y-8">
+      {notification && (
+        <div>
+          <div className={`rounded-xl p-3 sm:p-4 border mx-0 sm:mx-0 ${
+            notification.type === 'success' ? 'bg-green-50 border-green-200 text-green-800' :
+            notification.type === 'error' ? 'bg-red-50 border-red-200 text-red-800' :
+            'bg-blue-50 border-blue-200 text-blue-800'
+          }`}>
+            <div className="flex items-start justify-between">
+              <p className="text-sm sm:text-base font-medium">{notification.message}</p>
+              <button onClick={() => setNotification(null)} className="text-current opacity-70 hover:opacity-100">×</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Header + Actions Section */}
+      <div className="w-full">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-4 lg:mb-6">
+          <div className="max-w-full mx-auto bg-slate-50">
+            {/* Header: title + description + counters */}
+            <div className="px-3 sm:px-6 lg:px-8 py-4 sm:py-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="flex-1">
+                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 tracking-tight">
+                  Email Management
+                </h1>
+                <p className="mt-2 text-sm sm:text-base text-slate-600">
+                  Configure and manage your email accounts for seamless communication
+                </p>
+                {configurations.length > 0 && (
+                  <div className="mt-3 space-y-1">
+                    <p className="text-sm text-slate-500">
+                      {`${configurations.length} account${configurations.length > 1 ? 's' : ''} configured, ${configurations.filter(c => c.is_active).length} active`}
+                    </p>
+                    {configurations.some(c => c.provider_type === 'microsoft') && (
+                      <p className="text-xs text-slate-400 flex items-center">
+                        <span className="inline-block w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
+                        Statistics include both Gmail and Microsoft accounts
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+              
+              {/* Refresh Button */}
+              <div className="flex items-center">
+                <button
+                  onClick={async () => {
+                    setLoading(true);
+                    await loadConfigurations();
+                    await loadStats();
+                  }}
+                  className="p-2 sm:px-4 sm:py-3 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors flex items-center"
+                  title="Refresh data"
+                >
+                  <ArrowPathIcon className="h-4 w-4 sm:h-5 sm:w-5 text-slate-500" />
+                  <span className="hidden sm:inline ml-2">Refresh</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Actions Row */}
+            <div className="border-t border-slate-200 bg-white">
+              <div className="px-3 sm:px-6 lg:px-8 py-4">
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                  {/* Stats Cards */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 flex-1">
+                    <div className="bg-slate-50 rounded-lg border border-slate-200 p-3 sm:p-4 hover:shadow-sm transition-shadow">
+                      <div className="flex items-center space-x-2 sm:space-x-3">
+                        <div className="w-6 h-6 sm:w-8 sm:h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                          {loadingStats ? (
+                            <div className="w-3 h-3 sm:w-4 sm:h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                          ) : (
+                            <EnvelopeIcon className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600" />
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-base sm:text-lg font-semibold text-slate-900">
+                            {loadingStats ? '...' : (stats.total_received || 0)}
+                          </p>
+                          <p className="text-xs text-slate-600">Received</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-slate-50 rounded-lg border border-slate-200 p-3 sm:p-4 hover:shadow-sm transition-shadow">
+                      <div className="flex items-center space-x-2 sm:space-x-3">
+                        <div className="w-6 h-6 sm:w-8 sm:h-8 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
+                          {loadingStats ? (
+                            <div className="w-3 h-3 border-2 border-orange-600 border-t-transparent rounded-full animate-spin"></div>
+                          ) : (
+                            <div className="w-3 h-3 bg-orange-600 rounded-full"></div>
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-base sm:text-lg font-semibold text-slate-900">
+                            {loadingStats ? '...' : (stats.unread_count || 0)}
+                          </p>
+                          <p className="text-xs text-slate-600">Unread</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-slate-50 rounded-lg border border-slate-200 p-3 sm:p-4 hover:shadow-sm transition-shadow sm:col-span-2 lg:col-span-1">
+                      <div className="flex items-center space-x-2 sm:space-x-3">
+                        <div className="w-6 h-6 sm:w-8 sm:h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                          {loadingStats ? (
+                            <div className="w-3 h-3 border-2 border-green-600 border-t-transparent rounded-full animate-spin"></div>
+                          ) : (
+                            <div className="w-3 h-3 bg-green-600 rounded-full"></div>
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-base sm:text-lg font-semibold text-slate-900">
+                            {loadingStats ? '...' : (stats.total_sent || 0)}
+                          </p>
+                          <p className="text-xs text-slate-600">Sent</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex items-center">
+                    <div className="flex gap-2">
+                      {/* Gmail Account - DISABLED FOR DEVELOPMENT */}
+                      <button
+                        disabled={true}
+                        className="bg-gray-400 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-xl cursor-not-allowed text-sm sm:text-base opacity-50"
+                      >
+                        <EnvelopeIcon className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2" />
+                        <span className="hidden sm:inline">Gmail (in development)</span>
+                        <span className="sm:hidden">Gmail (Em Dev)</span>
+                      </button>
+                      
+                      {/* Microsoft Account - DISABLED FOR DEVELOPMENT */}
+                      <button
+                        disabled={true}
+                        className="bg-gray-400 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-xl cursor-not-allowed text-sm sm:text-base opacity-50"
+                      >
+                        <div className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2 flex items-center justify-center">
+                          <svg viewBox="0 0 24 24" className="w-full h-full">
+                            <path fill="currentColor" d="M11.4 24H0V12.6h11.4V24zM24 24H12.6V12.6H24V24zM11.4 11.4H0V0h11.4v11.4zM24 11.4H12.6V0H24v11.4z"/>
+                          </svg>
+                        </div>
+                        <span className="hidden sm:inline">Microsoft</span>
+                        <span className="sm:hidden">MS</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Confirm Dialog */}
+      {confirmDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-md w-full shadow-lg">
+            <div className="p-5 border-b border-slate-200">
+              <h3 className="text-lg font-semibold text-slate-900">{confirmDialog.title}</h3>
+            </div>
+            <div className="p-5">
+              <p className="text-slate-700 text-sm">{confirmDialog.message}</p>
+            </div>
+            <div className="p-4 border-t border-slate-200 flex justify-end space-x-2">
+              <button
+                onClick={confirmDialog.onCancel}
+                className="px-4 py-2 rounded-lg text-slate-600 hover:text-slate-800 hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDialog.onConfirm}
+                className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700"
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+        {/* Email Configurations List */}
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
+
+
+          {configurations.length === 0 && (!microsoftConnections || microsoftConnections.length === 0) ? (
+            <div className="text-center py-16">
+              <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <EnvelopeIcon className="h-8 w-8 text-slate-400" />
+              </div>
+              <h3 className="text-lg font-medium text-slate-900 mb-2">
+                No accounts configured
+              </h3>
+              <p className="text-slate-500 mb-6 max-w-sm mx-auto">
+                Add your first email account to start sending and receiving messages.
+              </p>
+              
+              <div className="flex gap-3 justify-center">
+                {/* Gmail Account - DISABLED FOR DEVELOPMENT */}
+                <button
+                  disabled={true}
+                  className="bg-gray-400 text-white px-6 py-3 rounded-xl cursor-not-allowed opacity-50"
+                >
+                  <EnvelopeIcon className="h-5 w-5" />
+                  <span>Gmail (Em Desenvolvimento)</span>
+                </button>
+                
+                {/* Microsoft Account - DISABLED FOR DEVELOPMENT */}
+                <button
+                  disabled={true}
+                  className="bg-gray-400 text-white px-6 py-3 rounded-xl cursor-not-allowed opacity-50"
+                >
+                  <div className="w-5 h-5 flex items-center justify-center">
+                    <svg viewBox="0 0 24 24" className="w-full h-full">
+                      <path fill="currentColor" d="M11.4 24H0V12.6h11.4V24zM24 24H12.6V12.6H24V24zM11.4 11.4H0V0h11.4v11.4zM24 11.4H12.6V0H24v11.4z"/>
+                    </svg>
+                  </div>
+                  <span>Microsoft (Em Desenvolvimento)</span>
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="divide-y divide-slate-100">
+              {/* Microsoft Connections */}
+              {microsoftConnections && microsoftConnections.length > 0 && (
+                <>
+                  {microsoftConnections.map((connection) => (
+                    <div key={connection.id} className="p-4 sm:p-6 hover:bg-slate-50 transition-colors">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="flex items-center space-x-3 sm:space-x-4 flex-1 min-w-0">
+                          {/* Microsoft Avatar */}
+                          <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
+                            <span className="text-white font-medium text-sm">M</span>
+                          </div>
+                          
+                          {/* Account Info */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-3 mb-1">
+                              <h3 className="text-base font-medium text-slate-900 truncate">
+                                {connection.email_address}
+                              </h3>
+                              
+                              {/* Microsoft badge */}
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium w-fit bg-blue-100 text-blue-700">
+                                Microsoft
+                              </span>
+                              
+                              {/* Connection status */}
+                              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                connection.isConnected ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+                              }`}>
+                                {connection.isConnected ? 'Connected' : 'Disconnected'}
+                              </span>
+                            </div>
+                            
+                            <p className="text-sm text-slate-500">
+                              Connected via BFF • Last updated: {new Date(connection.updated_at).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Actions - Padronizado com outras contas */}
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-2 sm:ml-4">
+                          {/* Quick Actions */}
+                          <div className="flex sm:hidden items-center space-x-2">
+                            <button
+                              onClick={() => setNotification({ type: 'info', message: 'Inbox em desenvolvimento - não disponível no momento.' })}
+                              className="flex-1 text-sm font-medium py-2 px-3 rounded transition-colors text-gray-400 cursor-not-allowed"
+                              title="Inbox em desenvolvimento"
+                            >
+                              Inbox (in development)
+                            </button>
+                            
+                            <button
+                              onClick={() => navigate(`/school/dashboard/email/compose?config=${connection.id}`)}
+                              className="flex-1 text-sm font-medium py-2 px-3 rounded transition-colors text-green-600 hover:text-green-800 hover:bg-green-50"
+                              title="Compose email"
+                            >
+                              Compose
+                            </button>
+                          </div>
+                          
+                          <div className="hidden sm:flex items-center space-x-2 mr-4">
+                            <button
+                              onClick={() => setNotification({ type: 'info', message: 'Inbox em desenvolvimento - não disponível no momento.' })}
+                              className="text-sm font-medium py-1 px-2 rounded transition-colors text-gray-400 cursor-not-allowed"
+                              title="Inbox em desenvolvimento"
+                            >
+                              Inbox (in development)
+                            </button>
+                            
+                            <button
+                              onClick={() => navigate(`/school/dashboard/email/compose?config=${connection.id}`)}
+                              className="text-sm font-medium py-1 px-2 rounded transition-colors text-green-600 hover:text-green-800 hover:bg-green-50"
+                              title="Compose email"
+                            >
+                              Compose
+                            </button>
+                          </div>
+
+                          {/* Action Buttons - Padronizados */}
+                          <div className="flex items-center space-x-1 sm:space-x-2">
+                            {/* Sync Button */}
+                            <button
+                              onClick={() => handleSync(connection.id)}
+                              disabled={syncing[connection.id]}
+                              className={`p-2 rounded-full transition-colors ${
+                                syncing[connection.id] 
+                                  ? 'bg-blue-100 text-blue-600' 
+                                  : 'hover:bg-slate-100 text-slate-600'
+                              }`}
+                              title={syncing[connection.id] ? 'Syncing...' : 'Sync now'}
+                            >
+                              <ArrowPathIcon 
+                                className={`h-4 w-4 ${syncing[connection.id] ? 'animate-spin' : ''}`} 
+                              />
+                            </button>
+
+                            {/* Settings Button */}
+                            <button
+                              onClick={() => handleSettingsNavigation(connection.id)}
+                              className="p-2 rounded-full hover:bg-slate-100 transition-colors"
+                              title="Account settings"
+                            >
+                              <Cog6ToothIcon className="h-4 w-4 text-slate-600" />
+                            </button>
+
+                            {/* Delete/Disconnect Button */}
+                            <button
+                              onClick={() => handleDelete(connection.id)}
+                              disabled={actionLoading[`delete_${connection.id}`]}
+                              className={`p-2 rounded-full transition-colors ${
+                                actionLoading[`delete_${connection.id}`] 
+                                  ? 'bg-red-100 text-red-400' 
+                                  : 'hover:bg-slate-100 text-slate-600 hover:text-red-600'
+                              }`}
+                              title={actionLoading[`delete_${connection.id}`] ? 'Disconnecting...' : 'Disconnect Microsoft account'}
+                            >
+                              <TrashIcon className={`h-4 w-4 ${actionLoading[`delete_${connection.id}`] ? 'animate-pulse' : ''}`} />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </>
+              )}
+              
+              {/* Regular Configurations */}
+              {configurations.map((config) => (
+                <div key={config.id} className="p-4 sm:p-6 hover:bg-slate-50 transition-colors">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-center space-x-3 sm:space-x-4 flex-1 min-w-0">
+                      {/* Avatar */}
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                        config.provider_type === 'microsoft' 
+                          ? 'bg-blue-500' 
+                          : 'bg-red-500'
+                      }`}>
+                        <span className="text-white font-medium text-sm">
+                          {config.provider_type === 'microsoft' ? 'M' : 'G'}
+                        </span>
+                      </div>
+                      
+                      {/* Account Info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-3 mb-1">
+                          <h3 className="text-base font-medium text-slate-900 truncate">
+                            {config.name}
+                          </h3>
+                          
+                          {/* Provider badge */}
+                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium w-fit ${
+                            config.provider_type === 'microsoft' 
+                              ? 'bg-blue-100 text-blue-700'
+                              : 'bg-red-100 text-red-700'
+                          }`}>
+                            {config.provider_type === 'microsoft' ? 'Microsoft' : 'Gmail'}
+                          </span>
+                          
+                          {/* Status badges */}
+                          <div className="flex flex-wrap items-center gap-2">
+                            {/* Account Status */}
+                            <button
+                              onClick={() => toggleAccountStatus(config.id, config.is_active)}
+                              disabled={actionLoading[`status_${config.id}`]}
+                              className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium transition-all hover:scale-105 ${
+                                actionLoading[`status_${config.id}`]
+                                  ? 'bg-slate-100 text-slate-500 cursor-wait'
+                                  : config.is_active 
+                                  ? 'bg-green-100 text-green-700 hover:bg-green-200 cursor-pointer' 
+                                  : 'bg-red-100 text-red-700 hover:bg-red-200 cursor-pointer'
+                              }`}
+                              title={`Click to ${config.is_active ? 'deactivate' : 'activate'} account`}
+                            >
+                              {actionLoading[`status_${config.id}`] ? (
+                                <>
+                                  <div className="w-2 h-2 bg-slate-400 rounded-full mr-1 animate-pulse"></div>
+                                  <span className="hidden sm:inline">Updating...</span>
+                                  <span className="sm:hidden">...</span>
+                                </>
+                              ) : config.is_active ? (
+                                <>
+                                  <div className="w-2 h-2 bg-green-600 rounded-full mr-1"></div>
+                                  <span className="hidden sm:inline">Active</span>
+                                  <span className="sm:hidden">On</span>
+                                </>
+                              ) : (
+                                <>
+                                  <div className="w-2 h-2 bg-red-600 rounded-full mr-1"></div>
+                                  <span className="hidden sm:inline">Inactive</span>
+                                  <span className="sm:hidden">Off</span>
+                                </>
+                              )}
+                            </button>
+
+                            {/* Sync Status */}
+                            {config.sync_enabled && (
+                              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                config.is_active 
+                                  ? 'bg-blue-100 text-blue-700' 
+                                  : 'bg-slate-100 text-slate-500'
+                              }`}>
+                                <div className={`w-2 h-2 rounded-full mr-1 ${
+                                  syncing[config.id] 
+                                    ? 'bg-blue-600 animate-pulse' 
+                                    : config.is_active 
+                                    ? 'bg-blue-600' 
+                                    : 'bg-slate-400'
+                                }`}></div>
+                                {syncing[config.id] ? 'Syncing...' : 'Auto-sync'}
+                              </span>
+                            )}
+
+                            {/* Last Sync Indicator */}
+                            {config.last_sync_at && (
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-600">
+                                <div className="w-2 h-2 bg-slate-400 rounded-full mr-1"></div>
+                                Last sync: {new Date(lastSyncUpdate[config.id] || config.last_sync_at).toLocaleTimeString('en-US', {
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        
+                        <p className="text-sm text-slate-600 mb-2">
+                          {config.email_address}
+                        </p>
+                        
+                        {/* Technical details */}
+                        
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-2 sm:ml-4">
+                      {/* Quick Actions */}
+                      <div className="flex sm:hidden items-center space-x-2">
+                        <button
+                          onClick={() => handleInboxNavigation(config)}
+                          disabled={!config.is_active}
+                          className={`flex-1 text-sm font-medium py-2 px-3 rounded transition-colors ${
+                            config.is_active 
+                              ? 'text-blue-600 hover:text-blue-800 hover:bg-blue-50' 
+                              : 'text-slate-400 cursor-not-allowed'
+                          }`}
+                          title={config.is_active ? 'Open inbox' : 'Account is inactive'}
+                        >
+                          Inbox
+                        </button>
+                        
+                        <button
+                          onClick={() => handleComposeNavigation(config)}
+                          disabled={!config.is_active}
+                          className={`flex-1 text-sm font-medium py-2 px-3 rounded transition-colors ${
+                            config.is_active 
+                              ? 'text-green-600 hover:text-green-800 hover:bg-green-50' 
+                              : 'text-slate-400 cursor-not-allowed'
+                          }`}
+                          title={config.is_active ? 'Compose email' : 'Account is inactive'}
+                        >
+                          Compose
+                        </button>
+                      </div>
+                      
+                      <div className="hidden sm:flex items-center space-x-2 mr-4">
+                        <button
+                          onClick={() => handleInboxNavigation(config)}
+                          disabled={!config.is_active}
+                          className={`text-sm font-medium py-1 px-2 rounded transition-colors ${
+                            config.is_active 
+                              ? 'text-blue-600 hover:text-blue-800 hover:bg-blue-50' 
+                              : 'text-slate-400 cursor-not-allowed'
+                          }`}
+                          title={config.is_active ? 'Open inbox' : 'Account is inactive'}
+                        >
+                          Inbox
+                        </button>
+                        
+                        <button
+                          onClick={() => handleComposeNavigation(config)}
+                          disabled={!config.is_active}
+                          className={`text-sm font-medium py-1 px-2 rounded transition-colors ${
+                            config.is_active 
+                              ? 'text-green-600 hover:text-green-800 hover:bg-green-50' 
+                              : 'text-slate-400 cursor-not-allowed'
+                          }`}
+                          title={config.is_active ? 'Compose email' : 'Account is inactive'}
+                        >
+                          Compose
+                        </button>
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="flex items-center space-x-1 sm:space-x-2">
+                        <button
+                          onClick={() => handleSync(config.id)}
+                          disabled={syncing[config.id] || !config.is_active}
+                          className={`p-2 rounded-full transition-colors ${
+                            syncing[config.id] 
+                              ? 'bg-blue-100 text-blue-600' 
+                              : config.is_active 
+                              ? 'hover:bg-slate-100 text-slate-600' 
+                              : 'text-slate-400 cursor-not-allowed'
+                          }`}
+                          title={
+                            !config.is_active 
+                              ? 'Account is inactive' 
+                              : syncing[config.id] 
+                              ? 'Syncing...' 
+                              : 'Sync now'
+                          }
+                        >
+                          <ArrowPathIcon 
+                            className={`h-4 w-4 ${syncing[config.id] ? 'animate-spin' : ''}`} 
+                          />
+                        </button>
+
+                        {/* Sync Toggle */}
+                        <label className="flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={config.sync_enabled}
+                            onChange={() => toggleSync(config.id, config.sync_enabled)}
+                            disabled={actionLoading[`toggle_${config.id}`] || !config.is_active}
+                            className="sr-only"
+                          />
+                          <div className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                            actionLoading[`toggle_${config.id}`] 
+                              ? 'bg-slate-300' 
+                              : !config.is_active 
+                              ? 'bg-slate-200 opacity-50' 
+                              : config.sync_enabled 
+                              ? 'bg-blue-600' 
+                              : 'bg-slate-200'
+                          }`}>
+                            <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
+                              actionLoading[`toggle_${config.id}`] 
+                                ? 'animate-pulse' 
+                                : config.sync_enabled 
+                                ? 'translate-x-5' 
+                                : 'translate-x-1'
+                            }`} />
+                          </div>
+                        </label>
+
+                        {/* Settings Button */}
+                        <button
+                          onClick={() => handleSettingsNavigation(config.id)}
+                          className="p-2 rounded-full hover:bg-slate-100 transition-colors"
+                          title="Account settings"
+                        >
+                          <Cog6ToothIcon className="h-4 w-4 text-slate-600" />
+                        </button>
+
+                        {/* Delete Button */}
+                        <button
+                          onClick={() => handleDelete(config.id)}
+                          disabled={actionLoading[`delete_${config.id}`]}
+                          className={`p-2 rounded-full transition-colors ${
+                            actionLoading[`delete_${config.id}`] 
+                              ? 'bg-red-100 text-red-400' 
+                              : 'hover:bg-slate-100 text-slate-600 hover:text-red-600'
+                          }`}
+                          title={actionLoading[`delete_${config.id}`] ? 'Deleting...' : 'Delete account'}
+                        >
+                          <TrashIcon className={`h-4 w-4 ${actionLoading[`delete_${config.id}`] ? 'animate-pulse' : ''}`} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        
+        {/* Microsoft Token Diagnostic */}
+        <div className="mt-8">
+          {/* DISABLED FOR DEVELOPMENT */}
+          {/* <MicrosoftTokenDiagnostic /> */}
+        </div>
+
+        {/* DISABLED FOR DEVELOPMENT */}
+        {/* Microsoft BFF Test */}
+        {/* <div className="mt-8">
+          <MicrosoftBFFTest />
+        </div> */}
+
+        {/* Token Renewal Test */}
+        {/* <div className="mt-8">
+          <TokenRenewalTest />
+        </div> */}
+      </div>
+    );
+  };
+
+  export default EmailManagement;

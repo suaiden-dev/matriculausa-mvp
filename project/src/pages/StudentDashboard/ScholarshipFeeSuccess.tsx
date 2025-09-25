@@ -4,35 +4,21 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import CustomLoading from '../../components/CustomLoading';
 import { CheckCircle } from 'lucide-react';
-import { useFeeConfig } from '../../hooks/useFeeConfig';
 import { useDynamicFees } from '../../hooks/useDynamicFees';
-
-const messages = {
-  title: 'Scholarship Fee Payment Successful!',
-  processed: 'We have received your Scholarship Fee payment. We will contact you soon with the next steps for your scholarship process.',
-  sessionId: 'Session ID:',
-  confirmation: 'You will receive a confirmation email shortly.',
-  goHome: 'Return Home',
-  verifying: 'Verifying your payment...',
-  pleaseWait: 'Please wait.',
-  errorTitle: 'Payment Processing Error',
-  errorTryAgain: 'Please try again or contact support.'
-};
+import { useTranslation } from 'react-i18next';
 
 const ScholarshipFeeSuccess: React.FC = () => {
-  const [sessionId, setSessionId] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [applicationId, setApplicationId] = useState<string | null>(null);
   const navigate = useNavigate();
-  const { user, userProfile, loading: authLoading } = useAuth();
-  const { formatFeeAmount } = useFeeConfig(user?.id);
-  const { scholarshipFee, hasSellerPackage } = useDynamicFees();
+  const { userProfile } = useAuth();
+  const { scholarshipFee } = useDynamicFees();
+  const { t } = useTranslation();
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const sessionId = params.get('session_id');
-    setSessionId(sessionId);
     console.log('[ScholarshipFeeSuccess] sessionId from URL:', sessionId);
     if (!sessionId) {
       setError('Session ID not found.');
@@ -106,7 +92,11 @@ const ScholarshipFeeSuccess: React.FC = () => {
     return (
         <div className="min-h-[60vh] flex flex-col items-center justify-center bg-white px-4">
           <div className="bg-white rounded-2xl shadow-lg p-10 max-w-md w-full flex flex-col items-center">
-            <CustomLoading color="green" title="Verifying Payment..." message="Please wait while we confirm your payment." />
+            <CustomLoading 
+              color="green" 
+              title={t('successPages.scholarshipFee.verifying')} 
+              message={t('successPages.scholarshipFee.pleaseWait')} 
+            />
           </div>
         </div>
     );
@@ -119,9 +109,17 @@ const ScholarshipFeeSuccess: React.FC = () => {
             <svg className="h-16 w-16 text-red-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01" />
             </svg>
-            <h1 className="text-3xl font-bold text-red-700 mb-2">Scholarship Fee Payment Error</h1>
-            <p className="text-slate-700 mb-6 text-center">There was a problem processing your payment.<br/>Please try again. If the error persists, contact support.</p>
-            <button onClick={handleGoToChat} className="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-700 transition-all duration-300">Go to View Details</button>
+            <h1 className="text-3xl font-bold text-red-700 mb-2">{t('successPages.scholarshipFee.errorTitle')}</h1>
+            <p className="text-slate-700 mb-6 text-center">
+              {t('successPages.scholarshipFee.errorMessage')}<br/>
+              {t('successPages.scholarshipFee.errorRetry')}
+            </p>
+            <button 
+              onClick={handleGoToChat} 
+              className="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-700 transition-all duration-300"
+            >
+              {t('successPages.scholarshipFee.button')}
+            </button>
           </div>
         </div>
     );
@@ -131,12 +129,10 @@ const ScholarshipFeeSuccess: React.FC = () => {
       <div className="min-h-[60vh] flex flex-col items-center justify-center bg-white px-4">
         <div className="bg-white rounded-2xl shadow-lg p-10 max-w-md w-full flex flex-col items-center">
           <CheckCircle className="h-16 w-16 text-green-600 mb-4" />
-          <h1 className="text-3xl font-bold text-green-700 mb-2">Scholarship Fee Payment Successful!</h1>
+          <h1 className="text-3xl font-bold text-green-700 mb-2">{t('successPages.scholarshipFee.title')}</h1>
           <p className="text-slate-700 mb-6 text-center">
-            Your payment of <span className="font-bold">
-              {hasSellerPackage ? scholarshipFee : formatFeeAmount(550)}
-            </span> was processed successfully.<br/>
-            Your application will now proceed to the next step.
+            {t('successPages.scholarshipFee.description', { amount: scholarshipFee })}<br/>
+            {t('successPages.scholarshipFee.message')}
           </p>
           <button
             className="bg-green-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-green-700 transition-all duration-300"
@@ -145,63 +141,11 @@ const ScholarshipFeeSuccess: React.FC = () => {
               if (applicationId) navigate(`/student/dashboard/application/${applicationId}/chat`);
             }}
           >
-            Go to View Details
+            {t('successPages.scholarshipFee.button')}
           </button>
         </div>
       </div>
   );
-};
-
-const styles: { [key: string]: React.CSSProperties } = {
-  container: {
-    fontFamily: 'Arial, sans-serif',
-    textAlign: 'center',
-    padding: '40px',
-    maxWidth: '600px',
-    margin: '50px auto',
-    boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
-    borderRadius: '8px',
-    backgroundColor: '#fff',
-    color: '#333',
-  },
-  heading: {
-    color: '#28a745',
-    fontSize: '2em',
-    marginBottom: '20px',
-  },
-  text: {
-    fontSize: '1.1em',
-    lineHeight: '1.6',
-    marginBottom: '15px',
-  },
-  errorText: {
-    color: '#dc3545',
-    fontSize: '1.1em',
-    lineHeight: '1.6',
-    marginBottom: '15px',
-  },
-  sessionId: {
-    backgroundColor: '#f0f0f0',
-    padding: '10px',
-    borderRadius: '4px',
-    display: 'inline-block',
-    margin: '10px 0',
-    fontSize: '0.9em',
-    color: '#555',
-  },
-  button: {
-    display: 'inline-block',
-    marginTop: '20px',
-    padding: '10px 20px',
-    backgroundColor: '#007bff',
-    color: 'white',
-    textDecoration: 'none',
-    border: 'none',
-    borderRadius: '5px',
-    fontSize: '1em',
-    cursor: 'pointer',
-    transition: 'background-color 0.3s ease',
-  },
 };
 
 export default ScholarshipFeeSuccess; 

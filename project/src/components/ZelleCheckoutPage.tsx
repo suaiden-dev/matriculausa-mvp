@@ -43,8 +43,8 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user } = useAuth();
-  const { getFeeAmount } = useFeeConfig();
+  const { user, userProfile } = useAuth();
+  const { getFeeAmount, userFeeOverrides } = useFeeConfig(user?.id);
   const { selectionProcessFee, scholarshipFee, i20ControlFee, hasSellerPackage, packageName } = useDynamicFees();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -99,9 +99,20 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
   const feeInfo: FeeInfo[] = [
     {
       type: 'selection_process',
-      amount: activeDiscount && feeType === 'selection_process' ? 
-        (hasSellerPackage ? parseFloat(selectionProcessFee.replace('$', '')) - (activeDiscount.discount_amount || 0) : getFeeAmount('selection_process') - (activeDiscount.discount_amount || 0)) : 
-        (hasSellerPackage ? parseFloat(selectionProcessFee.replace('$', '')) : getFeeAmount('selection_process')),
+      amount: (() => {
+        const base = hasSellerPackage ? parseFloat(selectionProcessFee.replace('$', '')) : (() => {
+          const hasOverride = userFeeOverrides?.selection_process_fee !== undefined;
+          if (hasOverride) {
+            // Se há override, usar apenas o valor do override (já inclui dependentes se necessário)
+            return getFeeAmount('selection_process');
+          } else {
+            // Se não há override, aplicar lógica de dependentes aos valores padrão
+            return getFeeAmount('selection_process') + ((Number(userProfile?.dependents) || 0) * 150);
+          }
+        })();
+        const discount = (activeDiscount && feeType === 'selection_process') ? (activeDiscount.discount_amount || 0) : 0;
+        return Math.max(0, base - discount);
+      })(),
       description: `Selection Process Fee - Complete your application process${hasSellerPackage ? ` (${packageName})` : ''}${activeDiscount && feeType === 'selection_process' ? ` ($${activeDiscount.discount_amount || 0} discount applied)` : ''}`,
       icon: <CreditCard className="w-6 h-6" />
     },

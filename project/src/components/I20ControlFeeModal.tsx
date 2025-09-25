@@ -2,6 +2,8 @@ import React, { useEffect } from 'react';
 import { Dialog } from '@headlessui/react';
 import { PaymentMethodSelector } from './PaymentMethodSelector';
 import { useFeeConfig } from '../hooks/useFeeConfig';
+import { useDynamicFees } from '../hooks/useDynamicFees';
+import { useAuth } from '../hooks/useAuth';
 
 interface I20ControlFeeModalProps {
   isOpen: boolean;
@@ -16,7 +18,9 @@ export const I20ControlFeeModal: React.FC<I20ControlFeeModalProps> = ({
   selectedPaymentMethod,
   onPaymentMethodSelect,
 }) => {
-  const { getFeeAmount } = useFeeConfig();
+  const { user } = useAuth();
+  const { getFeeAmount } = useFeeConfig(user?.id);
+  const { i20ControlFee, hasSellerPackage } = useDynamicFees();
   
   // Hide floating elements when modal is open
   useEffect(() => {
@@ -86,7 +90,7 @@ export const I20ControlFeeModal: React.FC<I20ControlFeeModalProps> = ({
               selectedMethod={selectedPaymentMethod}
               onMethodSelect={handlePaymentMethodSelect}
               feeType="i20_control_fee"
-              amount={getFeeAmount('i20_control_fee')}
+              amount={hasSellerPackage ? parseFloat(i20ControlFee.replace('$', '')) : getFeeAmount('i20_control_fee')}
             />
 
             {/* Info sobre processamento automático */}

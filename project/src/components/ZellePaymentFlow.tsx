@@ -29,7 +29,8 @@ export const ZellePaymentFlow: React.FC<ZellePaymentFlowProps> = ({
   studentProcessType,
 }) => {
   const { t } = useTranslation();
-  const { getFeeAmount } = useFeeConfig();
+  const { isAuthenticated, user, userProfile } = useAuth();
+  const { getFeeAmount, userFeeOverrides } = useFeeConfig(user?.id);
   const { isBlocked, pendingPayment, loading: paymentBlockedLoading } = usePaymentBlocked();
   const [loading] = useState(false);
   const [showPreCheckoutModal, setShowPreCheckoutModal] = useState(false);
@@ -37,8 +38,6 @@ export const ZellePaymentFlow: React.FC<ZellePaymentFlowProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [discountApplied, setDiscountApplied] = useState(false);
   const [finalAmount, setFinalAmount] = useState<number | null>(null);
-
-  const { isAuthenticated } = useAuth();
 
   const handleStartPayment = () => {
     if (!isAuthenticated) {
@@ -150,7 +149,19 @@ export const ZellePaymentFlow: React.FC<ZellePaymentFlowProps> = ({
   };
 
   const getAmount = () => {
-    return feeType === 'selection_process' ? getFeeAmount('selection_process') : getFeeAmount('application_fee');
+    if (feeType === 'selection_process') {
+      const hasOverride = userFeeOverrides?.selection_process_fee !== undefined;
+      if (hasOverride) {
+        // Se há override, usar apenas o valor do override (já inclui dependentes se necessário)
+        return getFeeAmount('selection_process');
+      } else {
+        // Se não há override, aplicar lógica de dependentes aos valores padrão
+        const dependents = Number(userProfile?.dependents) || 0;
+        const dependentsCost = dependents * 150; // $150 por dependente apenas no Selection Process
+        return getFeeAmount('selection_process') + dependentsCost;
+      }
+    }
+    return getFeeAmount('application_fee');
   };
 
   const getProductName = () => {

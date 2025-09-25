@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import { PublicClientApplication } from '@azure/msal-browser';
+import { msalConfig } from '../lib/msalConfig';
 import { useAuth } from '../hooks/useAuth';
 
 const EmailOAuthCallback: React.FC = () => {
@@ -21,51 +23,69 @@ const EmailOAuthCallback: React.FC = () => {
           console.error('❌ Erro no OAuth:', error);
           setStatus('error');
           setMessage(`Erro no OAuth: ${error}`);
-          setTimeout(() => navigate('/school/dashboard/inbox'), 3000);
+          // Redirecionar para a página correta baseada no provider
+          const provider = state ? state.split('_')[0] : 'google';
+          const redirectPath = provider === 'microsoft' 
+            ? '/school/dashboard/microsoft-email' 
+            : '/school/dashboard/inbox';
+          setTimeout(() => navigate(redirectPath), 3000);
           return;
         }
 
         if (!code || !state) {
           setStatus('error');
           setMessage('Parâmetros OAuth inválidos');
-          setTimeout(() => navigate('/school/dashboard/inbox'), 3000);
+          // Redirecionar para a página correta baseada no provider
+          const provider = state ? state.split('_')[0] : 'google';
+          const redirectPath = provider === 'microsoft' 
+            ? '/school/dashboard/microsoft-email' 
+            : '/school/dashboard/inbox';
+          setTimeout(() => navigate(redirectPath), 3000);
           return;
         }
 
         // Extrair provider do state
         const provider = state.split('_')[0] as 'google' | 'microsoft';
         
-        // Usar URL dinâmica baseada no ambiente atual
-        const redirectUri = `${window.location.origin}/email-oauth-callback`;
-        
         console.log('🔍 DEBUG: OAuth Callback Environment detection:', {
           hostname: window.location.hostname,
-          redirectUri,
           provider
         });
 
         console.log('✅ OAuth bem-sucedido! Processando...');
         setMessage(`Processando tokens do ${provider}...`);
 
-        // Trocar código por tokens via Edge Function
-        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/exchange-oauth-code`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          },
-          body: JSON.stringify({
-            code,
-            provider,
-            redirect_uri: redirectUri
-          })
-        });
+        let result;
 
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+        if (provider === 'microsoft') {
+          // Microsoft agora usa popup, não redirecionamento
+          setStatus('error');
+          setMessage('Microsoft OAuth deve ser feito via popup. Use o botão de conectar.');
+          setTimeout(() => navigate('/school/dashboard/microsoft-email'), 3000);
+          return;
+        } else {
+          // Para Google, usar Edge Function
+          const redirectUri = `${window.location.origin}/email-oauth-callback`;
+          
+          const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/exchange-oauth-code`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            },
+            body: JSON.stringify({
+              code,
+              provider,
+              redirect_uri: redirectUri
+            })
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
+          result = await response.json();
         }
-
-        const result = await response.json();
 
         if (result.success && result.tokens) {
           // Salvar tokens na tabela
@@ -121,8 +141,11 @@ const EmailOAuthCallback: React.FC = () => {
             setStatus('success');
             setMessage(`${provider} conectado com sucesso! Redirecionando...`);
             
-            // Redirecionar para inbox após 2 segundos
-            setTimeout(() => navigate('/school/dashboard/inbox'), 2000);
+            // Redirecionar para a página correta baseada no provider
+            const redirectPath = provider === 'microsoft' 
+              ? '/school/dashboard/microsoft-email' 
+              : '/school/dashboard/inbox';
+            setTimeout(() => navigate(redirectPath), 2000);
           }
         } else {
           setStatus('error');
@@ -133,7 +156,14 @@ const EmailOAuthCallback: React.FC = () => {
         console.error('Erro ao processar OAuth:', err);
         setStatus('error');
         setMessage(`Erro ao processar OAuth: ${err.message}`);
-        setTimeout(() => navigate('/school/dashboard/inbox'), 3000);
+        // Redirecionar para a página correta baseada no provider
+        const urlParams = new URLSearchParams(window.location.search);
+        const state = urlParams.get('state');
+        const provider = state ? state.split('_')[0] : 'google';
+        const redirectPath = provider === 'microsoft' 
+          ? '/school/dashboard/microsoft-email' 
+          : '/school/dashboard/inbox';
+        setTimeout(() => navigate(redirectPath), 3000);
       }
     };
 
@@ -174,7 +204,16 @@ const EmailOAuthCallback: React.FC = () => {
           
           {status === 'error' && (
             <button
-              onClick={() => navigate('/school/dashboard/inbox')}
+              onClick={() => {
+                // Redirecionar para a página correta baseada no provider
+                const urlParams = new URLSearchParams(window.location.search);
+                const state = urlParams.get('state');
+                const provider = state ? state.split('_')[0] : 'google';
+                const redirectPath = provider === 'microsoft' 
+                  ? '/school/dashboard/microsoft-email' 
+                  : '/school/dashboard/inbox';
+                navigate(redirectPath);
+              }}
               className="px-4 py-2 bg-gradient-to-r from-[#05294E] to-[#D0151C] text-white rounded-lg hover:from-[#041f3f] hover:to-[#b01218] transition-all duration-300"
             >
               Voltar ao Dashboard

@@ -48,6 +48,7 @@ const SellerManagement: React.FC = () => {
         .order('created_at', { ascending: false });
 
       if (usersError) {
+        console.error('Error loading users:', usersError);
         throw new Error(`Failed to load users: ${usersError.message}`);
       }
 
@@ -58,6 +59,7 @@ const SellerManagement: React.FC = () => {
         .eq('is_active', true);
 
       if (sellersError) {
+        console.error('Error loading sellers:', sellersError);
         throw new Error(`Failed to load sellers: ${sellersError.message}`);
       }
 
@@ -77,6 +79,7 @@ const SellerManagement: React.FC = () => {
 
       setUsers(processedUsers);
     } catch (error: any) {
+      console.error('Error loading users:', error);
     } finally {
       setLoading(false);
     }
@@ -89,7 +92,7 @@ const SellerManagement: React.FC = () => {
       // Buscar o user_profile_id pelo user_id
       const { data: userProfile, error: profileError } = await supabase
         .from('user_profiles')
-        .select('id, email, full_name')
+        .select('id, email, full_name, phone')
         .eq('user_id', userId)
         .single();
 
@@ -137,6 +140,8 @@ const SellerManagement: React.FC = () => {
           created_by: "affiliate_admin"
         };
 
+        console.log('📧 [SellerCreation] Enviando notificação para admin:', adminNotificationPayload);
+
         const adminNotificationResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
           method: 'POST',
           headers: {
@@ -145,7 +150,13 @@ const SellerManagement: React.FC = () => {
           body: JSON.stringify(adminNotificationPayload),
         });
 
+        if (adminNotificationResponse.ok) {
+          console.log('✅ [SellerCreation] Notificação para admin enviada com sucesso!');
+        } else {
+          console.warn('⚠️ [SellerCreation] Erro ao enviar notificação para admin:', adminNotificationResponse.status);
+        }
       } catch (notificationError) {
+        console.error('❌ [SellerCreation] Erro ao enviar notificação para admin:', notificationError);
       }
 
       // Enviar notificação para o seller sobre sua criação
@@ -154,6 +165,7 @@ const SellerManagement: React.FC = () => {
           tipo_notf: "Você foi promovido a seller",
           email_seller: userProfile.email,
           nome_seller: userProfile.full_name || userName,
+          phone_seller: userProfile.phone || "",
           email_affiliate_admin: affiliateAdmin?.email || "",
           nome_affiliate_admin: affiliateAdmin?.full_name || "Affiliate Admin",
           o_que_enviar: `Parabéns! Você foi promovido a seller pelo affiliate admin ${affiliateAdmin?.full_name || "Affiliate Admin"}. Seu código de referência é: ${sellerData?.referral_code || "N/A"}. Use este código para indicar alunos e ganhar comissões!`,
@@ -163,6 +175,7 @@ const SellerManagement: React.FC = () => {
           dashboard_link: "/seller/dashboard"
         };
 
+        console.log('📧 [SellerCreation] Enviando notificação para seller:', sellerNotificationPayload);
 
         const sellerNotificationResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
           method: 'POST',
@@ -172,12 +185,19 @@ const SellerManagement: React.FC = () => {
           body: JSON.stringify(sellerNotificationPayload),
         });
 
+        if (sellerNotificationResponse.ok) {
+          console.log('✅ [SellerCreation] Notificação para seller enviada com sucesso!');
+        } else {
+          console.warn('⚠️ [SellerCreation] Erro ao enviar notificação para seller:', sellerNotificationResponse.status);
+        }
       } catch (notificationError) {
+        console.error('❌ [SellerCreation] Erro ao enviar notificação para seller:', notificationError);
       }
 
       // Recarregar usuários
       await loadAllUsers();
     } catch (error: any) {
+      console.error('Error promoting user:', error);
       alert(`Error promoting user: ${error.message}`);
     } finally {
       setPromotingUser(null);
@@ -212,6 +232,7 @@ const SellerManagement: React.FC = () => {
       // Recarregar usuários
       await loadAllUsers();
     } catch (error: any) {
+      console.error('Error demoting seller:', error);
       alert(`Error demoting seller: ${error.message}`);
     } finally {
       setDemotingUser(null);

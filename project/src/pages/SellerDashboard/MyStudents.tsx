@@ -76,13 +76,17 @@ interface MyStudentsProps {
 }
 
 const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStudent }) => {
-  const { getFeeAmount } = useFeeConfig();
+  const { getFeeAmount } = useFeeConfig(); // Usar sem parâmetro para valores padrão, será usado para overrides específicos por estudante
   const [currentPage, setCurrentPage] = useState(1);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [universities, setUniversities] = useState<University[]>([]);
   
   // Estado para armazenar as taxas do pacote de cada estudante
   const [studentPackageFees, setStudentPackageFees] = useStateReact<{[key: string]: any}>({});
+  // Estado para dependentes por estudante
+  const [studentDependents, setStudentDependents] = useStateReact<{[key: string]: number}>({});
+  // Estado para armazenar overrides de taxas por estudante
+  const [studentFeeOverrides, setStudentFeeOverrides] = useStateReact<{[key: string]: any}>({});
   
   // Função para buscar taxas do pacote de um estudante
   const loadStudentPackageFees = async (studentUserId: string) => {
@@ -94,6 +98,7 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
       });
       
       if (error) {
+        console.error('❌ [MY_STUDENTS] Erro ao buscar taxas do pacote:', error);
         return;
       }
       
@@ -109,6 +114,48 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
         }));
       }
     } catch (error) {
+      console.error('❌ [MY_STUDENTS] Erro ao buscar taxas do pacote:', error);
+    }
+  };
+
+  // Buscar dependents do perfil do estudante
+  const loadStudentDependents = async (studentUserId: string) => {
+    if (!studentUserId || studentDependents[studentUserId] !== undefined) return;
+    try {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('dependents')
+        .eq('user_id', studentUserId)
+        .single();
+      if (!error && data) {
+        setStudentDependents(prev => ({ ...prev, [studentUserId]: Number(data.dependents || 0) }));
+      } else {
+        setStudentDependents(prev => ({ ...prev, [studentUserId]: 0 }));
+      }
+    } catch {
+      setStudentDependents(prev => ({ ...prev, [studentUserId]: 0 }));
+    }
+  };
+
+  // Buscar overrides de taxas para um estudante específico
+  const loadStudentFeeOverrides = async (studentUserId: string) => {
+    if (!studentUserId || studentFeeOverrides[studentUserId] !== undefined) return;
+    
+    try {
+      const { data: overrides, error } = await supabase
+        .from('user_fee_overrides')
+        .select('*')
+        .eq('user_id', studentUserId)
+        .single();
+      
+      if (!error && overrides) {
+        setStudentFeeOverrides(prev => ({ ...prev, [studentUserId]: overrides }));
+      } else {
+        setStudentFeeOverrides(prev => ({ ...prev, [studentUserId]: null }));
+      }
+    } catch (error) {
+      console.error('❌ [MY_STUDENTS] Erro ao buscar overrides:', error);
+      setStudentFeeOverrides(prev => ({ ...prev, [studentUserId]: null }));
     }
   };
   
@@ -118,8 +165,14 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
       if (student.id && !studentPackageFees[student.id]) {
         loadStudentPackageFees(student.id);
       }
+      if (student.id && studentDependents[student.id] === undefined) {
+        loadStudentDependents(student.id);
+      }
+      if (student.id && studentFeeOverrides[student.id] === undefined) {
+        loadStudentFeeOverrides(student.id);
+      }
     });
-  }, [students, studentPackageFees]);
+  }, [students, studentPackageFees, studentDependents, studentFeeOverrides]);
   
   // Estado dos filtros
   const [filters, setFilters] = useState<FilterState>({
@@ -149,6 +202,7 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
           setUniversities(universitiesData);
         }
       } catch (error) {
+        console.warn('Could not load universities:', error);
       }
     };
 
@@ -312,31 +366,35 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
   // Função para determinar quais taxas estão faltando para um aluno
   const getMissingFees = (student: Student) => {
     const missingFees = [];
+    const deps = studentDependents[student.id] || 0;
+    const overrides = studentFeeOverrides[student.id];
     
     // Verificar Selection Process Fee (primeira taxa a ser paga)
     if (!student.has_paid_selection_process_fee) {
-      const selectionProcessFee = getFeeAmount('selection_process');
+      const baseSelectionFee = getStudentFeeAmount(student.id, 'selection_process');
+      // Se há override, usar valor do override (já inclui dependentes), senão calcular normalmente
+      const selectionProcessFee = (overrides && overrides.selection_process_fee !== undefined && overrides.selection_process_fee !== null) 
+        ? baseSelectionFee 
+        : baseSelectionFee + (deps * 150);
       missingFees.push({ name: 'Selection Process', amount: selectionProcessFee, color: 'red' });
       return missingFees; // Se não pagou essa, não mostra as outras
     }
     
-    // Verificar Scholarship Fee (segunda taxa a ser paga)
-    if (!student.is_scholarship_fee_paid) {
-      const scholarshipFee = getFeeAmount('scholarship_fee');
-      missingFees.push({ name: 'Scholarship', amount: scholarshipFee, color: 'blue' });
-      return missingFees; // Se não pagou essa, não mostra as outras
-    }
-    
-    // Verificar I20 Control Fee (terceira taxa a ser paga)
-    if (!student.has_paid_i20_control_fee) {
-      const i20ControlFee = getFeeAmount('i20_control_fee');
-      missingFees.push({ name: 'I20 Control', amount: i20ControlFee, color: 'orange' });
-    }
-    
-    // Verificar Application Fee (última taxa a ser paga)
+    // Após Selection Process pago, listar todas as pendências restantes (Application, Scholarship, I-20)
     if (!student.is_application_fee_paid) {
-      const applicationFee = getFeeAmount('application_fee');
+      const applicationFee = getStudentFeeAmount(student.id, 'application_fee');
       missingFees.push({ name: 'Application', amount: applicationFee, color: 'gray' });
+    }
+
+    if (!student.is_scholarship_fee_paid) {
+      const scholarshipFee = getStudentFeeAmount(student.id, 'scholarship_fee');
+      missingFees.push({ name: 'Scholarship', amount: scholarshipFee, color: 'blue' });
+    }
+    
+    // I-20 Control Fee
+    if (!student.has_paid_i20_control_fee) {
+      const i20ControlFee = getStudentFeeAmount(student.id, 'i20_control_fee');
+      missingFees.push({ name: 'I20 Control', amount: i20ControlFee, color: 'orange' });
     }
     
     return missingFees;
@@ -364,24 +422,81 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
     return null;
   };
 
+  // Função auxiliar para obter valor da taxa com override
+  const getStudentFeeAmount = (studentId: string, feeType: string): number => {
+    const overrides = studentFeeOverrides[studentId];
+    const packageFees = studentPackageFees[studentId];
+    
+    // Primeiro, verificar se há override (mapear nomes corretos)
+    if (overrides) {
+      switch (feeType) {
+        case 'selection_process':
+          if (overrides.selection_process_fee !== undefined && overrides.selection_process_fee !== null) {
+            return Number(overrides.selection_process_fee);
+          }
+          break;
+        case 'application_fee':
+          if (overrides.application_fee !== undefined && overrides.application_fee !== null) {
+            return Number(overrides.application_fee);
+          }
+          break;
+        case 'scholarship_fee':
+          if (overrides.scholarship_fee !== undefined && overrides.scholarship_fee !== null) {
+            return Number(overrides.scholarship_fee);
+          }
+          break;
+        case 'i20_control_fee':
+          if (overrides.i20_control_fee !== undefined && overrides.i20_control_fee !== null) {
+            return Number(overrides.i20_control_fee);
+          }
+          break;
+      }
+    }
+    
+    // Segundo, verificar se há taxa personalizada do pacote
+    // Mapear feeType para nome correto do campo no banco para packageFees também
+    const fieldMapping: {[key: string]: string} = {
+      'selection_process': 'selection_process_fee',
+      'application_fee': 'application_fee',
+      'scholarship_fee': 'scholarship_fee',
+      'i20_control_fee': 'i20_control_fee'
+    };
+    const dbFieldName = fieldMapping[feeType] || feeType;
+    if (packageFees && packageFees[dbFieldName]) {
+      return Number(packageFees[dbFieldName]);
+    }
+    
+    // Por último, usar taxa padrão
+    return getFeeAmount(feeType);
+  };
+
   // Estatísticas calculadas dinamicamente
   // Função para calcular o total pago por um aluno
   const calculateStudentTotalPaid = (student: Student): number => {
     let total = 0;
-    
-    // Buscar taxas do pacote do estudante
-    const packageFees = studentPackageFees[student.id];
+    const deps = studentDependents[student.id] || 0;
+    const overrides = studentFeeOverrides[student.id];
 
     if (student.has_paid_selection_process_fee) {
-      total += packageFees ? packageFees.selection_process_fee : getFeeAmount('selection_process');
+      // Para Selection Process, verificar se há override primeiro
+      if (overrides && overrides.selection_process_fee !== undefined && overrides.selection_process_fee !== null) {
+        // Se há override, usar apenas o valor do override (já inclui dependentes)
+        total += overrides.selection_process_fee;
+      } else {
+        // Sem override: usar taxa padrão + dependentes
+        const baseSelectionFee = getFeeAmount('selection_process');
+        total += baseSelectionFee + (deps * 150);
+      }
     }
     
     if (student.has_paid_i20_control_fee) {
-      total += packageFees ? packageFees.i20_control_fee : getFeeAmount('i20_control_fee');
+      const baseI20Fee = getStudentFeeAmount(student.id, 'i20_control_fee');
+      total += baseI20Fee; // I-20 nunca tem dependentes
     }
     
     if (student.is_scholarship_fee_paid) {
-      total += packageFees ? packageFees.scholarship_fee : getFeeAmount('scholarship_fee');
+      const scholarshipFee = getStudentFeeAmount(student.id, 'scholarship_fee');
+      total += scholarshipFee;
     }
     
     // Application fee não é contabilizada na receita do seller (é exclusiva da universidade)
@@ -491,7 +606,12 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-600">Total Revenue</p>
-              <p className="text-3xl font-bold text-green-600 mt-1">{formatCurrency(stats.totalRevenue)}</p>
+              {/* Skeleton enquanto dependents/fees não carregaram completamente */}
+              {Object.keys(studentDependents).length === 0 && Object.keys(studentPackageFees).length === 0 ? (
+                <div className="h-8 w-40 bg-slate-200 rounded animate-pulse mt-1" />
+              ) : (
+                <p className="text-3xl font-bold text-green-600 mt-1">{formatCurrency(stats.totalRevenue)}</p>
+              )}
             </div>
             <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
               <DollarSign className="h-6 w-6 text-green-600" />
@@ -773,7 +893,11 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
                     
                     <div className="flex items-center text-sm font-medium text-green-600">
                       <DollarSign className="h-4 w-4 mr-1" />
-                      {formatCurrency(calculateStudentTotalPaid(student))}
+                      {studentDependents[student.id] === undefined ? (
+                        <div className="h-4 w-16 bg-slate-200 rounded animate-pulse" />
+                      ) : (
+                        formatCurrency(calculateStudentTotalPaid(student))
+                      )}
                     </div>
                   </div>
                 </div>

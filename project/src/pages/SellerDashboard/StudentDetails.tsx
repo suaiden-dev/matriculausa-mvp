@@ -5,18 +5,15 @@ import {
   FileText,
   CheckCircle2,
   XCircle,
-  ArrowLeft
+  ArrowLeft,
+  Edit3,
+  Check,
+  X
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { getDocumentStatusDisplay } from '../../utils/documentStatusMapper';
 import DocumentViewerModal from '../../components/DocumentViewerModal';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
-
-// Silencia logs apenas neste arquivo, sem alterar a lógica
-// Evita poluir o console em produção mantendo o código intacto
-const __noop = (..._args: unknown[]) => {};
-// Somente escopo local deste módulo
-const console = { ...globalThis.console, log: __noop, warn: __noop, error: __noop, info: __noop, debug: __noop } as Console;
 
 interface StudentInfo {
   student_id: string;
@@ -113,11 +110,17 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
   const [realScholarshipApplication, setRealScholarshipApplication] = useState<any>(null);
   const [loadingApplication, setLoadingApplication] = useState(false);
   
-  // Hook para configurações dinâmicas de taxas
-  const { getFeeAmount, formatFeeAmount } = useFeeConfig();
+  // Hook para configurações dinâmicas de taxas (usando profileId para ver overrides do estudante)
+  const { getFeeAmount, formatFeeAmount, hasOverride } = useFeeConfig(profileId);
   
   // Estados para taxas dinâmicas do estudante
   const [studentPackageFees, setStudentPackageFees] = useState<any>(null);
+  const [dependents, setDependents] = useState<number>(0);
+  
+  // Estados para edição de Scholarship Range
+  const [isEditingPackage, setIsEditingPackage] = useState(false);
+  const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
+  const [isUpdatingPackage, setIsUpdatingPackage] = useState(false);
   
   // Função para buscar taxas do pacote do estudante
   const loadStudentPackageFees = useCallback(async (studentUserId: string) => {
@@ -146,6 +149,22 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
     }
   }, []);
 
+  // Buscar dependents do perfil do estudante
+  const loadDependents = useCallback(async (studentUserId: string) => {
+    if (!studentUserId) return;
+    try {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('dependents')
+        .eq('user_id', studentUserId)
+        .single();
+      if (!error && data) setDependents(Number(data.dependents || 0));
+      else setDependents(0);
+    } catch {
+      setDependents(0);
+    }
+  }, []);
+
   // Debug: verificar estado inicial
   console.log('🔍 [STUDENT_DETAILS] Estado inicial - documentsLoaded:', documentsLoaded);
 
@@ -153,6 +172,91 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
     { id: 'details', label: 'Details', icon: User },
     { id: 'documents', label: 'Documents', icon: FileText }
   ];
+
+  // Funções para gerenciar Scholarship Range
+  const loadScholarshipRange = async (profileId: string) => {
+    if (!profileId) return;
+    try {
+      // Buscar o perfil do estudante com desired_scholarship_range
+      const { data: profileData, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('desired_scholarship_range')
+        .eq('id', profileId)
+        .single();
+
+      if (profileError || !profileData) {
+        console.error('Error loading student profile:', profileError);
+        setStudentPackageFees(null);
+        return;
+      }
+
+      console.log('🔍 [StudentDetails] Profile data loaded:', profileData);
+      
+      // Se não tem desired_scholarship_range, retornar null
+      if (!profileData.desired_scholarship_range) {
+        console.log('🔍 [StudentDetails] No desired scholarship range set');
+        setStudentPackageFees(null);
+        return;
+      }
+
+      // Criar dados do pacote baseado no desired_scholarship_range
+      const desiredRange = Number(profileData.desired_scholarship_range);
+      const packageFees = {
+        id: `range-${desiredRange}`, // ID baseado no range
+        package_name: `Scholarship Range $${desiredRange}+`
+      };
+      
+      console.log('🔍 [StudentDetails] Package fees set:', packageFees);
+      setStudentPackageFees(packageFees);
+    } catch (error) {
+      console.error('Error loading student package fees:', error);
+      setStudentPackageFees(null);
+    }
+  };
+
+  // Função para iniciar edição de pacote
+  const handleStartEditPackage = () => {
+    setIsEditingPackage(true);
+    setSelectedPackageId(studentPackageFees?.id || null);
+  };
+
+  // Função para cancelar edição
+  const handleCancelEditPackage = () => {
+    setIsEditingPackage(false);
+    setSelectedPackageId(studentPackageFees?.id || null);
+  };
+
+  // Função para salvar alteração de pacote
+  const handleSavePackageChange = async () => {
+    if (!selectedPackageId || !profileId) return;
+
+    setIsUpdatingPackage(true);
+    try {
+      // Extrair o valor do range do ID selecionado (formato: range-3800)
+      const rangeValue = selectedPackageId.replace('range-', '');
+      
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({ desired_scholarship_range: Number(rangeValue) })
+        .eq('id', profileId);
+
+      if (error) {
+        console.error('Error updating package:', error);
+        alert('Error updating package. Please try again.');
+        return;
+      }
+
+      // Recarregar os dados do pacote
+      await loadScholarshipRange(profileId);
+      setIsEditingPackage(false);
+      alert('Scholarship range updated successfully!');
+    } catch (error) {
+      console.error('Error updating package:', error);
+      alert('Error updating package. Please try again.');
+    } finally {
+      setIsUpdatingPackage(false);
+    }
+  };
 
   // Estado atual para debug (removido para produção)
 
@@ -198,6 +302,12 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
         // Buscar taxas do pacote do estudante
         if (studentInfoData.student_id) {
           loadStudentPackageFees(studentInfoData.student_id);
+          loadDependents(studentInfoData.student_id);
+        }
+        
+        // Carregar scholarship range do perfil
+        if (profileId) {
+          loadScholarshipRange(profileId);
         }
          // Dados do estudante carregados com sucesso
        } else {
@@ -1414,6 +1524,102 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                 </div>
               </div>
 
+              {/* Scholarship Range Management Card */}
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
+                <div className="bg-gradient-to-r rounded-t-2xl from-[#05294E] to-[#0a4a7a] px-6 py-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-white">Scholarship Range</h3>
+                    {!isEditingPackage && (
+                      <button
+                        onClick={handleStartEditPackage}
+                        className="p-1.5 rounded-lg bg-white/20 hover:bg-white/30 transition-colors"
+                        title="Edit scholarship range"
+                      >
+                        <Edit3 className="w-4 h-4 text-white" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <div className="p-6">
+                  {isEditingPackage ? (
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Select Scholarship Range
+                        </label>
+                        <div className="space-y-2">
+                          {[3800, 4200, 4500, 5000, 5500].map((range) => (
+                            <div
+                              key={`range-${range}`}
+                              className={`p-3 border-2 rounded-lg cursor-pointer transition-all ${
+                                selectedPackageId === `range-${range}`
+                                  ? 'border-blue-500 bg-blue-50'
+                                  : 'border-gray-200 hover:border-gray-300'
+                              }`}
+                              onClick={() => setSelectedPackageId(`range-${range}`)}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <h4 className="font-semibold text-slate-900">Scholarship Range ${range}+</h4>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={handleSavePackageChange}
+                          disabled={isUpdatingPackage || !selectedPackageId}
+                          className="flex-1 flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          {isUpdatingPackage ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                              Saving...
+                            </>
+                          ) : (
+                            <>
+                              <Check className="w-4 h-4 mr-2" />
+                              Save
+                            </>
+                          )}
+                        </button>
+                        <button
+                          onClick={handleCancelEditPackage}
+                          disabled={isUpdatingPackage}
+                          className="flex-1 flex items-center justify-center px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 disabled:opacity-50 transition-colors"
+                        >
+                          <X className="w-4 h-4 mr-2" />
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {studentPackageFees ? (
+                        <>
+                          <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                            <div className="flex items-center justify-between mb-2">
+                              <h4 className="font-semibold text-blue-900">{studentPackageFees.package_name}</h4>
+                              <span className="text-sm text-blue-600">Current</span>
+                            </div>
+                          </div>
+                          <div className="text-xs text-slate-500 text-center">
+                            Click edit to change scholarship range
+                          </div>
+                        </>
+                      ) : (
+                        <div className="text-center py-4">
+                          <div className="text-slate-400 mb-2">No scholarship range set</div>
+                          <div className="text-sm text-slate-500">Click edit to set scholarship range</div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
               {/* Fee Status Card */}
               <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
                 <div className="bg-gradient-to-r rounded-t-2xl from-slate-500 to-slate-600 px-6 py-4">
@@ -1434,7 +1640,14 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                            </span>
                            {studentInfo?.has_paid_selection_process_fee && (
                              <span className="text-xs text-slate-500">
-                               {studentPackageFees ? formatFeeAmount(studentPackageFees.selection_process_fee) : formatFeeAmount(getFeeAmount('selection_process'))}
+                               {(() => {
+                                 // Se há override, usar valor direto (já inclui dependentes)
+                                 // Se não há override, somar dependentes ao valor base
+                                 const baseFee = Number(getFeeAmount('selection_process'));
+                                 const hasCustomOverride = hasOverride('selection_process');
+                                 const total = hasCustomOverride ? baseFee : baseFee + (dependents * 150);
+                                 return formatFeeAmount(total);
+                               })()}
                              </span>
                            )}
                          </div>
@@ -1454,24 +1667,13 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                          {studentInfo?.is_application_fee_paid && (
                            <span className="text-xs text-slate-500">
                              {(() => {
-                               console.log('🔍 [STUDENT_DETAILS] Application Fee Debug:', {
-                                 hasScholarship: !!studentInfo?.scholarship,
-                                 applicationFeeAmount: studentInfo?.scholarship?.application_fee_amount,
-                                 studentInfoApplicationFee: (studentInfo as any)?.application_fee_amount,
-                                 isApplicationFeePaid: studentInfo?.is_application_fee_paid,
-                                 defaultFee: getFeeAmount('application_fee')
-                               });
-                               
                                if (studentInfo?.scholarship?.application_fee_amount) {
                                  const amount = Number(studentInfo.scholarship.application_fee_amount);
-                                 console.log('🔍 [STUDENT_DETAILS] Using dynamic amount from scholarship (already in dollars):', amount);
                                  return formatFeeAmount(amount);
                                } else if ((studentInfo as any)?.application_fee_amount) {
                                  const amount = Number((studentInfo as any).application_fee_amount);
-                                 console.log('🔍 [STUDENT_DETAILS] Using dynamic amount from studentInfo (already in dollars):', amount);
                                  return formatFeeAmount(amount);
                                } else {
-                                 console.log('🔍 [STUDENT_DETAILS] Using default amount:', getFeeAmount('application_fee'));
                                  return formatFeeAmount(getFeeAmount('application_fee'));
                                }
                              })()}
@@ -1492,7 +1694,19 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                          </span>
                          {studentInfo?.is_scholarship_fee_paid && (
                            <span className="text-xs text-slate-500">
-                             {studentPackageFees ? formatFeeAmount(studentPackageFees.scholarship_fee) : formatFeeAmount(getFeeAmount('scholarship_fee'))}
+                             {(() => {
+                               // Priorizar override do usuário se existir
+                               if (hasOverride('scholarship_fee')) {
+                                 return formatFeeAmount(getFeeAmount('scholarship_fee'));
+                               }
+                               // Se não há override, usar valor da scholarship específica se disponível
+                               if (studentInfo?.scholarship?.scholarship_fee_amount) {
+                                 const amount = Number(studentInfo.scholarship.scholarship_fee_amount);
+                                 return formatFeeAmount(amount);
+                               }
+                               // Fallback para valor padrão
+                               return formatFeeAmount(getFeeAmount('scholarship_fee'));
+                             })()}
                            </span>
                          )}
                        </div>
@@ -1511,7 +1725,12 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                            </span>
                            {studentInfo?.has_paid_i20_control_fee && (
                              <span className="text-xs text-slate-500">
-                               {studentPackageFees ? formatFeeAmount(studentPackageFees.i20_control_fee) : formatFeeAmount(getFeeAmount('i-20_control_fee'))}
+                               {(() => {
+                                 // Se há override, usar valor direto (já inclui dependentes se aplicável)
+                                 // Se não há override, usar valor base (I-20 não soma dependentes)
+                                 const baseFee = Number(getFeeAmount('i20_control_fee'));
+                                 return formatFeeAmount(baseFee);
+                               })()}
                              </span>
                            )}
                          </div>

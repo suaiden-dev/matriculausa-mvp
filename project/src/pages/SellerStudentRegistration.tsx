@@ -17,7 +17,10 @@ const SellerStudentRegistration: React.FC = () => {
     confirmPassword: '',
     phone: '',
     sellerReferralCode: sellerCode,
-    selectedPackage: ''
+    // Selecionar por padrão o pacote principal fixo
+    selectedPackage: '1',
+    desiredScholarshipRange: 3800, // Default value
+    dependents: 0
   });
   
   const [error, setError] = useState('');
@@ -31,14 +34,24 @@ const SellerStudentRegistration: React.FC = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const { register } = useAuth();
+  const { register, user, userProfile } = useAuth();
   const { packages, loading: packagesLoading } = useScholarshipPackages();
   const navigate = useNavigate();
+
+  // Guardar acesso: apenas equipe interna (admin/affiliate_admin)
+  const allowedRoles = new Set(['admin', 'affiliate_admin', 'seller']);
+  const isAllowed = !!user && allowedRoles.has(String(userProfile?.role || '').toLowerCase());
 
   // Validar código do vendedor ao carregar a página
   useEffect(() => {
     if (sellerCode) {
       validateSellerReferralCode(sellerCode);
+      
+      // Garantir que o código seja atualizado no formData
+      setFormData(prev => ({
+        ...prev,
+        sellerReferralCode: sellerCode
+      }));
     }
   }, [sellerCode]);
 
@@ -72,11 +85,33 @@ const SellerStudentRegistration: React.FC = () => {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData(prev => ({ ...prev, [name]: name === 'dependents' ? Math.max(0, parseInt(value || '0', 10)) : value }));
   };
 
+  // Função para seleção de pacote
   const handlePackageSelect = (packageNumber: number) => {
-    setFormData(prev => ({ ...prev, selectedPackage: packageNumber.toString() }));
+    // Mapear package_number para desired_scholarship_range
+    const rangeMapping: { [key: number]: number } = {
+      1: 3800,
+      2: 4200,
+      3: 4500,
+      4: 5000,
+      5: 5500
+    };
+    
+    const desiredRange = rangeMapping[packageNumber] || 3800;
+    
+    console.log('🔍 [SellerStudentRegistration] Package selected:', packageNumber, 'Range:', desiredRange);
+    
+    setFormData(prev => {
+      const newData = { 
+        ...prev, 
+        selectedPackage: packageNumber.toString(),
+        desiredScholarshipRange: desiredRange
+      };
+      console.log('🔍 [SellerStudentRegistration] New form data:', newData);
+      return newData;
+    });
   };
 
   // Validation function for each step
@@ -95,6 +130,7 @@ const SellerStudentRegistration: React.FC = () => {
         else if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = 'Passwords do not match';
         if (!termsAccepted) newErrors.terms = 'You must accept the terms and conditions';
         if (!sellerReferralCodeValid) newErrors.sellerCode = 'Invalid seller referral code';
+        if (formData.dependents < 0) newErrors.dependents = 'Dependents cannot be negative';
         break;
       case 2:
         if (!formData.selectedPackage) newErrors.package = 'Please select a scholarship package';
@@ -126,19 +162,38 @@ const SellerStudentRegistration: React.FC = () => {
     setError('');
 
     try {
+      console.log('🔍 [SellerStudentRegistration] Submitting with formData:', formData);
+      console.log('🔍 [SellerStudentRegistration] sellerCode from URL:', sellerCode);
+      console.log('🔍 [SellerStudentRegistration] formData.sellerReferralCode:', formData.sellerReferralCode);
+      
+      // Garantir que o seller_referral_code seja sempre o da URL se existir
+      const finalSellerCode = sellerCode || formData.sellerReferralCode;
+      
       // Usar o hook useAuth para registrar o usuário
-      const userData = {
+      // Simplificar os dados para evitar conflitos
+      const registerData = {
         full_name: formData.full_name,
-        email: formData.email,
         phone: formData.phone,
         role: 'student' as const,
-        status: 'active',
-        seller_referral_code: formData.sellerReferralCode,
-        scholarship_package_id: packages.find(p => p.package_number === parseInt(formData.selectedPackage))?.id
+        seller_referral_code: finalSellerCode,
+        dependents: formData.dependents,
+        scholarship_package_number: parseInt(formData.selectedPackage),
+        desired_scholarship_range: formData.desiredScholarshipRange
       };
 
+      console.log('🔍 [SellerStudentRegistration] Final registerData:', registerData);
+      console.log('🔍 [SellerStudentRegistration] seller_referral_code específico:', registerData.seller_referral_code);
       
-      await register(formData.email, formData.password, userData);
+      // Verificar se os dados são válidos
+      if (!registerData.full_name || !formData.email || !formData.password) {
+        throw new Error('Dados obrigatórios não fornecidos');
+      }
+      
+      if (!registerData.seller_referral_code) {
+        console.warn('⚠️ [SellerStudentRegistration] seller_referral_code está vazio!');
+      }
+      
+      await register(formData.email, formData.password, registerData);
       
       setShowVerificationModal(true);
     } catch (err: any) {
@@ -149,7 +204,37 @@ const SellerStudentRegistration: React.FC = () => {
     }
   };
 
-  const selectedPackage = packages.find(p => p.package_number === parseInt(formData.selectedPackage));
+  // Obter pacote selecionado
+  const selectedPackage = packages.find(pkg => pkg.package_number.toString() === formData.selectedPackage);
+
+  // Bloqueio de acesso para usuários não autorizados
+  if (!isAllowed) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-20 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-lg mx-auto bg-white rounded-2xl shadow-sm border border-slate-200 p-8 text-center">
+          <div className="mx-auto mb-4 w-12 h-12 rounded-full bg-red-50 flex items-center justify-center">
+            <span className="text-red-600 text-2xl">!</span>
+          </div>
+          <h1 className="text-2xl font-bold text-slate-900 mb-2">Acesso restrito</h1>
+          <p className="text-slate-600 mb-6">Esta página é exclusiva para a equipe interna.</p>
+          <div className="flex justify-center gap-3">
+            <button
+              onClick={() => navigate('/login')}
+              className="bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Ir para Login
+            </button>
+            <button
+              onClick={() => navigate('/')}
+              className="bg-slate-100 text-slate-800 py-2 px-4 rounded-lg hover:bg-slate-200 transition-colors"
+            >
+              Voltar ao início
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
@@ -313,6 +398,35 @@ const SellerStudentRegistration: React.FC = () => {
                       <p className="mt-1 text-sm text-red-600">{errors.phone}</p>
                     )}
                   </div>
+
+                  {/* Dependents Input - moved to Step 1 */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Dependents
+                    </label>
+                    <select
+                      name="dependents"
+                      value={formData.dependents}
+                      onChange={handleInputChange}
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                        errors.dependents ? 'border-red-300' : 'border-gray-300'
+                      }`}
+                    >
+                      <option value={0}>0 Dependents</option>
+                      <option value={1}>1 Dependent</option>
+                      <option value={2}>2 Dependents</option>
+                      <option value={3}>3 Dependents</option>
+                      <option value={4}>4 Dependents</option>
+                      <option value={5}>5 Dependents</option>
+                    </select>
+                    <p className="text-xs text-gray-500 mt-1">
+                      $150 per dependent will be added to the Selection Process Fee.
+                    </p>
+                    {errors.dependents && (
+                      <p className="mt-1 text-sm text-red-600">{errors.dependents}</p>
+                    )}
+                  </div>
+
                 </div>
 
                 {/* Password Fields */}
@@ -415,7 +529,7 @@ const SellerStudentRegistration: React.FC = () => {
             </>
           )}
 
-          {/* Step 2: Package Selection */}
+              {/* Step 2: Package Selection */}
           {currentStep === 2 && (
             <>
               <h2 className="text-2xl font-bold text-gray-900 mb-6">Choose Your Package</h2>
@@ -433,6 +547,7 @@ const SellerStudentRegistration: React.FC = () => {
                 </div>
               )}
 
+              {/* Lista de pacotes com visualização original */}
               {packagesLoading ? (
                 <div className="text-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
@@ -456,25 +571,6 @@ const SellerStudentRegistration: React.FC = () => {
                         <p className="text-sm text-gray-500">Scholarships starting from</p>
                       </div>
                       
-                      <div className="space-y-3 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Selection Process Fee:</span>
-                          <span className="font-semibold">${pkg.selection_process_fee}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Scholarship Fee:</span>
-                          <span className="font-semibold">${pkg.scholarship_fee}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">I-20 Control Fee:</span>
-                          <span className="font-semibold">${pkg.i20_control_fee}</span>
-                        </div>
-                        <div className="border-t pt-2 flex justify-between">
-                          <span className="text-gray-600 font-medium">Total Paid:</span>
-                          <span className="font-bold text-green-600 text-lg">${pkg.total_paid}</span>
-                        </div>
-                      </div>
-
                       {pkg.description && (
                         <p className="mt-2 text-xs text-gray-500">{pkg.description}</p>
                       )}
@@ -483,14 +579,16 @@ const SellerStudentRegistration: React.FC = () => {
                 </div>
               )}
 
+              {/* Dependents input has been moved to Step 1 */}
+
               {selectedPackage && (
                 <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                   <h4 className="font-semibold text-blue-900 mb-2">Selected Package Summary</h4>
                   <div className="space-y-1 text-sm">
                     <p><strong>Package:</strong> {selectedPackage.name}</p>
-                    <p><strong>Total Investment:</strong> ${selectedPackage.total_paid}</p>
+                    <p><strong>Total Investment:</strong> ${(2200 + (formData.dependents * 150)).toFixed(2)}</p>
                     <p><strong>Scholarships starting from:</strong> ${selectedPackage.scholarship_amount}</p>
-                    <p><strong>Net Savings:</strong> ${selectedPackage.scholarship_amount - selectedPackage.total_paid}</p>
+                    <p><strong>Net Savings:</strong> ${(selectedPackage.scholarship_amount - (2200 + (formData.dependents * 150))).toFixed(2)}</p>
                   </div>
                 </div>
               )}

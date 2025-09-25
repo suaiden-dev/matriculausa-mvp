@@ -15,14 +15,12 @@ import {
   Award
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
-import { useFeeConfig } from '../../hooks/useFeeConfig';
 import { supabase } from '../../lib/supabase';
 import FinancialOverview from './FinancialOverview';
 import { AffiliatePaymentRequestService } from '../../services/AffiliatePaymentRequestService';
 
 const PaymentManagement: React.FC = () => {
   const { user } = useAuth();
-  const { getFeeAmount } = useFeeConfig();
   
   // Tab state
   const [activeTab, setActiveTab] = useState<'financial-overview' | 'payment-requests' | 'commission-history'>('financial-overview');
@@ -61,7 +59,7 @@ const PaymentManagement: React.FC = () => {
   // definido após os loaders; placeholder aqui para declaração
   let handleRefresh: () => Promise<void>;
 
-  // Load affiliate revenue/balance usando mesma lógica do FinancialOverview (memoizado)
+  // Load affiliate revenue/balance usando lógica ajustada com overrides (mesmo padrão do Overview/Analytics)
   const loadAffiliateBalance = useCallback(async () => {
     const uid = user?.id;
     if (!uid) return;
@@ -72,34 +70,114 @@ const PaymentManagement: React.FC = () => {
       isLoadingBalanceRef.current = true;
       setLoadingBalance(true);
 
-      // 1) Receitas das taxas do aluno (exceto application fee) via RPC
-      const { data: studentsAnalytics, error: studentsError } = await supabase
-        .rpc('get_admin_students_analytics', { admin_user_id: uid });
+      // Descobrir affiliate_admin_id
+      const { data: aaList, error: aaErr } = await supabase
+        .from('affiliate_admins')
+        .select('id')
+        .eq('user_id', uid)
+        .limit(1);
+      if (aaErr || !aaList || aaList.length === 0) {
+        hasLoadedBalanceForUser.current = uid;
+        setAffiliateBalance(0);
+        setTotalEarned(0);
+        return;
+      }
+      const affiliateAdminId = aaList[0].id;
 
-      if (studentsError) {
-        hasLoadedBalanceForUser.current = uid; // evita looping
+      // Buscar sellers vinculados a este affiliate admin
+      const { data: sellers, error: sellersErr } = await supabase
+        .from('sellers')
+        .select('referral_code')
+        .eq('affiliate_admin_id', affiliateAdminId);
+      
+      if (sellersErr || !sellers || sellers.length === 0) {
+        hasLoadedBalanceForUser.current = uid;
+        setAffiliateBalance(0);
+        setTotalEarned(0);
+        return;
+      }
+      
+      const referralCodes = sellers.map(s => s.referral_code);
+      
+      // Buscar perfis de estudantes vinculados via seller_referral_code
+      const { data: profiles, error: profilesErr } = await supabase
+        .from('user_profiles')
+        .select(`
+          id,
+          user_id,
+          has_paid_selection_process_fee, 
+          has_paid_i20_control_fee, 
+          dependents,
+          seller_referral_code,
+          scholarship_applications(is_scholarship_fee_paid)
+        `)
+        .in('seller_referral_code', referralCodes);
+      if (profilesErr || !profiles) {
+        hasLoadedBalanceForUser.current = uid;
         setAffiliateBalance(0);
         setTotalEarned(0);
         return;
       }
 
-      const rows = studentsAnalytics || [];
-      const totalRevenue = rows.reduce((sum: number, r: any) => sum + (Number(r.total_paid) || 0), 0);
+      // Preparar overrides por user_id
+      const uniqueUserIds = Array.from(new Set((profiles || []).map((p) => p.user_id).filter(Boolean)));
+      const overrideEntries = await Promise.allSettled(uniqueUserIds.map(async (uid) => {
+        const { data, error } = await supabase.rpc('get_user_fee_overrides', { user_id_param: uid });
+        return [uid, error ? null : data];
+      }));
+      const overridesMap: Record<string, any> = overrideEntries.reduce((acc: Record<string, any>, res) => {
+        if (res.status === 'fulfilled') {
+          const arr = res.value;
+          const uid = arr[0];
+          const data = arr[1];
+          if (data) acc[uid] = {
+            selection_process_fee: data.selection_process_fee != null ? Number(data.selection_process_fee) : undefined,
+            scholarship_fee: data.scholarship_fee != null ? Number(data.scholarship_fee) : undefined,
+            i20_control_fee: data.i20_control_fee != null ? Number(data.i20_control_fee) : undefined,
+          };
+        }
+        return acc;
+      }, {});
 
-      // Derivar pendências (sem pagamento) para estimar pending credits, se necessário
-      let derivedPending = 0;
-      rows.forEach((r: any) => {
-        const selectionFee = getFeeAmount('selection_process');
-        const scholarshipFee = getFeeAmount('scholarship_fee');
-        const paidSelection = !!r.has_paid_selection_process_fee || (Number(r.total_paid) || 0) >= selectionFee;
-        const paidScholarship = !!r.is_scholarship_fee_paid || (Number(r.total_paid) || 0) >= (selectionFee + scholarshipFee);
-        const hasAnyPayment = paidSelection || paidScholarship || (Number(r.total_paid) || 0) > 0;
-        if (!hasAnyPayment) derivedPending += 1;
-      });
-      // const pending = derivedPending * 50;
+      // Calcular total ajustado considerando dependentes quando não houver override
+      const totalRevenue = (profiles || []).reduce((sum, p) => {
+        const deps = Number(p?.dependents || 0);
+        const ov = overridesMap[p?.user_id] || {};
+
+        // Selection Process
+        let selPaid = 0;
+        if (p?.has_paid_selection_process_fee) {
+          const baseSel = ov.selection_process_fee != null ? Number(ov.selection_process_fee) : 400;
+          selPaid = ov.selection_process_fee != null ? baseSel : baseSel + (deps * 150);
+        }
+
+        // Scholarship Fee (sem dependentes)
+        const hasAnyScholarshipPaid = Array.isArray(p?.scholarship_applications)
+          ? p.scholarship_applications.some((a) => !!a?.is_scholarship_fee_paid)
+          : false;
+        const schBase = ov.scholarship_fee != null ? Number(ov.scholarship_fee) : 900;
+        const schPaid = hasAnyScholarshipPaid ? schBase : 0;
+
+        // I-20 Control (sem dependentes)
+        const i20Base = ov.i20_control_fee != null ? Number(ov.i20_control_fee) : 900;
+        const i20Paid = (hasAnyScholarshipPaid && p?.has_paid_i20_control_fee) ? i20Base : 0;
+
+        return sum + selPaid + schPaid + i20Paid;
+      }, 0);
+
+      console.groupCollapsed('🔎 [PaymentManagement][AdjustedRevenue] calculated');
+      console.log('userId:', uid);
+      console.log('profiles.length:', profiles?.length || 0);
+      console.log('totalRevenue (adjusted):', totalRevenue);
+      console.groupEnd();
 
       // 2) Requests do afiliado para calcular Available Balance
       const affiliateRequests = await AffiliatePaymentRequestService.listAffiliatePaymentRequests(uid);
+      console.groupCollapsed('🔎 [Affiliate][Requests] affiliate_payment_requests');
+      console.log('userId:', uid);
+      console.log('requests.length:', affiliateRequests.length);
+      console.log('sampleRequest:', affiliateRequests[0]);
+      console.groupEnd();
       const totalPaidOut = affiliateRequests
         .filter((r: any) => r.status === 'paid')
         .reduce((sum: number, r: any) => sum + (Number(r.amount_usd) || 0), 0);
@@ -112,12 +190,13 @@ const PaymentManagement: React.FC = () => {
 
       const availableBalance = Math.max(0, totalRevenue - totalPaidOut - totalApproved - totalPending);
 
+      console.log('✅ [Affiliate] AvailableBalance:', availableBalance, 'TotalRevenue:', totalRevenue);
       setAffiliateBalance(availableBalance); // Available Balance
       setTotalEarned(totalRevenue); // Total Revenue
       // keep pending credits disabled in UI for now
       hasLoadedBalanceForUser.current = uid;
     } catch (error: any) {
-      // Error handling without logging
+      console.error('Error loading affiliate balance:', error);
     } finally {
       setLoadingBalance(false);
       isLoadingBalanceRef.current = false;
@@ -134,10 +213,15 @@ const PaymentManagement: React.FC = () => {
       isLoadingRequestsRef.current = true;
       setLoadingRequests(true);
       const requests = await AffiliatePaymentRequestService.listAffiliatePaymentRequests(uid);
+      console.groupCollapsed('🔎 [Affiliate][Requests][Loader] fetch result');
+      console.log('userId:', uid);
+      console.log('fetched.length:', requests.length);
+      console.log('first:', requests[0]);
+      console.groupEnd();
       setAffiliatePaymentRequests(requests);
       hasLoadedRequestsForUser.current = null; // disable cache to always refresh on demand
     } catch (error: any) {
-      // Error handling without logging
+      console.error('Error loading affiliate payment requests:', error);
     } finally {
       setLoadingRequests(false);
       isLoadingRequestsRef.current = false;
@@ -260,17 +344,20 @@ const PaymentManagement: React.FC = () => {
   // Load inicial e polling controlado pela aba ativa
   useEffect(() => {
     if (!user?.id) return;
-    // sempre faz um load inicial ao montar ou trocar de usuário
+    // Sempre força reload inicial, sem cache
+    hasLoadedBalanceForUser.current = null;
+    hasLoadedRequestsForUser.current = null;
     loadAffiliateBalance();
     loadAffiliatePaymentRequests();
 
-    // Habilita polling apenas quando a aba de payment-requests estiver ativa
+    // Habilita polling apenas quando a aba de payment-requests estiver ativa (reduzido para 5 minutos)
     let interval: number | undefined;
     if (activeTab === 'payment-requests') {
       interval = window.setInterval(() => {
         // polling mais espaçado para reduzir carga; realtime cobre mudanças rápidas
+        hasLoadedRequestsForUser.current = null; // força refresh no polling
         loadAffiliatePaymentRequests();
-      }, 60000);
+      }, 300000); // Reduzido de 60s para 5 minutos
     }
     return () => {
       if (interval) clearInterval(interval);
@@ -281,6 +368,7 @@ const PaymentManagement: React.FC = () => {
   useEffect(() => {
     if (!user?.id) return;
     if (activeTab === 'payment-requests') {
+      // Força reload completo ao entrar na aba
       hasLoadedBalanceForUser.current = null;
       hasLoadedRequestsForUser.current = null;
       loadAffiliateBalance();
