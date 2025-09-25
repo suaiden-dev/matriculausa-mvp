@@ -46,6 +46,12 @@ const SellerStudentRegistration: React.FC = () => {
   useEffect(() => {
     if (sellerCode) {
       validateSellerReferralCode(sellerCode);
+      
+      // Garantir que o código seja atualizado no formData
+      setFormData(prev => ({
+        ...prev,
+        sellerReferralCode: sellerCode
+      }));
     }
   }, [sellerCode]);
 
@@ -157,6 +163,11 @@ const SellerStudentRegistration: React.FC = () => {
 
     try {
       console.log('🔍 [SellerStudentRegistration] Submitting with formData:', formData);
+      console.log('🔍 [SellerStudentRegistration] sellerCode from URL:', sellerCode);
+      console.log('🔍 [SellerStudentRegistration] formData.sellerReferralCode:', formData.sellerReferralCode);
+      
+      // Garantir que o seller_referral_code seja sempre o da URL se existir
+      const finalSellerCode = sellerCode || formData.sellerReferralCode;
       
       // Usar o hook useAuth para registrar o usuário
       // Simplificar os dados para evitar conflitos
@@ -164,20 +175,23 @@ const SellerStudentRegistration: React.FC = () => {
         full_name: formData.full_name,
         phone: formData.phone,
         role: 'student' as const,
-        seller_referral_code: formData.sellerReferralCode,
+        seller_referral_code: finalSellerCode,
         dependents: formData.dependents,
         scholarship_package_number: parseInt(formData.selectedPackage),
         desired_scholarship_range: formData.desiredScholarshipRange
       };
 
-      console.log('🔍 [SellerStudentRegistration] Dados que serão enviados:', registerData);
+      console.log('🔍 [SellerStudentRegistration] Final registerData:', registerData);
+      console.log('🔍 [SellerStudentRegistration] seller_referral_code específico:', registerData.seller_referral_code);
       
       // Verificar se os dados são válidos
       if (!registerData.full_name || !formData.email || !formData.password) {
         throw new Error('Dados obrigatórios não fornecidos');
       }
       
-      console.log('🔍 [SellerStudentRegistration] Register data:', registerData);
+      if (!registerData.seller_referral_code) {
+        console.warn('⚠️ [SellerStudentRegistration] seller_referral_code está vazio!');
+      }
       
       await register(formData.email, formData.password, registerData);
       
