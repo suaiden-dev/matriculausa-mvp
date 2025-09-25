@@ -2,9 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import CustomLoading from '../../components/CustomLoading';
 import { CheckCircle } from 'lucide-react';
-import { useFeeConfig } from '../../hooks/useFeeConfig';
 import { useDynamicFees } from '../../hooks/useDynamicFees';
-import { useAuth } from '../../hooks/useAuth';
+import { useTranslation } from 'react-i18next';
 
 const SelectionProcessFeeSuccess: React.FC = () => {
   const navigate = useNavigate();
@@ -13,9 +12,8 @@ const SelectionProcessFeeSuccess: React.FC = () => {
   const sessionId = params.get('session_id');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { user } = useAuth();
-  const { formatFeeAmount } = useFeeConfig(user?.id);
-  const { selectionProcessFee, hasSellerPackage } = useDynamicFees();
+  const { selectionProcessFee } = useDynamicFees();
+  const { t } = useTranslation();
 
   useEffect(() => {
     const verifySession = async () => {
@@ -62,7 +60,11 @@ const SelectionProcessFeeSuccess: React.FC = () => {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center bg-white px-4">
         <div className="bg-white rounded-2xl shadow-lg p-10 max-w-md w-full flex flex-col items-center">
-          <CustomLoading color="green" title="Verifying Payment..." message="Please wait while we confirm your transaction. This may take a moment." />
+          <CustomLoading 
+            color="green" 
+            title={t('successPages.selectionProcessFee.verifying')} 
+            message={t('successPages.selectionProcessFee.pleaseWait')} 
+          />
         </div>
       </div>
     );
@@ -75,9 +77,17 @@ const SelectionProcessFeeSuccess: React.FC = () => {
           <svg className="h-16 w-16 text-red-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01" />
           </svg>
-          <h1 className="text-3xl font-bold text-red-700 mb-2">Selection Process Fee Payment Error</h1>
-          <p className="text-slate-700 mb-6 text-center">There was a problem processing your payment.<br/>Please try again. If the error persists, contact support.</p>
-          <button className="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-700 transition-all duration-300" onClick={() => navigate('/student/dashboard/scholarships')}>Go to Scholarships</button>
+          <h1 className="text-3xl font-bold text-red-700 mb-2">{t('successPages.selectionProcessFee.errorTitle')}</h1>
+          <p className="text-slate-700 mb-6 text-center">
+            {t('successPages.selectionProcessFee.errorMessage')}<br/>
+            {t('successPages.selectionProcessFee.errorRetry')}
+          </p>
+          <button 
+            className="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-700 transition-all duration-300" 
+            onClick={() => navigate('/student/dashboard/scholarships')}
+          >
+            {t('successPages.selectionProcessFee.button')}
+          </button>
         </div>
       </div>
     );
@@ -87,18 +97,16 @@ const SelectionProcessFeeSuccess: React.FC = () => {
     <div className="min-h-[60vh] flex flex-col items-center justify-center bg-white px-4">
       <div className="bg-white rounded-2xl shadow-lg p-10 max-w-md w-full flex flex-col items-center">
         <CheckCircle className="h-16 w-16 text-green-600 mb-4" />
-        <h1 className="text-3xl font-bold text-green-700 mb-2">Selection Process Fee Payment Successful!</h1>
+        <h1 className="text-3xl font-bold text-green-700 mb-2">{t('successPages.selectionProcessFee.title')}</h1>
         <p className="text-slate-700 mb-6 text-center">
-          Your payment of <span className="font-bold">
-            {hasSellerPackage ? selectionProcessFee : formatFeeAmount(350)}
-          </span> was processed successfully.<br/>
-          You now have access to all scholarships and can apply freely.
+          {t('successPages.selectionProcessFee.description', { amount: selectionProcessFee })}<br/>
+          {t('successPages.selectionProcessFee.message')}
         </p>
         <button
           className="bg-green-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-green-700 transition-all duration-300"
           onClick={() => navigate('/student/dashboard/scholarships')}
         >
-          Go to Scholarships
+          {t('successPages.selectionProcessFee.button')}
         </button>
       </div>
     </div>

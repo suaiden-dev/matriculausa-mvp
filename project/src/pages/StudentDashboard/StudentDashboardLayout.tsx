@@ -428,10 +428,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
           setShowNotificationsModal(false);
         }}
         onMarkAllAsRead={markAllAsRead}
-        onClearAll={() => {
-          // Implementar clearAll se necessário
-          console.log('Clear all notifications');
-        }}
+        onClearAll={clearAll}
       />
     </div>
   );
