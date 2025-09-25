@@ -258,6 +258,54 @@ const SellerRegistrationsManager: React.FC<SellerRegistrationsManagerProps> = ({
       if (!userProfile) {
         throw new Error('User profile not found');
       }
+ 
+      // Se o email não estiver no user_profiles, buscar através de métodos alternativos
+      let userEmail = userProfile.email;
+      if (!userEmail) {
+        try {
+          // Primeiro, tentar usar auth.admin
+          const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(userId);
+          
+          if (authError) {
+            console.error('Error fetching auth user:', authError);
+          } else if (authUser?.user?.email) {
+            userEmail = authUser.user.email;
+            console.log('🔍 [SellerApproval] Email encontrado no auth.users:', userEmail);
+          }
+        } catch (authErr) {
+          console.warn('⚠️ [SellerApproval] Método auth.admin não disponível:', authErr);
+        }
+
+        // Se ainda não encontrou o email, tentar buscar na registration que está sendo processada
+        if (!userEmail) {
+          const currentRegistration = registrations.find(r => r.id === userId);
+          if (currentRegistration?.email) {
+            userEmail = currentRegistration.email;
+          }
+        }
+        
+        // Se encontrou o email, atualizar o user_profiles
+        if (userEmail) {
+          const { error: updateError } = await supabase
+            .from('user_profiles')
+            .update({ email: userEmail })
+            .eq('user_id', userId);
+            
+          if (updateError) {
+            console.warn('⚠️ [SellerApproval] Não foi possível atualizar o email no user_profiles:', updateError);
+          } else {
+            console.log('✅ [SellerApproval] Email atualizado no user_profiles');
+          }
+        }
+      }
+      
+      // Validar se email existe
+      if (!userEmail) {
+        throw new Error('User email is required but not found in profile or auth');
+      }
+
+      // Atualizar userProfile com o email correto
+      userProfile.email = userEmail;
 
       // 2. Update the user's role from student to seller
       // Update user role to 'seller' using RPC function to avoid RLS recursion
@@ -306,19 +354,26 @@ const SellerRegistrationsManager: React.FC<SellerRegistrationsManagerProps> = ({
 
       if (!existingSeller) {
         // 5. Create seller record in sellers table
+        const sellerData = {
+          user_id: userId,
+          affiliate_admin_id: affiliateAdmin.id,
+          name: userProfile.full_name,
+          email: userProfile.email,
+          phone: userProfile.phone,
+          territory: 'General',
+          referral_code: `SELL${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
+          is_active: true,
+          notes: 'Approved from registration'
+        };
+
+        // Log para debug dos dados que serão inseridos
+        console.log('🔍 [SellerApproval] Dados para inserir na tabela sellers:', sellerData);
+        console.log('🔍 [SellerApproval] Email especificamente:', sellerData.email);
+        console.log('🔍 [SellerApproval] Tipo do email:', typeof sellerData.email);
+
         const { error: sellerError } = await supabase
           .from('sellers')
-          .insert({
-            user_id: userId,
-            affiliate_admin_id: affiliateAdmin.id,
-            name: userProfile.full_name,
-            email: userProfile.email,
-            phone: userProfile.phone,
-            territory: 'General',
-            referral_code: `SELL${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
-            is_active: true,
-            notes: 'Approved from registration'
-          });
+          .insert(sellerData);
 
         if (sellerError) {
           console.error('Error creating seller record:', sellerError);
