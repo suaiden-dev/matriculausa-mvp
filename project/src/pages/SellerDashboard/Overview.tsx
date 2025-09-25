@@ -26,9 +26,10 @@ interface OverviewProps {
 
 const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = [], onRefresh, onNavigate }) => {
   const recentStudents = students.slice(0, 5);
-  const { getFeeAmount } = useFeeConfig();
+  const { getFeeAmount } = useFeeConfig(); // Para valores padrão, será usado para overrides específicos por estudante
   const [studentPackageFees, setStudentPackageFees] = useStateReact<{[key: string]: any}>({});
   const [studentDependents, setStudentDependents] = useStateReact<{[key: string]: number}>({});
+  const [studentFeeOverrides, setStudentFeeOverrides] = useStateReact<{[key: string]: any}>({});
   const [loadingCalc, setLoadingCalc] = useStateReact<boolean>(false);
 
   // Debug específico para investigar discrepância de receita
@@ -51,13 +52,14 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
     }
   }, [students, studentPackageFees, studentDependents]);
 
-  // Carregar taxas do pacote (RPC) e dependentes do perfil em lote para reduzir latência e flicker
+  // Carregar taxas do pacote (RPC), dependentes do perfil e overrides em lote para reduzir latência e flicker
   useEffect(() => {
     const preload = async () => {
       const ids = (students || []).map((s: any) => s.id).filter(Boolean);
       const idsToLoadFees = ids.filter((id: string) => studentPackageFees[id] === undefined);
       const idsToLoadDeps = ids.filter((id: string) => studentDependents[id] === undefined);
-      if (ids.length === 0 || (idsToLoadFees.length === 0 && idsToLoadDeps.length === 0)) return;
+      const idsToLoadOverrides = ids.filter((id: string) => studentFeeOverrides[id] === undefined);
+      if (ids.length === 0 || (idsToLoadFees.length === 0 && idsToLoadDeps.length === 0 && idsToLoadOverrides.length === 0)) return;
       setLoadingCalc(true);
       try {
         // Dependentes em lote
@@ -71,6 +73,20 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
             idsToLoadDeps.forEach((id: string) => { newDeps[id] = 0; });
             (depsRows || []).forEach((r: any) => { newDeps[r.user_id] = Number(r.dependents || 0); });
             setStudentDependents(prev => ({ ...prev, ...newDeps }));
+          }
+        }
+
+        // Overrides de taxas em lote
+        if (idsToLoadOverrides.length > 0) {
+          const { data: overridesRows, error: overridesError } = await supabase
+            .from('user_fee_overrides')
+            .select('*')
+            .in('user_id', idsToLoadOverrides);
+          if (!overridesError) {
+            const newOverrides: {[key: string]: any} = {};
+            idsToLoadOverrides.forEach((id: string) => { newOverrides[id] = null; });
+            (overridesRows || []).forEach((r: any) => { newOverrides[r.user_id] = r; });
+            setStudentFeeOverrides(prev => ({ ...prev, ...newOverrides }));
           }
         }
 
@@ -98,23 +114,56 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
     preload();
   }, [students]);
 
+  // Função auxiliar para obter valor da taxa com override
+  const getStudentFeeAmount = (studentId: string, feeType: string): number => {
+    const overrides = studentFeeOverrides[studentId];
+    const packageFees = studentPackageFees[studentId];
+    
+    // Mapear feeType para nome correto do campo no banco
+    const fieldMapping: {[key: string]: string} = {
+      'selection_process': 'selection_process_fee',
+      'scholarship_fee': 'scholarship_fee',
+      'i20_control_fee': 'i20_control_fee'
+    };
+    const dbFieldName = fieldMapping[feeType] || feeType;
+    
+    // Primeiro, verificar se há override
+    if (overrides && overrides[dbFieldName]) {
+      return overrides[dbFieldName];
+    }
+    
+    // Segundo, verificar se há taxa personalizada do pacote
+    if (packageFees && packageFees[dbFieldName]) {
+      return packageFees[dbFieldName];
+    }
+    
+    // Por último, usar taxa padrão
+    return getFeeAmount(feeType);
+  };
+
   const calculateStudentAdjustedPaid = (student: any): number => {
     let total = 0;
-    const packageFees = studentPackageFees[student.id];
     const deps = studentDependents[student.id] || 0;
+    const overrides = studentFeeOverrides[student.id];
+
     if (student.has_paid_selection_process_fee) {
-      // Sempre usar a taxa padrão do Selection Process e somar dependentes
-      const baseSel = getFeeAmount('selection_process');
-      total += Number(baseSel) + (deps * 150);
+      // Para Selection Process, verificar se há override primeiro
+      if (overrides && overrides.selection_process_fee) {
+        // Se há override, usar apenas o valor do override (já inclui dependentes)
+        total += overrides.selection_process_fee;
+      } else {
+        // Sem override: usar taxa padrão + dependentes
+        const baseSelectionFee = getFeeAmount('selection_process');
+        total += baseSelectionFee + (deps * 150);
+      }
     }
     if (student.is_scholarship_fee_paid) {
-      const baseSch = packageFees ? packageFees.scholarship_fee : getFeeAmount('scholarship_fee');
-      total += Number(baseSch);
+      const scholarshipFee = getStudentFeeAmount(student.id, 'scholarship_fee');
+      total += scholarshipFee;
     }
     if (student.has_paid_i20_control_fee) {
-      const baseI20 = packageFees ? packageFees.i20_control_fee : getFeeAmount('i20_control_fee');
-      // Não somar dependentes no I-20 para evitar dupla cobrança
-      total += Number(baseI20);
+      const i20Fee = getStudentFeeAmount(student.id, 'i20_control_fee');
+      total += i20Fee; // I-20 nunca tem dependentes
     }
     // Application fee não entra na receita do seller
     return total;

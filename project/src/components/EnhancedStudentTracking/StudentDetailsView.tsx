@@ -26,8 +26,20 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
   onViewDocument,
   onDownloadDocument
 }) => {
-  // Hook para configurações dinâmicas de taxas
-  const { getFeeAmount, formatFeeAmount } = useFeeConfig();
+  // Hook para configurações dinâmicas de taxas (usando student_id para ver overrides do estudante)
+  const { getFeeAmount, formatFeeAmount, userFeeOverrides } = useFeeConfig(studentDetails?.student_id);
+  
+  // Debug: Verificar se os overrides estão sendo carregados
+  useEffect(() => {
+    if (studentDetails?.student_id) {
+      console.log('🔍 [StudentDetailsView] Debug - Student ID:', studentDetails.student_id);
+      console.log('🔍 [StudentDetailsView] Debug - Email:', studentDetails.email);
+      console.log('🔍 [StudentDetailsView] Debug - User Fee Overrides:', userFeeOverrides);
+      console.log('🔍 [StudentDetailsView] Debug - getFeeAmount(selection_process):', getFeeAmount('selection_process'));
+      console.log('🔍 [StudentDetailsView] Debug - getFeeAmount(scholarship_fee):', getFeeAmount('scholarship_fee'));
+      console.log('🔍 [StudentDetailsView] Debug - getFeeAmount(i20_control_fee):', getFeeAmount('i20_control_fee'));
+    }
+  }, [studentDetails?.student_id, studentDetails?.email, userFeeOverrides, getFeeAmount]);
   
   
   // Estado para armazenar as taxas do pacote do estudante
@@ -711,19 +723,11 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                           {studentDetails?.has_paid_selection_process_fee && (
                             <span className="text-xs text-slate-500">
                               {(() => {
-                                console.log('🔍 [StudentDetailsView] Selection Process Fee - Dependents:', studentDependents, 'Package Fees:', studentPackageFees);
-                                
-                                if (studentPackageFees) {
-                                  const baseFee = studentPackageFees.selection_process_fee;
-                                  const finalAmount = calculateFeeWithDependents(baseFee, studentDependents, 'selection_process');
-                                  console.log('🔍 [StudentDetailsView] Selection Process - Base:', baseFee, 'Final:', finalAmount);
-                                  return formatFeeAmount(finalAmount);
-                                } else {
-                                  const baseFee = getFeeAmount('selection_process');
-                                  const finalAmount = calculateFeeWithDependents(baseFee, studentDependents, 'selection_process');
-                                  console.log('🔍 [StudentDetailsView] Selection Process (no package) - Base:', baseFee, 'Final:', finalAmount);
-                                  return formatFeeAmount(finalAmount);
-                                }
+                                // getFeeAmount já considera overrides específicos deste estudante
+                                const baseFee = getFeeAmount('selection_process');
+                                const finalAmount = calculateFeeWithDependents(baseFee, studentDependents, 'selection_process');
+                                console.log('🔍 [StudentDetailsView] Selection Process - Base (with override):', baseFee, 'Final:', finalAmount, 'Student ID:', studentDetails?.student_id);
+                                return formatFeeAmount(finalAmount);
                               })()}
                             </span>
                           )}
@@ -768,7 +772,7 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                         </span>
                         {studentDetails?.is_scholarship_fee_paid && (
                           <span className="text-xs text-slate-500">
-                            {studentPackageFees ? formatFeeAmount(studentPackageFees.scholarship_fee) : formatFeeAmount(getFeeAmount('scholarship_fee'))}
+                            {formatFeeAmount(getFeeAmount('scholarship_fee'))}
                           </span>
                         )}
                       </div>
@@ -788,19 +792,11 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                           {studentDetails?.has_paid_i20_control_fee && (
                             <span className="text-xs text-slate-500">
                               {(() => {
-                                console.log('🔍 [StudentDetailsView] I-20 Control Fee - Dependents:', studentDependents, 'Package Fees:', studentPackageFees);
-                                
-                                if (studentPackageFees) {
-                                  const baseFee = studentPackageFees.i20_control_fee;
-                                  const finalAmount = calculateFeeWithDependents(baseFee, studentDependents, 'i20_control_fee');
-                                  console.log('🔍 [StudentDetailsView] I-20 Control - Base:', baseFee, 'Final:', finalAmount);
-                                  return formatFeeAmount(finalAmount);
-                                } else {
-                                  const baseFee = getFeeAmount('i20_control_fee');
-                                  const finalAmount = calculateFeeWithDependents(baseFee, studentDependents, 'i20_control_fee');
-                                  console.log('🔍 [StudentDetailsView] I-20 Control (no package) - Base:', baseFee, 'Final:', finalAmount);
-                                  return formatFeeAmount(finalAmount);
-                                }
+                                // getFeeAmount já considera overrides específicos deste estudante
+                                const baseFee = getFeeAmount('i20_control_fee');
+                                const finalAmount = calculateFeeWithDependents(baseFee, studentDependents, 'i20_control_fee');
+                                console.log('🔍 [StudentDetailsView] I-20 Control - Base (with override):', baseFee, 'Final:', finalAmount, 'Student ID:', studentDetails?.student_id);
+                                return formatFeeAmount(finalAmount);
                               })()}
                             </span>
                           )}

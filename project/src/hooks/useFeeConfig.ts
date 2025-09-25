@@ -207,6 +207,24 @@ export const useFeeConfig = (userId?: string) => {
       .replace(/\${applicationFee}/g, formatFeeAmount(feeConfig.application_fee_default));
   };
 
+  const hasOverride = (feeType: string): boolean => {
+    if (!userFeeOverrides) return false;
+    
+    switch (feeType) {
+      case 'selection_process':
+        return userFeeOverrides.selection_process_fee !== undefined && userFeeOverrides.selection_process_fee !== null;
+      case 'application_fee':
+        return userFeeOverrides.application_fee !== undefined && userFeeOverrides.application_fee !== null;
+      case 'scholarship_fee':
+        return userFeeOverrides.scholarship_fee !== undefined && userFeeOverrides.scholarship_fee !== null;
+      case 'i-20_control_fee':
+      case 'i20_control_fee':
+        return userFeeOverrides.i20_control_fee !== undefined && userFeeOverrides.i20_control_fee !== null;
+      default:
+        return false;
+    }
+  };
+
   return {
     feeConfig,
     userPackageFees,
@@ -219,6 +237,7 @@ export const useFeeConfig = (userId?: string) => {
     updateFeeConfig,
     getFeeAmount,
     formatFeeAmount,
-    processTranslation
+    processTranslation,
+    hasOverride
   };
 };

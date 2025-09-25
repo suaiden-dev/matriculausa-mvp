@@ -108,7 +108,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
   const [loadingApplication, setLoadingApplication] = useState(false);
   
   // Hook para configurações dinâmicas de taxas (usando studentId para ver overrides do estudante)
-  const { getFeeAmount, formatFeeAmount } = useFeeConfig(studentId);
+  const { getFeeAmount, formatFeeAmount, hasOverride } = useFeeConfig(studentId);
   
   // Estados para taxas dinâmicas do estudante
   const [studentPackageFees, setStudentPackageFees] = useState<any>(null);
@@ -1447,8 +1447,11 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                            {studentInfo?.has_paid_selection_process_fee && (
                              <span className="text-xs text-slate-500">
                                {(() => {
-                                 const base = studentPackageFees ? Number(studentPackageFees.selection_process_fee) : Number(getFeeAmount('selection_process'));
-                                 const total = base + (dependents * 150); // 100% dos dependentes no Selection Process
+                                 // Se há override, usar valor direto (já inclui dependentes)
+                                 // Se não há override, somar dependentes ao valor base
+                                 const baseFee = Number(getFeeAmount('selection_process'));
+                                 const hasCustomOverride = hasOverride('selection_process');
+                                 const total = hasCustomOverride ? baseFee : baseFee + (dependents * 150);
                                  return formatFeeAmount(total);
                                })()}
                              </span>
@@ -1470,24 +1473,13 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                          {studentInfo?.is_application_fee_paid && (
                            <span className="text-xs text-slate-500">
                              {(() => {
-                               console.log('🔍 [STUDENT_DETAILS] Application Fee Debug:', {
-                                 hasScholarship: !!studentInfo?.scholarship,
-                                 applicationFeeAmount: studentInfo?.scholarship?.application_fee_amount,
-                                 studentInfoApplicationFee: (studentInfo as any)?.application_fee_amount,
-                                 isApplicationFeePaid: studentInfo?.is_application_fee_paid,
-                                 defaultFee: getFeeAmount('application_fee')
-                               });
-                               
                                if (studentInfo?.scholarship?.application_fee_amount) {
                                  const amount = Number(studentInfo.scholarship.application_fee_amount);
-                                 console.log('🔍 [STUDENT_DETAILS] Using dynamic amount from scholarship (already in dollars):', amount);
                                  return formatFeeAmount(amount);
                                } else if ((studentInfo as any)?.application_fee_amount) {
                                  const amount = Number((studentInfo as any).application_fee_amount);
-                                 console.log('🔍 [STUDENT_DETAILS] Using dynamic amount from studentInfo (already in dollars):', amount);
                                  return formatFeeAmount(amount);
                                } else {
-                                 console.log('🔍 [STUDENT_DETAILS] Using default amount:', getFeeAmount('application_fee'));
                                  return formatFeeAmount(getFeeAmount('application_fee'));
                                }
                              })()}
@@ -1508,7 +1500,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                          </span>
                          {studentInfo?.is_scholarship_fee_paid && (
                            <span className="text-xs text-slate-500">
-                             {studentPackageFees ? formatFeeAmount(studentPackageFees.scholarship_fee) : formatFeeAmount(getFeeAmount('scholarship_fee'))}
+                             {formatFeeAmount(getFeeAmount('scholarship_fee'))}
                            </span>
                          )}
                        </div>
@@ -1527,11 +1519,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                            </span>
                            {studentInfo?.has_paid_i20_control_fee && (
                              <span className="text-xs text-slate-500">
-                               {(() => {
-                                 const base = studentPackageFees ? Number(studentPackageFees.i20_control_fee) : Number(getFeeAmount('i20_control_fee'));
-                                 const total = base; // Sem dependentes no I-20
-                                 return formatFeeAmount(total);
-                               })()}
+                               {formatFeeAmount(getFeeAmount('i20_control_fee'))}
                              </span>
                            )}
                          </div>
