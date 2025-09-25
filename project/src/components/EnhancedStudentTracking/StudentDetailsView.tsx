@@ -27,7 +27,7 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
   onDownloadDocument
 }) => {
   // Hook para configurações dinâmicas de taxas (usando student_id para ver overrides do estudante)
-  const { getFeeAmount, formatFeeAmount, userFeeOverrides } = useFeeConfig(studentDetails?.student_id);
+  const { getFeeAmount, formatFeeAmount, userFeeOverrides, hasOverride } = useFeeConfig(studentDetails?.student_id);
   
   // Debug: Verificar se os overrides estão sendo carregados
   useEffect(() => {
@@ -57,6 +57,10 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
   // - Selection Process: +150 por dependente
   // - I-20: sem adicionais
   const calculateFeeWithDependents = (baseFee: number, dependents: number = 0, feeType: 'selection_process' | 'i20_control_fee') => {
+    // Se houver override para este tipo de taxa, usar exatamente o valor definido pelo admin
+    if (hasOverride && hasOverride(feeType)) {
+      return baseFee;
+    }
     if (feeType === 'selection_process') {
       const dependentCost = dependents * 150;
       return baseFee + dependentCost;

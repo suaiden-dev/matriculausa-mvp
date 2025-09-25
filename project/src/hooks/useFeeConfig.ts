@@ -84,11 +84,34 @@ export const useFeeConfig = (userId?: string) => {
     if (!userId) return;
 
     try {
-      const { data, error } = await supabase
-        .from('user_fee_overrides')
-        .select('*')
-        .eq('user_id', userId)
-        .single();
+      // Tentar primeiro via função SECURITY DEFINER para bypass de RLS em dashboards
+      let data: any = null;
+      let error: any = null;
+
+      try {
+        const rpc = await supabase.rpc('get_user_fee_overrides', { user_id_param: userId });
+        if (!rpc.error) {
+          data = rpc.data || null;
+        } else {
+          error = rpc.error;
+        }
+      } catch (e) {
+        error = e;
+      }
+
+      // Fallback: tentar select direto (caso o contexto atual permita SELECT)
+      if (!data) {
+        const direct = await supabase
+          .from('user_fee_overrides')
+          .select('*')
+          .eq('user_id', userId)
+          .single();
+        if (!direct.error) {
+          data = direct.data || null;
+        } else if (direct.error?.code !== 'PGRST116') {
+          error = direct.error;
+        }
+      }
 
       if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
         console.warn('⚠️ [useFeeConfig] Erro ao carregar overrides de taxas do usuário:', error);
@@ -96,7 +119,15 @@ export const useFeeConfig = (userId?: string) => {
         return;
       }
 
-      setUserFeeOverrides(data || null);
+      // Normalizar para números (podem vir como string do Postgres)
+      const normalized = data ? {
+        selection_process_fee: data.selection_process_fee != null ? Number(data.selection_process_fee) : undefined,
+        application_fee: data.application_fee != null ? Number(data.application_fee) : undefined,
+        scholarship_fee: data.scholarship_fee != null ? Number(data.scholarship_fee) : undefined,
+        i20_control_fee: data.i20_control_fee != null ? Number(data.i20_control_fee) : undefined,
+      } : null;
+
+      setUserFeeOverrides(normalized);
     } catch (err) {
       console.error('❌ [useFeeConfig] Erro inesperado ao carregar overrides de taxas:', err);
       setUserFeeOverrides(null);
