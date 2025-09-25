@@ -9,6 +9,7 @@ import PaymentManagement from './PaymentManagement';
 import EnhancedStudentTracking from './EnhancedStudentTrackingRefactored';
 import Analytics from './Analytics';
 import ProfileSettings from './ProfileSettings';
+import MyStudents from './MyStudents';
 
 interface AffiliateAdminStats {
   totalStudents: number;
@@ -244,6 +245,10 @@ const AffiliateAdminDashboard: React.FC = () => {
           element={
             <EnhancedStudentTracking userId={userId} />
           } 
+        />
+        <Route 
+          path="my-students" 
+          element={<MyStudents />} 
         />
         <Route 
           path="analytics" 
