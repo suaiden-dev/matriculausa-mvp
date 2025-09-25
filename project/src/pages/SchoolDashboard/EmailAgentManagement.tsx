@@ -189,7 +189,7 @@ export default function EmailAgentManagement() {
       // Upload pending files if any
       if (pendingFiles.length > 0 && uploadRef.current) {
         try {
-          await uploadRef.current.uploadPendingFiles(university.id);
+          await uploadRef.current.uploadPendingFiles(agent.id);
         } catch (uploadError) {
           console.error('Error uploading files:', uploadError);
         }
@@ -554,7 +554,7 @@ export default function EmailAgentManagement() {
                 <EmailKnowledgeUpload
                   ref={uploadRef}
                   universityId={university?.id || ""}
-                  agentId={editingAgent?.id || ""} // Pass empty string when creating
+                  agentId={editingAgent?.id || ""} // Will be updated after agent creation
                   onDocumentsChange={(documents: any[]) => {
                     console.log('Documents uploaded:', documents);
                   }}

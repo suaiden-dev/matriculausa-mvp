@@ -267,7 +267,7 @@ const Scholarships: React.FC = () => {
     if (userProfile && !userProfile.has_paid_selection_process_fee) {
       interval = setInterval(() => {
         refetchUserProfile && refetchUserProfile();
-      }, 3000);
+      }, 120000); // Reduzido de 3s para 2 minutos
     }
     return () => { if (interval) clearInterval(interval); };
   }, [refetchUserProfile, userProfile]);

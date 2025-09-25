@@ -67,7 +67,7 @@ export const useMicrosoftConnection = (): UseMicrosoftConnectionReturn => {
         return false;
       }
 
-      console.log('🔍 Session found, checking email_configurations (microsoft) for user:', session.user.id);
+      // Session found, checking Microsoft connections
       const { data, error } = await supabase
         .from('email_configurations')
         .select('id, user_id, email_address, oauth_access_token, oauth_refresh_token, is_active, created_at, updated_at')
@@ -82,7 +82,7 @@ export const useMicrosoftConnection = (): UseMicrosoftConnectionReturn => {
       }
 
       if (data && data.length > 0) {
-        console.log('✅ Microsoft connections found:', data.length);
+        // Microsoft connections found
         const mapped = data.map((row: any) => ({
           id: row.id,
           user_id: row.user_id,
@@ -94,7 +94,7 @@ export const useMicrosoftConnection = (): UseMicrosoftConnectionReturn => {
           updated_at: row.updated_at,
           isConnected: !!row.oauth_access_token,
         }));
-        console.log('✅ Mapped connections:', mapped);
+        // Mapped connections
         setConnections(mapped);
         
         // Restaurar conta ativa do localStorage ou usar a primeira
@@ -107,7 +107,7 @@ export const useMicrosoftConnection = (): UseMicrosoftConnectionReturn => {
         }
         
         if (activeConn) {
-          console.log('🔄 Setting active connection:', activeConn.email_address);
+          // Setting active connection
           setActiveConnectionState(activeConn as MicrosoftConnection);
           localStorage.setItem(ACTIVE_MICROSOFT_CONNECTION_KEY, activeConn.email_address);
         } else {

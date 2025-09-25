@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useImperativeHandle, forwardRef } from 'react';
+import { useState, useCallback, useImperativeHandle, forwardRef } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
@@ -55,14 +55,14 @@ const EmailKnowledgeUpload = forwardRef<EmailKnowledgeUploadRef, EmailKnowledgeU
         const uploadedDocs: EmailKnowledgeDocument[] = [];
         
         for (const file of pendingFiles) {
-          console.log(`📤 Uploading file: ${file.name}`);
+          // Uploading file
           
           // Upload file to Supabase Storage
           const fileExt = file.name.split('.').pop();
           const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
           const filePath = `${universityId}/${fileName}`;
           
-          const { data: uploadData, error: uploadError } = await supabase.storage
+          const { error: uploadError } = await supabase.storage
             .from('email-knowledge-documents')
             .upload(filePath, file);
           
@@ -77,24 +77,67 @@ const EmailKnowledgeUpload = forwardRef<EmailKnowledgeUploadRef, EmailKnowledgeU
             throw new Error('Uploaded file is not accessible');
           }
           
-          // Insert into database
-          const { data: docData, error: insertError } = await supabase
-            .from('email_knowledge_documents')
-            .insert({
-              university_id: universityId,
-              agent_id: agentId || null, // Handle empty string or undefined
-              document_name: file.name,
-              file_url: publicUrl,
-              file_size: file.size,
-              mime_type: file.type,
-              uploaded_by_user_id: user?.id
-            })
-            .select()
-            .single();
+          // Detectar qual sistema usar baseado no agentId
+          let docData;
+          let insertError;
           
-          if (insertError) throw insertError;
+          // Verificar se agentId é válido (não vazio, não null, não undefined)
+          const hasValidAgentId = agentId && agentId.trim() !== '' && agentId !== 'null' && agentId !== 'undefined';
           
-          console.log('✅ Documento salvo no banco com ID:', docData.id);
+          // Se está criando um novo agente (isCreating=true), assumir que é Microsoft
+          const isMicrosoftAgent = hasValidAgentId || isCreating;
+          
+          // Debug logs removidos para evitar spam no console
+          
+          if (isMicrosoftAgent) {
+            // Sistema Microsoft: usar email_knowledge_documents (CORRETO)
+            if (isCreating) {
+              // Quando está criando um novo agente, não podemos salvar ainda
+              // porque o agente ainda não existe. Vamos retornar um erro informativo
+              // Upload bloqueado durante criação do agente
+              throw new Error('Aguarde o agente ser criado antes de fazer upload de documentos');
+            } else {
+              // Agente já existe, usar tabela Microsoft correta
+              // Salvando na tabela Microsoft (email_knowledge_documents)
+              const result = await supabase
+                .from('email_knowledge_documents')
+                .insert({
+                  university_id: universityId,
+                  agent_id: agentId, // Microsoft tem agent_id específico
+                  document_name: file.name,
+                  file_url: publicUrl,
+                  file_size: file.size,
+                  mime_type: file.type,
+                  uploaded_by_user_id: user?.id
+                })
+                .select()
+                .single();
+              docData = result.data;
+              insertError = result.error;
+            }
+          } else {
+            // Sistema Gmail: usar ai_agent_knowledge_documents (CORRETO)
+            // Salvando na tabela Gmail
+            const result = await supabase
+              .from('ai_agent_knowledge_documents')
+              .insert({
+                ai_configuration_id: agentId,
+                document_name: file.name,
+                file_url: publicUrl,
+                file_size: file.size,
+                mime_type: file.type,
+                uploaded_by_user_id: user?.id
+              })
+              .select()
+              .single();
+            docData = result.data;
+            insertError = result.error;
+          }
+          
+          if (insertError) {
+            console.error('Erro ao inserir documento:', insertError);
+            throw insertError;
+          }
           uploadedDocs.push(docData);
           
           // Send webhook for transcription
@@ -104,7 +147,7 @@ const EmailKnowledgeUpload = forwardRef<EmailKnowledgeUploadRef, EmailKnowledgeU
             
             const SUPABASE_FUNCTIONS_URL = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL || 'https://fitpynguasqqutuhzifx.supabase.co/functions/v1';
             
-            console.log('🔄 Enviando webhook para transcrição:', docData.id);
+            // Enviando webhook para transcrição
             
             const webhookResponse = await fetch(`${SUPABASE_FUNCTIONS_URL}/transcribe-email-document`, {
               method: 'POST',
@@ -121,8 +164,8 @@ const EmailKnowledgeUpload = forwardRef<EmailKnowledgeUploadRef, EmailKnowledgeU
               }),
             });
             
-            const webhookResult = await webhookResponse.json();
-            console.log('✅ Webhook enviado para transcrição:', webhookResult);
+            await webhookResponse.json();
+            // Webhook enviado para transcrição
           } catch (webhookError) {
             console.error('❌ Erro ao enviar webhook para transcrição:', webhookError);
             // Não falhar o processo se o webhook falhar
@@ -135,7 +178,7 @@ const EmailKnowledgeUpload = forwardRef<EmailKnowledgeUploadRef, EmailKnowledgeU
         setPendingFiles([]);
         onPendingFilesChange?.([]);
         
-        console.log('✅ Todos os documentos enviados com sucesso');
+        // Todos os documentos enviados com sucesso
         return uploadedDocs;
       } catch (err: any) {
         console.error('❌ Upload error:', err);
@@ -147,16 +190,10 @@ const EmailKnowledgeUpload = forwardRef<EmailKnowledgeUploadRef, EmailKnowledgeU
     }
   }));
 
-  const fileToBase64 = (file: File): Promise<string> =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = error => reject(error);
-    });
+  // Função para converter arquivo para base64 (removida - não utilizada)
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
-    console.log('📁 Files dropped:', acceptedFiles.map(f => f.name));
+    // Files dropped
     
     // Validate file types
     const allowedTypes = ['application/pdf', 'text/plain', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
@@ -304,7 +341,7 @@ const EmailKnowledgeUpload = forwardRef<EmailKnowledgeUploadRef, EmailKnowledgeU
       {/* Upload Button */}
       {pendingFiles.length > 0 && !uploading && (
         <button
-          onClick={() => ref?.current?.uploadPendingFiles(universityId)}
+          onClick={() => (ref as any)?.uploadPendingFiles(universityId)}
           className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
         >
           Enviar {pendingFiles.length} arquivo(s)

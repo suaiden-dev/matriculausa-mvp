@@ -25,7 +25,7 @@ const InboxRouter = () => {
 
   const loadConfigurationInfo = async () => {
     try {
-      console.log('🔍 Carregando informações da configuração:', configId);
+      // Loading configuration info
       
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       
@@ -59,7 +59,7 @@ const InboxRouter = () => {
         return;
       }
 
-      console.log('✅ Configuração carregada:', data);
+      // Configuration loaded
       setProviderType(data.provider_type);
       
     } catch (error) {

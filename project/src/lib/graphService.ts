@@ -41,7 +41,7 @@ class GraphService {
 
       // Se token expirado, tentar renovar
       if (this.refreshToken && this.configId) {
-        console.log('🔄 Token expirado, tentando renovar...');
+        // Token expired, trying to renew
         const newToken = await this.refreshAccessToken();
         if (newToken) {
           this.accessToken = newToken;
@@ -72,9 +72,6 @@ class GraphService {
       const { error } = await supabase
         .from('email_configurations')
         .update({
-          oauth_access_token: null,
-          oauth_refresh_token: null,
-          oauth_token_expires_at: null,
           is_active: false
         })
         .eq('id', this.configId);
@@ -82,7 +79,7 @@ class GraphService {
       if (error) {
         console.error('❌ Erro ao marcar conta como desconectada:', error);
       } else {
-        console.log('✅ Conta marcada como desconectada');
+        // Account marked as disconnected
       }
     } catch (error) {
       console.error('❌ Erro ao marcar conta como desconectada:', error);
@@ -92,7 +89,7 @@ class GraphService {
   // Método para renovar o token usando refresh token
   private async refreshAccessToken(): Promise<string | null> {
     try {
-      console.log('🔄 Renovando token via refresh token...');
+        // Renewing token via refresh token
       
       const response = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
         method: 'POST',
@@ -113,7 +110,7 @@ class GraphService {
       }
 
       const data = await response.json();
-      console.log('✅ Token renovado com sucesso');
+        // Token renewed successfully
       
       // Atualizar token no banco de dados
       await this.updateTokenInDatabase(data.access_token, data.refresh_token);
@@ -165,7 +162,7 @@ class GraphService {
 
   async getMailFolders() {
     try {
-      console.log('GraphService - Listando pastas de email...');
+      // Listing email folders
       
       const folders = await rateLimiter.executeRequest(async () => {
         return await this.graphClient

@@ -1,3 +1,5 @@
+// DISABLED FOR DEVELOPMENT - Microsoft Token Diagnostic
+/*
 import React, { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 
@@ -134,3 +136,4 @@ const MicrosoftTokenDiagnostic: React.FC = () => {
 };
 
 export default MicrosoftTokenDiagnostic;
+*/

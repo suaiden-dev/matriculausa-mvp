@@ -161,7 +161,7 @@ export const useSmartPollingNotifications = ({
         clearInterval(intervalRef.current);
       }
 
-      const interval = isVisible && isOnline ? 5000 : 30000; // 5s ativo, 30s em background
+      const interval = isVisible && isOnline ? 60000 : 300000; // 1min ativo, 5min em background
       
       intervalRef.current = setInterval(() => {
         fetchNotifications(true); // Verificar apenas novas
