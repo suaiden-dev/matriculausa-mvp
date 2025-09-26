@@ -30,23 +30,15 @@ class QueueAIService {
     try {
       console.log(`🤖 [WORKER] Processando email: ${email.subject}`);
       
-      // Buscar base de conhecimento do usuário
-      const { data: knowledgeData } = await supabase
-        .from('email_knowledge_documents')
-        .select('content')
-        .eq('user_id', userId);
-        
-      const knowledgeBase = knowledgeData?.map(doc => doc.content).join('\n\n') || '';
-      
-      // Buscar prompt da universidade
+      // Buscar prompt da universidade (já contém base de conhecimento)
       const { data: promptData } = await supabase
-        .from('ai_agent_prompts')
-        .select('prompt_text')
-        .eq('user_id', userId)
+        .from('ai_configurations')
+        .select('final_prompt')
+        .eq('university_id', userId)
         .eq('is_active', true)
         .maybeSingle();
         
-      const universityPrompt = promptData?.prompt_text || 'Você é um assistente universitário.';
+      const universityPrompt = promptData?.final_prompt || 'Você é um assistente universitário.';
       
       // Preparar prompt para Gemini
       const emailContent = `
@@ -55,15 +47,24 @@ De: ${email.from?.emailAddress?.address || 'Unknown'}
 Conteúdo: ${email.bodyPreview || email.body?.content || 'Sem conteúdo'}
 `;
 
-      const fullPrompt = `${universityPrompt}
+      // Detectar idioma do email
+      const emailText = `${email.subject} ${email.bodyPreview || email.body?.content || ''}`.toLowerCase();
+      const isEnglish = /\b(hello|hi|dear|sir|madam|thank|please|help|information|about|study|university|scholarship|application|admission|process|requirements|documents|payment|fee|cost|price|when|where|how|what|why|can|could|would|should|need|want|interested|apply|enroll|register|contact|email|phone|address|website|program|course|degree|bachelor|master|phd|undergraduate|graduate|international|student|usa|america|united states)\b/.test(emailText);
+      
+      const languageInstruction = isEnglish 
+        ? "Respond in English. Be professional and helpful."
+        : "Responda em português. Seja profissional e prestativo.";
 
-Base de conhecimento da universidade:
-${knowledgeBase}
+      const fullPrompt = `${universityPrompt}
 
 Analise o seguinte email e determine se deve ser respondido:
 ${emailContent}
 
-IMPORTANTE: Responda no MESMO IDIOMA do email recebido. Se o email for em inglês, responda em inglês. Se for em português, responda em português.
+IMPORTANTE: 
+- ${languageInstruction}
+- Use a base de conhecimento fornecida para dar respostas específicas e úteis
+- Seja específico sobre programas, bolsas e processos da universidade
+- Forneça informações detalhadas sobre MatriculaUSA, bolsas e programas
 
 Responda APENAS com um JSON válido no formato:
 {
@@ -79,7 +80,7 @@ Responda APENAS com um JSON válido no formato:
       console.log(`🔑 [WORKER] Usando Gemini API Key: ${this.apiKey ? 'CONFIGURADA' : 'NÃO CONFIGURADA'}`);
       console.log(`📡 [WORKER] Fazendo requisição para Gemini...`);
       
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${this.apiKey}`, {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${this.apiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -423,10 +424,179 @@ async function processEmailQueue(): Promise<void> {
 // 🚀 Handler da Edge Function
 Deno.serve(async (req) => {
   console.log('🗃️ [WORKER] Email Queue Worker iniciado');
+  console.log('🔍 [WORKER] Method:', req.method);
+  console.log('🔍 [WORKER] URL:', req.url);
+  console.log('🔍 [WORKER] Headers:', Object.fromEntries(req.headers.entries()));
+  
+  // CORS Headers
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
+    'Access-Control-Max-Age': '86400',
+  };
+  
+  // Handle CORS preflight
+  if (req.method === 'OPTIONS') {
+    console.log('✅ [WORKER] CORS preflight request handled');
+    return new Response(null, { status: 200, headers: corsHeaders });
+  }
   
   try {
     if (req.method === 'POST') {
       const body = await req.json();
+      
+      // Chatbot mode
+      if (body.chatbotMode) {
+        console.log('💬 [WORKER] Modo chatbot ativado');
+        
+        try {
+          // Verificar limite de uso
+          const sessionId = body.sessionId || `session_${body.userId}_${Date.now()}`;
+          console.log(`🔍 [WORKER] Verificando limite para universidade ${body.userId}, sessão ${sessionId}`);
+          
+          const { data: usageCheck, error: usageError } = await supabase
+            .rpc('check_ai_usage_limit', {
+              p_university_id: body.userId,
+              p_session_id: sessionId
+            });
+            
+          if (usageError) {
+            console.error('❌ [WORKER] Erro ao verificar limite:', usageError);
+            return new Response(JSON.stringify({ 
+              error: 'Failed to check usage limit',
+              success: false 
+            }), { 
+              status: 500,
+              headers: { 'Content-Type': 'application/json' }
+            });
+          }
+          
+          console.log('📊 [WORKER] Status do uso:', usageCheck);
+          
+          if (!usageCheck.can_use) {
+            console.log('🚫 [WORKER] Limite de prompts atingido');
+            return new Response(JSON.stringify({ 
+              error: 'Daily prompt limit reached',
+              message: `You have reached the limit of ${usageCheck.max_prompts} prompts per session. Please try again tomorrow.`,
+              success: false,
+              usage: usageCheck
+            }), { 
+              status: 429,
+              headers: { 'Content-Type': 'application/json' }
+            });
+          }
+          
+          // Incrementar contador de uso
+          const { data: usageUpdate, error: incrementError } = await supabase
+            .rpc('increment_ai_usage', {
+              p_university_id: body.userId,
+              p_session_id: sessionId
+            });
+            
+          if (incrementError) {
+            console.error('❌ [WORKER] Erro ao incrementar uso:', incrementError);
+          } else {
+            console.log('✅ [WORKER] Uso incrementado:', usageUpdate);
+          }
+          
+          // Buscar prompt da universidade (já contém base de conhecimento)
+          const { data: promptData } = await supabase
+            .from('ai_configurations')
+            .select('final_prompt')
+            .eq('university_id', body.userId)
+            .eq('is_active', true)
+            .maybeSingle();
+            
+          const universityPrompt = promptData?.final_prompt || 'Você é um assistente universitário.';
+          
+          // Detectar idioma da mensagem
+          const messageText = body.message?.toLowerCase() || '';
+          
+          // Detectar idiomas específicos
+          const isEnglish = /\b(hello|hi|dear|thank|please|help|information|about|study|university|scholarship|application|admission|process|requirements|documents|payment|fee|cost|price|when|where|how|what|why|can|could|would|should|need|want|interested|apply|enroll|register|contact|email|phone|address|website|program|course|degree|bachelor|master|phd|undergraduate|graduate|international|student|usa|america|united states|want|do|this|hello|how|are|you)\b/.test(messageText);
+          
+          const isSpanish = /\b(hola|buenos|días|tarde|noche|gracias|por|favor|ayuda|información|sobre|estudiar|universidad|beca|solicitud|admisón|proceso|requisitos|documentos|pago|cuota|costo|precio|cuándo|dónde|cómo|qué|por|qué|puedo|podría|debería|necesito|quiero|interesado|aplicar|matricular|registrar|contacto|correo|teléfono|dirección|sitio|programa|curso|grado|licenciatura|maestría|doctorado|pregrado|posgrado|internacional|estudiante|estados|unidos|america|quiero|hacer|esto|hola|cómo|está|solicitar|beca|universidad)\b/.test(messageText);
+          
+          const isJapanese = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(messageText) || 
+                            /\b(こんにちは|はじめまして|ありがとう|お願い|助けて|情報|について|勉強|大学|奨学金|申請|入学|プロセス|要件|書類|支払い|料金|費用|価格|いつ|どこ|どのように|何|なぜ|できます|できる|すべき|必要|したい|興味|応募|登録|連絡|メール|電話|住所|ウェブサイト|プログラム|コース|学位|学士|修士|博士|学部|大学院|国際|学生|アメリカ|合衆国|したい|これ|こんにちは|いかが|奨学金|申請|大学)\b/.test(messageText);
+          
+          const isFrench = /\b(bonjour|bonsoir|merci|s'il|vous|plaît|aide|information|sur|étudier|université|bourse|demande|admission|processus|exigences|documents|paiement|frais|coût|prix|quand|où|comment|quoi|pourquoi|peux|peut|devrais|besoin|veux|intéressé|postuler|s'inscrire|enregistrer|contact|email|téléphone|adresse|site|programme|cours|diplôme|licence|maîtrise|doctorat|premier|cycle|deuxième|cycle|international|étudiant|états|unis|amérique|veux|faire|ceci|bonjour|comment|allez|demander|bourse|université)\b/.test(messageText);
+          
+          const isGerman = /\b(hallo|guten|tag|abend|danke|bitte|hilfe|information|über|studieren|universität|stipendium|bewerbung|zulassung|prozess|anforderungen|dokumente|zahlung|gebühr|kosten|preis|wann|wo|wie|was|warum|kann|könnte|sollte|brauche|will|interessiert|bewerben|einschreiben|registrieren|kontakt|email|telefon|adresse|website|programm|kurs|abschluss|bachelor|master|doktor|grundstudium|aufbaustudium|international|student|usa|amerika|will|tun|dies|hallo|wie|geht|stipendium|beantragen|universität)\b/.test(messageText);
+          
+          // Determinar idioma de resposta
+          let languageInstruction;
+          if (isEnglish) {
+            languageInstruction = "Respond in English. Be professional and helpful.";
+          } else if (isSpanish) {
+            languageInstruction = "Responde en español. Sé profesional y servicial.";
+          } else if (isJapanese) {
+            languageInstruction = "日本語で回答してください。プロフェッショナルで親切にしてください。";
+          } else if (isFrench) {
+            languageInstruction = "Répondez en français. Soyez professionnel et serviable.";
+          } else if (isGerman) {
+            languageInstruction = "Antworten Sie auf Deutsch. Seien Sie professionell und hilfsbereit.";
+          } else {
+            languageInstruction = "Responda em português. Seja profissional e prestativo.";
+          }
+
+          const chatPrompt = `${universityPrompt}
+
+Mensagem do usuário: ${body.message}
+
+IMPORTANTE: 
+- ${languageInstruction}
+- Use a base de conhecimento fornecida para dar respostas específicas e úteis
+- Seja específico sobre programas, bolsas e processos da universidade
+- Forneça informações detalhadas sobre MatriculaUSA, bolsas e programas
+- Se não souber algo específico, seja honesto mas ofereça alternativas
+
+Responda de forma natural e conversacional, como um assistente universitário.`;
+
+          // Fazer requisição para Gemini
+          const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GEMINI_API_KEY}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: chatPrompt }] }]
+            })
+          });
+
+          if (!response.ok) {
+            throw new Error(`Gemini API error: ${response.status}`);
+          }
+
+          const data = await response.json();
+          const geminiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
+          
+          return new Response(JSON.stringify({
+            success: true,
+            response: geminiResponse || 'Sorry, I could not process your message.',
+            analysis: { chatbotMode: true },
+            usage: usageUpdate
+          }), {
+            status: 200,
+            headers: { 
+              'Content-Type': 'application/json',
+              ...corsHeaders
+            }
+          });
+        } catch (error) {
+          console.error('❌ [WORKER] Erro no modo chatbot:', error);
+          return new Response(JSON.stringify({
+            success: false,
+            response: 'Desculpe, ocorreu um erro ao processar sua mensagem.',
+            error: error.message
+          }), {
+            status: 500,
+            headers: { 
+              'Content-Type': 'application/json',
+              ...corsHeaders
+            }
+          });
+        }
+      }
       
       if (body.trigger === 'process_queue') {
         console.log('🎯 [WORKER] Trigger recebido - processando fila');
@@ -437,7 +607,10 @@ Deno.serve(async (req) => {
           message: 'Fila processada com sucesso'
         }), {
           status: 200,
-          headers: { 'Content-Type': 'application/json' }
+          headers: { 
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          }
         });
       }
     }

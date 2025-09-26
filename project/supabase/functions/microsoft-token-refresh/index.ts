@@ -59,12 +59,22 @@ async function refreshMicrosoftToken(
     // Atualizar tokens no banco de dados
     const expiresAt = new Date(Date.now() + (tokenData.expires_in * 1000));
     
+    console.log(`🔄 Atualizando tokens no banco para ${email}...`);
+    console.log(`📊 Dados a serem salvos:`, {
+      oauth_access_token: tokenData.access_token ? 'PRESENTE' : 'AUSENTE',
+      oauth_refresh_token: tokenData.refresh_token ? 'PRESENTE' : 'AUSENTE',
+      oauth_token_expires_at: expiresAt.toISOString(),
+      is_active: true,
+      updated_at: new Date().toISOString()
+    });
+
     const { error: updateError } = await supabase
       .from('email_configurations')
       .update({
         oauth_access_token: tokenData.access_token,
         oauth_refresh_token: tokenData.refresh_token || refreshToken,
         oauth_token_expires_at: expiresAt.toISOString(),
+        is_active: true, // MANTER CONTA ATIVA APÓS RENOVAÇÃO
         updated_at: new Date().toISOString()
       })
       .eq('user_id', userId)
@@ -80,6 +90,9 @@ async function refreshMicrosoftToken(
         userId
       };
     }
+
+    console.log(`✅ Tokens atualizados com sucesso para ${email}`);
+    console.log(`✅ Conta mantida ATIVA após renovação`);
 
     return {
       success: true,
@@ -127,15 +140,15 @@ async function markAccountAsDisconnected(userId: string, email: string): Promise
 }
 
 /**
- * Verificar se token está próximo do vencimento (5 minutos)
+ * Verificar se token está próximo do vencimento (30 minutos)
  */
 function isTokenNearExpiry(expiresAt: string): boolean {
   const expiryDate = new Date(expiresAt);
   const now = new Date();
   const timeUntilExpiry = expiryDate.getTime() - now.getTime();
   
-  // Considerar próximo do vencimento se restam menos de 5 minutos
-  return timeUntilExpiry < 5 * 60 * 1000;
+  // Considerar próximo do vencimento se restam menos de 30 minutos
+  return timeUntilExpiry < 30 * 60 * 1000;
 }
 
 /**
@@ -197,9 +210,13 @@ async function processTokenRefresh(): Promise<{
         continue;
       }
 
-      // Verificar se token está próximo do vencimento
-      if (!isTokenNearExpiry(oauth_token_expires_at)) {
-        console.log(`✅ ${email_address} - Token ainda válido por mais tempo`);
+      // Verificar se token está próximo do vencimento (sempre renovar para garantir)
+      const now = new Date();
+      const tokenExpiry = new Date(oauth_token_expires_at);
+      const timeUntilExpiry = tokenExpiry.getTime() - now.getTime();
+      
+      if (timeUntilExpiry > 30 * 60 * 1000) { // Mais de 30 minutos restantes
+        console.log(`✅ ${email_address} - Token ainda válido por mais tempo (${Math.round(timeUntilExpiry / 60000)} minutos)`);
         results.push({
           success: true,
           message: 'Token ainda válido',
@@ -307,4 +324,4 @@ Deno.serve(async (req) => {
       },
     });
   }
-});
+}, { verify_jwt: false });

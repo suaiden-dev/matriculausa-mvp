@@ -12,11 +12,6 @@ import {
 } from '@heroicons/react/24/outline';
 import { supabase } from '../../lib/supabase';
 import { useMicrosoftConnection } from '../../hooks/useMicrosoftConnection';
-// DISABLED FOR DEVELOPMENT
-// import MicrosoftTokenDiagnostic from '../../components/MicrosoftTokenDiagnostic';
-// DISABLED FOR DEVELOPMENT
-// import MicrosoftBFFTest from '../../components/MicrosoftBFFTest';
-// import TokenRenewalTest from '../../components/TokenRenewalTest';
 
 const EmailManagement = () => {
   const navigate = useNavigate();
@@ -565,9 +560,6 @@ const EmailManagement = () => {
   };
 
   const handleInboxNavigation = (config) => {
-    // DISABLED FOR DEVELOPMENT - Inbox navigation
-    setNotification({ type: 'info', message: 'Inbox em desenvolvimento - não disponível no momento.' });
-    /*
     try {
       if (config.provider_type === 'microsoft') {
         navigate('/school/dashboard/microsoft-email');
@@ -577,7 +569,6 @@ const EmailManagement = () => {
     } catch (error) {
       setNotification({ type: 'error', message: 'Failed to open inbox. Please try again.' });
     }
-    */
   };
 
   const handleComposeNavigation = (config) => {
@@ -744,20 +735,21 @@ const EmailManagement = () => {
                   {/* Action Buttons */}
                   <div className="flex items-center">
                     <div className="flex gap-2">
-                      {/* Gmail Account - DISABLED FOR DEVELOPMENT */}
+                      {/* Gmail Account */}
                       <button
-                        disabled={true}
-                        className="bg-gray-400 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-xl cursor-not-allowed text-sm sm:text-base opacity-50"
+                        onClick={() => navigate('/school/dashboard/email/config?provider=gmail')}
+                        className="bg-gradient-to-r from-red-500 to-red-600 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-xl hover:from-red-600 hover:to-red-700 transition-all duration-300 font-bold flex items-center shadow-lg hover:shadow-xl transform hover:scale-105 text-sm sm:text-base"
                       >
                         <EnvelopeIcon className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2" />
-                        <span className="hidden sm:inline">Gmail (in development)</span>
-                        <span className="sm:hidden">Gmail (Em Dev)</span>
+                        <span className="hidden sm:inline">Gmail</span>
+                        <span className="sm:hidden">Gmail</span>
                       </button>
                       
-                      {/* Microsoft Account - DISABLED FOR DEVELOPMENT */}
+                      {/* Microsoft Account - Direct Connection */}
                       <button
-                        disabled={true}
-                        className="bg-gray-400 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-xl cursor-not-allowed text-sm sm:text-base opacity-50"
+                        onClick={handleDirectMicrosoftConnection}
+                        disabled={microsoftLoading}
+                        className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-300 font-bold flex items-center shadow-lg hover:shadow-xl transform hover:scale-105 text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <div className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2 flex items-center justify-center">
                           <svg viewBox="0 0 24 24" className="w-full h-full">
@@ -821,26 +813,27 @@ const EmailManagement = () => {
               </p>
               
               <div className="flex gap-3 justify-center">
-                {/* Gmail Account - DISABLED FOR DEVELOPMENT */}
+                {/* Gmail Account */}
                 <button
-                  disabled={true}
-                  className="bg-gray-400 text-white px-6 py-3 rounded-xl cursor-not-allowed opacity-50"
+                  onClick={() => navigate('/school/dashboard/email/config?provider=gmail')}
+                  className="bg-gradient-to-r from-red-500 to-red-600 text-white px-6 py-3 rounded-xl hover:from-red-600 hover:to-red-700 transition-all duration-300 font-bold flex items-center space-x-2 shadow-lg hover:shadow-xl transform hover:scale-105"
                 >
                   <EnvelopeIcon className="h-5 w-5" />
-                  <span>Gmail (Em Desenvolvimento)</span>
+                  <span>Gmail</span>
                 </button>
                 
-                {/* Microsoft Account - DISABLED FOR DEVELOPMENT */}
+                {/* Microsoft Account - Direct Connection */}
                 <button
-                  disabled={true}
-                  className="bg-gray-400 text-white px-6 py-3 rounded-xl cursor-not-allowed opacity-50"
+                  onClick={handleDirectMicrosoftConnection}
+                  disabled={microsoftLoading}
+                  className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-6 py-3 rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-300 font-bold flex items-center space-x-2 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <div className="w-5 h-5 flex items-center justify-center">
                     <svg viewBox="0 0 24 24" className="w-full h-full">
                       <path fill="currentColor" d="M11.4 24H0V12.6h11.4V24zM24 24H12.6V12.6H24V24zM11.4 11.4H0V0h11.4v11.4zM24 11.4H12.6V0H24v11.4z"/>
                     </svg>
                   </div>
-                  <span>Microsoft (Em Desenvolvimento)</span>
+                  <span>Microsoft</span>
                 </button>
               </div>
             </div>
@@ -889,11 +882,11 @@ const EmailManagement = () => {
                           {/* Quick Actions */}
                           <div className="flex sm:hidden items-center space-x-2">
                             <button
-                              onClick={() => setNotification({ type: 'info', message: 'Inbox em desenvolvimento - não disponível no momento.' })}
-                              className="flex-1 text-sm font-medium py-2 px-3 rounded transition-colors text-gray-400 cursor-not-allowed"
-                              title="Inbox em desenvolvimento"
+                              onClick={() => navigate(`/school/dashboard/email/inbox?config=${connection.id}`)}
+                              className="flex-1 text-sm font-medium py-2 px-3 rounded transition-colors text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                              title="Open inbox"
                             >
-                              Inbox (in development)
+                              Inbox
                             </button>
                             
                             <button
@@ -907,11 +900,11 @@ const EmailManagement = () => {
                           
                           <div className="hidden sm:flex items-center space-x-2 mr-4">
                             <button
-                              onClick={() => setNotification({ type: 'info', message: 'Inbox em desenvolvimento - não disponível no momento.' })}
-                              className="text-sm font-medium py-1 px-2 rounded transition-colors text-gray-400 cursor-not-allowed"
-                              title="Inbox em desenvolvimento"
+                              onClick={() => navigate(`/school/dashboard/email/inbox?config=${connection.id}`)}
+                              className="text-sm font-medium py-1 px-2 rounded transition-colors text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                              title="Open inbox"
                             >
-                              Inbox (in development)
+                              Inbox
                             </button>
                             
                             <button
@@ -1222,22 +1215,6 @@ const EmailManagement = () => {
           )}
         </div>
         
-        {/* Microsoft Token Diagnostic */}
-        <div className="mt-8">
-          {/* DISABLED FOR DEVELOPMENT */}
-          {/* <MicrosoftTokenDiagnostic /> */}
-        </div>
-
-        {/* DISABLED FOR DEVELOPMENT */}
-        {/* Microsoft BFF Test */}
-        {/* <div className="mt-8">
-          <MicrosoftBFFTest />
-        </div> */}
-
-        {/* Token Renewal Test */}
-        {/* <div className="mt-8">
-          <TokenRenewalTest />
-        </div> */}
       </div>
     );
   };

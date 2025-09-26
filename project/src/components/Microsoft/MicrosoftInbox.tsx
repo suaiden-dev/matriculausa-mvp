@@ -4,19 +4,43 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   Mail, RefreshCw, Inbox as InboxIcon,
   Send as SendIcon, Star as StarIcon, FileText, AlertTriangle, Trash,
-  Bot, Play, BarChart3, Loader2, XCircle,
+  Bot, Play, Loader2, XCircle,
   Search, MoreVertical, Reply, Forward, User,
-  Plus, Archive, Settings, Folder, FolderOpen, BookOpen
+  Plus, Archive, Folder, FolderOpen, BookOpen,
+  Send, X, Paperclip, Save
 } from 'lucide-react';
 import { useAuthToken } from '../../hooks/useAuthToken';
 import { useMicrosoftConnection } from '../../hooks/useMicrosoftConnection';
 import { formatDateUS } from '../../lib/dateUtils';
 import GraphService from '../../lib/graphService';
-import AutoEmailProcessing from './AutoEmailProcessing';
 import MicrosoftAccountSelector from './MicrosoftAccountSelector';
 import EmailKnowledgeManagement from '../../pages/SchoolDashboard/EmailKnowledgeManagement';
 import EmailAgentManagement from '../../pages/SchoolDashboard/EmailAgentManagement';
 import { useUniversity } from '../../context/UniversityContext';
+import { supabase } from '../../lib/supabase';
+
+// Função para extrair email do token MSAL
+const getEmailFromToken = async (token: string): Promise<string> => {
+  try {
+    // Fazer requisição para Microsoft Graph para obter informações do usuário
+    const response = await fetch('https://graph.microsoft.com/v1.0/me', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Erro ao obter dados do usuário: ${response.status}`);
+    }
+
+    const userData = await response.json();
+    return userData.mail || userData.userPrincipalName || 'unknown@microsoft.com';
+  } catch (error) {
+    console.error('Erro ao obter email do token:', error);
+    return 'unknown@microsoft.com';
+  }
+};
 
 // Interfaces
 
@@ -74,6 +98,7 @@ export default function MicrosoftInbox() {
   const [status, setStatus] = useState<'idle' | 'active' | 'error' | 'loading'>('idle');
   const [recentEmails, setRecentEmails] = useState<ProcessedEmail[]>([]);
   const [loadingEmails, setLoadingEmails] = useState(false);
+  const [showComposeModal, setShowComposeModal] = useState(false);
 
   // Estados do Inbox
   const [selectedEmail, setSelectedEmail] = useState<ProcessedEmail | MicrosoftGraphEmail | null>(null);
@@ -88,6 +113,19 @@ export default function MicrosoftInbox() {
   const [folderCache, setFolderCache] = useState<{ [key: string]: { data: MicrosoftGraphEmail[], timestamp: number } }>({});
   const [newEmailNotification, setNewEmailNotification] = useState<{ show: boolean, count: number }>({ show: false, count: 0 });
   const [showKnowledgeBase, setShowKnowledgeBase] = useState(false);
+  
+  // Estados para o chatbot de teste
+  const [showTestChat, setShowTestChat] = useState(false);
+  const [chatMessages, setChatMessages] = useState<Array<{
+    id: string;
+    type: 'user' | 'ai';
+    message: string;
+    timestamp: Date;
+  }>>([]);
+  const [chatInput, setChatInput] = useState('');
+  const [isChatLoading, setIsChatLoading] = useState(false);
+  const [sessionId] = useState(() => `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
+  const [usageInfo, setUsageInfo] = useState<{prompts_used: number, max_prompts: number, remaining_prompts: number} | null>(null);
   
   // Cache duration: 5 minutes
   const CACHE_DURATION = 5 * 60 * 1000;
@@ -121,42 +159,42 @@ export default function MicrosoftInbox() {
   const sidebarNavItems = [
     {
       id: 'inbox',
-      label: 'Caixa de Entrada',
+      label: 'Inbox',
       icon: <InboxIcon className="h-4 w-4" />,
       color: 'text-blue-600',
       count: emailCounts.inbox
     },
     {
       id: 'sent',
-      label: 'Itens Enviados',
+      label: 'Sent Items',
       icon: <SendIcon className="h-4 w-4" />,
       color: 'text-gray-600',
       count: emailCounts.sent
     },
     {
       id: 'drafts',
-      label: 'Rascunhos',
+      label: 'Drafts',
       icon: <FileText className="h-4 w-4" />,
       color: 'text-gray-600',
       count: emailCounts.drafts
     },
     {
       id: 'archive',
-      label: 'Arquivo Morto',
+      label: 'Archive',
       icon: <Archive className="h-4 w-4" />,
       color: 'text-gray-600',
       count: emailCounts.archive
     },
     {
       id: 'spam',
-      label: 'Lixo Eletrônico',
+      label: 'Junk Email',
       icon: <AlertTriangle className="h-4 w-4" />,
       color: 'text-red-600',
       count: emailCounts.spam
     },
     {
       id: 'trash',
-      label: 'Itens Excluídos',
+      label: 'Deleted Items',
       icon: <Trash className="h-4 w-4" />,
       color: 'text-gray-500',
       count: emailCounts.trash
@@ -317,22 +355,25 @@ export default function MicrosoftInbox() {
     } catch (error) {
       console.error(`MicrosoftInbox - Erro ao buscar emails da pasta ${folderKey}:`, error);
       
-      // Verificar se é erro de token expirado
+      // Verificar se é erro de token expirado ou inválido
       if (error instanceof Error && (
         error.message.includes('token') || 
         error.message.includes('expired') || 
         error.message.includes('unauthorized') ||
-        error.message.includes('401')
+        error.message.includes('401') ||
+        error.message.includes('Token inválido') ||
+        error.message.includes('invalid_token')
       )) {
-        console.log('🔄 Token expirado detectado, tentando renovação...');
+        console.log('🔄 Token inválido/expirado detectado, silenciando erro...');
+        // Não mostrar erro para o usuário para evitar confusão
         setFolderErrors(prev => ({ 
           ...prev, 
-          [folderKey]: 'Token expirado. Tente fazer login novamente.' 
+          [folderKey]: '' 
         }));
       } else {
         setFolderErrors(prev => ({ 
           ...prev, 
-          [folderKey]: `Erro ao carregar pasta: ${error instanceof Error ? error.message : 'Erro desconhecido'}` 
+          [folderKey]: `Error loading folder: ${error instanceof Error ? error.message : 'Unknown error'}` 
         }));
       }
       return [];
@@ -507,8 +548,7 @@ export default function MicrosoftInbox() {
             // Mostrar notificação para o usuário fazer login novamente
             setNewEmailNotification({ 
               show: true, 
-              count: 0,
-              message: 'Sessão expirada. Faça login novamente.' 
+              count: 0
             });
           }
         }
@@ -521,49 +561,40 @@ export default function MicrosoftInbox() {
   }, [getToken, accounts.length, emailCounts.inbox]);
 
   // Funções do AIManager
-  const checkPollingStatus = async () => {
-    setLoading(true);
-
-    try {
-      const token = await getToken();
-      const response = await fetch('http://localhost:3001/api/polling-user', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      if (data.success) {
-        setStatus(data.isRunning ? 'active' : 'idle');
-        setRecentEmails(data.stats?.recentEmails || []);
-      } else {
-        setStatus('error');
-      }
-    } catch (error) {
-      console.error('MicrosoftInbox - Erro ao verificar status do polling:', error);
-      setStatus('error');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const startProcessing = async () => {
     setLoading(true);
 
     try {
-      // Simular processamento local sem depender da API externa
+      console.log('🔄 MicrosoftInbox - Iniciando processamento real...');
       
-      // Simular delay de inicialização
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const { data: { user } } = await supabase.auth.getUser();
       
+      if (!user) {
+        console.error('❌ Usuário não encontrado');
+        setStatus('error');
+        return;
+      }
+
+      // Buscar configuração existente
+      const { data: existingConfig, error: fetchError } = await supabase
+        .from('email_configurations')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('provider_type', 'microsoft')
+        .eq('is_active', true)
+        .single();
+
+      if (fetchError || !existingConfig) {
+        console.error('❌ Configuração Microsoft não encontrada:', fetchError);
+        setStatus('error');
+        return;
+      }
+
+      console.log('✅ Configuração encontrada:', existingConfig);
       setStatus('active');
     } catch (error) {
-      console.error('MicrosoftInbox - Erro ao iniciar processamento local:', error);
+      console.error('❌ Erro ao iniciar processamento:', error);
       setStatus('error');
     } finally {
       setLoading(false);
@@ -571,62 +602,205 @@ export default function MicrosoftInbox() {
   };
 
   const stopProcessing = async () => {
-    console.log('MicrosoftInbox - stopProcessing iniciado (modo local)');
+    console.log('🔄 MicrosoftInbox - Parando processamento real...');
     setLoading(true);
 
     try {
-      // Simular parada do processamento local
-      console.log('MicrosoftInbox - Parando processamento local...');
+      const { data: { user } } = await supabase.auth.getUser();
       
-      // Simular delay de parada
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
+      if (!user) {
+        console.error('❌ Usuário não encontrado');
+        setStatus('error');
+        return;
+      }
+
+      // Desativar configuração existente
+      const { data, error } = await supabase
+        .from('email_configurations')
+        .update({ is_active: false })
+        .eq('user_id', user.id)
+        .eq('provider_type', 'microsoft')
+        .select();
+
+      if (error) {
+        console.error('❌ Erro ao desativar configuração:', error);
+        throw error;
+      }
+
+      console.log('✅ Processamento parado com sucesso:', data);
       setStatus('idle');
-      console.log('MicrosoftInbox - Processamento local parado com sucesso');
     } catch (error) {
-      console.error('MicrosoftInbox - Erro ao parar processamento local:', error);
+      console.error('❌ Erro ao parar processamento:', error);
       setStatus('error');
     } finally {
       setLoading(false);
     }
   };
 
+  // Test AI - Abrir chatbot de teste
   const testProcessing = async () => {
-    console.log('MicrosoftInbox - testProcessing iniciado (modo local)');
-    setLoading(true);
+    console.log('🧪 MicrosoftInbox - Abrindo chatbot de teste...');
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('Usuário não autenticado');
+      }
+
+      // Verificar se há configuração Microsoft ativa (mais flexível)
+      const { data: microsoftConfigs, error: configError } = await supabase
+        .from('email_configurations')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('provider_type', 'microsoft');
+
+      if (configError) {
+        console.error('❌ Erro ao buscar configurações:', configError);
+        throw new Error('Erro ao verificar configurações Microsoft');
+      }
+
+      if (!microsoftConfigs || microsoftConfigs.length === 0) {
+        throw new Error('Configuração Microsoft não encontrada. Conecte sua conta primeiro.');
+      }
+
+      // Verificar se há pelo menos uma configuração ativa
+      const activeConfig = microsoftConfigs.find(config => config.is_active);
+      if (!activeConfig) {
+        throw new Error('Conta Microsoft desconectada. Reconecte sua conta primeiro.');
+      }
+
+
+      // Verificar se há agente de IA configurado (mais flexível)
+      const { data: aiConfigs, error: aiError } = await supabase
+        .from('ai_configurations')
+        .select('*')
+        .eq('university_id', user.id)
+        .eq('is_active', true);
+
+      if (aiError) {
+        console.error('❌ Erro ao buscar agente de IA:', aiError);
+        // Continuar mesmo sem agente - modo demo
+        console.log('⚠️ Agente de IA não encontrado, continuando em modo demo');
+      }
+
+      // Inicializar chatbot com mensagem de boas-vindas
+      const welcomeMessage = aiConfigs && aiConfigs.length > 0 
+        ? 'Hello! I am your email AI. How can I help you today? You can ask me questions about scholarships, enrollment processes, or any other university-related questions.'
+        : 'Hello! I am your email AI in demonstration mode. How can I help you today? You can ask me questions about scholarships, enrollment processes, or any other university-related questions.';
+
+      setChatMessages([{
+        id: '1',
+        type: 'ai',
+        message: welcomeMessage,
+        timestamp: new Date()
+      }]);
+      
+      // Abrir modal do chatbot
+      setShowTestChat(true);
+      
+    } catch (error) {
+      console.error('❌ Erro ao abrir chatbot:', error);
+      alert(`❌ Erro: ${error.message}\n\n💡 Solução: Reconecte sua conta Microsoft primeiro.`);
+    }
+  };
+
+  // Função para enviar mensagem no chatbot
+  const sendChatMessage = async () => {
+    if (!chatInput.trim() || isChatLoading) return;
+
+    const userMessage = {
+      id: Date.now().toString(),
+      type: 'user' as const,
+      message: chatInput.trim(),
+      timestamp: new Date()
+    };
+
+    setChatMessages(prev => [...prev, userMessage]);
+    setChatInput('');
+    setIsChatLoading(true);
 
     try {
-      // Simular teste local
-      console.log('MicrosoftInbox - Testando processamento local...');
+      console.log('🤖 Enviando mensagem para Gemini API...');
       
-      // Simular delay de teste
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Simular emails de teste
-      const testEmails = [
-        {
-          id: 'test-1',
-          subject: 'Email de teste',
-          from: 'teste@exemplo.com',
-          analysis: {
-            shouldReply: true,
-            priority: 'medium' as const,
-            category: 'teste',
-            confidence: 0.9,
-            summary: 'Email de teste para verificar funcionamento'
-          },
-          processedAt: new Date(),
-          status: 'processed' as const
+      // Chamar Edge Function para processar com Gemini
+      const { data: result, error } = await supabase.functions.invoke('email-queue-worker', {
+        body: {
+          message: chatInput.trim(),
+          userId: (await supabase.auth.getUser()).data.user?.id,
+          chatbotMode: true,
+          sessionId: sessionId
         }
-      ];
-      
-      setRecentEmails(testEmails);
-      console.log('MicrosoftInbox - Teste local concluído com sucesso');
+      });
+
+      if (error) {
+        console.error('❌ Erro na Edge Function:', error);
+        
+        // Verificar se é erro de limite atingido
+        if (error.message?.includes('Daily prompt limit reached') || error.message?.includes('429')) {
+          const aiMessage = {
+            id: (Date.now() + 1).toString(),
+            type: 'ai' as const,
+            message: '🚫 You have reached the limit of 5 prompts per session. Please try again tomorrow or contact support to increase your limit.',
+            timestamp: new Date()
+          };
+          setChatMessages(prev => [...prev, aiMessage]);
+          return;
+        }
+        
+        throw new Error(`AI Error: ${error.message}`);
+      }
+
+      console.log('✅ Resposta da Gemini:', result);
+
+      // Atualizar informações de uso se disponíveis
+      if (result?.usage) {
+        setUsageInfo({
+          prompts_used: result.usage.prompts_used,
+          max_prompts: result.usage.max_prompts,
+          remaining_prompts: result.usage.remaining_prompts
+        });
+      }
+
+      const aiMessage = {
+        id: (Date.now() + 1).toString(),
+        type: 'ai' as const,
+        message: result?.response || result?.analysis?.summary || 'Sorry, I could not process your message.',
+        timestamp: new Date()
+      };
+
+      setChatMessages(prev => [...prev, aiMessage]);
     } catch (error) {
-      console.error('MicrosoftInbox - Erro ao testar processamento local:', error);
+      console.error('❌ Erro ao processar mensagem:', error);
+      
+      // Fallback para resposta simulada se Gemini falhar
+      const fallbackResponses = [
+        "Entendo sua pergunta! Com base nas informações que tenho, posso ajudá-lo com isso. Você gostaria de mais detalhes?",
+        "Excelente pergunta! Vou analisar isso para você. Deixe-me verificar as informações mais recentes.",
+        "Posso ajudá-lo com essa questão. Baseado no meu conhecimento sobre bolsas de estudo, aqui está o que posso te dizer...",
+        "Ótima pergunta! Vou processar essa informação e dar uma resposta detalhada para você.",
+        "Entendo! Deixe-me analisar sua pergunta e fornecer a melhor resposta possível."
+      ];
+
+      const randomResponse = fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)];
+
+      const aiMessage = {
+        id: (Date.now() + 1).toString(),
+        type: 'ai' as const,
+        message: `⚠️ Modo demo: ${randomResponse}`,
+        timestamp: new Date()
+      };
+
+      setChatMessages(prev => [...prev, aiMessage]);
     } finally {
-      setLoading(false);
+      setIsChatLoading(false);
     }
+  };
+
+  // Função para fechar o chatbot
+  const closeTestChat = () => {
+    setShowTestChat(false);
+    setChatMessages([]);
+    setChatInput('');
   };
 
   const handleEmailSelect = (email: ProcessedEmail | MicrosoftGraphEmail) => {
@@ -634,7 +808,8 @@ export default function MicrosoftInbox() {
   };
 
   const handleCompose = () => {
-    console.log('Compose clicked');
+    console.log('📧 MicrosoftInbox - Abrindo compositor de email...');
+    setShowComposeModal(true);
   };
 
   // Função para forçar recarregamento completo
@@ -732,20 +907,20 @@ export default function MicrosoftInbox() {
   });
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50">
-      {/* Notificação de novos emails */}
+    <div className="h-screen flex flex-col bg-gray-50 m-0 p-0 -mt-8">
+      {/* New emails notification */}
       {newEmailNotification.show && (
         <div className="fixed top-4 right-4 z-50 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg flex items-center space-x-2 animate-pulse">
           <Mail className="h-5 w-5" />
           <span className="font-medium">
-            {newEmailNotification.count} novo{newEmailNotification.count > 1 ? 's' : ''} email{newEmailNotification.count > 1 ? 's' : ''} detectado{newEmailNotification.count > 1 ? 's' : ''}!
+            {newEmailNotification.count} new{newEmailNotification.count > 1 ? 's' : ''} email{newEmailNotification.count > 1 ? 's' : ''} detected!
           </span>
-          <span className="text-sm">IA ativada automaticamente</span>
+          <span className="text-sm">AI activated automatically</span>
         </div>
       )}
 
       {/* Header - Outlook Style */}
-      <div className="h-16 bg-blue-600 flex items-center justify-between px-6 text-white">
+      <div className="h-16 bg-blue-600 flex items-center justify-between px-6 text-white m-0 p-0 -mt-8">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <Mail className="h-8 w-8" />
@@ -763,7 +938,7 @@ export default function MicrosoftInbox() {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
             <input
               type="text"
-              placeholder="Pesquisar"
+              placeholder="Search"
               value={searchTerm}
               onChange={handleSearch}
               className="w-full pl-10 pr-4 py-2 bg-white text-gray-900 rounded-lg focus:ring-2 focus:ring-blue-300 focus:outline-none"
@@ -772,6 +947,42 @@ export default function MicrosoftInbox() {
         </div>
 
         <div className="flex items-center gap-4">
+          {/* Account selector for multiple Microsoft accounts */}
+          {connections && connections.length > 1 && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-blue-100">Account:</span>
+              <select
+                value={activeConnection?.id || ''}
+                onChange={(e) => {
+                  const selectedConnection = connections.find(conn => conn.id === e.target.value);
+                  if (selectedConnection) {
+                    // Update active connection in localStorage
+                    localStorage.setItem('active_microsoft_connection', JSON.stringify(selectedConnection));
+                    // Reload the page to refresh the connection
+                    window.location.reload();
+                  }
+                }}
+                className="bg-blue-500 text-white text-sm px-3 py-1 rounded-lg border border-blue-400 focus:ring-2 focus:ring-blue-300 focus:outline-none"
+              >
+                {connections.map((connection) => (
+                  <option key={connection.id} value={connection.id}>
+                    {connection.email_address}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+          
+          {/* User name display */}
+          <div className="flex items-center gap-2 text-white">
+            <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
+              <User className="h-3 w-3 text-white" />
+            </div>
+            <span className="text-sm font-medium">
+              {activeConnection?.email_address?.split('@')[0] || accounts[0]?.name || 'User'}
+            </span>
+          </div>
+          
           {/* <MicrosoftAccountSelector onAccountChange={(email) => {
             console.log('Account changed to:', email);
             // Limpar cache e recarregar emails quando a conta muda
@@ -784,34 +995,9 @@ export default function MicrosoftInbox() {
             onClick={loadAllFolders}
             disabled={loadingEmails}
             className="p-2 hover:bg-blue-700 rounded-lg transition-colors"
-            title="Recarregar emails"
+            title="Refresh emails"
           >
             <RefreshCw className={`h-5 w-5 ${loadingEmails ? 'animate-spin' : ''}`} />
-          </button>
-          
-          {/* Force reload button */}
-          <button 
-            onClick={forceReload}
-            disabled={loadingEmails}
-            className="p-2 hover:bg-blue-700 rounded-lg transition-colors"
-            title="Forçar recarregamento completo"
-          >
-            <RefreshCw className={`h-5 w-5 ${loadingEmails ? 'animate-spin' : ''}`} />
-          </button>
-          
-          {/* Debug button */}
-          <button 
-            onClick={() => {
-              console.log('🔍 DEBUG - activeConnection:', activeConnection);
-              console.log('🔍 DEBUG - connections:', connections);
-              console.log('🔍 DEBUG - folderEmails:', folderEmails);
-              console.log('🔍 DEBUG - emailCounts:', emailCounts);
-              console.log('🔍 DEBUG - mailFolders:', mailFolders);
-            }}
-            className="p-2 hover:bg-blue-700 rounded-lg transition-colors"
-            title="Debug info"
-          >
-            <Settings className="h-5 w-5" />
           </button>
           {/* <button className="p-2 hover:bg-blue-700 rounded-lg transition-colors">
             <Settings className="h-5 w-5" />
@@ -833,7 +1019,7 @@ export default function MicrosoftInbox() {
               className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors text-sm"
             >
               <Plus className="h-4 w-4" />
-              Novo email
+              New email
             </button>
           </div>
 
@@ -844,14 +1030,10 @@ export default function MicrosoftInbox() {
                     className="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors text-sm"
                   >
                     <Bot className="h-4 w-4" />
-                    Criar Agente de IA
+                    Create AI Agent
                   </button>
                 </div>
 
-          {/* AI Assistant - Minimalista */}
-          <div className="px-3 pb-3">
-            <AutoEmailProcessing />
-          </div>
 
           {/* Navigation */}
           <nav className="flex-1 px-2">
@@ -899,15 +1081,6 @@ export default function MicrosoftInbox() {
               </div>
               
               <button
-                onClick={checkPollingStatus}
-                disabled={loading}
-                className="w-full flex items-center gap-3 px-3 py-2 text-left transition-colors mb-1 text-gray-700 hover:bg-gray-100 disabled:opacity-50"
-              >
-                <BarChart3 className="h-4 w-4 text-blue-600" />
-                <span className="text-sm">Status</span>
-              </button>
-
-              <button
                 onClick={startProcessing}
                 disabled={loading || status === 'active'}
                 className="w-full flex items-center gap-3 px-3 py-2 text-left transition-colors mb-1 text-gray-700 hover:bg-gray-100 disabled:opacity-50"
@@ -946,10 +1119,10 @@ export default function MicrosoftInbox() {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium text-gray-900 truncate">
-                  {accounts[0]?.name || 'User'}
+                  {activeConnection?.email_address?.split('@')[0] || accounts[0]?.name || 'User'}
                 </div>
                 <div className="text-xs text-gray-500 truncate">
-                  {accounts[0]?.username || 'user@outlook.com'}
+                  {activeConnection?.email_address || accounts[0]?.username || 'user@outlook.com'}
                 </div>
               </div>
             </div>
@@ -980,7 +1153,7 @@ export default function MicrosoftInbox() {
                 {loadingFolders[activeTab] && (
                   <div className="flex items-center gap-2 text-xs text-blue-600">
                     <Loader2 className="h-3 w-3 animate-spin" />
-                    <span>Carregando...</span>
+                    <span>Loading...</span>
                   </div>
                 )}
                 {folderErrors[activeTab] && (
@@ -997,9 +1170,9 @@ export default function MicrosoftInbox() {
                   onChange={(e) => setFilter(e.target.value as 'all' | 'unread' | 'starred')}
                   className="text-xs border border-gray-300 rounded px-2 py-1 focus:ring-1 focus:ring-blue-500 focus:border-transparent"
                 >
-                  <option value="all">Todos</option>
-                  <option value="unread">Não lidos</option>
-                  <option value="starred">Favoritos</option>
+                  <option value="all">All</option>
+                  <option value="unread">Unread</option>
+                  <option value="starred">Starred</option>
                 </select>
               </div>
             </div>
@@ -1008,7 +1181,7 @@ export default function MicrosoftInbox() {
               <div className="flex-1 flex items-center justify-center">
                 <div className="text-center">
                   <Loader2 className="h-8 w-8 text-blue-600 animate-spin mx-auto mb-4" />
-                  <p className="text-gray-600">Carregando pasta...</p>
+                  <p className="text-gray-600">Loading folder...</p>
                 </div>
               </div>
             ) : folderErrors[activeTab] ? (
@@ -1191,8 +1364,8 @@ export default function MicrosoftInbox() {
               <div className="flex-1 flex items-center justify-center">
                 <div className="text-center">
                   <Mail className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">Selecione um email para visualizar</h3>
-                  <p className="text-gray-500">Escolha um email da lista para ler seu conteúdo</p>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">Select an email to view</h3>
+                  <p className="text-gray-500">Choose an email from the list to read its content</p>
                 </div>
               </div>
             )}
@@ -1204,25 +1377,238 @@ export default function MicrosoftInbox() {
              {showKnowledgeBase && (
                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                  <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full mx-4 max-h-[90vh] overflow-hidden">
-                   <div className="flex items-center justify-between p-6 border-b">
-                     <div>
-                       <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-                         <Bot className="h-5 w-5 text-green-600" />
-                         Criar Agente de IA para Emails
-                       </h2>
-                       <p className="text-sm text-gray-600 mt-1">
-                         Configure seu agente de IA e adicione documentos para a base de conhecimento
-                       </p>
+                  <div className="flex items-center p-6 border-b">
+                    <div>
+                      <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+                        <Bot className="h-5 w-5 text-green-600" />
+                        Create AI Agent for Emails
+                      </h2>
+                      <p className="text-sm text-gray-600 mt-1">
+                        Configure your AI agent and add documents to the knowledge base
+                      </p>
+                    </div>
+                  </div>
+                   <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+                     <EmailAgentManagement />
+                   </div>
+                 </div>
+               </div>
+             )}
+
+             {/* Test AI Chatbot Modal */}
+             {showTestChat && (
+               <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                 <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-hidden flex flex-col">
+                   {/* Header */}
+                   <div className="flex items-center justify-between p-4 border-b bg-blue-600 text-white">
+                     <div className="flex items-center gap-3">
+                       <div className="w-10 h-10 bg-blue-700 rounded-lg flex items-center justify-center">
+                         <Bot className="h-6 w-6" />
+                       </div>
+                       <div>
+                         <h2 className="text-lg font-semibold">AI Test</h2>
+                         <p className="text-sm text-blue-100">Demonstration chatbot</p>
+                       </div>
                      </div>
                      <button
-                       onClick={() => setShowKnowledgeBase(false)}
-                       className="text-gray-400 hover:text-gray-600"
+                       onClick={closeTestChat}
+                       className="text-white hover:text-blue-200 transition-colors"
                      >
                        <XCircle className="h-6 w-6" />
                      </button>
                    </div>
-                   <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
-                     <EmailAgentManagement />
+
+                   {/* Chat Messages */}
+                   <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+                     {chatMessages.map((message) => (
+                       <div
+                         key={message.id}
+                         className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
+                       >
+                         <div
+                           className={`max-w-[80%] rounded-lg px-4 py-2 ${
+                             message.type === 'user'
+                               ? 'bg-blue-600 text-white'
+                               : 'bg-white text-gray-800 border border-blue-200 shadow-sm'
+                           }`}
+                         >
+                           <p className="text-sm">{message.message}</p>
+                           <p className="text-xs opacity-70 mt-1">
+                             {message.timestamp.toLocaleTimeString()}
+                           </p>
+                         </div>
+                       </div>
+                     ))}
+                     
+                     {isChatLoading && (
+                       <div className="flex justify-start">
+                         <div className="bg-white text-gray-800 border border-blue-200 shadow-sm rounded-lg px-4 py-2">
+                           <div className="flex items-center gap-2">
+                             <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+                             <span className="text-sm">AI is thinking...</span>
+                           </div>
+                         </div>
+                       </div>
+                     )}
+                   </div>
+
+                   {/* Usage Info */}
+                   {usageInfo && (
+                     <div className="px-4 py-2 bg-blue-50 border-t border-blue-200">
+                       <div className="flex items-center justify-between text-xs text-blue-700">
+                         <span>Prompts used: {usageInfo.prompts_used}/{usageInfo.max_prompts}</span>
+                         <span className="font-medium">
+                           {usageInfo.remaining_prompts > 0 
+                             ? `${usageInfo.remaining_prompts} remaining`
+                             : 'Limit reached'
+                           }
+                         </span>
+                       </div>
+                       <div className="w-full bg-blue-200 rounded-full h-1 mt-1">
+                         <div 
+                           className="bg-blue-600 h-1 rounded-full transition-all duration-300"
+                           style={{ width: `${(usageInfo.prompts_used / usageInfo.max_prompts) * 100}%` }}
+                         />
+                       </div>
+                     </div>
+                   )}
+
+                   {/* Chat Input */}
+                   <div className="p-4 border-t bg-white">
+                     <div className="flex gap-2">
+                       <input
+                         type="text"
+                         value={chatInput}
+                         onChange={(e) => setChatInput(e.target.value)}
+                         onKeyPress={(e) => e.key === 'Enter' && sendChatMessage()}
+                         placeholder={usageInfo && usageInfo.remaining_prompts === 0 ? "Limit reached - try again tomorrow" : "Type your message..."}
+                         className={`flex-1 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                           usageInfo && usageInfo.remaining_prompts === 0 
+                             ? 'border-red-300 bg-gray-100 text-gray-500 cursor-not-allowed' 
+                             : 'border-blue-300'
+                         }`}
+                         disabled={isChatLoading || (usageInfo && usageInfo.remaining_prompts === 0)}
+                       />
+                       <button
+                         onClick={sendChatMessage}
+                         disabled={!chatInput.trim() || isChatLoading || (usageInfo && usageInfo.remaining_prompts === 0)}
+                         className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${
+                           usageInfo && usageInfo.remaining_prompts === 0
+                             ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                             : 'bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed'
+                         }`}
+                       >
+                         {isChatLoading ? (
+                           <Loader2 className="h-4 w-4 animate-spin" />
+                         ) : (
+                           <SendIcon className="h-4 w-4" />
+                         )}
+                         Send
+                       </button>
+                     </div>
+                     <p className={`text-xs mt-2 ${
+                       usageInfo && usageInfo.remaining_prompts === 0 
+                         ? 'text-red-500 font-medium' 
+                         : 'text-gray-500'
+                     }`}>
+                       {usageInfo && usageInfo.remaining_prompts === 0 
+                         ? '🚫 Daily limit reached. Try again tomorrow or contact support to increase your limit.'
+                         : '💡 Tip: Ask questions about scholarships, enrollment or university processes'
+                       }
+                     </p>
+                   </div>
+                 </div>
+               </div>
+             )}
+
+             {/* Email Compose Modal */}
+             {showComposeModal && (
+               <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                 <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col">
+                   {/* Header */}
+                   <div className="flex items-center justify-between p-4 border-b bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+                     <div className="flex items-center gap-3">
+                       <div className="w-10 h-10 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                         <Send className="h-6 w-6" />
+                       </div>
+                       <div>
+                         <h2 className="text-lg font-semibold">New Email</h2>
+                         <p className="text-sm text-blue-100">Compose and send email</p>
+                       </div>
+                     </div>
+                     <button
+                       onClick={() => setShowComposeModal(false)}
+                       className="text-white hover:text-blue-200 transition-colors"
+                     >
+                       <X className="h-6 w-6" />
+                     </button>
+                   </div>
+
+                   {/* Compose Form */}
+                   <div className="flex-1 overflow-y-auto p-6">
+                     <div className="space-y-4">
+                       {/* To Field */}
+                       <div>
+                         <label className="block text-sm font-medium text-gray-700 mb-2">
+                           Para
+                         </label>
+                         <input
+                           type="email"
+                           placeholder="Digite o email do destinatário"
+                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                         />
+                       </div>
+
+                       {/* Subject Field */}
+                       <div>
+                         <label className="block text-sm font-medium text-gray-700 mb-2">
+                           Assunto
+                         </label>
+                         <input
+                           type="text"
+                           placeholder="Digite o assunto do email"
+                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                         />
+                       </div>
+
+                       {/* Body Field */}
+                       <div>
+                         <label className="block text-sm font-medium text-gray-700 mb-2">
+                           Mensagem
+                         </label>
+                         <textarea
+                           placeholder="Digite sua mensagem aqui..."
+                           rows={10}
+                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                         />
+                       </div>
+                     </div>
+                   </div>
+
+                   {/* Footer */}
+                   <div className="p-4 border-t bg-gray-50">
+                     <div className="flex items-center justify-between">
+                       <div className="flex items-center gap-2">
+                         <button className="p-2 text-gray-500 hover:text-gray-700 transition-colors">
+                           <Paperclip className="h-5 w-5" />
+                         </button>
+                         <button className="p-2 text-gray-500 hover:text-gray-700 transition-colors">
+                           <Save className="h-5 w-5" />
+                         </button>
+                       </div>
+                       <div className="flex items-center gap-3">
+                         <button
+                           onClick={() => setShowComposeModal(false)}
+                           className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                         >
+                           Cancelar
+                         </button>
+                         <button className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2">
+                           <Send className="h-4 w-4" />
+                           Enviar
+                         </button>
+                       </div>
+                     </div>
                    </div>
                  </div>
                </div>

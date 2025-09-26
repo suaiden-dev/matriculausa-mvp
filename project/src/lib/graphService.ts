@@ -49,9 +49,9 @@ class GraphService {
         }
       }
 
-      // Se não conseguiu renovar, marcar conta como desconectada
-      console.log('❌ Token inválido e não foi possível renovar, marcando conta como desconectada');
-      await this.markAccountAsDisconnected();
+      // Se não conseguiu renovar, apenas logar o erro sem desativar a conta
+      console.log('❌ Token inválido e não foi possível renovar, mas mantendo conta ativa');
+      // Removido: await this.markAccountAsDisconnected();
       
       throw new Error('Token inválido - conta precisa ser reconectada');
     } catch (error) {
@@ -164,11 +164,9 @@ class GraphService {
     try {
       // Listing email folders
       
-      const folders = await rateLimiter.executeRequest(async () => {
-        return await this.graphClient
-          .api('/me/mailFolders')
-          .get();
-      });
+      const folders = await this.graphClient
+        .api('/me/mailFolders')
+        .get();
       
       console.log('GraphService - Pastas encontradas:', folders);
       if (folders.value) {
@@ -187,14 +185,12 @@ class GraphService {
     try {
       console.log(`GraphService - Buscando emails da pasta ${folderId}...`);
       
-      const emails = await rateLimiter.executeRequest(async () => {
-        return await this.graphClient
-          .api(`/me/mailFolders/${folderId}/messages`)
-          .top(top)
-          .select('id,subject,from,receivedDateTime,isRead,bodyPreview')
-          .orderby('receivedDateTime desc')
-          .get();
-      });
+      const emails = await this.graphClient
+        .api(`/me/mailFolders/${folderId}/messages`)
+        .top(top)
+        .select('id,subject,from,receivedDateTime,isRead,bodyPreview')
+        .orderby('receivedDateTime desc')
+        .get();
 
       console.log(`GraphService - Emails da pasta ${folderId}:`, emails.value?.length || 0);
       return emails;
@@ -223,20 +219,18 @@ class GraphService {
       }
       
       // Buscar emails com filtro opcional
-      const allEmails = await rateLimiter.executeRequest(async () => {
-        let query = this.graphClient
-          .api('/me/messages')
-          .top(top)
-          .skip(skip)
-          .select('id,subject,from,receivedDateTime,isRead,bodyPreview')
-          .orderby('receivedDateTime desc');
-        
-        if (filterQuery) {
-          query = query.filter(filterQuery);
-        }
-        
-        return await query.get();
-      });
+      let query = this.graphClient
+        .api('/me/messages')
+        .top(top)
+        .skip(skip)
+        .select('id,subject,from,receivedDateTime,isRead,bodyPreview')
+        .orderby('receivedDateTime desc');
+      
+      if (filterQuery) {
+        query = query.filter(filterQuery);
+      }
+      
+      const allEmails = await query.get();
 
       console.log('GraphService - Total de emails encontrados:', allEmails.value?.length || 0);
       

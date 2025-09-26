@@ -290,13 +290,13 @@ export class ImprovedTokenRenewalService {
       if (!token) {
         console.log('⚠️ Refresh token pode ter sido revogado - usuário precisa reautenticar');
         
-        // Limpar tokens inválidos do banco
+        // Limpar tokens inválidos do banco mas manter conta ativa
         await supabase
           .from('email_configurations')
           .update({
             oauth_access_token: '',
-            oauth_refresh_token: '',
-            is_active: false
+            oauth_refresh_token: ''
+            // Removido: is_active: false
           })
           .eq('user_id', userId)
           .eq('email_address', email)

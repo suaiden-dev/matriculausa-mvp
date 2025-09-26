@@ -42,6 +42,13 @@ interface EmailAgent {
   knowledge_documents_count: number;
 }
 
+interface EmailAgentManagementProps {
+  activeEmailConfig?: {
+    id: string;
+    email_address: string;
+  };
+}
+
 const personalityOptions = [
   { value: "Friendly", label: "Friendly", description: "Warm and welcoming approach" },
   { value: "Professional", label: "Professional", description: "Formal and reliable" },
@@ -64,7 +71,7 @@ const agentTypeOptions = [
   "Library Services"
 ];
 
-export default function EmailAgentManagement() {
+export default function EmailAgentManagement({ activeEmailConfig }: EmailAgentManagementProps = {}) {
   const { user } = useAuth();
   const { university } = useUniversity();
   const [agents, setAgents] = useState<EmailAgent[]>([]);
@@ -88,10 +95,10 @@ export default function EmailAgentManagement() {
   const [formLoading, setFormLoading] = useState(false);
 
   useEffect(() => {
-    if (university?.id) {
+    if (university?.id || activeEmailConfig?.id) {
       fetchAgents();
     }
-  }, [university?.id]);
+  }, [university?.id, activeEmailConfig?.id]);
 
   const fetchAgents = async () => {
     try {
