@@ -42,6 +42,23 @@ const Performance: React.FC<PerformanceProps> = ({ sellerProfile, students }) =>
     }).format(amount || 0);
   };
 
+  // Função para deduplificar estudantes como no MyStudents.tsx e Overview.tsx
+  const getUniqueStudents = React.useMemo(() => {
+    if (!students || students.length === 0) return [];
+    
+    // Agrupar por estudante para remover duplicatas (mesma lógica do MyStudents.tsx)
+    const groupedByStudent = new Map<string, any>();
+    students.forEach(student => {
+      const studentId = student.id;
+      if (!groupedByStudent.has(studentId)) {
+        groupedByStudent.set(studentId, student);
+      }
+      // Se já existe, manter o primeiro (não sobrescrever)
+    });
+    
+    return Array.from(groupedByStudent.values());
+  }, [students]);
+
   // Helpers para carregar pacotes e dependentes
   const loadStudentPackageFees = async (studentUserId: string) => {
     if (!studentUserId || studentPackageFees[studentUserId]) return;
@@ -141,14 +158,15 @@ const Performance: React.FC<PerformanceProps> = ({ sellerProfile, students }) =>
   useEffect(() => {
     if (!students || students.length === 0) return;
     
-    console.log('🔄 [PERFORMANCE] Carregando dados para', students.length, 'estudantes');
+    const uniqueStudents = getUniqueStudents;
+    console.log('🔄 [PERFORMANCE] Carregando dados para', uniqueStudents.length, 'estudantes únicos de', students.length, 'originais');
     
-    (students || []).forEach((s: any) => {
+    uniqueStudents.forEach((s: any) => {
       if (s.id && !studentPackageFees[s.id]) loadStudentPackageFees(s.id);
       if (s.id && studentDependents[s.id] === undefined) loadStudentDependents(s); // Passa o student completo
       if (s.id && studentFeeOverrides[s.id] === undefined) loadStudentFeeOverrides(s.id);
     });
-  }, [students]); // Removidas as outras dependências para evitar loop infinito
+  }, [getUniqueStudents]); // Usar getUniqueStudents em vez de students
 
 
 
@@ -349,18 +367,21 @@ const Performance: React.FC<PerformanceProps> = ({ sellerProfile, students }) =>
 
   // Recalcular receita ajustada e monthly_data quando tivermos taxas/dependentes carregados
   useEffect(() => {
-    if (!performanceData || !students || students.length === 0) return;
+    if (!performanceData) return;
     
     // Usar um timeout para evitar updates muito frequentes
     const timeoutId = setTimeout(() => {
       try {
-        const adjustedRevenue = students.reduce((sum: number, s: any) => sum + calculateStudentAdjustedPaid(s), 0);
+        const uniqueStudents = getUniqueStudents;
+        if (!uniqueStudents || uniqueStudents.length === 0) return;
+        
+        const adjustedRevenue = uniqueStudents.reduce((sum: number, s: any) => sum + calculateStudentAdjustedPaid(s), 0);
         
         console.log('💰 [PERFORMANCE_TOTAL] Total calculado no Performance.tsx:', adjustedRevenue);
-        console.log('💰 [PERFORMANCE_TOTAL] Número de estudantes no Performance.tsx:', students.length);
+        console.log('💰 [PERFORMANCE_TOTAL] Estudantes únicos:', uniqueStudents.length, 'de', students.length, 'originais');
         
         // Debug para comparar com MyStudents.tsx
-        console.log('🔍 [PERFORMANCE_COMPARISON] Estudantes no Performance:', students.map(s => ({ 
+        console.log('🔍 [PERFORMANCE_COMPARISON] Estudantes únicos no Performance:', uniqueStudents.map(s => ({ 
           id: s.id, 
           email: s.email,
           has_paid_selection_process: s.has_paid_selection_process_fee,
@@ -388,11 +409,12 @@ const Performance: React.FC<PerformanceProps> = ({ sellerProfile, students }) =>
     }, 100);
     
     return () => clearTimeout(timeoutId);
-  }, [students, studentPackageFees, studentDependents, studentFeeOverrides, rpcTotalRevenue, originalMonthlyData]); // Incluído studentFeeOverrides
+  }, [getUniqueStudents, studentPackageFees, studentDependents, studentFeeOverrides, rpcTotalRevenue, originalMonthlyData, performanceData]); // Incluído getUniqueStudents
 
   // Debug específico para checar discrepância do Irving
   useEffect(() => {
-    const target = (students || []).find((s: any) => s?.email === 'irving1745@uorak.com');
+    const uniqueStudents = getUniqueStudents;
+    const target = uniqueStudents.find((s: any) => s?.email === 'irving1745@uorak.com');
     if (target) {
       const packageFees = studentPackageFees[target.id];
       const deps = studentDependents[target.id] || 0;
@@ -409,7 +431,7 @@ const Performance: React.FC<PerformanceProps> = ({ sellerProfile, students }) =>
         calculated: calculateStudentAdjustedPaid(target)
       });
     }
-  }, [students, studentPackageFees, studentDependents]);
+  }, [getUniqueStudents, studentPackageFees, studentDependents]);
 
   if (loading) {
     return (

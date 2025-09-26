@@ -267,10 +267,44 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
     return total;
   };
 
+  // Função para deduplificar estudantes como no MyStudents.tsx
+  const getUniqueStudents = React.useMemo(() => {
+    if (!students || students.length === 0) return [];
+    
+    // Agrupar por estudante para remover duplicatas (mesma lógica do MyStudents.tsx)
+    const groupedByStudent = new Map<string, any>();
+    students.forEach(student => {
+      const studentId = student.id;
+      if (!groupedByStudent.has(studentId)) {
+        groupedByStudent.set(studentId, student);
+      }
+      // Se já existe, manter o primeiro (não sobrescrever)
+    });
+    
+    return Array.from(groupedByStudent.values());
+  }, [students]);
+
   const adjustedTotalRevenue = React.useMemo(() => {
-    if (!students || students.length === 0) return 0;
-    return students.reduce((sum: number, s: any) => sum + calculateStudentAdjustedPaid(s), 0);
-  }, [students, studentPackageFees, studentDependents, studentFeeOverrides]);
+    const uniqueStudents = getUniqueStudents;
+    if (!uniqueStudents || uniqueStudents.length === 0) return 0;
+    
+    const total = uniqueStudents.reduce((sum: number, s: any) => sum + calculateStudentAdjustedPaid(s), 0);
+    
+    console.log('💰 [OVERVIEW_TOTAL] Total calculado no Overview.tsx:', total);
+    console.log('💰 [OVERVIEW_TOTAL] Estudantes únicos:', uniqueStudents.length, 'de', students.length, 'originais');
+    
+    // Debug para comparar com MyStudents.tsx
+    console.log('🔍 [OVERVIEW_COMPARISON] Estudantes únicos no Overview:', uniqueStudents.map(s => ({ 
+      id: s.id, 
+      email: s.email,
+      has_paid_selection_process: s.has_paid_selection_process_fee,
+      has_paid_scholarship: s.is_scholarship_fee_paid,
+      has_paid_i20: s.has_paid_i20_control_fee,
+      calculated: calculateStudentAdjustedPaid(s)
+    })));
+    
+    return total;
+  }, [getUniqueStudents, studentPackageFees, studentDependents, studentFeeOverrides]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -365,7 +399,7 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
                   <div className="h-4 w-24 bg-slate-200 rounded animate-pulse" />
                 ) : (
                 <span className="text-sm font-medium text-emerald-600">
-                  {students.length > 0 ? (adjustedTotalRevenue / students.length).toFixed(2) : 0} per student
+                  {getUniqueStudents.length > 0 ? (adjustedTotalRevenue / getUniqueStudents.length).toFixed(2) : 0} per student
                 </span>
                 )}
               </div>
@@ -446,7 +480,7 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
       </div>
 
       {/* Top Sales Performance */}
-      {students.length > 0 && (
+      {getUniqueStudents.length > 0 && (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
           <div className="p-4 sm:p-6 border-b border-slate-200">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -469,7 +503,7 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
           <div className="p-4 sm:p-6">
             <div className="space-y-4">
               {/* Top 3 Students by Revenue */}
-              {(loadingCalc ? students : students)
+              {(loadingCalc ? getUniqueStudents : getUniqueStudents)
                 .sort((a, b) => (calculateStudentAdjustedPaid(b) || 0) - (calculateStudentAdjustedPaid(a) || 0))
                 .slice(0, 3)
                 .map((student, index) => (
@@ -519,11 +553,11 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
                 ))}
               
               {/* Additional Top Students (4th to 6th place) */}
-              {students.length > 3 && (
+              {getUniqueStudents.length > 3 && (
                 <div className="pt-4 border-t border-slate-200">
                   <h4 className="text-sm font-medium text-slate-600 mb-3">Other Top Performers</h4>
                   <div className="space-y-3">
-                    {(loadingCalc ? students : students)
+                    {(loadingCalc ? getUniqueStudents : getUniqueStudents)
                       .sort((a, b) => (calculateStudentAdjustedPaid(b) || 0) - (calculateStudentAdjustedPaid(a) || 0))
                       .slice(3, 6)
                       .map((student, index) => (
