@@ -28,6 +28,185 @@ import {
 } from 'lucide-react';
 import DocumentViewerModal from '../../components/DocumentViewerModal';
 import ZellePaymentReviewModal from '../../components/ZellePaymentReviewModal';
+import { generateTermAcceptancePDFBlob, StudentTermAcceptanceData } from '../../utils/pdfGenerator';
+
+// Function to send term acceptance notification with PDF after successful payment
+const sendTermAcceptanceNotificationAfterPayment = async (userId: string, feeType: string) => {
+  try {
+    console.log('[NOTIFICAÇÃO] Buscando dados do usuário para notificação...');
+    
+    // Get user profile data
+    const { data: userProfile, error: userError } = await supabase
+      .from('user_profiles')
+      .select('email, full_name, country, seller_referral_code')
+      .eq('user_id', userId)
+      .single();
+
+    if (userError || !userProfile) {
+      console.error('[NOTIFICAÇÃO] Erro ao buscar perfil do usuário:', userError);
+      return;
+    }
+
+    // Get the most recent term acceptance for this user
+    const { data: termAcceptance, error: termError } = await supabase
+      .from('comprehensive_term_acceptance')
+      .select('term_id, accepted_at, ip_address, user_agent')
+      .eq('user_id', userId)
+      .eq('term_type', 'checkout_terms')
+      .order('accepted_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (termError || !termAcceptance) {
+      console.error('[NOTIFICAÇÃO] Erro ao buscar aceitação de termos:', termError);
+      return;
+    }
+
+    // Get term content
+    const { data: termData, error: termDataError } = await supabase
+      .from('application_terms')
+      .select('title, content')
+      .eq('id', termAcceptance.term_id)
+      .single();
+
+    if (termDataError || !termData) {
+      console.error('[NOTIFICAÇÃO] Erro ao buscar conteúdo do termo:', termDataError);
+      return;
+    }
+
+    // Get seller data if user has seller_referral_code
+    let sellerData = null;
+    if (userProfile.seller_referral_code) {
+      const { data: sellerResult } = await supabase
+        .from('sellers')
+        .select('name, email, referral_code, user_id, affiliate_admin_id')
+        .eq('referral_code', userProfile.seller_referral_code)
+        .single();
+      
+      if (sellerResult) {
+        sellerData = sellerResult;
+      }
+    }
+
+    // Get affiliate admin data if seller has affiliate_admin_id
+    let affiliateAdminData = null;
+    if (sellerData?.affiliate_admin_id) {
+      console.log('[NOTIFICAÇÃO] Buscando affiliate admin com ID:', sellerData.affiliate_admin_id);
+      
+      // First get the affiliate admin to get the user_id
+      const { data: affiliateResult, error: affiliateError } = await supabase
+        .from('affiliate_admins')
+        .select('user_id')
+        .eq('id', sellerData.affiliate_admin_id)
+        .single();
+      
+      if (affiliateError) {
+        console.error('[NOTIFICAÇÃO] Erro ao buscar affiliate admin:', affiliateError);
+      } else if (affiliateResult?.user_id) {
+        // Then get the user profile data
+        const { data: userProfileResult, error: userProfileError } = await supabase
+          .from('user_profiles')
+          .select('full_name, email')
+          .eq('user_id', affiliateResult.user_id)
+          .single();
+        
+        if (userProfileError) {
+          console.error('[NOTIFICAÇÃO] Erro ao buscar user profile do affiliate admin:', userProfileError);
+        } else if (userProfileResult) {
+          affiliateAdminData = {
+            full_name: userProfileResult.full_name,
+            email: userProfileResult.email
+          };
+          console.log('[NOTIFICAÇÃO] Dados do affiliate admin carregados:', affiliateAdminData);
+        }
+      }
+    }
+
+    // Generate PDF for the term acceptance
+    let pdfBlob: Blob | null = null;
+    try {
+      console.log('[NOTIFICAÇÃO] Gerando PDF para notificação...');
+      
+      // Prepare data for PDF generation
+      const pdfData: StudentTermAcceptanceData = {
+        student_name: userProfile.full_name,
+        student_email: userProfile.email,
+        term_title: termData.title,
+        accepted_at: termAcceptance.accepted_at,
+        ip_address: termAcceptance.ip_address || 'N/A',
+        user_agent: termAcceptance.user_agent || 'N/A',
+        country: userProfile.country || 'N/A',
+        affiliate_code: sellerData?.referral_code || 'N/A',
+        term_content: termData.content || ''
+      };
+
+      // Generate PDF blob
+      pdfBlob = generateTermAcceptancePDFBlob(pdfData);
+      console.log('[NOTIFICAÇÃO] PDF gerado com sucesso!');
+    } catch (pdfError) {
+      console.error('[NOTIFICAÇÃO] Erro ao gerar PDF:', pdfError);
+      // Don't continue without PDF as it's required for this notification
+      throw new Error('Failed to generate PDF for term acceptance notification');
+    }
+
+    // Prepare notification payload
+    const webhookPayload = {
+      tipo_notf: "Student Term Acceptance",
+      email_admin: "admin@matriculausa.com",
+      nome_admin: "Admin MatriculaUSA",
+      email_aluno: userProfile.email,
+      nome_aluno: userProfile.full_name,
+      email_seller: sellerData?.email || "",
+      nome_seller: sellerData?.name || "N/A",
+      email_affiliate_admin: affiliateAdminData?.email || "",
+      nome_affiliate_admin: affiliateAdminData?.full_name || "N/A",
+      o_que_enviar: `Student ${userProfile.full_name} has accepted the ${termData.title} and completed ${feeType} payment via Zelle (manually approved). This shows the student is progressing through the enrollment process.`,
+      term_title: termData.title,
+      term_type: 'checkout_terms',
+      accepted_at: termAcceptance.accepted_at,
+      ip_address: termAcceptance.ip_address,
+      student_country: userProfile.country,
+      seller_id: sellerData?.user_id || "",
+      referral_code: sellerData?.referral_code || "",
+      affiliate_admin_id: sellerData?.affiliate_admin_id || ""
+    };
+
+    console.log('[NOTIFICAÇÃO] Enviando webhook com payload:', webhookPayload);
+
+    // Send webhook notification with PDF (always required for term acceptance)
+    if (!pdfBlob) {
+      throw new Error('PDF is required for term acceptance notification but was not generated');
+    }
+
+    const formData = new FormData();
+    
+    // Add each field individually for n8n to process correctly
+    Object.entries(webhookPayload).forEach(([key, value]) => {
+      formData.append(key, value !== null && value !== undefined ? value.toString() : '');
+    });
+
+    // Add PDF with descriptive filename
+    const fileName = `term_acceptance_${userProfile.full_name.replace(/\s+/g, '_').toLowerCase()}_${new Date().toISOString().split('T')[0]}.pdf`;
+    formData.append('pdf', pdfBlob, fileName);
+    console.log('[NOTIFICAÇÃO] PDF anexado à notificação:', fileName);
+
+    const webhookResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (webhookResponse.ok) {
+      console.log('[NOTIFICAÇÃO] Notificação enviada com sucesso!');
+    } else {
+      const errorText = await webhookResponse.text();
+      console.warn('[NOTIFICAÇÃO] Erro ao enviar notificação:', webhookResponse.status, errorText);
+    }
+
+  } catch (error) {
+    console.error('[NOTIFICAÇÃO] Erro ao enviar notificação de aceitação de termos:', error);
+    // Don't throw error to avoid breaking the payment process
+  }
+};
 
 interface PaymentRecord {
   id: string;
@@ -988,6 +1167,18 @@ const PaymentManagement = (): React.JSX.Element => {
         // Não falhar o processo se o webhook falhar
       }
 
+      // --- NOTIFICAÇÃO DE ACEITAÇÃO DE TERMOS COM PDF (apenas para selection_process_fee) ---
+      if (payment.fee_type === 'selection_process') {
+        try {
+          console.log('📄 [approveZellePayment] Enviando notificação de aceitação de termos com PDF...');
+          await sendTermAcceptanceNotificationAfterPayment(payment.user_id!, 'selection_process');
+          console.log('✅ [approveZellePayment] Notificação de aceitação de termos enviada com sucesso!');
+        } catch (termNotificationError) {
+          console.error('❌ [approveZellePayment] Erro ao enviar notificação de aceitação de termos:', termNotificationError);
+          // Não falhar o processo se a notificação de termos falhar
+        }
+      }
+
       // --- NOTIFICAÇÃO PARA UNIVERSIDADE ---
       try {
         console.log(`📤 [approveZellePayment] Enviando notificação de ${payment.fee_type} para universidade...`);
@@ -1007,13 +1198,13 @@ const PaymentManagement = (): React.JSX.Element => {
           
           console.log(`📤 [approveZellePayment] Payload para universidade:`, payload);
           
-          console.log(`🔗 [approveZellePayment] URL da Edge Function:`, `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${notificationEndpoint}`);
+          console.log(`🔗 [approveZellePayment] URL da Edge Function:`, `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${notificationEndpoint!}`);
           console.log(`🔗 [approveZellePayment] Headers:`, {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
           });
           
-          const notificationResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${notificationEndpoint}`, {
+          const notificationResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${notificationEndpoint!}`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -1143,7 +1334,7 @@ const PaymentManagement = (): React.JSX.Element => {
         }
 
         if (sellerData && !sellerError) {
-          const { data: sellerProfile, error: sellerProfileError } = await supabase.from('user_profiles').select('phone').eq('user_id', sellerData.user_id).single();
+          const { data: sellerProfile } = await supabase.from('user_profiles').select('phone').eq('user_id', sellerData.user_id).single();
           const sellerPhone = sellerProfile?.phone;
 
           console.log(`📤 [approveZellePayment] Seller encontrado:`, sellerData);

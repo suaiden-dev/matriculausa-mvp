@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './useAuth';
+import { sendTermAcceptanceNotification } from '../utils/termAcceptanceNotification';
 
 export type TermType = 
   | 'terms_of_service'
@@ -66,8 +67,13 @@ export const useAffiliateTermsAcceptance = () => {
         throw acceptanceError;
       }
 
+      const success = acceptanceData || true;
+
+      // Term acceptance recorded successfully
+      // Note: Notification with PDF will be sent after successful payment, not here
+
       console.log('✅ [AffiliateTermsAcceptance] Aceitação registrada com sucesso');
-      return acceptanceData || true;
+      return success;
     } catch (error: any) {
       console.error('Erro ao registrar aceitação de termos do affiliate:', error);
       return false;
