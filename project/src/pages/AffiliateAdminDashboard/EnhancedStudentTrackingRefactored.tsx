@@ -62,8 +62,11 @@ function EnhancedStudentTracking(props) {
   useEffect(() => {
     const loadOverrides = async () => {
       try {
-        const uniqueIds = Array.from(new Set((students || []).map((s) => s.id).filter(Boolean)));
+        console.log('🔍 LOADING OVERRIDES - Students count:', (students || []).length);
+        const uniqueIds = Array.from(new Set((students || []).map((s) => s.user_id).filter(Boolean)));
+        console.log('🔍 LOADING OVERRIDES - Unique user_ids:', uniqueIds);
         if (uniqueIds.length === 0) {
+          console.log('🔍 LOADING OVERRIDES - No valid user_ids found!');
           setOverridesMap({});
           return;
         }
@@ -81,19 +84,27 @@ function EnhancedStudentTracking(props) {
             const v = res.value;
             const userId = v.userId;
             const data = v.data;
-            if (data) {
+            // ✅ CORREÇÃO: get_user_fee_overrides pode retornar array ou objeto único
+            const override = Array.isArray(data) ? (data.length > 0 ? data[0] : null) : data;
+            if (override) {
               map[userId] = {
-                selection_process_fee: data.selection_process_fee != null ? Number(data.selection_process_fee) : undefined,
-                application_fee: data.application_fee != null ? Number(data.application_fee) : undefined,
-                scholarship_fee: data.scholarship_fee != null ? Number(data.scholarship_fee) : undefined,
-                i20_control_fee: data.i20_control_fee != null ? Number(data.i20_control_fee) : undefined
+                selection_process_fee: override.selection_process_fee != null ? Number(override.selection_process_fee) : undefined,
+                application_fee: override.application_fee != null ? Number(override.application_fee) : undefined,
+                scholarship_fee: override.scholarship_fee != null ? Number(override.scholarship_fee) : undefined,
+                i20_control_fee: override.i20_control_fee != null ? Number(override.i20_control_fee) : undefined
               };
+              console.log(`🔍 OVERRIDE LOADED for ${userId}:`, map[userId]);
+            } else {
+              console.log(`🔍 NO OVERRIDE for ${userId}, data:`, data);
             }
           }
         });
 
+        console.log('🔍 OVERRIDES MAP FINAL:', map);
+        console.log('🔍 OVERRIDES MAP SIZE:', Object.keys(map).length);
         setOverridesMap(map);
       } catch (e) {
+        console.error('🔍 OVERRIDES ERROR:', e);
         setOverridesMap({});
       }
     };
@@ -136,32 +147,79 @@ function EnhancedStudentTracking(props) {
   const adjustedStudents = useMemo(() => {
     console.log('🔍 CALCULATING ADJUSTED STUDENTS');
     console.log('🔍 filteredStudents input:', (filteredStudents || []).length);
+    console.log('🔍 feeConfig values:', feeConfig);
+    console.log('🔍 overridesMap size:', Object.keys(overridesMap).length);
+    console.log('🔍 dependentsMap size:', Object.keys(dependentsMap).length);
     
     const result = (filteredStudents || []).map((s) => {
       console.log(`🔍 PROCESSING STUDENT ${s.email}:`, {
         hasMultipleApplications: s.hasMultipleApplications,
         applicationCount: s.applicationCount,
-        allApplications: s.allApplications?.length || 0
+        allApplications: s.allApplications?.length || 0,
+        studentId: s.id,
+        profileId: s.profile_id
       });
       
-      const o = overridesMap[s.id] || {};
+      if (!s.user_id) {
+        console.warn(`🔍 WARNING: Student ${s.email} has no user_id!`, s);
+      }
+      const o = overridesMap[s.user_id] || {};
       const dependents = Number(dependentsMap[s.profile_id]) || 0;
-      const selectionAmount = o.selection_process_fee ?? feeConfig.selection_process_fee;
-      const scholarshipAmount = o.scholarship_fee ?? feeConfig.scholarship_fee_default;
-      const i20Amount = o.i20_control_fee ?? feeConfig.i20_control_fee;
+      console.log(`🔍 STUDENT DATA for ${s.email}:`, {
+        student_id: s.id,
+        user_id: s.user_id, // ✅ ADICIONADO: Log do user_id
+        profile_id: s.profile_id, // ✅ ADICIONADO: Log do profile_id
+        overrides: o,
+        overrides_available: Object.keys(overridesMap),
+        dependents: dependents,
+        payments: {
+          selection: s.has_paid_selection_process_fee,
+          scholarship: s.is_scholarship_fee_paid,
+          i20: s.has_paid_i20_control_fee
+        }
+      });
 
       let total = 0;
       if (s.has_paid_selection_process_fee) {
-        // Se houver override para selection, usar exatamente o override;
-        // caso contrário, somar +150 por dependente
+        // ✅ CORREÇÃO: Se houver override para selection, usar exatamente o override;
+        // caso contrário, usar valor padrão + dependentes
         const sel = o.selection_process_fee != null
-          ? Number(selectionAmount)
-          : Number(selectionAmount) + (dependents * 150);
+          ? Number(o.selection_process_fee) // ✅ Usar diretamente o override
+          : Number(feeConfig.selection_process_fee) + (dependents * 150); // ✅ Valor padrão + dependentes
         total += sel || 0;
+        console.log(`🔍 Selection Process Fee for ${s.email}:`, {
+          hasOverride: o.selection_process_fee != null,
+          overrideValue: o.selection_process_fee,
+          defaultValue: feeConfig.selection_process_fee,
+          dependents: dependents,
+          finalAmount: sel
+        });
       }
       // Application fee NÃO entra no somatório de receita deste dashboard
-      if (s.is_scholarship_fee_paid) total += Number(scholarshipAmount) || 0;
-      if (s.has_paid_i20_control_fee) total += Number(i20Amount) || 0;
+      if (s.is_scholarship_fee_paid) {
+        const schol = o.scholarship_fee != null 
+          ? Number(o.scholarship_fee) 
+          : Number(feeConfig.scholarship_fee_default);
+        total += schol || 0;
+        console.log(`🔍 Scholarship Fee for ${s.email}:`, {
+          hasOverride: o.scholarship_fee != null,
+          overrideValue: o.scholarship_fee,
+          defaultValue: feeConfig.scholarship_fee_default,
+          finalAmount: schol
+        });
+      }
+      if (s.has_paid_i20_control_fee) {
+        const i20 = o.i20_control_fee != null 
+          ? Number(o.i20_control_fee) 
+          : Number(feeConfig.i20_control_fee);
+        total += i20 || 0;
+        console.log(`🔍 I20 Control Fee for ${s.email}:`, {
+          hasOverride: o.i20_control_fee != null,
+          overrideValue: o.i20_control_fee,
+          defaultValue: feeConfig.i20_control_fee,
+          finalAmount: i20
+        });
+      }
 
       const adjusted = { 
         ...s, 
@@ -172,10 +230,14 @@ function EnhancedStudentTracking(props) {
         allApplications: s.allApplications
       };
       
-      console.log(`🔍 ADJUSTED STUDENT ${s.email}:`, {
-        hasMultipleApplications: adjusted.hasMultipleApplications,
-        applicationCount: adjusted.applicationCount,
-        allApplications: adjusted.allApplications?.length || 0
+      console.log(`🔍 FINAL TOTAL for ${s.email}:`, {
+        totalCalculated: total,
+        breakdown: {
+          selectionPaid: s.has_paid_selection_process_fee,
+          scholarshipPaid: s.is_scholarship_fee_paid,  
+          i20Paid: s.has_paid_i20_control_fee
+        },
+        expectedForWilfried: s.email === 'wilfried8078@uorak.com' ? '999+400+999=2398' : 'N/A'
       });
       
       return adjusted;

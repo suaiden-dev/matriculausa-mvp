@@ -500,11 +500,17 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
     
     // Verificar Selection Process Fee (primeira taxa a ser paga)
     if (!student.has_paid_selection_process_fee) {
-      const baseSelectionFee = getStudentFeeAmount(student.id, 'selection_process');
-      // Se há override, usar valor do override (já inclui dependentes), senão calcular normalmente
-      const selectionProcessFee = (overrides && overrides.selection_process_fee !== undefined && overrides.selection_process_fee !== null) 
-        ? baseSelectionFee 
-        : baseSelectionFee + (deps * 150);
+      let selectionProcessFee;
+      
+      // ✅ CORREÇÃO: Se há override, usar exatamente o valor do override
+      if (overrides && overrides.selection_process_fee !== undefined && overrides.selection_process_fee !== null) {
+        selectionProcessFee = Number(overrides.selection_process_fee);
+      } else {
+        // Sem override: usar taxa padrão + dependentes
+        const baseSelectionFee = getFeeAmount('selection_process'); // usar getFeeAmount direto para valor padrão
+        selectionProcessFee = baseSelectionFee + (deps * 150);
+      }
+      
       missingFees.push({ name: 'Selection Process', amount: selectionProcessFee, color: 'red' });
       return missingFees; // Se não pagou essa, não mostra as outras
     }
@@ -611,8 +617,8 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
     if (student.has_paid_selection_process_fee) {
       // Para Selection Process, verificar se há override primeiro
       if (overrides && overrides.selection_process_fee !== undefined && overrides.selection_process_fee !== null) {
-        // Se há override, usar apenas o valor do override (já inclui dependentes)
-        total += overrides.selection_process_fee;
+        // ✅ CORREÇÃO: Se há override, usar exatamente o valor do override (já inclui dependentes)
+        total += Number(overrides.selection_process_fee);
       } else {
         // Sem override: usar taxa padrão + dependentes
         const baseSelectionFee = getFeeAmount('selection_process');

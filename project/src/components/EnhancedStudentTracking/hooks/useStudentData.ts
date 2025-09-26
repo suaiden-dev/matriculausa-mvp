@@ -107,6 +107,8 @@ export const useStudentData = (userId?: string) => {
               console.log('🔍 PROCESSING ROW FOR STUDENT:', studentId, {
                 student_name: row.student_name,
                 student_email: row.student_email,
+                user_id: row.user_id, // ✅ ADICIONADO: Log do user_id para debug
+                profile_id: row.profile_id, // ✅ ADICIONADO: Log do profile_id para debug
                 application_id: row.application_id,
                 scholarship_title: row.scholarship_title,
                 university_name: row.university_name
@@ -117,7 +119,7 @@ export const useStudentData = (userId?: string) => {
                 studentsMap.set(studentId, {
                   id: studentId,
                   profile_id: row.profile_id,
-                  user_id: studentId,
+                  user_id: row.user_id,
                   full_name: row.student_name,
                   email: row.student_email,
                   country: row.country,

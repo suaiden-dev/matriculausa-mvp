@@ -248,7 +248,7 @@ const MyStudents: React.FC = () => {
         student_name: student.user_full_name,
         student_email: student.user_email,
         term_title: student.term_title,
-        accepted_at: new Date(student.accepted_at).toLocaleString('pt-BR'),
+        accepted_at: new Date(student.accepted_at).toLocaleString('en-US'),
         ip_address: student.ip_address || 'N/A',
         user_agent: student.user_agent || 'N/A',
         country: student.user_country || 'N/A',
