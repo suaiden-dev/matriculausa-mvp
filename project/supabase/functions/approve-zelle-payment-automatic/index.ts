@@ -471,14 +471,21 @@ serve(async (req) => {
         // NOTIFICAÇÃO PARA AFFILIATE ADMIN
         if (sellerData.affiliate_admin?.user_profiles?.email) {
           try {
+            // Buscar telefone do affiliate admin
+            const { data: affiliateAdminProfile, error: affiliateAdminProfileError } = await supabaseClient.from('user_profiles').select('phone').eq('user_id', sellerData.affiliate_admin.user_id).single();
+            const affiliateAdminPhone = affiliateAdminProfile?.phone || "";
+            
             const affiliateAdminNotificationPayload = {
               tipo_notf: "Pagamento de aluno do seu seller aprovado automaticamente",
               email_affiliate_admin: sellerData.affiliate_admin.user_profiles.email,
               nome_affiliate_admin: sellerData.affiliate_admin.user_profiles.full_name || "Affiliate Admin",
+              phone_affiliate_admin: affiliateAdminPhone,
               email_aluno: userProfile?.email || "",
               nome_aluno: userProfile?.full_name || "Aluno",
+              phone_aluno: userProfile?.phone || "",
               email_seller: sellerData.email,
               nome_seller: sellerData.name,
+              phone_seller: sellerPhone || "",
               o_que_enviar: `Pagamento de ${normalizedFeeTypeGlobal} no valor de ${amount} do aluno ${userProfile?.full_name || "Aluno"} foi aprovado automaticamente pelo sistema. Seller responsável: ${sellerData.name} (${sellerData.referral_code})`,
               payment_id: paymentId,
               fee_type: normalizedFeeTypeGlobal,
@@ -515,6 +522,7 @@ serve(async (req) => {
             tipo_notf: "Pagamento do seu aluno aprovado automaticamente",
             email_seller: sellerData.email,
             nome_seller: sellerData.name,
+            phone_seller: sellerPhone || "",
             email_aluno: userProfile?.email || "",
             nome_aluno: userProfile?.full_name || "Aluno",
             phone_aluno: userProfile?.phone || "",

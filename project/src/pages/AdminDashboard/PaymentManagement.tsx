@@ -1315,7 +1315,7 @@ const PaymentManagement = (): React.JSX.Element => {
             // Depois buscar as informações do user_profiles
             const { data: userProfileData, error: userProfileError } = await supabase
               .from('user_profiles')
-              .select('full_name, email')
+              .select('full_name, email, phone')
               .eq('user_id', affiliateData.user_id)
               .single();
             
@@ -1385,10 +1385,13 @@ const PaymentManagement = (): React.JSX.Element => {
                 tipo_notf: "Pagamento de aluno do seu seller aprovado",
                 email_affiliate_admin: affiliateAdminData.user_profiles.email,
                 nome_affiliate_admin: affiliateAdminData.user_profiles.full_name || "Affiliate Admin",
+                phone_affiliate_admin: affiliateAdminData.user_profiles.phone || "",
                 email_aluno: payment.student_email,
                 nome_aluno: payment.student_name,
+                phone_aluno: payment.student_phone || "",
                 email_seller: sellerData.email,
                 nome_seller: sellerData.name,
+                phone_seller: sellerPhone || "",
                 o_que_enviar: `Pagamento de ${payment.fee_type} no valor de ${payment.amount} do aluno ${payment.student_name} foi aprovado. Seller responsável: ${sellerData.name} (${sellerData.referral_code})`,
                 payment_id: paymentId,
                 fee_type: payment.fee_type,
@@ -1734,6 +1737,47 @@ const PaymentManagement = (): React.JSX.Element => {
           }, {}) || {};
         }
       }
+
+      // Buscar overrides de taxas para todos os usuários
+      const allUserIds = [
+        ...(applications?.map(app => app.user_profiles?.user_id).filter(Boolean) || []),
+        ...(zellePayments?.map(payment => payment.user_profiles?.user_id).filter(Boolean) || []),
+        ...(stripeUsers?.map(user => user.user_id).filter(Boolean) || [])
+      ];
+      const uniqueUserIds = [...new Set(allUserIds)];
+      
+      let overridesMap: { [key: string]: any } = {};
+      if (uniqueUserIds.length > 0) {
+        console.log('🔍 DEBUG: Loading overrides for user IDs:', uniqueUserIds);
+        const overrideEntries = await Promise.allSettled(
+          uniqueUserIds.map(async (userId) => {
+            const { data, error } = await supabase.rpc('get_user_fee_overrides', { user_id_param: userId });
+            if (error) {
+              console.log(`❌ DEBUG: Error loading override for user ${userId}:`, error);
+            } else if (data) {
+              console.log(`✅ DEBUG: Override found for user ${userId}:`, data);
+            }
+            return { userId, data: error ? null : data };
+          })
+        );
+        
+        overridesMap = overrideEntries.reduce((acc: { [key: string]: any }, res) => {
+          if (res.status === 'fulfilled') {
+            const { userId, data } = res.value;
+            if (data) {
+              acc[userId] = {
+                selection_process_fee: data.selection_process_fee != null ? Number(data.selection_process_fee) : undefined,
+                application_fee: data.application_fee != null ? Number(data.application_fee) : undefined,
+                scholarship_fee: data.scholarship_fee != null ? Number(data.scholarship_fee) : undefined,
+                i20_control_fee: data.i20_control_fee != null ? Number(data.i20_control_fee) : undefined,
+              };
+            }
+          }
+          return acc;
+        }, {});
+        
+        console.log('🔍 DEBUG: Final overrides map:', overridesMap);
+      }
       console.log('🚨 DEBUG: First application user_profiles:', applications?.[0]?.user_profiles);
       console.log('🚨 DEBUG: First application scholarship_packages:', applications?.[0]?.user_profiles?.scholarship_packages);
       
@@ -1811,14 +1855,53 @@ const PaymentManagement = (): React.JSX.Element => {
 
         // Obter valores dinâmicos do pacote + dependentes ou usar valores padrão + dependentes
         const dependents = Number(student?.dependents) || 0;
-        const dependentCost = dependents * 75; // $75 por dependente para cada taxa (em centavos)
+        const dependentCost = dependents * 150; // $150 por dependente apenas para Selection Process (em centavos)
+        const userOverrides = overridesMap[student?.user_id] || {};
         
-        const selectionProcessFee = packageData?.selection_process_fee ? 
-          Math.round((packageData.selection_process_fee + dependentCost) * 100) : Math.round((getFeeAmount('selection_process') + dependentCost) * 100);
-        const i20ControlFee = packageData?.i20_control_fee ? 
-          Math.round((packageData.i20_control_fee + dependentCost) * 100) : Math.round((getFeeAmount('i20_control_fee') + dependentCost) * 100);
-        const scholarshipFee = packageData?.scholarship_fee ? 
-          Math.round(packageData.scholarship_fee * 100) : Math.round(getFeeAmount('scholarship_fee') * 100); // Scholarship fee não tem dependentes
+        // Debug: Log dos overrides para este usuário
+        if (Object.keys(userOverrides).length > 0) {
+          console.log(`🔍 DEBUG: User ${student?.user_id} (${studentName}) has overrides:`, userOverrides);
+        }
+        
+        // Selection Process Fee - prioridade: override > pacote > padrão
+        let selectionProcessFee: number;
+        if (userOverrides.selection_process_fee !== undefined) {
+          // Se há override, usar exatamente o valor do override (já inclui dependentes se necessário)
+          selectionProcessFee = Math.round(userOverrides.selection_process_fee * 100);
+          console.log(`🔍 DEBUG: Using override for Selection Process Fee: $${userOverrides.selection_process_fee} (${selectionProcessFee} cents)`);
+        } else if (packageData?.selection_process_fee) {
+          selectionProcessFee = Math.round((packageData.selection_process_fee + dependentCost) * 100);
+          console.log(`🔍 DEBUG: Using package for Selection Process Fee: $${packageData.selection_process_fee} + $${dependentCost/100} = $${(selectionProcessFee/100).toFixed(2)}`);
+        } else {
+          selectionProcessFee = Math.round((getFeeAmount('selection_process') + dependentCost) * 100);
+          console.log(`🔍 DEBUG: Using default for Selection Process Fee: $${getFeeAmount('selection_process')} + $${dependentCost/100} = $${(selectionProcessFee/100).toFixed(2)}`);
+        }
+        
+        // I-20 Control Fee - prioridade: override > pacote > padrão (sem dependentes)
+        let i20ControlFee: number;
+        if (userOverrides.i20_control_fee !== undefined) {
+          i20ControlFee = Math.round(userOverrides.i20_control_fee * 100);
+          console.log(`🔍 DEBUG: Using override for I-20 Control Fee: $${userOverrides.i20_control_fee} (${i20ControlFee} cents)`);
+        } else if (packageData?.i20_control_fee) {
+          i20ControlFee = Math.round(packageData.i20_control_fee * 100);
+          console.log(`🔍 DEBUG: Using package for I-20 Control Fee: $${packageData.i20_control_fee} (${i20ControlFee} cents)`);
+        } else {
+          i20ControlFee = Math.round(getFeeAmount('i20_control_fee') * 100);
+          console.log(`🔍 DEBUG: Using default for I-20 Control Fee: $${getFeeAmount('i20_control_fee')} (${i20ControlFee} cents)`);
+        }
+        
+        // Scholarship Fee - prioridade: override > pacote > padrão (sem dependentes)
+        let scholarshipFee: number;
+        if (userOverrides.scholarship_fee !== undefined) {
+          scholarshipFee = Math.round(userOverrides.scholarship_fee * 100);
+          console.log(`🔍 DEBUG: Using override for Scholarship Fee: $${userOverrides.scholarship_fee} (${scholarshipFee} cents)`);
+        } else if (packageData?.scholarship_fee) {
+          scholarshipFee = Math.round(packageData.scholarship_fee * 100);
+          console.log(`🔍 DEBUG: Using package for Scholarship Fee: $${packageData.scholarship_fee} (${scholarshipFee} cents)`);
+        } else {
+          scholarshipFee = Math.round(getFeeAmount('scholarship_fee') * 100);
+          console.log(`🔍 DEBUG: Using default for Scholarship Fee: $${getFeeAmount('scholarship_fee')} (${scholarshipFee} cents)`);
+        }
         
         // Debug: Log de todas as taxas calculadas
         if (studentName === 'froilan8153@uorak.com') {
@@ -2135,14 +2218,39 @@ const PaymentManagement = (): React.JSX.Element => {
 
         // Obter valores dinâmicos do pacote + dependentes ou usar valores padrão + dependentes
         const dependents = Number(stripeUser?.dependents) || 0;
-        const dependentCost = dependents * 75; // $75 por dependente para cada taxa (em centavos)
+        const dependentCost = dependents * 150; // $150 por dependente apenas para Selection Process (em centavos)
+        const userOverrides = overridesMap[stripeUser?.user_id] || {};
         
-        const selectionProcessFee = packageData?.selection_process_fee ? 
-          Math.round((packageData.selection_process_fee + dependentCost) * 100) : Math.round((getFeeAmount('selection_process') + dependentCost) * 100);
-        const i20ControlFee = packageData?.i20_control_fee ? 
-          Math.round((packageData.i20_control_fee + dependentCost) * 100) : Math.round((getFeeAmount('i20_control_fee') + dependentCost) * 100);
-        const scholarshipFee = packageData?.scholarship_fee ? 
-          Math.round(packageData.scholarship_fee * 100) : Math.round(getFeeAmount('scholarship_fee') * 100); // Scholarship fee não tem dependentes
+        // Selection Process Fee - prioridade: override > pacote > padrão
+        let selectionProcessFee: number;
+        if (userOverrides.selection_process_fee !== undefined) {
+          // Se há override, usar exatamente o valor do override (já inclui dependentes se necessário)
+          selectionProcessFee = Math.round(userOverrides.selection_process_fee * 100);
+        } else if (packageData?.selection_process_fee) {
+          selectionProcessFee = Math.round((packageData.selection_process_fee + dependentCost) * 100);
+        } else {
+          selectionProcessFee = Math.round((getFeeAmount('selection_process') + dependentCost) * 100);
+        }
+        
+        // I-20 Control Fee - prioridade: override > pacote > padrão (sem dependentes)
+        let i20ControlFee: number;
+        if (userOverrides.i20_control_fee !== undefined) {
+          i20ControlFee = Math.round(userOverrides.i20_control_fee * 100);
+        } else if (packageData?.i20_control_fee) {
+          i20ControlFee = Math.round(packageData.i20_control_fee * 100);
+        } else {
+          i20ControlFee = Math.round(getFeeAmount('i20_control_fee') * 100);
+        }
+        
+        // Scholarship Fee - prioridade: override > pacote > padrão (sem dependentes)
+        let scholarshipFee: number;
+        if (userOverrides.scholarship_fee !== undefined) {
+          scholarshipFee = Math.round(userOverrides.scholarship_fee * 100);
+        } else if (packageData?.scholarship_fee) {
+          scholarshipFee = Math.round(packageData.scholarship_fee * 100);
+        } else {
+          scholarshipFee = Math.round(getFeeAmount('scholarship_fee') * 100);
+        }
         // Application Fee - para usuários Stripe, usar valor padrão do sistema
         const applicationFee = Math.round(getFeeAmount('application_fee') * 100);
 

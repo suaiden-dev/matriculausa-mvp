@@ -19,6 +19,10 @@ import {
   BookOpen
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import dayjs from 'dayjs';
 
 interface StudentRecord {
   // Dados do estudante (sempre presentes)
@@ -28,6 +32,7 @@ interface StudentRecord {
   student_created_at: string;
   has_paid_selection_process_fee: boolean;
   has_paid_i20_control_fee: boolean;
+  seller_referral_code: string | null;
   
   // Dados da aplicação (podem ser null se não aplicou ainda)
   application_id: string | null;
@@ -58,9 +63,114 @@ const StudentApplicationsView: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(20);
 
+  // Novos filtros
+  const [stageFilter, setStageFilter] = useState('all');
+  const [affiliateFilter, setAffiliateFilter] = useState('all');
+  const [scholarshipFilter, setScholarshipFilter] = useState('all');
+  const [universityFilter, setUniversityFilter] = useState('all');
+  const [timeFilter, setTimeFilter] = useState('all');
+  const [startDate, setStartDate] = useState<dayjs.Dayjs | null>(null);
+  const [endDate, setEndDate] = useState<dayjs.Dayjs | null>(null);
+  
+  // Dados para os filtros
+  const [affiliates, setAffiliates] = useState<any[]>([]);
+  const [scholarships, setScholarships] = useState<any[]>([]);
+  const [universities, setUniversities] = useState<any[]>([]);
+
   useEffect(() => {
     fetchStudents();
+    fetchFilterData();
   }, []);
+
+  const fetchFilterData = async () => {
+    try {
+      // Buscar usuários com role affiliate_admin da tabela user_profiles
+      const { data: affiliateAdminsData, error: affiliateAdminsError } = await supabase
+        .from('user_profiles')
+        .select('user_id, full_name, email')
+        .eq('role', 'affiliate_admin')
+        .eq('status', 'active')
+        .order('created_at', { ascending: false });
+      
+      if (affiliateAdminsError) {
+        console.error('Error loading affiliate admins:', affiliateAdminsError);
+      } else if (affiliateAdminsData) {
+        console.log('🔍 DEBUG: Found affiliate admins:', affiliateAdminsData);
+        
+        // Para cada affiliate admin, buscar os sellers associados
+        const affiliatesWithSellers = await Promise.all(
+          affiliateAdminsData.map(async (admin) => {
+            // Primeiro buscar o affiliate_admin_id na tabela affiliate_admins
+            const { data: affiliateAdminData } = await supabase
+              .from('affiliate_admins')
+              .select('id')
+              .eq('user_id', admin.user_id)
+              .single();
+            
+            let sellers = [];
+            if (affiliateAdminData) {
+              // Buscar sellers que pertencem a este affiliate admin
+              const { data: sellersData } = await supabase
+                .from('sellers')
+                .select('id, referral_code, name, email')
+                .eq('affiliate_admin_id', affiliateAdminData.id)
+                .eq('is_active', true);
+              
+              sellers = sellersData || [];
+            }
+            
+            // Se não encontrar sellers diretos, buscar por email
+            if (sellers.length === 0) {
+              const { data: sellersByEmail } = await supabase
+                .from('sellers')
+                .select('id, referral_code, name, email')
+                .eq('email', admin.email)
+                .eq('is_active', true);
+              sellers = sellersByEmail || [];
+            }
+            
+            console.log(`🔍 DEBUG: Affiliate ${admin.full_name} has sellers:`, sellers.map(s => s.referral_code));
+            
+            return {
+              id: admin.user_id,
+              user_id: admin.user_id,
+              name: admin.full_name || admin.email,
+              email: admin.email,
+              referral_code: sellers[0]?.referral_code || null,
+              sellers: sellers
+            };
+          })
+        );
+        
+        console.log('🔍 DEBUG: Loaded affiliates with sellers:', affiliatesWithSellers);
+        setAffiliates(affiliatesWithSellers);
+      }
+
+      // Carregar scholarships
+      const { data: scholarshipsData } = await supabase
+        .from('scholarships')
+        .select('id, title, universities!inner(name)')
+        .eq('is_active', true)
+        .order('title', { ascending: true });
+      
+      if (scholarshipsData) {
+        setScholarships(scholarshipsData);
+      }
+
+      // Carregar universities
+      const { data: universitiesData } = await supabase
+        .from('universities')
+        .select('id, name')
+        .eq('is_approved', true)
+        .order('name', { ascending: true });
+      
+      if (universitiesData) {
+        setUniversities(universitiesData);
+      }
+    } catch (error) {
+      console.error('Error loading filter data:', error);
+    }
+  };
 
   const fetchStudents = async () => {
     try {
@@ -75,6 +185,7 @@ const StudentApplicationsView: React.FC = () => {
           has_paid_selection_process_fee,
           has_paid_i20_control_fee,
           role,
+          seller_referral_code,
           scholarship_applications (
             id,
             scholarship_id,
@@ -98,6 +209,13 @@ const StudentApplicationsView: React.FC = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
+
+      // Debug: verificar se o campo seller_referral_code está sendo retornado
+      console.log('🔍 DEBUG: Raw students data (first 3):', data?.slice(0, 3).map(s => ({ 
+        name: s.full_name, 
+        email: s.email, 
+        seller_referral_code: s.seller_referral_code 
+      })));
 
       const formattedData = data?.map((student: any) => {
         // Cada estudante aparece apenas uma vez na tabela
@@ -130,6 +248,7 @@ const StudentApplicationsView: React.FC = () => {
           student_created_at: student.created_at,
           has_paid_selection_process_fee: student.has_paid_selection_process_fee || false,
           has_paid_i20_control_fee: student.has_paid_i20_control_fee || false,
+          seller_referral_code: student.seller_referral_code || null,
           // Dados da aplicação só aparecem se locked
           application_id: lockedApplication?.id || null,
           scholarship_id: lockedApplication?.scholarship_id || null,
@@ -220,8 +339,176 @@ const StudentApplicationsView: React.FC = () => {
       (statusFilter === 'locked' && student.is_locked) ||
       (statusFilter === 'single_application' && student.total_applications === 1);
     
-    return matchesSearch && matchesStatus;
+    // Filtro por etapa do processo (baseado no Application Flow)
+    const matchesStage = stageFilter === 'all' || (() => {
+      // Debug: Log do estado do estudante
+      if (stageFilter !== 'all') {
+        console.log(`🔍 DEBUG: Student ${student.student_name} - Stage Filter: ${stageFilter}`, {
+          has_paid_selection_process_fee: student.has_paid_selection_process_fee,
+          total_applications: student.total_applications,
+          is_locked: student.is_locked,
+          status: student.status,
+          is_application_fee_paid: student.is_application_fee_paid,
+          is_scholarship_fee_paid: student.is_scholarship_fee_paid,
+          acceptance_letter_status: student.acceptance_letter_status,
+          has_paid_i20_control_fee: student.has_paid_i20_control_fee
+        });
+      }
+
+      let result = false;
+      switch (stageFilter) {
+        case 'selection_fee':
+          // Está na etapa Selection Fee se NÃO pagou a taxa de seleção
+          result = !student.has_paid_selection_process_fee;
+          break;
+        case 'application':
+          // Está na etapa Application se pagou a taxa de seleção mas não aplicou ainda
+          result = student.has_paid_selection_process_fee && student.total_applications === 0;
+          break;
+        case 'review':
+          // Está na etapa Review se aplicou mas está pendente ou em análise
+          result = student.total_applications > 0 && (student.status === 'pending' || student.status === 'under_review') && !student.is_locked;
+          break;
+        case 'app_fee':
+          // Está na etapa App Fee se foi aprovado mas não pagou a taxa de aplicação
+          result = student.status === 'approved' && !student.is_application_fee_paid;
+          break;
+        case 'scholarship_fee':
+          // Está na etapa Scholarship Fee se pagou a taxa de aplicação mas não a de bolsa
+          result = student.is_locked && !student.is_scholarship_fee_paid;
+          break;
+        case 'acceptance':
+          // Está na etapa Acceptance se pagou a taxa de bolsa mas não tem carta de aceitação
+          result = student.is_locked && student.is_scholarship_fee_paid && !student.acceptance_letter_status;
+          break;
+        case 'i20_fee':
+          // Está na etapa I-20 Fee se tem carta de aceitação mas não pagou a taxa I-20
+          result = student.is_locked && student.acceptance_letter_status && !student.has_paid_i20_control_fee;
+          break;
+        case 'enrollment':
+          // Está na etapa Enrollment se pagou todas as taxas e está matriculado
+          result = student.is_locked && student.has_paid_i20_control_fee && student.status === 'enrolled';
+          break;
+        default:
+          result = true;
+      }
+      
+      if (stageFilter !== 'all') console.log(`  → Result: ${result}`);
+      return result;
+    })();
+    
+    // Filtro por bolsa
+    const matchesScholarship = scholarshipFilter === 'all' || 
+      (student.scholarship_id && student.scholarship_id === scholarshipFilter);
+    
+    // Filtro por universidade
+    const matchesUniversity = universityFilter === 'all' || 
+      (student.university_name && student.university_name.toLowerCase().includes(universityFilter.toLowerCase()));
+    
+    // Filtro por affiliate admin
+    const matchesAffiliate = affiliateFilter === 'all' || (() => {
+      if (affiliateFilter !== 'all') {
+        console.log(`🔍 DEBUG: Checking affiliate filter for student ${student.student_name}:`, {
+          student_referral_code: student.seller_referral_code,
+          affiliateFilter,
+          student_id: student.student_id,
+          available_affiliates: affiliates.map(a => ({ 
+            id: a.id, 
+            name: a.name, 
+            referral_code: a.referral_code,
+            sellers: a.sellers?.map(s => s.referral_code) || []
+          }))
+        });
+      }
+      
+      if (!student.seller_referral_code) {
+        // Se não tem referral code, só aparece se filtro for "all"
+        if (affiliateFilter !== 'all') {
+          console.log(`  → Student has no referral code, excluding from filter`);
+        }
+        return affiliateFilter === 'all';
+      }
+      
+      // Buscar o affiliate admin pelo referral code do estudante
+      // Primeiro tenta pelo referral_code direto do affiliate
+      let affiliate = affiliates.find(aff => aff.referral_code === student.seller_referral_code);
+      
+      if (affiliate) {
+        console.log(`  → Found affiliate by direct referral_code:`, affiliate);
+      } else {
+        // Se não encontrar, busca pelos sellers do affiliate
+        affiliate = affiliates.find(aff => 
+          aff.sellers?.some(seller => seller.referral_code === student.seller_referral_code)
+        );
+        
+        if (affiliate) {
+          console.log(`  → Found affiliate by seller referral_code:`, affiliate);
+        } else {
+          console.log(`  → No affiliate found for referral_code: ${student.seller_referral_code}`);
+        }
+      }
+      
+      const result = affiliate && affiliate.id === affiliateFilter;
+      
+      if (affiliateFilter !== 'all') {
+        console.log(`  → Final result: ${result} (affiliate.id: ${affiliate?.id}, filter: ${affiliateFilter})`);
+      }
+      
+      return result;
+    })();
+    
+    // Filtro por tempo
+    const matchesTime = (() => {
+      if (timeFilter === 'all') return true;
+      
+      const studentDate = dayjs(student.student_created_at);
+      
+      // Se tem datas específicas selecionadas, usar elas
+      if (startDate && endDate) {
+        return studentDate.isAfter(startDate.subtract(1, 'day')) && studentDate.isBefore(endDate.add(1, 'day'));
+      }
+      
+      // Se tem apenas data de início
+      if (startDate) {
+        return studentDate.isAfter(startDate.subtract(1, 'day'));
+      }
+      
+      // Se tem apenas data de fim
+      if (endDate) {
+        return studentDate.isBefore(endDate.add(1, 'day'));
+      }
+      
+      // Filtros predefinidos
+      const now = dayjs();
+      switch (timeFilter) {
+        case 'last_7_days': return studentDate.isAfter(now.subtract(7, 'day'));
+        case 'last_30_days': return studentDate.isAfter(now.subtract(30, 'day'));
+        case 'last_90_days': return studentDate.isAfter(now.subtract(90, 'day'));
+        case 'last_year': return studentDate.isAfter(now.subtract(1, 'year'));
+        default: return true;
+      }
+    })();
+    
+    const finalResult = matchesSearch && matchesStatus && matchesStage && matchesScholarship && matchesUniversity && matchesAffiliate && matchesTime;
+    
+    if (affiliateFilter !== 'all' && finalResult) {
+      console.log(`✅ Student ${student.student_name} PASSED affiliate filter`);
+    }
+    
+    return finalResult;
   });
+  
+  // Log do resultado final do filtro
+  if (affiliateFilter !== 'all') {
+    console.log(`🔍 DEBUG: Affiliate filter "${affiliateFilter}" resulted in ${filteredStudents.length} students`);
+    console.log(`🔍 DEBUG: All students with referral codes:`, 
+      students.map(s => ({ 
+        name: s.student_name, 
+        referral_code: s.seller_referral_code,
+        has_referral: !!s.seller_referral_code 
+      }))
+    );
+  }
 
   const totalPages = Math.ceil(filteredStudents.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -290,6 +577,8 @@ const StudentApplicationsView: React.FC = () => {
 
       {/* Filters */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="space-y-4">
+          {/* Primeira linha - Busca e Status */}
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex-1">
             <div className="relative">
@@ -320,6 +609,210 @@ const StudentApplicationsView: React.FC = () => {
               <option value="rejected">Rejected</option>
               <option value="enrolled">Enrolled</option>
             </select>
+            </div>
+          </div>
+          
+          {/* Segunda linha - Novos filtros */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            {/* Filtro por Etapa */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Process Stage</label>
+              <select
+                value={stageFilter}
+                onChange={(e) => setStageFilter(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] text-sm"
+              >
+                <option value="all">All Stages</option>
+                <option value="selection_fee">Selection Fee</option>
+                <option value="application">Application</option>
+                <option value="review">Review</option>
+                <option value="app_fee">App Fee</option>
+                <option value="scholarship_fee">Scholarship Fee</option>
+                <option value="acceptance">Acceptance</option>
+                <option value="i20_fee">I-20 Fee</option>
+                <option value="enrollment">Enrollment</option>
+              </select>
+            </div>
+            
+            {/* Filtro por Bolsa */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Scholarship</label>
+              <select
+                value={scholarshipFilter}
+                onChange={(e) => setScholarshipFilter(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] text-sm"
+              >
+                <option value="all">All Scholarships</option>
+                {scholarships.map((scholarship) => (
+                  <option key={scholarship.id} value={scholarship.id}>
+                    {scholarship.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            {/* Filtro por Universidade */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">University</label>
+              <select
+                value={universityFilter}
+                onChange={(e) => setUniversityFilter(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] text-sm"
+              >
+                <option value="all">All Universities</option>
+                {universities.map((university) => (
+                  <option key={university.id} value={university.name}>
+                    {university.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            {/* Filtro por Tempo */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Time Period</label>
+              <div className="space-y-2">
+                <select
+                  value={timeFilter}
+                  onChange={(e) => {
+                    setTimeFilter(e.target.value);
+                    if (e.target.value !== 'custom') {
+                      setStartDate(null);
+                      setEndDate(null);
+                    }
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] text-sm"
+                >
+                  <option value="all">All Time</option>
+                  <option value="last_7_days">Last 7 Days</option>
+                  <option value="last_30_days">Last 30 Days</option>
+                  <option value="last_90_days">Last 90 Days</option>
+                  <option value="last_year">Last Year</option>
+                  <option value="custom">Custom Range</option>
+                </select>
+                {timeFilter === 'custom' && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="relative">
+                      <label className="block text-xs font-medium text-gray-500 mb-1">From</label>
+                      <LocalizationProvider dateAdapter={AdapterDayjs}>
+                        <DatePicker
+                          value={startDate}
+                          onChange={(newValue) => setStartDate(newValue)}
+                          slotProps={{
+                            textField: {
+                              size: 'small',
+                              placeholder: 'Select start date',
+                              sx: {
+                                '& .MuiOutlinedInput-root': {
+                                  fontSize: '0.875rem',
+                                  height: '40px',
+                                  borderRadius: '0.5rem',
+                                  backgroundColor: 'white',
+                                  '& fieldset': {
+                                    borderColor: '#d1d5db',
+                                    borderWidth: '1px',
+                                  },
+                                  '&:hover fieldset': {
+                                    borderColor: '#05294E',
+                                  },
+                                  '&.Mui-focused fieldset': {
+                                    borderColor: '#05294E',
+                                    borderWidth: '2px',
+                                    boxShadow: '0 0 0 3px rgba(5, 41, 78, 0.1)',
+                                  },
+                                },
+                                '& .MuiInputLabel-root': {
+                                  display: 'none',
+                                },
+                                '& .MuiOutlinedInput-input': {
+                                  padding: '8px 12px',
+                                  fontSize: '0.875rem',
+                                  color: '#374151',
+                                },
+                                '& .MuiInputAdornment-root': {
+                                  marginLeft: '8px',
+                                },
+                                '& .MuiIconButton-root': {
+                                  padding: '4px',
+                                  color: '#6b7280',
+                                },
+                              }
+                            }
+                          }}
+                        />
+                      </LocalizationProvider>
+                    </div>
+                    <div className="relative">
+                      <label className="block text-xs font-medium text-gray-500 mb-1">To</label>
+                      <LocalizationProvider dateAdapter={AdapterDayjs}>
+                        <DatePicker
+                          value={endDate}
+                          onChange={(newValue) => setEndDate(newValue)}
+                          slotProps={{
+                            textField: {
+                              size: 'small',
+                              placeholder: 'Select end date',
+                              sx: {
+                                '& .MuiOutlinedInput-root': {
+                                  fontSize: '0.875rem',
+                                  height: '40px',
+                                  borderRadius: '0.5rem',
+                                  backgroundColor: 'white',
+                                  '& fieldset': {
+                                    borderColor: '#d1d5db',
+                                    borderWidth: '1px',
+                                  },
+                                  '&:hover fieldset': {
+                                    borderColor: '#05294E',
+                                  },
+                                  '&.Mui-focused fieldset': {
+                                    borderColor: '#05294E',
+                                    borderWidth: '2px',
+                                    boxShadow: '0 0 0 3px rgba(5, 41, 78, 0.1)',
+                                  },
+                                },
+                                '& .MuiInputLabel-root': {
+                                  display: 'none',
+                                },
+                                '& .MuiOutlinedInput-input': {
+                                  padding: '8px 12px',
+                                  fontSize: '0.875rem',
+                                  color: '#374151',
+                                },
+                                '& .MuiInputAdornment-root': {
+                                  marginLeft: '8px',
+                                },
+                                '& .MuiIconButton-root': {
+                                  padding: '4px',
+                                  color: '#6b7280',
+                                },
+                              }
+                            }
+                          }}
+                        />
+                      </LocalizationProvider>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            {/* Filtro por Admin Affiliate */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Affiliate Admin</label>
+              <select
+                value={affiliateFilter}
+                onChange={(e) => setAffiliateFilter(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] text-sm"
+              >
+                <option value="all">All Affiliates</option>
+                {affiliates.map((affiliate) => (
+                  <option key={affiliate.id} value={affiliate.id}>
+                    {affiliate.name || affiliate.email || 'Unknown'}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
       </div>

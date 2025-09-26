@@ -282,12 +282,13 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
 
       console.log('📤 [ZelleCheckout] Enviando webhooks para n8n:', webhookPayload);
       
-      // Buscar nome completo do usuário
+      // Buscar nome completo e telefone do usuário
       let userName = user?.email || 'Usuário';
+      let userPhone = '';
       try {
         const { data: userProfile } = await supabase
           .from('user_profiles')
-          .select('full_name')
+          .select('full_name, phone')
           .eq('user_id', user?.id)
           .single();
         
@@ -297,16 +298,50 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
         } else {
           console.log('⚠️ [ZelleCheckout] Nome completo não encontrado, usando email');
         }
+        
+        if (userProfile?.phone) {
+          userPhone = userProfile.phone;
+          console.log('✅ [ZelleCheckout] Telefone do usuário encontrado:', userPhone);
+        } else {
+          console.log('⚠️ [ZelleCheckout] Telefone do usuário não encontrado');
+        }
       } catch (error) {
-        console.log('⚠️ [ZelleCheckout] Erro ao buscar nome do usuário:', error);
+        console.log('⚠️ [ZelleCheckout] Erro ao buscar dados do usuário:', error);
       }
 
-      // Criar payload de notificação para admin específico
+      // Buscar informações dos administradores
+      let adminEmail = 'admin@matriculausa.com';
+      let adminName = 'Admin MatriculaUSA';
+      let adminPhone = '';
+      
+      try {
+        const { data: adminProfile, error: adminProfileError } = await supabase
+          .from('user_profiles')
+          .select('email, full_name, phone')
+          .eq('email', 'admin@matriculausa.com')
+          .single();
+        
+        if (adminProfile && !adminProfileError) {
+          adminEmail = adminProfile.email || 'admin@matriculausa.com';
+          adminName = adminProfile.full_name || 'Admin MatriculaUSA';
+          adminPhone = adminProfile.phone || '';
+          console.log('✅ [ZelleCheckout] Dados do admin encontrados:', { adminEmail, adminName, adminPhone });
+        } else {
+          console.log('⚠️ [ZelleCheckout] Dados do admin não encontrados, usando valores padrão');
+        }
+      } catch (error) {
+        console.log('⚠️ [ZelleCheckout] Erro ao buscar dados do admin:', error);
+      }
+
+      // Criar payload de notificação para admin
       const notificationPayload = {
         tipo_notf: 'Pagamento Zelle pendente para avaliação',
+        email_admin: adminEmail,
+        nome_admin: adminName,
+        phone_admin: adminPhone,
         email_aluno: user?.email,
         nome_aluno: userName,
-        email_universidade: 'newvicturibdev@gmail.com', // Admin específico
+        phone_aluno: userPhone,
         o_que_enviar: `Novo pagamento Zelle de ${currentFee.amount} USD foi enviado para avaliação.`,
         temp_payment_id: realPaymentId,
         fee_type: normalizedFeeType,
