@@ -44,6 +44,24 @@ export const useStudentDetails = () => {
         if (!sqlError && sqlData && sqlData.length > 0) {
           studentData = sqlData[0];
           
+          // ✅ CORREÇÃO: Calcular selection process fee com dependentes
+          const dependents = studentData.dependents || 0;
+          const selectionProcessFeeAmount = 400 + (dependents * 150);
+          
+          // Calcular total paid correto incluindo selection process fee
+          let calculatedTotalPaid = 0;
+          if (studentData.has_paid_selection_process_fee) {
+            calculatedTotalPaid += selectionProcessFeeAmount;
+          }
+          if (studentData.has_paid_i20_control_fee) {
+            calculatedTotalPaid += 900;
+          }
+          
+          // Adicionar campos calculados
+          studentData.dependents = dependents;
+          studentData.selection_process_fee_amount = selectionProcessFeeAmount;
+          studentData.total_fees_paid = calculatedTotalPaid;
+          
           // Adicionar dados do scholarship se disponíveis
           if (studentData.application_fee_amount || studentData.scholarship_fee_amount) {
             studentData.scholarship = {
@@ -53,6 +71,9 @@ export const useStudentDetails = () => {
           }
           
           console.log('🔍 [USE_STUDENT_DETAILS] SQL data loaded with scholarship:', studentData.scholarship);
+          console.log('🔍 [SELECTION_PROCESS_FEE] Dependents:', dependents);
+          console.log('🔍 [SELECTION_PROCESS_FEE] Calculated fee amount:', selectionProcessFeeAmount);
+          console.log('🔍 [SELECTION_PROCESS_FEE] Total fees paid:', calculatedTotalPaid);
         } else {
           studentError = sqlError;
         }
@@ -62,11 +83,11 @@ export const useStudentDetails = () => {
 
       // Se a função SQL falhou ou retornou dados vazios, usar fallback robusto
       if (!studentData) {
-        // Buscar dados básicos do estudante
+        // Buscar dados básicos do estudante (usando profile_id ao invés de user_id)
         const { data: profileData, error: profileError } = await supabase
           .from('user_profiles')
           .select('*')
-          .eq('user_id', studentId)
+          .eq('id', profile_id)
           .single();
 
         if (profileError) {
@@ -108,15 +129,28 @@ export const useStudentDetails = () => {
           }
         }
 
-        // Buscar histórico de taxas
+        // Buscar histórico de taxas (usando user_id do profileData)
         const { data: feesData, error: feesError } = await supabase
           .from('stripe_connect_transfers')
           .select('*')
-          .eq('user_id', studentId)
+          .eq('user_id', profileData.user_id)
           .eq('status', 'succeeded');
 
         // Extrair documentos da aplicação principal
         let documentsData: any = applicationData?.documents;
+
+        // ✅ CORREÇÃO: Calcular selection process fee com dependentes no fallback
+        const dependents = profileData.dependents || 0;
+        const selectionProcessFeeAmount = 400 + (dependents * 150);
+        
+        // Calcular total paid correto incluindo selection process fee
+        let calculatedTotalPaid = 0;
+        if (profileData.has_paid_selection_process_fee) {
+          calculatedTotalPaid += selectionProcessFeeAmount;
+        }
+        if (profileData.has_paid_i20_control_fee) {
+          calculatedTotalPaid += 900;
+        }
 
         // Construir objeto de dados do estudante
         studentData = {
@@ -133,7 +167,7 @@ export const useStudentDetails = () => {
           current_status: profileData.status || 'active',
           seller_referral_code: profileData.seller_referral_code || '',
           seller_name: sellerData?.name || 'Seller not available',
-          total_fees_paid: feesData ? feesData.reduce((sum, fee) => sum + (fee.amount || 0), 0) : 0,
+          total_fees_paid: calculatedTotalPaid, // ✅ Usar o valor calculado
           fees_count: feesData ? feesData.length : 0,
           scholarship_title: applicationData?.scholarships?.title || 'Scholarship not specified',
           university_name: applicationData?.scholarships?.universities?.name || 'University not specified',
@@ -146,11 +180,17 @@ export const useStudentDetails = () => {
           student_process_type: applicationData?.student_process_type || 'Not specified',
           application_status: applicationData?.status || 'Pending',
           documents: documentsData || [],
+          dependents: dependents, // ✅ Adicionar campo dependents
+          selection_process_fee_amount: selectionProcessFeeAmount, // ✅ Adicionar campo da taxa calculada
           scholarship: applicationData?.scholarships ? {
             application_fee_amount: applicationData.scholarships?.application_fee_amount,
             scholarship_fee_amount: applicationData.scholarships?.scholarship_fee_amount
           } : undefined
         };
+        
+        console.log('🔍 [FALLBACK_SELECTION_PROCESS_FEE] Dependents:', dependents);
+        console.log('🔍 [FALLBACK_SELECTION_PROCESS_FEE] Calculated fee amount:', selectionProcessFeeAmount);
+        console.log('🔍 [FALLBACK_SELECTION_PROCESS_FEE] Total fees paid:', calculatedTotalPaid);
 
         setStudentDocuments(applicationData?.documents);
         
@@ -237,28 +277,14 @@ export const useStudentDetails = () => {
               console.log('🔍 [AFFILIATE_DEBUG] studentData available:', !!studentData);
               console.log('🔍 [AFFILIATE_DEBUG] studentData.email:', studentData?.email);
               
-              // ✅ CORREÇÃO: Buscar pelo email para encontrar o ID correto na auth.users
+              // ✅ CORREÇÃO: Usar user_id do profile ao invés de buscar auth.users
               let authUserId = null;
-              if (studentData?.email) {
-                console.log('🔍 [AFFILIATE_DEBUG] Searching for auth user ID by email:', studentData.email);
-                const { data: authUser, error: authError } = await supabase
-                  .from('auth.users')
-                  .select('id')
-                  .eq('email', studentData.email)
-                  .single();
-                
-                console.log('🔍 [AFFILIATE_DEBUG] Auth user query result:', {
-                  data: authUser,
-                  error: authError,
-                  found: !!authUser
-                });
-                
-                if (!authError && authUser) {
-                  authUserId = authUser.id;
-                  console.log('✅ [AFFILIATE_DEBUG] Found auth user ID:', authUserId);
-                } else {
-                  console.log('⚠️ [AFFILIATE_DEBUG] Could not find auth user:', authError);
-                }
+              if (studentData?.student_id) {
+                // O student_id já é o user_id do auth.users
+                authUserId = studentData.student_id;
+                console.log('✅ [AFFILIATE_DEBUG] Using student_id as auth user ID:', authUserId);
+              } else {
+                console.log('⚠️ [AFFILIATE_DEBUG] Could not determine auth user ID');
               }
               
               // Buscar uploads usando ambos os IDs possíveis
@@ -583,6 +609,7 @@ export const useStudentDetails = () => {
             documents: studentData.documents || [],
             acceptance_letter_status: 'pending',
             acceptance_letter_url: '',
+            acceptance_letter_sent_at: studentData.acceptance_letter_sent_at || null, // ✅ Adicionar campo faltante
             is_application_fee_paid: studentData.is_application_fee_paid || false,
             is_scholarship_fee_paid: studentData.is_scholarship_fee_paid || false,
             paid_at: new Date().toISOString(),
