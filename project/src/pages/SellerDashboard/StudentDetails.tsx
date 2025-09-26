@@ -110,8 +110,8 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
   const [realScholarshipApplication, setRealScholarshipApplication] = useState<any>(null);
   const [loadingApplication, setLoadingApplication] = useState(false);
   
-  // Hook para configurações dinâmicas de taxas (usando profileId para ver overrides do estudante)
-  const { getFeeAmount, formatFeeAmount, hasOverride } = useFeeConfig(profileId);
+  // Hook para configurações dinâmicas de taxas (usando student_id para ver overrides do estudante)
+  const { getFeeAmount, formatFeeAmount, hasOverride } = useFeeConfig(studentInfo?.student_id);
   
   // Estados para taxas dinâmicas do estudante
   const [studentPackageFees, setStudentPackageFees] = useState<any>(null);
@@ -1638,18 +1638,22 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                            <span className={`text-sm font-medium ${studentInfo?.has_paid_selection_process_fee ? 'text-green-700' : 'text-red-700'}`}>
                              {studentInfo?.has_paid_selection_process_fee ? 'Paid' : 'Pending'}
                            </span>
-                           {studentInfo?.has_paid_selection_process_fee && (
-                             <span className="text-xs text-slate-500">
-                               {(() => {
-                                 // Se há override, usar valor direto (já inclui dependentes)
-                                 // Se não há override, somar dependentes ao valor base
+                           <span className="text-xs text-slate-500">
+                             {(() => {
+                               // Se há override, usar valor direto (NÃO incluir dependentes)
+                               // Se não há override, somar dependentes ao valor padrão
+                               const hasCustomOverride = hasOverride('selection_process');
+                               if (hasCustomOverride) {
+                                 // Com override: usar valor exato do override
+                                 return formatFeeAmount(getFeeAmount('selection_process'));
+                               } else {
+                                 // Sem override: valor padrão + dependentes
                                  const baseFee = Number(getFeeAmount('selection_process'));
-                                 const hasCustomOverride = hasOverride('selection_process');
-                                 const total = hasCustomOverride ? baseFee : baseFee + (dependents * 150);
+                                 const total = baseFee + (dependents * 150);
                                  return formatFeeAmount(total);
-                               })()}
-                             </span>
-                           )}
+                               }
+                             })()}
+                           </span>
                          </div>
                        </div>
                      </div>
@@ -1664,21 +1668,19 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                          <span className={`text-sm font-medium ${studentInfo?.is_application_fee_paid ? 'text-green-700' : 'text-red-700'}`}>
                            {studentInfo?.is_application_fee_paid ? 'Paid' : 'Pending'}
                          </span>
-                         {studentInfo?.is_application_fee_paid && (
-                           <span className="text-xs text-slate-500">
-                             {(() => {
-                               if (studentInfo?.scholarship?.application_fee_amount) {
-                                 const amount = Number(studentInfo.scholarship.application_fee_amount);
-                                 return formatFeeAmount(amount);
-                               } else if ((studentInfo as any)?.application_fee_amount) {
-                                 const amount = Number((studentInfo as any).application_fee_amount);
-                                 return formatFeeAmount(amount);
-                               } else {
-                                 return formatFeeAmount(getFeeAmount('application_fee'));
-                               }
-                             })()}
-                           </span>
-                         )}
+                         <span className="text-xs text-slate-500">
+                           {(() => {
+                             if (studentInfo?.scholarship?.application_fee_amount) {
+                               const amount = Number(studentInfo.scholarship.application_fee_amount);
+                               return formatFeeAmount(amount);
+                             } else if ((studentInfo as any)?.application_fee_amount) {
+                               const amount = Number((studentInfo as any).application_fee_amount);
+                               return formatFeeAmount(amount);
+                             } else {
+                               return formatFeeAmount(getFeeAmount('application_fee'));
+                             }
+                           })()}
+                         </span>
                        </div>
                      </div>
 
@@ -1692,23 +1694,21 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                          <span className={`text-sm font-medium ${studentInfo?.is_scholarship_fee_paid ? 'text-green-700' : 'text-red-700'}`}>
                            {studentInfo?.is_scholarship_fee_paid ? 'Paid' : 'Pending'}
                          </span>
-                         {studentInfo?.is_scholarship_fee_paid && (
-                           <span className="text-xs text-slate-500">
-                             {(() => {
-                               // Priorizar override do usuário se existir
-                               if (hasOverride('scholarship_fee')) {
-                                 return formatFeeAmount(getFeeAmount('scholarship_fee'));
-                               }
-                               // Se não há override, usar valor da scholarship específica se disponível
-                               if (studentInfo?.scholarship?.scholarship_fee_amount) {
-                                 const amount = Number(studentInfo.scholarship.scholarship_fee_amount);
-                                 return formatFeeAmount(amount);
-                               }
-                               // Fallback para valor padrão
+                         <span className="text-xs text-slate-500">
+                           {(() => {
+                             // Priorizar override do usuário se existir
+                             if (hasOverride('scholarship_fee')) {
                                return formatFeeAmount(getFeeAmount('scholarship_fee'));
-                             })()}
-                           </span>
-                         )}
+                             }
+                             // Se não há override, usar valor da scholarship específica se disponível
+                             if (studentInfo?.scholarship?.scholarship_fee_amount) {
+                               const amount = Number(studentInfo.scholarship.scholarship_fee_amount);
+                               return formatFeeAmount(amount);
+                             }
+                             // Fallback para valor padrão
+                             return formatFeeAmount(getFeeAmount('scholarship_fee'));
+                           })()}
+                         </span>
                        </div>
                      </div>
 
@@ -1723,16 +1723,13 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                            <span className={`text-sm font-medium ${studentInfo?.has_paid_i20_control_fee ? 'text-green-700' : 'text-red-700'}`}>
                              {studentInfo?.has_paid_i20_control_fee ? 'Paid' : 'Pending'}
                            </span>
-                           {studentInfo?.has_paid_i20_control_fee && (
-                             <span className="text-xs text-slate-500">
-                               {(() => {
-                                 // Se há override, usar valor direto (já inclui dependentes se aplicável)
-                                 // Se não há override, usar valor base (I-20 não soma dependentes)
-                                 const baseFee = Number(getFeeAmount('i20_control_fee'));
-                                 return formatFeeAmount(baseFee);
-                               })()}
-                             </span>
-                           )}
+                           <span className="text-xs text-slate-500">
+                             {(() => {
+                               // I-20 Control Fee sempre usa override se disponível, senão valor padrão
+                               // I-20 nunca soma dependentes
+                               return formatFeeAmount(getFeeAmount('i20_control_fee'));
+                             })()}
+                           </span>
                          </div>
                        </div>
                      </div>

@@ -96,7 +96,10 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
   // Flag para desabilitar user_fee_overrides se não estiver disponível
   const [userFeeOverridesDisabled, setUserFeeOverridesDisabled] = useStateReact<boolean>(() => {
     try {
-      return localStorage.getItem('user_fee_overrides_disabled') === 'true';
+      // RESETANDO user_fee_overrides_disabled para debug
+      localStorage.removeItem('user_fee_overrides_disabled');
+      console.log('🔄 [MY_STUDENTS] Reset user_fee_overrides_disabled');
+      return false;
     } catch {
       return false;
     }
@@ -184,11 +187,8 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
   const loadStudentFeeOverrides = async (studentUserId: string) => {
     if (!studentUserId || studentFeeOverrides[studentUserId] !== undefined) return;
     
-    // Se a tabela foi desabilitada por erro anterior, não fazer requisição
-    if (userFeeOverridesDisabled) {
-      setStudentFeeOverrides(prev => ({ ...prev, [studentUserId]: null }));
-      return;
-    }
+    // DEBUG: Sempre tentar carregar overrides
+    console.log('🔄 [LOAD_OVERRIDES] Carregando overrides para:', studentUserId);
     
     // Verificar se já está carregando
     const requestKey = `overrides_${studentUserId}`;
@@ -198,13 +198,38 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
     setLoadingRequests(prev => new Set([...prev, requestKey]));
     
     try {
-      const { data: overrides, error } = await supabase
-        .from('user_fee_overrides')
-        .select('*')
-        .eq('user_id', studentUserId)
-        .single();
+      // Tentar primeiro via RPC function (security definer) 
+      let overrides = null;
+      let error = null;
+
+      try {
+        const rpcResult = await supabase.rpc('get_user_fee_overrides', { user_id_param: studentUserId });
+        if (!rpcResult.error && rpcResult.data) {
+          overrides = rpcResult.data;
+        } else {
+          error = rpcResult.error;
+        }
+      } catch (rpcError) {
+        console.warn('⚠️ [MY_STUDENTS] RPC get_user_fee_overrides failed, trying direct query:', rpcError);
+        // Fallback para query direta
+        const directResult = await supabase
+          .from('user_fee_overrides')
+          .select('*')
+          .eq('user_id', studentUserId)
+          .single();
+        overrides = directResult.data;
+        error = directResult.error;
+      }
       
       if (!error && overrides) {
+        // Debug log para wilfried8078@uorak.com
+        if (studentUserId === '01fc762b-de80-4509-893f-671c71ceb0b1') {
+          console.log('🔍 [MYSTUDENTS_LOAD] Carregando overrides para wilfried8078@uorak.com:', {
+            studentUserId,
+            overrides,
+            error
+          });
+        }
         setStudentFeeOverrides(prev => ({ ...prev, [studentUserId]: overrides }));
       } else {
         // Se erro 406 ou similar, desabilitar futuras chamadas
@@ -248,6 +273,15 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
       }
       
       uniqueStudentIds.forEach(studentId => {
+        // Debug para wilfried8078@uorak.com
+        if (studentId === '01fc762b-de80-4509-893f-671c71ceb0b1') {
+          console.log('🔍 [MY_STUDENTS_LOAD] Carregando dados para wilfried8078@uorak.com:', studentId);
+          console.log('🔍 [MY_STUDENTS_LOAD] packageFees já carregado?', studentPackageFees[studentId] !== undefined);
+          console.log('🔍 [MY_STUDENTS_LOAD] dependents já carregado?', studentDependents[studentId] !== undefined);
+          console.log('🔍 [MY_STUDENTS_LOAD] overrides já carregado?', studentFeeOverrides[studentId] !== undefined);
+          console.log('🔍 [MY_STUDENTS_LOAD] overridesDisabled?', userFeeOverridesDisabled);
+        }
+        
         if (studentPackageFees[studentId] === undefined) {
           loadStudentPackageFees(studentId);
         }
@@ -255,12 +289,9 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
           loadStudentDependents(studentId);
         }
         if (studentFeeOverrides[studentId] === undefined) {
-          if (userFeeOverridesDisabled) {
-            // Se desabilitado, definir como null diretamente
-            setStudentFeeOverrides(prev => ({ ...prev, [studentId]: null }));
-          } else {
-            loadStudentFeeOverrides(studentId);
-          }
+          // SEMPRE tentar carregar overrides para debug
+          console.log('🔄 [MY_STUDENTS] Forçando carregamento de overrides para:', studentId);
+          loadStudentFeeOverrides(studentId);
         }
       });
     }, 100);
@@ -507,7 +538,7 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
         selectionProcessFee = Number(overrides.selection_process_fee);
       } else {
         // Sem override: usar taxa padrão + dependentes
-        const baseSelectionFee = getFeeAmount('selection_process'); // usar getFeeAmount direto para valor padrão
+        const baseSelectionFee = getFeeAmount('selection_process');
         selectionProcessFee = baseSelectionFee + (deps * 150);
       }
       
@@ -517,18 +548,36 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
     
     // Após Selection Process pago, listar todas as pendências restantes (Application, Scholarship, I-20)
     if (!student.is_application_fee_paid) {
-      const applicationFee = getStudentFeeAmount(student.id, 'application_fee');
+      // ✅ CORREÇÃO: Usar lógica consistente para application fee
+      let applicationFee;
+      if (overrides && overrides.application_fee !== undefined && overrides.application_fee !== null) {
+        applicationFee = Number(overrides.application_fee);
+      } else {
+        applicationFee = getFeeAmount('application_fee');
+      }
       missingFees.push({ name: 'Application', amount: applicationFee, color: 'gray' });
     }
 
     if (!student.is_scholarship_fee_paid) {
-      const scholarshipFee = getStudentFeeAmount(student.id, 'scholarship_fee');
+      // ✅ CORREÇÃO: Usar lógica consistente para scholarship fee
+      let scholarshipFee;
+      if (overrides && overrides.scholarship_fee !== undefined && overrides.scholarship_fee !== null) {
+        scholarshipFee = Number(overrides.scholarship_fee);
+      } else {
+        scholarshipFee = getFeeAmount('scholarship_fee');
+      }
       missingFees.push({ name: 'Scholarship', amount: scholarshipFee, color: 'blue' });
     }
     
     // I-20 Control Fee
     if (!student.has_paid_i20_control_fee) {
-      const i20ControlFee = getStudentFeeAmount(student.id, 'i20_control_fee');
+      // ✅ CORREÇÃO: Usar lógica consistente para I-20 control fee
+      let i20ControlFee;
+      if (overrides && overrides.i20_control_fee !== undefined && overrides.i20_control_fee !== null) {
+        i20ControlFee = Number(overrides.i20_control_fee);
+      } else {
+        i20ControlFee = getFeeAmount('i20_control_fee');
+      }
       missingFees.push({ name: 'I20 Control', amount: i20ControlFee, color: 'orange' });
     }
     
@@ -559,54 +608,6 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
 
 
 
-  // Função auxiliar para obter valor da taxa com override
-  const getStudentFeeAmount = (studentId: string, feeType: string): number => {
-    const overrides = studentFeeOverrides[studentId];
-    const packageFees = studentPackageFees[studentId];
-    
-    // Primeiro, verificar se há override (mapear nomes corretos)
-    if (overrides) {
-      switch (feeType) {
-        case 'selection_process':
-          if (overrides.selection_process_fee !== undefined && overrides.selection_process_fee !== null) {
-            return Number(overrides.selection_process_fee);
-          }
-          break;
-        case 'application_fee':
-          if (overrides.application_fee !== undefined && overrides.application_fee !== null) {
-            return Number(overrides.application_fee);
-          }
-          break;
-        case 'scholarship_fee':
-          if (overrides.scholarship_fee !== undefined && overrides.scholarship_fee !== null) {
-            return Number(overrides.scholarship_fee);
-          }
-          break;
-        case 'i20_control_fee':
-          if (overrides.i20_control_fee !== undefined && overrides.i20_control_fee !== null) {
-            return Number(overrides.i20_control_fee);
-          }
-          break;
-      }
-    }
-    
-    // Segundo, verificar se há taxa personalizada do pacote
-    // Mapear feeType para nome correto do campo no banco para packageFees também
-    const fieldMapping: {[key: string]: string} = {
-      'selection_process': 'selection_process_fee',
-      'application_fee': 'application_fee',
-      'scholarship_fee': 'scholarship_fee',
-      'i20_control_fee': 'i20_control_fee'
-    };
-    const dbFieldName = fieldMapping[feeType] || feeType;
-    if (packageFees && packageFees[dbFieldName]) {
-      return Number(packageFees[dbFieldName]);
-    }
-    
-    // Por último, usar taxa padrão
-    return getFeeAmount(feeType);
-  };
-
   // Estatísticas calculadas dinamicamente
   // Função para calcular o total pago por um aluno
   const calculateStudentTotalPaid = (student: Student): number => {
@@ -614,35 +615,97 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
     const deps = studentDependents[student.id] || 0;
     const overrides = studentFeeOverrides[student.id];
 
+
     if (student.has_paid_selection_process_fee) {
       // Para Selection Process, verificar se há override primeiro
       if (overrides && overrides.selection_process_fee !== undefined && overrides.selection_process_fee !== null) {
         // ✅ CORREÇÃO: Se há override, usar exatamente o valor do override (já inclui dependentes)
-        total += Number(overrides.selection_process_fee);
+        const selectionAmount = Number(overrides.selection_process_fee);
+        total += selectionAmount;
+        if (student.email === 'wilfried8078@uorak.com') {
+          console.log('🔍 [MYSTUDENTS_DEBUG] Selection Process (override):', selectionAmount, 'de', overrides.selection_process_fee);
+        }
       } else {
         // Sem override: usar taxa padrão + dependentes
         const baseSelectionFee = getFeeAmount('selection_process');
-        total += baseSelectionFee + (deps * 150);
+        const selectionAmount = baseSelectionFee + (deps * 150);
+        total += selectionAmount;
+        if (student.email === 'wilfried8078@uorak.com') {
+          console.log('🔍 [MYSTUDENTS_DEBUG] Selection Process (padrão + deps):', selectionAmount, '=', baseSelectionFee, '+', (deps * 150));
+        }
       }
     }
     
     if (student.has_paid_i20_control_fee) {
-      const baseI20Fee = getStudentFeeAmount(student.id, 'i20_control_fee');
-      total += baseI20Fee; // I-20 nunca tem dependentes
+      // ✅ CORREÇÃO: Usar lógica consistente que considera dependentes para I-20 também se não há override
+      if (overrides && overrides.i20_control_fee !== undefined && overrides.i20_control_fee !== null) {
+        // Se há override, usar exatamente o valor do override
+        const i20Amount = Number(overrides.i20_control_fee);
+        total += i20Amount;
+        if (student.email === 'wilfried8078@uorak.com') {
+          console.log('🔍 [MYSTUDENTS_DEBUG] I-20 Control (override):', i20Amount, 'de', overrides.i20_control_fee);
+        }
+      } else {
+        // Sem override: usar taxa padrão (I-20 normalmente não tem dependentes, mas mantendo consistência)
+        const baseI20Fee = getFeeAmount('i20_control_fee');
+        total += baseI20Fee;
+        if (student.email === 'wilfried8078@uorak.com') {
+          console.log('🔍 [MYSTUDENTS_DEBUG] I-20 Control (padrão):', baseI20Fee);
+        }
+      }
     }
     
     if (student.is_scholarship_fee_paid) {
-      const scholarshipFee = getStudentFeeAmount(student.id, 'scholarship_fee');
-      total += scholarshipFee;
+      // ✅ CORREÇÃO: Usar lógica consistente para scholarship fee
+      if (overrides && overrides.scholarship_fee !== undefined && overrides.scholarship_fee !== null) {
+        // Se há override, usar exatamente o valor do override
+        const scholarshipAmount = Number(overrides.scholarship_fee);
+        total += scholarshipAmount;
+        if (student.email === 'wilfried8078@uorak.com') {
+          console.log('🔍 [MYSTUDENTS_DEBUG] Scholarship (override):', scholarshipAmount, 'de', overrides.scholarship_fee);
+        }
+      } else {
+        // Sem override: usar taxa padrão
+        const scholarshipFee = getFeeAmount('scholarship_fee');
+        total += scholarshipFee;
+        if (student.email === 'wilfried8078@uorak.com') {
+          console.log('🔍 [MYSTUDENTS_DEBUG] Scholarship (padrão):', scholarshipFee);
+        }
+      }
     }
     
     // Application fee não é contabilizada na receita do seller (é exclusiva da universidade)
+
+    if (student.email === 'wilfried8078@uorak.com') {
+      console.log('🔍 [MYSTUDENTS_DEBUG] Total final:', total);
+      console.log('🔍 [MYSTUDENTS_DEBUG] =================================');
+    }
 
     return total;
   };
 
   const stats = React.useMemo(() => {
     const totalRevenue = filteredStudents.reduce((sum, student) => sum + calculateStudentTotalPaid(student), 0);
+    
+    console.log('💰 [MYSTUDENTS_TOTAL] Total calculado no MyStudents.tsx:', totalRevenue);
+    console.log('💰 [MYSTUDENTS_TOTAL] Número de estudantes:', { 
+      'students (total)': students.length, 
+      'filteredStudents (filtrados)': filteredStudents.length 
+    });
+    
+    // Debug para comparar com Performance.tsx
+    console.log('🔍 [MYSTUDENTS_COMPARISON] Estudantes no MyStudents:', filteredStudents.map(s => ({ 
+      id: s.id, 
+      email: s.email,
+      has_paid_selection_process: s.has_paid_selection_process_fee,
+      has_paid_scholarship: s.is_scholarship_fee_paid,
+      has_paid_i20: s.has_paid_i20_control_fee,
+      calculated: calculateStudentTotalPaid(s)
+    })));
+    
+    // CRITICAL: Comparação com array não filtrado para entender diferença do Performance.tsx
+    const totalRevenueUnfiltered = students.reduce((sum, student) => sum + calculateStudentTotalPaid(student), 0);
+    console.log('🚨 [MYSTUDENTS_UNFILTERED] Se usássemos students (não filtrado) como Performance.tsx:', totalRevenueUnfiltered);
     
     // Contar estudantes únicos para as estatísticas
     const uniqueStudentIds = new Set(filteredStudents.map(s => s.id));
