@@ -6,6 +6,9 @@ export interface DynamicFeeValues {
   selectionProcessFee: string;
   scholarshipFee: string;
   i20ControlFee: string;
+  selectionProcessFeeAmount: number;
+  scholarshipFeeAmount: number;
+  i20ControlFeeAmount: number;
   hasSellerPackage: boolean;
   packageName?: string;
   packageNumber?: number;
@@ -24,6 +27,9 @@ export const useDynamicFees = (): DynamicFeeValues => {
           selectionProcessFee: '$400.00',
           scholarshipFee: '$900.00',
           i20ControlFee: '$900.00',
+          selectionProcessFeeAmount: 400,
+          scholarshipFeeAmount: 900,
+          i20ControlFeeAmount: 900,
           hasSellerPackage: false
         };
       }
@@ -49,6 +55,9 @@ export const useDynamicFees = (): DynamicFeeValues => {
         selectionProcessFee: `$${finalSelectionFee.toFixed(2)}`,
         scholarshipFee: `$${baseScholarship.toFixed(2)}`,
         i20ControlFee: `$${baseI20.toFixed(2)}`,
+        selectionProcessFeeAmount: finalSelectionFee,
+        scholarshipFeeAmount: baseScholarship,
+        i20ControlFeeAmount: baseI20,
         hasSellerPackage: false
       };
     } catch (error) {
@@ -58,6 +67,9 @@ export const useDynamicFees = (): DynamicFeeValues => {
         selectionProcessFee: '$400.00',
         scholarshipFee: '$900.00',
         i20ControlFee: '$900.00',
+        selectionProcessFeeAmount: 400,
+        scholarshipFeeAmount: 900,
+        i20ControlFeeAmount: 900,
         hasSellerPackage: false
       };
     }
