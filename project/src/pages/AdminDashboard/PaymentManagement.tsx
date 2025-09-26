@@ -28,6 +28,185 @@ import {
 } from 'lucide-react';
 import DocumentViewerModal from '../../components/DocumentViewerModal';
 import ZellePaymentReviewModal from '../../components/ZellePaymentReviewModal';
+import { generateTermAcceptancePDFBlob, StudentTermAcceptanceData } from '../../utils/pdfGenerator';
+
+// Function to send term acceptance notification with PDF after successful payment
+const sendTermAcceptanceNotificationAfterPayment = async (userId: string, feeType: string) => {
+  try {
+    console.log('[NOTIFICAÇÃO] Buscando dados do usuário para notificação...');
+    
+    // Get user profile data
+    const { data: userProfile, error: userError } = await supabase
+      .from('user_profiles')
+      .select('email, full_name, country, seller_referral_code')
+      .eq('user_id', userId)
+      .single();
+
+    if (userError || !userProfile) {
+      console.error('[NOTIFICAÇÃO] Erro ao buscar perfil do usuário:', userError);
+      return;
+    }
+
+    // Get the most recent term acceptance for this user
+    const { data: termAcceptance, error: termError } = await supabase
+      .from('comprehensive_term_acceptance')
+      .select('term_id, accepted_at, ip_address, user_agent')
+      .eq('user_id', userId)
+      .eq('term_type', 'checkout_terms')
+      .order('accepted_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (termError || !termAcceptance) {
+      console.error('[NOTIFICAÇÃO] Erro ao buscar aceitação de termos:', termError);
+      return;
+    }
+
+    // Get term content
+    const { data: termData, error: termDataError } = await supabase
+      .from('application_terms')
+      .select('title, content')
+      .eq('id', termAcceptance.term_id)
+      .single();
+
+    if (termDataError || !termData) {
+      console.error('[NOTIFICAÇÃO] Erro ao buscar conteúdo do termo:', termDataError);
+      return;
+    }
+
+    // Get seller data if user has seller_referral_code
+    let sellerData = null;
+    if (userProfile.seller_referral_code) {
+      const { data: sellerResult } = await supabase
+        .from('sellers')
+        .select('name, email, referral_code, user_id, affiliate_admin_id')
+        .eq('referral_code', userProfile.seller_referral_code)
+        .single();
+      
+      if (sellerResult) {
+        sellerData = sellerResult;
+      }
+    }
+
+    // Get affiliate admin data if seller has affiliate_admin_id
+    let affiliateAdminData = null;
+    if (sellerData?.affiliate_admin_id) {
+      console.log('[NOTIFICAÇÃO] Buscando affiliate admin com ID:', sellerData.affiliate_admin_id);
+      
+      // First get the affiliate admin to get the user_id
+      const { data: affiliateResult, error: affiliateError } = await supabase
+        .from('affiliate_admins')
+        .select('user_id')
+        .eq('id', sellerData.affiliate_admin_id)
+        .single();
+      
+      if (affiliateError) {
+        console.error('[NOTIFICAÇÃO] Erro ao buscar affiliate admin:', affiliateError);
+      } else if (affiliateResult?.user_id) {
+        // Then get the user profile data
+        const { data: userProfileResult, error: userProfileError } = await supabase
+          .from('user_profiles')
+          .select('full_name, email')
+          .eq('user_id', affiliateResult.user_id)
+          .single();
+        
+        if (userProfileError) {
+          console.error('[NOTIFICAÇÃO] Erro ao buscar user profile do affiliate admin:', userProfileError);
+        } else if (userProfileResult) {
+          affiliateAdminData = {
+            full_name: userProfileResult.full_name,
+            email: userProfileResult.email
+          };
+          console.log('[NOTIFICAÇÃO] Dados do affiliate admin carregados:', affiliateAdminData);
+        }
+      }
+    }
+
+    // Generate PDF for the term acceptance
+    let pdfBlob: Blob | null = null;
+    try {
+      console.log('[NOTIFICAÇÃO] Gerando PDF para notificação...');
+      
+      // Prepare data for PDF generation
+      const pdfData: StudentTermAcceptanceData = {
+        student_name: userProfile.full_name,
+        student_email: userProfile.email,
+        term_title: termData.title,
+        accepted_at: termAcceptance.accepted_at,
+        ip_address: termAcceptance.ip_address || 'N/A',
+        user_agent: termAcceptance.user_agent || 'N/A',
+        country: userProfile.country || 'N/A',
+        affiliate_code: sellerData?.referral_code || 'N/A',
+        term_content: termData.content || ''
+      };
+
+      // Generate PDF blob
+      pdfBlob = generateTermAcceptancePDFBlob(pdfData);
+      console.log('[NOTIFICAÇÃO] PDF gerado com sucesso!');
+    } catch (pdfError) {
+      console.error('[NOTIFICAÇÃO] Erro ao gerar PDF:', pdfError);
+      // Don't continue without PDF as it's required for this notification
+      throw new Error('Failed to generate PDF for term acceptance notification');
+    }
+
+    // Prepare notification payload
+    const webhookPayload = {
+      tipo_notf: "Student Term Acceptance",
+      email_admin: "admin@matriculausa.com",
+      nome_admin: "Admin MatriculaUSA",
+      email_aluno: userProfile.email,
+      nome_aluno: userProfile.full_name,
+      email_seller: sellerData?.email || "",
+      nome_seller: sellerData?.name || "N/A",
+      email_affiliate_admin: affiliateAdminData?.email || "",
+      nome_affiliate_admin: affiliateAdminData?.full_name || "N/A",
+      o_que_enviar: `Student ${userProfile.full_name} has accepted the ${termData.title} and completed ${feeType} payment via Zelle (manually approved). This shows the student is progressing through the enrollment process.`,
+      term_title: termData.title,
+      term_type: 'checkout_terms',
+      accepted_at: termAcceptance.accepted_at,
+      ip_address: termAcceptance.ip_address,
+      student_country: userProfile.country,
+      seller_id: sellerData?.user_id || "",
+      referral_code: sellerData?.referral_code || "",
+      affiliate_admin_id: sellerData?.affiliate_admin_id || ""
+    };
+
+    console.log('[NOTIFICAÇÃO] Enviando webhook com payload:', webhookPayload);
+
+    // Send webhook notification with PDF (always required for term acceptance)
+    if (!pdfBlob) {
+      throw new Error('PDF is required for term acceptance notification but was not generated');
+    }
+
+    const formData = new FormData();
+    
+    // Add each field individually for n8n to process correctly
+    Object.entries(webhookPayload).forEach(([key, value]) => {
+      formData.append(key, value !== null && value !== undefined ? value.toString() : '');
+    });
+
+    // Add PDF with descriptive filename
+    const fileName = `term_acceptance_${userProfile.full_name.replace(/\s+/g, '_').toLowerCase()}_${new Date().toISOString().split('T')[0]}.pdf`;
+    formData.append('pdf', pdfBlob, fileName);
+    console.log('[NOTIFICAÇÃO] PDF anexado à notificação:', fileName);
+
+    const webhookResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (webhookResponse.ok) {
+      console.log('[NOTIFICAÇÃO] Notificação enviada com sucesso!');
+    } else {
+      const errorText = await webhookResponse.text();
+      console.warn('[NOTIFICAÇÃO] Erro ao enviar notificação:', webhookResponse.status, errorText);
+    }
+
+  } catch (error) {
+    console.error('[NOTIFICAÇÃO] Erro ao enviar notificação de aceitação de termos:', error);
+    // Don't throw error to avoid breaking the payment process
+  }
+};
 
 interface PaymentRecord {
   id: string;
@@ -988,6 +1167,18 @@ const PaymentManagement = (): React.JSX.Element => {
         // Não falhar o processo se o webhook falhar
       }
 
+      // --- NOTIFICAÇÃO DE ACEITAÇÃO DE TERMOS COM PDF (apenas para selection_process_fee) ---
+      if (payment.fee_type === 'selection_process') {
+        try {
+          console.log('📄 [approveZellePayment] Enviando notificação de aceitação de termos com PDF...');
+          await sendTermAcceptanceNotificationAfterPayment(payment.user_id!, 'selection_process');
+          console.log('✅ [approveZellePayment] Notificação de aceitação de termos enviada com sucesso!');
+        } catch (termNotificationError) {
+          console.error('❌ [approveZellePayment] Erro ao enviar notificação de aceitação de termos:', termNotificationError);
+          // Não falhar o processo se a notificação de termos falhar
+        }
+      }
+
       // --- NOTIFICAÇÃO PARA UNIVERSIDADE ---
       try {
         console.log(`📤 [approveZellePayment] Enviando notificação de ${payment.fee_type} para universidade...`);
@@ -1007,13 +1198,13 @@ const PaymentManagement = (): React.JSX.Element => {
           
           console.log(`📤 [approveZellePayment] Payload para universidade:`, payload);
           
-          console.log(`🔗 [approveZellePayment] URL da Edge Function:`, `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${notificationEndpoint}`);
+          console.log(`🔗 [approveZellePayment] URL da Edge Function:`, `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${notificationEndpoint!}`);
           console.log(`🔗 [approveZellePayment] Headers:`, {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
           });
           
-          const notificationResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${notificationEndpoint}`, {
+          const notificationResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${notificationEndpoint!}`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -1124,7 +1315,7 @@ const PaymentManagement = (): React.JSX.Element => {
             // Depois buscar as informações do user_profiles
             const { data: userProfileData, error: userProfileError } = await supabase
               .from('user_profiles')
-              .select('full_name, email')
+              .select('full_name, email, phone')
               .eq('user_id', affiliateData.user_id)
               .single();
             
@@ -1143,7 +1334,7 @@ const PaymentManagement = (): React.JSX.Element => {
         }
 
         if (sellerData && !sellerError) {
-          const { data: sellerProfile, error: sellerProfileError } = await supabase.from('user_profiles').select('phone').eq('user_id', sellerData.user_id).single();
+          const { data: sellerProfile } = await supabase.from('user_profiles').select('phone').eq('user_id', sellerData.user_id).single();
           const sellerPhone = sellerProfile?.phone;
 
           console.log(`📤 [approveZellePayment] Seller encontrado:`, sellerData);
@@ -1194,10 +1385,13 @@ const PaymentManagement = (): React.JSX.Element => {
                 tipo_notf: "Pagamento de aluno do seu seller aprovado",
                 email_affiliate_admin: affiliateAdminData.user_profiles.email,
                 nome_affiliate_admin: affiliateAdminData.user_profiles.full_name || "Affiliate Admin",
+                phone_affiliate_admin: affiliateAdminData.user_profiles.phone || "",
                 email_aluno: payment.student_email,
                 nome_aluno: payment.student_name,
+                phone_aluno: payment.student_phone || "",
                 email_seller: sellerData.email,
                 nome_seller: sellerData.name,
+                phone_seller: sellerPhone || "",
                 o_que_enviar: `Pagamento de ${payment.fee_type} no valor de ${payment.amount} do aluno ${payment.student_name} foi aprovado. Seller responsável: ${sellerData.name} (${sellerData.referral_code})`,
                 payment_id: paymentId,
                 fee_type: payment.fee_type,
@@ -1543,6 +1737,47 @@ const PaymentManagement = (): React.JSX.Element => {
           }, {}) || {};
         }
       }
+
+      // Buscar overrides de taxas para todos os usuários
+      const allUserIds = [
+        ...(applications?.map(app => app.user_profiles?.user_id).filter(Boolean) || []),
+        ...(zellePayments?.map(payment => payment.user_profiles?.user_id).filter(Boolean) || []),
+        ...(stripeUsers?.map(user => user.user_id).filter(Boolean) || [])
+      ];
+      const uniqueUserIds = [...new Set(allUserIds)];
+      
+      let overridesMap: { [key: string]: any } = {};
+      if (uniqueUserIds.length > 0) {
+        console.log('🔍 DEBUG: Loading overrides for user IDs:', uniqueUserIds);
+        const overrideEntries = await Promise.allSettled(
+          uniqueUserIds.map(async (userId) => {
+            const { data, error } = await supabase.rpc('get_user_fee_overrides', { user_id_param: userId });
+            if (error) {
+              console.log(`❌ DEBUG: Error loading override for user ${userId}:`, error);
+            } else if (data) {
+              console.log(`✅ DEBUG: Override found for user ${userId}:`, data);
+            }
+            return { userId, data: error ? null : data };
+          })
+        );
+        
+        overridesMap = overrideEntries.reduce((acc: { [key: string]: any }, res) => {
+          if (res.status === 'fulfilled') {
+            const { userId, data } = res.value;
+            if (data) {
+              acc[userId] = {
+                selection_process_fee: data.selection_process_fee != null ? Number(data.selection_process_fee) : undefined,
+                application_fee: data.application_fee != null ? Number(data.application_fee) : undefined,
+                scholarship_fee: data.scholarship_fee != null ? Number(data.scholarship_fee) : undefined,
+                i20_control_fee: data.i20_control_fee != null ? Number(data.i20_control_fee) : undefined,
+              };
+            }
+          }
+          return acc;
+        }, {});
+        
+        console.log('🔍 DEBUG: Final overrides map:', overridesMap);
+      }
       console.log('🚨 DEBUG: First application user_profiles:', applications?.[0]?.user_profiles);
       console.log('🚨 DEBUG: First application scholarship_packages:', applications?.[0]?.user_profiles?.scholarship_packages);
       
@@ -1620,14 +1855,53 @@ const PaymentManagement = (): React.JSX.Element => {
 
         // Obter valores dinâmicos do pacote + dependentes ou usar valores padrão + dependentes
         const dependents = Number(student?.dependents) || 0;
-        const dependentCost = dependents * 75; // $75 por dependente para cada taxa (em centavos)
+        const dependentCost = dependents * 150; // $150 por dependente apenas para Selection Process (em centavos)
+        const userOverrides = overridesMap[student?.user_id] || {};
         
-        const selectionProcessFee = packageData?.selection_process_fee ? 
-          Math.round((packageData.selection_process_fee + dependentCost) * 100) : Math.round((getFeeAmount('selection_process') + dependentCost) * 100);
-        const i20ControlFee = packageData?.i20_control_fee ? 
-          Math.round((packageData.i20_control_fee + dependentCost) * 100) : Math.round((getFeeAmount('i20_control_fee') + dependentCost) * 100);
-        const scholarshipFee = packageData?.scholarship_fee ? 
-          Math.round(packageData.scholarship_fee * 100) : Math.round(getFeeAmount('scholarship_fee') * 100); // Scholarship fee não tem dependentes
+        // Debug: Log dos overrides para este usuário
+        if (Object.keys(userOverrides).length > 0) {
+          console.log(`🔍 DEBUG: User ${student?.user_id} (${studentName}) has overrides:`, userOverrides);
+        }
+        
+        // Selection Process Fee - prioridade: override > pacote > padrão
+        let selectionProcessFee: number;
+        if (userOverrides.selection_process_fee !== undefined) {
+          // Se há override, usar exatamente o valor do override (já inclui dependentes se necessário)
+          selectionProcessFee = Math.round(userOverrides.selection_process_fee * 100);
+          console.log(`🔍 DEBUG: Using override for Selection Process Fee: $${userOverrides.selection_process_fee} (${selectionProcessFee} cents)`);
+        } else if (packageData?.selection_process_fee) {
+          selectionProcessFee = Math.round((packageData.selection_process_fee + dependentCost) * 100);
+          console.log(`🔍 DEBUG: Using package for Selection Process Fee: $${packageData.selection_process_fee} + $${dependentCost/100} = $${(selectionProcessFee/100).toFixed(2)}`);
+        } else {
+          selectionProcessFee = Math.round((getFeeAmount('selection_process') + dependentCost) * 100);
+          console.log(`🔍 DEBUG: Using default for Selection Process Fee: $${getFeeAmount('selection_process')} + $${dependentCost/100} = $${(selectionProcessFee/100).toFixed(2)}`);
+        }
+        
+        // I-20 Control Fee - prioridade: override > pacote > padrão (sem dependentes)
+        let i20ControlFee: number;
+        if (userOverrides.i20_control_fee !== undefined) {
+          i20ControlFee = Math.round(userOverrides.i20_control_fee * 100);
+          console.log(`🔍 DEBUG: Using override for I-20 Control Fee: $${userOverrides.i20_control_fee} (${i20ControlFee} cents)`);
+        } else if (packageData?.i20_control_fee) {
+          i20ControlFee = Math.round(packageData.i20_control_fee * 100);
+          console.log(`🔍 DEBUG: Using package for I-20 Control Fee: $${packageData.i20_control_fee} (${i20ControlFee} cents)`);
+        } else {
+          i20ControlFee = Math.round(getFeeAmount('i20_control_fee') * 100);
+          console.log(`🔍 DEBUG: Using default for I-20 Control Fee: $${getFeeAmount('i20_control_fee')} (${i20ControlFee} cents)`);
+        }
+        
+        // Scholarship Fee - prioridade: override > pacote > padrão (sem dependentes)
+        let scholarshipFee: number;
+        if (userOverrides.scholarship_fee !== undefined) {
+          scholarshipFee = Math.round(userOverrides.scholarship_fee * 100);
+          console.log(`🔍 DEBUG: Using override for Scholarship Fee: $${userOverrides.scholarship_fee} (${scholarshipFee} cents)`);
+        } else if (packageData?.scholarship_fee) {
+          scholarshipFee = Math.round(packageData.scholarship_fee * 100);
+          console.log(`🔍 DEBUG: Using package for Scholarship Fee: $${packageData.scholarship_fee} (${scholarshipFee} cents)`);
+        } else {
+          scholarshipFee = Math.round(getFeeAmount('scholarship_fee') * 100);
+          console.log(`🔍 DEBUG: Using default for Scholarship Fee: $${getFeeAmount('scholarship_fee')} (${scholarshipFee} cents)`);
+        }
         
         // Debug: Log de todas as taxas calculadas
         if (studentName === 'froilan8153@uorak.com') {
@@ -1944,14 +2218,39 @@ const PaymentManagement = (): React.JSX.Element => {
 
         // Obter valores dinâmicos do pacote + dependentes ou usar valores padrão + dependentes
         const dependents = Number(stripeUser?.dependents) || 0;
-        const dependentCost = dependents * 75; // $75 por dependente para cada taxa (em centavos)
+        const dependentCost = dependents * 150; // $150 por dependente apenas para Selection Process (em centavos)
+        const userOverrides = overridesMap[stripeUser?.user_id] || {};
         
-        const selectionProcessFee = packageData?.selection_process_fee ? 
-          Math.round((packageData.selection_process_fee + dependentCost) * 100) : Math.round((getFeeAmount('selection_process') + dependentCost) * 100);
-        const i20ControlFee = packageData?.i20_control_fee ? 
-          Math.round((packageData.i20_control_fee + dependentCost) * 100) : Math.round((getFeeAmount('i20_control_fee') + dependentCost) * 100);
-        const scholarshipFee = packageData?.scholarship_fee ? 
-          Math.round(packageData.scholarship_fee * 100) : Math.round(getFeeAmount('scholarship_fee') * 100); // Scholarship fee não tem dependentes
+        // Selection Process Fee - prioridade: override > pacote > padrão
+        let selectionProcessFee: number;
+        if (userOverrides.selection_process_fee !== undefined) {
+          // Se há override, usar exatamente o valor do override (já inclui dependentes se necessário)
+          selectionProcessFee = Math.round(userOverrides.selection_process_fee * 100);
+        } else if (packageData?.selection_process_fee) {
+          selectionProcessFee = Math.round((packageData.selection_process_fee + dependentCost) * 100);
+        } else {
+          selectionProcessFee = Math.round((getFeeAmount('selection_process') + dependentCost) * 100);
+        }
+        
+        // I-20 Control Fee - prioridade: override > pacote > padrão (sem dependentes)
+        let i20ControlFee: number;
+        if (userOverrides.i20_control_fee !== undefined) {
+          i20ControlFee = Math.round(userOverrides.i20_control_fee * 100);
+        } else if (packageData?.i20_control_fee) {
+          i20ControlFee = Math.round(packageData.i20_control_fee * 100);
+        } else {
+          i20ControlFee = Math.round(getFeeAmount('i20_control_fee') * 100);
+        }
+        
+        // Scholarship Fee - prioridade: override > pacote > padrão (sem dependentes)
+        let scholarshipFee: number;
+        if (userOverrides.scholarship_fee !== undefined) {
+          scholarshipFee = Math.round(userOverrides.scholarship_fee * 100);
+        } else if (packageData?.scholarship_fee) {
+          scholarshipFee = Math.round(packageData.scholarship_fee * 100);
+        } else {
+          scholarshipFee = Math.round(getFeeAmount('scholarship_fee') * 100);
+        }
         // Application Fee - para usuários Stripe, usar valor padrão do sistema
         const applicationFee = Math.round(getFeeAmount('application_fee') * 100);
 

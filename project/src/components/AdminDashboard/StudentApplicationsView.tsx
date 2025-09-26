@@ -19,15 +19,22 @@ import {
   BookOpen
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { useFeeConfig } from '../../hooks/useFeeConfig';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import dayjs from 'dayjs';
 
 interface StudentRecord {
   // Dados do estudante (sempre presentes)
   student_id: string;
+  user_id: string;
   student_name: string;
   student_email: string;
   student_created_at: string;
   has_paid_selection_process_fee: boolean;
   has_paid_i20_control_fee: boolean;
+  seller_referral_code: string | null;
   
   // Dados da aplicação (podem ser null se não aplicou ainda)
   application_id: string | null;
@@ -57,10 +64,145 @@ const StudentApplicationsView: React.FC = () => {
   const [selectedStudent, setSelectedStudent] = useState<StudentRecord | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(20);
+  const [expandedApps, setExpandedApps] = useState<{[key: string]: boolean}>({});
+  const [dependents, setDependents] = useState<number>(0);
+  
+  // Hook para configurações dinâmicas de taxas
+  const { getFeeAmount, formatFeeAmount, hasOverride } = useFeeConfig(selectedStudent?.user_id);
+
+  // Novos filtros
+  const [stageFilter, setStageFilter] = useState('all');
+  const [affiliateFilter, setAffiliateFilter] = useState('all');
+  const [scholarshipFilter, setScholarshipFilter] = useState('all');
+  const [universityFilter, setUniversityFilter] = useState('all');
+  const [timeFilter, setTimeFilter] = useState('all');
+  const [startDate, setStartDate] = useState<dayjs.Dayjs | null>(null);
+  const [endDate, setEndDate] = useState<dayjs.Dayjs | null>(null);
+  
+  // Dados para os filtros
+  const [affiliates, setAffiliates] = useState<any[]>([]);
+  const [scholarships, setScholarships] = useState<any[]>([]);
+  const [universities, setUniversities] = useState<any[]>([]);
 
   useEffect(() => {
     fetchStudents();
+    fetchFilterData();
   }, []);
+
+  // Carregar dependents quando selectedStudent mudar
+  useEffect(() => {
+    if (selectedStudent?.user_id) {
+      loadDependents(selectedStudent.user_id);
+    } else {
+      setDependents(0);
+    }
+  }, [selectedStudent?.user_id]);
+
+  // Função para carregar dependents do estudante
+  const loadDependents = async (studentUserId?: string) => {
+    if (!studentUserId) return;
+    try {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('dependents')
+        .eq('user_id', studentUserId)
+        .single();
+      if (!error && data) setDependents(Number(data.dependents || 0));
+      else setDependents(0);
+    } catch {
+      setDependents(0);
+    }
+  };
+
+  const fetchFilterData = async () => {
+    try {
+      // Buscar usuários com role affiliate_admin da tabela user_profiles
+      const { data: affiliateAdminsData, error: affiliateAdminsError } = await supabase
+        .from('user_profiles')
+        .select('user_id, full_name, email')
+        .eq('role', 'affiliate_admin')
+        .eq('status', 'active')
+        .order('created_at', { ascending: false });
+      
+      if (affiliateAdminsError) {
+        console.error('Error loading affiliate admins:', affiliateAdminsError);
+      } else if (affiliateAdminsData) {
+        console.log('🔍 DEBUG: Found affiliate admins:', affiliateAdminsData);
+        
+        // Para cada affiliate admin, buscar os sellers associados
+        const affiliatesWithSellers = await Promise.all(
+          affiliateAdminsData.map(async (admin) => {
+            // Primeiro buscar o affiliate_admin_id na tabela affiliate_admins
+            const { data: affiliateAdminData } = await supabase
+              .from('affiliate_admins')
+              .select('id')
+              .eq('user_id', admin.user_id)
+              .single();
+            
+            let sellers = [];
+            if (affiliateAdminData) {
+              // Buscar sellers que pertencem a este affiliate admin
+              const { data: sellersData } = await supabase
+                .from('sellers')
+                .select('id, referral_code, name, email')
+                .eq('affiliate_admin_id', affiliateAdminData.id)
+                .eq('is_active', true);
+              
+              sellers = sellersData || [];
+            }
+            
+            // Se não encontrar sellers diretos, buscar por email
+            if (sellers.length === 0) {
+              const { data: sellersByEmail } = await supabase
+                .from('sellers')
+                .select('id, referral_code, name, email')
+                .eq('email', admin.email)
+                .eq('is_active', true);
+              sellers = sellersByEmail || [];
+            }
+            
+            console.log(`🔍 DEBUG: Affiliate ${admin.full_name} has sellers:`, sellers.map(s => s.referral_code));
+            
+            return {
+              id: admin.user_id,
+              user_id: admin.user_id,
+              name: admin.full_name || admin.email,
+              email: admin.email,
+              referral_code: sellers[0]?.referral_code || null,
+              sellers: sellers
+            };
+          })
+        );
+        
+        console.log('🔍 DEBUG: Loaded affiliates with sellers:', affiliatesWithSellers);
+        setAffiliates(affiliatesWithSellers);
+      }
+
+      // Carregar scholarships
+      const { data: scholarshipsData } = await supabase
+        .from('scholarships')
+        .select('id, title, universities!inner(name)')
+        .eq('is_active', true)
+        .order('title', { ascending: true });
+      
+      if (scholarshipsData) {
+        setScholarships(scholarshipsData);
+      }
+
+      // Carregar universities
+      const { data: universitiesData } = await supabase
+        .from('universities')
+        .select('id, name')
+        .eq('is_approved', true)
+        .order('name', { ascending: true });
+      
+      if (universitiesData) {
+        setUniversities(universitiesData);
+      }
+    } catch (error) {
+      console.error('Error loading filter data:', error);
+    }
+  };
 
   const fetchStudents = async () => {
     try {
@@ -69,12 +211,14 @@ const StudentApplicationsView: React.FC = () => {
         .from('user_profiles')
         .select(`
           id,
+          user_id,
           full_name,
           email,
           created_at,
           has_paid_selection_process_fee,
           has_paid_i20_control_fee,
           role,
+          seller_referral_code,
           scholarship_applications (
             id,
             scholarship_id,
@@ -86,6 +230,7 @@ const StudentApplicationsView: React.FC = () => {
             payment_status,
             reviewed_at,
             reviewed_by,
+            documents,
             scholarships (
               title,
               universities (
@@ -98,6 +243,13 @@ const StudentApplicationsView: React.FC = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
+
+      // Debug: verificar se o campo seller_referral_code está sendo retornado
+      console.log('🔍 DEBUG: Raw students data (first 3):', data?.slice(0, 3).map(s => ({ 
+        name: s.full_name, 
+        email: s.email, 
+        seller_referral_code: s.seller_referral_code 
+      })));
 
       const formattedData = data?.map((student: any) => {
         // Cada estudante aparece apenas uma vez na tabela
@@ -125,11 +277,13 @@ const StudentApplicationsView: React.FC = () => {
 
         return {
           student_id: student.id,
+          user_id: student.user_id,
           student_name: student.full_name || 'N/A',
           student_email: student.email || 'N/A',
           student_created_at: student.created_at,
           has_paid_selection_process_fee: student.has_paid_selection_process_fee || false,
           has_paid_i20_control_fee: student.has_paid_i20_control_fee || false,
+          seller_referral_code: student.seller_referral_code || null,
           // Dados da aplicação só aparecem se locked
           application_id: lockedApplication?.id || null,
           scholarship_id: lockedApplication?.scholarship_id || null,
@@ -220,8 +374,176 @@ const StudentApplicationsView: React.FC = () => {
       (statusFilter === 'locked' && student.is_locked) ||
       (statusFilter === 'single_application' && student.total_applications === 1);
     
-    return matchesSearch && matchesStatus;
+    // Filtro por etapa do processo (baseado no Application Flow)
+    const matchesStage = stageFilter === 'all' || (() => {
+      // Debug: Log do estado do estudante
+      if (stageFilter !== 'all') {
+        console.log(`🔍 DEBUG: Student ${student.student_name} - Stage Filter: ${stageFilter}`, {
+          has_paid_selection_process_fee: student.has_paid_selection_process_fee,
+          total_applications: student.total_applications,
+          is_locked: student.is_locked,
+          status: student.status,
+          is_application_fee_paid: student.is_application_fee_paid,
+          is_scholarship_fee_paid: student.is_scholarship_fee_paid,
+          acceptance_letter_status: student.acceptance_letter_status,
+          has_paid_i20_control_fee: student.has_paid_i20_control_fee
+        });
+      }
+
+      let result = false;
+      switch (stageFilter) {
+        case 'selection_fee':
+          // Está na etapa Selection Fee se NÃO pagou a taxa de seleção
+          result = !student.has_paid_selection_process_fee;
+          break;
+        case 'application':
+          // Está na etapa Application se pagou a taxa de seleção mas não aplicou ainda
+          result = student.has_paid_selection_process_fee && student.total_applications === 0;
+          break;
+        case 'review':
+          // Está na etapa Review se aplicou mas está pendente ou em análise
+          result = student.total_applications > 0 && (student.status === 'pending' || student.status === 'under_review') && !student.is_locked;
+          break;
+        case 'app_fee':
+          // Está na etapa App Fee se foi aprovado mas não pagou a taxa de aplicação
+          result = student.status === 'approved' && !student.is_application_fee_paid;
+          break;
+        case 'scholarship_fee':
+          // Está na etapa Scholarship Fee se pagou a taxa de aplicação mas não a de bolsa
+          result = student.is_locked && !student.is_scholarship_fee_paid;
+          break;
+        case 'acceptance':
+          // Está na etapa Acceptance se pagou a taxa de bolsa mas não tem carta de aceitação
+          result = student.is_locked && student.is_scholarship_fee_paid && !student.acceptance_letter_status;
+          break;
+        case 'i20_fee':
+          // Está na etapa I-20 Fee se tem carta de aceitação mas não pagou a taxa I-20
+          result = student.is_locked && student.acceptance_letter_status && !student.has_paid_i20_control_fee;
+          break;
+        case 'enrollment':
+          // Está na etapa Enrollment se pagou todas as taxas e está matriculado
+          result = student.is_locked && student.has_paid_i20_control_fee && student.status === 'enrolled';
+          break;
+        default:
+          result = true;
+      }
+      
+      if (stageFilter !== 'all') console.log(`  → Result: ${result}`);
+      return result;
+    })();
+    
+    // Filtro por bolsa
+    const matchesScholarship = scholarshipFilter === 'all' || 
+      (student.scholarship_id && student.scholarship_id === scholarshipFilter);
+    
+    // Filtro por universidade
+    const matchesUniversity = universityFilter === 'all' || 
+      (student.university_name && student.university_name.toLowerCase().includes(universityFilter.toLowerCase()));
+    
+    // Filtro por affiliate admin
+    const matchesAffiliate = affiliateFilter === 'all' || (() => {
+      if (affiliateFilter !== 'all') {
+        console.log(`🔍 DEBUG: Checking affiliate filter for student ${student.student_name}:`, {
+          student_referral_code: student.seller_referral_code,
+          affiliateFilter,
+          student_id: student.student_id,
+          available_affiliates: affiliates.map(a => ({ 
+            id: a.id, 
+            name: a.name, 
+            referral_code: a.referral_code,
+            sellers: a.sellers?.map(s => s.referral_code) || []
+          }))
+        });
+      }
+      
+      if (!student.seller_referral_code) {
+        // Se não tem referral code, só aparece se filtro for "all"
+        if (affiliateFilter !== 'all') {
+          console.log(`  → Student has no referral code, excluding from filter`);
+        }
+        return affiliateFilter === 'all';
+      }
+      
+      // Buscar o affiliate admin pelo referral code do estudante
+      // Primeiro tenta pelo referral_code direto do affiliate
+      let affiliate = affiliates.find(aff => aff.referral_code === student.seller_referral_code);
+      
+      if (affiliate) {
+        console.log(`  → Found affiliate by direct referral_code:`, affiliate);
+      } else {
+        // Se não encontrar, busca pelos sellers do affiliate
+        affiliate = affiliates.find(aff => 
+          aff.sellers?.some(seller => seller.referral_code === student.seller_referral_code)
+        );
+        
+        if (affiliate) {
+          console.log(`  → Found affiliate by seller referral_code:`, affiliate);
+        } else {
+          console.log(`  → No affiliate found for referral_code: ${student.seller_referral_code}`);
+        }
+      }
+      
+      const result = affiliate && affiliate.id === affiliateFilter;
+      
+      if (affiliateFilter !== 'all') {
+        console.log(`  → Final result: ${result} (affiliate.id: ${affiliate?.id}, filter: ${affiliateFilter})`);
+      }
+      
+      return result;
+    })();
+    
+    // Filtro por tempo
+    const matchesTime = (() => {
+      if (timeFilter === 'all') return true;
+      
+      const studentDate = dayjs(student.student_created_at);
+      
+      // Se tem datas específicas selecionadas, usar elas
+      if (startDate && endDate) {
+        return studentDate.isAfter(startDate.subtract(1, 'day')) && studentDate.isBefore(endDate.add(1, 'day'));
+      }
+      
+      // Se tem apenas data de início
+      if (startDate) {
+        return studentDate.isAfter(startDate.subtract(1, 'day'));
+      }
+      
+      // Se tem apenas data de fim
+      if (endDate) {
+        return studentDate.isBefore(endDate.add(1, 'day'));
+      }
+      
+      // Filtros predefinidos
+      const now = dayjs();
+      switch (timeFilter) {
+        case 'last_7_days': return studentDate.isAfter(now.subtract(7, 'day'));
+        case 'last_30_days': return studentDate.isAfter(now.subtract(30, 'day'));
+        case 'last_90_days': return studentDate.isAfter(now.subtract(90, 'day'));
+        case 'last_year': return studentDate.isAfter(now.subtract(1, 'year'));
+        default: return true;
+      }
+    })();
+    
+    const finalResult = matchesSearch && matchesStatus && matchesStage && matchesScholarship && matchesUniversity && matchesAffiliate && matchesTime;
+    
+    if (affiliateFilter !== 'all' && finalResult) {
+      console.log(`✅ Student ${student.student_name} PASSED affiliate filter`);
+    }
+    
+    return finalResult;
   });
+  
+  // Log do resultado final do filtro
+  if (affiliateFilter !== 'all') {
+    console.log(`🔍 DEBUG: Affiliate filter "${affiliateFilter}" resulted in ${filteredStudents.length} students`);
+    console.log(`🔍 DEBUG: All students with referral codes:`, 
+      students.map(s => ({ 
+        name: s.student_name, 
+        referral_code: s.seller_referral_code,
+        has_referral: !!s.seller_referral_code 
+      }))
+    );
+  }
 
   const totalPages = Math.ceil(filteredStudents.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -290,6 +612,8 @@ const StudentApplicationsView: React.FC = () => {
 
       {/* Filters */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="space-y-4">
+          {/* Primeira linha - Busca e Status */}
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex-1">
             <div className="relative">
@@ -320,6 +644,210 @@ const StudentApplicationsView: React.FC = () => {
               <option value="rejected">Rejected</option>
               <option value="enrolled">Enrolled</option>
             </select>
+            </div>
+          </div>
+          
+          {/* Segunda linha - Novos filtros */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            {/* Filtro por Etapa */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Process Stage</label>
+              <select
+                value={stageFilter}
+                onChange={(e) => setStageFilter(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] text-sm"
+              >
+                <option value="all">All Stages</option>
+                <option value="selection_fee">Selection Fee</option>
+                <option value="application">Application</option>
+                <option value="review">Review</option>
+                <option value="app_fee">App Fee</option>
+                <option value="scholarship_fee">Scholarship Fee</option>
+                <option value="acceptance">Acceptance</option>
+                <option value="i20_fee">I-20 Fee</option>
+                <option value="enrollment">Enrollment</option>
+              </select>
+            </div>
+            
+            {/* Filtro por Bolsa */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Scholarship</label>
+              <select
+                value={scholarshipFilter}
+                onChange={(e) => setScholarshipFilter(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] text-sm"
+              >
+                <option value="all">All Scholarships</option>
+                {scholarships.map((scholarship) => (
+                  <option key={scholarship.id} value={scholarship.id}>
+                    {scholarship.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            {/* Filtro por Universidade */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">University</label>
+              <select
+                value={universityFilter}
+                onChange={(e) => setUniversityFilter(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] text-sm"
+              >
+                <option value="all">All Universities</option>
+                {universities.map((university) => (
+                  <option key={university.id} value={university.name}>
+                    {university.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            {/* Filtro por Tempo */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Time Period</label>
+              <div className="space-y-2">
+                <select
+                  value={timeFilter}
+                  onChange={(e) => {
+                    setTimeFilter(e.target.value);
+                    if (e.target.value !== 'custom') {
+                      setStartDate(null);
+                      setEndDate(null);
+                    }
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] text-sm"
+                >
+                  <option value="all">All Time</option>
+                  <option value="last_7_days">Last 7 Days</option>
+                  <option value="last_30_days">Last 30 Days</option>
+                  <option value="last_90_days">Last 90 Days</option>
+                  <option value="last_year">Last Year</option>
+                  <option value="custom">Custom Range</option>
+                </select>
+                {timeFilter === 'custom' && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="relative">
+                      <label className="block text-xs font-medium text-gray-500 mb-1">From</label>
+                      <LocalizationProvider dateAdapter={AdapterDayjs}>
+                        <DatePicker
+                          value={startDate}
+                          onChange={(newValue) => setStartDate(newValue)}
+                          slotProps={{
+                            textField: {
+                              size: 'small',
+                              placeholder: 'Select start date',
+                              sx: {
+                                '& .MuiOutlinedInput-root': {
+                                  fontSize: '0.875rem',
+                                  height: '40px',
+                                  borderRadius: '0.5rem',
+                                  backgroundColor: 'white',
+                                  '& fieldset': {
+                                    borderColor: '#d1d5db',
+                                    borderWidth: '1px',
+                                  },
+                                  '&:hover fieldset': {
+                                    borderColor: '#05294E',
+                                  },
+                                  '&.Mui-focused fieldset': {
+                                    borderColor: '#05294E',
+                                    borderWidth: '2px',
+                                    boxShadow: '0 0 0 3px rgba(5, 41, 78, 0.1)',
+                                  },
+                                },
+                                '& .MuiInputLabel-root': {
+                                  display: 'none',
+                                },
+                                '& .MuiOutlinedInput-input': {
+                                  padding: '8px 12px',
+                                  fontSize: '0.875rem',
+                                  color: '#374151',
+                                },
+                                '& .MuiInputAdornment-root': {
+                                  marginLeft: '8px',
+                                },
+                                '& .MuiIconButton-root': {
+                                  padding: '4px',
+                                  color: '#6b7280',
+                                },
+                              }
+                            }
+                          }}
+                        />
+                      </LocalizationProvider>
+                    </div>
+                    <div className="relative">
+                      <label className="block text-xs font-medium text-gray-500 mb-1">To</label>
+                      <LocalizationProvider dateAdapter={AdapterDayjs}>
+                        <DatePicker
+                          value={endDate}
+                          onChange={(newValue) => setEndDate(newValue)}
+                          slotProps={{
+                            textField: {
+                              size: 'small',
+                              placeholder: 'Select end date',
+                              sx: {
+                                '& .MuiOutlinedInput-root': {
+                                  fontSize: '0.875rem',
+                                  height: '40px',
+                                  borderRadius: '0.5rem',
+                                  backgroundColor: 'white',
+                                  '& fieldset': {
+                                    borderColor: '#d1d5db',
+                                    borderWidth: '1px',
+                                  },
+                                  '&:hover fieldset': {
+                                    borderColor: '#05294E',
+                                  },
+                                  '&.Mui-focused fieldset': {
+                                    borderColor: '#05294E',
+                                    borderWidth: '2px',
+                                    boxShadow: '0 0 0 3px rgba(5, 41, 78, 0.1)',
+                                  },
+                                },
+                                '& .MuiInputLabel-root': {
+                                  display: 'none',
+                                },
+                                '& .MuiOutlinedInput-input': {
+                                  padding: '8px 12px',
+                                  fontSize: '0.875rem',
+                                  color: '#374151',
+                                },
+                                '& .MuiInputAdornment-root': {
+                                  marginLeft: '8px',
+                                },
+                                '& .MuiIconButton-root': {
+                                  padding: '4px',
+                                  color: '#6b7280',
+                                },
+                              }
+                            }
+                          }}
+                        />
+                      </LocalizationProvider>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            {/* Filtro por Admin Affiliate */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Affiliate Admin</label>
+              <select
+                value={affiliateFilter}
+                onChange={(e) => setAffiliateFilter(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] text-sm"
+              >
+                <option value="all">All Affiliates</option>
+                {affiliates.map((affiliate) => (
+                  <option key={affiliate.id} value={affiliate.id}>
+                    {affiliate.name || affiliate.email || 'Unknown'}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
       </div>
@@ -479,224 +1007,725 @@ const StudentApplicationsView: React.FC = () => {
       {/* Detailed View Modal */}
       {selectedStudent && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xl font-bold text-gray-900">Student Details</h3>
+          <div className="bg-slate-50 rounded-3xl max-w-7xl w-full max-h-[95vh] overflow-y-auto shadow-2xl">
+            {/* Header Section */}
+            <div className="bg-white shadow-sm border-b border-slate-200 rounded-t-3xl sticky top-0 z-10">
+              <div className="flex items-center justify-between p-6">
+                <div className="flex items-center space-x-4">
+                  <div className="bg-gradient-to-r from-[#05294E] to-[#0a4a7a] rounded-2xl p-3">
+                    <User className="h-8 w-8 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold text-slate-900">{selectedStudent.student_name}</h3>
+                    <p className="text-slate-600">{selectedStudent.student_email}</p>
+                    <div className="flex items-center space-x-4 mt-1">
+                      <span className="text-sm text-slate-500">
+                        Registered: {new Date(selectedStudent.student_created_at).toLocaleDateString()}
+                      </span>
+                      {selectedStudent.seller_referral_code && (
+                        <span className="bg-slate-100 text-slate-700 px-2 py-1 rounded-lg text-xs font-medium">
+                          Ref: {selectedStudent.seller_referral_code}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
                 <button
                   onClick={() => setSelectedStudent(null)}
-                  className="text-gray-400 hover:text-gray-600"
+                  className="text-slate-400 hover:text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl p-2 transition-colors"
+                  aria-label="Close student details modal"
                 >
                   <XCircle className="h-6 w-6" />
                 </button>
               </div>
             </div>
             
-            <div className="p-6">
-              {/* Student Info */}
-              <div className="mb-6">
-                <h4 className="text-lg font-semibold text-gray-900 mb-3">Student Information</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <label className="text-sm font-medium text-gray-500">Name</label>
-                    <p className="text-sm text-gray-900">{selectedStudent.student_name}</p>
-                  </div>
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <label className="text-sm font-medium text-gray-500">Email</label>
-                    <p className="text-sm text-gray-900">{selectedStudent.student_email}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Scholarship Info */}
-              {selectedStudent.scholarship_title ? (
-                <div className="mb-6">
-                  <h4 className="text-lg font-semibold text-gray-900 mb-3">Scholarship Information</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <label className="text-sm font-medium text-gray-500">Scholarship</label>
-                      <p className="text-sm text-gray-900">{selectedStudent.scholarship_title}</p>
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                <div className="lg:col-span-8 space-y-6">
+                  {/* Student Information Card */}
+                  <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
+                    <div className="bg-gradient-to-r rounded-t-2xl from-[#05294E] to-[#0a4a7a] px-6 py-4">
+                      <h2 className="text-xl font-semibold text-white flex items-center">
+                        <User className="w-6 h-6 mr-3" />
+                        Student Information
+                      </h2>
                     </div>
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <label className="text-sm font-medium text-gray-500">University</label>
-                      <p className="text-sm text-gray-900">{selectedStudent.university_name}</p>
-                    </div>
-                  </div>
-                </div>
-              ) : selectedStudent.total_applications > 0 ? (
-                <div className="mb-6">
-                  <h4 className="text-lg font-semibold text-gray-900 mb-3">
-                    Active Applications ({selectedStudent.total_applications})
-                  </h4>
-                  <div className="space-y-3">
-                    {selectedStudent.all_applications.map((app: any) => (
-                      <div key={app.id} className="bg-gray-50 border border-gray-200 p-4 rounded-lg">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <h5 className="font-medium text-gray-900">
-                              {app.scholarships?.title || 'N/A'}
-                            </h5>
-                            <p className="text-sm text-gray-600">
-                              {app.scholarships?.universities?.name || 'N/A'}
-                            </p>
-                            <p className="text-xs text-gray-500 mt-1">
-                              Applied: {app.applied_at ? new Date(app.applied_at).toLocaleDateString() : 'N/A'}
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              app.status === 'approved' 
-                                ? 'bg-green-100 text-green-800'
-                                : app.status === 'under_review'
-                                ? 'bg-blue-100 text-blue-800' 
-                                : app.status === 'rejected'
-                                ? 'bg-red-100 text-red-800'
-                                : 'bg-yellow-100 text-yellow-800'
-                            }`}>
-                              {app.status || 'Pending'}
-                            </span>
-                            {app.status === 'approved' && (
-                              <div className="mt-1">
-                                <span className={`text-xs font-medium ${
-                                  app.is_application_fee_paid 
-                                    ? 'text-green-600' 
-                                    : 'text-amber-600'
-                                }`}>
-                                  {app.is_application_fee_paid ? '✓ Fee Paid' : 'Payment Pending'}
-                                </span>
+                    <div className="p-6">
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div className="space-y-4">
+                          <h3 className="text-lg font-semibold text-slate-900 border-b border-slate-200 pb-2">Contact Details</h3>
+                          <div className="space-y-3">
+                            <div>
+                              <dt className="text-sm font-medium text-slate-600">Full Name</dt>
+                              <dd className="text-base font-semibold text-slate-900 mt-1">{selectedStudent.student_name}</dd>
+                            </div>
+                            <div>
+                              <dt className="text-sm font-medium text-slate-600">Email</dt>
+                              <dd className="text-base text-slate-900 mt-1">{selectedStudent.student_email}</dd>
+                            </div>
+                            <div>
+                              <dt className="text-sm font-medium text-slate-600">Registration Date</dt>
+                              <dd className="text-base text-slate-900 mt-1">
+                                {new Date(selectedStudent.student_created_at).toLocaleDateString('en-US', {
+                                  year: 'numeric',
+                                  month: 'long',
+                                  day: 'numeric'
+                                })}
+                              </dd>
+                            </div>
+                            {selectedStudent.seller_referral_code && (
+                              <div>
+                                <dt className="text-sm font-medium text-slate-600">Referral Code</dt>
+                                <dd className="text-base text-slate-900 mt-1 font-mono bg-slate-100 px-2 py-1 rounded">
+                                  {selectedStudent.seller_referral_code}
+                                </dd>
                               </div>
                             )}
                           </div>
                         </div>
+
+                        <div className="space-y-4">
+                          <h3 className="text-lg font-semibold text-slate-900 border-b border-slate-200 pb-2">Application Status</h3>
+                          <div className="space-y-3">
+                            <div>
+                              <dt className="text-sm font-medium text-slate-600">Total Applications</dt>
+                              <dd className="text-base font-semibold text-slate-900 mt-1">
+                                {selectedStudent.total_applications} application(s)
+                              </dd>
+                            </div>
+                            <div>
+                              <dt className="text-sm font-medium text-slate-600">Current Status</dt>
+                              <dd className="mt-1">
+                                <div className="flex items-center space-x-2">
+                                  <div className={`w-2 h-2 rounded-full ${
+                                    selectedStudent.is_locked ? 'bg-green-500' : 
+                                    selectedStudent.status === 'approved' ? 'bg-blue-500' :
+                                    selectedStudent.status === 'under_review' ? 'bg-yellow-500' :
+                                    selectedStudent.total_applications > 0 ? 'bg-orange-500' : 'bg-gray-500'
+                                  }`}></div>
+                                  <span className={`text-sm font-medium ${
+                                    selectedStudent.is_locked ? 'text-green-700' : 
+                                    selectedStudent.status === 'approved' ? 'text-blue-700' :
+                                    selectedStudent.status === 'under_review' ? 'text-yellow-700' :
+                                    selectedStudent.total_applications > 0 ? 'text-orange-700' : 'text-gray-700'
+                                  }`}>
+                                    {selectedStudent.is_locked ? 'Committed to Scholarship' :
+                                     selectedStudent.status === 'approved' ? 'Approved - Pending Payment' :
+                                     selectedStudent.status === 'under_review' ? 'Under Review' :
+                                     selectedStudent.total_applications > 0 ? 'Applications Submitted' : 'No Applications Yet'}
+                                  </span>
+                                </div>
+                              </dd>
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                    ))}
+                    </div>
                   </div>
-                  <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <p className="text-blue-800 text-sm">
-                      <strong>Note:</strong> Student can apply to multiple scholarships. 
-                      Once approved and application fee is paid for one scholarship, 
-                      the student will be committed to that scholarship.
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <div className="mb-6">
-                  <h4 className="text-lg font-semibold text-gray-900 mb-3">Application Status</h4>
-                  <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg">
-                    <p className="text-yellow-800">This student hasn't applied to any scholarship yet.</p>
-                  </div>
-                </div>
-              )}
 
-              {/* Application Flow */}
-              <div className="mb-6">
-                <h4 className="text-lg font-semibold text-gray-900 mb-3">Application Progress</h4>
-                <div className="bg-gray-50 p-6 rounded-lg">
-                  <ApplicationFlowSteps student={selectedStudent} />
-                </div>
-              </div>
-
-              {/* Payment Status */}
-              <div className="mb-6">
-                <h4 className="text-lg font-semibold text-gray-900 mb-3">Payment Status</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <label className="text-sm font-medium text-gray-500">Selection Process Fee</label>
-                    <div className="flex items-center mt-2">
-                      {selectedStudent.has_paid_selection_process_fee ? (
-                        <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
-                      ) : (
-                        <XCircle className="h-5 w-5 text-red-600 mr-2" />
-                      )}
-                      <span className={`text-sm font-medium ${
-                        selectedStudent.has_paid_selection_process_fee 
-                          ? 'text-green-600' 
-                          : 'text-red-600'
-                      }`}>
-                        {selectedStudent.has_paid_selection_process_fee ? 'Paid' : 'Not Paid'}
-                      </span>
+                  {/* Scholarship Information Card */}
+                  {selectedStudent.scholarship_title ? (
+                    <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
+                      <div className="bg-gradient-to-r rounded-t-2xl from-slate-700 to-slate-800 px-6 py-4">
+                        <h2 className="text-xl font-semibold text-white flex items-center">
+                          <Award className="w-6 h-6 mr-3" />
+                          Committed Scholarship
+                        </h2>
+                      </div>
+                      <div className="p-6">
+                        <div className="space-y-4">
+                          <div className="flex items-start space-x-3">
+                            <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
+                            <div className="flex-1">
+                              <dt className="text-sm font-medium text-slate-600">Scholarship Program</dt>
+                              <dd className="text-lg font-semibold text-slate-900">
+                                {selectedStudent.scholarship_title}
+                              </dd>
+                            </div>
+                          </div>
+                          <div className="flex items-start space-x-3">
+                            <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
+                            <div className="flex-1">
+                              <dt className="text-sm font-medium text-slate-600">University</dt>
+                              <dd className="text-lg font-semibold text-slate-900">
+                                {selectedStudent.university_name}
+                              </dd>
+                            </div>
+                          </div>
+                          <div className="flex items-start space-x-3">
+                            <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
+                            <div className="flex-1">
+                              <dt className="text-sm font-medium text-slate-600">Application Status</dt>
+                              <dd className="text-base text-slate-700">
+                                <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                                  selectedStudent.status === 'approved' ? 'bg-green-100 text-green-800' :
+                                  selectedStudent.status === 'under_review' ? 'bg-blue-100 text-blue-800' :
+                                  selectedStudent.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                                  'bg-yellow-100 text-yellow-800'
+                                }`}>
+                                  {selectedStudent.status ? 
+                                    selectedStudent.status.charAt(0).toUpperCase() + selectedStudent.status.slice(1) : 
+                                    'Status not available'
+                                  }
+                                </span>
+                              </dd>
+                            </div>
+                          </div>
+                          {selectedStudent.applied_at && (
+                            <div className="flex items-start space-x-3">
+                              <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
+                              <div className="flex-1">
+                                <dt className="text-sm font-medium text-slate-600">Applied Date</dt>
+                                <dd className="text-base text-slate-700">
+                                  {new Date(selectedStudent.applied_at).toLocaleDateString('en-US', {
+                                    year: 'numeric',
+                                    month: 'long', 
+                                    day: 'numeric'
+                                  })}
+                                </dd>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <label className="text-sm font-medium text-gray-500">Application Fee</label>
-                    <div className="flex items-center mt-2">
-                      {selectedStudent.is_application_fee_paid ? (
-                        <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
-                      ) : (
-                        <XCircle className="h-5 w-5 text-red-600 mr-2" />
-                      )}
-                      <span className={`text-sm font-medium ${
-                        selectedStudent.is_application_fee_paid 
-                          ? 'text-green-600' 
-                          : 'text-red-600'
-                      }`}>
-                        {selectedStudent.is_application_fee_paid ? 'Paid' : 'Not Paid'}
-                      </span>
+                  ) : selectedStudent.total_applications > 0 ? (
+                    <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
+                      <div className="bg-gradient-to-r rounded-t-2xl from-orange-600 to-orange-700 px-6 py-4">
+                        <h2 className="text-xl font-semibold text-white flex items-center">
+                          <FileText className="w-6 h-6 mr-3" />
+                          Multiple Applications ({selectedStudent.total_applications})
+                        </h2>
+                        <p className="text-orange-100 text-sm mt-1">Student has applied to multiple scholarships</p>
+                      </div>
+                      <div className="p-6">
+                        <div className="space-y-4">
+                          {selectedStudent.all_applications.map((app: any, index: number) => (
+                            <div key={app.id} className="bg-slate-50 border border-slate-200 rounded-xl p-5 hover:bg-slate-100 transition-colors">
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1">
+                                  <div className="flex items-center space-x-2 mb-2">
+                                    <span className="text-xs font-semibold text-slate-600 bg-slate-200 px-2 py-1 rounded">#{index + 1}</span>
+                                    <h5 className="font-semibold text-slate-900 text-lg">
+                                      {app.scholarships?.title || 'Scholarship Title N/A'}
+                                    </h5>
+                                  </div>
+                                  <p className="text-slate-700 font-medium mb-1">
+                                    {app.scholarships?.universities?.name || 'University N/A'}
+                                  </p>
+                                  <p className="text-sm text-slate-600 mb-3">
+                                    Applied: {app.applied_at ? new Date(app.applied_at).toLocaleDateString('en-US', {
+                                      year: 'numeric',
+                                      month: 'short',
+                                      day: 'numeric'
+                                    }) : 'Date N/A'}
+                                  </p>
+                                  {app.reviewed_at && (
+                                    <p className="text-sm text-slate-600 mb-3">
+                                      Reviewed: {new Date(app.reviewed_at).toLocaleDateString('en-US', {
+                                        year: 'numeric',
+                                        month: 'short',
+                                        day: 'numeric'
+                                      })}
+                                    </p>
+                                  )}
+                                </div>
+                                <div className="text-right space-y-2">
+                                  <div>
+                                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                                      app.status === 'approved' ? 'bg-green-100 text-green-800' :
+                                      app.status === 'under_review' ? 'bg-blue-100 text-blue-800' :
+                                      app.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                                      'bg-yellow-100 text-yellow-800'
+                                    }`}>
+                                      {(app.status || 'Pending').charAt(0).toUpperCase() + (app.status || 'pending').slice(1)}
+                                    </span>
+                                  </div>
+                                  {app.status === 'approved' && (
+                                    <div className="text-right">
+                                      <div className={`inline-flex items-center px-2 py-1 rounded-lg text-xs font-medium ${
+                                        app.is_application_fee_paid ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+                                      }`}>
+                                        {app.is_application_fee_paid ? (
+                                          <><CheckCircle className="w-3 h-3 mr-1" />Fee Paid</>
+                                        ) : (
+                                          <><Clock className="w-3 h-3 mr-1" />Payment Pending</>
+                                        )}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="mt-4 p-4 bg-blue-50 border-l-4 border-blue-400 rounded-r-lg">
+                          <div className="flex items-start">
+                            <AlertCircle className="w-5 h-5 text-blue-400 mr-3 mt-0.5 flex-shrink-0" />
+                            <div>
+                              <p className="text-blue-800 text-sm font-medium mb-1">Multiple Applications Policy</p>
+                              <p className="text-blue-700 text-sm">
+                                Student can apply to multiple scholarships. Once approved and application fee is paid for one scholarship, 
+                                the student will be committed to that scholarship and cannot switch to others.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <label className="text-sm font-medium text-gray-500">Scholarship Fee</label>
-                    <div className="flex items-center mt-2">
-                      {selectedStudent.is_scholarship_fee_paid ? (
-                        <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
-                      ) : (
-                        <XCircle className="h-5 w-5 text-red-600 mr-2" />
-                      )}
-                      <span className={`text-sm font-medium ${
-                        selectedStudent.is_scholarship_fee_paid 
-                          ? 'text-green-600' 
-                          : 'text-red-600'
-                      }`}>
-                        {selectedStudent.is_scholarship_fee_paid ? 'Paid' : 'Not Paid'}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <label className="text-sm font-medium text-gray-500">I-20 Control Fee</label>
-                    <div className="flex items-center mt-2">
-                      {selectedStudent.has_paid_i20_control_fee ? (
-                        <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
-                      ) : (
-                        <XCircle className="h-5 w-5 text-red-600 mr-2" />
-                      )}
-                      <span className={`text-sm font-medium ${
-                        selectedStudent.has_paid_i20_control_fee 
-                          ? 'text-green-600' 
-                          : 'text-red-600'
-                      }`}>
-                        {selectedStudent.has_paid_i20_control_fee ? 'Paid' : 'Not Paid'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Timeline */}
-              <div className="mb-6">
-                <h4 className="text-lg font-semibold text-gray-900 mb-3">Timeline</h4>
-                <div className="space-y-3">
-                  <div className="flex items-center space-x-3">
-                    <CheckCircle className="h-5 w-5 text-blue-600" />
-                    <span className="text-sm text-gray-900">
-                      Joined on {new Date(selectedStudent.student_created_at).toLocaleString()}
-                    </span>
-                  </div>
-                  {selectedStudent.applied_at && (
-                    <div className="flex items-center space-x-3">
-                      <CheckCircle className="h-5 w-5 text-green-600" />
-                      <span className="text-sm text-gray-900">
-                        Applied on {new Date(selectedStudent.applied_at).toLocaleString()}
-                      </span>
+                  ) : (
+                    <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
+                      <div className="bg-gradient-to-r rounded-t-2xl from-gray-600 to-gray-700 px-6 py-4">
+                        <h2 className="text-xl font-semibold text-white flex items-center">
+                          <AlertCircle className="w-6 h-6 mr-3" />
+                          No Applications Yet
+                        </h2>
+                      </div>
+                      <div className="p-6">
+                        <div className="text-center py-8">
+                          <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                            <FileText className="w-8 h-8 text-gray-400" />
+                          </div>
+                          <h3 className="text-lg font-medium text-slate-900 mb-2">No Scholarship Applications</h3>
+                          <p className="text-slate-600 max-w-md mx-auto">
+                            This student has registered but hasn't submitted any scholarship applications yet. 
+                            They may still be in the process of selecting a program or preparing their documents.
+                          </p>
+                          {selectedStudent.has_paid_selection_process_fee && (
+                            <div className="mt-4 inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                              <CheckCircle className="w-4 h-4 mr-2" />
+                              Selection Fee Paid - Ready to Apply
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   )}
-                  {selectedStudent.reviewed_at && (
-                    <div className="flex items-center space-x-3">
-                      <CheckCircle className="h-5 w-5 text-purple-600" />
-                      <span className="text-sm text-gray-900">
-                        Reviewed on {new Date(selectedStudent.reviewed_at).toLocaleString()}
-                      </span>
+                </div>
+
+                {/* Sidebar */}
+                <div className="lg:col-span-4 space-y-6">
+                  {/* Application Progress Card */}
+                  <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
+                    <div className="bg-gradient-to-r rounded-t-2xl from-blue-600 to-blue-700 px-6 py-4">
+                      <h2 className="text-xl font-semibold text-white flex items-center">
+                        <FileText className="w-6 h-6 mr-3" />
+                        Application Progress
+                      </h2>
                     </div>
-                  )}
+                    <div className="p-6">
+                      <ApplicationFlowSteps student={selectedStudent} />
+                    </div>
+                  </div>
+
+                  {/* Payment Status Card */}
+                  <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
+                    <div className="bg-gradient-to-r rounded-t-2xl from-green-600 to-green-700 px-6 py-4">
+                      <h2 className="text-xl font-semibold text-white flex items-center">
+                        <CreditCard className="w-6 h-6 mr-3" />
+                        Payment Status
+                      </h2>
+                    </div>
+                    <div className="p-6">
+                      <div className="space-y-4">
+                        <div className="bg-slate-50 rounded-xl p-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <dt className="text-sm font-medium text-slate-600">Selection Process Fee</dt>
+                              <dd className="text-sm text-slate-500 mt-1">Required to start applications</dd>
+                              <dd className="text-sm font-semibold text-slate-700 mt-1">
+                                {(() => {
+                                  const hasCustomOverride = hasOverride('selection_process');
+                                  if (hasCustomOverride) {
+                                    // Com override: usar valor exato do override
+                                    return formatFeeAmount(getFeeAmount('selection_process'));
+                                  } else {
+                                    // Sem override: valor padrão + dependentes
+                                    const baseFee = Number(getFeeAmount('selection_process'));
+                                    const total = baseFee + (dependents * 150);
+                                    return formatFeeAmount(total);
+                                  }
+                                })()}
+                              </dd>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              {selectedStudent.has_paid_selection_process_fee ? (
+                                <>
+                                  <CheckCircle className="h-5 w-5 text-green-600" />
+                                  <span className="text-sm font-medium text-green-600">Paid</span>
+                                </>
+                              ) : (
+                                <>
+                                  <XCircle className="h-5 w-5 text-red-600" />
+                                  <span className="text-sm font-medium text-red-600">Not Paid</span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="bg-slate-50 rounded-xl p-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <dt className="text-sm font-medium text-slate-600">Application Fee</dt>
+                              <dd className="text-sm text-slate-500 mt-1">Paid after scholarship approval</dd>
+                              {selectedStudent.is_application_fee_paid && (
+                                <dd className="text-sm font-semibold text-slate-700 mt-1">{formatFeeAmount(getFeeAmount('application_fee'))}</dd>
+                              )}
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              {selectedStudent.is_application_fee_paid ? (
+                                <>
+                                  <CheckCircle className="h-5 w-5 text-green-600" />
+                                  <span className="text-sm font-medium text-green-600">Paid</span>
+                                </>
+                              ) : (
+                                <>
+                                  <XCircle className="h-5 w-5 text-red-600" />
+                                  <span className="text-sm font-medium text-red-600">Not Paid</span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="bg-slate-50 rounded-xl p-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <dt className="text-sm font-medium text-slate-600">Scholarship Fee</dt>
+                              <dd className="text-sm text-slate-500 mt-1">Paid after application fee</dd>
+                              <dd className="text-sm font-semibold text-slate-700 mt-1">{formatFeeAmount(getFeeAmount('scholarship_fee'))}</dd>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              {selectedStudent.is_scholarship_fee_paid ? (
+                                <>
+                                  <CheckCircle className="h-5 w-5 text-green-600" />
+                                  <span className="text-sm font-medium text-green-600">Paid</span>
+                                </>
+                              ) : (
+                                <>
+                                  <XCircle className="h-5 w-5 text-red-600" />
+                                  <span className="text-sm font-medium text-red-600">Not Paid</span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="bg-slate-50 rounded-xl p-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <dt className="text-sm font-medium text-slate-600">I-20 Control Fee</dt>
+                              <dd className="text-sm text-slate-500 mt-1">Final step for enrollment</dd>
+                              <dd className="text-sm font-semibold text-slate-700 mt-1">{formatFeeAmount(getFeeAmount('i20_control_fee'))}</dd>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              {selectedStudent.has_paid_i20_control_fee ? (
+                                <>
+                                  <CheckCircle className="h-5 w-5 text-green-600" />
+                                  <span className="text-sm font-medium text-green-600">Paid</span>
+                                </>
+                              ) : (
+                                <>
+                                  <XCircle className="h-5 w-5 text-red-600" />
+                                  <span className="text-sm font-medium text-red-600">Not Paid</span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Student Documents Card */}
+                  <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
+                    <div className="bg-gradient-to-r rounded-t-2xl from-[#05294E] to-[#0a4a7a] px-6 py-4">
+                      <h2 className="text-xl font-semibold text-white flex items-center">
+                        <FileText className="w-6 h-6 mr-3" />
+                        Student Documents
+                      </h2>
+                      <p className="text-blue-100 text-sm mt-1">Documents submitted by the student</p>
+                    </div>
+                    <div className="p-6">
+                      {(() => {
+                        // Verificar se há aplicações com documentos
+                        let hasDocuments = false;
+                        let applicationsWithDocs: any[] = [];
+
+                        // Se é uma aplicação única (student está committed)
+                        if (selectedStudent.scholarship_title && selectedStudent.all_applications) {
+                          const committedApp = selectedStudent.all_applications.find((app: any) => 
+                            app.scholarships?.title === selectedStudent.scholarship_title
+                          );
+                          if (committedApp && committedApp.documents && Array.isArray(committedApp.documents) && committedApp.documents.length > 0) {
+                            applicationsWithDocs = [committedApp];
+                            hasDocuments = true;
+                          }
+                        } 
+                        // Se tem múltiplas aplicações (não committed ainda)
+                        else if (selectedStudent.all_applications && selectedStudent.all_applications.length > 0) {
+                          selectedStudent.all_applications.forEach((app: any) => {
+                            if (app.documents && Array.isArray(app.documents) && app.documents.length > 0) {
+                              applicationsWithDocs.push(app);
+                              hasDocuments = true;
+                            }
+                          });
+                        }
+                        
+                        const documentTypes = [
+                          { key: 'passport', label: 'Passport', description: 'Valid passport copy' },
+                          { key: 'diploma', label: 'High School Diploma', description: 'Educational certificate' },
+                          { key: 'funds_proof', label: 'Proof of Funds', description: 'Bank statement or financial document' },
+                          { key: 'transcript', label: 'Academic Transcript', description: 'Official academic records' },
+                          { key: 'english_test', label: 'English Test', description: 'TOEFL, IELTS or equivalent' },
+                          { key: 'personal_statement', label: 'Personal Statement', description: 'Essay or motivation letter' }
+                        ];
+
+                        const getStatusColor = (status: string) => {
+                          switch (status.toLowerCase()) {
+                            case 'approved': return 'text-green-700 bg-green-100';
+                            case 'under_review': return 'text-blue-700 bg-blue-100';
+                            case 'pending': return 'text-amber-700 bg-amber-100';
+                            case 'changes_requested': return 'text-orange-700 bg-orange-100';
+                            case 'rejected': return 'text-red-700 bg-red-100';
+                            default: return 'text-slate-700 bg-slate-100';
+                          }
+                        };
+
+                        const getStatusIcon = (status: string) => {
+                          switch (status.toLowerCase()) {
+                            case 'approved': return <CheckCircle className="w-4 h-4 text-green-600" />;
+                            case 'under_review': return <Clock className="w-4 h-4 text-blue-600" />;
+                            case 'pending': return <Clock className="w-4 h-4 text-amber-600" />;
+                            case 'changes_requested': return <AlertCircle className="w-4 h-4 text-orange-600" />;
+                            case 'rejected': return <XCircle className="w-4 h-4 text-red-600" />;
+                            default: return <FileText className="w-4 h-4 text-slate-500" />;
+                          }
+                        };
+
+                        if (!hasDocuments) {
+                          return (
+                            <div className="text-center py-8">
+                              <div className="mx-auto w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+                                <FileText className="w-8 h-8 text-slate-400" />
+                              </div>
+                              <h3 className="text-lg font-medium text-slate-900 mb-2">No Documents Yet</h3>
+                              <p className="text-slate-600 text-sm">
+                                The student hasn't submitted any documents for their applications.
+                              </p>
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <div className="space-y-4">
+                            {applicationsWithDocs.map((app: any, appIndex: number) => {
+                              const appKey = app.id || `app-${appIndex}`;
+                              const isExpanded = expandedApps[appKey] || false;
+                              
+                              return (
+                                <div key={appKey} className="border border-slate-200 rounded-xl overflow-hidden">
+                                  {/* Scholarship Header - Clickable */}
+                                  <button
+                                    onClick={() => setExpandedApps(prev => ({ ...prev, [appKey]: !isExpanded }))}
+                                    className="w-full px-4 py-3 bg-slate-50 hover:bg-slate-100 transition-colors text-left flex items-center justify-between"
+                                  >
+                                    <div>
+                                      <h4 className="font-semibold text-slate-900">
+                                        {app.scholarships?.title || 'Scholarship Application'}
+                                      </h4>
+                                      <p className="text-sm text-slate-600">
+                                        {app.scholarships?.universities?.name || 'University Name'} • {app.documents.length} documents
+                                      </p>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                        app.status === 'approved' ? 'bg-green-100 text-green-800' :
+                                        app.status === 'under_review' ? 'bg-blue-100 text-blue-800' :
+                                        app.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                                        'bg-yellow-100 text-yellow-800'
+                                      }`}>
+                                        {(app.status || 'Pending').charAt(0).toUpperCase() + (app.status || 'pending').slice(1)}
+                                      </span>
+                                      <svg 
+                                        className={`w-5 h-5 text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                                        fill="none" 
+                                        stroke="currentColor" 
+                                        viewBox="0 0 24 24"
+                                      >
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                      </svg>
+                                    </div>
+                                  </button>
+
+                                  {/* Documents List - Expandable */}
+                                  {isExpanded && (
+                                    <div className="p-4 bg-white border-t border-slate-200">
+                                      <div className="grid gap-3">
+                                        {app.documents.map((doc: any, docIndex: number) => {
+                                          const docType = documentTypes.find(dt => dt.key === doc.type) || {
+                                            key: doc.type,
+                                            label: doc.type.charAt(0).toUpperCase() + doc.type.slice(1).replace('_', ' '),
+                                            description: 'Document submitted by student'
+                                          };
+
+                                          return (
+                                            <div 
+                                              key={`${app.id}-${doc.type}-${docIndex}`}
+                                              className="border border-slate-200 rounded-lg p-4 hover:bg-slate-50 transition-colors"
+                                            >
+                                              {/* Header com título e status */}
+                                              <div className="flex items-start justify-between mb-3">
+                                                <div className="flex-1 min-w-0">
+                                                  <div className="flex items-center space-x-2 mb-1">
+                                                    <h5 className="font-semibold text-slate-900 text-sm">{docType.label}</h5>
+                                                    {getStatusIcon(doc.status)}
+                                                  </div>
+                                                  <p className="text-xs text-slate-600 mb-2 line-clamp-2">{docType.description}</p>
+                                                </div>
+                                                
+                                                <div className="flex items-center space-x-1 ml-3 flex-shrink-0">
+                                                  <button
+                                                    onClick={() => {
+                                                      const baseUrl = 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/student-documents/';
+                                                      const fullUrl = doc.url.startsWith('http') ? doc.url : `${baseUrl}${doc.url}`;
+                                                      window.open(fullUrl, '_blank');
+                                                    }}
+                                                    className="text-xs text-[#05294E] hover:text-[#05294E]/80 font-medium flex items-center space-x-1 transition-colors px-2 py-1 border border-[#05294E] rounded-md hover:bg-[#05294E]/5"
+                                                  >
+                                                    <Eye className="w-3 h-3" />
+                                                    <span className="hidden sm:inline">View</span>
+                                                  </button>
+                                                  <button
+                                                    onClick={() => {
+                                                      const baseUrl = 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/student-documents/';
+                                                      const fullUrl = doc.url.startsWith('http') ? doc.url : `${baseUrl}${doc.url}`;
+                                                      const link = document.createElement('a');
+                                                      link.href = fullUrl;
+                                                      link.download = `${docType.label}_${selectedStudent.student_name}`;
+                                                      document.body.appendChild(link);
+                                                      link.click();
+                                                      document.body.removeChild(link);
+                                                    }}
+                                                    className="text-xs text-slate-600 hover:text-slate-800 font-medium flex items-center space-x-1 transition-colors px-2 py-1 border border-slate-300 rounded-md hover:bg-slate-50"
+                                                  >
+                                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                    </svg>
+                                                    <span className="hidden sm:inline">Download</span>
+                                                  </button>
+                                                </div>
+                                              </div>
+                                              
+                                              {/* Status e datas */}
+                                              <div className="flex flex-wrap items-center gap-2">
+                                                <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${getStatusColor(doc.status)}`}>
+                                                  {doc.status.charAt(0).toUpperCase() + doc.status.slice(1).replace('_', ' ')}
+                                                </span>
+                                                {doc.uploaded_at && (
+                                                  <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded-md">
+                                                    Uploaded {new Date(doc.uploaded_at).toLocaleDateString()}
+                                                  </span>
+                                                )}
+                                                {doc.approved_at && (
+                                                  <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded-md">
+                                                    Approved {new Date(doc.approved_at).toLocaleDateString()}
+                                                  </span>
+                                                )}
+                                              </div>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  </div>
+
+                  {/* Timeline Card */}
+                  <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
+                    <div className="bg-gradient-to-r rounded-t-2xl from-slate-600 to-slate-700 px-6 py-4">
+                      <h2 className="text-xl font-semibold text-white flex items-center">
+                        <Clock className="w-6 h-6 mr-3" />
+                        Timeline
+                      </h2>
+                    </div>
+                    <div className="p-6">
+                      <div className="space-y-4">
+                        <div className="flex items-start space-x-4">
+                          <div className="flex-shrink-0">
+                            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                              <User className="w-4 h-4 text-blue-600" />
+                            </div>
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-slate-900">Registration</p>
+                            <p className="text-sm text-slate-600">
+                              {new Date(selectedStudent.student_created_at).toLocaleDateString('en-US', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </p>
+                          </div>
+                        </div>
+
+                        {selectedStudent.applied_at && (
+                          <div className="flex items-start space-x-4">
+                            <div className="flex-shrink-0">
+                              <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                                <FileText className="w-4 h-4 text-green-600" />
+                              </div>
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-slate-900">Application Submitted</p>
+                              <p className="text-sm text-slate-600">
+                                {new Date(selectedStudent.applied_at).toLocaleDateString('en-US', {
+                                  year: 'numeric',
+                                  month: 'short',
+                                  day: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+
+                        {selectedStudent.reviewed_at && (
+                          <div className="flex items-start space-x-4">
+                            <div className="flex-shrink-0">
+                              <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+                                <Eye className="w-4 h-4 text-purple-600" />
+                              </div>
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-slate-900">Application Reviewed</p>
+                              <p className="text-sm text-slate-600">
+                                {new Date(selectedStudent.reviewed_at).toLocaleDateString('en-US', {
+                                  year: 'numeric',
+                                  month: 'short',
+                                  day: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

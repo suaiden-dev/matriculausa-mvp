@@ -48,25 +48,35 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
   // Estado para armazenar os dependentes do estudante
   const [studentDependents, setStudentDependents] = useState<number>(0);
   
+  // ✅ Sincronizar dependentes do studentDetails com estado local
+  useEffect(() => {
+    if (studentDetails?.dependents !== undefined) {
+      setStudentDependents(studentDetails.dependents);
+      console.log('🔍 [StudentDetailsView] Dependents updated from studentDetails:', studentDetails.dependents);
+    }
+  }, [studentDetails?.dependents]);
+  
   // Estados para edição de pacote
   const [isEditingPackage, setIsEditingPackage] = useState(false);
   const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
   const [isUpdatingPackage, setIsUpdatingPackage] = useState(false);
   
-  // Função para calcular valor com dependentes (regra nova):
-  // - Selection Process: +150 por dependente
-  // - I-20: sem adicionais
+  // ✅ CORREÇÃO: Função para calcular valor com dependentes priorizando overrides
+  // - Se há override: usar exatamente o valor do override (já inclui dependentes se foi configurado assim)
+  // - Se não há override: aplicar regra de dependentes (Selection Process: +150 por dependente, I-20: sem adicionais)
   const calculateFeeWithDependents = (baseFee: number, dependents: number = 0, feeType: 'selection_process' | 'i20_control_fee') => {
-    // Se houver override para este tipo de taxa, usar exatamente o valor definido pelo admin
+    // ✅ Se há override para este tipo de taxa, usar exatamente o valor do override (não adicionar dependentes)
     if (hasOverride && hasOverride(feeType)) {
-      return baseFee;
+      return baseFee; // baseFee já vem com o valor do override através do getFeeAmount
     }
+    
+    // ✅ Sem override: aplicar regra de dependentes
     if (feeType === 'selection_process') {
       const dependentCost = dependents * 150;
       return baseFee + dependentCost;
     }
     if (feeType === 'i20_control_fee') {
-      return baseFee;
+      return baseFee; // I-20 nunca tem dependentes
     }
     return baseFee;
   };
@@ -100,16 +110,36 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
         return;
       }
 
+      // ✅ CORREÇÃO: Calcular selection process fee priorizando overrides
+      const dependents = Number(profileData.dependents) || 0;
+      let selectionProcessFee;
+      
+      // Verificar se há override para este estudante
+      if (hasOverride && hasOverride('selection_process')) {
+        // Se há override, usar o valor do override (já inclui dependentes se configurado)
+        selectionProcessFee = getFeeAmount('selection_process');
+      } else {
+        // Sem override: usar valor padrão + dependentes
+        const baseFee = getFeeAmount('selection_process');
+        selectionProcessFee = baseFee + (dependents * 150);
+      }
+      
       // Criar dados do pacote baseado no desired_scholarship_range
       const desiredRange = Number(profileData.desired_scholarship_range);
+      
+      // ✅ CORREÇÃO: Calcular outras fees considerando overrides também
+      const i20ControlFee = getFeeAmount('i20_control_fee'); // já considera override se existir
+      const scholarshipFee = getFeeAmount('scholarship_fee'); // já considera override se existir
+      
       const packageFees = {
         id: `range-${desiredRange}`, // ID baseado no range
-        selection_process_fee: 400,
-        i20_control_fee: 900,
-        scholarship_fee: 900,
-        total_paid: 2200,
+        selection_process_fee: selectionProcessFee, // ✅ Valor calculado considerando override e dependentes
+        i20_control_fee: i20ControlFee, // ✅ Valor considerando override
+        scholarship_fee: scholarshipFee, // ✅ Valor considerando override
+        total_paid: selectionProcessFee + i20ControlFee + scholarshipFee, // ✅ Total correto com overrides
         scholarship_amount: desiredRange,
-        package_name: `Scholarship Range $${desiredRange}+`
+        package_name: `Scholarship Range $${desiredRange}+`,
+        dependents: dependents // ✅ Informação dos dependentes
       };
       
       console.log('🔍 [StudentDetailsView] Package fees set:', packageFees);
@@ -183,7 +213,7 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Header Section */}
-        <div className="bg-white shadow-sm border-b border-slate-200 rounded-t-3xl mb-6">
+        {/* <div className="bg-white shadow-sm border-b border-slate-200 rounded-t-3xl mb-6">
           <div className="px-4 sm:px-6 lg:px-8 py-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex flex-col sm:flex-row items-start sm:items-center sm:space-x-4 min-w-0 w-full">
@@ -206,7 +236,7 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
               </div>
             </div>
           </div>
-        </div>
+        </div> */}
         {activeTab === 'details' && (
           <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
             <div className="xl:col-span-8 space-y-6">
@@ -724,34 +754,33 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                           <span className={`text-sm font-medium ${studentDetails?.has_paid_selection_process_fee ? 'text-green-700' : 'text-red-700'}`}>
                             {studentDetails?.has_paid_selection_process_fee ? 'Paid' : 'Pending'}
                           </span>
-                          {studentDetails?.has_paid_selection_process_fee && (
-                            <span className="text-xs text-slate-500">
-                              {(() => {
-                                // getFeeAmount já considera overrides específicos deste estudante
-                                const baseFee = getFeeAmount('selection_process');
-                                const finalAmount = calculateFeeWithDependents(baseFee, studentDependents, 'selection_process');
-                                console.log('🔍 [StudentDetailsView] Selection Process - Base (with override):', baseFee, 'Final:', finalAmount, 'Student ID:', studentDetails?.student_id);
-                                return formatFeeAmount(finalAmount);
-                              })()}
-                            </span>
-                          )}
+                          <span className="text-xs text-slate-500">
+                            {(() => {
+                              // ✅ CORREÇÃO: Mostrar valor sempre, prioritizando overrides
+                              const baseFee = getFeeAmount('selection_process'); // já considera overrides
+                              const finalAmount = calculateFeeWithDependents(baseFee, studentDependents, 'selection_process');
+                              console.log('🔍 [StudentDetailsView] Selection Process - Base (with override):', baseFee, 'Final:', finalAmount, 'Dependents:', studentDependents, 'Has Override:', hasOverride && hasOverride('selection_process'));
+                              return formatFeeAmount(finalAmount);
+                            })()}
+                          </span>
                         </div>
                       </div>
                     </div>
 
                     {/* Application Fee Status */}
                     <div className="w-full flex items-center justify-between p-3 rounded-lg border border-slate-200">
-                      <div className="flex items-center space-x-3">
-                        <div className={`w-3 h-3 rounded-full ${studentDetails?.is_application_fee_paid ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                        <span className="text-sm font-medium text-slate-900">Application Fee</span>
-                      </div>
-                      <div className="flex flex-col items-end">
-                        <span className={`text-sm font-medium ${studentDetails?.is_application_fee_paid ? 'text-green-700' : 'text-red-700'}`}>
-                          {studentDetails?.is_application_fee_paid ? 'Paid' : 'Pending'}
-                        </span>
-                        {studentDetails?.is_application_fee_paid && (
+                      <div className="flex items-center justify-between w-full">
+                        <div className="flex items-center space-x-3">
+                          <div className={`w-3 h-3 rounded-full ${studentDetails?.is_application_fee_paid ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                          <span className="text-sm font-medium text-slate-900">Application Fee</span>
+                        </div>
+                        <div className="flex flex-col items-end">
+                          <span className={`text-sm font-medium ${studentDetails?.is_application_fee_paid ? 'text-green-700' : 'text-red-700'}`}>
+                            {studentDetails?.is_application_fee_paid ? 'Paid' : 'Pending'}
+                          </span>
                           <span className="text-xs text-slate-500">
                             {(() => {
+                              // ✅ CORREÇÃO: Mostrar valor sempre, priorizando scholarship amount
                               if (studentDetails?.scholarship?.application_fee_amount) {
                                 const amount = Number(studentDetails.scholarship.application_fee_amount);
                                 return formatFeeAmount(amount);
@@ -760,25 +789,33 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                               }
                             })()}
                           </span>
-                        )}
+                        </div>
                       </div>
                     </div>
 
                     {/* Scholarship Fee Status */}
                     <div className="w-full flex items-center justify-between p-3 rounded-lg border border-slate-200">
-                      <div className="flex items-center space-x-3">
-                        <div className={`w-3 h-3 rounded-full ${studentDetails?.is_scholarship_fee_paid ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                        <span className="text-sm font-medium text-slate-900">Scholarship Fee</span>
-                      </div>
-                      <div className="flex flex-col items-end">
-                        <span className={`text-sm font-medium ${studentDetails?.is_scholarship_fee_paid ? 'text-green-700' : 'text-red-700'}`}>
-                          {studentDetails?.is_scholarship_fee_paid ? 'Paid' : 'Pending'}
-                        </span>
-                        {studentDetails?.is_scholarship_fee_paid && (
-                          <span className="text-xs text-slate-500">
-                            {formatFeeAmount(getFeeAmount('scholarship_fee'))}
+                      <div className="flex items-center justify-between w-full">
+                        <div className="flex items-center space-x-3">
+                          <div className={`w-3 h-3 rounded-full ${studentDetails?.is_scholarship_fee_paid ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                          <span className="text-sm font-medium text-slate-900">Scholarship Fee</span>
+                        </div>
+                        <div className="flex flex-col items-end">
+                          <span className={`text-sm font-medium ${studentDetails?.is_scholarship_fee_paid ? 'text-green-700' : 'text-red-700'}`}>
+                            {studentDetails?.is_scholarship_fee_paid ? 'Paid' : 'Pending'}
                           </span>
-                        )}
+                          <span className="text-xs text-slate-500">
+                            {(() => {
+                              // ✅ CORREÇÃO: Mostrar valor sempre, considerando overrides
+                              if (studentDetails?.scholarship?.scholarship_fee_amount) {
+                                const amount = Number(studentDetails.scholarship.scholarship_fee_amount);
+                                return formatFeeAmount(amount);
+                              } else {
+                                return formatFeeAmount(getFeeAmount('scholarship_fee'));
+                              }
+                            })()}
+                          </span>
+                        </div>
                       </div>
                     </div>
 
@@ -793,17 +830,15 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                           <span className={`text-sm font-medium ${studentDetails?.has_paid_i20_control_fee ? 'text-green-700' : 'text-red-700'}`}>
                             {studentDetails?.has_paid_i20_control_fee ? 'Paid' : 'Pending'}
                           </span>
-                          {studentDetails?.has_paid_i20_control_fee && (
-                            <span className="text-xs text-slate-500">
-                              {(() => {
-                                // getFeeAmount já considera overrides específicos deste estudante
-                                const baseFee = getFeeAmount('i20_control_fee');
-                                const finalAmount = calculateFeeWithDependents(baseFee, studentDependents, 'i20_control_fee');
-                                console.log('🔍 [StudentDetailsView] I-20 Control - Base (with override):', baseFee, 'Final:', finalAmount, 'Student ID:', studentDetails?.student_id);
-                                return formatFeeAmount(finalAmount);
-                              })()}
-                            </span>
-                          )}
+                          <span className="text-xs text-slate-500">
+                            {(() => {
+                              // ✅ CORREÇÃO: Mostrar valor sempre, prioritizando overrides  
+                              const baseFee = getFeeAmount('i20_control_fee'); // já considera overrides
+                              const finalAmount = calculateFeeWithDependents(baseFee, studentDependents, 'i20_control_fee');
+                              console.log('🔍 [StudentDetailsView] I-20 Control - Base (with override):', baseFee, 'Final:', finalAmount, 'Has Override:', hasOverride && hasOverride('i20_control_fee'));
+                              return formatFeeAmount(finalAmount);
+                            })()}
+                          </span>
                         </div>
                       </div>
                     </div>

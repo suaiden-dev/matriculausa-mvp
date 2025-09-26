@@ -5,8 +5,9 @@ import { X, AlertCircle, CheckCircle, Shield, Lock, Scroll } from 'lucide-react'
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
-import { useTermsAcceptance } from '../hooks/useTermsAcceptance';
 import { useFeeConfig } from '../hooks/useFeeConfig';
+import { useTermsAcceptance } from '../hooks/useTermsAcceptance';
+import { useAffiliateTermsAcceptance } from '../hooks/useAffiliateTermsAcceptance';
 
 interface Term {
   id: string;
@@ -44,6 +45,7 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
   const { user, userProfile } = useAuth();
   const { getFeeAmount, userFeeOverrides } = useFeeConfig(user?.id);
   const { recordTermAcceptance } = useTermsAcceptance();
+  const { recordAffiliateTermAcceptance, checkIfUserHasAffiliate } = useAffiliateTermsAcceptance();
   const [discountCode, setDiscountCode] = useState('');
   const [isValidating, setIsValidating] = useState(false);
   const [validationResult, setValidationResult] = useState<{
@@ -338,7 +340,16 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
       try {
         // Record acceptance of checkout terms
         if (activeTerm) {
-          await recordTermAcceptance(activeTerm.id, 'checkout_terms');
+          // Verificar se o usuário tem affiliate através do seller_referral_code
+          const affiliateAdminId = await checkIfUserHasAffiliate();
+          
+          if (affiliateAdminId) {
+            console.log('🔍 [PreCheckoutModal] Usuário tem affiliate através de seller, usando registro específico. Affiliate Admin ID:', affiliateAdminId);
+            await recordAffiliateTermAcceptance(activeTerm.id, 'checkout_terms', affiliateAdminId);
+          } else {
+            console.log('🔍 [PreCheckoutModal] Usuário sem affiliate, usando registro normal');
+            await recordTermAcceptance(activeTerm.id, 'checkout_terms');
+          }
         }
         
         console.log('🔍 [PreCheckoutModal] Termos aceitos e registrados, fechando modal');
