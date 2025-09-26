@@ -1,12 +1,14 @@
 import React from 'react';
-import { User, ChevronDown, ChevronRight, MapPin, DollarSign, CheckCircle2, ChevronRight as ArrowRight } from 'lucide-react';
+import { User, ChevronDown, ChevronRight, MapPin, DollarSign, CheckCircle2, ChevronRight as ArrowRight, Building } from 'lucide-react';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
 
 interface SellersListProps {
   filteredSellers: any[];
   filteredStudents: any[];
   expandedSellers: Set<string>;
+  expandedStudents: Set<string>;
   onToggleSellerExpansion: (sellerId: string) => void;
+  onToggleStudentExpansion: (studentId: string) => void;
   onViewStudentDetails: (studentId: string, profileId: string) => void;
 }
 
@@ -14,7 +16,9 @@ const SellersList: React.FC<SellersListProps> = ({
   filteredSellers,
   filteredStudents,
   expandedSellers,
+  expandedStudents,
   onToggleSellerExpansion,
+  onToggleStudentExpansion,
   onViewStudentDetails
 }) => {
   const { getFeeAmount } = useFeeConfig();
@@ -94,8 +98,7 @@ const SellersList: React.FC<SellersListProps> = ({
     );
   }
 
-  console.log('🔍 SellersList - filteredSellers:', filteredSellers);
-  console.log('🔍 SellersList - filteredStudents:', filteredStudents);
+
   
   return (
     <div className="space-y-4">
@@ -191,11 +194,29 @@ const SellersList: React.FC<SellersListProps> = ({
                       </thead>
                       <tbody className="bg-white divide-y divide-slate-200">
                         {sellerStudents.map((student) => (
-                          <tr 
-                            key={student.id} 
-                            className="hover:bg-blue-50 hover:shadow-sm cursor-pointer transition-all duration-200 group"
-                            onClick={() => onViewStudentDetails(student.id, student.profile_id)}
-                          >
+                          <React.Fragment key={student.id}>
+                            <tr 
+                              className="hover:bg-blue-50 hover:shadow-sm cursor-pointer transition-all duration-200 group"
+                              onClick={() => {
+                                console.log(`🔍 STUDENT CLICK - ${student.email}:`, {
+                                  hasMultipleApplications: student.hasMultipleApplications,
+                                  applicationCount: student.applicationCount,
+                                  allApplications: student.allApplications?.length || 0,
+                                  student_id: student.id,
+                                  profile_id: student.profile_id
+                                });
+                                
+                                if (student.hasMultipleApplications) {
+                                  // Se tem múltiplas aplicações, expandir/contrair dropdown
+                                  console.log(`🔍 EXPANDING STUDENT ${student.email} - multiple applications detected`);
+                                  onToggleStudentExpansion(student.id);
+                                } else {
+                                  // Se tem apenas uma aplicação, ir direto para os detalhes
+                                  console.log(`🔍 NAVIGATING TO DETAILS FOR ${student.email} - single application`);
+                                  onViewStudentDetails(student.id, student.profile_id);
+                                }
+                              }}
+                            >
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="flex items-center">
                                 <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
@@ -203,13 +224,34 @@ const SellersList: React.FC<SellersListProps> = ({
                                     {student.full_name?.charAt(0)?.toUpperCase() || 'S'}
                                   </span>
                                 </div>
-                                <div className="ml-4">
-                                  <div className="text-sm font-medium text-slate-900">{student.full_name}</div>
+                                <div className="ml-4 flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <div className="text-sm font-medium text-slate-900">{student.full_name}</div>
+                                    {student.hasMultipleApplications && (
+                                      <span className="inline-flex items-center px-2 py-1 text-xs font-medium text-amber-700 bg-amber-100 rounded-full">
+                                        {student.applicationCount} Applications
+                                        <svg 
+                                          className={`ml-1 h-3 w-3 transform transition-transform duration-200 ${expandedStudents.has(student.id) ? 'rotate-180' : ''}`}
+                                          fill="none" 
+                                          stroke="currentColor" 
+                                          viewBox="0 0 24 24"
+                                        >
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                      </span>
+                                    )}
+                                  </div>
                                   <div className="text-sm text-slate-500">{student.email}</div>
                                   {student.country && (
                                     <div className="flex items-center text-xs text-slate-400 mt-1">
                                       <MapPin className="h-3 w-3 mr-1" />
                                       {student.country}
+                                    </div>
+                                  )}
+                                  {student.hasMultipleApplications && (
+                                    <div className="flex items-center text-xs text-slate-400 mt-1">
+                                      <Building className="h-3 w-3 mr-1" />
+                                      Multiple Universities
                                     </div>
                                   )}
                                 </div>
@@ -295,7 +337,71 @@ const SellersList: React.FC<SellersListProps> = ({
                                 <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-blue-600 transition-colors" />
                               </div>
                             </td>
-                          </tr>
+                            </tr>
+                            
+                            {/* Dropdown inline para múltiplas aplicações */}
+                            {student.hasMultipleApplications && expandedStudents.has(student.id) && (
+                              <tr>
+                                <td colSpan={7} className="px-6 py-4 bg-slate-50">
+                                  <div className="space-y-3">
+                                    <h4 className="text-sm font-medium text-slate-700">All Applications:</h4>
+                                    {student.allApplications?.map((app: any, appIndex: number) => (
+                                      <div 
+                                        key={`${app.application_id}-${appIndex}`}
+                                        className="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-200 hover:border-blue-300 transition-colors"
+                                      >
+                                        <div className="flex-1">
+                                          <div className="flex items-center gap-2">
+                                            <span className="font-medium text-sm text-slate-900">
+                                              {app.scholarship_title || 'No scholarship selected'}
+                                            </span>
+                                            {app.university_name && (
+                                              <span className="text-xs text-slate-600">
+                                                @ {app.university_name}
+                                              </span>
+                                            )}
+                                          </div>
+                                          <div className="flex gap-2 mt-1">
+                                            {app.is_application_fee_paid && (
+                                              <span className="inline-flex items-center px-2 py-1 text-xs font-medium text-green-700 bg-green-100 rounded-full">
+                                                Application Fee Paid
+                                              </span>
+                                            )}
+                                            {app.is_scholarship_fee_paid && (
+                                              <span className="inline-flex items-center px-2 py-1 text-xs font-medium text-blue-700 bg-blue-100 rounded-full">
+                                                Scholarship Fee Paid
+                                              </span>
+                                            )}
+                                            {!app.is_application_fee_paid && !app.is_scholarship_fee_paid && (
+                                              <span className="inline-flex items-center px-2 py-1 text-xs font-medium text-gray-700 bg-gray-100 rounded-full">
+                                                Pending Payment
+                                              </span>
+                                            )}
+                                            <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${
+                                              app.application_status === 'approved' ? 'bg-green-100 text-green-800' :
+                                              app.application_status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                              'bg-gray-100 text-gray-800'
+                                            }`}>
+                                              {app.application_status || 'pending'}
+                                            </span>
+                                          </div>
+                                        </div>
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            onViewStudentDetails(student.id, student.profile_id);
+                                          }}
+                                          className="text-xs text-blue-600 hover:text-blue-800 font-medium px-3 py-1 rounded hover:bg-blue-50 transition-colors"
+                                        >
+                                          View Details
+                                        </button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </td>
+                              </tr>
+                            )}
+                          </React.Fragment>
                         ))}
                       </tbody>
                     </table>

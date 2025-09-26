@@ -21,6 +21,7 @@ function EnhancedStudentTracking(props) {
   const { userId } = props || {};
   const { user } = useAuth();
   const [expandedSellers, setExpandedSellers] = useState(new Set());
+  const [expandedStudents, setExpandedStudents] = useState(new Set());
   const [activeTab, setActiveTab] = useState('details');
 
   // Hooks personalizados
@@ -133,7 +134,16 @@ function EnhancedStudentTracking(props) {
 
   // Calcular receita ajustada por estudante usando overrides quando existirem
   const adjustedStudents = useMemo(() => {
-    return (filteredStudents || []).map((s) => {
+    console.log('🔍 CALCULATING ADJUSTED STUDENTS');
+    console.log('🔍 filteredStudents input:', (filteredStudents || []).length);
+    
+    const result = (filteredStudents || []).map((s) => {
+      console.log(`🔍 PROCESSING STUDENT ${s.email}:`, {
+        hasMultipleApplications: s.hasMultipleApplications,
+        applicationCount: s.applicationCount,
+        allApplications: s.allApplications?.length || 0
+      });
+      
       const o = overridesMap[s.id] || {};
       const dependents = Number(dependentsMap[s.profile_id]) || 0;
       const selectionAmount = o.selection_process_fee ?? feeConfig.selection_process_fee;
@@ -153,8 +163,28 @@ function EnhancedStudentTracking(props) {
       if (s.is_scholarship_fee_paid) total += Number(scholarshipAmount) || 0;
       if (s.has_paid_i20_control_fee) total += Number(i20Amount) || 0;
 
-      return { ...s, total_paid_adjusted: total };
+      const adjusted = { 
+        ...s, 
+        total_paid_adjusted: total,
+        // Preservar propriedades de múltiplas aplicações
+        hasMultipleApplications: s.hasMultipleApplications,
+        applicationCount: s.applicationCount,
+        allApplications: s.allApplications
+      };
+      
+      console.log(`🔍 ADJUSTED STUDENT ${s.email}:`, {
+        hasMultipleApplications: adjusted.hasMultipleApplications,
+        applicationCount: adjusted.applicationCount,
+        allApplications: adjusted.allApplications?.length || 0
+      });
+      
+      return adjusted;
     });
+    
+    console.log('🔍 FINAL ADJUSTED STUDENTS:', result.length);
+    console.log('🔍 Students with multiple applications in adjusted:', result.filter(s => s.hasMultipleApplications).length);
+    
+    return result;
   }, [filteredStudents, overridesMap, feeConfig, dependentsMap]);
 
   // Toggle expandir vendedor
@@ -165,6 +195,19 @@ function EnhancedStudentTracking(props) {
         newSet.delete(sellerId);
       } else {
         newSet.add(sellerId);
+      }
+      return newSet;
+    });
+  };
+
+  // Toggle expandir estudante
+  const toggleStudentExpansion = (studentId) => {
+    setExpandedStudents(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(studentId)) {
+        newSet.delete(studentId);
+      } else {
+        newSet.add(studentId);
       }
       return newSet;
     });
@@ -348,7 +391,9 @@ function EnhancedStudentTracking(props) {
             filteredSellers={filteredSellers}
             filteredStudents={adjustedStudents}
             expandedSellers={expandedSellers}
+            expandedStudents={expandedStudents}
             onToggleSellerExpansion={toggleSellerExpansion}
+            onToggleStudentExpansion={toggleStudentExpansion}
             onViewStudentDetails={loadStudentDetails}
           />
         </div>

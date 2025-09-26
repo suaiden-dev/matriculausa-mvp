@@ -48,6 +48,14 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
   // Estado para armazenar os dependentes do estudante
   const [studentDependents, setStudentDependents] = useState<number>(0);
   
+  // ✅ Sincronizar dependentes do studentDetails com estado local
+  useEffect(() => {
+    if (studentDetails?.dependents !== undefined) {
+      setStudentDependents(studentDetails.dependents);
+      console.log('🔍 [StudentDetailsView] Dependents updated from studentDetails:', studentDetails.dependents);
+    }
+  }, [studentDetails?.dependents]);
+  
   // Estados para edição de pacote
   const [isEditingPackage, setIsEditingPackage] = useState(false);
   const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
@@ -100,16 +108,21 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
         return;
       }
 
+      // ✅ CORREÇÃO: Calcular selection process fee com dependentes
+      const dependents = Number(profileData.dependents) || 0;
+      const selectionProcessFee = 400 + (dependents * 150);
+      
       // Criar dados do pacote baseado no desired_scholarship_range
       const desiredRange = Number(profileData.desired_scholarship_range);
       const packageFees = {
         id: `range-${desiredRange}`, // ID baseado no range
-        selection_process_fee: 400,
+        selection_process_fee: selectionProcessFee, // ✅ Usar valor calculado com dependentes
         i20_control_fee: 900,
         scholarship_fee: 900,
-        total_paid: 2200,
+        total_paid: selectionProcessFee + 900 + 900, // ✅ Atualizar total considerando dependentes
         scholarship_amount: desiredRange,
-        package_name: `Scholarship Range $${desiredRange}+`
+        package_name: `Scholarship Range $${desiredRange}+`,
+        dependents: dependents // ✅ Adicionar informação dos dependentes
       };
       
       console.log('🔍 [StudentDetailsView] Package fees set:', packageFees);
