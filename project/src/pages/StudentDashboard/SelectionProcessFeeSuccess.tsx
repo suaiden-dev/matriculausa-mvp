@@ -12,7 +12,7 @@ const SelectionProcessFeeSuccess: React.FC = () => {
   const sessionId = params.get('session_id');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { selectionProcessFee } = useDynamicFees();
+  const { selectionProcessFeeAmount } = useDynamicFees();
   const { t } = useTranslation();
 
   useEffect(() => {
@@ -97,9 +97,9 @@ const SelectionProcessFeeSuccess: React.FC = () => {
     <div className="min-h-[60vh] flex flex-col items-center justify-center bg-white px-4">
       <div className="bg-white rounded-2xl shadow-lg p-10 max-w-md w-full flex flex-col items-center">
         <CheckCircle className="h-16 w-16 text-green-600 mb-4" />
-        <h1 className="text-3xl font-bold text-green-700 mb-2">{t('successPages.selectionProcessFee.title')}</h1>
+        <h1 className="text-3xl font-bold text-green-700 mb-2 text-center">{t('successPages.selectionProcessFee.title')}</h1>
         <p className="text-slate-700 mb-6 text-center">
-          {t('successPages.selectionProcessFee.description', { amount: selectionProcessFee })}<br/>
+          Seu pagamento de ${selectionProcessFeeAmount?.toFixed(2) || '400.00'} foi processado com sucesso.<br/>
           {t('successPages.selectionProcessFee.message')}
         </p>
         <button
