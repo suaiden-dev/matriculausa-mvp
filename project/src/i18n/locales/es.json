@@ -3046,9 +3046,40 @@
       "redirecting": "Por favor espera, redirigiendo al checkout"
     }
   },
-  "common": {
-    "close": "Cerrar",
-    "cancel": "Cancelar",
-    "processing": "Procesando..."
+  "successPages": {
+    "selectionProcessFee": {
+      "title": "¡Pago de Tarifa de Proceso de Selección Exitoso!",
+      "description": "Tu pago de {amount} fue procesado exitosamente.",
+      "message": "Ahora tienes acceso a todas las becas y puedes aplicar libremente.",
+      "button": "Ir a Becas",
+      "verifying": "Verificando tu pago...",
+      "pleaseWait": "Por favor espera mientras confirmamos tu transacción. Esto puede tomar un momento.",
+      "errorTitle": "Error en el Pago de la Tarifa de Proceso de Selección",
+      "errorMessage": "Hubo un problema al procesar tu pago.",
+      "errorRetry": "Por favor intenta de nuevo. Si el error persiste, contacta al soporte."
+    },
+    "scholarshipFee": {
+      "title": "¡Pago de Tarifa de Beca Exitoso!",
+      "description": "Tu pago de {amount} fue procesado exitosamente.",
+      "message": "Tu aplicación ahora procederá al siguiente paso.",
+      "button": "Ver Detalles",
+      "verifying": "Verificando tu pago...",
+      "pleaseWait": "Por favor espera mientras confirmamos tu pago.",
+      "errorTitle": "Error en el Procesamiento del Pago",
+      "errorMessage": "Hubo un problema al procesar tu pago.",
+      "errorRetry": "Por favor intenta de nuevo o contacta al soporte."
+    },
+    "applicationFee": {
+      "title": "¡Pago de Tarifa de Aplicación Exitoso!",
+      "description": "Tu pago de {amount} fue procesado exitosamente.",
+      "message": "Tu aplicación ahora procederá al siguiente paso.",
+      "button": "Ir a Mis Aplicaciones",
+      "verifying": "Verificando Pago...",
+      "pleaseWait": "Por favor espera mientras confirmamos tu transacción. Esto puede tomar un momento.",
+      "errorTitle": "Verificación Fallida",
+      "errorMessage": "Hubo un problema al verificar tu pago. Por favor contacta al soporte.",
+      "errorDetails": "Detalles del error:"
+    }
   }
-}}
+}
+}

@@ -1695,12 +1695,17 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                          {studentInfo?.is_scholarship_fee_paid && (
                            <span className="text-xs text-slate-500">
                              {(() => {
+                               // Priorizar override do usuário se existir
+                               if (hasOverride('scholarship_fee')) {
+                                 return formatFeeAmount(getFeeAmount('scholarship_fee'));
+                               }
+                               // Se não há override, usar valor da scholarship específica se disponível
                                if (studentInfo?.scholarship?.scholarship_fee_amount) {
                                  const amount = Number(studentInfo.scholarship.scholarship_fee_amount);
                                  return formatFeeAmount(amount);
-                               } else {
-                                 return formatFeeAmount(getFeeAmount('scholarship_fee'));
                                }
+                               // Fallback para valor padrão
+                               return formatFeeAmount(getFeeAmount('scholarship_fee'));
                              })()}
                            </span>
                          )}

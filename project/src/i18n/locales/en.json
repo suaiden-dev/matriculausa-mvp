@@ -2831,5 +2831,40 @@
         "descriptionDetailed": "Pay via Zelle and upload the receipt. Manual verification required."
       }
     }
+  },
+  "successPages": {
+    "selectionProcessFee": {
+      "title": "Selection Process Fee Payment Successful!",
+      "description": "Your payment of {amount} was processed successfully.",
+      "message": "You now have access to all scholarships and can apply freely.",
+      "button": "Go to Scholarships",
+      "verifying": "Verifying your payment...",
+      "pleaseWait": "Please wait while we confirm your transaction. This may take a moment.",
+      "errorTitle": "Selection Process Fee Payment Error",
+      "errorMessage": "There was a problem processing your payment.",
+      "errorRetry": "Please try again. If the error persists, contact support."
+    },
+    "scholarshipFee": {
+      "title": "Scholarship Fee Payment Successful!",
+      "description": "Your payment of {amount} was processed successfully.",
+      "message": "Your application will now proceed to the next step.",
+      "button": "Go to View Details",
+      "verifying": "Verifying your payment...",
+      "pleaseWait": "Please wait while we confirm your payment.",
+      "errorTitle": "Payment Processing Error",
+      "errorMessage": "There was a problem processing your payment.",
+      "errorRetry": "Please try again or contact support."
+    },
+    "applicationFee": {
+      "title": "Application Fee Payment Successful!",
+      "description": "Your payment of {amount} was processed successfully.",
+      "message": "Your application will now proceed to the next step.",
+      "button": "Go to My Applications",
+      "verifying": "Verifying Payment...",
+      "pleaseWait": "Please wait while we confirm your transaction. This may take a moment.",
+      "errorTitle": "Verification Failed",
+      "errorMessage": "There was a problem verifying your payment. Please contact support.",
+      "errorDetails": "Error details:"
+    }
   }
 }
