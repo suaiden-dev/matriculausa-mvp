@@ -399,6 +399,35 @@ const FinancialAnalytics: React.FC = () => {
       packageDataMap[pkg.id] = pkg;
     });
 
+    // Buscar overrides de taxas para todos os usuários
+    const allUserIds = applications?.map(app => app.user_profiles?.user_id).filter(Boolean) || [];
+    const uniqueUserIds = [...new Set(allUserIds)];
+    
+    let overridesMap: { [key: string]: any } = {};
+    if (uniqueUserIds.length > 0) {
+      const overrideEntries = await Promise.allSettled(
+        uniqueUserIds.map(async (userId) => {
+          const { data, error } = await supabase.rpc('get_user_fee_overrides', { user_id_param: userId });
+          return { userId, data: error ? null : data };
+        })
+      );
+      
+      overridesMap = overrideEntries.reduce((acc: { [key: string]: any }, res) => {
+        if (res.status === 'fulfilled') {
+          const { userId, data } = res.value;
+          if (data) {
+            acc[userId] = {
+              selection_process_fee: data.selection_process_fee != null ? Number(data.selection_process_fee) : undefined,
+              application_fee: data.application_fee != null ? Number(data.application_fee) : undefined,
+              scholarship_fee: data.scholarship_fee != null ? Number(data.scholarship_fee) : undefined,
+              i20_control_fee: data.i20_control_fee != null ? Number(data.i20_control_fee) : undefined,
+            };
+          }
+        }
+        return acc;
+      }, {});
+    }
+
     // Processar applications para extrair pagamentos (usando valores dinâmicos como PaymentManagement)
     applications.forEach((app: any) => {
       const student = app.user_profiles;
@@ -426,14 +455,41 @@ const FinancialAnalytics: React.FC = () => {
       // Obter valores dinâmicos do pacote ou usar valores padrão (igual ao PaymentManagement)
       const packageData = packageDataMap[student?.scholarship_package_id];
       const dependents = Number(student?.dependents) || 0;
-      const dependentCost = dependents * 75; // $75 por dependente para cada taxa (em centavos)
+      const dependentCost = dependents * 150; // $150 por dependente apenas para Selection Process (em centavos)
       
-      const selectionProcessFee = packageData?.selection_process_fee ? 
-        Math.round((packageData.selection_process_fee + dependentCost) * 100) : Math.round((feeConfig.selection_process_fee + dependentCost) * 100);
-      const i20ControlFee = packageData?.i20_control_fee ? 
-        Math.round((packageData.i20_control_fee + dependentCost) * 100) : Math.round((feeConfig.i20_control_fee + dependentCost) * 100);
-      const scholarshipFee = packageData?.scholarship_fee ? 
-        Math.round(packageData.scholarship_fee * 100) : Math.round(feeConfig.scholarship_fee_default * 100); // Scholarship fee não tem dependentes
+      // Buscar override do usuário
+      const userOverrides = overridesMap[student?.user_id] || {};
+      
+      // Selection Process Fee - prioridade: override > pacote > padrão
+      let selectionProcessFee: number;
+      if (userOverrides.selection_process_fee !== undefined) {
+        // Se há override, usar exatamente o valor do override (já inclui dependentes se necessário)
+        selectionProcessFee = Math.round(userOverrides.selection_process_fee * 100);
+      } else if (packageData?.selection_process_fee) {
+        selectionProcessFee = Math.round((packageData.selection_process_fee + dependentCost) * 100);
+      } else {
+        selectionProcessFee = Math.round((feeConfig.selection_process_fee + dependentCost) * 100);
+      }
+      
+      // I-20 Control Fee - prioridade: override > pacote > padrão (sem dependentes)
+      let i20ControlFee: number;
+      if (userOverrides.i20_control_fee !== undefined) {
+        i20ControlFee = Math.round(userOverrides.i20_control_fee * 100);
+      } else if (packageData?.i20_control_fee) {
+        i20ControlFee = Math.round(packageData.i20_control_fee * 100);
+      } else {
+        i20ControlFee = Math.round(feeConfig.i20_control_fee * 100);
+      }
+      
+      // Scholarship Fee - prioridade: override > pacote > padrão (sem dependentes)
+      let scholarshipFee: number;
+      if (userOverrides.scholarship_fee !== undefined) {
+        scholarshipFee = Math.round(userOverrides.scholarship_fee * 100);
+      } else if (packageData?.scholarship_fee) {
+        scholarshipFee = Math.round(packageData.scholarship_fee * 100);
+      } else {
+        scholarshipFee = Math.round(feeConfig.scholarship_fee_default * 100);
+      }
       // Application Fee dinâmico baseado na bolsa específica
       let applicationFee: number;
       if (app.scholarships?.application_fee_amount) {
