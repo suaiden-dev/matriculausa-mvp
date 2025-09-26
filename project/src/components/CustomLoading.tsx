@@ -18,7 +18,7 @@ const CustomLoading: React.FC<CustomLoadingProps> = ({
       <svg className={`h-16 w-16 ${colorClass} mb-4 animate-spin`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
       </svg>
-      <h1 className={`text-3xl font-bold ${titleClass} mb-2`}>{title}</h1>
+      <h1 className={`text-3xl font-bold ${titleClass} text-center mb-2`}>{title}</h1>
       <p className="text-slate-700 mb-6 text-center">{message}</p>
     </>
   );

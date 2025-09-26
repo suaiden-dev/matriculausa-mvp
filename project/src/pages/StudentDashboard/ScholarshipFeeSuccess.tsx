@@ -13,7 +13,7 @@ const ScholarshipFeeSuccess: React.FC = () => {
   const [applicationId, setApplicationId] = useState<string | null>(null);
   const navigate = useNavigate();
   const { userProfile } = useAuth();
-  const { scholarshipFee } = useDynamicFees();
+  const { scholarshipFeeAmount } = useDynamicFees();
   const { t } = useTranslation();
 
   useEffect(() => {
@@ -129,9 +129,9 @@ const ScholarshipFeeSuccess: React.FC = () => {
       <div className="min-h-[60vh] flex flex-col items-center justify-center bg-white px-4">
         <div className="bg-white rounded-2xl shadow-lg p-10 max-w-md w-full flex flex-col items-center">
           <CheckCircle className="h-16 w-16 text-green-600 mb-4" />
-          <h1 className="text-3xl font-bold text-green-700 mb-2">{t('successPages.scholarshipFee.title')}</h1>
+          <h1 className="text-3xl font-bold text-green-700 mb-2 text-center">{t('successPages.scholarshipFee.title')}</h1>
           <p className="text-slate-700 mb-6 text-center">
-            {t('successPages.scholarshipFee.description', { amount: scholarshipFee })}<br/>
+            {/* Seu pagamento de ${scholarshipFeeAmount?.toFixed(2) || '900.00'} foi processado com sucesso.<br/> */}
             {t('successPages.scholarshipFee.message')}
           </p>
           <button
