@@ -1579,6 +1579,7 @@ async function processUserEmails(config) {
         processedCount++;
         
         // 🚀 Trigger do worker para processar a fila (assíncrono)
+        console.log('🚀 [POLLING] Chamando Email Queue Worker...');
         fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/email-queue-worker`, {
           method: 'POST',
           headers: {
@@ -1586,7 +1587,17 @@ async function processUserEmails(config) {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({ trigger: 'process_queue' })
-        }).catch(error => console.log('Worker trigger error (não crítico):', error));
+        })
+        .then(response => {
+          if (response.ok) {
+            console.log('✅ [POLLING] Email Queue Worker chamado com sucesso');
+          } else {
+            console.error('❌ [POLLING] Erro ao chamar Email Queue Worker:', response.status, response.statusText);
+          }
+        })
+        .catch(error => {
+          console.error('❌ [POLLING] Erro ao chamar Email Queue Worker:', error);
+        });
         
         
         // Atualizar último email processado (manter para compatibilidade)
@@ -1595,17 +1606,8 @@ async function processUserEmails(config) {
         }).eq('user_id', config.userId).eq('provider_type', 'microsoft');
       } catch (error) {
         console.error(`Erro ao processar email ${email.id}:`, error);
-        // Registrar email como erro na tabela de controle
-        await supabase.from('processed_microsoft_emails').insert({
-          microsoft_message_id: email.id,
-          user_id: config.userId,
-          connection_email: connectionEmail,
-          subject: email.subject,
-          from_email: email.from?.emailAddress?.address,
-          status: 'error',
-          error_message: error.message,
-          processed_at: new Date().toISOString()
-        });
+        // ❌ NÃO SALVAR EMAILS COM ERRO - Deixar para o worker processar
+        console.log(`⚠️ Email ${email.id} com erro será reprocessado pelo worker`);
       }
     }
     // Atualizar contadores totais se houve processamento

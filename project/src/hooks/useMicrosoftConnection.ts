@@ -29,7 +29,7 @@ export interface UseMicrosoftConnectionReturn {
   error: string | null;
   connectMicrosoft: () => Promise<void>;
   disconnectMicrosoft: (email: string) => Promise<void>;
-  setActiveConnection: (email: string) => void;
+  setActiveConnection: (email: string) => Promise<void>;
   clearError: () => void;
   showSecurityWarning: boolean;
   setShowSecurityWarning: (show: boolean) => void;
@@ -73,6 +73,7 @@ export const useMicrosoftConnection = (): UseMicrosoftConnectionReturn => {
         .select('id, user_id, email_address, oauth_access_token, oauth_refresh_token, is_active, created_at, updated_at')
         .eq('user_id', session.user.id)
         .eq('provider_type', 'microsoft')
+        .eq('is_active', true)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -128,7 +129,7 @@ export const useMicrosoftConnection = (): UseMicrosoftConnectionReturn => {
     }
   }, []);
 
-  const setActiveConnection = useCallback((email: string) => {
+  const setActiveConnection = useCallback(async (email: string) => {
     console.log('🔄 Setting active Microsoft connection:', email);
     const connection = connections.find(conn => conn.email_address === email);
     if (connection) {
@@ -136,9 +137,42 @@ export const useMicrosoftConnection = (): UseMicrosoftConnectionReturn => {
       localStorage.setItem(ACTIVE_MICROSOFT_CONNECTION_KEY, email);
       console.log('✅ Active Microsoft connection set:', email);
     } else {
-      console.error('❌ Connection not found for email:', email);
+      console.log('❌ Microsoft connection not found in active connections, checking inactive ones...');
+      // Verificar se existe uma conta inativa com este email
+      try {
+        const { data: session } = await supabase.auth.getSession();
+        if (session.session) {
+          const { data: inactiveConnection } = await supabase
+            .from('email_configurations')
+            .select('*')
+            .eq('user_id', session.session.user.id)
+            .eq('provider_type', 'microsoft')
+            .eq('email_address', email)
+            .eq('is_active', false)
+            .single();
+          
+          if (inactiveConnection) {
+            console.log('🔄 Found inactive connection, reactivating...');
+            // Reativar a conta inativa
+            const { error: updateError } = await supabase
+              .from('email_configurations')
+              .update({ is_active: true })
+              .eq('id', inactiveConnection.id);
+            
+            if (!updateError) {
+              console.log('✅ Inactive account reactivated:', email);
+              // Recarregar as conexões
+              await checkConnections();
+            } else {
+              console.error('❌ Error reactivating account:', updateError);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('❌ Error trying to reactivate account:', error);
+      }
     }
-  }, [connections]);
+  }, [connections, checkConnections]);
 
   const connectMicrosoft = useCallback(async (forceNewLogin = false) => {
     try {

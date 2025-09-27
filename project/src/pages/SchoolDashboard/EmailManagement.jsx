@@ -10,11 +10,9 @@ import {
   ArrowPathIcon,
   BookOpenIcon
 } from '@heroicons/react/24/outline';
+import { Bot } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useMicrosoftConnection } from '../../hooks/useMicrosoftConnection';
-// import MicrosoftTokenDiagnostic from '../../components/MicrosoftTokenDiagnostic';
-// import MicrosoftBFFTest from '../../components/MicrosoftBFFTest';
-// import TokenRenewalTest from '../../components/TokenRenewalTest';
 
 const EmailManagement = () => {
   const navigate = useNavigate();
@@ -38,7 +36,6 @@ const EmailManagement = () => {
   // Detect Microsoft connections and reload data when they change
   useEffect(() => {
     if (microsoftConnections && microsoftConnections.length > 0) {
-      console.log('🔄 Microsoft connections detected, reloading data...');
       loadConfigurations();
       loadStats();
     }
@@ -236,7 +233,6 @@ const EmailManagement = () => {
               totalReceived += emails.length;
               unreadCount += emails.filter(email => !email.isRead).length;
               
-              console.log(`📊 Microsoft Inbox: ${emails.length} total, ${emails.filter(email => !email.isRead).length} unread`);
             } catch (inboxError) {
               console.warn(`📊 Error loading Microsoft inbox stats:`, inboxError);
             }
@@ -250,7 +246,6 @@ const EmailManagement = () => {
               
               totalSent += sentEmailsData.length;
               
-              console.log(`📊 Microsoft Sent: ${sentEmailsData.length} emails`);
             } catch (sentError) {
               console.warn(`📊 Error loading Microsoft sent stats:`, sentError);
             }
@@ -264,7 +259,6 @@ const EmailManagement = () => {
         }
       }
 
-      console.log(`📊 Final stats - Received: ${totalReceived}, Unread: ${unreadCount}, Sent: ${totalSent}`);
 
       setStats({
         total_received: totalReceived,
@@ -739,19 +733,23 @@ const EmailManagement = () => {
                   <div className="flex items-center">
                     <div className="flex gap-2">
                       {/* Gmail Account */}
+                      {/* Gmail Account */}
                       <button
-                        onClick={() => navigate('/school/dashboard/email/config/new?provider=gmail')}
-                        className="bg-red-500 hover:bg-red-600 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-xl text-sm sm:text-base transition-colors"
+                        onClick={() => navigate('/school/dashboard/email/config?provider=gmail')}
+                        className="bg-gradient-to-r from-red-500 to-red-600 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-xl hover:from-red-600 hover:to-red-700 transition-all duration-300 font-bold flex items-center shadow-lg hover:shadow-xl transform hover:scale-105 text-sm sm:text-base"
                       >
                         <EnvelopeIcon className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2" />
                         <span className="hidden sm:inline">Gmail</span>
                         <span className="sm:hidden">Gmail</span>
+                        <span className="hidden sm:inline">Gmail</span>
+                        <span className="sm:hidden">Gmail</span>
                       </button>
                       
-                      {/* Microsoft Account */}
+                      {/* Microsoft Account - Direct Connection */}
                       <button
                         onClick={handleDirectMicrosoftConnection}
-                        className="bg-blue-500 hover:bg-blue-600 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-xl text-sm sm:text-base transition-colors"
+                        disabled={microsoftLoading}
+                        className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-300 font-bold flex items-center shadow-lg hover:shadow-xl transform hover:scale-105 text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <div className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2 flex items-center justify-center">
                           <svg viewBox="0 0 24 24" className="w-full h-full">
@@ -816,24 +814,28 @@ const EmailManagement = () => {
               
               <div className="flex gap-3 justify-center">
                 {/* Gmail Account */}
+                {/* Gmail Account */}
                 <button
-                  onClick={() => navigate('/school/dashboard/email/config/new?provider=gmail')}
-                  className="bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-xl transition-colors"
+                  onClick={() => navigate('/school/dashboard/email/config?provider=gmail')}
+                  className="bg-gradient-to-r from-red-500 to-red-600 text-white px-6 py-3 rounded-xl hover:from-red-600 hover:to-red-700 transition-all duration-300 font-bold flex items-center space-x-2 shadow-lg hover:shadow-xl transform hover:scale-105"
                 >
                   <EnvelopeIcon className="h-5 w-5" />
                   <span>Gmail</span>
+                  <span>Gmail</span>
                 </button>
                 
-                {/* Microsoft Account */}
+                {/* Microsoft Account - Direct Connection */}
                 <button
                   onClick={handleDirectMicrosoftConnection}
-                  className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-xl transition-colors"
+                  disabled={microsoftLoading}
+                  className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-6 py-3 rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-300 font-bold flex items-center space-x-2 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <div className="w-5 h-5 flex items-center justify-center">
                     <svg viewBox="0 0 24 24" className="w-full h-full">
                       <path fill="currentColor" d="M11.4 24H0V12.6h11.4V24zM24 24H12.6V12.6H24V24zM11.4 11.4H0V0h11.4v11.4zM24 11.4H12.6V0H24v11.4z"/>
                     </svg>
                   </div>
+                  <span>Microsoft</span>
                   <span>Microsoft</span>
                 </button>
               </div>
@@ -854,27 +856,30 @@ const EmailManagement = () => {
                           
                           {/* Account Info */}
                           <div className="flex-1 min-w-0">
-                            <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-3 mb-1">
-                              <h3 className="text-base font-medium text-slate-900 truncate">
+                            <div className="flex flex-col space-y-2 mb-1">
+                              <div className="flex items-center space-x-2">
+                                <h3 className="text-base font-medium text-slate-900 truncate">
+                                  {connection.email_address.split('@')[0]}
+                                </h3>
+                                
+                                {/* Microsoft badge */}
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                                  Microsoft
+                                </span>
+                                
+                                {/* Connection status */}
+                                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                  connection.isConnected ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+                                }`}>
+                                  {connection.isConnected ? 'Connected' : 'Disconnected'}
+                                </span>
+                              </div>
+                              
+                              <p className="text-sm text-slate-500">
                                 {connection.email_address}
-                              </h3>
-                              
-                              {/* Microsoft badge */}
-                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium w-fit bg-blue-100 text-blue-700">
-                                Microsoft
-                              </span>
-                              
-                              {/* Connection status */}
-                              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                                connection.isConnected ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
-                              }`}>
-                                {connection.isConnected ? 'Connected' : 'Disconnected'}
-                              </span>
+                              </p>
                             </div>
                             
-                            <p className="text-sm text-slate-500">
-                              Connected via BFF • Last updated: {new Date(connection.updated_at).toLocaleDateString()}
-                            </p>
                           </div>
                         </div>
 
@@ -883,10 +888,11 @@ const EmailManagement = () => {
                           {/* Quick Actions */}
                           <div className="flex sm:hidden items-center space-x-2">
                             <button
-                              onClick={() => handleInboxNavigation(connection)}
+                              onClick={() => navigate(`/school/dashboard/email/inbox?config=${connection.id}`)}
                               className="flex-1 text-sm font-medium py-2 px-3 rounded transition-colors text-blue-600 hover:text-blue-800 hover:bg-blue-50"
                               title="Open inbox"
                             >
+                              Inbox
                               Inbox
                             </button>
                             
@@ -901,10 +907,11 @@ const EmailManagement = () => {
                           
                           <div className="hidden sm:flex items-center space-x-2 mr-4">
                             <button
-                              onClick={() => handleInboxNavigation(connection)}
+                              onClick={() => navigate(`/school/dashboard/email/inbox?config=${connection.id}`)}
                               className="text-sm font-medium py-1 px-2 rounded transition-colors text-blue-600 hover:text-blue-800 hover:bg-blue-50"
                               title="Open inbox"
                             >
+                              Inbox
                               Inbox
                             </button>
                             
@@ -917,29 +924,16 @@ const EmailManagement = () => {
                             </button>
                           </div>
 
-                          {/* Action Buttons - Padronizados */}
+                          {/* Action Buttons - AI Agents e Delete para Microsoft */}
                           <div className="flex items-center space-x-1 sm:space-x-2">
-                            {/* Sync Button */}
+                            {/* AI Agents Button */}
                             <button
-                              onClick={() => handleSync(connection.id)}
-                              disabled={syncing[connection.id]}
-                              className={`p-2 rounded-full transition-colors ${
-                                syncing[connection.id] 
-                                  ? 'bg-blue-100 text-blue-600' 
-                                  : 'hover:bg-slate-100 text-slate-600'
-                              }`}
-                              title={syncing[connection.id] ? 'Syncing...' : 'Sync now'}
-                            >
-                              <ArrowPathIcon 
-                                className={`h-4 w-4 ${syncing[connection.id] ? 'animate-spin' : ''}`} 
-                              />
-                            </button>
-
-                            {/* Settings Button */}
-                            <button
-                              onClick={() => handleSettingsNavigation(connection.id)}
+                              onClick={() => {
+                                // Redirecionar para Microsoft inbox com config específico
+                                window.location.href = `/school/dashboard/email/inbox?config=${connection.id}`;
+                              }}
                               className="p-2 rounded-full hover:bg-slate-100 transition-colors"
-                              title="Account settings"
+                              title="Access Microsoft Inbox"
                             >
                               <Cog6ToothIcon className="h-4 w-4 text-slate-600" />
                             </button>
@@ -999,57 +993,14 @@ const EmailManagement = () => {
                           
                           {/* Status badges */}
                           <div className="flex flex-wrap items-center gap-2">
-                            {/* Account Status */}
-                            <button
-                              onClick={() => toggleAccountStatus(config.id, config.is_active)}
-                              disabled={actionLoading[`status_${config.id}`]}
-                              className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium transition-all hover:scale-105 ${
-                                actionLoading[`status_${config.id}`]
-                                  ? 'bg-slate-100 text-slate-500 cursor-wait'
-                                  : config.is_active 
-                                  ? 'bg-green-100 text-green-700 hover:bg-green-200 cursor-pointer' 
-                                  : 'bg-red-100 text-red-700 hover:bg-red-200 cursor-pointer'
-                              }`}
-                              title={`Click to ${config.is_active ? 'deactivate' : 'activate'} account`}
-                            >
-                              {actionLoading[`status_${config.id}`] ? (
-                                <>
-                                  <div className="w-2 h-2 bg-slate-400 rounded-full mr-1 animate-pulse"></div>
-                                  <span className="hidden sm:inline">Updating...</span>
-                                  <span className="sm:hidden">...</span>
-                                </>
-                              ) : config.is_active ? (
-                                <>
-                                  <div className="w-2 h-2 bg-green-600 rounded-full mr-1"></div>
-                                  <span className="hidden sm:inline">Active</span>
-                                  <span className="sm:hidden">On</span>
-                                </>
-                              ) : (
-                                <>
-                                  <div className="w-2 h-2 bg-red-600 rounded-full mr-1"></div>
-                                  <span className="hidden sm:inline">Inactive</span>
-                                  <span className="sm:hidden">Off</span>
-                                </>
-                              )}
-                            </button>
-
-                            {/* Sync Status */}
-                            {config.sync_enabled && (
-                              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                                config.is_active 
-                                  ? 'bg-blue-100 text-blue-700' 
-                                  : 'bg-slate-100 text-slate-500'
-                              }`}>
-                                <div className={`w-2 h-2 rounded-full mr-1 ${
-                                  syncing[config.id] 
-                                    ? 'bg-blue-600 animate-pulse' 
-                                    : config.is_active 
-                                    ? 'bg-blue-600' 
-                                    : 'bg-slate-400'
-                                }`}></div>
-                                {syncing[config.id] ? 'Syncing...' : 'Auto-sync'}
-                              </span>
-                            )}
+                            {/* Connection Status - Padronizado com Microsoft */}
+                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                              config.is_active 
+                                ? 'bg-green-100 text-green-700' 
+                                : 'bg-yellow-100 text-yellow-700'
+                            }`}>
+                              {config.is_active ? 'Connected' : 'Disconnected'}
+                            </span>
 
                             {/* Last Sync Indicator */}
                             {config.last_sync_at && (
@@ -1132,67 +1083,18 @@ const EmailManagement = () => {
                         </button>
                       </div>
 
-                      {/* Action Buttons */}
+                      {/* Action Buttons - Settings e Delete */}
                       <div className="flex items-center space-x-1 sm:space-x-2">
-                        <button
-                          onClick={() => handleSync(config.id)}
-                          disabled={syncing[config.id] || !config.is_active}
-                          className={`p-2 rounded-full transition-colors ${
-                            syncing[config.id] 
-                              ? 'bg-blue-100 text-blue-600' 
-                              : config.is_active 
-                              ? 'hover:bg-slate-100 text-slate-600' 
-                              : 'text-slate-400 cursor-not-allowed'
-                          }`}
-                          title={
-                            !config.is_active 
-                              ? 'Account is inactive' 
-                              : syncing[config.id] 
-                              ? 'Syncing...' 
-                              : 'Sync now'
-                          }
-                        >
-                          <ArrowPathIcon 
-                            className={`h-4 w-4 ${syncing[config.id] ? 'animate-spin' : ''}`} 
-                          />
-                        </button>
-
-                        {/* Sync Toggle */}
-                        <label className="flex items-center cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={config.sync_enabled}
-                            onChange={() => toggleSync(config.id, config.sync_enabled)}
-                            disabled={actionLoading[`toggle_${config.id}`] || !config.is_active}
-                            className="sr-only"
-                          />
-                          <div className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-                            actionLoading[`toggle_${config.id}`] 
-                              ? 'bg-slate-300' 
-                              : !config.is_active 
-                              ? 'bg-slate-200 opacity-50' 
-                              : config.sync_enabled 
-                              ? 'bg-blue-600' 
-                              : 'bg-slate-200'
-                          }`}>
-                            <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
-                              actionLoading[`toggle_${config.id}`] 
-                                ? 'animate-pulse' 
-                                : config.sync_enabled 
-                                ? 'translate-x-5' 
-                                : 'translate-x-1'
-                            }`} />
-                          </div>
-                        </label>
-
-                        {/* Settings Button */}
-                        <button
-                          onClick={() => handleSettingsNavigation(config.id)}
-                          className="p-2 rounded-full hover:bg-slate-100 transition-colors"
-                          title="Account settings"
-                        >
-                          <Cog6ToothIcon className="h-4 w-4 text-slate-600" />
-                        </button>
+                        {/* Settings Button - Apenas para Gmail */}
+                        {config.provider_type !== 'microsoft' && config.provider_type !== 'Microsoft' && (
+                          <button
+                            onClick={() => handleSettingsNavigation(config.id)}
+                            className="p-2 rounded-full hover:bg-slate-100 transition-colors"
+                            title="Account settings"
+                          >
+                            <Cog6ToothIcon className="h-4 w-4 text-slate-600" />
+                          </button>
+                        )}
 
                         {/* Delete Button */}
                         <button
@@ -1216,20 +1118,6 @@ const EmailManagement = () => {
           )}
         </div>
         
-        {/* Microsoft Token Diagnostic */}
-        <div className="mt-8">
-          {/* <MicrosoftTokenDiagnostic /> */}
-        </div>
-
-        {/* Microsoft BFF Test */}
-        {/* <div className="mt-8">
-          <MicrosoftBFFTest />
-        </div> */}
-
-        {/* Token Renewal Test */}
-        {/* <div className="mt-8">
-          <TokenRenewalTest />
-        </div> */}
       </div>
     );
   };

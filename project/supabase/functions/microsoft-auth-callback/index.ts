@@ -323,21 +323,44 @@ Deno.serve(async (req: Request) => {
       throw new Error(`Erro ao obter informações do usuário: ${error.message}`);
     }
 
-    // Obter userId do header de autorização ou usar fixo para teste
+    // 🔑 OBTER USER ID REAL DO USUÁRIO AUTENTICADO
     const authHeader = req.headers.get('Authorization');
-    let userId = '5682bded-cdbb-4f5e-afcc-bf2a2d8fdd27'; // User ID padrão para teste
+    let userId: string | null = null;
     
     if (authHeader && authHeader.startsWith('Bearer ')) {
       try {
-        // Tentar extrair userId do token (implementação simples)
-        // Por enquanto, usar o userId fixo
-        console.log('🔍 DEBUG - Header de autorização presente, mas usando userId fixo');
+        // Extrair token do header
+        const token = authHeader.substring(7);
+        console.log('🔍 DEBUG - Token extraído do header');
+        
+        // Verificar token com Supabase para obter userId real
+        const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+        
+        if (authError) {
+          console.error('❌ Erro ao verificar token:', authError);
+          throw new Error('Token inválido ou expirado');
+        }
+        
+        if (user && user.id) {
+          userId = user.id;
+          console.log('✅ User ID obtido do token:', userId);
+        } else {
+          throw new Error('Usuário não encontrado no token');
+        }
       } catch (error) {
-        console.log('⚠️ Erro ao processar header de autorização, usando userId fixo');
+        console.error('❌ Erro ao processar token de autorização:', error);
+        throw new Error('Falha na autenticação do usuário');
       }
+    } else {
+      console.error('❌ Header de autorização não encontrado');
+      throw new Error('Token de autorização não fornecido');
     }
     
-    console.log('🔍 DEBUG - Usando userId:', userId);
+    if (!userId) {
+      throw new Error('Não foi possível obter o ID do usuário');
+    }
+    
+    console.log('🔍 DEBUG - Usando userId real:', userId);
 
     // Salvar tokens no banco de dados
     console.log('🔄 Tentando salvar tokens no banco de dados...');
