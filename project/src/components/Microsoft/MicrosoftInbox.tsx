@@ -6,8 +6,8 @@ import {
   Send as SendIcon, Star as StarIcon, FileText, AlertTriangle, Trash,
   Bot, Play, Loader2, XCircle,
   Search, MoreVertical, Reply, Forward, User,
-  Plus, Archive, Folder, FolderOpen, BookOpen,
-  Send, X, Paperclip, Save
+  Plus, Archive, Folder, FolderOpen,
+  Send, X
 } from 'lucide-react';
 import { useAuthToken } from '../../hooks/useAuthToken';
 import { useMicrosoftConnection } from '../../hooks/useMicrosoftConnection';
@@ -99,6 +99,13 @@ export default function MicrosoftInbox() {
   const [recentEmails, setRecentEmails] = useState<ProcessedEmail[]>([]);
   const [loadingEmails, setLoadingEmails] = useState(false);
   const [showComposeModal, setShowComposeModal] = useState(false);
+  const [composeData, setComposeData] = useState({
+    to: '',
+    cc: '',
+    bcc: '',
+    subject: '',
+    message: ''
+  });
 
   // Estados do Inbox
   const [selectedEmail, setSelectedEmail] = useState<ProcessedEmail | MicrosoftGraphEmail | null>(null);
@@ -314,10 +321,8 @@ export default function MicrosoftInbox() {
       // Usar token da conta ativa se disponível; senão usar MSAL
       let token;
       if (activeConnection?.access_token) {
-        console.log(`MicrosoftInbox - Usando token salvo para ${folderKey}`);
         token = activeConnection.access_token;
       } else {
-        console.log(`MicrosoftInbox - Nenhum token salvo encontrado para ${folderKey}. Fallback para MSAL.`);
         token = await getToken();
       }
       
@@ -345,7 +350,6 @@ export default function MicrosoftInbox() {
         }
       }));
       
-      console.log(`📧 MicrosoftInbox - Salvando ${emailData.length} emails para pasta ${folderKey}`);
       setFolderEmails(prev => ({
         ...prev,
         [folderKey]: emailData
@@ -400,7 +404,6 @@ export default function MicrosoftInbox() {
       }
       
       const folderMapping = getFolderMapping(folders);
-      console.log('🔄 MicrosoftInbox - Mapeamento de pastas:', folderMapping);
       
       // Buscar emails de cada pasta SEQUENCIALMENTE para evitar rate limiting
       const newCounts = { inbox: 0, sent: 0, drafts: 0, archive: 0, spam: 0, trash: 0 };
@@ -408,17 +411,14 @@ export default function MicrosoftInbox() {
       // Processar pastas uma por vez com delay entre elas
       for (const [key, folderId] of Object.entries(folderMapping)) {
         try {
-          console.log(`🔄 MicrosoftInbox - Processando pasta ${key} (${folderId})`);
           
           // Adicionar delay entre requisições para evitar rate limiting
           if (Object.values(newCounts).some(count => count > 0)) {
-            console.log('⏳ MicrosoftInbox - Aguardando delay entre requisições...');
             await new Promise(resolve => setTimeout(resolve, 1000)); // Reduzido para 1 segundo
           }
           
           const emails = await fetchEmailsFromFolder(folderId, key, true);
           const count = emails.length;
-          console.log(`📧 MicrosoftInbox - Pasta ${key}: ${count} emails`);
           
           if (key in newCounts) {
             newCounts[key as keyof typeof newCounts] = count;
@@ -432,7 +432,6 @@ export default function MicrosoftInbox() {
         }
       }
       
-      console.log('📊 MicrosoftInbox - Contadores finais:', newCounts);
       setEmailCounts(newCounts);
       
     } catch (error) {
@@ -470,7 +469,6 @@ export default function MicrosoftInbox() {
 
   // Verificar status do sistema quando o componente carrega
   useEffect(() => {
-    // console.log('MicrosoftInbox - useEffect executado, accounts.length:', accounts.length);
     
     if (!getToken) {
       setStatus('idle');
@@ -491,6 +489,17 @@ export default function MicrosoftInbox() {
     // Iniciar polling automático quando o usuário faz login
     startProcessing();
   }, [getToken, accounts.length]);
+
+  // Verificar se deve abrir modal de AI Agents automaticamente
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('openAI') === 'true') {
+      setShowKnowledgeBase(true);
+      // Limpar o parâmetro da URL
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
+    }
+  }, []);
 
   // Polling automático para detectar novos emails
   useEffect(() => {
@@ -566,7 +575,6 @@ export default function MicrosoftInbox() {
     setLoading(true);
 
     try {
-      console.log('🔄 MicrosoftInbox - Iniciando processamento real...');
       
       const { data: { user } } = await supabase.auth.getUser();
       
@@ -602,7 +610,6 @@ export default function MicrosoftInbox() {
   };
 
   const stopProcessing = async () => {
-    console.log('🔄 MicrosoftInbox - Parando processamento real...');
     setLoading(true);
 
     try {
@@ -639,7 +646,6 @@ export default function MicrosoftInbox() {
 
   // Test AI - Abrir chatbot de teste
   const testProcessing = async () => {
-    console.log('🧪 MicrosoftInbox - Abrindo chatbot de teste...');
     
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -808,13 +814,12 @@ export default function MicrosoftInbox() {
   };
 
   const handleCompose = () => {
-    console.log('📧 MicrosoftInbox - Abrindo compositor de email...');
+    // Abrir modal de compose completo (como na página principal)
     setShowComposeModal(true);
   };
 
   // Função para forçar recarregamento completo
   const forceReload = async () => {
-    console.log('🔄 MicrosoftInbox - Forçando recarregamento completo...');
     
     // Limpar todos os estados
     setFolderCache({});
@@ -825,7 +830,6 @@ export default function MicrosoftInbox() {
     
     // Aguardar um pouco e recarregar
     setTimeout(() => {
-      console.log('🔄 MicrosoftInbox - Iniciando recarregamento após limpeza...');
       loadAllFolders();
     }, 500);
   };
@@ -1333,11 +1337,11 @@ export default function MicrosoftInbox() {
                         }}
                       />
                     ) : (
-                      <p className="text-gray-600">
+                      <div className="text-gray-600 whitespace-pre-wrap">
                         {(selectedEmail as MicrosoftGraphEmail).bodyPreview || 
                          (selectedEmail as ProcessedEmail).analysis?.summary || 
                          'Nenhum conteúdo disponível'}
-                      </p>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -1376,20 +1380,21 @@ export default function MicrosoftInbox() {
              {/* AI Agent Creation Modal */}
              {showKnowledgeBase && (
                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                 <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full mx-4 max-h-[90vh] overflow-hidden">
-                  <div className="flex items-center p-6 border-b">
-                    <div>
-                      <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-                        <Bot className="h-5 w-5 text-green-600" />
-                        Create AI Agent for Emails
-                      </h2>
-                      <p className="text-sm text-gray-600 mt-1">
-                        Configure your AI agent and add documents to the knowledge base
-                      </p>
-                    </div>
-                  </div>
-                   <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
-                     <EmailAgentManagement />
+                 <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full mx-4 max-h-[90vh] overflow-hidden relative">
+                   {/* Botão X no canto superior direito do modal */}
+                   <button
+                     onClick={() => setShowKnowledgeBase(false)}
+                     className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 transition-colors rounded-lg hover:bg-gray-100 z-10"
+                     title="Close modal"
+                   >
+                     <X className="h-5 w-5" />
+                   </button>
+                   
+                   <div className="p-6 overflow-y-auto max-h-[90vh]">
+                     <EmailAgentManagement activeEmailConfig={activeConnection ? {
+                       id: activeConnection.id,
+                       email_address: activeConnection.email_address
+                     } : undefined} />
                    </div>
                  </div>
                </div>
@@ -1521,98 +1526,162 @@ export default function MicrosoftInbox() {
                </div>
              )}
 
-             {/* Email Compose Modal */}
+             {/* Email Compose Modal - Original Design */}
              {showComposeModal && (
                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                  <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col">
-                   {/* Header */}
-                   <div className="flex items-center justify-between p-4 border-b bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-                     <div className="flex items-center gap-3">
-                       <div className="w-10 h-10 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
-                         <Send className="h-6 w-6" />
-                       </div>
+                   {/* Header - Clean Design */}
+                   <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                     <div className="flex items-center gap-4">
+                       <button
+                         onClick={() => setShowComposeModal(false)}
+                         className="text-gray-600 hover:text-gray-800 transition-colors"
+                       >
+                         <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                         </svg>
+                       </button>
                        <div>
-                         <h2 className="text-lg font-semibold">New Email</h2>
-                         <p className="text-sm text-blue-100">Compose and send email</p>
+                         <h2 className="text-2xl font-bold text-gray-900">New Message</h2>
+                         <p className="text-sm text-gray-600">From: Microsoft Account ({activeConnection?.email_address || 'user@outlook.com'})</p>
                        </div>
                      </div>
-                     <button
-                       onClick={() => setShowComposeModal(false)}
-                       className="text-white hover:text-blue-200 transition-colors"
-                     >
-                       <X className="h-6 w-6" />
-                     </button>
+                     <div className="flex items-center gap-3">
+                       <select className="bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700">
+                         <option>Microsoft Account</option>
+                       </select>
+                       <button
+                         onClick={() => setShowComposeModal(false)}
+                         className="text-gray-600 hover:text-gray-800 transition-colors p-2"
+                       >
+                         <X className="h-5 w-5" />
+                       </button>
+                     </div>
                    </div>
 
-                   {/* Compose Form */}
+                   {/* Compose Form - Original Layout */}
                    <div className="flex-1 overflow-y-auto p-6">
                      <div className="space-y-4">
                        {/* To Field */}
-                       <div>
-                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                           Para
-                         </label>
-                         <input
-                           type="email"
-                           placeholder="Digite o email do destinatário"
-                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                         />
+                       <div className="flex items-center gap-4">
+                         <label className="w-16 text-sm font-medium text-gray-700">To</label>
+                         <div className="flex-1">
+                           <input
+                             type="email"
+                             value={composeData.to}
+                             onChange={(e) => setComposeData(prev => ({ ...prev, to: e.target.value }))}
+                             placeholder="recipient@email.com"
+                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                           />
+                         </div>
                        </div>
+
+                       {/* Recipient Options */}
+                       <div className="flex gap-4 ml-20">
+                         <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">+ Add recipient</button>
+                         <button 
+                           onClick={() => setComposeData(prev => ({ ...prev, cc: prev.cc ? '' : 'cc@email.com' }))}
+                           className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                         >
+                           + CC
+                         </button>
+                         <button 
+                           onClick={() => setComposeData(prev => ({ ...prev, bcc: prev.bcc ? '' : 'bcc@email.com' }))}
+                           className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                         >
+                           + BCC
+                         </button>
+                       </div>
+
+                       {/* CC Field */}
+                       {composeData.cc && (
+                         <div className="flex items-center gap-4">
+                           <label className="w-16 text-sm font-medium text-gray-700">CC</label>
+                           <div className="flex-1">
+                             <input
+                               type="email"
+                               value={composeData.cc}
+                               onChange={(e) => setComposeData(prev => ({ ...prev, cc: e.target.value }))}
+                               placeholder="cc@email.com"
+                               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                             />
+                           </div>
+                         </div>
+                       )}
+
+                       {/* BCC Field */}
+                       {composeData.bcc && (
+                         <div className="flex items-center gap-4">
+                           <label className="w-16 text-sm font-medium text-gray-700">BCC</label>
+                           <div className="flex-1">
+                             <input
+                               type="email"
+                               value={composeData.bcc}
+                               onChange={(e) => setComposeData(prev => ({ ...prev, bcc: e.target.value }))}
+                               placeholder="bcc@email.com"
+                               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                             />
+                           </div>
+                         </div>
+                       )}
 
                        {/* Subject Field */}
-                       <div>
-                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                           Assunto
-                         </label>
-                         <input
-                           type="text"
-                           placeholder="Digite o assunto do email"
-                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                         />
+                       <div className="flex items-center gap-4">
+                         <label className="w-16 text-sm font-medium text-gray-700">Subject</label>
+                         <div className="flex-1">
+                           <input
+                             type="text"
+                             value={composeData.subject}
+                             onChange={(e) => setComposeData(prev => ({ ...prev, subject: e.target.value }))}
+                             placeholder="Email subject"
+                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                           />
+                         </div>
                        </div>
 
-                       {/* Body Field */}
+                       {/* Message Body */}
                        <div>
-                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                           Mensagem
-                         </label>
                          <textarea
-                           placeholder="Digite sua mensagem aqui..."
-                           rows={10}
+                           value={composeData.message}
+                           onChange={(e) => setComposeData(prev => ({ ...prev, message: e.target.value }))}
+                           placeholder="Type your message here..."
+                           rows={12}
                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                          />
                        </div>
                      </div>
                    </div>
 
-                   {/* Footer */}
-                   <div className="p-4 border-t bg-gray-50">
+                   {/* Footer - Original Design */}
+                   <div className="p-6 border-t border-gray-200">
                      <div className="flex items-center justify-between">
-                       <div className="flex items-center gap-2">
-                         <button className="p-2 text-gray-500 hover:text-gray-700 transition-colors">
-                           <Paperclip className="h-5 w-5" />
-                         </button>
-                         <button className="p-2 text-gray-500 hover:text-gray-700 transition-colors">
-                           <Save className="h-5 w-5" />
+                       <div className="flex items-center gap-4">
+                         <button className="text-gray-700 hover:text-gray-900 text-sm font-medium">
+                           ► Advanced: Add HTML content
                          </button>
                        </div>
-                       <div className="flex items-center gap-3">
-                         <button
-                           onClick={() => setShowComposeModal(false)}
-                           className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
-                         >
-                           Cancelar
-                         </button>
-                         <button className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2">
-                           <Send className="h-4 w-4" />
-                           Enviar
-                         </button>
+                       <div className="flex items-center gap-4">
+                         <div className="flex items-center gap-3">
+                           <button
+                             onClick={() => setShowComposeModal(false)}
+                             className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                           >
+                             Cancel
+                           </button>
+                           <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                             Send
+                           </button>
+                         </div>
+                         <div className="text-sm text-gray-500">
+                           {composeData.message.length} characters
+                         </div>
                        </div>
                      </div>
                    </div>
                  </div>
                </div>
              )}
+
     </div>
   );
 }

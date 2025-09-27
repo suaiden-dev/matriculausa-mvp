@@ -8,14 +8,80 @@ const supabase = createClient(
 
 const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY') || Deno.env.get('VITE_GEMINI_API_KEY');
 
+// 🔒 SISTEMA DE LOCK PARA EVITAR EXECUÇÕES SIMULTÂNEAS
+const LOCK_KEY = 'email_worker_lock';
+const LOCK_TIMEOUT = 300000; // 5 minutos timeout para lock
+
+async function acquireLock(): Promise<boolean> {
+  try {
+    console.log('🔒 [LOCK] Tentando adquirir lock...');
+    
+    // Verificar se já existe lock ativo
+    const { data: existingLock } = await supabase
+      .from('worker_locks')
+      .select('*')
+      .eq('lock_key', LOCK_KEY)
+      .eq('is_active', true)
+      .maybeSingle();
+    
+    if (existingLock) {
+      const lockAge = Date.now() - new Date(existingLock.created_at).getTime();
+      if (lockAge < LOCK_TIMEOUT) {
+        console.log('🔒 [LOCK] Lock já existe e é válido - abortando execução');
+        return false;
+      } else {
+        console.log('🔒 [LOCK] Lock expirado - removendo e criando novo');
+        await supabase
+          .from('worker_locks')
+          .delete()
+          .eq('lock_key', LOCK_KEY);
+      }
+    }
+    
+    // Criar novo lock
+    const { error } = await supabase
+      .from('worker_locks')
+      .insert({
+        lock_key: LOCK_KEY,
+        is_active: true,
+        created_at: new Date().toISOString()
+      });
+    
+    if (error) {
+      console.error('🔒 [LOCK] Erro ao criar lock:', error);
+      return false;
+    }
+    
+    console.log('🔒 [LOCK] Lock adquirido com sucesso');
+    return true;
+  } catch (error) {
+    console.error('🔒 [LOCK] Erro ao adquirir lock:', error);
+    return false;
+  }
+}
+
+async function releaseLock(): Promise<void> {
+  try {
+    console.log('🔒 [LOCK] Liberando lock...');
+    await supabase
+      .from('worker_locks')
+      .delete()
+      .eq('lock_key', LOCK_KEY);
+    console.log('🔒 [LOCK] Lock liberado com sucesso');
+  } catch (error) {
+    console.error('🔒 [LOCK] Erro ao liberar lock:', error);
+  }
+}
+
 // 🛡️ CONFIGURAÇÕES ULTRA CONSERVADORAS PARA FILA
 const QUEUE_CONFIG = {
   batchSize: 1, // Processar 1 email por vez
-  delayBetweenEmails: 5000, // 5 segundos entre emails (mínimo)
+  delayBetweenEmails: 30000, // 30 segundos entre emails (respeitando quota Gemini)
   maxRetries: 3,
   retryDelay: 60000, // 1 minuto para retry
-  maxEmailsPerRun: 10, // Máximo 10 emails por execução do worker
+  maxEmailsPerRun: 2, // Máximo 2 emails por execução (quota Gemini: 4/min)
   timeoutPerEmail: 30000, // 30 segundos timeout por email
+  geminiRateLimit: 15000, // 15 segundos entre chamadas Gemini (4/min = 15s)
 };
 
 // 🤖 Classe AIService simplificada para o worker
@@ -30,15 +96,28 @@ class QueueAIService {
     try {
       console.log(`🤖 [WORKER] Processando email: ${email.subject}`);
       
-      // Buscar prompt da universidade (já contém base de conhecimento)
-      const { data: promptData } = await supabase
+      // Buscar informações completas do agente
+      const { data: agentData } = await supabase
         .from('ai_configurations')
-        .select('final_prompt')
+        .select('ai_name, company_name, personality, final_prompt')
         .eq('university_id', userId)
         .eq('is_active', true)
         .maybeSingle();
         
-      const universityPrompt = promptData?.final_prompt || 'Você é um assistente universitário.';
+      // Criar prompt personalizado automaticamente
+      let universityPrompt;
+      if (agentData) {
+        const { ai_name, company_name, personality, final_prompt } = agentData;
+        universityPrompt = final_prompt || `Você é ${ai_name}, um assistente de IA da ${company_name}. 
+        
+PERSONALIDADE: ${personality}
+UNIVERSIDADE: ${company_name}
+NOME DO AGENTE: ${ai_name}
+
+Use sempre seu nome real (${ai_name}) e o nome da universidade (${company_name}) nas respostas.`;
+      } else {
+        universityPrompt = 'Você é um assistente universitário.';
+      }
       
       // Preparar prompt para Gemini
       const emailContent = `
@@ -97,6 +176,11 @@ Responda APENAS com um JSON válido no formato:
         
         if (response.status === 401) {
           console.error(`🚨 [WORKER] GEMINI 401 UNAUTHORIZED - API KEY INVÁLIDA!`);
+        }
+        
+        if (response.status === 429) {
+          console.error(`🚨 [WORKER] GEMINI 429 QUOTA EXCEEDED - Aguardando 180s...`);
+          await new Promise(resolve => setTimeout(resolve, 180000)); // 180 segundos (3 minutos)
         }
         
         throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
@@ -220,10 +304,60 @@ async function processEmailQueue(): Promise<void> {
     const processedEmails = new Set();
     const uniqueQueueItems = [];
     
+    // 🔍 VERIFICAÇÃO NO BANCO: Buscar emails já processados com SUCESSO na tabela processed_microsoft_emails
+    const { data: alreadyProcessed, error: processedError } = await supabase
+      .from('processed_microsoft_emails')
+      .select('microsoft_message_id, status')
+      .in('microsoft_message_id', queueItems?.map(item => item.email_data?.id).filter(Boolean) || [])
+      .in('status', ['processed', 'replied']); // APENAS emails processados com sucesso
+    
+    if (processedError) {
+      console.error('❌ [WORKER] Erro ao verificar emails processados:', processedError);
+    } else {
+      console.log(`🔍 [WORKER] Emails já processados com SUCESSO no banco: ${alreadyProcessed?.length || 0}`);
+    }
+    
+    const processedMessageIds = new Set(alreadyProcessed?.map(p => p.microsoft_message_id) || []);
+    
     for (const item of queueItems || []) {
       const emailId = item.email_data?.id;
+      
+      // Verificar duplicata na fila
       if (emailId && !processedEmails.has(emailId)) {
         processedEmails.add(emailId);
+        
+        // Verificar se já foi processado com SUCESSO no banco
+        if (processedMessageIds.has(emailId)) {
+          console.log(`🚫 [WORKER] EMAIL JÁ PROCESSADO COM SUCESSO NO BANCO - Pulando email: ${emailId}`);
+          // Marcar como já processado
+          await supabase
+            .from('email_queue')
+            .update({ 
+              status: 'completed',
+              error_message: 'Email já processado anteriormente com sucesso',
+              completed_at: new Date().toISOString()
+            })
+            .eq('id', item.id);
+          continue;
+        }
+        
+        // 🔄 REPROCESSAR EMAILS COM ERRO: Limpar registros de erro para permitir reprocessamento
+        const { data: errorEmails } = await supabase
+          .from('processed_microsoft_emails')
+          .select('id')
+          .eq('microsoft_message_id', emailId)
+          .eq('status', 'error');
+          
+        if (errorEmails && errorEmails.length > 0) {
+          console.log(`🔄 [WORKER] REPROCESSANDO EMAIL COM ERRO: ${emailId}`);
+          // Deletar registros de erro para permitir reprocessamento
+          await supabase
+            .from('processed_microsoft_emails')
+            .delete()
+            .eq('microsoft_message_id', emailId)
+            .eq('status', 'error');
+        }
+        
         uniqueQueueItems.push(item);
       } else if (emailId) {
         console.log(`🚫 [WORKER] DUPLICATA DETECTADA - Pulando email: ${emailId}`);
@@ -372,8 +506,9 @@ async function processEmailQueue(): Promise<void> {
           })
           .eq('id', queueItem.id);
           
-        // Registrar na tabela de emails processados
-        await supabase.from('processed_microsoft_emails').insert({
+        // ✅ APENAS SALVAR NA TABELA APÓS PROCESSAMENTO COMPLETO COM SUCESSO
+        console.log(`💾 [WORKER] Salvando email processado na tabela processed_microsoft_emails...`);
+        const { data: upsertData, error: upsertError } = await supabase.from('processed_microsoft_emails').upsert({
           microsoft_message_id: queueItem.email_data.id,
           user_id: queueItem.user_id,
           connection_email: 'queue@system.com',
@@ -383,15 +518,24 @@ async function processEmailQueue(): Promise<void> {
           analysis: result.analysis,
           response_text: result.response,
           processed_at: new Date().toISOString()
+        }, {
+          onConflict: 'microsoft_message_id,user_id,connection_email'
         });
+        
+        if (upsertError) {
+          console.error(`❌ [WORKER] Erro ao salvar email processado:`, upsertError);
+        } else {
+          console.log(`✅ [WORKER] Email processado salvo/atualizado com sucesso na tabela`);
+        }
         
         processedCount++;
         console.log(`✅ [WORKER] Email ${queueItem.id} processado com sucesso`);
         
-        // Delay mínimo entre emails (proteção anti-spam)
+        // Delay mínimo entre emails (proteção anti-spam + quota Gemini)
         if (processedCount < queueItems.length) {
-          console.log(`⏳ [WORKER] Aguardando ${QUEUE_CONFIG.delayBetweenEmails/1000}s antes do próximo email...`);
-          await new Promise(resolve => setTimeout(resolve, QUEUE_CONFIG.delayBetweenEmails));
+          const delay = Math.max(QUEUE_CONFIG.delayBetweenEmails, QUEUE_CONFIG.geminiRateLimit);
+          console.log(`⏳ [WORKER] Aguardando ${delay/1000}s antes do próximo email (respeitando quota Gemini)...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
         }
         
       } catch (error) {
@@ -427,6 +571,20 @@ Deno.serve(async (req) => {
   console.log('🔍 [WORKER] Method:', req.method);
   console.log('🔍 [WORKER] URL:', req.url);
   console.log('🔍 [WORKER] Headers:', Object.fromEntries(req.headers.entries()));
+  console.log('🔍 [WORKER] Timestamp:', new Date().toISOString());
+  
+  // 🔒 ADQUIRIR LOCK ANTES DE PROCESSAR
+  const lockAcquired = await acquireLock();
+  if (!lockAcquired) {
+    console.log('🚫 [WORKER] Lock não adquirido - abortando execução');
+    return new Response(JSON.stringify({ 
+      success: false, 
+      message: 'Worker já está em execução' 
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
   
   // CORS Headers
   const corsHeaders = {
@@ -501,14 +659,27 @@ Deno.serve(async (req) => {
           }
           
           // Buscar prompt da universidade (já contém base de conhecimento)
-          const { data: promptData } = await supabase
+          const { data: agentData } = await supabase
             .from('ai_configurations')
-            .select('final_prompt')
+            .select('ai_name, company_name, personality, final_prompt')
             .eq('university_id', body.userId)
             .eq('is_active', true)
             .maybeSingle();
             
-          const universityPrompt = promptData?.final_prompt || 'Você é um assistente universitário.';
+          // Criar prompt personalizado automaticamente
+          let universityPrompt;
+          if (agentData) {
+            const { ai_name, company_name, personality, final_prompt } = agentData;
+            universityPrompt = final_prompt || `Você é ${ai_name}, um assistente de IA da ${company_name}. 
+            
+PERSONALIDADE: ${personality}
+UNIVERSIDADE: ${company_name}
+NOME DO AGENTE: ${ai_name}
+
+Use sempre seu nome real (${ai_name}) e o nome da universidade (${company_name}) nas respostas.`;
+          } else {
+            universityPrompt = 'Você é um assistente universitário.';
+          }
           
           // Detectar idioma da mensagem
           const messageText = body.message?.toLowerCase() || '';
@@ -635,5 +806,8 @@ Responda de forma natural e conversacional, como um assistente universitário.`;
       status: 500,
       headers: { 'Content-Type': 'application/json' }
     });
+  } finally {
+    // 🔒 LIBERAR LOCK SEMPRE (mesmo em caso de erro)
+    await releaseLock();
   }
 });
