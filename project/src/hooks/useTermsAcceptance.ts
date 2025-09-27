@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './useAuth';
+import { sendTermAcceptanceNotification } from '../utils/termAcceptanceNotification';
 
 export type TermType = 
   | 'terms_of_service'
@@ -113,7 +114,12 @@ export const useTermsAcceptance = () => {
 
       if (error) throw error;
       
-      return data || false;
+      const success = data || false;
+      
+      // Term acceptance recorded successfully
+      // Note: Notification with PDF will be sent after successful payment, not here
+      
+      return success;
     } catch (error: any) {
       console.error('Error recording term acceptance:', error);
       setError(error.message || 'Failed to record term acceptance');

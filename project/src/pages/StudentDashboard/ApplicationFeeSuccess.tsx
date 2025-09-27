@@ -82,9 +82,9 @@ const ApplicationFeeSuccess: React.FC = () => {
         return (
           <>
             <CheckCircle className="h-16 w-16 text-green-600 mb-4 mx-auto" />
-            <h1 className="text-3xl font-bold text-green-700 mb-2">{t('successPages.applicationFee.title')}</h1>
+            <h1 className="text-3xl font-bold text-green-700 mb-2 text-center">{t('successPages.applicationFee.title')}</h1>
             <p className="text-slate-700 mb-6 text-center">
-              {t('successPages.applicationFee.description', { amount: `$${paymentAmount.toFixed(2)}` })}<br/>
+              {/* Seu pagamento de ${paymentAmount.toFixed(2)} foi processado com sucesso.<br/> */}
               {t('successPages.applicationFee.message')}
             </p>
             <button

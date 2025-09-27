@@ -48,6 +48,7 @@ const AffiliateAdminDashboardLayout: React.FC<AffiliateAdminDashboardLayoutProps
     const path = location.pathname;
     if (path.includes('/users')) return 'users';
     if (path.includes('/payments')) return 'payments';
+    if (path.includes('/my-students')) return 'my-students';
     if (path.includes('/students')) return 'students';
     if (path.includes('/analytics')) return 'analytics';
     if (path.includes('/profile')) return 'profile';
@@ -61,6 +62,7 @@ const AffiliateAdminDashboardLayout: React.FC<AffiliateAdminDashboardLayoutProps
     { id: 'users', label: 'Seller Management', icon: Users, path: '/affiliate-admin/dashboard/users', badge: null },
     { id: 'payments', label: 'Payment Management', icon: CreditCard, path: '/affiliate-admin/dashboard/payments', badge: null },
     { id: 'students', label: 'Seller Tracking', icon: GraduationCap, path: '/affiliate-admin/dashboard/students', badge: null },
+    { id: 'my-students', label: 'My Students', icon: UserPlus, path: '/affiliate-admin/dashboard/my-students', badge: null },
     { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/affiliate-admin/dashboard/analytics', badge: null },
     { id: 'profile', label: 'Profile Settings', icon: Settings, path: '/affiliate-admin/dashboard/profile', badge: null }
   ];

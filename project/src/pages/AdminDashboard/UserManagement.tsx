@@ -40,7 +40,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
   onSuspend,
   onRefresh
 }) => {
-  const [activeTab, setActiveTab] = useState<'users' | 'applications' | 'feeManagement'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'applications' | 'feeManagement'>('applications');
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');

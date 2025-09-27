@@ -66,42 +66,202 @@ export const useStudentData = (userId?: string) => {
             console.log('🔍 SQL sellers function failed or returned no data, will use fallback');
           }
 
-          // Buscar dados reais dos estudantes usando função com dependentes
-          const { data: realStudentsData, error: realStudentsError } = await supabase
+          // Primeiro, buscar dados básicos com a função existente
+          const { data: basicStudentsData, error: basicStudentsError } = await supabase
             .rpc('get_admin_students_analytics_with_dependents', { admin_user_id: userId });
 
-          console.log('🔍 SQL students response:', { data: realStudentsData, error: realStudentsError });
+          // Depois, buscar dados detalhados das aplicações
+          const { data: detailedStudentsData, error: detailedStudentsError } = await supabase
+            .rpc('get_admin_students_with_applications', { admin_user_id: userId });
+
+          console.log('🔍 DETAILED STUDENTS RESPONSE:', { 
+            data: detailedStudentsData?.length || 0, 
+            error: detailedStudentsError?.message || 'No error',
+            hasData: !detailedStudentsError && detailedStudentsData && detailedStudentsData.length > 0
+          });
+
+          // Priorizar dados detalhados com múltiplas aplicações
+          let realStudentsData, realStudentsError;
+          
+          if (!detailedStudentsError && detailedStudentsData && detailedStudentsData.length > 0) {
+            realStudentsData = detailedStudentsData;
+            realStudentsError = detailedStudentsError;
+            console.log('🔍 ✅ USING DETAILED STUDENTS DATA - Multiple applications enabled!');
+          } else {
+            realStudentsData = basicStudentsData;
+            realStudentsError = basicStudentsError;
+            console.log('🔍 ⚠️ FALLBACK TO BASIC STUDENTS DATA - No multiple applications', detailedStudentsError?.message);
+          }
 
           if (!realStudentsError && realStudentsData && realStudentsData.length > 0) {
-            // Processar estudantes usando receita já calculada pela função RPC
-            const studentsWithRevenue = realStudentsData.map((student: any) => {
-              return {
-                id: student.student_id,
-                profile_id: student.profile_id,
-                user_id: student.student_id,
-                full_name: student.student_name,
-                email: student.student_email,
-                country: student.country,
-                referred_by_seller_id: student.referred_by_seller_id,
-                seller_name: student.seller_name,
-                seller_referral_code: student.seller_referral_code,
-                referral_code_used: student.referral_code_used,
-                total_paid: Number(student.total_paid) || 0, // Normalizar número
-                created_at: student.created_at,
-                status: student.status,
-                application_status: student.application_status,
-                scholarship_title: student.scholarship_title,
-                university_name: student.university_name,
-                university_id: student.university_id, // Adicionar university_id
-                // Flags de pagamento necessários para a visualização das taxas faltantes
-                has_paid_selection_process_fee: student.has_paid_selection_process_fee,
-                has_paid_i20_control_fee: student.has_paid_i20_control_fee,
-                is_scholarship_fee_paid: student.is_scholarship_fee_paid,
-                is_application_fee_paid: student.is_application_fee_paid
-              };
+            // Sempre tentar processar como dados com múltiplas aplicações primeiro
+            const hasApplicationData = realStudentsData.some((row: any) => row.application_id !== undefined);
+            
+            if (hasApplicationData) {
+              // Processar dados com múltiplas aplicações
+              console.log('🔍 PROCESSING MULTIPLE APPLICATIONS DATA');
+              const studentsMap = new Map();
+              
+              realStudentsData.forEach((row: any) => {
+              const studentId = row.student_id;
+              console.log('🔍 PROCESSING ROW FOR STUDENT:', studentId, {
+                student_name: row.student_name,
+                student_email: row.student_email,
+                user_id: row.user_id, // ✅ ADICIONADO: Log do user_id para debug
+                profile_id: row.profile_id, // ✅ ADICIONADO: Log do profile_id para debug
+                application_id: row.application_id,
+                scholarship_title: row.scholarship_title,
+                university_name: row.university_name
+              });
+              
+              if (!studentsMap.has(studentId)) {
+                // Primeiro registro deste estudante
+                studentsMap.set(studentId, {
+                  id: studentId,
+                  profile_id: row.profile_id,
+                  user_id: row.user_id,
+                  full_name: row.student_name,
+                  email: row.student_email,
+                  country: row.country,
+                  referred_by_seller_id: row.referred_by_seller_id,
+                  seller_name: row.seller_name,
+                  seller_referral_code: row.seller_referral_code,
+                  referral_code_used: row.referral_code_used,
+                  total_paid: Number(row.total_paid) || 0,
+                  created_at: row.created_at,
+                  status: row.status,
+                  has_paid_selection_process_fee: row.has_paid_selection_process_fee,
+                  has_paid_i20_control_fee: row.has_paid_i20_control_fee,
+                  // Dados da primeira aplicação (ou única)
+                  scholarship_title: row.scholarship_title,
+                  university_name: row.university_name,
+                  university_id: row.university_id,
+                  application_status: row.application_status,
+                  is_scholarship_fee_paid: row.is_scholarship_fee_paid,
+                  is_application_fee_paid: row.is_application_fee_paid,
+                  // Arrays para múltiplas aplicações
+                  allApplications: row.application_id ? [{
+                    id: row.application_id,
+                    application_id: row.application_id,
+                    scholarship_id: row.scholarship_id,
+                    scholarship_title: row.scholarship_title,
+                    university_name: row.university_name,
+                    university_id: row.university_id,
+                    is_application_fee_paid: row.is_application_fee_paid,
+                    is_scholarship_fee_paid: row.is_scholarship_fee_paid,
+                    application_status: row.application_status
+                  }] : [],
+                  hasMultipleApplications: false,
+                  applicationCount: row.application_id ? 1 : 0
+                });
+              } else {
+                // Estudante já existe, adicionar nova aplicação
+                const existingStudent = studentsMap.get(studentId);
+                
+                if (row.application_id) {
+                  existingStudent.allApplications.push({
+                    id: row.application_id,
+                    application_id: row.application_id,
+                    scholarship_id: row.scholarship_id,
+                    scholarship_title: row.scholarship_title,
+                    university_name: row.university_name,
+                    university_id: row.university_id,
+                    is_application_fee_paid: row.is_application_fee_paid,
+                    is_scholarship_fee_paid: row.is_scholarship_fee_paid,
+                    application_status: row.application_status
+                  });
+                  
+                  existingStudent.applicationCount = existingStudent.allApplications.length;
+                  existingStudent.hasMultipleApplications = existingStudent.applicationCount > 1;
+                  
+                  // Se tem múltiplas aplicações, mostrar "Multiple Universities" no título principal
+                  if (existingStudent.hasMultipleApplications) {
+                    existingStudent.university_name = 'Multiple Universities';
+                    existingStudent.scholarship_title = 'Multiple Scholarships';
+                  }
+                  
+                  // Atualizar flags de pagamento baseado em todas as aplicações
+                  const hasAnyScholarshipPaid = existingStudent.allApplications.some((app: any) => app.is_scholarship_fee_paid);
+                  const hasAnyApplicationPaid = existingStudent.allApplications.some((app: any) => app.is_application_fee_paid);
+                  
+                  existingStudent.is_scholarship_fee_paid = hasAnyScholarshipPaid;
+                  existingStudent.is_application_fee_paid = hasAnyApplicationPaid;
+                }
+              }
             });
             
-            processedStudents = studentsWithRevenue;
+              processedStudents = Array.from(studentsMap.values());
+              
+              // Aplicar filtro: Se o estudante pagou application fee, mostrar apenas essa aplicação
+              processedStudents = processedStudents.map((student: any) => {
+                if (student.allApplications && student.allApplications.length > 1) {
+                  // Verificar se há aplicação com application fee paga
+                  const paidApplication = student.allApplications.find((app: any) => app.is_application_fee_paid);
+                  
+                  if (paidApplication) {
+                    // Se encontrou aplicação paga, mostrar apenas ela
+                    return {
+                      ...student,
+                      // Atualizar dados principais com a aplicação paga
+                      scholarship_title: paidApplication.scholarship_title,
+                      university_name: paidApplication.university_name,
+                      university_id: paidApplication.university_id,
+                      application_status: paidApplication.application_status,
+                      is_scholarship_fee_paid: paidApplication.is_scholarship_fee_paid,
+                      is_application_fee_paid: paidApplication.is_application_fee_paid,
+                      // Manter apenas a aplicação paga
+                      allApplications: [paidApplication],
+                      hasMultipleApplications: false,
+                      applicationCount: 1
+                    };
+                  }
+                }
+                
+                // Se não há aplicação paga ou tem apenas uma, manter como está
+                return student;
+              });
+              
+              console.log('🔍 FINAL PROCESSED STUDENTS FROM MAP (after application fee filter):', processedStudents.length);
+              processedStudents.forEach((student: any) => {
+                console.log(`🔍 STUDENT ${student.email}:`, {
+                  hasMultipleApplications: student.hasMultipleApplications,
+                  applicationCount: student.applicationCount,
+                  allApplications: student.allApplications?.length || 0,
+                  university_name: student.university_name,
+                  has_paid_application_fee: student.is_application_fee_paid
+                });
+              });
+            } else {
+              // Processar dados básicos (sem múltiplas aplicações)
+              processedStudents = realStudentsData.map((student: any) => {
+                return {
+                  id: student.student_id,
+                  profile_id: student.profile_id,
+                  user_id: student.student_id,
+                  full_name: student.student_name,
+                  email: student.student_email,
+                  country: student.country,
+                  referred_by_seller_id: student.referred_by_seller_id,
+                  seller_name: student.seller_name,
+                  seller_referral_code: student.seller_referral_code,
+                  referral_code_used: student.referral_code_used,
+                  total_paid: Number(student.total_paid) || 0,
+                  created_at: student.created_at,
+                  status: student.status,
+                  application_status: student.application_status,
+                  scholarship_title: student.scholarship_title,
+                  university_name: student.university_name,
+                  university_id: student.university_id,
+                  has_paid_selection_process_fee: student.has_paid_selection_process_fee,
+                  has_paid_i20_control_fee: student.has_paid_i20_control_fee,
+                  is_scholarship_fee_paid: student.is_scholarship_fee_paid,
+                  is_application_fee_paid: student.is_application_fee_paid,
+                  hasMultipleApplications: false,
+                  applicationCount: 1,
+                  allApplications: []
+                };
+              });
+            }
             
             console.log('🔍 Processed students from SQL with real revenue:', processedStudents);
             console.log('🔍 SQL Students debug - referred_by_seller_id values:', processedStudents.map((s: any) => ({

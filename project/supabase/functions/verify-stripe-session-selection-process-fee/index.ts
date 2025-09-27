@@ -1,6 +1,7 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import Stripe from 'npm:stripe@17.7.0';
 import { createClient } from 'npm:@supabase/supabase-js@2.49.1';
+import jsPDF from 'npm:jspdf@2.5.1';
 const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
 const stripeSecret = Deno.env.get('STRIPE_SECRET_KEY');
 const stripe = new Stripe(stripeSecret, {
@@ -10,6 +11,216 @@ const stripe = new Stripe(stripeSecret, {
     version: '1.0.0'
   }
 });
+// Function to send term acceptance notification with PDF after successful payment
+async function sendTermAcceptanceNotificationAfterPayment(userId, feeType) {
+  try {
+    console.log('[NOTIFICAÇÃO] Buscando dados do usuário para notificação...');
+    // Get user profile data
+    const { data: userProfile, error: userError } = await supabase.from('user_profiles').select('email, full_name, country, seller_referral_code').eq('user_id', userId).single();
+    if (userError || !userProfile) {
+      console.error('[NOTIFICAÇÃO] Erro ao buscar perfil do usuário:', userError);
+      return;
+    }
+    // Get the most recent term acceptance for this user
+    const { data: termAcceptance, error: termError } = await supabase.from('comprehensive_term_acceptance').select('term_id, accepted_at, ip_address, user_agent').eq('user_id', userId).eq('term_type', 'checkout_terms').order('accepted_at', {
+      ascending: false
+    }).limit(1).single();
+    if (termError || !termAcceptance) {
+      console.error('[NOTIFICAÇÃO] Erro ao buscar aceitação de termos:', termError);
+      return;
+    }
+    // Get term content
+    const { data: termData, error: termDataError } = await supabase.from('application_terms').select('title, content').eq('id', termAcceptance.term_id).single();
+    if (termDataError || !termData) {
+      console.error('[NOTIFICAÇÃO] Erro ao buscar conteúdo do termo:', termDataError);
+      return;
+    }
+    // Get seller data if user has seller_referral_code
+    let sellerData = null;
+    if (userProfile.seller_referral_code) {
+      const { data: sellerResult } = await supabase.from('sellers').select('name, email, referral_code, user_id, affiliate_admin_id').eq('referral_code', userProfile.seller_referral_code).single();
+      if (sellerResult) {
+        sellerData = sellerResult;
+      }
+    }
+    // Get affiliate admin data if seller has affiliate_admin_id
+    let affiliateAdminData = null;
+    if (sellerData?.affiliate_admin_id) {
+      console.log('[NOTIFICAÇÃO] Buscando affiliate admin com ID:', sellerData.affiliate_admin_id);
+      // First get the affiliate admin to get the user_id
+      const { data: affiliateResult, error: affiliateError } = await supabase.from('affiliate_admins').select('user_id').eq('id', sellerData.affiliate_admin_id).single();
+      if (affiliateError) {
+        console.error('[NOTIFICAÇÃO] Erro ao buscar affiliate admin:', affiliateError);
+      } else if (affiliateResult?.user_id) {
+        // Then get the user profile data
+        const { data: userProfileResult, error: userProfileError } = await supabase.from('user_profiles').select('full_name, email').eq('user_id', affiliateResult.user_id).single();
+        if (userProfileError) {
+          console.error('[NOTIFICAÇÃO] Erro ao buscar user profile do affiliate admin:', userProfileError);
+        } else if (userProfileResult) {
+          affiliateAdminData = {
+            full_name: userProfileResult.full_name,
+            email: userProfileResult.email
+          };
+          console.log('[NOTIFICAÇÃO] Dados do affiliate admin carregados:', affiliateAdminData);
+        }
+      }
+    }
+    // Generate PDF for the term acceptance
+    let pdfBlob = null;
+    try {
+      console.log('[NOTIFICAÇÃO] Gerando PDF para notificação...');
+      // Create PDF document
+      const pdf = new jsPDF();
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const margin = 20;
+      let currentY = margin;
+      // Function to add wrapped text
+      const addWrappedText = (text, x, y, maxWidth, fontSize = 12)=>{
+        pdf.setFontSize(fontSize);
+        const lines = pdf.splitTextToSize(text, maxWidth);
+        for(let i = 0; i < lines.length; i++){
+          if (y > pdf.internal.pageSize.getHeight() - margin) {
+            pdf.addPage();
+            y = margin;
+          }
+          pdf.text(lines[i], x, y);
+          y += fontSize * 0.6;
+        }
+        return y;
+      };
+      // PDF Header
+      pdf.setFontSize(20);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('TERM ACCEPTANCE DOCUMENT', pageWidth / 2, currentY, {
+        align: 'center'
+      });
+      currentY += 15;
+      pdf.setFontSize(12);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text('MatriculaUSA - Academic Management System', pageWidth / 2, currentY, {
+        align: 'center'
+      });
+      currentY += 20;
+      // Separator line
+      pdf.setLineWidth(0.5);
+      pdf.line(margin, currentY, pageWidth - margin, currentY);
+      currentY += 10;
+      // Student Information
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('STUDENT INFORMATION', margin, currentY);
+      currentY += 12;
+      pdf.setFontSize(11);
+      pdf.setFont('helvetica', 'normal');
+      // Name
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Name:', margin, currentY);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(userProfile.full_name, margin + 30, currentY);
+      currentY += 8;
+      // Email
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Email:', margin, currentY);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(userProfile.email, margin + 30, currentY);
+      currentY += 8;
+      // Country
+      if (userProfile.country) {
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Country:', margin, currentY);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(userProfile.country, margin + 40, currentY);
+        currentY += 8;
+      }
+      currentY += 10;
+      // Term Information
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('TERM ACCEPTANCE DETAILS', margin, currentY);
+      currentY += 12;
+      pdf.setFontSize(11);
+      pdf.setFont('helvetica', 'normal');
+      // Term Title
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Term Title:', margin, currentY);
+      pdf.setFont('helvetica', 'normal');
+      currentY = addWrappedText(termData.title, margin + 50, currentY, pageWidth - margin - 50, 11);
+      currentY += 5;
+      // Acceptance Date
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Accepted At:', margin, currentY);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(new Date(termAcceptance.accepted_at).toLocaleString(), margin + 50, currentY);
+      currentY += 8;
+      // IP Address
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('IP Address:', margin, currentY);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(termAcceptance.ip_address || 'N/A', margin + 50, currentY);
+      currentY += 8;
+      // Generate PDF blob
+      const pdfArrayBuffer = pdf.output('arraybuffer');
+      pdfBlob = new Blob([
+        pdfArrayBuffer
+      ], {
+        type: 'application/pdf'
+      });
+      console.log('[NOTIFICAÇÃO] PDF gerado com sucesso!');
+    } catch (pdfError) {
+      console.error('[NOTIFICAÇÃO] Erro ao gerar PDF:', pdfError);
+      // Don't continue without PDF as it's required for this notification
+      throw new Error('Failed to generate PDF for term acceptance notification');
+    }
+    // Prepare notification payload
+    const webhookPayload = {
+      tipo_notf: "Student Term Acceptance",
+      email_admin: "admin@matriculausa.com",
+      nome_admin: "Admin MatriculaUSA",
+      email_aluno: userProfile.email,
+      nome_aluno: userProfile.full_name,
+      email_seller: sellerData?.email || "",
+      nome_seller: sellerData?.name || "N/A",
+      email_affiliate_admin: affiliateAdminData?.email || "",
+      nome_affiliate_admin: affiliateAdminData?.full_name || "N/A",
+      o_que_enviar: `Student ${userProfile.full_name} has accepted the Student Checkout Terms & Conditions and completed ${feeType} payment via Stripe. This shows the student is progressing through the enrollment process.`,
+      term_title: termData.title,
+      term_type: 'checkout_terms',
+      accepted_at: termAcceptance.accepted_at,
+      ip_address: termAcceptance.ip_address,
+      student_country: userProfile.country,
+      seller_id: sellerData?.user_id || "",
+      referral_code: sellerData?.referral_code || "",
+      affiliate_admin_id: sellerData?.affiliate_admin_id || ""
+    };
+    console.log('[NOTIFICAÇÃO] Enviando webhook com payload:', webhookPayload);
+    // Send webhook notification with PDF (always required for term acceptance)
+    if (!pdfBlob) {
+      throw new Error('PDF is required for term acceptance notification but was not generated');
+    }
+    const formData = new FormData();
+    // Add each field individually for n8n to process correctly
+    Object.entries(webhookPayload).forEach(([key, value])=>{
+      formData.append(key, value !== null && value !== undefined ? value.toString() : '');
+    });
+    // Add PDF with descriptive filename
+    const fileName = `term_acceptance_${userProfile.full_name.replace(/\s+/g, '_').toLowerCase()}_${new Date().toISOString().split('T')[0]}.pdf`;
+    formData.append('pdf', pdfBlob, fileName);
+    console.log('[NOTIFICAÇÃO] PDF anexado à notificação:', fileName);
+    const webhookResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+      method: 'POST',
+      body: formData
+    });
+    if (webhookResponse.ok) {
+      console.log('[NOTIFICAÇÃO] Notificação enviada com sucesso!');
+    } else {
+      const errorText = await webhookResponse.text();
+      console.warn('[NOTIFICAÇÃO] Erro ao enviar notificação:', webhookResponse.status, errorText);
+    }
+  } catch (error) {
+    console.error('[NOTIFICAÇÃO] Erro ao enviar notificação de aceitação de termos:', error);
+  // Don't throw error to avoid breaking the payment process
+  }
+}
 function corsResponse(body, status = 200) {
   const headers = {
     'Access-Control-Allow-Origin': '*',
@@ -133,6 +344,15 @@ Deno.serve(async (req)=>{
             message: 'Session verified and processed successfully.'
           }, 200);
         }
+        // Send term acceptance notification with PDF after successful payment
+        try {
+          console.log('[NOTIFICAÇÃO] Enviando notificação de aceitação de termos...');
+          await sendTermAcceptanceNotificationAfterPayment(userId, 'selection_process');
+          console.log('[NOTIFICAÇÃO] Notificação de aceitação de termos enviada com sucesso!');
+        } catch (notificationError) {
+          console.error('[NOTIFICAÇÃO] Erro ao enviar notificação de aceitação de termos:', notificationError);
+        // Continue with other notifications even if term acceptance fails
+        }
         // 1. NOTIFICAÇÃO PARA O ALUNO
         const alunoNotificationPayload = {
           tipo_notf: 'Pagamento de selection process confirmado',
@@ -204,7 +424,6 @@ Deno.serve(async (req)=>{
             // Buscar telefone do admin (usando email admin@matriculausa.com)
             const { data: adminProfile, error: adminProfileError } = await supabase.from('user_profiles').select('phone').eq('email', 'admin@matriculausa.com').single();
             const adminPhone = adminProfile?.phone || "";
-            
             const adminNotificationPayload = {
               tipo_notf: "Pagamento Stripe de selection process confirmado - Admin",
               email_admin: "admin@matriculausa.com",
@@ -242,7 +461,6 @@ Deno.serve(async (req)=>{
             // Buscar telefone do seller
             const { data: sellerProfile, error: sellerProfileError } = await supabase.from('user_profiles').select('phone').eq('user_id', sellerData.user_id).single();
             const sellerPhone = sellerProfile?.phone || "";
-            
             const sellerNotificationPayload = {
               tipo_notf: "Pagamento Stripe de selection process confirmado - Seller",
               email_seller: sellerData.email,

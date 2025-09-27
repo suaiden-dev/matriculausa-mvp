@@ -113,7 +113,6 @@ export const useI20DeadlineMonitor = ({
               });
 
             if (sellerError || !sellerData || sellerData.length === 0) {
-              console.warn(`⚠️ [I20_DEADLINE_MONITOR] Não foi possível encontrar seller para estudante ${student.student_id}`);
               continue;
             }
 
@@ -132,13 +131,11 @@ export const useI20DeadlineMonitor = ({
               seller.name || 'Unknown Seller'
             );
 
-            console.log(`✅ [I20_DEADLINE_MONITOR] Notificação criada para estudante ${student.user_profiles?.full_name} (${student.daysOverdue} dias em atraso)`);
           } catch (error) {
             console.error(`❌ [I20_DEADLINE_MONITOR] Erro ao processar estudante ${student.student_id}:`, error);
           }
         }
       } else {
-        console.log('✅ [I20_DEADLINE_MONITOR] Nenhum deadline expirado encontrado');
       }
 
     } catch (error) {

@@ -30,6 +30,8 @@ interface Student {
   fees_count?: number;
   scholarship_title?: string;
   university_name?: string;
+  // Campos específicos da aplicação (para múltiplas aplicações)
+  application_id?: string;
   // Flags de pagamento usados em MyStudents
   has_paid_selection_process_fee: boolean;
   has_paid_i20_control_fee: boolean;
@@ -207,7 +209,7 @@ const SellerDashboard: React.FC = () => {
           .in('id', profileIds),
         supabase
           .from('scholarship_applications')
-          .select('student_id, is_scholarship_fee_paid, is_application_fee_paid, acceptance_letter_sent_at, acceptance_letter_status')
+          .select('id, student_id, scholarship_id, is_scholarship_fee_paid, is_application_fee_paid, acceptance_letter_sent_at, acceptance_letter_status, scholarships(title, universities(name))')
           .in('student_id', profileIds)
       ]);
 
@@ -230,39 +232,59 @@ const SellerDashboard: React.FC = () => {
         });
       });
 
-      const profileIdToScholarshipFlags = new Map<string, any>();
-      (schAppsResp.data || []).forEach((row: any) => {
-        profileIdToScholarshipFlags.set(row.student_id, {
-          is_scholarship_fee_paid: !!row.is_scholarship_fee_paid,
-          is_application_fee_paid: !!row.is_application_fee_paid,
-          acceptance_letter_sent_at: row.acceptance_letter_sent_at || null,
-          acceptance_letter_status: row.acceptance_letter_status || null
-        });
-      });
-
-      // Mesclar dados corretos
-      const studentsData = baseStudents.map((s: any) => {
-        const profileFlags = profileIdToFlags.get(s.profile_id) || {};
-        const scholarshipFlags = profileIdToScholarshipFlags.get(s.profile_id) || {};
-        const result = {
-          ...s,
-          ...profileFlags,
-          ...scholarshipFlags,
-          scholarship_fee_paid_date: null // Não temos data de pagamento, apenas flags
-        };
+      // Agora criar uma entrada por aplicação em vez de por estudante
+      const studentsData: any[] = [];
+      const scholarshipApplications = schAppsResp.data || [];
+      
+      baseStudents.forEach((baseStudent: any) => {
+        const profileFlags = profileIdToFlags.get(baseStudent.profile_id) || {};
         
-        // Log específico para a Kiara
-        if (s.email === 'kiara4854@uorak.com') {
-          console.log('🔍 [SELLER] Kiara data merge:', {
-            original: s,
-            profileFlags,
-            scholarshipFlags,
-            final: result
+        // Buscar todas as aplicações deste estudante
+        const studentApplications = scholarshipApplications.filter((app: any) => app.student_id === baseStudent.profile_id);
+        
+        if (studentApplications.length === 0) {
+          // Se não tem aplicações, criar entrada padrão
+          studentsData.push({
+            ...baseStudent,
+            ...profileFlags,
+            application_id: `no-app-${baseStudent.profile_id}`,
+            is_scholarship_fee_paid: false,
+            is_application_fee_paid: false,
+            acceptance_letter_sent_at: null,
+            acceptance_letter_status: null,
+            scholarship_fee_paid_date: null
+          });
+        } else {
+          // Aplicar filtro baseado na application fee paga (mesmo comportamento do StudentDashboard)
+          const chosenPaidApp = studentApplications.find(
+            (app) => !!app.is_application_fee_paid || !!app.is_scholarship_fee_paid
+          );
+          const applicationsToShow = chosenPaidApp
+            ? studentApplications.filter((app) => app.id === chosenPaidApp.id)
+            : studentApplications;
+
+          // Criar uma entrada para cada aplicação (após filtro)
+          applicationsToShow.forEach((app: any) => {
+            studentsData.push({
+              ...baseStudent,
+              ...profileFlags,
+              application_id: app.id,
+              is_scholarship_fee_paid: !!app.is_scholarship_fee_paid,
+              is_application_fee_paid: !!app.is_application_fee_paid,
+              acceptance_letter_sent_at: app.acceptance_letter_sent_at || null,
+              acceptance_letter_status: app.acceptance_letter_status || null,
+              scholarship_fee_paid_date: null,
+              // Sobrescrever com dados específicos da aplicação se disponíveis
+              scholarship_title: app.scholarships?.title || baseStudent.scholarship_title,
+              university_name: app.scholarships?.universities?.name || baseStudent.university_name
+            });
           });
         }
-        
-        return result;
       });
+      
+      // Log específico para debug
+      console.log('🔍 [SELLER] Final students data with applications (filtered by paid fees):', studentsData);
+      console.log('ℹ️ [SELLER] Comportamento: Se estudante pagou application_fee ou scholarship_fee, mostra apenas essa aplicação. Senão, mostra todas as aplicações.');
 
       // Process seller data
       const processedSeller = {

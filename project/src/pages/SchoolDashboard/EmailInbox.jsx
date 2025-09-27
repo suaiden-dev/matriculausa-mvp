@@ -497,16 +497,19 @@ const EmailInbox = () => {
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
     
     if (diffDays === 0) {
-      return date.toLocaleTimeString('pt-BR', { 
+      return date.toLocaleTimeString('en-US', { 
         hour: '2-digit', 
-        minute: '2-digit' 
+        minute: '2-digit',
+        timeZone: 'America/New_York'
       });
     } else if (diffDays === 1) {
-      return 'Ontem';
+      return 'Yesterday';
     } else if (diffDays < 7) {
-      return `${diffDays} dias atrás`;
+      return `${diffDays} days ago`;
     } else {
-      return date.toLocaleDateString('pt-BR');
+      return date.toLocaleDateString('en-US', {
+        timeZone: 'America/New_York'
+      });
     }
   };
 
@@ -977,12 +980,13 @@ const EmailInbox = () => {
                   </div>
                   
                   <span className="text-sm text-gray-500 flex-shrink-0 ml-4">
-                    {new Date(selectedEmail.received_date).toLocaleDateString('pt-BR', {
+                    {new Date(selectedEmail.received_date).toLocaleDateString('en-US', {
                       day: 'numeric',
                       month: 'long',
                       year: 'numeric',
                       hour: '2-digit',
-                      minute: '2-digit'
+                      minute: '2-digit',
+                      timeZone: 'America/New_York'
                     })}
                   </span>
                 </div>
@@ -1251,11 +1255,12 @@ const EmailInbox = () => {
                       </div>
                       
                       <span className="text-xs text-gray-500 flex-shrink-0 ml-4">
-                        {new Date(selectedEmail.received_date).toLocaleDateString('pt-BR', {
+                        {new Date(selectedEmail.received_date).toLocaleDateString('en-US', {
                           day: 'numeric',
                           month: 'short',
                           hour: '2-digit',
-                          minute: '2-digit'
+                          minute: '2-digit',
+                          timeZone: 'America/New_York'
                         })}
                       </span>
                     </div>

@@ -28,6 +28,8 @@ export interface StudentInfo {
   application_status: string;
   documents: any[];
   dependents?: number;
+  selection_process_fee_amount?: number; // ✅ Adicionar campo para valor da taxa de seleção
+  acceptance_letter_sent_at?: string | null; // ✅ Adicionar campo faltante
   scholarship?: {
     application_fee_amount: number;
     scholarship_fee_amount: number;
@@ -85,6 +87,8 @@ export interface Seller {
 // Tipos para estudantes
 export interface Student {
   id: string;
+  profile_id?: string;
+  user_id?: string;
   full_name: string;
   email: string;
   phone: string;
@@ -101,6 +105,7 @@ export interface Student {
   fees_count: number;
   scholarship_title: string;
   university_name: string;
+  university_id?: string;
   selected_scholarship_id: string | null;
   documents_status: string;
   is_application_fee_paid: boolean;
@@ -114,6 +119,17 @@ export interface Student {
     application_fee_amount: number;
     scholarship_fee_amount: number;
   };
+  // Campos para múltiplas aplicações
+  hasMultipleApplications?: boolean;
+  applicationCount?: number;
+  allApplications?: any[];
+  // Campos adicionais do affiliate
+  referred_by_seller_id?: string;
+  referral_code_used?: string;
+  total_paid?: number;
+  total_paid_adjusted?: number;
+  created_at?: string;
+  status?: string;
 }
 
 // Tipos para universidades

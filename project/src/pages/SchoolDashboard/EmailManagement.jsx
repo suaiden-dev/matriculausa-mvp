@@ -733,11 +733,14 @@ const EmailManagement = () => {
                   <div className="flex items-center">
                     <div className="flex gap-2">
                       {/* Gmail Account */}
+                      {/* Gmail Account */}
                       <button
                         onClick={() => navigate('/school/dashboard/email/config?provider=gmail')}
                         className="bg-gradient-to-r from-red-500 to-red-600 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-xl hover:from-red-600 hover:to-red-700 transition-all duration-300 font-bold flex items-center shadow-lg hover:shadow-xl transform hover:scale-105 text-sm sm:text-base"
                       >
                         <EnvelopeIcon className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2" />
+                        <span className="hidden sm:inline">Gmail</span>
+                        <span className="sm:hidden">Gmail</span>
                         <span className="hidden sm:inline">Gmail</span>
                         <span className="sm:hidden">Gmail</span>
                       </button>
@@ -811,11 +814,13 @@ const EmailManagement = () => {
               
               <div className="flex gap-3 justify-center">
                 {/* Gmail Account */}
+                {/* Gmail Account */}
                 <button
                   onClick={() => navigate('/school/dashboard/email/config?provider=gmail')}
                   className="bg-gradient-to-r from-red-500 to-red-600 text-white px-6 py-3 rounded-xl hover:from-red-600 hover:to-red-700 transition-all duration-300 font-bold flex items-center space-x-2 shadow-lg hover:shadow-xl transform hover:scale-105"
                 >
                   <EnvelopeIcon className="h-5 w-5" />
+                  <span>Gmail</span>
                   <span>Gmail</span>
                 </button>
                 
@@ -830,6 +835,7 @@ const EmailManagement = () => {
                       <path fill="currentColor" d="M11.4 24H0V12.6h11.4V24zM24 24H12.6V12.6H24V24zM11.4 11.4H0V0h11.4v11.4zM24 11.4H12.6V0H24v11.4z"/>
                     </svg>
                   </div>
+                  <span>Microsoft</span>
                   <span>Microsoft</span>
                 </button>
               </div>
@@ -887,6 +893,7 @@ const EmailManagement = () => {
                               title="Open inbox"
                             >
                               Inbox
+                              Inbox
                             </button>
                             
                             <button
@@ -904,6 +911,7 @@ const EmailManagement = () => {
                               className="text-sm font-medium py-1 px-2 rounded transition-colors text-blue-600 hover:text-blue-800 hover:bg-blue-50"
                               title="Open inbox"
                             >
+                              Inbox
                               Inbox
                             </button>
                             
