@@ -30,6 +30,7 @@ import { StarIcon as StarSolidIcon } from '@heroicons/react/24/solid';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { supabase } from '../../lib/supabase';
+import EmailAgentManagement from './EmailAgentManagement';
 
 const EmailInbox = () => {
   const [searchParams] = useSearchParams();
@@ -53,6 +54,9 @@ const EmailInbox = () => {
   const [hasMoreEmails, setHasMoreEmails] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showKnowledgeBase, setShowKnowledgeBase] = useState(false);
+  const [existingAgent, setExistingAgent] = useState(null);
+  const [loadingAgent, setLoadingAgent] = useState(false);
   
   // Modal states
   const [showModal, setShowModal] = useState(false);
@@ -82,6 +86,33 @@ const EmailInbox = () => {
       return () => clearTimeout(timeoutId);
     }
   }, [selectedConfig, filter, activeTab]);
+
+  // Carregar agente existente para a configuração selecionada (apenas um por configuração)
+  useEffect(() => {
+    const fetchAgent = async () => {
+      if (!selectedConfig) {
+        setExistingAgent(null);
+        return;
+      }
+      try {
+        setLoadingAgent(true);
+        const { data, error } = await supabase
+          .from('ai_email_agents')
+          .select('id, ai_name, is_active, personality, agent_type, updated_at')
+          .eq('email_configuration_id', selectedConfig)
+          .order('created_at', { ascending: false })
+          .limit(1);
+        if (error) throw error;
+        setExistingAgent(data && data.length > 0 ? data[0] : null);
+      } catch (err) {
+        console.error('Erro ao buscar agente existente:', err);
+        setExistingAgent(null);
+      } finally {
+        setLoadingAgent(false);
+      }
+    };
+    fetchAgent();
+  }, [selectedConfig]);
 
   // Separar useEffect para page para evitar loops
   useEffect(() => {
@@ -798,6 +829,39 @@ const EmailInbox = () => {
             </button>
           </div>
 
+          {/* AI Agent Area: mostra o agente se existir; caso contrário, botão de criação */}
+          <div className="px-4 pb-3">
+            {selectedConfig && (existingAgent ? (
+              <div className="w-full border border-green-200 bg-green-50 text-green-900 px-4 py-3 rounded-lg flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-sm font-semibold truncate">{existingAgent.ai_name}</div>
+                  <div className="text-xs opacity-80 truncate">
+                    {existingAgent.agent_type || 'Agent'} • {existingAgent.personality || 'Personality'}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${existingAgent.is_active ? 'bg-green-600 text-white' : 'bg-gray-400 text-white'}`}>
+                    {existingAgent.is_active ? 'Active' : 'Inactive'}
+                  </span>
+                  <button
+                    onClick={() => setShowKnowledgeBase(true)}
+                    className="text-xs bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-md transition-colors"
+                  >
+                    Manage
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowKnowledgeBase(true)}
+                disabled={!selectedConfig || loadingAgent}
+                className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-4 py-2 rounded-full font-medium flex items-center justify-center gap-2 transition-colors shadow-sm"
+              >
+                <span>{loadingAgent ? 'Checking agent...' : 'Create AI Agent'}</span>
+              </button>
+            ))}
+          </div>
+
           {/* Account Selector */}
           <div className="px-4 mb-4">
             <select
@@ -1380,6 +1444,28 @@ const EmailInbox = () => {
                   {modalConfig.confirmText}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* AI Agent Creation Modal */}
+      {showKnowledgeBase && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden relative">
+            <button
+              onClick={() => setShowKnowledgeBase(false)}
+              className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 transition-colors rounded-lg hover:bg-gray-100"
+              title="Close modal"
+            >
+              <XMarkIcon className="h-5 w-5" />
+            </button>
+            <div className="p-6 overflow-y-auto max-h-[90vh]">
+              <EmailAgentManagement
+                activeEmailConfig={selectedConfig ? {
+                  id: selectedConfig,
+                  email_address: (configurations.find(c => c.id === selectedConfig) || {}).email_address
+                } : undefined}
+              />
             </div>
           </div>
         </div>
