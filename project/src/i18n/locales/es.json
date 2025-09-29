@@ -166,13 +166,15 @@
       "analyzing": "Analizando tu recibo de pago...",
       "approved": "¡Pago aprobado! 🎉",
       "rejected": "Pago rechazado ❌",
-      "error": "Error al verificar el pago"
+      "error": "Error al verificar el pago",
+      "under_review": "Procesando Pago"
     },
     "details": {
       "analyzing": "Nuestro equipo está verificando tu recibo. Esto puede tomar unos minutos.",
       "approved": "Tu pago ha sido verificado y aprobado exitosamente.",
       "rejected": "Tu recibo no fue aprobado. Verifica que toda la información sea visible.",
-      "error": "Ocurrió un error al verificar tu pago. Inténtalo de nuevo."
+      "error": "Ocurrió un error al verificar tu pago. Inténtalo de nuevo.",
+      "under_review": "Tu comprobante de pago requiere verificación adicional. Nuestro equipo lo revisará dentro de 24 horas."
     },
     "actions": {
       "tryAgain": "Intentar de Nuevo",
@@ -1486,6 +1488,7 @@
       "allFields": "Todos los Campos", 
       "allModes": "Todos los Modos",
       "allPermissions": "Todos los Permisos",
+      "allUniversities": "Todas las Universidades",
       "minValue": "Valor mínimo",
       "maxValue": "Valor máximo",
       "deadline": "Fecha límite (días)",

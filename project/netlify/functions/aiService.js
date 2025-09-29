@@ -166,7 +166,7 @@ export class AIService {
 }
 
 class GeminiService {
-  constructor(apiKey, model = 'gemini-1.5-flash') {
+  constructor(apiKey, model = 'gemini-2.0-flash-exp') {
     this.name = 'Google Gemini';
     this.apiKey = apiKey;
     this.model = model;

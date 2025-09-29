@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   Award, 
@@ -46,6 +46,7 @@ const Overview: React.FC<OverviewProps> = ({
   const { activeDiscount } = useReferralCode();
   const { getFeeAmount, userFeeOverrides } = useFeeConfig(user?.id);
   const [visibleApplications, setVisibleApplications] = useState(5); // Mostrar 5 inicialmente
+  const [feesLoading, setFeesLoading] = useState(true);
   
   const hasMoreApplications = recentApplications.length > visibleApplications;
   const displayedApplications = recentApplications.slice(0, visibleApplications);
@@ -53,6 +54,24 @@ const Overview: React.FC<OverviewProps> = ({
   const handleLoadMore = () => {
     setVisibleApplications(prev => Math.min(prev + 5, recentApplications.length));
   };
+
+  // Exibir skeleton até os dados de perfil e taxas estarem prontos para evitar flicker
+  useEffect(() => {
+    // Considera carregado quando perfil está resolvido (mesmo que null) e já tivemos uma avaliação inicial das taxas
+    // Também adiciona um pequeno debounce para permitir cálculos de overrides/discounts estabilizarem
+    const debounce = setTimeout(() => {
+      const selection = Number(getFeeAmount('selection_process')) || 0;
+      const scholarship = Number(getFeeAmount('scholarship_fee')) || 0;
+      const i20 = Number(getFeeAmount('i20_control_fee')) || 0;
+      const hasProfileResolved = user !== undefined; // quando hook de auth já rodou
+      const someFeeKnown = selection > 0 || scholarship > 0 || i20 > 0;
+      if (hasProfileResolved && someFeeKnown) {
+        setFeesLoading(false);
+      }
+    }, 250);
+
+    return () => clearTimeout(debounce);
+  }, [user, userProfile, userFeeOverrides, getFeeAmount]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -317,7 +336,9 @@ const Overview: React.FC<OverviewProps> = ({
                   </div>
                 </div>
                 <div className="text-left sm:text-right">
-                  {activeDiscount?.has_discount ? (
+                  {feesLoading ? (
+                    <div className="inline-block w-24 h-6 bg-white/30 rounded animate-pulse" />
+                  ) : activeDiscount?.has_discount ? (
                     <div className="flex flex-col sm:text-center">
                       <div className="text-lg sm:text-xl md:text-2xl font-bold text-white line-through">${selectionWithDependents}</div>
                       <div className="text-base sm:text-lg md:text-xl font-bold text-green-300">
@@ -331,7 +352,7 @@ const Overview: React.FC<OverviewProps> = ({
                       </div>
                     </div>
                   ) : (
-                  <div className="text-lg sm:text-xl md:text-2xl font-bold text-white">${selectionWithDependents}</div>
+                    <div className="text-lg sm:text-xl md:text-2xl font-bold text-white">${selectionWithDependents}</div>
                   )}
                 </div>
               </div>

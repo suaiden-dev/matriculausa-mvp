@@ -17,7 +17,7 @@ class GeminiService implements AIProvider {
   private apiKey: string;
   private model: string;
 
-  constructor(apiKey: string, model: string = 'gemini-1.5-flash') {
+  constructor(apiKey: string, model: string = 'gemini-2.0-flash-exp') {
     this.apiKey = apiKey;
     this.model = model;
   }

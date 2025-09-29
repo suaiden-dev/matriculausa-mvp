@@ -397,7 +397,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
     if (showVerificationModal || showStudentVerificationNotice) {
       const timer = setTimeout(() => {
         navigate('/login');
-      }, 3000); // 3 seconds
+      }, 9000); // 8 seconds
       return () => clearTimeout(timer);
     }
   }, [showVerificationModal, showStudentVerificationNotice, navigate]);
