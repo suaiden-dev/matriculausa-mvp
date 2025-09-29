@@ -166,13 +166,15 @@
       "analyzing": "Analisando seu comprovante de pagamento...",
       "approved": "Pagamento aprovado! 🎉",
       "rejected": "Pagamento rejeitado ❌",
-      "error": "Erro ao verificar pagamento"
+      "error": "Erro ao verificar pagamento",
+      "under_review": "Processando Pagamento"
     },
     "details": {
       "analyzing": "Nossa equipe está verificando seu comprovante. Isso pode levar alguns minutos.",
       "approved": "Seu pagamento foi verificado e aprovado com sucesso.",
       "rejected": "Seu comprovante não foi aprovado. Verifique se todas as informações estão visíveis.",
-      "error": "Ocorreu um erro ao verificar seu pagamento. Tente novamente."
+      "error": "Ocorreu um erro ao verificar seu pagamento. Tente novamente.",
+      "under_review": "Seu comprovante requer verificação adicional. Nossa equipe o revisará em até 24 horas."
     },
     "actions": {
       "tryAgain": "Tentar Novamente",
