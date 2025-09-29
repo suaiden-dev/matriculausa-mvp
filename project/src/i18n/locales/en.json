@@ -166,13 +166,15 @@
       "analyzing": "Analyzing your payment receipt...",
       "approved": "Payment approved! 🎉",
       "rejected": "Payment rejected ❌",
-      "error": "Error verifying payment"
+      "error": "Error verifying payment",
+      "under_review": "Processing Payment"
     },
     "details": {
       "analyzing": "Our team is verifying your receipt. This may take a few minutes.",
       "approved": "Your payment has been verified and approved successfully.",
       "rejected": "Your receipt was not approved. Please check that all information is visible.",
-      "error": "An error occurred while verifying your payment. Please try again."
+      "error": "An error occurred while verifying your payment. Please try again.",
+      "under_review": "Your payment proof requires additional verification. Our team will review it within 24 hours."
     },
     "actions": {
       "tryAgain": "Try Again",

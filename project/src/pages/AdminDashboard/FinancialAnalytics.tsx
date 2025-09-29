@@ -34,6 +34,15 @@ const formatUSD = (v: number) => v.toLocaleString(undefined, { minimumFractionDi
 // Utilitário para formatar valores em centavos para dólares
 const formatCentsToUSD = (cents: number) => formatUSD(Number(formatCentsToDollars(cents)));
 
+// Normaliza valores que podem vir em dólares ou centavos para centavos
+// Regras: se o número for grande (>= 10_000), consideramos que já está em centavos.
+// Caso contrário, tratamos como dólares e convertemos para centavos.
+const toCents = (value: number | null | undefined): number => {
+  const n = Number(value);
+  if (!isFinite(n) || isNaN(n)) return 0;
+  return n >= 10000 ? Math.round(n) : Math.round(n * 100);
+};
+
 interface FinancialMetrics {
   totalRevenue: number;
   monthlyRevenue: number;
@@ -128,9 +137,15 @@ const FinancialAnalytics: React.FC = () => {
           <XAxis dataKey="date" tick={{ fontSize: 12 }} />
           <YAxis yAxisId="left" tickFormatter={(v) => `$${formatCentsToUSD(Number(v))}`} tick={{ fontSize: 12 }} />
           <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12 }} />
-          <Tooltip formatter={(value: any, name: string) => {
+          <Tooltip formatter={(value: any, _name: string, props: any) => {
             const num = Number(value);
-            if (name === 'revenue') return `$${formatCentsToUSD(num)}`;
+            const key = props?.dataKey;
+            if (key === 'revenue') {
+              return `$${formatCentsToUSD(num)}`;
+            }
+            if (key === 'payments') {
+              return `${Math.round(num)}`;
+            }
             return formatUSD(num);
           }} />
           <Legend />
@@ -455,7 +470,7 @@ const FinancialAnalytics: React.FC = () => {
       // Obter valores dinâmicos do pacote ou usar valores padrão (igual ao PaymentManagement)
       const packageData = packageDataMap[student?.scholarship_package_id];
       const dependents = Number(student?.dependents) || 0;
-      const dependentCost = dependents * 150; // $150 por dependente apenas para Selection Process (em centavos)
+      const dependentCostDollars = dependents * 150; // $150 por dependente somente Selection Process (em dólares)
       
       // Buscar override do usuário
       const userOverrides = overridesMap[student?.user_id] || {};
@@ -463,32 +478,32 @@ const FinancialAnalytics: React.FC = () => {
       // Selection Process Fee - prioridade: override > pacote > padrão
       let selectionProcessFee: number;
       if (userOverrides.selection_process_fee !== undefined) {
-        // Se há override, usar exatamente o valor do override (já inclui dependentes se necessário)
-        selectionProcessFee = Math.round(userOverrides.selection_process_fee * 100);
-      } else if (packageData?.selection_process_fee) {
-        selectionProcessFee = Math.round((packageData.selection_process_fee + dependentCost) * 100);
+        // Se há override, usar exatamente o valor do override (pode já incluir dependentes)
+        selectionProcessFee = toCents(userOverrides.selection_process_fee);
+      } else if (packageData?.selection_process_fee != null) {
+        selectionProcessFee = toCents((packageData.selection_process_fee || 0) + dependentCostDollars);
       } else {
-        selectionProcessFee = Math.round((feeConfig.selection_process_fee + dependentCost) * 100);
+        selectionProcessFee = toCents((feeConfig.selection_process_fee || 0) + dependentCostDollars);
       }
       
       // I-20 Control Fee - prioridade: override > pacote > padrão (sem dependentes)
       let i20ControlFee: number;
       if (userOverrides.i20_control_fee !== undefined) {
-        i20ControlFee = Math.round(userOverrides.i20_control_fee * 100);
-      } else if (packageData?.i20_control_fee) {
-        i20ControlFee = Math.round(packageData.i20_control_fee * 100);
+        i20ControlFee = toCents(userOverrides.i20_control_fee);
+      } else if (packageData?.i20_control_fee != null) {
+        i20ControlFee = toCents(packageData.i20_control_fee);
       } else {
-        i20ControlFee = Math.round(feeConfig.i20_control_fee * 100);
+        i20ControlFee = toCents(feeConfig.i20_control_fee);
       }
       
       // Scholarship Fee - prioridade: override > pacote > padrão (sem dependentes)
       let scholarshipFee: number;
       if (userOverrides.scholarship_fee !== undefined) {
-        scholarshipFee = Math.round(userOverrides.scholarship_fee * 100);
-      } else if (packageData?.scholarship_fee) {
-        scholarshipFee = Math.round(packageData.scholarship_fee * 100);
+        scholarshipFee = toCents(userOverrides.scholarship_fee);
+      } else if (packageData?.scholarship_fee != null) {
+        scholarshipFee = toCents(packageData.scholarship_fee);
       } else {
-        scholarshipFee = Math.round(feeConfig.scholarship_fee_default * 100);
+        scholarshipFee = toCents(feeConfig.scholarship_fee_default);
       }
       // Application Fee dinâmico baseado na bolsa específica
       let applicationFee: number;
@@ -504,7 +519,7 @@ const FinancialAnalytics: React.FC = () => {
         }
       } else {
         // Fallback para valor padrão do sistema (converter dólares para centavos)
-        applicationFee = Math.round(feeConfig.application_fee_default * 100);
+        applicationFee = toCents(feeConfig.application_fee_default);
       }
 
       // Contar apenas os pagamentos reais (não incrementar totalPayments aqui)
@@ -687,14 +702,14 @@ const FinancialAnalytics: React.FC = () => {
 
       // Obter valores dinâmicos do pacote ou usar valores padrão (igual ao PaymentManagement)
       const dependents = Number(student?.dependents) || 0;
-      const dependentCost = dependents * 75; // $75 por dependente para cada taxa (em centavos)
+      const dependentCostDollars2 = dependents * 75; // $75 por dependente (dólares) usado em algumas taxas
       
-      const selectionProcessFee = packageData?.selection_process_fee ? 
-        Math.round((packageData.selection_process_fee + dependentCost) * 100) : Math.round((feeConfig.selection_process_fee + dependentCost) * 100);
-      const i20ControlFee = packageData?.i20_control_fee ? 
-        Math.round((packageData.i20_control_fee + dependentCost) * 100) : Math.round((feeConfig.i20_control_fee + dependentCost) * 100);
-      const scholarshipFee = packageData?.scholarship_fee ? 
-        Math.round(packageData.scholarship_fee * 100) : Math.round(feeConfig.scholarship_fee_default * 100); // Scholarship fee não tem dependentes
+      const selectionProcessFee = packageData?.selection_process_fee != null ? 
+        toCents((packageData.selection_process_fee || 0) + dependentCostDollars2) : toCents((feeConfig.selection_process_fee || 0) + dependentCostDollars2);
+      const i20ControlFee = packageData?.i20_control_fee != null ? 
+        toCents(packageData.i20_control_fee) : toCents(feeConfig.i20_control_fee);
+      const scholarshipFee = packageData?.scholarship_fee != null ? 
+        toCents(packageData.scholarship_fee) : toCents(feeConfig.scholarship_fee_default); // Scholarship fee não tem dependentes
       // Application Fee dinâmico baseado na bolsa específica
       let applicationFee: number;
       if (app.scholarships?.application_fee_amount) {
@@ -709,7 +724,7 @@ const FinancialAnalytics: React.FC = () => {
         }
       } else {
         // Fallback para valor padrão do sistema (converter dólares para centavos)
-        applicationFee = Math.round(feeConfig.application_fee_default * 100);
+        applicationFee = toCents(feeConfig.application_fee_default);
       }
 
       // Selection Process Fee (valor dinâmico em centavos)
