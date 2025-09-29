@@ -127,6 +127,13 @@ const Header: React.FC = () => {
               Universities
               <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-[#05294E] group-hover:w-full transition-all duration-300"></span>
             </Link>
+            <Link 
+              to="/eb3-jobs" 
+              className="text-slate-700 hover:text-[#05294E] transition-colors font-medium relative group"
+            >
+              EB-3 Jobs
+              <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-[#05294E] group-hover:w-full transition-all duration-300"></span>
+            </Link>
             <Link to="/scholarships" className="text-slate-700 hover:text-[#05294E] transition-colors font-medium relative group flex items-center">
               {t('nav.scholarships')}
               <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-[#05294E] group-hover:w-full transition-all duration-300"></span>
@@ -251,6 +258,13 @@ const Header: React.FC = () => {
               onClick={() => setIsMenuOpen(false)}
             >
               Universities
+            </Link>
+            <Link 
+              to="/eb3-jobs" 
+              className="block px-4 py-3 text-slate-700 hover:bg-[#05294E]/5 rounded-xl font-medium transition-all duration-200" 
+              onClick={() => setIsMenuOpen(false)}
+            >
+              EB-3 Jobs
             </Link>
             <Link to="/scholarships" className="px-4 py-3 text-slate-700 hover:bg-[#05294E]/5 rounded-xl font-medium transition-all duration-200 flex items-center" onClick={() => setIsMenuOpen(false)}>
               {t('nav.scholarships')}

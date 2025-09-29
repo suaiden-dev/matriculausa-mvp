@@ -2869,5 +2869,236 @@
       "errorMessage": "There was a problem verifying your payment. Please contact support.",
       "errorDetails": "Error details:"
     }
+  },
+"eb3Jobs": {
+  "hero": {
+    "badge": "EB-3 Employment Opportunities",
+    "title": "Work and Live <span class=\"text-[#05294E]\">Legally</span> in the USA",
+    "subtitle": "Multiple employment opportunities in essential industries in the USA through the <strong>EB-3</strong> program, which offers <strong>permanent residence (Green Card)</strong> for you and your family.",
+    "importantInfo": {
+      "title": "Important Information",
+      "items": [
+        "• These positions are <strong>not guaranteed</strong> and placement is only confirmed after we are hired",
+        "• Positions fill up quickly",
+        "• All listed salaries are the <strong>minimum values established by PWD</strong>"
+      ]
+    },
+    "applyNow": "Apply Now",
+    "learnMore": "Learn More"
+  },
+  "whatIsEb3": {
+    "badge": "What is EB-3?",
+    "title": "Permanent Residence through <span class=\"text-[#05294E]\">Work</span>",
+    "benefits": [
+      {
+        "title": "Permanent Green Card",
+        "description": "Permanent residence for you and your family through qualified employment."
+      },
+      {
+        "title": "Competitive Salaries",
+        "description": "Stable and competitive compensation in essential USA industries."
+      },
+      {
+        "title": "Nationwide",
+        "description": "Opportunities available in multiple states across the United States."
+      }
+    ],
+    "greenCardApproved": "Green Card Approved",
+    "permanentResidence": "Permanent Residence"
+  },
+  "jobs": {
+    "badge": "Available Jobs",
+    "title": "List of <span class=\"text-[#05294E]\">Opportunities</span>",
+    "lastUpdated": "Last updated: September 8, 2025",
+    "filters": {
+      "allJobs": "All Jobs",
+      "healthcare": "Healthcare",
+      "hospitality": "Hospitality",
+      "logistics": "Logistics",
+      "location": "Location:",
+      "allLocations": "All Locations",
+      "searchPlaceholder": "Search jobs..."
+    },
+    "jobCard": {
+      "moreDetails": "More Details",
+      "lessDetails": "Less Details",
+      "apply": "Apply",
+      "description": "Description:",
+      "requirements": "Requirements:"
+    },
+    "noJobsFound": {
+      "title": "No jobs found",
+      "description": "Try adjusting the filters or search term."
+    }
+  },
+  "benefits": {
+    "badge": "EB-3 Program Benefits",
+    "title": "Why choose <span class=\"text-[#05294E]\">EB-3</span>?",
+    "items": [
+      {
+        "title": "Permanent Residence",
+        "description": "Green Card for you and your family"
+      },
+      {
+        "title": "Stable Salaries",
+        "description": "Competitive and stable compensation"
+      },
+      {
+        "title": "Multiple States",
+        "description": "Opportunities across the country"
+      },
+      {
+        "title": "Professional Growth",
+        "description": "Stability and career growth"
+      }
+    ]
+  },
+  "howItWorks": {
+    "title": "How It <span class=\"text-[#05294E]\">Works</span>",
+    "subtitle": "Simple and transparent process for your journey to the Green Card",
+    "steps": [
+      {
+        "title": "Application",
+        "description": "Fill out the form and our team will contact you to review your profile"
+      },
+      {
+        "title": "Selection",
+        "description": "We evaluate your qualifications and connect you with the best opportunities"
+      },
+      {
+        "title": "Process",
+        "description": "We will guide you through the entire Green Card acquisition process"
+      }
+    ]
+  },
+  "offer": {
+    "title": "DON'T WAIT ANY LONGER FOR YOUR FUTURE",
+    "subtitle": "Fulfill Your Dream of Working in the USA!",
+    "card": {
+      "title": "EB3 Jobs Pre-Application",
+      "features": [
+        "Profile Analysis",
+        "Expert Consultation",
+        "Strategy Development",
+        "Guarantee"
+      ],
+      "pricing": {
+        "originalPrice": "FROM $ 1297.00",
+        "currentPrice": "$ 477.00",
+        "guarantee": "Guaranteed Refund in Case of Inelegibility"
+      },
+      "signUpNow": "Sign Up Now!",
+      "security": {
+        "secureCheckout": "Secure Checkout",
+        "satisfactionGuaranteed": "Satisfaction Guaranteed",
+        "protectedPrivacy": "Protected Privacy"
+      },
+      "paymentMethods": "Payment Methods:",
+      "methods": ["PIX", "VISA", "Mastercard", "PayPal", "Hipercard", "Bank Slip"]
+    },
+    "guarantee": {
+      "title": "Guarantee and Security",
+      "description": "If, after this evaluation, it is determined that you do not meet the necessary criteria for the EB-3 visa application, we guarantee a full refund of the amount invested in the pre-application process. This means you can proceed knowing that your investment is protected."
+    }
+  },
+  "faq": {
+    "badge": "Frequently Asked Questions",
+    "title": "Questions about <span class=\"text-[#05294E]\">EB-3</span>?",
+    "subtitle": "Find answers to the main questions about the Green Card acquisition process through the EB-3 program",
+    "questions": [
+      {
+        "question": "What is the EB-3 visa and how does it work?",
+        "answer": "The EB-3 is an employment-based immigration visa category that allows skilled workers, professionals, and unskilled workers to obtain permanent residence (Green Card) in the United States. The process involves a permanent job offer from an American employer and proof that there are no qualified American workers available for the position."
+      },
+      {
+        "question": "What are the requirements to qualify for EB-3?",
+        "answer": "Requirements vary by subcategory: 1) Skilled workers: Require at least 2 years of experience or training; 2) Professionals: Need a bachelor's degree or equivalent; 3) Unskilled workers: May have less than 2 years of experience. All must have a permanent job offer from an American employer."
+      },
+      {
+        "question": "How long does the EB-3 process take?",
+        "answer": "The total time varies from 2 to 4 years, depending on the country of origin and visa availability. The process includes: 1) Labor Certification (6-12 months); 2) I-140 Petition (6-12 months); 3) Status adjustment or consular process (6-18 months). Brazilians generally have shorter wait times compared to other countries."
+      },
+      {
+        "question": "Can I include my family in the EB-3 process?",
+        "answer": "Yes! The EB-3 allows you to include your spouse and unmarried children under 21 years old in the process. Everyone will receive Green Cards and have the same permanent residence rights, including permission to work and study in the United States."
+      },
+      {
+        "question": "What is the total cost of the EB-3 process?",
+        "answer": "Costs include: government fees (approximately $2,000-3,000), legal fees ($5,000-15,000), translations and documentation ($500-1,500), medical exams ($200-500), and travel costs. The employer usually pays the main fees, but some costs may be shared."
+      },
+      {
+        "question": "Do I need to speak English fluently for EB-3?",
+        "answer": "The required English level depends on the specific position. For some positions, basic English is sufficient, especially in unskilled jobs. For professional positions, intermediate or advanced English may be required. MatriculaUSA offers support to improve your language skills."
+      },
+      {
+        "question": "What happens if I lose my job after receiving the Green Card?",
+        "answer": "After receiving the Green Card, you have more flexibility. If you lose your job, you can look for another job in the same or similar field. After 5 years, you can naturalize as an American citizen. The EB-3 Green Card is permanent and is not tied to a specific employer after approval."
+      },
+      {
+        "question": "Can I change jobs during the EB-3 process?",
+        "answer": "During the process, it is possible to change jobs, but it requires a new I-140 petition with the new employer. This may add time to the process. After receiving the Green Card, you have complete freedom to change jobs without restrictions."
+      }
+    ]
+  },
+  "cta": {
+    "badge": "Join thousands of Brazilians",
+    "title": "Ready to start your <span class=\"text-[#D0151C]\">journey</span>?",
+    "subtitle": "Fill out the form below and our team will contact you to review your profile and guide you through the process.",
+    "applyNow": "Apply Now",
+    "contactUs": "Contact Us",
+    "features": [
+      "100% legal process",
+      "Specialized support",
+      "Permanent Green Card"
+    ]
   }
+},
+"eb3Success": {
+  "loading": {
+    "title": "Verifying your payment...",
+    "description": "Please wait a moment."
+  },
+  "success": {
+    "title": "EB-3 Pre-Application Processed!",
+    "description": "Your EB-3 job pre-application has been successfully processed. Our specialized team will contact you soon to continue your process."
+  },
+  "nextSteps": {
+    "title": "Next Steps",
+    "steps": [
+      {
+        "title": "Email Confirmation",
+        "description": "You will receive an email confirmation with all the details of your pre-application."
+      },
+      {
+        "title": "Team Contact",
+        "description": "Our team will contact you within 24 hours to schedule a conversation."
+      },
+      {
+        "title": "Application Process",
+        "description": "We will begin the complete application process for available EB-3 positions."
+      }
+    ]
+  },
+  "benefits": {
+    "title": "What do you get with your EB-3 pre-application?",
+    "items": [
+      "Exclusive access to EB-3 positions",
+      "Specialized support from our team",
+      "Complete process guidance",
+      "Organized necessary documentation",
+      "Personalized follow-up",
+      "Quality guarantee in the process"
+    ]
+  },
+  "actions": {
+    "viewMoreJobs": "View More EB-3 Jobs",
+    "backToHome": "Back to Home"
+  },
+  "contact": {
+    "title": "Questions?",
+    "description": "Contact us:",
+    "email": "Email: info@matriculausa.com",
+    "whatsapp": "WhatsApp: +1 (213) 676-2544"
+  }
+}
 }

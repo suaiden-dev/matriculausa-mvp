@@ -50,6 +50,7 @@ import CheckoutSuccess from './pages/CheckoutSuccess';
 import ZellePaymentSuccess from './pages/ZellePaymentSuccess';
 import SmartAssistantLayout from './components/SmartAssistantLayout';
 import MicrosoftIntegrationPage from './pages/MicrosoftIntegration';
+import EB3JobsLanding from './pages/EB3JobsLanding';
 
 // Componente interno que usa o hook dentro do contexto do Router
 const AppContent = () => {
@@ -130,6 +131,7 @@ const AppContent = () => {
           <Route path="/email-oauth-callback" element={<EmailOAuthCallback />} />
           <Route path="/auth-callback" element={<AuthCallback />} />
           <Route path="/microsoft-email" element={<MicrosoftCallback />} />
+          <Route path="/eb3-jobs" element={<EB3JobsLanding />} />
           
           
           {/* Microsoft Email Integration */}
