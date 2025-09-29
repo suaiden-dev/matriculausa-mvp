@@ -28,7 +28,6 @@ import {
   CheckCircle,
   XCircle,
   Clock,
-  ArrowRight,
   Building,
   Edit3,
   Save,
@@ -95,11 +94,27 @@ const AdminStudentDetails: React.FC = () => {
   const [loadingDocuments, setLoadingDocuments] = useState(false);
   const [uploadingDocumentRequest, setUploadingDocumentRequest] = useState<{[key: string]: boolean}>({});
   const [approvingDocumentRequest, setApprovingDocumentRequest] = useState<{[key: string]: boolean}>({});
+  const [isProgressExpanded, setIsProgressExpanded] = useState(false);
 
   const { user } = useAuth();
   const isPlatformAdmin = user?.role === 'admin';
 
   const { getFeeAmount, formatFeeAmount, hasOverride } = useFeeConfig(student?.user_id);
+
+  // Função para encontrar o passo atual
+  const getCurrentStep = () => {
+    if (!student) return null;
+    
+    for (let i = 0; i < steps.length; i++) {
+      const status = getStepStatus(student, steps[i].key);
+      if (status === 'in_progress' || status === 'pending') {
+        return { step: steps[i], index: i, status };
+      }
+    }
+    
+    // Se todos estão completos, retorna o último
+    return { step: steps[steps.length - 1], index: steps.length - 1, status: 'completed' };
+  };
 
   useEffect(() => {
     const run = async () => {
@@ -244,25 +259,6 @@ const AdminStudentDetails: React.FC = () => {
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'completed': return 'text-green-600 bg-green-100';
-      case 'in_progress': return 'text-blue-600 bg-blue-100';
-      case 'rejected': return 'text-red-600 bg-red-100';
-      case 'pending': return 'text-gray-600 bg-gray-100';
-      default: return 'text-gray-600 bg-gray-100';
-    }
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'completed': return CheckCircle;
-      case 'in_progress': return Clock;
-      case 'rejected': return XCircle;
-      case 'pending': return Clock;
-      default: return Clock;
-    }
-  };
 
   const steps = [
     { key: 'selection_fee', label: 'Selection Fee', icon: CreditCard },
@@ -1435,33 +1431,209 @@ const AdminStudentDetails: React.FC = () => {
 
         <div className="lg:col-span-4 space-y-6">
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
-            <div className="bg-gradient-to-r rounded-t-2xl from-blue-600 to-blue-700 px-6 py-4">
-              <h2 className="text-xl font-semibold text-white flex items-center">
-                <FileText className="w-6 h-6 mr-3" />
-                Application Progress
-              </h2>
+            <div className="px-6 py-4 border-b border-slate-200">
+              <h2 className="text-xl font-semibold text-slate-900">Application Progress</h2>
             </div>
             <div className="p-6">
-              <div className="flex items-center space-x-2 overflow-x-auto">
-                {steps.map((step, index) => {
-                  const status = getStepStatus(student, step.key);
-                  const StatusIcon = getStatusIcon(status);
-                  const StepIcon = step.icon as any;
-                  return (
-                    <React.Fragment key={step.key}>
-                      <div className={`flex flex-col items-center p-2 rounded-lg transition-all ${getStatusColor(status)}`}>
-                        <div className="relative">
-                          <StepIcon className="h-5 w-5 mb-1" />
-                          <StatusIcon className="h-3 w-3 absolute -top-1 -right-1" />
+              {/* Current Step Display */}
+              {(() => {
+                const currentStep = getCurrentStep();
+                if (!currentStep) return null;
+                
+                const { step, index, status } = currentStep;
+                const isCompleted = status === 'completed';
+                const isInProgress = status === 'in_progress';
+                const isRejected = status === 'rejected';
+                
+                return (
+                  <div className={`p-4 rounded-xl border-2 transition-all duration-200 ${
+                    isCompleted ? 'border-green-200 bg-green-50' :
+                    isInProgress ? 'border-blue-200 bg-blue-50' :
+                    isRejected ? 'border-red-200 bg-red-50' :
+                    'border-slate-200 bg-slate-50'
+                  }`}>
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-2">
+                      <div className="flex items-center space-x-3">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0 ${
+                          isCompleted ? 'bg-green-500 text-white' :
+                          isInProgress ? 'bg-blue-500 text-white' :
+                          isRejected ? 'bg-red-500 text-white' :
+                          'bg-slate-300 text-slate-600'
+                        }`}>
+                          {isCompleted ? '✓' : index + 1}
                         </div>
-                        <span className="text-xs font-medium text-center">{step.label}</span>
+                        <div className="min-w-0 flex-1">
+                          <h3 className={`text-sm sm:text-base font-semibold ${
+                            isCompleted ? 'text-green-900' :
+                            isInProgress ? 'text-blue-900' :
+                            isRejected ? 'text-red-900' :
+                            'text-slate-700'
+                          }`}>
+                            {step.label}
+                          </h3>
+                          <p className={`text-xs sm:text-sm ${
+                            isCompleted ? 'text-green-700' :
+                            isInProgress ? 'text-blue-700' :
+                            isRejected ? 'text-red-700' :
+                            'text-slate-500'
+                          }`}>
+                            {(() => {
+                              switch (step.key) {
+                                case 'selection_fee': return 'Student pays the initial application fee';
+                                case 'apply': return 'Student submits scholarship application';
+                                case 'review': return 'University reviews the application';
+                                case 'application_fee': return 'Student pays the application fee';
+                                case 'scholarship_fee': return 'Student pays the scholarship fee';
+                                case 'acceptance_letter': return 'University sends acceptance letter';
+                                case 'i20_fee': return 'Student pays I-20 control fee';
+                                case 'enrollment': return 'Student enrolls in the program';
+                                default: return 'Process step';
+                              }
+                            })()}
+                          </p>
+                        </div>
                       </div>
-                      {index < steps.length - 1 && (
-                        <ArrowRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                      )}
-                    </React.Fragment>
-                  );
-                })}
+                      <div className="flex items-center space-x-2 sm:space-x-3 flex-wrap">
+                        <div className={`px-2 sm:px-3 py-1 rounded-full text-xs font-medium ${
+                          isCompleted ? 'bg-green-100 text-green-700' :
+                          isInProgress ? 'bg-blue-100 text-blue-700' :
+                          isRejected ? 'bg-red-100 text-red-700' :
+                          'bg-slate-100 text-slate-500'
+                        }`}>
+                          {isCompleted ? 'Completed' :
+                           isInProgress ? 'In Progress' :
+                           isRejected ? 'Rejected' :
+                           'Pending'}
+                        </div>
+                        {isInProgress && (
+                          <div className="flex items-center space-x-1 sm:space-x-2">
+                            <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                            <span className="text-xs text-blue-600 font-medium">Active</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+              
+              {/* Expand/Collapse Button */}
+              <div className="mt-4 flex justify-center">
+                <button
+                  onClick={() => setIsProgressExpanded(!isProgressExpanded)}
+                  className="flex items-center space-x-2 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-all duration-200"
+                >
+                  <span className="whitespace-nowrap">{isProgressExpanded ? 'Show Less' : 'View All Steps'}</span>
+                  <svg 
+                    className={`w-3 h-3 sm:w-4 sm:h-4 transition-transform duration-200 ${isProgressExpanded ? 'rotate-180' : ''}`} 
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+              </div>
+              
+              {/* Expanded Timeline */}
+              <div className={`overflow-hidden transition-all duration-500 ease-in-out ${
+                isProgressExpanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'
+              }`}>
+                <div className="mt-6 pt-6 border-t border-slate-200">
+                  <div className="relative">
+                    {/* Timeline Line */}
+                    <div className="absolute left-4 sm:left-6 top-0 bottom-0 w-0.5 bg-slate-200"></div>
+                    
+                    {/* Steps */}
+                    <div className="space-y-4 sm:space-y-6">
+                      {steps.map((step) => {
+                        const status = getStepStatus(student, step.key);
+                        const isCompleted = status === 'completed';
+                        const isInProgress = status === 'in_progress';
+                        const isRejected = status === 'rejected';
+                        
+                        return (
+                          <div key={step.key} className="relative flex items-start">
+                            {/* Timeline Dot */}
+                            <div className={`relative z-10 flex-shrink-0 w-8 h-8 sm:w-12 sm:h-12 rounded-full border-2 sm:border-4 border-white shadow-sm flex items-center justify-center ${
+                              isCompleted ? 'bg-green-500' :
+                              isInProgress ? 'bg-blue-500' :
+                              isRejected ? 'bg-red-500' :
+                              'bg-slate-300'
+                            }`}>
+                              <div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${
+                                isCompleted ? 'bg-white' :
+                                isInProgress ? 'bg-white' :
+                                isRejected ? 'bg-white' :
+                                'bg-slate-100'
+                              }`}></div>
+                            </div>
+                            
+                            {/* Content Card */}
+                            <div className="ml-4 sm:ml-6 flex-1 min-w-0">
+                              <div className={`p-3 sm:p-4 rounded-lg border transition-all duration-200 ${
+                                isCompleted ? 'border-green-200 bg-green-50' :
+                                isInProgress ? 'border-blue-200 bg-blue-50' :
+                                isRejected ? 'border-red-200 bg-red-50' :
+                                'border-slate-200 bg-slate-50'
+                              }`}>
+                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                                  <h4 className={`text-sm font-semibold ${
+                                    isCompleted ? 'text-green-900' :
+                                    isInProgress ? 'text-blue-900' :
+                                    isRejected ? 'text-red-900' :
+                                    'text-slate-700'
+                                  }`}>
+                                    {step.label}
+                                  </h4>
+                                  <div className={`px-2 py-1 rounded-full text-xs font-medium self-start sm:self-auto ${
+                                    isCompleted ? 'bg-green-100 text-green-700' :
+                                    isInProgress ? 'bg-blue-100 text-blue-700' :
+                                    isRejected ? 'bg-red-100 text-red-700' :
+                                    'bg-slate-100 text-slate-500'
+                                  }`}>
+                                    {isCompleted ? 'Done' :
+                                     isInProgress ? 'Active' :
+                                     isRejected ? 'Failed' :
+                                     'Waiting'}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Progress Summary */}
+              <div className="mt-6 p-3 sm:p-4 bg-slate-50 rounded-xl">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
+                  <span className="text-sm font-medium text-slate-700">Overall Progress</span>
+                  <span className="text-sm font-semibold text-slate-900">
+                    {(() => {
+                      const completedSteps = steps.filter(step => getStepStatus(student, step.key) === 'completed').length;
+                      const percentage = Math.round((completedSteps / steps.length) * 100);
+                      return `${percentage}% Complete`;
+                    })()}
+                  </span>
+                </div>
+                <div className="w-full bg-slate-200 rounded-full h-2 sm:h-3">
+                  <div 
+                    className="bg-[#05294E] h-2 sm:h-3 rounded-full transition-all duration-700 ease-out"
+                    style={{ 
+                      width: `${(steps.filter(step => getStepStatus(student, step.key) === 'completed').length / steps.length) * 100}%` 
+                    }}
+                  />
+                </div>
+                <div className="mt-2 text-xs text-slate-500">
+                  {(() => {
+                    const completedSteps = steps.filter(step => getStepStatus(student, step.key) === 'completed').length;
+                    return `${completedSteps} of ${steps.length} steps completed`;
+                  })()}
+                </div>
               </div>
             </div>
           </div>
