@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
+import { useAuth } from '../../hooks/useAuth';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
@@ -66,9 +67,65 @@ const StudentApplicationsView: React.FC = () => {
   const [itemsPerPage] = useState(20);
   const [expandedApps, setExpandedApps] = useState<{[key: string]: boolean}>({});
   const [dependents, setDependents] = useState<number>(0);
+  const [approvingDocs, setApprovingDocs] = useState<{[key: string]: boolean}>({});
   
   // Hook para configurações dinâmicas de taxas
   const { getFeeAmount, formatFeeAmount, hasOverride } = useFeeConfig(selectedStudent?.user_id);
+
+  // Auth e role do usuário atual
+  const { user } = useAuth();
+  const isPlatformAdmin = user?.role === 'admin';
+
+  // Aprovação de documentos pelo admin
+  const approveableTypes = new Set(['passport', 'funds_proof', 'diploma']);
+  const handleApproveDocument = async (applicationId: string, docType: string) => {
+    if (!isPlatformAdmin) return;
+    if (!approveableTypes.has(docType)) return;
+
+    const loadingKey = `${applicationId}:${docType}`;
+    setApprovingDocs(prev => ({ ...prev, [loadingKey]: true }));
+    try {
+      const targetApp = selectedStudent?.all_applications?.find((a: any) => a.id === applicationId);
+      if (!targetApp) {
+        console.error('Aplicação não encontrada para aprovação de documento', { applicationId, docType });
+        return;
+      }
+
+      const currentDocs: any[] = Array.isArray(targetApp.documents) ? targetApp.documents : [];
+      const newDocuments = currentDocs.map((d: any) => {
+        if (d?.type === docType) {
+          return {
+            ...d,
+            status: 'approved',
+            approved_at: new Date().toISOString()
+          };
+        }
+        return d;
+      });
+
+      const { data: updated, error } = await supabase
+        .from('scholarship_applications')
+        .update({ documents: newDocuments, updated_at: new Date().toISOString() })
+        .eq('id', applicationId)
+        .select('id, documents')
+        .single();
+
+      if (error) {
+        console.error('Erro ao aprovar documento:', error);
+        return;
+      }
+
+      setSelectedStudent(prev => {
+        if (!prev) return prev;
+        const updatedApps = (prev.all_applications || []).map((a: any) =>
+          a.id === applicationId ? { ...a, documents: updated?.documents || newDocuments } : a
+        );
+        return { ...prev, all_applications: updatedApps } as any;
+      });
+    } finally {
+      setApprovingDocs(prev => ({ ...prev, [loadingKey]: false }));
+    }
+  };
 
   // Novos filtros
   const [stageFilter, setStageFilter] = useState('all');
@@ -89,7 +146,7 @@ const StudentApplicationsView: React.FC = () => {
     fetchFilterData();
   }, []);
 
-  // Carregar dependents quando selectedStudent mudar
+  // Carregar dependents quando selectedStudent mudar (mantido para compatibilidade, mas modal foi substituído por página dedicada)
   useEffect(() => {
     if (selectedStudent?.user_id) {
       loadDependents(selectedStudent.user_id);
@@ -870,14 +927,16 @@ const StudentApplicationsView: React.FC = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Applied Date
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
+                
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {currentStudents.map((student) => (
-                <tr key={student.application_id || student.student_id} className="hover:bg-gray-50">
+                <tr
+                  key={student.application_id || student.student_id}
+                  className="hover:bg-gray-50 cursor-pointer"
+                  onClick={() => { window.location.href = `/admin/dashboard/students/${student.student_id}`; }}
+                >
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="flex-shrink-0 h-10 w-10">
@@ -939,14 +998,7 @@ const StudentApplicationsView: React.FC = () => {
                       }
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button
-                      onClick={() => setSelectedStudent(student)}
-                      className="text-[#05294E] hover:text-[#05294E]/80 transition-colors"
-                    >
-                      <Eye className="h-5 w-5" />
-                    </button>
-                  </td>
+                  
                 </tr>
               ))}
             </tbody>
@@ -1005,8 +1057,9 @@ const StudentApplicationsView: React.FC = () => {
       </div>
 
       {/* Detailed View Modal */}
-      {selectedStudent && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      {/* Modal removido */}
+      {false && (
+        <div className="hidden">
           <div className="bg-slate-50 rounded-3xl max-w-7xl w-full max-h-[95vh] overflow-y-auto shadow-2xl">
             {/* Header Section */}
             <div className="bg-white shadow-sm border-b border-slate-200 rounded-t-3xl sticky top-0 z-10">
@@ -1203,9 +1256,9 @@ const StudentApplicationsView: React.FC = () => {
                         <div className="space-y-4">
                           {selectedStudent.all_applications.map((app: any, index: number) => (
                             <div key={app.id} className="bg-slate-50 border border-slate-200 rounded-xl p-5 hover:bg-slate-100 transition-colors">
-                              <div className="flex items-start justify-between">
+                              <div className="flex flex-col md:flex-row items-start justify-between gap-2">
                                 <div className="flex-1">
-                                  <div className="flex items-center space-x-2 mb-2">
+                                  <div className="flex items-center space-x-2 mb-2 w-full md:w-auto">
                                     <span className="text-xs font-semibold text-slate-600 bg-slate-200 px-2 py-1 rounded">#{index + 1}</span>
                                     <h5 className="font-semibold text-slate-900 text-lg">
                                       {app.scholarships?.title || 'Scholarship Title N/A'}
@@ -1231,7 +1284,7 @@ const StudentApplicationsView: React.FC = () => {
                                     </p>
                                   )}
                                 </div>
-                                <div className="text-right space-y-2">
+                                <div className="text-right space-y-2 w-full md:w-auto">
                                   <div>
                                     <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
                                       app.status === 'approved' ? 'bg-green-100 text-green-800' :
@@ -1577,7 +1630,7 @@ const StudentApplicationsView: React.FC = () => {
                                               className="border border-slate-200 rounded-lg p-4 hover:bg-slate-50 transition-colors"
                                             >
                                               {/* Header com título e status */}
-                                              <div className="flex items-start justify-between mb-3">
+                                              <div className="flex flex-col md:flex-row items-start justify-between gap-2 mb-3">
                                                 <div className="flex-1 min-w-0">
                                                   <div className="flex items-center space-x-2 mb-1">
                                                     <h5 className="font-semibold text-slate-900 text-sm">{docType.label}</h5>
@@ -1586,7 +1639,7 @@ const StudentApplicationsView: React.FC = () => {
                                                   <p className="text-xs text-slate-600 mb-2 line-clamp-2">{docType.description}</p>
                                                 </div>
                                                 
-                                                <div className="flex items-center space-x-1 ml-3 flex-shrink-0">
+                                                <div className="flex items-center flex-wrap gap-1 ml-0 md:ml-3 flex-shrink-0 justify-start md:justify-end w-full md:w-auto">
                                                   <button
                                                     onClick={() => {
                                                       const baseUrl = 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/student-documents/';
@@ -1596,7 +1649,7 @@ const StudentApplicationsView: React.FC = () => {
                                                     className="text-xs text-[#05294E] hover:text-[#05294E]/80 font-medium flex items-center space-x-1 transition-colors px-2 py-1 border border-[#05294E] rounded-md hover:bg-[#05294E]/5"
                                                   >
                                                     <Eye className="w-3 h-3" />
-                                                    <span className="hidden sm:inline">View</span>
+                                                    <span className="hidden md:inline">View</span>
                                                   </button>
                                                   <button
                                                     onClick={() => {
@@ -1614,8 +1667,18 @@ const StudentApplicationsView: React.FC = () => {
                                                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                                     </svg>
-                                                    <span className="hidden sm:inline">Download</span>
+                                                    <span className="hidden md:inline">Download</span>
                                                   </button>
+                                                  {isPlatformAdmin && approveableTypes.has(doc.type) && (doc.status || '').toLowerCase() !== 'approved' && (
+                                                    <button
+                                                      onClick={() => handleApproveDocument(app.id, doc.type)}
+                                                      disabled={!!approvingDocs[`${app.id}:${doc.type}`]}
+                                                      className={`text-xs font-medium flex items-center space-x-1 transition-colors px-2 py-1 rounded-md border ${approvingDocs[`${app.id}:${doc.type}`] ? 'text-slate-400 border-slate-200 bg-slate-50' : 'text-green-700 border-green-300 hover:bg-green-50'}`}
+                                                    >
+                                                      <CheckCircle className="w-3 h-3" />
+                                                      <span className="hidden md:inline">Approve</span>
+                                                    </button>
+                                                  )}
                                                 </div>
                                               </div>
                                               
