@@ -153,8 +153,8 @@ export const ZelleWaitingPage: React.FC = () => {
               console.log('❌ [ZelleWaiting] Resposta recebida:', responseData.response);
               setPaymentStatus({
                 status: 'under_review',
-                message: 'Processing Payment',
-                details: 'Your payment proof requires additional verification. Our team will review it within 24 hours.'
+                message: t('zelleWaiting.messages.under_review'),
+                details: t('zelleWaiting.details.under_review')
               });
               // Desabilitar verificação do banco para evitar sobrescrita
               shouldCheckDatabase.current = false;
@@ -331,12 +331,6 @@ export const ZelleWaitingPage: React.FC = () => {
     }
   };
 
-  console.log('�� [ZelleWaitingPage] Renderizando interface');
-  console.log('�� [ZelleWaitingPage] paymentStatus:', paymentStatus);
-  console.log('�� [ZelleWaitingPage] timeElapsed:', timeElapsed);
-  console.log('�� [ZelleWaitingPage] webhookResponseReceived:', webhookResponseReceived);
-  console.log('�� [ZelleWaitingPage] n8nAnalysisResult:', n8nAnalysisResult);
-
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-2xl mx-auto px-4">
@@ -354,7 +348,7 @@ export const ZelleWaitingPage: React.FC = () => {
         {/* Status Card */}
         <div className={`${getBackgroundColor()} rounded-lg border-2 border-gray-200 p-8 text-center`}>
           {/* Icon */}
-          <div className="mb-6">
+          <div className="mb-6 flex justify-center">
             {getStatusIcon()}
           </div>
 
