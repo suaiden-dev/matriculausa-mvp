@@ -33,6 +33,7 @@ interface WebhookPayload {
   timestamp: string;
   scholarship_application_id?: string;
   payment_id?: string;
+  scholarships_ids?: string[];
 }
 
 export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
@@ -49,6 +50,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [feesLoading, setFeesLoading] = useState(true);
 
   // Estado para desconto ativo
   const [activeDiscount, setActiveDiscount] = useState<any>(null);
@@ -83,6 +85,9 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
   const amount = searchParams.get('amount') || getFeeAmount('selection_process').toString();
   const scholarshipsIds = searchParams.get('scholarshipsIds') || '';
   const applicationFeeAmount = searchParams.get('applicationFeeAmount') ? parseFloat(searchParams.get('applicationFeeAmount')!) : undefined;
+  
+  // Guardar resolução de bolsa/aplicação para uso em múltiplos pontos do fluxo
+  let resolvedScholarshipId: string | null = null;
   
   // Normalizar feeType para lidar com inconsistências (i20_control_fee vs i-20_control_fee)
   const normalizedFeeType = feeType === 'i20_control_fee' ? 'i20_control' : feeType;
@@ -139,6 +144,16 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
   const currentFee = feeInfo.find(fee => fee.type === normalizedFeeType) || feeInfo[0];
   
   console.log('🔍 [ZelleCheckoutPage] currentFee:', currentFee);
+  // Controlar skeleton até que o cálculo dinâmico estabilize
+  useEffect(() => {
+    const debounce = setTimeout(() => {
+      const known = Number(currentFee?.amount || 0) > 0;
+      if (user !== undefined && known) {
+        setFeesLoading(false);
+      }
+    }, 250);
+    return () => clearTimeout(debounce);
+  }, [user, currentFee?.amount, selectionProcessFee, scholarshipFee, i20ControlFee, userFeeOverrides, activeDiscount]);
   console.log('🔍 [ZelleCheckoutPage] feeType recebido:', feeType);
   console.log('🔍 [ZelleCheckoutPage] normalizedFeeType usado:', normalizedFeeType);
   console.log('🔍 [ZelleCheckoutPage] feeInfo tipos disponíveis:', feeInfo.map(fee => fee.type));
@@ -252,6 +267,18 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
         payment_id: realPaymentId // ID real do pagamento
       };
 
+      // Incluir scholarships_ids diretamente do parâmetro de URL, se disponível
+      if ((normalizedFeeType === 'application_fee' || normalizedFeeType === 'scholarship_fee') && scholarshipsIds) {
+        const idsFromUrl = scholarshipsIds.split(',').map((s) => s.trim()).filter(Boolean);
+        if (idsFromUrl.length > 0) {
+          webhookPayload.scholarships_ids = idsFromUrl;
+          // Se houver apenas um ID, já resolver para uso posterior
+          if (idsFromUrl.length === 1) {
+            resolvedScholarshipId = idsFromUrl[0];
+          }
+        }
+      }
+
       // Adicionar scholarship_application_id se for taxa de bolsa
       if (normalizedFeeType === 'application_fee' || normalizedFeeType === 'scholarship_fee') {
         console.log('🔍 [ZelleCheckout] Buscando scholarship_application_id para taxa de bolsa');
@@ -262,14 +289,22 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
           // Se temos scholarshipsIds, buscar a candidatura correspondente
           const { data: applicationData } = await supabase
             .from('scholarship_applications')
-            .select('id')
+            .select('id, scholarship_id')
             .eq('student_id', user?.id)
             .in('scholarship_id', scholarshipsIds.split(','))
             .limit(1);
           
           if (applicationData && applicationData[0]) {
             webhookPayload.scholarship_application_id = applicationData[0].id;
+            if ((applicationData[0] as any).scholarship_id) {
+              resolvedScholarshipId = (applicationData[0] as any).scholarship_id as string;
+              // Apenas definir se ainda não veio do parâmetro
+              if (!webhookPayload.scholarships_ids || webhookPayload.scholarships_ids.length === 0) {
+                webhookPayload.scholarships_ids = [resolvedScholarshipId];
+              }
+            }
             console.log('✅ [ZelleCheckout] scholarship_application_id encontrado:', applicationData[0].id);
+            console.log('✅ [ZelleCheckout] scholarship_id resolvido:', resolvedScholarshipId);
           } else {
             console.log('⚠️ [ZelleCheckout] Nenhuma candidatura encontrada para os scholarshipsIds');
           }
@@ -584,6 +619,12 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
                     console.log('⏳ [ZelleCheckout] Mantendo pagamento como pending_verification para revisão manual');
                   }
 
+                  // Persistir scholarships_ids no registro quando aplicável
+                  if ((normalizedFeeType === 'application_fee' || normalizedFeeType === 'scholarship_fee') && resolvedScholarshipId) {
+                    updateData.scholarships_ids = [resolvedScholarshipId];
+                    console.log('💾 [ZelleCheckout] Gravando scholarships_ids no zelle_payments:', updateData.scholarships_ids);
+                  }
+
                   // Atualizar o registro encontrado
                   const { data: updateResult, error: updateError } = await supabase
                     .from('zelle_payments')
@@ -697,9 +738,13 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-2xl font-bold text-gray-900">
-                      ${currentFee.amount}
-                    </div>
+                    {feesLoading ? (
+                      <div className="w-24 h-7 bg-gray-200 rounded animate-pulse" />
+                    ) : (
+                      <div className="text-2xl font-bold text-gray-900">
+                        ${currentFee.amount}
+                      </div>
+                    )}
                     <div className="text-sm text-gray-500">USD</div>
                   </div>
                 </div>
@@ -707,9 +752,13 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
                 <div className="border-t pt-4">
                   <div className="flex justify-between items-center">
                     <span className="text-lg font-medium text-gray-900">{t('zelleCheckout.amount')}</span>
-                    <span className="text-2xl font-bold text-gray-900">
-                      ${currentFee.amount}
-                    </span>
+                    {feesLoading ? (
+                      <div className="w-24 h-7 bg-gray-200 rounded animate-pulse" />
+                    ) : (
+                      <span className="text-2xl font-bold text-gray-900">
+                        ${currentFee.amount}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -743,7 +792,11 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
                       Payment Amount
                     </label>
                     <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-                      <span className="text-lg font-bold text-gray-900">${currentFee.amount} USD</span>
+                      {feesLoading ? (
+                        <div className="w-28 h-6 bg-gray-200 rounded animate-pulse" />
+                      ) : (
+                        <span className="text-lg font-bold text-gray-900">${currentFee.amount} USD</span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -828,7 +881,13 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
                   <ol className="space-y-3 text-gray-700">
                     <li className="flex items-start gap-3">
                       <span className="w-5 h-5 bg-gray-200 text-gray-700 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0">1</span>
-                      <span>{t('zelleCheckout.steps.step1')} <strong>(${currentFee.amount} USD)</strong></span>
+                      <span>
+                        {t('zelleCheckout.steps.step1')} <strong>{feesLoading ? (
+                          <span className="inline-block w-16 h-4 align-middle bg-gray-200 rounded animate-pulse" />
+                        ) : (
+                          <>(${currentFee.amount} USD)</>
+                        )}</strong>
+                      </span>
                     </li>
                     <li className="flex items-start gap-3">
                       <span className="w-5 h-5 bg-gray-200 text-gray-700 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0">2</span>
@@ -905,7 +964,13 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
                       {t('zelleCheckout.processing')}
                     </div>
                   ) : (
-                    `${t('zelleCheckout.submitPayment')} - $${currentFee.amount} USD`
+                    feesLoading ? (
+                      <div className="flex items-center justify-center">
+                        <div className="w-24 h-4 bg-white/30 rounded animate-pulse" />
+                      </div>
+                    ) : (
+                      `${t('zelleCheckout.submitPayment')} - $${currentFee.amount} USD`
+                    )
                   )}
                 </button>
               </form>
