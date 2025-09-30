@@ -31,7 +31,8 @@ import {
   Building,
   Edit3,
   Save,
-  X
+  X,
+  AlertTriangle
 } from 'lucide-react';
 
 interface StudentRecord {
@@ -95,11 +96,50 @@ const AdminStudentDetails: React.FC = () => {
   const [uploadingDocumentRequest, setUploadingDocumentRequest] = useState<{[key: string]: boolean}>({});
   const [approvingDocumentRequest, setApprovingDocumentRequest] = useState<{[key: string]: boolean}>({});
   const [isProgressExpanded, setIsProgressExpanded] = useState(false);
+  const [i20Deadline, setI20Deadline] = useState<Date | null>(null);
 
   const { user } = useAuth();
   const isPlatformAdmin = user?.role === 'admin';
 
   const { getFeeAmount, formatFeeAmount, hasOverride } = useFeeConfig(student?.user_id);
+
+  // Função para calcular o deadline do I-20
+  const calculateI20Deadline = (studentData: StudentRecord) => {
+    try {
+      console.log('🔍 [ADMIN_I20_DEADLINE] Calculating deadline from student data:', {
+        has_paid_i20_control_fee: studentData.has_paid_i20_control_fee,
+        acceptance_letter_sent_at: studentData.all_applications?.find(app => app.acceptance_letter_sent_at)?.acceptance_letter_sent_at,
+        acceptance_letter_status: studentData.all_applications?.find(app => app.acceptance_letter_status)?.acceptance_letter_status
+      });
+
+      // Se o I-20 já foi pago, não há deadline
+      if (studentData.has_paid_i20_control_fee) {
+        setI20Deadline(null);
+        console.log('🔍 [ADMIN_I20_DEADLINE] I-20 already paid, no deadline');
+        return;
+      }
+
+      // Buscar aplicação com acceptance letter
+      const appWithLetter = studentData.all_applications?.find(app => 
+        app.acceptance_letter_sent_at && 
+        (app.acceptance_letter_status === 'sent' || app.acceptance_letter_status === 'approved')
+      );
+
+      if (appWithLetter) {
+        // Calcular deadline baseado na data de envio da carta de aceite + 10 dias
+        const acceptanceDate = new Date(appWithLetter.acceptance_letter_sent_at);
+        const deadline = new Date(acceptanceDate.getTime() + 10 * 24 * 60 * 60 * 1000); // 10 dias
+        setI20Deadline(deadline);
+        console.log('🔍 [ADMIN_I20_DEADLINE] Calculated deadline from acceptance letter:', deadline);
+      } else {
+        setI20Deadline(null);
+        console.log('🔍 [ADMIN_I20_DEADLINE] No acceptance letter sent yet');
+      }
+    } catch (error) {
+      console.error('❌ [ADMIN_I20_DEADLINE] Error calculating deadline:', error);
+      setI20Deadline(null);
+    }
+  };
 
   // Função para encontrar o passo atual
   const getCurrentStep = () => {
@@ -216,6 +256,9 @@ const AdminStudentDetails: React.FC = () => {
 
         setStudent(formatted);
         setDependents(Number(s.dependents || 0));
+        
+        // Calcular deadline do I-20
+        calculateI20Deadline(formatted);
       } catch (e) {
         // noop
       } finally {
@@ -1445,7 +1488,7 @@ const AdminStudentDetails: React.FC = () => {
                 const isInProgress = status === 'in_progress';
                 const isRejected = status === 'rejected';
                 
-                return (
+                  return (
                   <div className={`p-4 rounded-xl border-2 transition-all duration-200 ${
                     isCompleted ? 'border-green-200 bg-green-50' :
                     isInProgress ? 'border-blue-200 bg-blue-50' :
@@ -1491,7 +1534,7 @@ const AdminStudentDetails: React.FC = () => {
                               }
                             })()}
                           </p>
-                        </div>
+                      </div>
                       </div>
                       <div className="flex items-center space-x-2 sm:space-x-3 flex-wrap">
                         <div className={`px-2 sm:px-3 py-1 rounded-full text-xs font-medium ${
@@ -1601,8 +1644,8 @@ const AdminStudentDetails: React.FC = () => {
                               </div>
                             </div>
                           </div>
-                        );
-                      })}
+                  );
+                })}
                     </div>
                   </div>
                 </div>
@@ -1845,7 +1888,20 @@ const AdminStudentDetails: React.FC = () => {
             </div>
           </div>
 
+          {/* I-20 Deadline Timer */}
+          {i20Deadline && !student.has_paid_i20_control_fee && (
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
+              <div className="p-6">
+                <AdminI20DeadlineTimer 
+                  deadline={i20Deadline} 
+                  hasPaid={student.has_paid_i20_control_fee}
+                  studentName={student.student_name}
+                />
         </div>
+      </div>
+          )}
+
+    </div>
 
       </div>
       </div>
@@ -1933,6 +1989,174 @@ const AdminStudentDetails: React.FC = () => {
           )}
         </div>
       )}
+    </div>
+  );
+};
+
+// Componente do timer do I-20 adaptado para o admin
+interface AdminI20DeadlineTimerProps {
+  deadline: Date;
+  hasPaid: boolean;
+  studentName: string;
+}
+
+const AdminI20DeadlineTimer: React.FC<AdminI20DeadlineTimerProps> = ({ deadline, hasPaid, studentName }) => {
+  const [timeLeft, setTimeLeft] = useState<string>('');
+  const [isExpired, setIsExpired] = useState(false);
+
+  // Don't render if already paid
+  if (hasPaid) {
+    return null;
+  }
+
+  // Calculate time remaining
+  useEffect(() => {
+    const calculateTimeLeft = () => {
+      const now = new Date();
+      const timeDiff = deadline.getTime() - now.getTime();
+
+      if (timeDiff <= 0) {
+        setTimeLeft('Expired');
+        setIsExpired(true);
+        return;
+      }
+
+      const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+
+      if (days > 0) {
+        setTimeLeft(`${days}d ${hours}h ${minutes}m`);
+      } else if (hours > 0) {
+        setTimeLeft(`${hours}h ${minutes}m`);
+      } else {
+        setTimeLeft(`${minutes}m`);
+      }
+    };
+
+    calculateTimeLeft();
+    const interval = setInterval(calculateTimeLeft, 60000); // Update every minute
+
+    return () => clearInterval(interval);
+  }, [deadline]);
+
+  // Determine section style based on time remaining
+  const getSectionStyle = () => {
+    const now = new Date();
+    const timeDiff = deadline.getTime() - now.getTime();
+    const daysLeft = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+
+    if (timeDiff <= 0) {
+      return {
+        bgColor: 'bg-red-50',
+        borderColor: 'border-red-200',
+        iconColor: 'text-red-500',
+        textColor: 'text-red-700',
+        titleColor: 'text-red-800'
+      };
+    } else if (daysLeft <= 1) {
+      return {
+        bgColor: 'bg-red-50',
+        borderColor: 'border-red-200',
+        iconColor: 'text-red-500',
+        textColor: 'text-red-700',
+        titleColor: 'text-red-800'
+      };
+    } else if (daysLeft <= 3) {
+      return {
+        bgColor: 'bg-yellow-50',
+        borderColor: 'border-yellow-200',
+        iconColor: 'text-yellow-500',
+        textColor: 'text-yellow-700',
+        titleColor: 'text-yellow-800'
+      };
+    } else {
+      return {
+        bgColor: 'bg-blue-50',
+        borderColor: 'border-blue-200',
+        iconColor: 'text-blue-500',
+        textColor: 'text-blue-700',
+        titleColor: 'text-blue-800'
+      };
+    }
+  };
+
+  // Get status message
+  const getStatusMessage = () => {
+    const now = new Date();
+    const timeDiff = deadline.getTime() - now.getTime();
+    const daysLeft = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+
+    if (timeDiff <= 0) {
+      return 'Deadline expired. Student needs to contact support immediately.';
+    } else if (daysLeft <= 1) {
+      return 'URGENT: I-20 Control Fee deadline is approaching! Contact student immediately.';
+    } else if (daysLeft <= 3) {
+      return 'I-20 Control Fee deadline is approaching. Student should pay soon.';
+    } else {
+      return 'I-20 Control Fee deadline is active. Monitor student progress.';
+    }
+  };
+
+  // Get appropriate icon
+  const getIcon = () => {
+    const now = new Date();
+    const timeDiff = deadline.getTime() - now.getTime();
+    const daysLeft = Math.floor(timeDiff / (1000 * 60 * 60 * 24)); 
+
+    if (timeDiff <= 0) {
+      return <AlertTriangle className="w-5 h-5" />;
+    } else if (daysLeft <= 3) {
+      return <AlertTriangle className="w-5 h-5" />;
+    } else {
+      return <Clock className="w-5 h-5" />;
+    }
+  };
+
+  const styles = getSectionStyle();
+
+  return (
+    <div className={`${styles.bgColor} rounded-lg border ${styles.borderColor} p-4`}>
+      <div className="flex items-center space-x-3 mb-3">
+        <div className={styles.iconColor}>
+          {getIcon()}
+        </div>
+        <h3 className={`text-lg font-semibold ${styles.titleColor}`}>
+          I-20 Control Fee Deadline - {studentName}
+        </h3>
+      </div>
+      
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <span className={`text-sm font-medium ${styles.textColor}`}>
+              Time Remaining:
+            </span>
+            <span className={`text-xl font-bold ${styles.textColor}`}>
+              {timeLeft}
+            </span>
+          </div>
+          <div className={`text-sm ${styles.textColor}`}>
+            {isExpired ? 'Expired' : 'Active'}
+          </div>
+        </div>
+        
+        <div className={`text-sm ${styles.textColor}`}>
+          <div className="font-medium mb-1">Deadline:</div>
+          <div>{deadline.toLocaleString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          })}</div>
+        </div>
+        
+        <div className={`text-sm ${styles.textColor}`}>
+          <div className="font-medium mb-1">Admin Status:</div>
+          <div>{getStatusMessage()}</div>
+        </div>
+      </div>
     </div>
   );
 };

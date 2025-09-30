@@ -263,7 +263,7 @@ const StudentApplicationsView: React.FC = () => {
 
   const fetchStudents = async () => {
     try {
-      // Buscar todos os estudantes com suas aplicações (se houver)
+      // Buscar apenas estudantes que pagaram a taxa de seleção
       const { data, error } = await supabase
         .from('user_profiles')
         .select(`
@@ -297,6 +297,7 @@ const StudentApplicationsView: React.FC = () => {
           )
         `)
         .eq('role', 'student')
+        .eq('has_paid_selection_process_fee', true)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -418,6 +419,8 @@ const StudentApplicationsView: React.FC = () => {
   };
 
   const filteredStudents = students.filter((student: StudentRecord) => {
+    // Nota: Agora todos os estudantes já pagaram a taxa de seleção (filtro aplicado na query)
+    
     const matchesSearch = 
       student.student_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       student.student_email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -450,36 +453,39 @@ const StudentApplicationsView: React.FC = () => {
       let result = false;
       switch (stageFilter) {
         case 'selection_fee':
-          // Está na etapa Selection Fee se NÃO pagou a taxa de seleção
-          result = !student.has_paid_selection_process_fee;
+          // Selection Fee: todos os estudantes (já que filtramos apenas os que pagaram a taxa)
+          result = true; // Todos os estudantes mostrados já pagaram a taxa de seleção
           break;
         case 'application':
-          // Está na etapa Application se pagou a taxa de seleção mas não aplicou ainda
-          result = student.has_paid_selection_process_fee && student.total_applications === 0;
+          // Application: todos os estudantes (já que todos já pagaram a taxa de seleção)
+          result = true;
           break;
         case 'review':
-          // Está na etapa Review se aplicou mas está pendente ou em análise
-          result = student.total_applications > 0 && (student.status === 'pending' || student.status === 'under_review') && !student.is_locked;
+          // Review: estudantes que aplicaram (incluindo os que já foram aprovados/rejeitados)
+          result = student.total_applications > 0;
           break;
         case 'app_fee':
-          // Está na etapa App Fee se foi aprovado mas não pagou a taxa de aplicação
-          result = student.status === 'approved' && !student.is_application_fee_paid;
+          // App Fee: estudantes que foram aprovados (incluindo os que já pagaram a taxa)
+          result = student.status === 'approved';
           break;
         case 'scholarship_fee':
-          // Está na etapa Scholarship Fee se pagou a taxa de aplicação mas não a de bolsa
-          result = student.is_locked && !student.is_scholarship_fee_paid;
+          // Scholarship Fee: estudantes que estão locked (incluindo os que já pagaram a taxa de bolsa)
+          result = student.is_locked;
           break;
         case 'acceptance':
-          // Está na etapa Acceptance se pagou a taxa de bolsa mas não tem carta de aceitação
-          result = student.is_locked && student.is_scholarship_fee_paid && !student.acceptance_letter_status;
+          // Acceptance: estudantes que pagaram a taxa de bolsa (incluindo os que já receberam a carta)
+          result = student.is_locked && !!student.is_scholarship_fee_paid;
           break;
         case 'i20_fee':
-          // Está na etapa I-20 Fee se tem carta de aceitação mas não pagou a taxa I-20
-          result = student.is_locked && student.acceptance_letter_status && !student.has_paid_i20_control_fee;
+          // I-20 Fee: estudantes que têm carta de aceitação enviada (incluindo os que já pagaram a taxa I-20)
+          result = student.is_locked && !!student.acceptance_letter_status && 
+                   (student.acceptance_letter_status === 'sent' || 
+                    student.acceptance_letter_status === 'signed' || 
+                    student.acceptance_letter_status === 'approved');
           break;
         case 'enrollment':
-          // Está na etapa Enrollment se pagou todas as taxas e está matriculado
-          result = student.is_locked && student.has_paid_i20_control_fee && student.status === 'enrolled';
+          // Enrollment: estudantes que pagaram todas as taxas (incluindo os que já estão matriculados)
+          result = student.is_locked && student.has_paid_i20_control_fee;
           break;
         default:
           result = true;
