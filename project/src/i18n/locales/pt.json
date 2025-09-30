@@ -1366,6 +1366,7 @@
       "allFields": "Todos os Campos", 
       "allModes": "Todos os Modos",
       "allPermissions": "Todas as Permissões",
+      "allUniversities": "Todas as Universidades",
       "minValue": "Valor mínimo",
       "maxValue": "Valor máximo",
       "deadline": "Prazo (dias)",
@@ -2966,6 +2967,237 @@
       "errorTitle": "Falha na Verificação",
       "errorMessage": "Houve um problema ao verificar seu pagamento. Entre em contato com o suporte.",
       "errorDetails": "Detalhes do erro:"
+    }
+  },
+  "eb3Jobs": {
+    "hero": {
+      "badge": "Oportunidades de Emprego EB-3",
+      "title": "Trabalhe e Viva <span class=\"text-[#05294E]\">Legalmente</span> nos EUA",
+      "subtitle": "Múltiplas oportunidades de emprego em indústrias essenciais nos EUA através do programa <strong>EB-3</strong>, que oferece <strong>residência permanente (Green Card)</strong> para você e sua família.",
+      "importantInfo": {
+        "title": "Informação Importante",
+        "items": [
+          "• Estas posições <strong>não são garantidas</strong> e a colocação só é confirmada após sermos contratados",
+          "• As posições se preenchem rapidamente",
+          "• Todos os salários listados são os <strong>valores mínimos estabelecidos pelo PWD</strong>"
+        ]
+      },
+      "applyNow": "Candidatar-se Agora",
+      "learnMore": "Saiba Mais"
+    },
+    "whatIsEb3": {
+      "badge": "O que é EB-3?",
+      "title": "Residência Permanente através do <span class=\"text-[#05294E]\">Trabalho</span>",
+      "benefits": [
+        {
+          "title": "Green Card Permanente",
+          "description": "Residência permanente para você e sua família através de emprego qualificado."
+        },
+        {
+          "title": "Salários Competitivos",
+          "description": "Compensação estável e competitiva em indústrias essenciais dos EUA."
+        },
+        {
+          "title": "Nacional",
+          "description": "Oportunidades disponíveis em múltiplos estados dos Estados Unidos."
+        }
+      ],
+      "greenCardApproved": "Green Card Aprovado",
+      "permanentResidence": "Residência Permanente"
+    },
+    "jobs": {
+      "badge": "Empregos Disponíveis",
+      "title": "Lista de <span class=\"text-[#05294E]\">Oportunidades</span>",
+      "lastUpdated": "Última atualização: 8 de setembro de 2025",
+      "filters": {
+        "allJobs": "Todos os Empregos",
+        "healthcare": "Saúde",
+        "hospitality": "Hospitalidade",
+        "logistics": "Logística",
+        "location": "Localização:",
+        "allLocations": "Todas as Localizações",
+        "searchPlaceholder": "Buscar empregos..."
+      },
+      "jobCard": {
+        "moreDetails": "Mais Detalhes",
+        "lessDetails": "Menos Detalhes",
+        "apply": "Candidatar-se",
+        "description": "Descrição:",
+        "requirements": "Requisitos:"
+      },
+      "noJobsFound": {
+        "title": "Nenhum emprego encontrado",
+        "description": "Tente ajustar os filtros ou termo de busca."
+      }
+    },
+    "benefits": {
+      "badge": "Benefícios do Programa EB-3",
+      "title": "Por que escolher <span class=\"text-[#05294E]\">EB-3</span>?",
+      "items": [
+        {
+          "title": "Residência Permanente",
+          "description": "Green Card para você e sua família"
+        },
+        {
+          "title": "Salários Estáveis",
+          "description": "Compensação competitiva e estável"
+        },
+        {
+          "title": "Múltiplos Estados",
+          "description": "Oportunidades em todo o país"
+        },
+        {
+          "title": "Crescimento Profissional",
+          "description": "Estabilidade e crescimento na carreira"
+        }
+      ]
+    },
+    "howItWorks": {
+      "title": "Como <span class=\"text-[#05294E]\">Funciona</span>",
+      "subtitle": "Processo simples e transparente para sua jornada ao Green Card",
+      "steps": [
+        {
+          "title": "Candidatura",
+          "description": "Preencha o formulário e nossa equipe entrará em contato para revisar seu perfil"
+        },
+        {
+          "title": "Seleção",
+          "description": "Avaliamos suas qualificações e conectamos você com as melhores oportunidades"
+        },
+        {
+          "title": "Processo",
+          "description": "Guiaremos você através de todo o processo de aquisição do Green Card"
+        }
+      ]
+    },
+    "offer": {
+      "title": "NÃO ESPERE MAIS PELO SEU FUTURO",
+      "subtitle": "Realize Seu Sonho de Trabalhar nos EUA!",
+      "card": {
+        "title": "Pré-Candidatura EB3 Jobs",
+        "features": [
+          "Análise de Perfil",
+          "Consulta Especializada",
+          "Desenvolvimento de Estratégia",
+          "Garantia"
+        ],
+        "pricing": {
+          "originalPrice": "DE $ 1297,00",
+          "currentPrice": "$ 477,00",
+          "guarantee": "Garantia de Reembolso em Caso de Inelegibilidade"
+        },
+        "signUpNow": "Inscreva-se Agora!",
+        "security": {
+          "secureCheckout": "Checkout Seguro",
+          "satisfactionGuaranteed": "Satisfação Garantida",
+          "protectedPrivacy": "Privacidade Protegida"
+        },
+        "paymentMethods": "Métodos de Pagamento:",
+        "methods": ["PIX", "VISA", "Mastercard", "PayPal", "Hipercard", "Boleto"]
+      },
+      "guarantee": {
+        "title": "Garantia e Segurança",
+        "description": "Se, após esta avaliação, for determinado que você não atende aos critérios necessários para a candidatura ao visto EB-3, garantimos o reembolso integral do valor investido no processo de pré-candidatura. Isso significa que você pode prosseguir sabendo que seu investimento está protegido."
+      }
+    },
+    "faq": {
+      "badge": "Perguntas Frequentes",
+      "title": "Perguntas sobre <span class=\"text-[#05294E]\">EB-3</span>?",
+      "subtitle": "Encontre respostas para as principais perguntas sobre o processo de aquisição do Green Card através do programa EB-3",
+      "questions": [
+        {
+          "question": "O que é o visto EB-3 e como funciona?",
+          "answer": "O EB-3 é uma categoria de visto de imigração baseada em emprego que permite que trabalhadores qualificados, profissionais e trabalhadores não qualificados obtenham residência permanente (Green Card) nos Estados Unidos. O processo envolve uma oferta de emprego permanente de um empregador americano e prova de que não há trabalhadores americanos qualificados disponíveis para a posição."
+        },
+        {
+          "question": "Quais são os requisitos para se qualificar para o EB-3?",
+          "answer": "Os requisitos variam por subcategoria: 1) Trabalhadores qualificados: Requerem pelo menos 2 anos de experiência ou treinamento; 2) Profissionais: Precisam de bacharelado ou equivalente; 3) Trabalhadores não qualificados: Podem ter menos de 2 anos de experiência. Todos devem ter uma oferta de emprego permanente de um empregador americano."
+        },
+        {
+          "question": "Quanto tempo leva o processo EB-3?",
+          "answer": "O tempo total varia de 2 a 4 anos, dependendo do país de origem e disponibilidade de vistos. O processo inclui: 1) Certificação de Trabalho (6-12 meses); 2) Petição I-140 (6-12 meses); 3) Ajuste de status ou processo consular (6-18 meses). Brasileiros geralmente têm tempos de espera menores comparados a outros países."
+        },
+        {
+          "question": "Posso incluir minha família no processo EB-3?",
+          "answer": "Sim! O EB-3 permite que você inclua seu cônjuge e filhos solteiros menores de 21 anos no processo. Todos receberão Green Cards e terão os mesmos direitos de residência permanente, incluindo permissão para trabalhar e estudar nos Estados Unidos."
+        },
+        {
+          "question": "Qual é o custo total do processo EB-3?",
+          "answer": "Os custos incluem: taxas governamentais (aproximadamente $2.000-3.000), honorários advocatícios ($5.000-15.000), traduções e documentação ($500-1.500), exames médicos ($200-500), e custos de viagem. O empregador geralmente paga as principais taxas, mas alguns custos podem ser compartilhados."
+        },
+        {
+          "question": "Preciso falar inglês fluentemente para o EB-3?",
+          "answer": "O nível de inglês necessário depende da posição específica. Para algumas posições, inglês básico é suficiente, especialmente em empregos não qualificados. Para posições profissionais, inglês intermediário ou avançado pode ser necessário. A MatriculaUSA oferece suporte para melhorar suas habilidades linguísticas."
+        },
+        {
+          "question": "O que acontece se eu perder meu emprego após receber o Green Card?",
+          "answer": "Após receber o Green Card, você tem mais flexibilidade. Se perder o emprego, pode procurar outro emprego no mesmo ou campo similar. Após 5 anos, pode se naturalizar como cidadão americano. O Green Card EB-3 é permanente e não está vinculado a um empregador específico após aprovação."
+        },
+        {
+          "question": "Posso trocar de emprego durante o processo EB-3?",
+          "answer": "Durante o processo, é possível trocar de emprego, mas requer uma nova petição I-140 com o novo empregador. Isso pode adicionar tempo ao processo. Após receber o Green Card, você tem liberdade completa para trocar de emprego sem restrições."
+        }
+      ]
+    },
+    "cta": {
+      "badge": "Junte-se a milhares de brasileiros",
+      "title": "Pronto para começar sua <span class=\"text-[#D0151C]\">jornada</span>?",
+      "subtitle": "Preencha o formulário abaixo e nossa equipe entrará em contato para revisar seu perfil e guiá-lo através do processo.",
+      "applyNow": "Candidatar-se Agora",
+      "contactUs": "Entre em Contato",
+      "features": [
+        "Processo 100% legal",
+        "Suporte especializado",
+        "Green Card permanente"
+      ]
+    }
+  },
+  "eb3Success": {
+    "loading": {
+      "title": "Verificando seu pagamento...",
+      "description": "Por favor, aguarde um momento."
+    },
+    "success": {
+      "title": "Pré-candidatura EB-3 Processada!",
+      "description": "Sua pré-candidatura para vagas EB-3 foi processada com sucesso. Nossa equipe especializada entrará em contato em breve para dar continuidade ao seu processo."
+    },
+    "nextSteps": {
+      "title": "Próximos Passos",
+      "steps": [
+        {
+          "title": "Confirmação por Email",
+          "description": "Você receberá um email de confirmação com todos os detalhes da sua pré-candidatura."
+        },
+        {
+          "title": "Contato da Equipe",
+          "description": "Nossa equipe entrará em contato em até 24 horas para agendar uma conversa."
+        },
+        {
+          "title": "Processo de Candidatura",
+          "description": "Iniciaremos o processo completo de candidatura para as vagas EB-3 disponíveis."
+        }
+      ]
+    },
+    "benefits": {
+      "title": "O que você ganha com sua pré-candidatura EB-3?",
+      "items": [
+        "Acesso exclusivo a vagas EB-3",
+        "Suporte especializado da nossa equipe",
+        "Orientação completa no processo",
+        "Documentação necessária organizada",
+        "Acompanhamento personalizado",
+        "Garantia de qualidade no processo"
+      ]
+    },
+    "actions": {
+      "viewMoreJobs": "Ver Mais Vagas EB-3",
+      "backToHome": "Voltar ao Início"
+    },
+    "contact": {
+      "title": "Dúvidas?",
+      "description": "Entre em contato conosco:",
+      "email": "Email: info@matriculausa.com",
+      "whatsapp": "WhatsApp: +1 (213) 676-2544"
     }
   }
 }

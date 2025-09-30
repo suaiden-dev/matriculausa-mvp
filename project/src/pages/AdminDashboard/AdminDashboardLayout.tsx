@@ -44,6 +44,7 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
   
   const getActiveTab = () => {
     const path = location.pathname;
+    if (path.includes('/admin/dashboard/students')) return 'users';
     if (path.includes('/application-monitoring')) return 'application-monitoring';
     if (path.includes('/universities')) return 'universities';
     if (path.includes('/users')) return 'users';
