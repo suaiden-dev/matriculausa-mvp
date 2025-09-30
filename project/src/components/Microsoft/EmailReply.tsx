@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useMsal } from '@azure/msal-react';
 import { graphScopes } from '../../lib/msalConfig';
-import GraphService from '../../lib/graphService';
+import { GraphService } from '../../lib/services/GraphService';
 import { Send, X, Loader2 } from 'lucide-react';
 
 interface EmailReplyProps {

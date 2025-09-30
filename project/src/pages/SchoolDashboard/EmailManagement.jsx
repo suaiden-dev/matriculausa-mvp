@@ -200,7 +200,7 @@ const EmailManagement = () => {
           // Loading Microsoft stats
           
           // Importar GraphService dinamicamente para evitar problemas de dependências
-          const { default: GraphService } = await import('../../lib/graphService');
+          const { GraphService } = await import('../../lib/services/GraphService');
           // Criar GraphService com refresh token e config ID para renovação automática
           const graphService = new GraphService(
             microsoftConfig.oauth_access_token,
@@ -559,7 +559,8 @@ const EmailManagement = () => {
   const handleInboxNavigation = (config) => {
     try {
       if (config.provider_type === 'microsoft') {
-        navigate('/school/dashboard/microsoft-email');
+        // Para contas Microsoft, também passar o config ID para garantir que a conta correta seja selecionada
+        navigate(`/school/dashboard/email/inbox?config=${config.id}`);
       } else {
         navigate(`/school/dashboard/inbox?config=${config.id}`);
       }
@@ -741,8 +742,6 @@ const EmailManagement = () => {
                         <EnvelopeIcon className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2" />
                         <span className="hidden sm:inline">Gmail</span>
                         <span className="sm:hidden">Gmail</span>
-                        <span className="hidden sm:inline">Gmail</span>
-                        <span className="sm:hidden">Gmail</span>
                       </button>
                       
                       {/* Microsoft Account - Direct Connection */}
@@ -821,7 +820,6 @@ const EmailManagement = () => {
                 >
                   <EnvelopeIcon className="h-5 w-5" />
                   <span>Gmail</span>
-                  <span>Gmail</span>
                 </button>
                 
                 {/* Microsoft Account - Direct Connection */}
@@ -835,7 +833,6 @@ const EmailManagement = () => {
                       <path fill="currentColor" d="M11.4 24H0V12.6h11.4V24zM24 24H12.6V12.6H24V24zM11.4 11.4H0V0h11.4v11.4zM24 11.4H12.6V0H24v11.4z"/>
                     </svg>
                   </div>
-                  <span>Microsoft</span>
                   <span>Microsoft</span>
                 </button>
               </div>
@@ -893,7 +890,6 @@ const EmailManagement = () => {
                               title="Open inbox"
                             >
                               Inbox
-                              Inbox
                             </button>
                             
                             <button
@@ -911,7 +907,6 @@ const EmailManagement = () => {
                               className="text-sm font-medium py-1 px-2 rounded transition-colors text-blue-600 hover:text-blue-800 hover:bg-blue-50"
                               title="Open inbox"
                             >
-                              Inbox
                               Inbox
                             </button>
                             

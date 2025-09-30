@@ -24,8 +24,7 @@ import {
   Clock,
   CheckCircle2,
   Shield,
-  MessageSquare,
-  Edit
+  MessageSquare
 } from 'lucide-react';
 import DocumentViewerModal from '../../components/DocumentViewerModal';
 import ZellePaymentReviewModal from '../../components/ZellePaymentReviewModal';
@@ -349,13 +348,6 @@ const PaymentManagement = (): React.JSX.Element => {
   const [selectedZelleProofUrl, setSelectedZelleProofUrl] = useState<string>('');
   const [selectedZelleProofFileName, setSelectedZelleProofFileName] = useState<string>('');
 
-  // Estados para modal de edição de scholarship_id do pagamento Zelle
-  const [showZelleEditModal, setShowZelleEditModal] = useState(false);
-  const [selectedZellePaymentForEdit, setSelectedZellePaymentForEdit] = useState<PaymentRecord | null>(null);
-  const [availableScholarships, setAvailableScholarships] = useState<any[]>([]);
-  const [selectedScholarshipId, setSelectedScholarshipId] = useState<string>('');
-  const [editingZellePayment, setEditingZellePayment] = useState(false);
-
   useEffect(() => {
     if (user && user.role === 'admin') {
       if (!hasLoadedPayments.current) {
@@ -368,16 +360,6 @@ const PaymentManagement = (): React.JSX.Element => {
       }
     }
   }, [user]);
-
-  // Silenciar logs de debug enquanto esta página estiver montada
-  useEffect(() => {
-    const originalLog = console.log;
-    // Evitar spam no console: desabilita logs desta página
-    console.log = (..._args: any[]) => {};
-    return () => {
-      console.log = originalLog;
-    };
-  }, []);
 
   useEffect(() => {
     if (activeTab === 'university-requests' && !hasLoadedUniversityRequests.current) {
@@ -768,25 +750,29 @@ const PaymentManagement = (): React.JSX.Element => {
   const approveZellePayment = async (paymentId: string) => {
     try {
       setZelleActionLoading(true);
+      
       const payment = zellePayments.find(p => p.id === paymentId);
       if (!payment) throw new Error('Payment not found');
+
       console.log('🔍 [approveZellePayment] Aprovando pagamento:', payment);
 
-      // Resolução de scholarship_id será feita apenas quando necessário
-      // para tipos application_fee/scholarship_fee mais abaixo.
-
       // Atualizar o status do pagamento para aprovado
-      const { error } = await supabase
-        .from('zelle_payments')
-        .update({
-          status: 'approved',
-          admin_approved_by: user!.id,
-          admin_approved_at: new Date().toISOString(),
-        })
-        .eq('id', paymentId);
+          const { error } = await supabase
+      .from('zelle_payments')
+      .update({
+        status: 'approved',
+        admin_approved_by: user!.id,
+        admin_approved_at: new Date().toISOString()
+      })
+      .eq('id', paymentId);
+
       if (error) throw error;
 
-      // ...existing code...
+      // MARCAR COMO PAGO NAS TABELAS CORRETAS
+      console.log('💰 [approveZellePayment] Marcando como pago nas tabelas corretas...');
+      console.log('🔍 [approveZellePayment] payment.fee_type_global:', payment.fee_type_global);
+      console.log('🔍 [approveZellePayment] payment.fee_type:', payment.fee_type);
+      console.log('🔍 [approveZellePayment] payment.user_id:', payment.user_id);
       
       if (payment.fee_type_global === 'selection_process') {
         console.log('🎯 [approveZellePayment] Entrando na condição selection_process');
@@ -1050,61 +1036,9 @@ const PaymentManagement = (): React.JSX.Element => {
       if (payment.fee_type === 'application_fee' || payment.fee_type === 'scholarship_fee') {
         console.log('🎯 [approveZellePayment] Entrando na condição scholarship_applications');
         console.log('🔍 [approveZellePayment] fee_type:', payment.fee_type);
+        console.log('🔍 [approveZellePayment] Executando UPDATE scholarship_applications WHERE student_id =', payment.student_id);
         
-        // Buscar informações do pagamento Zelle para verificar scholarship_id específico
-        const { data: zellePaymentData, error: zelleError } = await supabase
-          .from('zelle_payments')
-          .select('scholarships_ids')
-          .eq('id', paymentId)
-          .single();
-
-        if (zelleError) {
-          console.error('❌ [approveZellePayment] Erro ao buscar dados do pagamento Zelle:', zelleError);
-          throw new Error('Erro ao buscar informações do pagamento');
-        }
-
-        let targetScholarshipId = null;
-        
-        // Verificar se há scholarship_id específico no pagamento
-        if (zellePaymentData?.scholarships_ids && Array.isArray(zellePaymentData.scholarships_ids) && zellePaymentData.scholarships_ids.length > 0) {
-          targetScholarshipId = zellePaymentData.scholarships_ids[0];
-          console.log('🎯 [approveZellePayment] Scholarship ID específico encontrado:', targetScholarshipId);
-        } else {
-          console.warn('⚠️ [approveZellePayment] ATENÇÃO: Pagamento Zelle não possui scholarship_id específico!');
-          console.log('🔍 [approveZellePayment] Buscando aplicações do estudante para verificar quantas existem...');
-          
-          // Buscar todas as aplicações do estudante para verificar se há múltiplas
-          const { data: studentApplications, error: appsError } = await supabase
-            .from('scholarship_applications')
-            .select('id, scholarship_id, scholarships(title)')
-            .eq('student_id', payment.student_id);
-
-          if (appsError) {
-            console.error('❌ [approveZellePayment] Erro ao buscar aplicações do estudante:', appsError);
-            throw new Error('Erro ao verificar aplicações do estudante');
-          }
-
-          if (studentApplications && studentApplications.length > 1) {
-            console.error('❌ [approveZellePayment] ERRO CRÍTICO: Estudante possui múltiplas aplicações mas o pagamento não especifica qual bolsa!');
-            console.log('📋 [approveZellePayment] Aplicações encontradas:', studentApplications.map(app => ({
-              id: app.id,
-              scholarship_id: app.scholarship_id,
-              title: (app as any).scholarships?.title
-            })));
-            
-          } else if (studentApplications && studentApplications.length === 1) {
-            // Se há apenas uma aplicação, usar ela
-            targetScholarshipId = studentApplications[0].scholarship_id;
-            console.log('✅ [approveZellePayment] Apenas uma aplicação encontrada, usando scholarship_id:', targetScholarshipId);
-          } else {
-            console.error('❌ [approveZellePayment] Nenhuma aplicação encontrada para o estudante');
-            throw new Error('Nenhuma aplicação de bolsa encontrada para este estudante');
-          }
-        }
-
-        console.log('🔍 [approveZellePayment] Executando UPDATE scholarship_applications WHERE scholarship_id =', targetScholarshipId);
-        
-        // Marcar no scholarship_applications - APENAS A APLICAÇÃO ESPECÍFICA
+        // Marcar no scholarship_applications
         const { data: updateData, error: appError } = await supabase
           .from('scholarship_applications')
           .update({ 
@@ -1112,7 +1046,6 @@ const PaymentManagement = (): React.JSX.Element => {
             updated_at: new Date().toISOString()
           })
           .eq('student_id', payment.student_id)
-          .eq('scholarship_id', targetScholarshipId)  // ← CORREÇÃO: Especificar a bolsa específica
           .select();
 
         console.log('🔍 [approveZellePayment] Resultado da atualização scholarship_applications:', { updateData, appError });
@@ -1455,7 +1388,7 @@ const PaymentManagement = (): React.JSX.Element => {
                 phone_affiliate_admin: affiliateAdminData.user_profiles.phone || "",
                 email_aluno: payment.student_email,
                 nome_aluno: payment.student_name,
-                phone_aluno: "", // Campo não disponível no PaymentRecord
+                phone_aluno: payment.student_phone || "",
                 email_seller: sellerData.email,
                 nome_seller: sellerData.name,
                 phone_seller: sellerPhone || "",
@@ -1623,37 +1556,6 @@ const PaymentManagement = (): React.JSX.Element => {
     }
   };
 
-  // Função para atualizar scholarship_id de um pagamento Zelle
-  const updateZellePaymentScholarship = async (paymentId: string, scholarshipId: string) => {
-    try {
-      setZelleActionLoading(true);
-      
-      console.log('🔧 [updateZellePaymentScholarship] Atualizando pagamento:', paymentId, 'com scholarship_id:', scholarshipId);
-
-      // Atualizar o pagamento Zelle com o scholarship_id correto
-      const { error } = await supabase
-        .from('zelle_payments')
-        .update({
-          scholarships_ids: [scholarshipId],
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', paymentId);
-
-      if (error) throw error;
-
-      console.log('✅ [updateZellePaymentScholarship] Pagamento Zelle atualizado com sucesso');
-      
-      // Recarregar pagamentos Zelle
-      await loadZellePayments();
-      
-    } catch (error: any) {
-      console.error('❌ [updateZellePaymentScholarship] Erro ao atualizar pagamento Zelle:', error);
-      throw error;
-    } finally {
-      setZelleActionLoading(false);
-    }
-  };
-
   // Funções auxiliares para abrir modais
   const openRejectModal = (id: string) => {
     const request = universityRequests.find(r => r.id === id);
@@ -1709,58 +1611,6 @@ const PaymentManagement = (): React.JSX.Element => {
       setSelectedZelleProofUrl(fullUrl);
       setSelectedZelleProofFileName(`Zelle Payment Proof - ${payment.student_name}`);
       setShowZelleProofModal(true);
-    }
-  };
-
-  // Função para abrir modal de edição de scholarship_id
-  const openZelleEditModal = async (paymentId: string) => {
-    const payment = zellePayments.find(p => p.id === paymentId);
-    if (!payment) return;
-
-    try {
-      setEditingZellePayment(true);
-      
-      // Buscar aplicações do estudante para mostrar as opções
-      const { data: studentApplications, error } = await supabase
-        .from('scholarship_applications')
-        .select('id, scholarship_id, scholarships(id, title)')
-        .eq('student_id', payment.student_id);
-
-      if (error) {
-        console.error('Erro ao buscar aplicações do estudante:', error);
-        return;
-      }
-
-      setSelectedZellePaymentForEdit(payment);
-      setAvailableScholarships(studentApplications || []);
-      setSelectedScholarshipId('');
-      setShowZelleEditModal(true);
-      
-    } catch (error) {
-      console.error('Erro ao abrir modal de edição:', error);
-    } finally {
-      setEditingZellePayment(false);
-    }
-  };
-
-  // Função para salvar a edição do scholarship_id
-  const handleSaveZelleEdit = async () => {
-    if (!selectedZellePaymentForEdit || !selectedScholarshipId) return;
-
-    try {
-      setEditingZellePayment(true);
-      
-      await updateZellePaymentScholarship(selectedZellePaymentForEdit.id, selectedScholarshipId);
-      
-      setShowZelleEditModal(false);
-      setSelectedZellePaymentForEdit(null);
-      setAvailableScholarships([]);
-      setSelectedScholarshipId('');
-      
-    } catch (error) {
-      console.error('Erro ao salvar edição:', error);
-    } finally {
-      setEditingZellePayment(false);
     }
   };
 
@@ -4544,20 +4394,6 @@ const PaymentManagement = (): React.JSX.Element => {
                             Add Notes
                           </button>
                         </div>
-
-                        {/* Botão para editar scholarship_id */}
-                        <div className="mt-3">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openZelleEditModal(payment.id);
-                            }}
-                            className="w-full px-3 py-2 bg-orange-600 text-white text-sm font-medium rounded-lg hover:bg-orange-700 transition-colors flex items-center justify-center gap-2"
-                          >
-                            <Edit className="w-4 h-4" />
-                            Edit Scholarship ID
-                          </button>
-                        </div>
                       </div>
                     ))}
                   </div>
@@ -4665,16 +4501,6 @@ const PaymentManagement = (): React.JSX.Element => {
                         >
                                     <MessageSquare size={16} />
                                     Notes
-                        </button>
-                        
-                        {/* Botão para editar scholarship_id */}
-                        <button
-                          onClick={() => openZelleEditModal(payment.id)}
-                          className="text-orange-600 hover:text-orange-900 flex items-center gap-1"
-                          title="Edit Scholarship ID"
-                        >
-                          <Edit size={16} />
-                          Edit
                         </button>
                       </div>
                               </td>
@@ -5427,56 +5253,6 @@ const PaymentManagement = (): React.JSX.Element => {
                   {affiliateActionLoading ? 'Adding Notes...' : 'Add Notes'}
                 </button>
               </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal para editar scholarship_id do Zelle */}
-      {showZelleEditModal && selectedZellePaymentForEdit && (
-        <div className="modal-overlay" onClick={() => setShowZelleEditModal(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Editar Scholarship ID</h3>
-              <button className="close-btn" onClick={() => setShowZelleEditModal(false)}>×</button>
-            </div>
-            <div className="modal-body">
-              <p><strong>Estudante:</strong> {selectedZellePaymentForEdit.student_name}</p>
-              <p><strong>Email:</strong> {selectedZellePaymentForEdit.student_email}</p>
-              <p><strong>Valor:</strong> ${selectedZellePaymentForEdit.amount}</p>
-              
-              <div className="form-group mt-4">
-                <label htmlFor="scholarship-select">Selecionar Scholarship:</label>
-                <select 
-                  id="scholarship-select"
-                  value={selectedScholarshipId} 
-                  onChange={(e) => setSelectedScholarshipId(e.target.value)}
-                  className="form-control"
-                >
-                  <option value="">Selecione uma scholarship...</option>
-                  {availableScholarships.map(app => (
-                    <option key={app.id} value={app.scholarship_id}>
-                      {app.scholarships?.title || `Scholarship ${app.scholarship_id}`} (ID: {app.scholarship_id})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <div className="modal-footer">
-              <button 
-                className="btn btn-secondary" 
-                onClick={() => setShowZelleEditModal(false)}
-                disabled={editingZellePayment}
-              >
-                Cancelar
-              </button>
-              <button 
-                className="btn btn-primary" 
-                onClick={handleSaveZelleEdit}
-                disabled={!selectedScholarshipId || editingZellePayment}
-              >
-                {editingZellePayment ? 'Salvando...' : 'Salvar'}
-              </button>
             </div>
           </div>
         </div>

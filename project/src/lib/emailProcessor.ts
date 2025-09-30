@@ -1,4 +1,4 @@
-import GraphService from './graphService';
+import { GraphService } from './services/GraphService';
 
 interface ProcessedEmail {
   id: string;

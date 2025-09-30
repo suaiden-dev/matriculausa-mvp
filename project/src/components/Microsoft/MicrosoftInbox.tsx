@@ -1,46 +1,23 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Mail, RefreshCw, Inbox as InboxIcon,
   Send as SendIcon, Star as StarIcon, FileText, AlertTriangle, Trash,
   Bot, Play, Loader2, XCircle,
   Search, MoreVertical, Reply, Forward, User,
   Plus, Archive, Folder, FolderOpen,
-  Send, X
+  X
 } from 'lucide-react';
-import { useAuthToken } from '../../hooks/useAuthToken';
+// import { useAuthToken } from '../../hooks/useAuthToken'; // Removido - usando GraphService diretamente
 import { useMicrosoftConnection } from '../../hooks/useMicrosoftConnection';
 import { formatDateUS } from '../../lib/dateUtils';
-import GraphService from '../../lib/graphService';
-import MicrosoftAccountSelector from './MicrosoftAccountSelector';
-import EmailKnowledgeManagement from '../../pages/SchoolDashboard/EmailKnowledgeManagement';
+import { GraphService } from '../../lib/services/GraphService';
 import EmailAgentManagement from '../../pages/SchoolDashboard/EmailAgentManagement';
 import { useUniversity } from '../../context/UniversityContext';
 import { supabase } from '../../lib/supabase';
 
-// Função para extrair email do token MSAL
-const getEmailFromToken = async (token: string): Promise<string> => {
-  try {
-    // Fazer requisição para Microsoft Graph para obter informações do usuário
-    const response = await fetch('https://graph.microsoft.com/v1.0/me', {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (!response.ok) {
-      throw new Error(`Erro ao obter dados do usuário: ${response.status}`);
-    }
-
-    const userData = await response.json();
-    return userData.mail || userData.userPrincipalName || 'unknown@microsoft.com';
-  } catch (error) {
-    console.error('Erro ao obter email do token:', error);
-    return 'unknown@microsoft.com';
-  }
-};
 
 // Interfaces
 
@@ -86,17 +63,20 @@ interface MicrosoftGraphEmail {
 }
 
 export default function MicrosoftInbox() {
-  const { getToken, accounts } = useAuthToken();
+  const [searchParams] = useSearchParams();
+  const configId = searchParams.get('config');
+  
+  // const { getToken, accounts } = useAuthToken(); // Removido - usando GraphService diretamente
   // Hook para gerenciar múltiplas conexões Microsoft (usado pelo MicrosoftAccountSelector)
-  const { activeConnection, connections } = useMicrosoftConnection();
+  const { activeConnection, connections, setActiveConnection } = useMicrosoftConnection();
   // Hook para obter o universityId
-  const { university } = useUniversity();
+  const { } = useUniversity();
   
 
   // Estados do AIManager
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<'idle' | 'active' | 'error' | 'loading'>('idle');
-  const [recentEmails, setRecentEmails] = useState<ProcessedEmail[]>([]);
+  const [recentEmails] = useState<ProcessedEmail[]>([]);
   const [loadingEmails, setLoadingEmails] = useState(false);
   const [showComposeModal, setShowComposeModal] = useState(false);
   const [composeData, setComposeData] = useState({
@@ -106,6 +86,14 @@ export default function MicrosoftInbox() {
     subject: '',
     message: ''
   });
+
+  // Estados para responsividade mobile
+  const [isMobile, setIsMobile] = useState(false);
+  // const [sidebarOpen, setSidebarOpen] = useState(false); // Removed - Sidebar always visible
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
+
+  // Estados para controle de requisições (SIMPLIFICADO)
+  const [isLoadingData, setIsLoadingData] = useState(false);
 
   // Estados do Inbox
   const [selectedEmail, setSelectedEmail] = useState<ProcessedEmail | MicrosoftGraphEmail | null>(null);
@@ -134,15 +122,15 @@ export default function MicrosoftInbox() {
   const [sessionId] = useState(() => `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
   const [usageInfo, setUsageInfo] = useState<{prompts_used: number, max_prompts: number, remaining_prompts: number} | null>(null);
   
-  // Cache duration: 5 minutes
-  const CACHE_DURATION = 5 * 60 * 1000;
+  // Cache simples - 10 minutos
+  const CACHE_DURATION = 10 * 60 * 1000;
 
   // Função para obter ícone dinâmico baseado no tipo de pasta
   const getFolderIcon = (folderId: string, isActive: boolean, isLoading: boolean, hasError: boolean) => {
-    if (isLoading) return <Loader2 className="h-4 w-4 animate-spin" />;
-    if (hasError) return <XCircle className="h-4 w-4 text-red-500" />;
+    if (isLoading) return <Loader2 className="h-3 w-3 animate-spin" />;
+    if (hasError) return <XCircle className="h-3 w-3 text-red-500" />;
     
-    const iconProps = { className: "h-4 w-4" };
+    const iconProps = { className: "h-3 w-3" };
     
     switch (folderId) {
       case 'inbox':
@@ -232,31 +220,44 @@ export default function MicrosoftInbox() {
     return mapping;
   };
 
-  // Função para buscar pastas de email
+  // Função para buscar pastas de email (SIMPLIFICADA)
   const fetchMailFolders = async () => {
-    if (!getToken) return;
+    if (!activeConnection || isLoadingData) return;
+    
+    setIsLoadingData(true);
     
     try {
-      // Usar token da conta ativa se disponível; senão usar MSAL
-      let token;
-      if (activeConnection?.access_token) {
-        // Using saved token for folders
-        token = activeConnection.access_token;
-      } else {
-        // No saved token found, using MSAL fallback
-        token = await getToken();
+      // 🔄 SINCRONIZAR TOKENS ANTES DA CHAMADA
+      const tokensSynced = await syncTokensFromDatabase();
+      
+      if (!tokensSynced) {
+        throw new Error('Tokens não sincronizados - aguardando renovação');
+      }
+
+      // Verificar se há uma conexão ativa válida
+      if (!activeConnection?.access_token) {
+        throw new Error('No active Microsoft connection found');
       }
       
-      // Verificar se o token é válido
-      if (!token) {
-        throw new Error('Token de acesso não disponível');
+      
+      // Verificar se é uma conta Microsoft (não Gmail)
+      if (!activeConnection.email_address.includes('@outlook.com') && 
+          !activeConnection.email_address.includes('@hotmail.com') && 
+          !activeConnection.email_address.includes('@live.com') &&
+          !activeConnection.email_address.includes('@microsoft.com')) {
+        throw new Error('This is not a Microsoft account. Use @outlook.com, @hotmail.com, @live.com or @microsoft.com accounts');
       }
       
-      // Criar GraphService com refresh token e config ID para renovação automática
+      // Verificar se o token não está expirado (básico)
+      if (activeConnection.access_token.length < 100) {
+        throw new Error('Access token appears invalid - account needs to be reconnected');
+      }
+      
+      // Criar GraphService com os dados da conexão ativa
       const graphService = new GraphService(
-        token, 
-        activeConnection?.refresh_token, 
-        activeConnection?.id
+        activeConnection.access_token, 
+        activeConnection.refresh_token, 
+        activeConnection.id
       );
       const folders = await graphService.getMailFolders();
       setMailFolders(folders.value || []);
@@ -271,23 +272,13 @@ export default function MicrosoftInbox() {
         error.message.includes('unauthorized') ||
         error.message.includes('401')
       )) {
-        console.log('🔄 Token expirado detectado ao buscar pastas, tentando renovação...');
-        // Tentar renovar token
-        try {
-          const newToken = await getToken();
-          if (newToken) {
-            console.log('✅ Token renovado, tentando novamente...');
-            const graphService = new GraphService(newToken);
-            const folders = await graphService.getMailFolders();
-            setMailFolders(folders.value || []);
-            return folders.value || [];
-          }
-        } catch (renewError) {
-          console.error('❌ Falha ao renovar token:', renewError);
-        }
+        // Token renewal is handled by GraphService automatically
+        console.log('🔄 Token renewal will be handled by GraphService');
       }
       
       return [];
+    } finally {
+      setIsLoadingData(false);
     }
   };
 
@@ -300,9 +291,11 @@ export default function MicrosoftInbox() {
     return (now - cached.timestamp) < CACHE_DURATION;
   };
 
+  // Função removida - lógica complexa desnecessária
+
   // Função para buscar emails de uma pasta específica
   const fetchEmailsFromFolder = useCallback(async (folderId: string, folderKey: string, forceRefresh = false) => {
-    if (!getToken || !folderId) return;
+    if (!folderId || isLoadingData) return;
     
     // Verificar cache se não for refresh forçado
     if (!forceRefresh && isCacheValid(folderKey)) {
@@ -313,33 +306,48 @@ export default function MicrosoftInbox() {
       return folderCache[folderKey].data;
     }
     
+    setIsLoadingData(true);
+    
     // Marcar pasta como carregando
     setLoadingFolders(prev => ({ ...prev, [folderKey]: true }));
     setFolderErrors(prev => ({ ...prev, [folderKey]: '' }));
     
     try {
-      // Usar token da conta ativa se disponível; senão usar MSAL
-      let token;
-      if (activeConnection?.access_token) {
-        token = activeConnection.access_token;
-      } else {
-        token = await getToken();
+      // 🔄 SINCRONIZAR TOKENS ANTES DA CHAMADA
+      const tokensSynced = await syncTokensFromDatabase();
+      
+      if (!tokensSynced) {
+        throw new Error('Tokens não sincronizados - aguardando renovação');
+      }
+
+      // Sempre usar a activeConnection atual
+      if (!activeConnection?.access_token) {
+        throw new Error('No active Microsoft connection found');
       }
       
-      // Verificar se o token é válido
-      if (!token) {
-        throw new Error('Token de acesso não disponível');
+      
+      // Verificar se é uma conta Microsoft (não Gmail)
+      if (!activeConnection.email_address.includes('@outlook.com') && 
+          !activeConnection.email_address.includes('@hotmail.com') && 
+          !activeConnection.email_address.includes('@live.com') &&
+          !activeConnection.email_address.includes('@microsoft.com')) {
+        throw new Error('This is not a Microsoft account. Use @outlook.com, @hotmail.com, @live.com or @microsoft.com accounts');
       }
       
-      // Criar GraphService com refresh token e config ID para renovação automática
+      // Verificar se o token não está expirado (básico)
+      if (activeConnection.access_token.length < 100) {
+        throw new Error('Access token appears invalid - account needs to be reconnected');
+      }
+      
+      // Criar GraphService com os dados da conexão ativa
       const graphService = new GraphService(
-        token, 
-        activeConnection?.refresh_token, 
-        activeConnection?.id
+        activeConnection.access_token, 
+        activeConnection.refresh_token, 
+        activeConnection.id
       );
       const emails = await graphService.getEmailsFromFolder(folderId, 50);
       
-      const emailData = emails.value || [];
+      const emailData = emails?.value || [];
       
       // Atualizar cache
       setFolderCache(prev => ({
@@ -368,11 +376,10 @@ export default function MicrosoftInbox() {
         error.message.includes('Token inválido') ||
         error.message.includes('invalid_token')
       )) {
-        console.log('🔄 Token inválido/expirado detectado, silenciando erro...');
-        // Não mostrar erro para o usuário para evitar confusão
+        // Mostrar mensagem clara para o usuário
         setFolderErrors(prev => ({ 
           ...prev, 
-          [folderKey]: '' 
+          [folderKey]: '🔐 Microsoft account disconnected. Click "Connect Microsoft" to reconnect.' 
         }));
       } else {
         setFolderErrors(prev => ({ 
@@ -383,13 +390,14 @@ export default function MicrosoftInbox() {
       return [];
     } finally {
       setLoadingFolders(prev => ({ ...prev, [folderKey]: false }));
+      setIsLoadingData(false);
     }
-  }, [getToken, activeConnection?.access_token, folderCache, isCacheValid]);
+  }, [activeConnection?.access_token, folderCache, isCacheValid]);
 
 
   // Função para carregar todas as pastas e seus emails
   const loadAllFolders = useCallback(async () => {
-    if (!getToken) return;
+    if (!activeConnection) return;
     
     setLoadingEmails(true);
     try {
@@ -397,13 +405,13 @@ export default function MicrosoftInbox() {
       // Buscar pastas
       const folders = await fetchMailFolders();
       
-      if (folders.length === 0) {
+      if (!folders || folders.length === 0) {
         // Nenhuma pasta encontrada
         setEmailCounts({ inbox: 0, sent: 0, drafts: 0, archive: 0, spam: 0, trash: 0 });
         return;
       }
       
-      const folderMapping = getFolderMapping(folders);
+      const folderMapping = getFolderMapping(folders || []);
       
       // Buscar emails de cada pasta SEQUENCIALMENTE para evitar rate limiting
       const newCounts = { inbox: 0, sent: 0, drafts: 0, archive: 0, spam: 0, trash: 0 };
@@ -418,7 +426,7 @@ export default function MicrosoftInbox() {
           }
           
           const emails = await fetchEmailsFromFolder(folderId, key, true);
-          const count = emails.length;
+          const count = emails?.length || 0;
           
           if (key in newCounts) {
             newCounts[key as keyof typeof newCounts] = count;
@@ -439,56 +447,163 @@ export default function MicrosoftInbox() {
     } finally {
       setLoadingEmails(false);
     }
-  }, [getToken, activeConnection?.email_address, fetchMailFolders, fetchEmailsFromFolder]);
+  }, [activeConnection?.email_address, fetchMailFolders, fetchEmailsFromFolder]);
 
-  // Recarregar emails quando activeConnection muda (otimizado para evitar loops)
-  useEffect(() => {
-    if (activeConnection && activeConnection.access_token) {
-      // Limpar cache e recarregar apenas uma vez
-      setFolderCache({});
-      setFolderEmails({});
-      setEmailCounts({ inbox: 0, sent: 0, drafts: 0, archive: 0, spam: 0, trash: 0 });
+  // DESABILITADO: Carregamento automático de emails
+  // useEffect(() => {
+  //   if (activeConnection && activeConnection.access_token && !isLoadingData) {
+  //     // Limpar cache e recarregar apenas uma vez
+  //     setFolderCache({});
+  //     setFolderEmails({});
+  //     setEmailCounts({ inbox: 0, sent: 0, drafts: 0, archive: 0, spam: 0, trash: 0 });
       
-      // Usar setTimeout para evitar loops
-      const timeoutId = setTimeout(() => {
-        loadAllFolders();
-      }, 100);
+  //     // Usar setTimeout para evitar loops
+  //     const timeoutId = setTimeout(() => {
+  //       loadAllFolders();
+  //     }, 1000); // 1 segundo é suficiente
       
-      return () => clearTimeout(timeoutId);
-    } else if (activeConnection && !activeConnection.access_token) {
-      // Tentar obter token via MSAL apenas uma vez
-      if (getToken) {
-        getToken().then(() => {
-          loadAllFolders();
-        }).catch(error => {
-          console.error('Erro ao obter token:', error);
-        });
-      }
+  //     return () => clearTimeout(timeoutId);
+  //   }
+  // }, [activeConnection?.email_address, loadAllFolders, isLoadingData]);
+
+
+  // Função para verificar o status da IA para a conta ativa
+
+  // Sincronizar tokens com o banco de dados (versão simplificada)
+  const syncTokensFromDatabase = async () => {
+    if (!activeConnection) {
+      console.log('❌ Nenhuma conta ativa para sincronizar tokens');
+      return false;
     }
-  }, [activeConnection?.email_address]); // Removido access_token das dependências para evitar loops
+
+    try {
+      // Verificar se temos tokens válidos na conexão ativa
+      if (!activeConnection.access_token || activeConnection.access_token.length < 100) {
+        return false;
+      }
+
+      if (!activeConnection.refresh_token || activeConnection.refresh_token.length < 50) {
+        return false;
+      }
+
+      return true;
+
+    } catch (error) {
+      console.error('❌ Erro ao verificar tokens:', error);
+      return false;
+    }
+  };
+
+  const checkAIStatus = async () => {
+    if (!activeConnection) {
+      setStatus('idle');
+      return;
+    }
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setStatus('idle');
+        return;
+      }
+
+      // Verificar se há configuração para esta conta específica
+      const { data: configs, error } = await supabase
+        .from('email_configurations')
+        .select('ai_processing, created_at, email_address')
+        .eq('user_id', user.id)
+        .eq('provider_type', 'microsoft')
+        .eq('email_address', activeConnection.email_address) // Específico para esta conta
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (!error && configs && configs.length > 0) {
+        const config = configs[0];
+        if (config.ai_processing === true) {
+          setStatus('active');
+        } else {
+          setStatus('idle');
+        }
+      } else {
+        setStatus('idle');
+      }
+    } catch (error) {
+      console.error('Erro ao verificar status da IA:', error);
+      setStatus('idle');
+    }
+  };
+
+  // Escutar eventos de atualização de conexão Microsoft
+  useEffect(() => {
+    const handleMicrosoftConnectionUpdate = () => {
+      // Apenas recarregar se há uma conexão ativa
+      if (activeConnection) {
+        // Verificar status da IA para a nova conta
+        checkAIStatus();
+        
+        // Limpar cache e recarregar
+        setFolderCache({});
+        setFolderEmails({});
+        setEmailCounts({ inbox: 0, sent: 0, drafts: 0, archive: 0, spam: 0, trash: 0 });
+        setFolderErrors({});
+        // DESABILITADO: Recarregamento automático
+        // setTimeout(() => {
+        //   loadAllFolders();
+        // }, 500);
+      }
+    };
+
+    window.addEventListener('microsoft-connection-updated', handleMicrosoftConnectionUpdate);
+    
+    return () => {
+      window.removeEventListener('microsoft-connection-updated', handleMicrosoftConnectionUpdate);
+    };
+  }, [activeConnection]);
+
+
+
+  // Verificar status da IA quando a conta ativa muda
+  useEffect(() => {
+    if (activeConnection) {
+      checkAIStatus();
+    }
+  }, [activeConnection?.email_address]);
+
+  // Detectar tamanho da tela para responsividade
+  useEffect(() => {
+    const checkScreenSize = () => {
+      setIsMobile(window.innerWidth < 768);
+      if (window.innerWidth >= 768) {
+        setShowMobileMenu(false);
+      }
+    };
+
+    checkScreenSize();
+    window.addEventListener('resize', checkScreenSize);
+    return () => window.removeEventListener('resize', checkScreenSize);
+  }, []);
+
+  // 🔄 Polling automático removido - sincronização apenas quando necessário
 
   // Verificar status do sistema quando o componente carrega
   useEffect(() => {
     
-    if (!getToken) {
-      setStatus('idle');
-      return;
-    }
-
-    if (accounts.length === 0) {
-      setStatus('idle');
-      return;
-    }
-
-    // Usuário logado, sistema pronto para uso manual
+    // Token handling moved to GraphService
     setStatus('idle');
+
+    // Verificar status da IA para a conta ativa
+    if (activeConnection) {
+      checkAIStatus();
+    } else {
+      setStatus('idle');
+    }
     
-    // Carregar todas as pastas e emails quando o usuário fizer login
-    loadAllFolders();
+    // DESABILITADO: Carregamento automático
+    // loadAllFolders();
     
     // Iniciar polling automático quando o usuário faz login
     startProcessing();
-  }, [getToken, accounts.length]);
+  }, [activeConnection]);
 
   // Verificar se deve abrir modal de AI Agents automaticamente
   useEffect(() => {
@@ -501,9 +616,25 @@ export default function MicrosoftInbox() {
     }
   }, []);
 
+  // Processar configId da URL para selecionar a conta correta
+  // Processar configId APENAS na primeira carga (não sobrescrever seleção manual)
+  useEffect(() => {
+    if (configId && connections.length > 0) {
+      // Encontrar a conexão correspondente ao configId
+      const targetConnection = connections.find(conn => conn.id === configId);
+      
+      if (targetConnection) {
+        // APENAS mudar se não há conta ativa (primeira carga)
+        if (!activeConnection) {
+          setActiveConnection(targetConnection.email_address);
+        }
+      }
+    }
+  }, [configId, connections]); // Removido setActiveConnection e activeConnection das dependências
+
   // Polling automático para detectar novos emails
   useEffect(() => {
-    if (!getToken || accounts.length === 0) return;
+    // Token handling moved to GraphService
 
     
     // Verificar novos emails a cada 5 minutos (reduzido para evitar spam)
@@ -511,12 +642,12 @@ export default function MicrosoftInbox() {
       try {
         // Buscar apenas emails da caixa de entrada (inbox) para detecção de novos
         const folders = await fetchMailFolders();
-        const folderMapping = getFolderMapping(folders);
+        const folderMapping = getFolderMapping(folders || []);
         const inboxId = folderMapping.inbox;
         
         if (inboxId) {
           const emails = await fetchEmailsFromFolder(inboxId, 'inbox', true);
-          const newCount = emails.length;
+          const newCount = emails?.length || 0;
           const currentCount = emailCounts.inbox || 0;
           
           // Se há novos emails, ativar IA automaticamente
@@ -546,12 +677,10 @@ export default function MicrosoftInbox() {
             error.message?.includes('expired') || 
             error.message?.includes('unauthorized') ||
             error.status === 401) {
-          console.log('🔄 Token expirado detectado, tentando renovação...');
           
           try {
             // Tentar renovar token
-            const newToken = await getToken();
-            console.log('✅ Token renovado com sucesso');
+            // Token handling moved to GraphService
           } catch (renewError) {
             console.error('❌ Falha ao renovar token:', renewError);
             // Mostrar notificação para o usuário fazer login novamente
@@ -567,7 +696,7 @@ export default function MicrosoftInbox() {
     return () => {
       clearInterval(pollingInterval);
     };
-  }, [getToken, accounts.length, emailCounts.inbox]);
+  }, [emailCounts.inbox]);
 
   // Funções do AIManager
 
@@ -579,27 +708,44 @@ export default function MicrosoftInbox() {
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
-        console.error('❌ Usuário não encontrado');
         setStatus('error');
         return;
       }
 
-      // Buscar configuração existente
-      const { data: existingConfig, error: fetchError } = await supabase
+      // Buscar configuração específica para a conta ativa
+      if (!activeConnection) {
+        setStatus('error');
+        return;
+      }
+
+      const { data: existingConfigs, error: fetchError } = await supabase
         .from('email_configurations')
         .select('*')
         .eq('user_id', user.id)
         .eq('provider_type', 'microsoft')
-        .eq('is_active', true)
-        .single();
+        .eq('email_address', activeConnection.email_address) // Específico para esta conta
+        .limit(1);
 
-      if (fetchError || !existingConfig) {
-        console.error('❌ Configuração Microsoft não encontrada:', fetchError);
+      if (fetchError || !existingConfigs || existingConfigs.length === 0) {
+        console.error('❌ Configuração Microsoft não encontrada para esta conta:', fetchError);
         setStatus('error');
         return;
       }
 
-      console.log('✅ Configuração encontrada:', existingConfig);
+      // Ativar IA para esta conta específica
+      const { error: updateError } = await supabase
+        .from('email_configurations')
+        .update({ ai_processing: true })
+        .eq('user_id', user.id)
+        .eq('provider_type', 'microsoft')
+        .eq('email_address', activeConnection.email_address);
+
+      if (updateError) {
+        console.error('❌ Erro ao ativar IA para esta conta:', updateError);
+        setStatus('error');
+        return;
+      }
+
       setStatus('active');
     } catch (error) {
       console.error('❌ Erro ao iniciar processamento:', error);
@@ -621,12 +767,19 @@ export default function MicrosoftInbox() {
         return;
       }
 
-      // Desativar configuração existente
-      const { data, error } = await supabase
+      // Desativar configuração específica para esta conta
+      if (!activeConnection) {
+        console.error('❌ Nenhuma conta ativa selecionada');
+        setStatus('error');
+        return;
+      }
+
+      const { error } = await supabase
         .from('email_configurations')
-        .update({ is_active: false })
+        .update({ ai_processing: false })
         .eq('user_id', user.id)
         .eq('provider_type', 'microsoft')
+        .eq('email_address', activeConnection.email_address) // Específico para esta conta
         .select();
 
       if (error) {
@@ -634,7 +787,6 @@ export default function MicrosoftInbox() {
         throw error;
       }
 
-      console.log('✅ Processamento parado com sucesso:', data);
       setStatus('idle');
     } catch (error) {
       console.error('❌ Erro ao parar processamento:', error);
@@ -666,13 +818,13 @@ export default function MicrosoftInbox() {
       }
 
       if (!microsoftConfigs || microsoftConfigs.length === 0) {
-        throw new Error('Configuração Microsoft não encontrada. Conecte sua conta primeiro.');
+        throw new Error('Microsoft configuration not found. Connect your account first.');
       }
 
       // Verificar se há pelo menos uma configuração ativa
       const activeConfig = microsoftConfigs.find(config => config.is_active);
       if (!activeConfig) {
-        throw new Error('Conta Microsoft desconectada. Reconecte sua conta primeiro.');
+        throw new Error('Microsoft account disconnected. Reconnect your account first.');
       }
 
 
@@ -686,7 +838,6 @@ export default function MicrosoftInbox() {
       if (aiError) {
         console.error('❌ Erro ao buscar agente de IA:', aiError);
         // Continuar mesmo sem agente - modo demo
-        console.log('⚠️ Agente de IA não encontrado, continuando em modo demo');
       }
 
       // Inicializar chatbot com mensagem de boas-vindas
@@ -706,7 +857,8 @@ export default function MicrosoftInbox() {
       
     } catch (error) {
       console.error('❌ Erro ao abrir chatbot:', error);
-      alert(`❌ Erro: ${error.message}\n\n💡 Solução: Reconecte sua conta Microsoft primeiro.`);
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      alert(`❌ Error: ${errorMessage}\n\n💡 Solution: Reconnect your Microsoft account first.`);
     }
   };
 
@@ -726,8 +878,6 @@ export default function MicrosoftInbox() {
     setIsChatLoading(true);
 
     try {
-      console.log('🤖 Enviando mensagem para Gemini API...');
-      
       // Chamar Edge Function para processar com Gemini
       const { data: result, error } = await supabase.functions.invoke('email-queue-worker', {
         body: {
@@ -739,24 +889,28 @@ export default function MicrosoftInbox() {
       });
 
       if (error) {
-        console.error('❌ Erro na Edge Function:', error);
-        
         // Verificar se é erro de limite atingido
         if (error.message?.includes('Daily prompt limit reached') || error.message?.includes('429')) {
           const aiMessage = {
             id: (Date.now() + 1).toString(),
             type: 'ai' as const,
-            message: '🚫 You have reached the limit of 5 prompts per session. Please try again tomorrow or contact support to increase your limit.',
+            message: '🚫 You have reached the limit of 5 messages per session. Please try again in a new session.',
             timestamp: new Date()
           };
           setChatMessages(prev => [...prev, aiMessage]);
           return;
         }
         
-        throw new Error(`AI Error: ${error.message}`);
+        // Erro genérico discreto
+        const aiMessage = {
+          id: (Date.now() + 1).toString(),
+          type: 'ai' as const,
+          message: 'Sorry, I was unable to process your message at the moment. Please try again.',
+          timestamp: new Date()
+        };
+        setChatMessages(prev => [...prev, aiMessage]);
+        return;
       }
-
-      console.log('✅ Resposta da Gemini:', result);
 
       // Atualizar informações de uso se disponíveis
       if (result?.usage) {
@@ -770,29 +924,16 @@ export default function MicrosoftInbox() {
       const aiMessage = {
         id: (Date.now() + 1).toString(),
         type: 'ai' as const,
-        message: result?.response || result?.analysis?.summary || 'Sorry, I could not process your message.',
+        message: result?.response || 'Sorry, I was unable to process your message.',
         timestamp: new Date()
       };
 
       setChatMessages(prev => [...prev, aiMessage]);
     } catch (error) {
-      console.error('❌ Erro ao processar mensagem:', error);
-      
-      // Fallback para resposta simulada se Gemini falhar
-      const fallbackResponses = [
-        "Entendo sua pergunta! Com base nas informações que tenho, posso ajudá-lo com isso. Você gostaria de mais detalhes?",
-        "Excelente pergunta! Vou analisar isso para você. Deixe-me verificar as informações mais recentes.",
-        "Posso ajudá-lo com essa questão. Baseado no meu conhecimento sobre bolsas de estudo, aqui está o que posso te dizer...",
-        "Ótima pergunta! Vou processar essa informação e dar uma resposta detalhada para você.",
-        "Entendo! Deixe-me analisar sua pergunta e fornecer a melhor resposta possível."
-      ];
-
-      const randomResponse = fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)];
-
       const aiMessage = {
         id: (Date.now() + 1).toString(),
         type: 'ai' as const,
-        message: `⚠️ Modo demo: ${randomResponse}`,
+        message: 'Sorry, I was unable to process your message at the moment. Please try again.',
         timestamp: new Date()
       };
 
@@ -818,28 +959,11 @@ export default function MicrosoftInbox() {
     setShowComposeModal(true);
   };
 
-  // Função para forçar recarregamento completo
-  const forceReload = async () => {
-    
-    // Limpar todos os estados
-    setFolderCache({});
-    setFolderEmails({});
-    setEmailCounts({ inbox: 0, sent: 0, drafts: 0, archive: 0, spam: 0, trash: 0 });
-    setFolderErrors({});
-    setMailFolders([]);
-    
-    // Aguardar um pouco e recarregar
-    setTimeout(() => {
-      loadAllFolders();
-    }, 500);
-  };
 
   const handleReply = () => {
-    console.log('Reply clicked');
   };
 
   const handleForward = () => {
-    console.log('Forward clicked');
   };
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -866,8 +990,9 @@ export default function MicrosoftInbox() {
         console.warn(`MicrosoftInbox - Pasta ${tabId} não encontrada no mapeamento`);
       }
     } else {
-      // Se não temos as pastas carregadas ainda, carregar todas
-      await loadAllFolders();
+      // DESABILITADO: Carregamento automático
+      console.log('⚠️ Pastas não carregadas - use o botão refresh para carregar');
+      // await loadAllFolders();
     }
   };
 
@@ -923,22 +1048,20 @@ export default function MicrosoftInbox() {
         </div>
       )}
 
-      {/* Header - Outlook Style */}
-      <div className="h-16 bg-blue-600 flex items-center justify-between px-6 text-white m-0 p-0 -mt-8">
-        <div className="flex items-center gap-4">
+      {/* Header - Responsive Outlook Style */}
+      <div className="h-16 bg-blue-600 flex items-center justify-between px-4 md:px-6 text-white m-0 p-0 -mt-8">
+        <div className="flex items-center gap-2 md:gap-4">
+          {/* Mobile Menu Button Removed - Sidebar Always Visible */}
+          
           <div className="flex items-center gap-2">
-            <Mail className="h-8 w-8" />
-            <span className="text-xl font-semibold">Outlook</span>
-            {/* {connections.length > 1 && (
-              <div className="bg-blue-500 text-white text-xs px-2 py-1 rounded-full">
-                {connections.length} contas
-              </div>
-            )} */}
+            <Mail className="h-6 w-6 md:h-8 md:w-8" />
+            <span className="text-lg md:text-xl font-semibold">Outlook</span>
           </div>
         </div>
         
-        <div className="flex-1 max-w-2xl mx-8">
-          <div className="relative">
+        {/* Search bar - hidden on mobile, visible on desktop */}
+        <div className="hidden md:flex flex-1 max-w-2xl mx-8">
+          <div className="relative w-full">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
             <input
               type="text"
@@ -950,27 +1073,42 @@ export default function MicrosoftInbox() {
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 md:gap-4">
+          {/* Mobile search button */}
+          {isMobile && (
+            <button
+              onClick={() => setShowMobileMenu(!showMobileMenu)}
+              className="p-2 hover:bg-blue-700 rounded-lg transition-colors"
+            >
+              <Search className="h-5 w-5" />
+            </button>
+          )}
+
           {/* Account selector for multiple Microsoft accounts */}
           {connections && connections.length > 1 && (
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-blue-100">Account:</span>
+            <div className="flex items-center gap-1 md:gap-2">
+              <span className="text-xs text-blue-100 hidden md:inline">Account:</span>
               <select
-                value={activeConnection?.id || ''}
+                value={activeConnection?.email_address || ''}
                 onChange={(e) => {
-                  const selectedConnection = connections.find(conn => conn.id === e.target.value);
+                  const selectedConnection = connections.find(conn => conn.email_address === e.target.value);
+                  
                   if (selectedConnection) {
-                    // Update active connection in localStorage
-                    localStorage.setItem('active_microsoft_connection', JSON.stringify(selectedConnection));
-                    // Reload the page to refresh the connection
-                    window.location.reload();
+                    // Update active connection using the hook's setActiveConnection method
+                    setActiveConnection(selectedConnection.email_address);
+                    
+                    // Aguardar um pouco para a mudança ser processada
+                    setTimeout(() => {
+                      // Refresh da página para garantir que tudo seja reinicializado corretamente
+                      window.location.reload();
+                    }, 500);
                   }
                 }}
-                className="bg-blue-500 text-white text-sm px-3 py-1 rounded-lg border border-blue-400 focus:ring-2 focus:ring-blue-300 focus:outline-none"
+                className="bg-white text-gray-700 text-xs md:text-sm px-2 md:px-3 py-1 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-300 focus:outline-none hover:bg-gray-50 max-w-32 md:max-w-none"
               >
                 {connections.map((connection) => (
-                  <option key={connection.id} value={connection.id}>
-                    {connection.email_address}
+                  <option key={connection.id} value={connection.email_address}>
+                    {isMobile ? connection.email_address.split('@')[0] : connection.email_address}
                   </option>
                 ))}
               </select>
@@ -983,12 +1121,11 @@ export default function MicrosoftInbox() {
               <User className="h-3 w-3 text-white" />
             </div>
             <span className="text-sm font-medium">
-              {activeConnection?.email_address?.split('@')[0] || accounts[0]?.name || 'User'}
+              {activeConnection?.email_address?.split('@')[0] || 'User'}
             </span>
           </div>
           
           {/* <MicrosoftAccountSelector onAccountChange={(email) => {
-            console.log('Account changed to:', email);
             // Limpar cache e recarregar emails quando a conta muda
             setFolderCache({});
             setFolderEmails({});
@@ -996,7 +1133,10 @@ export default function MicrosoftInbox() {
             loadAllFolders();
           }} /> */}
           <button 
-            onClick={loadAllFolders}
+            onClick={() => {
+              console.log('🔄 Refresh manual - carregando emails...');
+              loadAllFolders();
+            }}
             disabled={loadingEmails}
             className="p-2 hover:bg-blue-700 rounded-lg transition-colors"
             title="Refresh emails"
@@ -1012,10 +1152,62 @@ export default function MicrosoftInbox() {
         </div>
       </div>
 
-      {/* Main Content */}
+      {/* Mobile Search Modal */}
+      {isMobile && showMobileMenu && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 md:hidden">
+          <div className="bg-white p-4 m-4 rounded-lg">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Search</h3>
+              <button
+                onClick={() => setShowMobileMenu(false)}
+                className="p-2 hover:bg-gray-100 rounded-lg"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search emails..."
+                value={searchTerm}
+                onChange={handleSearch}
+                className="w-full pl-10 pr-4 py-3 bg-gray-50 text-gray-900 rounded-lg focus:ring-2 focus:ring-blue-300 focus:outline-none"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Notificação de Reconexão */}
+      {Object.values(folderErrors).some(error => error.includes('desconectada')) && (
+        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <AlertTriangle className="h-5 w-5 text-yellow-400" />
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-yellow-700">
+                <strong>Microsoft Account Disconnected:</strong> Your Microsoft account has been disconnected. 
+                <button 
+                  onClick={() => window.location.href = '/school/dashboard/email/management'}
+                  className="ml-2 text-yellow-800 underline hover:text-yellow-900"
+                >
+                  Click here to reconnect
+                </button>
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+
+      {/* Main Content - Responsive */}
       <div className="flex-1 flex min-h-0">
-        {/* Sidebar - Outlook Style */}
-        <div className="w-64 bg-white border-r border-gray-200 flex flex-col">
+        {/* Mobile Sidebar Overlay Removed - Sidebar Always Visible */}
+
+        {/* Sidebar - Always visible */}
+        <div className="w-64 bg-white border-r border-gray-200 flex-col transition-all duration-300">
           {/* New Email Button */}
           <div className="p-4">
             <button
@@ -1123,63 +1315,67 @@ export default function MicrosoftInbox() {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium text-gray-900 truncate">
-                  {activeConnection?.email_address?.split('@')[0] || accounts[0]?.name || 'User'}
+                  {activeConnection?.email_address?.split('@')[0] || 'User'}
                 </div>
                 <div className="text-xs text-gray-500 truncate">
-                  {activeConnection?.email_address || accounts[0]?.username || 'user@outlook.com'}
+                  {activeConnection?.email_address || 'user@outlook.com'}
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Content Area */}
+        {/* Content Area - Responsive */}
         <div className="flex-1 flex min-h-0">
-          {/* Email List */}
+          {/* Email List - Always visible */}
           <div className="flex-1 border-r border-gray-200 flex flex-col bg-white">
-            {/* Email List Header */}
-            <div className="h-12 bg-white border-b border-gray-200 flex items-center justify-between px-4">
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <span className={sidebarNavItems.find(item => item.id === activeTab)?.color || 'text-gray-600'}>
-                    {getFolderIcon(activeTab, true, loadingFolders[activeTab], !!folderErrors[activeTab])}
-                  </span>
-                  <h2 className="text-sm font-medium text-gray-900">
-                    {sidebarNavItems.find(item => item.id === activeTab)?.label || 'Microsoft Email'}
-                  </h2>
+            {/* Mobile Tab Navigation Removed - Using Sidebar Instead */}
+
+            {/* Email List Header - Desktop only */}
+            {!isMobile && (
+              <div className="h-12 bg-white border-b border-gray-200 flex items-center justify-between px-4">
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <span className={sidebarNavItems.find(item => item.id === activeTab)?.color || 'text-gray-600'}>
+                      {getFolderIcon(activeTab, true, loadingFolders[activeTab], !!folderErrors[activeTab])}
+                    </span>
+                    <h2 className="text-sm font-medium text-gray-900">
+                      {sidebarNavItems.find(item => item.id === activeTab)?.label || 'Microsoft Email'}
+                    </h2>
+                  </div>
+                  {status === 'active' && (
+                    <div className="flex items-center gap-2 text-xs text-green-600">
+                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                      <span>AI Ativo</span>
+                    </div>
+                  )}
+                  {loadingFolders[activeTab] && (
+                    <div className="flex items-center gap-2 text-xs text-blue-600">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      <span>Loading...</span>
+                    </div>
+                  )}
+                  {folderErrors[activeTab] && (
+                    <div className="flex items-center gap-2 text-xs text-red-600">
+                      <XCircle className="h-3 w-3" />
+                      <span>Erro</span>
+                    </div>
+                  )}
                 </div>
-                {status === 'active' && (
-                  <div className="flex items-center gap-2 text-xs text-green-600">
-                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                    <span>AI Ativo</span>
-                  </div>
-                )}
-                {loadingFolders[activeTab] && (
-                  <div className="flex items-center gap-2 text-xs text-blue-600">
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                    <span>Loading...</span>
-                  </div>
-                )}
-                {folderErrors[activeTab] && (
-                  <div className="flex items-center gap-2 text-xs text-red-600">
-                    <XCircle className="h-3 w-3" />
-                    <span>Erro</span>
-                  </div>
-                )}
+                
+                <div className="flex items-center gap-2">
+                  <select
+                    value={filter}
+                    onChange={(e) => setFilter(e.target.value as 'all' | 'unread' | 'starred')}
+                    className="text-xs border border-gray-300 rounded px-2 py-1 focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="all">All</option>
+                    <option value="unread">Unread</option>
+                    <option value="starred">Starred</option>
+                  </select>
+                </div>
               </div>
-              
-              <div className="flex items-center gap-2">
-                <select
-                  value={filter}
-                  onChange={(e) => setFilter(e.target.value as 'all' | 'unread' | 'starred')}
-                  className="text-xs border border-gray-300 rounded px-2 py-1 focus:ring-1 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="all">All</option>
-                  <option value="unread">Unread</option>
-                  <option value="starred">Starred</option>
-                </select>
-              </div>
-            </div>
+            )}
 
             {loadingFolders[activeTab] ? (
               <div className="flex-1 flex items-center justify-center">
@@ -1230,15 +1426,15 @@ export default function MicrosoftInbox() {
                 {filteredEmails.map((email) => (
                   <div
                     key={email.id}
-                    className={`p-3 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${
+                    className={`${isMobile ? 'p-2' : 'p-3'} border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${
                       selectedEmail?.id === email.id ? 'bg-blue-50 border-l-4 border-l-blue-600' : ''
                     } ${!email.isRead ? 'bg-blue-50/30 font-semibold' : ''}`}
                     onClick={() => handleEmailSelect(email)}
                   >
-                    <div className="flex items-start gap-3">
+                    <div className={`flex items-start ${isMobile ? 'gap-2' : 'gap-3'}`}>
                       <div className="flex-shrink-0">
-                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                          <span className="text-blue-600 text-xs font-medium">
+                        <div className={`${isMobile ? 'w-5 h-5' : 'w-8 h-8'} bg-blue-100 rounded-full flex items-center justify-center`}>
+                          <span className={`text-blue-600 ${isMobile ? 'text-xs' : 'text-xs'} font-medium`}>
                             {(email as MicrosoftGraphEmail).from?.emailAddress?.name?.charAt(0) || 
                              (email as ProcessedEmail).from?.charAt(0) || 'U'}
                           </span>
@@ -1246,24 +1442,27 @@ export default function MicrosoftInbox() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-1">
-                          <h4 className="text-sm font-medium text-gray-900 truncate">
+                          <h4 className={`${isMobile ? 'text-xs' : 'text-sm'} font-medium text-gray-900 truncate`}>
                             {(email as MicrosoftGraphEmail).from?.emailAddress?.name || 
                              (email as ProcessedEmail).from || 'Unknown'}
                           </h4>
-                          <span className="text-xs text-gray-500">
-                            {formatDate((email as ProcessedEmail).processedAt || (email as MicrosoftGraphEmail).receivedDateTime)}
+                          <span className={`${isMobile ? 'text-xs' : 'text-xs'} text-gray-500`}>
+                            {isMobile ? 
+                              formatDate((email as ProcessedEmail).processedAt || (email as MicrosoftGraphEmail).receivedDateTime).split(' ')[0] :
+                              formatDate((email as ProcessedEmail).processedAt || (email as MicrosoftGraphEmail).receivedDateTime)
+                            }
                           </span>
                         </div>
-                        <h5 className="text-sm text-gray-900 mb-1 truncate">
+                        <h5 className={`${isMobile ? 'text-xs' : 'text-sm'} text-gray-900 mb-1 truncate`}>
                           {email.subject || 'Sem assunto'}
                         </h5>
-                        <p className="text-xs text-gray-600 line-clamp-2">
+                        <p className={`${isMobile ? 'text-xs' : 'text-xs'} text-gray-600 ${isMobile ? 'line-clamp-1' : 'line-clamp-2'}`}>
                           {(email as MicrosoftGraphEmail).bodyPreview || 
                            (email as ProcessedEmail).analysis?.summary || 
                            'Nenhuma visualização disponível'}
                         </p>
                         {email.isStarred && (
-                          <StarIcon className="h-3 w-3 text-yellow-500 mt-1" />
+                          <StarIcon className={`${isMobile ? 'h-3 w-3' : 'h-3 w-3'} text-yellow-500 mt-1`} />
                         )}
                       </div>
                     </div>
@@ -1273,17 +1472,32 @@ export default function MicrosoftInbox() {
             )}
           </div>
 
-          {/* Email Viewer */}
-          <div className="flex-1 flex flex-col bg-white">
+          {/* Email Viewer - Desktop only */}
+          <div className="hidden md:flex flex-1 flex flex-col bg-white">
             {selectedEmail ? (
               <>
-                {/* Email Header */}
-                <div className="p-4 border-b border-gray-200">
+                {/* Email Header - Responsive */}
+                <div className="p-3 md:p-4 border-b border-gray-200">
+                  {/* Mobile Back Button */}
+                  {isMobile && (
+                    <div className="flex items-center gap-3 mb-3">
+                      <button
+                        onClick={() => setSelectedEmail(null)}
+                        className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                      >
+                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                        </svg>
+                      </button>
+                      <span className="text-sm font-medium text-gray-900">Back to emails</span>
+                    </div>
+                  )}
+                  
                   <div className="flex items-center justify-between mb-3">
-                    <h2 className="text-lg font-semibold text-gray-900">
+                    <h2 className={`${isMobile ? 'text-base' : 'text-lg'} font-semibold text-gray-900`}>
                       {selectedEmail.subject || 'Sem assunto'}
                     </h2>
-                    <div className="flex items-center gap-1">
+                    <div className={`flex items-center gap-1 ${isMobile ? 'hidden' : ''}`}>
                       <button
                         onClick={handleReply}
                         className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
@@ -1346,9 +1560,29 @@ export default function MicrosoftInbox() {
                   </div>
                 </div>
 
-                {/* Email Actions */}
-                <div className="p-4 border-t border-gray-200">
-                  <div className="flex items-center gap-2">
+                {/* Email Actions - Responsive */}
+                <div className="p-3 md:p-4 border-t border-gray-200">
+                  {/* Mobile Action Buttons */}
+                  {isMobile && (
+                    <div className="flex items-center justify-center gap-4 mb-3">
+                      <button
+                        onClick={handleReply}
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      >
+                        <Reply className="h-4 w-4" />
+                        <span className="text-sm">Reply</span>
+                      </button>
+                      <button
+                        onClick={handleForward}
+                        className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                      >
+                        <Forward className="h-4 w-4" />
+                        <span className="text-sm">Forward</span>
+                      </button>
+                    </div>
+                  )}
+                  
+                  <div className={`flex items-center gap-2 ${isMobile ? 'hidden' : ''}`}>
                     <button
                       onClick={handleReply}
                       className="px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors"
@@ -1492,11 +1726,11 @@ export default function MicrosoftInbox() {
                              ? 'border-red-300 bg-gray-100 text-gray-500 cursor-not-allowed' 
                              : 'border-blue-300'
                          }`}
-                         disabled={isChatLoading || (usageInfo && usageInfo.remaining_prompts === 0)}
+                         disabled={isChatLoading || (usageInfo?.remaining_prompts === 0)}
                        />
                        <button
                          onClick={sendChatMessage}
-                         disabled={!chatInput.trim() || isChatLoading || (usageInfo && usageInfo.remaining_prompts === 0)}
+                         disabled={!chatInput.trim() || isChatLoading || (usageInfo?.remaining_prompts === 0)}
                          className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${
                            usageInfo && usageInfo.remaining_prompts === 0
                              ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
@@ -1682,6 +1916,95 @@ export default function MicrosoftInbox() {
                </div>
              )}
 
+      {/* Mobile Email Viewer Modal */}
+      {isMobile && selectedEmail && (
+        <div className="fixed inset-0 z-50 bg-white">
+          <div className="h-full flex flex-col">
+            {/* Mobile Email Header */}
+            <div className="p-4 border-b border-gray-200 bg-white">
+              <div className="flex items-center gap-3 mb-3">
+                <button
+                  onClick={() => setSelectedEmail(null)}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+                <span className="text-sm font-medium text-gray-900">Back to emails</span>
+              </div>
+              
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-base font-semibold text-gray-900">
+                  {selectedEmail.subject || 'Sem assunto'}
+                </h2>
+              </div>
+              
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                  <span className="text-blue-600 text-xs font-medium">
+                    {(selectedEmail as MicrosoftGraphEmail).from?.emailAddress?.name?.charAt(0) || 
+                     (selectedEmail as ProcessedEmail).from?.charAt(0) || 'U'}
+                  </span>
+                </div>
+                <div className="flex-1">
+                  <div className="text-sm font-medium text-gray-900">
+                    {(selectedEmail as MicrosoftGraphEmail).from?.emailAddress?.name || 
+                     (selectedEmail as ProcessedEmail).from || 'Unknown'}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {formatDate((selectedEmail as ProcessedEmail).processedAt || (selectedEmail as MicrosoftGraphEmail).receivedDateTime)}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Mobile Email Content */}
+            <div className="flex-1 p-4 overflow-y-auto">
+              <div className="prose max-w-none text-sm">
+                {(selectedEmail as MicrosoftGraphEmail).body?.content ? (
+                  <div 
+                    dangerouslySetInnerHTML={{ 
+                      __html: (selectedEmail as MicrosoftGraphEmail).body?.content || '' 
+                    }}
+                  />
+                ) : (
+                  <div className="text-gray-600 whitespace-pre-wrap">
+                    {(selectedEmail as MicrosoftGraphEmail).bodyPreview || 
+                     (selectedEmail as ProcessedEmail).analysis?.summary || 
+                     'Nenhum conteúdo disponível'}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Mobile Email Actions */}
+            <div className="p-4 border-t border-gray-200 bg-white">
+              <div className="flex items-center justify-center gap-4">
+                <button
+                  onClick={handleReply}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <Reply className="h-4 w-4" />
+                  <span className="text-sm">Reply</span>
+                </button>
+                <button
+                  onClick={handleForward}
+                  className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                >
+                  <Forward className="h-4 w-4" />
+                  <span className="text-sm">Forward</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mobile Floating Action Button Removed - Sidebar Always Visible */}
+
     </div>
   );
 }
+
+// Export default já declarado na linha 65
