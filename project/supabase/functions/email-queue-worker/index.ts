@@ -10,7 +10,7 @@ const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY') || Deno.env.get('VITE_GEMI
 
 // 🔒 SISTEMA DE LOCK PARA EVITAR EXECUÇÕES SIMULTÂNEAS
 const LOCK_KEY = 'email_worker_lock';
-const LOCK_TIMEOUT = 300000; // 5 minutos timeout para lock
+const LOCK_TIMEOUT = 60000; // 1 minuto timeout para lock (reduzido para evitar locks longos)
 
 async function acquireLock(): Promise<boolean> {
   try {
@@ -26,6 +26,7 @@ async function acquireLock(): Promise<boolean> {
     
     if (existingLock) {
       const lockAge = Date.now() - new Date(existingLock.created_at).getTime();
+      console.log(`🔒 [LOCK] Lock existente encontrado - idade: ${lockAge}ms, timeout: ${LOCK_TIMEOUT}ms`);
       if (lockAge < LOCK_TIMEOUT) {
         console.log('🔒 [LOCK] Lock já existe e é válido - abortando execução');
         return false;
@@ -70,6 +71,24 @@ async function releaseLock(): Promise<void> {
     console.log('🔒 [LOCK] Lock liberado com sucesso');
   } catch (error) {
     console.error('🔒 [LOCK] Erro ao liberar lock:', error);
+  }
+}
+
+async function cleanupExpiredLocks(): Promise<void> {
+  try {
+    console.log('🧹 [CLEANUP] Limpando locks expirados...');
+    const { error } = await supabase
+      .from('worker_locks')
+      .delete()
+      .lt('created_at', new Date(Date.now() - LOCK_TIMEOUT).toISOString());
+    
+    if (error) {
+      console.error('🧹 [CLEANUP] Erro ao limpar locks:', error);
+    } else {
+      console.log('🧹 [CLEANUP] Locks expirados removidos');
+    }
+  } catch (error) {
+    console.error('🧹 [CLEANUP] Erro na limpeza:', error);
   }
 }
 
@@ -572,6 +591,9 @@ Deno.serve(async (req) => {
   console.log('🔍 [WORKER] URL:', req.url);
   console.log('🔍 [WORKER] Headers:', Object.fromEntries(req.headers.entries()));
   console.log('🔍 [WORKER] Timestamp:', new Date().toISOString());
+  
+  // 🧹 LIMPAR LOCKS EXPIRADOS PRIMEIRO
+  await cleanupExpiredLocks();
   
   // 🔒 ADQUIRIR LOCK ANTES DE PROCESSAR
   const lockAcquired = await acquireLock();
