@@ -2104,7 +2104,8 @@ const PaymentManagement = (): React.JSX.Element => {
           amount: selectionProcessFee,
             status: 'paid',
             payment_date: app.created_at,
-          created_at: app.created_at
+          created_at: app.created_at,
+          payment_method: 'stripe'
         });
         }
 
@@ -2123,7 +2124,8 @@ const PaymentManagement = (): React.JSX.Element => {
           amount: applicationFee,
             status: 'paid',
             payment_date: app.created_at,
-          created_at: app.created_at
+          created_at: app.created_at,
+          payment_method: 'stripe'
         });
         }
 
@@ -2142,7 +2144,8 @@ const PaymentManagement = (): React.JSX.Element => {
             amount: scholarshipFee,
             status: 'paid',
             payment_date: app.created_at,
-            created_at: app.created_at
+            created_at: app.created_at,
+            payment_method: 'stripe'
           });
         } else if (app.is_scholarship_fee_paid && scholarship.id === '31c9b8e6-af11-4462-8494-c79854f3f66e') {
           console.log('🚫 Excluding Current Students Scholarship payment for:', studentName, '- $', (scholarshipFee / 100).toFixed(2));
@@ -2163,7 +2166,8 @@ const PaymentManagement = (): React.JSX.Element => {
           amount: i20ControlFee,
             status: 'paid',
             payment_date: app.created_at,
-          created_at: app.created_at
+          created_at: app.created_at,
+          payment_method: 'stripe'
         });
         }
       });
@@ -2249,7 +2253,8 @@ const PaymentManagement = (): React.JSX.Element => {
             admin_notes: selectionPayment.admin_notes,
             zelle_status: 'approved',
             reviewed_by: selectionPayment.admin_approved_by,
-            reviewed_at: selectionPayment.admin_approved_at
+            reviewed_at: selectionPayment.admin_approved_at,
+            payment_method: 'zelle'
           });
         }
 
@@ -2275,7 +2280,8 @@ const PaymentManagement = (): React.JSX.Element => {
             admin_notes: applicationPayment.admin_notes,
             zelle_status: 'approved',
             reviewed_by: applicationPayment.admin_approved_by,
-            reviewed_at: applicationPayment.admin_approved_at
+            reviewed_at: applicationPayment.admin_approved_at,
+            payment_method: 'zelle'
           });
         }
 
@@ -2299,7 +2305,8 @@ const PaymentManagement = (): React.JSX.Element => {
             admin_notes: scholarshipPayment.admin_notes,
             zelle_status: 'approved',
             reviewed_by: scholarshipPayment.admin_approved_by,
-            reviewed_at: scholarshipPayment.admin_approved_at
+            reviewed_at: scholarshipPayment.admin_approved_at,
+            payment_method: 'zelle'
           });
         }
 
@@ -2323,7 +2330,8 @@ const PaymentManagement = (): React.JSX.Element => {
             admin_notes: i20Payment.admin_notes,
             zelle_status: 'approved',
             reviewed_by: i20Payment.admin_approved_by,
-            reviewed_at: i20Payment.admin_approved_at
+            reviewed_at: i20Payment.admin_approved_at,
+            payment_method: 'zelle'
           });
         }
       });
@@ -3128,6 +3136,9 @@ const PaymentManagement = (): React.JSX.Element => {
                       )}
                     </div>
                   </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Method
+                  </th>
                   <th 
                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
                     onClick={() => handleSort('status')}
@@ -3201,6 +3212,26 @@ const PaymentManagement = (): React.JSX.Element => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
                         ${formatCentsToDollars(payment.amount)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {(() => {
+                          const inferredMethod = payment.payment_method
+                            || (payment.zelle_status ? 'zelle' : undefined)
+                            || (payment.payment_proof_url ? 'zelle' : undefined)
+                            || (typeof payment.id === 'string' && payment.id.startsWith('zelle-') ? 'zelle' : undefined)
+                            || (typeof payment.id === 'string' && payment.id.startsWith('stripe-') ? 'stripe' : undefined);
+                          const chipClass = inferredMethod === 'zelle'
+                            ? 'bg-purple-100 text-purple-800'
+                            : inferredMethod === 'stripe'
+                            ? 'bg-blue-100 text-blue-800'
+                            : 'bg-gray-100 text-gray-800';
+                          const label = inferredMethod ? inferredMethod.charAt(0).toUpperCase() + inferredMethod.slice(1) : 'N/A';
+                          return (
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${chipClass}`}>
+                              {label}
+                            </span>
+                          );
+                        })()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -4717,6 +4748,19 @@ const PaymentManagement = (): React.JSX.Element => {
                       }`}>
                         {selectedPayment.status.charAt(0).toUpperCase() + selectedPayment.status.slice(1)}
                       </span>
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-500">Payment Method</label>
+                    <p className="mt-1 text-sm text-gray-900">
+                      {(() => {
+                        const inferredMethod = selectedPayment.payment_method
+                          || (selectedPayment.zelle_status ? 'zelle' : undefined)
+                          || (selectedPayment.payment_proof_url ? 'zelle' : undefined)
+                          || (typeof selectedPayment.id === 'string' && selectedPayment.id.startsWith('zelle-') ? 'zelle' : undefined)
+                          || (typeof selectedPayment.id === 'string' && selectedPayment.id.startsWith('stripe-') ? 'stripe' : undefined);
+                        return inferredMethod ? inferredMethod.charAt(0).toUpperCase() + inferredMethod.slice(1) : 'N/A';
+                      })()}
                     </p>
                   </div>
                   <div>
