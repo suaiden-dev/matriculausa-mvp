@@ -67,9 +67,9 @@ const FeeManagement: React.FC = () => {
       // Buscar todos os estudantes
       const { data: studentsData, error: studentsError } = await supabase
         .from('user_profiles')
-        .select('id, user_id, full_name, email, dependents, has_paid_selection_process_fee, has_paid_i20_control_fee')
+        .select('id, user_id, full_name, email, dependents, has_paid_selection_process_fee, has_paid_i20_control_fee, created_at')
         .eq('role', 'student')
-        .order('full_name');
+        .order('created_at', { ascending: false });
 
       if (studentsError) throw studentsError;
 

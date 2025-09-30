@@ -8,6 +8,11 @@ interface DocumentsViewProps {
   studentId?: string;
   onViewDocument: (doc: any) => void;
   onDownloadDocument: (doc: any) => void;
+  onUploadDocument?: (requestId: string, file: File) => void;
+  onApproveDocument?: (uploadId: string) => void;
+  isAdmin?: boolean;
+  uploadingStates?: {[key: string]: boolean};
+  approvingStates?: {[key: string]: boolean};
 }
 
 const DocumentsView: React.FC<DocumentsViewProps> = ({
@@ -16,13 +21,94 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
   scholarshipApplication,
   studentId,
   onViewDocument,
-  onDownloadDocument
+  onDownloadDocument,
+  onUploadDocument,
+  onApproveDocument,
+  isAdmin = false,
+  uploadingStates = {},
+  approvingStates = {}
 }) => {
   const [realScholarshipApplication, setRealScholarshipApplication] = useState<any>(null);
   const [loadingApplication, setLoadingApplication] = useState(false);
+  const [internalDocumentRequests, setInternalDocumentRequests] = useState<any[]>([]);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US');
+  };
+
+  // Função para buscar document requests internamente
+  const fetchDocumentRequests = async (applicationId: string, universityId?: string) => {
+    if (!applicationId) return;
+    
+    try {
+      console.log('🔍 [DOCUMENTS VIEW] Fetching document requests for application:', applicationId);
+      
+      let allRequests: any[] = [];
+      
+      // Buscar requests específicos para a aplicação
+      const { data: specificRequests, error: specificError } = await supabase
+        .from('document_requests')
+        .select(`
+          *,
+          document_request_uploads (
+            *,
+            reviewed_by,
+            reviewed_at
+          )
+        `)
+        .eq('scholarship_application_id', applicationId)
+        .order('created_at', { ascending: false });
+
+      if (specificError) throw specificError;
+      allRequests = [...allRequests, ...(specificRequests || [])];
+      
+      // Buscar requests globais se tivermos university_id
+      if (universityId) {
+        const { data: globalRequests, error: globalError } = await supabase
+          .from('document_requests')
+          .select(`
+            *,
+            document_request_uploads (
+              *,
+              reviewed_by,
+              reviewed_at
+            )
+          `)
+          .eq('is_global', true)
+          .eq('university_id', universityId)
+          .order('created_at', { ascending: false });
+
+        if (globalError) throw globalError;
+        allRequests = [...allRequests, ...(globalRequests || [])];
+      }
+      
+      // Também buscar TODOS os requests globais ativos
+      const { data: allGlobalRequests, error: allGlobalError } = await supabase
+        .from('document_requests')
+        .select(`
+          *,
+          document_request_uploads (
+            *,
+            reviewed_by,
+            reviewed_at
+          )
+        `)
+        .eq('is_global', true)
+        .eq('status', 'open')
+        .order('created_at', { ascending: false });
+
+      if (allGlobalError) throw allGlobalError;
+      
+      // Adicionar requests globais que ainda não foram adicionados
+      const existingIds = allRequests.map(req => req.id);
+      const newGlobalRequests = (allGlobalRequests || []).filter(req => !existingIds.includes(req.id));
+      allRequests = [...allRequests, ...newGlobalRequests];
+
+      console.log('🔍 [DOCUMENTS VIEW] Found document requests:', allRequests);
+      setInternalDocumentRequests(allRequests);
+    } catch (error) {
+      console.error('❌ [DOCUMENTS VIEW] Error fetching document requests:', error);
+    }
   };
 
   // Buscar a aplicação real do banco se não tivermos dados completos
@@ -41,17 +127,39 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
         return;
       }
 
-      if (studentDocuments && studentDocuments.length > 0) {
+      // Sempre tentar buscar a aplicação se não temos uma com acceptance letter
+      if (!scholarshipApplication?.acceptance_letter_url) {
         setLoadingApplication(true);
         try {
           console.log('🔍 [DOCUMENTS VIEW] Searching for application for specific student:', studentId);
           
-          // Buscar o id da tabela user_profiles usando o user_id (studentId)
-          const { data: profileData, error: profileError } = await supabase
+          // Verificar se studentId é user_id ou profile_id
+          let profileData: any = null;
+          let profileError: any = null;
+          
+          // Primeiro, tentar como user_id
+          const { data: userProfileData, error: userProfileError } = await supabase
             .from('user_profiles')
             .select('id')
             .eq('user_id', studentId)
             .single();
+          
+          if (!userProfileError && userProfileData) {
+            profileData = userProfileData;
+          } else {
+            // Se não encontrou como user_id, tentar como profile_id (id)
+            const { data: profileIdData, error: profileIdError } = await supabase
+              .from('user_profiles')
+              .select('id')
+              .eq('id', studentId)
+              .single();
+            
+            if (!profileIdError && profileIdData) {
+              profileData = profileIdData;
+            } else {
+              profileError = profileIdError;
+            }
+          }
           
           if (profileError || !profileData) {
             console.error('❌ [DOCUMENTS VIEW] Error loading profile for student:', studentId, profileError);
@@ -103,6 +211,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
               )
             `)
             .eq('student_id', profileData.id)
+            .order('acceptance_letter_url', { ascending: false, nullsFirst: false })
             .order('created_at', { ascending: false })
             .limit(1);
           
@@ -125,6 +234,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                   )
                 `)
                 .eq('is_application_fee_paid', true)
+                .order('acceptance_letter_url', { ascending: false, nullsFirst: false })
                 .order('created_at', { ascending: false })
                 .limit(1);
             
@@ -161,8 +271,16 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
             console.log('🔍 [DOCUMENTS VIEW] Acceptance letter URL:', app.acceptance_letter_url);
             console.log('🔍 [DOCUMENTS VIEW] Acceptance letter status:', app.acceptance_letter_status);
             setRealScholarshipApplication(app);
+            
+            // Buscar document requests se não foram fornecidos como prop
+            if (!documentRequests || documentRequests.length === 0) {
+              const universityId = app.scholarships?.university_id;
+              await fetchDocumentRequests(app.id, universityId);
+            }
           } else {
-            console.log('❌ [DOCUMENTS VIEW] No application found for student:', studentId, 'profile_id:', profileData.id);
+            console.log('❌ [DOCUMENTS VIEW] No application found for student:', studentId, 'profile_id:', profileData?.id);
+            console.log('❌ [DOCUMENTS VIEW] Applications found:', applications);
+            console.log('❌ [DOCUMENTS VIEW] Error:', error);
             setRealScholarshipApplication(null);
           }
         } catch (err) {
@@ -180,11 +298,13 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
   // Usar a aplicação real se disponível, senão usar a passada como prop
   const currentApplication = realScholarshipApplication || scholarshipApplication;
   
+  // Debug: Log para verificar se há acceptance letter
+  console.log('🔍 [DOCUMENTS VIEW] Current application:', currentApplication);
+  console.log('🔍 [DOCUMENTS VIEW] Acceptance letter URL:', currentApplication?.acceptance_letter_url);
+  console.log('🔍 [DOCUMENTS VIEW] Acceptance letter status:', currentApplication?.acceptance_letter_status);
+  
   // ✅ GAMBIARRA: Função para extrair nome do arquivo e construir URL completa
   const getDocumentInfo = (upload: any) => {
-    // ✅ CORREÇÃO: Usar o bucket correto 'document-attachments'
-    const baseUrl = 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/document-attachments/';
-    
     // Extrair nome do arquivo do file_url
     let filename = 'Document';
     if (upload.file_url) {
@@ -192,9 +312,8 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
       filename = urlParts[urlParts.length - 1] || 'Document';
     }
     
-    // ✅ CORREÇÃO: Construir URL completa para visualização/download
-    // O file_url já inclui 'uploads/', então não precisamos adicionar novamente
-    const fullUrl = upload.file_url ? `${baseUrl}${upload.file_url}` : null;
+    // O file_url já é uma URL completa, não precisamos concatenar com baseUrl
+    const fullUrl = upload.file_url;
     
     return {
       filename,
@@ -239,14 +358,18 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
         
         <div className="p-6">
           {(() => {
+            // Usar document requests internos se os externos não estiverem disponíveis
+            const requestsToUse = (documentRequests && documentRequests.length > 0) ? documentRequests : internalDocumentRequests;
             // ✅ CORREÇÃO: Filtrar acceptance letter dos document requests
-            const filteredRequests = documentRequests?.filter(request => request.id !== 'acceptance_letter') || [];
+            const filteredRequests = requestsToUse?.filter(request => request.id !== 'acceptance_letter') || [];
             return filteredRequests;
           })().length > 0 ? (
             <div className="space-y-4">
               {(() => {
+                // Usar document requests internos se os externos não estiverem disponíveis
+                const requestsToUse = (documentRequests && documentRequests.length > 0) ? documentRequests : internalDocumentRequests;
                 // ✅ CORREÇÃO: Filtrar acceptance letter dos document requests
-                const filteredRequests = documentRequests?.filter(request => request.id !== 'acceptance_letter') || [];
+                const filteredRequests = requestsToUse?.filter(request => request.id !== 'acceptance_letter') || [];
                 return filteredRequests;
               })().map((request) => (
                 <div key={request.id} className="bg-white p-4 sm:p-6 rounded-xl border border-slate-200">
@@ -364,6 +487,17 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                                 >
                                   Download
                                 </button>
+                                
+                                {/* Admin Approve Button - Only show for admin and if document is not already approved */}
+                                {isAdmin && onApproveDocument && upload.status !== 'approved' && (
+                                  <button
+                                    onClick={() => onApproveDocument(upload.id)}
+                                    disabled={approvingStates[`approve-${upload.id}`]}
+                                    className="bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap flex-1 sm:flex-none text-center disabled:cursor-not-allowed"
+                                  >
+                                    {approvingStates[`approve-${upload.id}`] ? 'Approving...' : 'Approve'}
+                                  </button>
+                                )}
                               </div>
                             </div>
                           );
@@ -375,6 +509,47 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                       )}
                     </div>
                   </div>
+
+                  {/* Admin Upload Section */}
+                  {isAdmin && onUploadDocument && (
+                    <div className="border-t border-slate-200 pt-4 mt-4">
+                      <h5 className="text-sm font-medium text-slate-700 mb-3 flex items-center">
+                        <svg className="w-4 h-4 mr-2 text-blue-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                        </svg>
+                        Admin Upload:
+                      </h5>
+                      
+                      <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4">
+                        <div className="flex flex-col sm:flex-row items-start gap-3">
+                          <div className="flex-1">
+                            <p className="text-sm text-slate-600 mb-2">
+                              Upload a document on behalf of the student for this request.
+                            </p>
+                            <label className="inline-flex items-center px-4 py-2 bg-[#05294E] hover:bg-[#041f38] text-white text-sm font-medium rounded-lg cursor-pointer transition-colors">
+                              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                              </svg>
+                              {uploadingStates[`request-${request.id}`] ? 'Uploading...' : 'Upload Document'}
+                              <input
+                                type="file"
+                                accept="application/pdf,image/*,.doc,.docx"
+                                className="hidden"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) {
+                                    onUploadDocument(request.id, file);
+                                    e.target.value = ''; // Reset input
+                                  }
+                                }}
+                                disabled={uploadingStates[`request-${request.id}`]}
+                              />
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
