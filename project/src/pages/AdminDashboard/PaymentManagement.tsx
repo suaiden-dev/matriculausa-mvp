@@ -817,6 +817,26 @@ const PaymentManagement = (): React.JSX.Element => {
             console.warn('⚠️ [approveZellePayment] Erro ao buscar valor dinâmico, usando valor padrão:', error);
           }
 
+          // Log the payment action
+          try {
+            await supabase.rpc('log_student_action', {
+              p_student_id: updateData[0]?.id,
+              p_action_type: 'fee_payment',
+              p_action_description: `Selection Process Fee paid via Zelle (approved by admin)`,
+              p_performed_by: user!.id,
+              p_performed_by_type: 'admin',
+              p_metadata: {
+                fee_type: 'selection_process',
+                payment_method: 'zelle',
+                amount: correctAmount,
+                payment_id: paymentId,
+                zelle_payment_id: paymentId
+              }
+            });
+          } catch (logError) {
+            console.error('Failed to log payment action:', logError);
+          }
+
           // Registrar no faturamento com valor correto
           console.log('💰 [approveZellePayment] Registrando selection_process no faturamento com valor:', correctAmount);
           const { error: billingError } = await supabase.rpc('register_payment_billing', {
@@ -1015,6 +1035,26 @@ const PaymentManagement = (): React.JSX.Element => {
             console.warn('⚠️ [approveZellePayment] Erro ao buscar valor dinâmico para i20_control_fee, usando valor padrão:', error);
           }
 
+          // Log the payment action
+          try {
+            await supabase.rpc('log_student_action', {
+              p_student_id: updateData[0]?.id,
+              p_action_type: 'fee_payment',
+              p_action_description: `I-20 Control Fee paid via Zelle (approved by admin)`,
+              p_performed_by: user!.id,
+              p_performed_by_type: 'admin',
+              p_metadata: {
+                fee_type: 'i20_control',
+                payment_method: 'zelle',
+                amount: correctAmount,
+                payment_id: paymentId,
+                zelle_payment_id: paymentId
+              }
+            });
+          } catch (logError) {
+            console.error('Failed to log payment action:', logError);
+          }
+
           // Registrar no faturamento com valor correto
           console.log('💰 [approveZellePayment] Registrando i20_control_fee no faturamento com valor:', correctAmount);
           const { error: billingError } = await supabase.rpc('register_payment_billing', {
@@ -1055,6 +1095,27 @@ const PaymentManagement = (): React.JSX.Element => {
         } else {
           console.log(`✅ [approveZellePayment] ${payment.fee_type === 'application_fee' ? 'is_application_fee_paid' : 'is_scholarship_fee_paid'} marcado como true`);
           console.log('🔍 [approveZellePayment] Dados atualizados scholarship_applications:', updateData);
+          
+          // Log the payment action
+          try {
+            await supabase.rpc('log_student_action', {
+              p_student_id: payment.student_id,
+              p_action_type: 'fee_payment',
+              p_action_description: `${payment.fee_type === 'application_fee' ? 'Application Fee' : 'Scholarship Fee'} paid via Zelle (approved by admin)`,
+              p_performed_by: user!.id,
+              p_performed_by_type: 'admin',
+              p_metadata: {
+                fee_type: payment.fee_type === 'application_fee' ? 'application' : 'scholarship',
+                payment_method: 'zelle',
+                amount: payment.amount,
+                payment_id: paymentId,
+                zelle_payment_id: paymentId,
+                application_id: updateData[0]?.id
+              }
+            });
+          } catch (logError) {
+            console.error('Failed to log payment action:', logError);
+          }
           
           // Registrar no faturamento apenas para scholarship_fee (application_fee não gera faturamento)
           if (payment.fee_type === 'scholarship_fee') {
@@ -1117,6 +1178,27 @@ const PaymentManagement = (): React.JSX.Element => {
           } else {
             console.log('✅ [approveZellePayment] is_application_fee_paid marcado como true no user_profiles');
             console.log('🔍 [approveZellePayment] Dados atualizados user_profiles:', profileUpdateData);
+            
+            // Log the payment action for user_profiles update
+            try {
+              await supabase.rpc('log_student_action', {
+                p_student_id: profileUpdateData[0]?.id,
+                p_action_type: 'fee_payment',
+                p_action_description: `Application Fee paid via Zelle (approved by admin) - user_profiles updated`,
+                p_performed_by: user!.id,
+                p_performed_by_type: 'admin',
+                p_metadata: {
+                  fee_type: 'application',
+                  payment_method: 'zelle',
+                  amount: payment.amount,
+                  payment_id: paymentId,
+                  zelle_payment_id: paymentId,
+                  table_updated: 'user_profiles'
+                }
+              });
+            } catch (logError) {
+              console.error('Failed to log payment action:', logError);
+            }
           }
         }
       }

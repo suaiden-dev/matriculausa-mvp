@@ -3,7 +3,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
 import { useAuth } from '../../hooks/useAuth';
+import { useStudentLogs } from '../../hooks/useStudentLogs';
 import DocumentsView from '../../components/EnhancedStudentTracking/DocumentsView';
+import StudentLogsView from '../../components/AdminDashboard/StudentLogsView';
 // Função simples de toast
 const showToast = (message: string, type: 'success' | 'error' = 'success') => {
   const toast = document.createElement('div');
@@ -90,7 +92,7 @@ const AdminStudentDetails: React.FC = () => {
   const [showRejectStudentModal, setShowRejectStudentModal] = useState(false);
   const [rejectStudentReason, setRejectStudentReason] = useState('');
   const [pendingRejectAppId, setPendingRejectAppId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'documents'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'documents' | 'logs'>('overview');
   const [documentRequests, setDocumentRequests] = useState<any[]>([]);
   const [loadingDocuments, setLoadingDocuments] = useState(false);
   const [uploadingDocumentRequest, setUploadingDocumentRequest] = useState<{[key: string]: boolean}>({});
@@ -129,6 +131,7 @@ const AdminStudentDetails: React.FC = () => {
   const isPlatformAdmin = user?.role === 'admin';
 
   const { getFeeAmount, formatFeeAmount, hasOverride } = useFeeConfig(student?.user_id);
+  const { logAction } = useStudentLogs(student?.student_id || '');
 
   // Função para buscar informações de referência
   const fetchReferralInfo = async (referralCode: string) => {
@@ -692,6 +695,26 @@ const AdminStudentDetails: React.FC = () => {
 
         // Atualizar estado local
         setStudent(prev => prev ? { ...prev, has_paid_selection_process_fee: true } : prev);
+
+        // Log the action
+        try {
+          await logAction(
+            'fee_payment',
+            `Selection Process Fee marked as paid via ${method || 'manual'} payment`,
+            user?.id || '',
+            'admin',
+            {
+              fee_type: 'selection_process',
+              payment_method: method || 'manual',
+              amount: (() => {
+                const base = Number(getFeeAmount('selection_process'));
+                return base + (student?.dependents || 0) * 150;
+              })()
+            }
+          );
+        } catch (logError) {
+          console.error('Failed to log action:', logError);
+        }
       } else if (feeType === 'application') {
         // Marcar application fee como pago na scholarship_applications
         let targetApplicationId = applicationId;
@@ -728,6 +751,24 @@ const AdminStudentDetails: React.FC = () => {
 
         // Atualizar estado local
         setStudent(prev => prev ? { ...prev, is_application_fee_paid: true } : prev);
+
+        // Log the action
+        try {
+          await logAction(
+            'fee_payment',
+            `Application Fee marked as paid via ${method || 'manual'} payment`,
+            user?.id || '',
+            'admin',
+            {
+              fee_type: 'application',
+              payment_method: method || 'manual',
+              amount: 400,
+              application_id: targetApplicationId
+            }
+          );
+        } catch (logError) {
+          console.error('Failed to log action:', logError);
+        }
       } else if (feeType === 'scholarship') {
         // Marcar scholarship fee como pago na scholarship_applications
         let targetApplicationId = applicationId;
@@ -764,6 +805,24 @@ const AdminStudentDetails: React.FC = () => {
 
         // Atualizar estado local
         setStudent(prev => prev ? { ...prev, is_scholarship_fee_paid: true } : prev);
+
+        // Log the action
+        try {
+          await logAction(
+            'fee_payment',
+            `Scholarship Fee marked as paid via ${method || 'manual'} payment`,
+            user?.id || '',
+            'admin',
+            {
+              fee_type: 'scholarship',
+              payment_method: method || 'manual',
+              amount: getFeeAmount('scholarship_fee'),
+              application_id: targetApplicationId
+            }
+          );
+        } catch (logError) {
+          console.error('Failed to log action:', logError);
+        }
       } else if (feeType === 'i20_control') {
         // Marcar I-20 control fee como pago
         const { error } = await supabase
@@ -775,6 +834,23 @@ const AdminStudentDetails: React.FC = () => {
 
         // Atualizar estado local
         setStudent(prev => prev ? { ...prev, has_paid_i20_control_fee: true } : prev);
+
+        // Log the action
+        try {
+          await logAction(
+            'fee_payment',
+            `I-20 Control Fee marked as paid via ${method || 'manual'} payment`,
+            user?.id || '',
+            'admin',
+            {
+              fee_type: 'i20_control',
+              payment_method: method || 'manual',
+              amount: getFeeAmount('i20_control_fee')
+            }
+          );
+        } catch (logError) {
+          console.error('Failed to log action:', logError);
+        }
       }
 
       showToast(`${feeType === 'selection_process' ? 'Selection Process Fee' : feeType === 'application' ? 'Application Fee' : feeType === 'scholarship' ? 'Scholarship Fee' : 'I-20 Control Fee'} marked as paid successfully!`, 'success');
@@ -880,6 +956,22 @@ const AdminStudentDetails: React.FC = () => {
       // Atualizar o estado local
       setStudent(prev => prev ? { ...prev, application_status: 'approved' } : prev);
       
+      // Log the action
+      try {
+        await logAction(
+          'application_approval',
+          `Scholarship application approved`,
+          user?.id || '',
+          'admin',
+          {
+            application_id: applicationId,
+            student_name: student.student_name
+          }
+        );
+      } catch (logError) {
+        console.error('Failed to log action:', logError);
+      }
+      
       showToast('Application approved successfully! The student will be notified.', 'success');
     } catch (error: any) {
       console.error('Error approving application:', error);
@@ -903,6 +995,23 @@ const AdminStudentDetails: React.FC = () => {
       setShowRejectStudentModal(false);
       setRejectStudentReason('');
       setPendingRejectAppId(null);
+      
+      // Log the action
+      try {
+        await logAction(
+          'application_rejection',
+          `Scholarship application rejected${rejectStudentReason ? `: ${rejectStudentReason}` : ''}`,
+          user?.id || '',
+          'admin',
+          {
+            application_id: applicationId,
+            student_name: student.student_name,
+            rejection_reason: rejectStudentReason
+          }
+        );
+      } catch (logError) {
+        console.error('Failed to log action:', logError);
+      }
       
       showToast('Application rejected successfully.', 'success');
     } catch (error: any) {
@@ -1226,6 +1335,22 @@ const AdminStudentDetails: React.FC = () => {
       // Recarregar document requests para mostrar a mudança
       await fetchDocumentRequests();
       
+      // Log the action
+      try {
+        await logAction(
+          'document_approval',
+          `Document request upload approved`,
+          user?.id || '',
+          'admin',
+          {
+            upload_id: uploadId,
+            document_type: 'document_request_upload'
+          }
+        );
+      } catch (logError) {
+        console.error('Failed to log action:', logError);
+      }
+      
       showToast('Document approved successfully!', 'success');
     } catch (error: any) {
       console.error('❌ [APPROVE] Error approving document:', error);
@@ -1346,6 +1471,16 @@ const AdminStudentDetails: React.FC = () => {
               }`}
             >
               Documents
+            </button>
+            <button
+              onClick={() => setActiveTab('logs')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'logs'
+                  ? 'border-[#05294E] text-[#05294E]'
+                  : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+              }`}
+            >
+              Activity Log
             </button>
           </nav>
         </div>
@@ -2526,6 +2661,15 @@ const AdminStudentDetails: React.FC = () => {
               approvingStates={approvingDocumentRequest}
             />
           )}
+        </div>
+      )}
+
+      {activeTab === 'logs' && student && (
+        <div className="p-6">
+          <StudentLogsView 
+            studentId={student.student_id} 
+            studentName={student.student_name} 
+          />
         </div>
       )}
 
