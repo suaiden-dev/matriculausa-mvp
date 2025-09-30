@@ -1188,7 +1188,8 @@
       "weakPassword": "Password is too weak. Please choose a stronger password.",
       "invalidEmail": "Please enter a valid email address.",
       "signupDisabled": "New registrations are currently disabled. Please contact support.",
-      "registrationFailed": "Registration Failed"
+      "registrationFailed": "Registration Failed",
+      "emailAlreadyRegistered": "This email is already registered. Please sign in or use another email."
     }
   },
   "features": {

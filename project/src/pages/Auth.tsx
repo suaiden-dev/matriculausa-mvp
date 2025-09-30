@@ -258,6 +258,31 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
         console.log('🔍 [AUTH] Tab ativa:', activeTab);
         console.log('🔍 [AUTH] Telefone no formData:', formData.phone);
         
+        // Checagem prévia: email já cadastrado (RPC + fallback em user_profiles)
+        const normalizedEmail = (formData.email || '').trim().toLowerCase();
+        try {
+          // 1) Checar direto no auth.users via RPC segura
+          const { data: existsRpc, error: rpcErr } = await supabase.rpc('email_exists', { p_email: normalizedEmail });
+          if (!rpcErr && existsRpc === true) {
+            setError(t('authPage.messages.emailAlreadyRegistered'));
+            setLoading(false);
+            return;
+          }
+          // 2) Fallback: verificar em user_profiles
+          const { data: existingUserByEmail } = await supabase
+            .from('user_profiles')
+            .select('user_id')
+            .eq('email', normalizedEmail)
+            .maybeSingle();
+          if (existingUserByEmail && (existingUserByEmail as any).user_id) {
+            setError(t('authPage.messages.emailAlreadyRegistered'));
+            setLoading(false);
+            return;
+          }
+        } catch (checkErr) {
+          // Se a checagem falhar por permissão ou outro motivo, seguimos, pois o backend ainda validará
+        }
+        
         if (formData.password !== formData.confirmPassword) {
           setError(t('authPage.messages.passwordsNotMatch'));
           setLoading(false);
@@ -327,7 +352,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
         console.log('💾 [AUTH] Salvando telefone no localStorage:', formData.phone);
         localStorage.setItem('pending_phone', formData.phone || '');
         
-        await register(formData.email, formData.password, userData);
+        await register(normalizedEmail, formData.password, userData);
 
         // Limpar códigos de referência do localStorage após registro bem-sucedido
         localStorage.removeItem('pending_affiliate_code');
@@ -358,6 +383,13 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
         
         if (message.includes('invalid_credentials') || message.includes('invalid login credentials')) {
           errorMessage = t('authPage.messages.invalidCredentials');
+        } else if (
+          message.includes('already registered') ||
+          message.includes('user already registered') ||
+          message.includes('email already registered') ||
+          message.includes('user_already_registered')
+        ) {
+          errorMessage = t('authPage.messages.emailAlreadyRegistered');
         } else if (message.includes('email_not_confirmed')) {
           errorMessage = t('authPage.messages.emailNotConfirmed');
         } else if (message.includes('too_many_requests')) {
