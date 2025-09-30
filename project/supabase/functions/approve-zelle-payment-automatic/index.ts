@@ -137,6 +137,25 @@ serve(async (req) => {
       console.log('✅ [approve-zelle-payment-automatic] has_paid_selection_process_fee marcado como true')
       console.log('🔍 [approve-zelle-payment-automatic] Dados atualizados:', updateData)
 
+      // Log the payment action
+      try {
+        await supabaseClient.rpc('log_student_action', {
+          p_student_id: updateData[0]?.id,
+          p_action_type: 'fee_payment',
+          p_action_description: `Selection Process Fee paid via Zelle (${temp_payment_id})`,
+          p_performed_by: user_id,
+          p_performed_by_type: 'student',
+          p_metadata: {
+            fee_type: 'selection_process',
+            payment_method: 'zelle',
+            temp_payment_id: temp_payment_id,
+            payment_id: paymentId
+          }
+        });
+      } catch (logError) {
+        console.error('Failed to log payment action:', logError);
+      }
+
       // --- MATRICULA REWARDS - ADICIONAR COINS ---
       try {
         console.log('🎁 [approve-zelle-payment-automatic] Processando Matricula Rewards para Selection Process Fee...')
@@ -200,6 +219,25 @@ serve(async (req) => {
 
       console.log('✅ [approve-zelle-payment-automatic] has_paid_i20_control_fee marcado como true')
       console.log('🔍 [approve-zelle-payment-automatic] Dados atualizados:', updateData)
+
+      // Log the payment action
+      try {
+        await supabaseClient.rpc('log_student_action', {
+          p_student_id: updateData[0]?.id,
+          p_action_type: 'fee_payment',
+          p_action_description: `I-20 Control Fee paid via Zelle (${temp_payment_id})`,
+          p_performed_by: user_id,
+          p_performed_by_type: 'student',
+          p_metadata: {
+            fee_type: 'i20_control',
+            payment_method: 'zelle',
+            temp_payment_id: temp_payment_id,
+            payment_id: paymentId
+          }
+        });
+      } catch (logError) {
+        console.error('Failed to log payment action:', logError);
+      }
 
     } else if (normalizedFeeTypeGlobal === 'application_fee' || normalizedFeeTypeGlobal === 'scholarship_fee') {
       console.log('🎯 [approve-zelle-payment-automatic] Atualizando scholarship_applications...')
@@ -313,6 +351,27 @@ serve(async (req) => {
           }
 
           console.log(`✅ [approve-zelle-payment-automatic] ${normalizedFeeTypeGlobal} marcado como true para scholarship_id: ${scholarshipId} (app_id: ${existingApp.id})`)
+
+          // Log the payment action
+          try {
+            await supabaseClient.rpc('log_student_action', {
+              p_student_id: existingApp.student_id,
+              p_action_type: 'fee_payment',
+              p_action_description: `${normalizedFeeTypeGlobal.replace('_', ' ')} paid via Zelle (${temp_payment_id})`,
+              p_performed_by: user_id,
+              p_performed_by_type: 'student',
+              p_metadata: {
+                fee_type: normalizedFeeTypeGlobal,
+                payment_method: 'zelle',
+                temp_payment_id: temp_payment_id,
+                payment_id: paymentId,
+                application_id: existingApp.id,
+                scholarship_id: scholarshipId
+              }
+            });
+          } catch (logError) {
+            console.error('Failed to log payment action:', logError);
+          }
           console.log('🔍 [approve-zelle-payment-automatic] Dados atualizados:', updateData)
           
           // --- NOTIFICAÇÃO PARA UNIVERSIDADE ---
