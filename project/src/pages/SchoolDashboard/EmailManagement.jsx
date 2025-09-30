@@ -733,30 +733,29 @@ const EmailManagement = () => {
                   {/* Action Buttons */}
                   <div className="flex items-center">
                     <div className="flex gap-2">
-                      {/* Gmail Account */}
+                      {/* Gmail Account - DISABLED FOR SECURITY */}
                       {/* Gmail Account */}
                       <button
-                        onClick={() => navigate('/school/dashboard/email/config?provider=gmail')}
-                        className="bg-gradient-to-r from-red-500 to-red-600 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-xl hover:from-red-600 hover:to-red-700 transition-all duration-300 font-bold flex items-center shadow-lg hover:shadow-xl transform hover:scale-105 text-sm sm:text-base"
+                        disabled={true}
+                        className="bg-gradient-to-r from-gray-400 to-gray-500 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-xl transition-all duration-300 font-bold flex items-center shadow-lg text-sm sm:text-base opacity-50 cursor-not-allowed"
                       >
                         <EnvelopeIcon className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2" />
-                        <span className="hidden sm:inline">Gmail</span>
-                        <span className="sm:hidden">Gmail</span>
+                        <span className="hidden sm:inline">Gmail (Coming Soon)</span>
+                        <span className="sm:hidden">Gmail (Coming Soon)</span>
                       </button>
                       
-                      {/* Microsoft Account - Direct Connection */}
+                      {/* Microsoft Account - DISABLED FOR SECURITY */}
                       <button
-                        onClick={handleDirectMicrosoftConnection}
-                        disabled={microsoftLoading}
-                        className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-300 font-bold flex items-center shadow-lg hover:shadow-xl transform hover:scale-105 text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled={true}
+                        className="bg-gradient-to-r from-gray-400 to-gray-500 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-xl transition-all duration-300 font-bold flex items-center shadow-lg text-sm sm:text-base opacity-50 cursor-not-allowed"
                       >
                         <div className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2 flex items-center justify-center">
                           <svg viewBox="0 0 24 24" className="w-full h-full">
                             <path fill="currentColor" d="M11.4 24H0V12.6h11.4V24zM24 24H12.6V12.6H24V24zM11.4 11.4H0V0h11.4v11.4zM24 11.4H12.6V0H24v11.4z"/>
                           </svg>
                         </div>
-                        <span className="hidden sm:inline">Microsoft</span>
-                        <span className="sm:hidden">MS</span>
+                        <span className="hidden sm:inline">Microsoft (Coming Soon)</span>
+                        <span className="sm:hidden">MS (Coming Soon)</span>
                       </button>
                     </div>
                   </div>
@@ -812,28 +811,27 @@ const EmailManagement = () => {
               </p>
               
               <div className="flex gap-3 justify-center">
-                {/* Gmail Account */}
+                {/* Gmail Account - DISABLED FOR SECURITY */}
                 {/* Gmail Account */}
                 <button
-                  onClick={() => navigate('/school/dashboard/email/config?provider=gmail')}
-                  className="bg-gradient-to-r from-red-500 to-red-600 text-white px-6 py-3 rounded-xl hover:from-red-600 hover:to-red-700 transition-all duration-300 font-bold flex items-center space-x-2 shadow-lg hover:shadow-xl transform hover:scale-105"
+                  disabled={true}
+                  className="bg-gradient-to-r from-gray-400 to-gray-500 text-white px-6 py-3 rounded-xl transition-all duration-300 font-bold flex items-center space-x-2 shadow-lg opacity-50 cursor-not-allowed"
                 >
                   <EnvelopeIcon className="h-5 w-5" />
-                  <span>Gmail</span>
+                  <span>Gmail (Coming Soon)</span>
                 </button>
                 
-                {/* Microsoft Account - Direct Connection */}
+                {/* Microsoft Account - DISABLED FOR SECURITY */}
                 <button
-                  onClick={handleDirectMicrosoftConnection}
-                  disabled={microsoftLoading}
-                  className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-6 py-3 rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-300 font-bold flex items-center space-x-2 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={true}
+                  className="bg-gradient-to-r from-gray-400 to-gray-500 text-white px-6 py-3 rounded-xl transition-all duration-300 font-bold flex items-center space-x-2 shadow-lg opacity-50 cursor-not-allowed"
                 >
                   <div className="w-5 h-5 flex items-center justify-center">
                     <svg viewBox="0 0 24 24" className="w-full h-full">
                       <path fill="currentColor" d="M11.4 24H0V12.6h11.4V24zM24 24H12.6V12.6H24V24zM11.4 11.4H0V0h11.4v11.4zM24 11.4H12.6V0H24v11.4z"/>
                     </svg>
                   </div>
-                  <span>Microsoft</span>
+                  <span>Microsoft (Coming Soon)</span>
                 </button>
               </div>
             </div>
