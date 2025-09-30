@@ -36,9 +36,13 @@ export const useAuthToken = () => {
     try {
       // Tentar token silencioso primeiro com configurações otimizadas
       console.log('Tentando token silencioso...');
+      
+      // Usar a conta ativa do MSAL se disponível, senão usar a primeira
+      const activeAccount = instance.getActiveAccount() || accounts[0];
+      
       const response = await instance.acquireTokenSilent({
         scopes: graphScopes,
-        account: accounts[0],
+        account: activeAccount,
         forceRefresh: false, // Não forçar refresh desnecessário
         extraQueryParameters: {
           'prompt': 'none' // Evitar prompts desnecessários

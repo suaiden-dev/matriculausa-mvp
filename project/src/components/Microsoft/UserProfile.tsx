@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useMsal } from '@azure/msal-react';
 import { useAuthToken } from '../../hooks/useAuthToken';
-import GraphService from '../../lib/graphService';
+import { GraphService } from '../../lib/services/GraphService';
 import { User, Mail, LogOut, Loader2 } from 'lucide-react';
 
 interface UserProfileData {

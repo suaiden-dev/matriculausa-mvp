@@ -21,7 +21,7 @@ const MicrosoftAccountSelector: React.FC<MicrosoftAccountSelectorProps> = ({ onA
 
   const handleAccountSelect = (email: string) => {
     console.log('🔄 MicrosoftAccountSelector: handleAccountSelect called with:', email);
-    console.log('🔄 Current activeConnection:', activeConnection?.email);
+    console.log('🔄 Current activeConnection:', activeConnection?.email_address);
     
     setActiveConnection(email);
     onAccountChange?.(email);
@@ -51,12 +51,11 @@ const MicrosoftAccountSelector: React.FC<MicrosoftAccountSelectorProps> = ({ onA
   if (connections.length === 0) {
     return (
       <button
-        onClick={connectMicrosoft}
-        disabled={loading}
-        className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+        disabled={true}
+        className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-gray-400 border border-gray-400 rounded-lg cursor-not-allowed shadow-sm opacity-50"
       >
-        {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
-        {loading ? 'Conectando...' : 'Conectar Microsoft'}
+        <Mail className="w-4 h-4" />
+        Microsoft (Coming Soon)
       </button>
     );
   }
@@ -102,9 +101,9 @@ const MicrosoftAccountSelector: React.FC<MicrosoftAccountSelectorProps> = ({ onA
               <div
                 key={connection.id}
                 className={`px-3 py-2 text-sm hover:bg-gray-50 flex items-center justify-between group ${
-                  activeConnection?.email === connection.email_address 
-                    ? 'bg-blue-50 text-blue-700' 
-                    : 'text-gray-700'
+                  activeConnection?.email_address === connection.email_address 
+                    ? 'bg-blue-100 text-blue-800 border-l-4 border-blue-500' 
+                    : 'text-gray-600 hover:text-gray-800'
                 }`}
               >
                 <button
@@ -116,8 +115,11 @@ const MicrosoftAccountSelector: React.FC<MicrosoftAccountSelectorProps> = ({ onA
                 </button>
                 
                 <div className="flex items-center gap-2">
-                  {activeConnection?.email === connection.email_address && (
-                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                  {activeConnection?.email_address === connection.email_address && (
+                    <div className="flex items-center gap-1">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                      <span className="text-xs text-blue-600 font-medium">Active</span>
+                    </div>
                   )}
                   
                   {connections.length > 1 && (
@@ -133,14 +135,13 @@ const MicrosoftAccountSelector: React.FC<MicrosoftAccountSelectorProps> = ({ onA
               </div>
             ))}
 
-            {/* Add Account Button */}
+            {/* Add Account Button - DISABLED FOR SECURITY */}
             <button
-              onClick={handleAddAccount}
-              disabled={loading}
-              className="w-full px-3 py-2 text-left text-sm text-gray-500 hover:bg-gray-50 flex items-center gap-2 border-t border-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={true}
+              className="w-full px-3 py-2 text-left text-sm text-gray-400 flex items-center gap-2 border-t border-gray-100 cursor-not-allowed opacity-50"
             >
-              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-              {loading ? 'Adicionando conta...' : 'Adicionar Conta Microsoft'}
+              <Plus className="w-4 h-4" />
+              Microsoft (Coming Soon)
             </button>
           </div>
         </div>

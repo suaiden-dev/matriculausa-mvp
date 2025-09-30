@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useMsal } from '@azure/msal-react';
 import { useAuthToken } from '../../hooks/useAuthToken';
-import GraphService from '../../lib/graphService';
+import { GraphService } from '../../lib/services/GraphService';
 import { Mail, Clock, User, Eye, EyeOff } from 'lucide-react';
 
 interface Email {

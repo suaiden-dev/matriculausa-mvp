@@ -1,11 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { createClient } from '@supabase/supabase-js';
-
-
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-);
+import { supabase } from '../lib/supabase';
+import { getOptimizedMsalConfig, clearMsalInstances, diagnoseAuthIssues } from '../lib/microsoftAuthConfig';
 
 // Constante para chave do localStorage
 const ACTIVE_MICROSOFT_CONNECTION_KEY = 'active_microsoft_connection';
@@ -73,7 +68,6 @@ export const useMicrosoftConnection = (): UseMicrosoftConnectionReturn => {
         .select('id, user_id, email_address, oauth_access_token, oauth_refresh_token, is_active, created_at, updated_at')
         .eq('user_id', session.user.id)
         .eq('provider_type', 'microsoft')
-        .eq('is_active', true)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -98,17 +92,20 @@ export const useMicrosoftConnection = (): UseMicrosoftConnectionReturn => {
         // Mapped connections
         setConnections(mapped);
         
-        // Restaurar conta ativa do localStorage ou usar a primeira
+        // Restaurar conta ativa do localStorage ou usar a mais recente
         const savedActiveEmail = localStorage.getItem(ACTIVE_MICROSOFT_CONNECTION_KEY);
         let activeConn = savedActiveEmail 
           ? mapped.find(conn => conn.email_address === savedActiveEmail)
-          : mapped[0];
+          : null;
+        
+        // Se não encontrou a conta salva ou não há conta salva, usar a mais recente
         if (!activeConn && mapped.length > 0) {
-          activeConn = mapped[0];
+          activeConn = mapped[0]; // A primeira é sempre a mais recente (order by created_at desc)
         }
         
         if (activeConn) {
           // Setting active connection
+          console.log('✅ Setting active connection:', activeConn.email_address);
           setActiveConnectionState(activeConn as MicrosoftConnection);
           localStorage.setItem(ACTIVE_MICROSOFT_CONNECTION_KEY, activeConn.email_address);
         } else {
@@ -130,14 +127,28 @@ export const useMicrosoftConnection = (): UseMicrosoftConnectionReturn => {
   }, []);
 
   const setActiveConnection = useCallback(async (email: string) => {
-    console.log('🔄 Setting active Microsoft connection:', email);
     const connection = connections.find(conn => conn.email_address === email);
+    
     if (connection) {
       setActiveConnectionState(connection);
       localStorage.setItem(ACTIVE_MICROSOFT_CONNECTION_KEY, email);
-      console.log('✅ Active Microsoft connection set:', email);
+      
+      // Atualizar conta ativa no MSAL
+      try {
+        const { MSALAccountManager } = await import('../lib/msalAccountManager');
+        const msalInstance = await MSALAccountManager.getInstance().getMSALInstance();
+        const accounts = msalInstance.getAllAccounts();
+        const msalAccount = accounts.find(acc => acc.username === email);
+        if (msalAccount) {
+          msalInstance.setActiveAccount(msalAccount);
+        }
+      } catch (error) {
+        console.warn('Erro ao definir conta ativa no MSAL:', error);
+      }
+      
+      // Disparar evento para notificar outros componentes sobre a mudança
+      window.dispatchEvent(new CustomEvent('microsoft-connection-updated'));
     } else {
-      console.log('❌ Microsoft connection not found in active connections, checking inactive ones...');
       // Verificar se existe uma conta inativa com este email
       try {
         const { data: session } = await supabase.auth.getSession();
@@ -149,27 +160,23 @@ export const useMicrosoftConnection = (): UseMicrosoftConnectionReturn => {
             .eq('provider_type', 'microsoft')
             .eq('email_address', email)
             .eq('is_active', false)
-            .single();
+            .limit(1);
           
-          if (inactiveConnection) {
-            console.log('🔄 Found inactive connection, reactivating...');
+          if (inactiveConnection?.[0]) {
             // Reativar a conta inativa
             const { error: updateError } = await supabase
               .from('email_configurations')
               .update({ is_active: true })
-              .eq('id', inactiveConnection.id);
+              .eq('id', inactiveConnection[0].id);
             
             if (!updateError) {
-              console.log('✅ Inactive account reactivated:', email);
               // Recarregar as conexões
               await checkConnections();
-            } else {
-              console.error('❌ Error reactivating account:', updateError);
             }
           }
         }
       } catch (error) {
-        console.error('❌ Error trying to reactivate account:', error);
+        console.error('Error trying to reactivate account:', error);
       }
     }
   }, [connections, checkConnections]);
@@ -179,21 +186,39 @@ export const useMicrosoftConnection = (): UseMicrosoftConnectionReturn => {
       setLoading(true);
       setError(null);
 
-      console.log('🔗 Iniciando conexão com Microsoft...', forceNewLogin ? '(forçando novo login)' : '');
 
+      // Diagnosticar problemas de configuração
+      const issues = diagnoseAuthIssues();
+      if (issues.length > 0) {
+        console.warn('⚠️ Problemas de configuração detectados:', issues);
+      }
+      
+      // Limpar instâncias MSAL duplicadas
+      clearMsalInstances();
+      
+      // Limpar cache MSAL se há muitas contas
+      if ((window as any).msalInstance) {
+        const accounts = (window as any).msalInstance.getAllAccounts();
+        if (accounts.length > 3) {
+          try {
+            await (window as any).msalInstance.clearCache();
+          } catch (error) {
+            console.warn('⚠️ Erro ao limpar cache MSAL:', error);
+          }
+        }
+      }
+      
       // Usar MSAL para autorização com PKCE automático
       const { PublicClientApplication } = await import('@azure/msal-browser');
-      const { msalConfig } = await import('../lib/msalConfig');
+      const msalConfig = getOptimizedMsalConfig();
       
       // Verificar se já existe uma instância MSAL
       const existingInstance = (window as any).msalInstance;
       let msalInstance;
       
       if (existingInstance) {
-        console.log('🔄 Reutilizando instância MSAL existente');
         msalInstance = existingInstance;
       } else {
-        console.log('🆕 Criando nova instância MSAL');
         msalInstance = new PublicClientApplication(msalConfig);
         
         // Inicializar MSAL
@@ -253,31 +278,13 @@ export const useMicrosoftConnection = (): UseMicrosoftConnectionReturn => {
         throw error;
       });
 
-      console.log('✅ Microsoft login successful:', loginResponse.account?.username);
-      console.log('🔑 Refresh token disponível:', loginResponse.refreshToken ? 'SIM' : 'NÃO');
-      console.log('🔍 DEBUG - loginResponse completo:', {
-        hasAccessToken: !!loginResponse.accessToken,
-        hasRefreshToken: !!loginResponse.refreshToken,
-        hasExpiresOn: !!loginResponse.expiresOn,
-        account: loginResponse.account?.username,
-        scopes: loginResponse.scopes
-      });
-      
-      // Log detalhado do refresh token
-      if (loginResponse.refreshToken) {
-        console.log('🎉 REFRESH TOKEN OBTIDO:', loginResponse.refreshToken.substring(0, 50) + '...');
-      } else {
-        console.log('❌ REFRESH TOKEN NÃO OBTIDO - Verificando configuração MSAL...');
-      }
 
       // Mostrar aviso de segurança após login bem-sucedido
       setShowSecurityWarning(true);
       
       // Verificar se temos refresh token
       if (loginResponse.refreshToken) {
-        console.log('🔑 Refresh token (primeiros 20 chars):', loginResponse.refreshToken.substring(0, 20) + '...');
       } else {
-        console.log('⚠️ MSAL não retornou refresh token - tentando obter via acquireTokenSilent...');
         
         // Tentar obter refresh token via acquireTokenSilent
         try {
@@ -294,19 +301,15 @@ export const useMicrosoftConnection = (): UseMicrosoftConnectionReturn => {
           });
           
           if (tokenResponse.refreshToken) {
-            console.log('✅ Refresh token obtido via acquireTokenSilent');
             loginResponse.refreshToken = tokenResponse.refreshToken;
           } else {
-            console.log('⚠️ Ainda não foi possível obter refresh token');
           }
         } catch (tokenError) {
-          console.log('⚠️ Erro ao obter refresh token via acquireTokenSilent:', tokenError);
         }
       }
       
       // SOLUÇÃO ALTERNATIVA: Tentar obter refresh token via acquireTokenPopup
       if (!loginResponse.refreshToken) {
-        console.log('🔄 Tentando obter refresh token via acquireTokenPopup...');
         try {
           const popupResponse = await msalInstance.acquireTokenPopup({
             scopes: ['User.Read', 'Mail.Read', 'Mail.ReadWrite', 'Mail.Send', 'offline_access'],
@@ -321,13 +324,10 @@ export const useMicrosoftConnection = (): UseMicrosoftConnectionReturn => {
           });
           
           if (popupResponse.refreshToken) {
-            console.log('✅ Refresh token obtido via acquireTokenPopup');
             loginResponse.refreshToken = popupResponse.refreshToken;
           } else {
-            console.log('❌ acquireTokenPopup também não retornou refresh token');
           }
         } catch (popupError) {
-          console.log('❌ Erro ao obter refresh token via acquireTokenPopup:', popupError);
         }
       }
       await handleSuccessfulLogin(loginResponse);
@@ -353,7 +353,6 @@ export const useMicrosoftConnection = (): UseMicrosoftConnectionReturn => {
   const handleSuccessfulLogin = async (loginResponse: any) => {
     try {
       // Buscar informações do usuário
-      console.log('📧 Buscando informações do usuário...');
       const userInfoResponse = await fetch('https://graph.microsoft.com/v1.0/me', {
         headers: {
           'Authorization': `Bearer ${loginResponse.accessToken}`,
@@ -367,7 +366,6 @@ export const useMicrosoftConnection = (): UseMicrosoftConnectionReturn => {
       const userInfo = await userInfoResponse.json();
       const userEmail = userInfo.mail || userInfo.userPrincipalName;
       
-      console.log('👤 Usuário identificado:', userEmail);
 
       // Buscar user_id do contexto atual
       let { data: { session } } = await supabase.auth.getSession();
@@ -387,29 +385,21 @@ export const useMicrosoftConnection = (): UseMicrosoftConnectionReturn => {
         throw new Error('User not authenticated');
       }
       
-      console.log('✅ Usuário autenticado:', session.user.id);
 
       // Salvar tokens na tabela COM REFRESH TOKEN
-      console.log('💾 Salvando conexão no banco de dados...');
-      console.log('🔍 DEBUG - Dados para salvar:', {
-        accessToken: loginResponse.accessToken ? 'PRESENTE' : 'AUSENTE',
-        refreshToken: loginResponse.refreshToken ? 'PRESENTE' : 'AUSENTE',
-        refreshTokenValue: loginResponse.refreshToken ? loginResponse.refreshToken.substring(0, 20) + '...' : 'VAZIO',
-        expiresOn: loginResponse.expiresOn?.toISOString() || 'FALLBACK'
-      });
       
-      const { data: existingConfig } = await supabase
+      const { data: existingConfigs } = await supabase
         .from('email_configurations')
         .select('id')
         .eq('user_id', session.user.id)
         .eq('email_address', userEmail)
         .eq('provider_type', 'microsoft')
-        .single();
+        .limit(1);
+      
+      const existingConfig = existingConfigs?.[0];
 
-      let connectionData;
       if (existingConfig?.id) {
-        console.log('🔄 Atualizando configuração existente...');
-        const { data: updated, error: updateError } = await supabase
+        const { error: updateError } = await supabase
           .from('email_configurations')
           .update({
             oauth_access_token: loginResponse.accessToken,
@@ -419,17 +409,10 @@ export const useMicrosoftConnection = (): UseMicrosoftConnectionReturn => {
           })
           .eq('id', existingConfig.id)
           .select()
-          .single();
+          .limit(1);
         if (updateError) throw updateError;
-        connectionData = updated;
-        console.log('✅ Configuração atualizada:', {
-          hasAccessToken: !!connectionData.oauth_access_token,
-          hasRefreshToken: !!connectionData.oauth_refresh_token,
-          refreshTokenValue: connectionData.oauth_refresh_token ? connectionData.oauth_refresh_token.substring(0, 20) + '...' : 'VAZIO'
-        });
       } else {
-        console.log('🆕 Criando nova configuração...');
-        const { data: inserted, error: insertError } = await supabase
+        const { error: insertError } = await supabase
           .from('email_configurations')
           .insert([{
             user_id: session.user.id,
@@ -442,24 +425,16 @@ export const useMicrosoftConnection = (): UseMicrosoftConnectionReturn => {
             is_active: true
           }])
           .select()
-          .single();
+          .limit(1);
         if (insertError) throw insertError;
-        connectionData = inserted;
-        console.log('✅ Nova configuração criada:', {
-          hasAccessToken: !!connectionData.oauth_access_token,
-          hasRefreshToken: !!connectionData.oauth_refresh_token,
-          refreshTokenValue: connectionData.oauth_refresh_token ? connectionData.oauth_refresh_token.substring(0, 20) + '...' : 'VAZIO'
-        });
       }
 
       // conexão salva/atualizada com sucesso
 
-      console.log('✅ Microsoft connection saved:', connectionData);
       
       // Recarregar conexões
       await checkConnections();
       
-      console.log('🎉 Conexão Microsoft estabelecida com sucesso!');
 
     } catch (err: any) {
       console.error('❌ Error in handleSuccessfulLogin:', err);
@@ -472,7 +447,6 @@ export const useMicrosoftConnection = (): UseMicrosoftConnectionReturn => {
       setLoading(true);
       setError(null);
 
-      console.log('🔍 Disconnecting Microsoft connection:', email);
 
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
@@ -480,13 +454,15 @@ export const useMicrosoftConnection = (): UseMicrosoftConnectionReturn => {
       }
 
       // Buscar a conexão específica
-      const { data: connection, error: fetchError } = await supabase
+      const { data: connections, error: fetchError } = await supabase
         .from('email_configurations')
         .select('id')
         .eq('user_id', session.user.id)
         .eq('email_address', email)
         .eq('provider_type', 'microsoft')
-        .single();
+        .limit(1);
+      
+      const connection = connections?.[0];
 
       if (fetchError || !connection) {
         throw new Error('Connection not found');
@@ -502,7 +478,6 @@ export const useMicrosoftConnection = (): UseMicrosoftConnectionReturn => {
         throw new Error(deleteError.message);
       }
 
-      console.log('✅ Microsoft connection disconnected:', email);
 
       // Atualizar estado local
       await checkConnections();
@@ -531,11 +506,30 @@ export const useMicrosoftConnection = (): UseMicrosoftConnectionReturn => {
     return () => clearTimeout(timer);
   }, [checkConnections]);
 
+  // Detectar quando uma nova conta foi adicionada e defini-la como ativa
+  useEffect(() => {
+    if (connections.length > 0) {
+      const savedActiveEmail = localStorage.getItem(ACTIVE_MICROSOFT_CONNECTION_KEY);
+      const hasActiveConnection = savedActiveEmail && connections.find(conn => conn.email_address === savedActiveEmail);
+      
+      // Se não há conta ativa salva ou a conta salva não existe mais, usar a mais recente
+      if (!hasActiveConnection) {
+        const newestConnection = connections[0]; // A primeira é sempre a mais recente
+        if (newestConnection) {
+          setActiveConnectionState(newestConnection);
+          localStorage.setItem(ACTIVE_MICROSOFT_CONNECTION_KEY, newestConnection.email_address);
+        }
+      }
+    }
+  }, [connections]);
+
   // Escutar eventos de atualização das conexões Microsoft
   useEffect(() => {
     const handleMicrosoftConnectionUpdate = () => {
-      console.log('🔄 useMicrosoftConnection - Evento de atualização recebido, recarregando conexões...');
-      checkConnections();
+      // Apenas recarregar se não estiver já carregando
+      if (!loading) {
+        checkConnections();
+      }
     };
 
     window.addEventListener('microsoft-connection-updated', handleMicrosoftConnectionUpdate);
@@ -543,7 +537,7 @@ export const useMicrosoftConnection = (): UseMicrosoftConnectionReturn => {
     return () => {
       window.removeEventListener('microsoft-connection-updated', handleMicrosoftConnectionUpdate);
     };
-  }, [checkConnections]);
+  }, [checkConnections, loading]);
 
   return {
     connections,
