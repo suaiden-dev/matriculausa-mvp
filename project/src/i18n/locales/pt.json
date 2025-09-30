@@ -1189,7 +1189,8 @@
       "weakPassword": "A senha é muito fraca. Escolha uma senha mais forte.",
       "invalidEmail": "Digite um endereço de email válido.",
       "signupDisabled": "Novos registros estão atualmente desabilitados. Entre em contato com o suporte.",
-      "registrationFailed": "Falha no Registro"
+      "registrationFailed": "Falha no Registro",
+      "emailAlreadyRegistered": "Este email já está cadastrado. Faça login ou use outro email."
     },
   "features": {
     "whyChoose": "Por Que Escolher MatriculaUSA?",

@@ -297,7 +297,7 @@ const StudentApplicationsView: React.FC = () => {
           )
         `)
         .eq('role', 'student')
-        .eq('has_paid_selection_process_fee', true)
+        // .eq('has_paid_selection_process_fee', true)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -453,39 +453,39 @@ const StudentApplicationsView: React.FC = () => {
       let result = false;
       switch (stageFilter) {
         case 'selection_fee':
-          // Selection Fee: todos os estudantes (já que filtramos apenas os que pagaram a taxa)
-          result = true; // Todos os estudantes mostrados já pagaram a taxa de seleção
+          // Estudantes que pagaram a Selection Process Fee
+          result = !!student.has_paid_selection_process_fee;
           break;
         case 'application':
-          // Application: todos os estudantes (já que todos já pagaram a taxa de seleção)
-          result = true;
+          // Estudantes que já fizeram alguma aplicação
+          result = (student.total_applications || 0) > 0;
           break;
         case 'review':
-          // Review: estudantes que aplicaram (incluindo os que já foram aprovados/rejeitados)
-          result = student.total_applications > 0;
+          // Estudantes com alguma aplicação em revisão/aprovada/rejeitada
+          result = !!student.status || (student.total_applications || 0) > 0;
           break;
         case 'app_fee':
-          // App Fee: estudantes que foram aprovados (incluindo os que já pagaram a taxa)
-          result = student.status === 'approved';
+          // Application fee paga
+          result = !!student.is_application_fee_paid;
           break;
         case 'scholarship_fee':
-          // Scholarship Fee: estudantes que estão locked (incluindo os que já pagaram a taxa de bolsa)
-          result = student.is_locked;
+          // Scholarship fee paga
+          result = !!student.is_scholarship_fee_paid;
           break;
         case 'acceptance':
-          // Acceptance: estudantes que pagaram a taxa de bolsa (incluindo os que já receberam a carta)
-          result = student.is_locked && !!student.is_scholarship_fee_paid;
-          break;
-        case 'i20_fee':
-          // I-20 Fee: estudantes que têm carta de aceitação enviada (incluindo os que já pagaram a taxa I-20)
-          result = student.is_locked && !!student.acceptance_letter_status && 
+          // Carta de aceitação enviada/assinada/aprovada
+          result = !!student.acceptance_letter_status && 
                    (student.acceptance_letter_status === 'sent' || 
                     student.acceptance_letter_status === 'signed' || 
                     student.acceptance_letter_status === 'approved');
           break;
+        case 'i20_fee':
+          // I-20 Control Fee paga
+          result = !!student.has_paid_i20_control_fee;
+          break;
         case 'enrollment':
-          // Enrollment: estudantes que pagaram todas as taxas (incluindo os que já estão matriculados)
-          result = student.is_locked && student.has_paid_i20_control_fee;
+          // Considerar matriculado quando status for 'enrolled'
+          result = student.status === 'enrolled';
           break;
         default:
           result = true;
