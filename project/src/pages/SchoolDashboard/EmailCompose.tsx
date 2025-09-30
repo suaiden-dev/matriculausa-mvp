@@ -3,7 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useMsal } from '@azure/msal-react';
 import { graphScopes } from '../../lib/msalConfig';
-import GraphService from '../../lib/graphService';
+import { GraphService } from '../../lib/services/GraphService';
 import { PaperClipIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
 
 interface EmailConfiguration {
