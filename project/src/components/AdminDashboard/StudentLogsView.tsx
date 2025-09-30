@@ -278,3 +278,4 @@ const StudentLogsView: React.FC<StudentLogsViewProps> = ({ studentId, studentNam
 };
 
 export default StudentLogsView;
+

@@ -236,6 +236,33 @@ const SelectionProcess: React.FC = () => {
       });
       
       setStudentDocs(updatedStudentDocs);
+
+      // Log the document approval action
+      try {
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('id')
+          .eq('user_id', selectedStudent.user_profiles.user_id)
+          .single();
+        
+        if (profile) {
+          await supabase.rpc('log_student_action', {
+            p_student_id: profile.id,
+            p_action_type: 'document_approval',
+            p_action_description: `Document ${type} approved by university`,
+            p_performed_by: user?.id || '',
+            p_performed_by_type: 'university',
+            p_metadata: {
+              document_type: type,
+              application_id: selectedStudent.id,
+              university_name: university?.name || 'University',
+              approved_by: user?.email || 'University Staff'
+            }
+          });
+        }
+      } catch (logError) {
+        console.error('Failed to log document approval:', logError);
+      }
       
       // Verificar se todos os documentos foram aprovados
       const allDocsApproved = ['passport', 'diploma', 'funds_proof']
@@ -333,6 +360,35 @@ const SelectionProcess: React.FC = () => {
         .from('user_profiles')
         .update({ documents_status: 'under_review' })
         .eq('user_id', selectedStudent.user_profiles.user_id);
+
+      // Log the document rejection action
+      try {
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('id')
+          .eq('user_id', selectedStudent.user_profiles.user_id)
+          .single();
+        
+        if (profile) {
+          await supabase.rpc('log_student_action', {
+            p_student_id: profile.id,
+            p_action_type: 'document_rejection',
+            p_action_description: `Document ${type} rejected by university - changes requested`,
+            p_performed_by: user?.id || '',
+            p_performed_by_type: 'university',
+            p_metadata: {
+              document_type: type,
+              application_id: selectedStudent.id,
+              university_name: university?.name || 'University',
+              rejected_by: user?.email || 'University Staff',
+              rejection_reason: reason || 'Changes requested',
+              changes_requested_at: new Date().toISOString()
+            }
+          });
+        }
+      } catch (logError) {
+        console.error('Failed to log document rejection:', logError);
+      }
 
       // Webhook + notificação no sino para "Request Changes"
       try {
@@ -438,6 +494,36 @@ const SelectionProcess: React.FC = () => {
 
       if (profileUpdateError) {
         console.error('Erro ao atualizar documents_status:', profileUpdateError);
+      }
+
+      // Log the student approval action
+      try {
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('id')
+          .eq('user_id', selectedStudent.user_profiles.user_id)
+          .single();
+        
+        if (profile) {
+          await supabase.rpc('log_student_action', {
+            p_student_id: profile.id,
+            p_action_type: 'application_approval',
+            p_action_description: `Scholarship application approved by university`,
+            p_performed_by: user?.id || '',
+            p_performed_by_type: 'university',
+            p_metadata: {
+              application_id: selectedStudent.id,
+              scholarship_id: selectedStudent.scholarship_id,
+              scholarship_title: selectedStudent.scholarships?.title || 'Scholarship',
+              university_name: university?.name || 'University',
+              approved_by: user?.email || 'University Staff',
+              approval_date: new Date().toISOString(),
+              student_name: selectedStudent.user_profiles.full_name
+            }
+          });
+        }
+      } catch (logError) {
+        console.error('Failed to log student approval:', logError);
       }
 
       // Webhook e notificação (simplificado)
@@ -563,6 +649,37 @@ const SelectionProcess: React.FC = () => {
         .from('scholarship_applications')
         .update({ status: 'rejected', notes: rejectStudentReason || null })
         .eq('id', selectedStudent.id);
+
+      // Log the student rejection action
+      try {
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('id')
+          .eq('user_id', selectedStudent.user_profiles.user_id)
+          .single();
+        
+        if (profile) {
+          await supabase.rpc('log_student_action', {
+            p_student_id: profile.id,
+            p_action_type: 'application_rejection',
+            p_action_description: `Scholarship application rejected by university`,
+            p_performed_by: user?.id || '',
+            p_performed_by_type: 'university',
+            p_metadata: {
+              application_id: selectedStudent.id,
+              scholarship_id: selectedStudent.scholarship_id,
+              scholarship_title: selectedStudent.scholarships?.title || 'Scholarship',
+              university_name: university?.name || 'University',
+              rejected_by: user?.email || 'University Staff',
+              rejection_reason: rejectStudentReason || 'Application rejected',
+              rejection_date: new Date().toISOString(),
+              student_name: selectedStudent.user_profiles.full_name
+            }
+          });
+        }
+      } catch (logError) {
+        console.error('Failed to log student rejection:', logError);
+      }
       
       // Atualizar o contexto global para refletir as mudanças
       await refreshData();

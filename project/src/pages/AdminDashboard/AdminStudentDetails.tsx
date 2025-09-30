@@ -518,6 +518,23 @@ const AdminStudentDetails: React.FC = () => {
         const updatedApps = (prev.all_applications || []).map((a: any) => a.id === applicationId ? { ...a, documents: data?.documents || newDocuments } : a);
         return { ...prev, all_applications: updatedApps } as any;
       });
+
+      // Log the action
+      try {
+        await logAction(
+          'document_approval',
+          `Document ${docType} approved by admin`,
+          user?.id || '',
+          'admin',
+          {
+            document_type: docType,
+            application_id: applicationId,
+            approved_by: user?.email || 'Admin'
+          }
+        );
+      } catch (logError) {
+        console.error('Failed to log action:', logError);
+      }
     } finally {
       setApprovingDocs(p => ({ ...p, [k]: false }));
     }
@@ -960,12 +977,13 @@ const AdminStudentDetails: React.FC = () => {
       try {
         await logAction(
           'application_approval',
-          `Scholarship application approved`,
+          `Scholarship application approved by admin`,
           user?.id || '',
           'admin',
           {
             application_id: applicationId,
-            student_name: student.student_name
+            student_name: student.student_name,
+            approved_by: user?.email || 'Admin'
           }
         );
       } catch (logError) {
@@ -1000,13 +1018,14 @@ const AdminStudentDetails: React.FC = () => {
       try {
         await logAction(
           'application_rejection',
-          `Scholarship application rejected${rejectStudentReason ? `: ${rejectStudentReason}` : ''}`,
+          `Scholarship application rejected by admin${rejectStudentReason ? `: ${rejectStudentReason}` : ''}`,
           user?.id || '',
           'admin',
           {
             application_id: applicationId,
             student_name: student.student_name,
-            rejection_reason: rejectStudentReason
+            rejection_reason: rejectStudentReason,
+            rejected_by: user?.email || 'Admin'
           }
         );
       } catch (logError) {
@@ -1339,12 +1358,13 @@ const AdminStudentDetails: React.FC = () => {
       try {
         await logAction(
           'document_approval',
-          `Document request upload approved`,
+          `Document request upload approved by admin`,
           user?.id || '',
           'admin',
           {
             upload_id: uploadId,
-            document_type: 'document_request_upload'
+            document_type: 'document_request_upload',
+            approved_by: user?.email || 'Admin'
           }
         );
       } catch (logError) {
