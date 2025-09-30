@@ -104,16 +104,169 @@ const AdminStudentDetails: React.FC = () => {
     due_date: '',
     attachment: null
   });
-  // Upload de Acceptance Letter (Admin)
-  const [acceptanceLetterFile, setAcceptanceLetterFile] = useState<File | null>(null);
-  const [uploadingAcceptanceLetter, setUploadingAcceptanceLetter] = useState(false);
+  // Upload de Acceptance Letter (Admin) - Removido pois agora está no DocumentsView
   const [isProgressExpanded, setIsProgressExpanded] = useState(false);
   const [i20Deadline, setI20Deadline] = useState<Date | null>(null);
+  const [referralInfo, setReferralInfo] = useState<{
+    type: 'seller' | 'affiliate' | 'student' | null;
+    name: string | null;
+    email: string | null;
+    company?: string | null;
+    affiliateName?: string | null;
+    affiliateEmail?: string | null;
+    isRewards?: boolean;
+  } | null>(null);
 
   const { user } = useAuth();
   const isPlatformAdmin = user?.role === 'admin';
 
   const { getFeeAmount, formatFeeAmount, hasOverride } = useFeeConfig(student?.user_id);
+
+  // Função para buscar informações de referência
+  const fetchReferralInfo = async (referralCode: string) => {
+    if (!referralCode) {
+      setReferralInfo(null);
+      return;
+    }
+
+    try {
+      // 0) Matricula Rewards: códigos iniciados com MATR pertencem à tabela affiliate_codes
+      if (/^MATR/i.test(referralCode)) {
+        // Encontrar o dono do código na affiliate_codes
+        const { data: codeOwner } = await supabase
+          .from('affiliate_codes')
+          .select('user_id')
+          .eq('code', referralCode)
+          .maybeSingle();
+
+        let ownerName: string | null = null;
+        let ownerEmail: string | null = null;
+        if (codeOwner?.user_id) {
+          const { data: ownerProfile } = await supabase
+            .from('user_profiles')
+            .select('full_name, email')
+            .eq('user_id', codeOwner.user_id)
+            .maybeSingle();
+          ownerName = (ownerProfile as any)?.full_name || null;
+          ownerEmail = (ownerProfile as any)?.email || null;
+        }
+
+        setReferralInfo({
+          type: 'student',
+          name: ownerName,
+          email: ownerEmail,
+          isRewards: true
+        });
+        return;
+      }
+
+      // 1) Buscar em sellers (referral_code referencia seller_referral_code do user_profiles)
+      const { data: sellerData } = await supabase
+        .from('sellers')
+        .select('name, email, affiliate_admin_id')
+        .eq('referral_code', referralCode)
+        .single();
+
+      if (sellerData) {
+        // Buscar SEMPRE o affiliate vinculado ao seller via affiliate_admin_id
+        let affiliateName: string | null = null;
+        let affiliateEmail: string | null = null;
+        // 2.1) Mapear affiliate_admin_id -> user_id via affiliate_admins
+        let affiliateUserId: string | null = null;
+        const { data: affiliateAdmin } = await supabase
+          .from('affiliate_admins')
+          .select('user_id')
+          .eq('id', (sellerData as any).affiliate_admin_id)
+          .maybeSingle();
+        affiliateUserId = (affiliateAdmin as any)?.user_id || null;
+
+        // 2.2) Carregar perfil do affiliate via user_id
+        if (affiliateUserId) {
+          const { data: affiliateProfileByUserId } = await supabase
+            .from('user_profiles')
+            .select('full_name, email')
+            .eq('user_id', affiliateUserId)
+            .maybeSingle();
+          if (affiliateProfileByUserId) {
+            affiliateName = (affiliateProfileByUserId as any)?.full_name || null;
+            affiliateEmail = (affiliateProfileByUserId as any)?.email || null;
+          }
+        }
+
+        // 2.3) Fallback final: tentar em user_profiles pelo id (caso id seja o profile_id)
+        if (!affiliateName && !affiliateEmail) {
+          const { data: affiliateProfileById } = await supabase
+            .from('user_profiles')
+            .select('full_name, email')
+            .eq('id', (sellerData as any).affiliate_admin_id)
+            .maybeSingle();
+          if (affiliateProfileById) {
+            affiliateName = (affiliateProfileById as any)?.full_name || null;
+            affiliateEmail = (affiliateProfileById as any)?.email || null;
+          }
+        }
+
+        setReferralInfo({
+          type: 'seller',
+          name: (sellerData as any)?.name || null,
+          email: (sellerData as any)?.email || null,
+          affiliateName,
+          affiliateEmail
+        });
+        return;
+      }
+
+      // 2) Buscar em used_referral_codes (Matricula Rewards - student referrals)
+      const { data: studentData } = await supabase
+        .from('used_referral_codes')
+        .select(`
+          affiliate_code,
+          user_profiles!used_referral_codes_referrer_id_fkey (
+            full_name,
+            email
+          )
+        `)
+        .eq('affiliate_code', referralCode)
+        .single();
+
+      if (studentData) {
+        setReferralInfo({
+          type: 'student',
+          name: (studentData.user_profiles as any)?.full_name || null,
+          email: (studentData.user_profiles as any)?.email || null
+        });
+        return;
+      }
+
+      // 3) Buscar em affiliate_referrals (outras referências via afiliado)
+      const { data: affiliateData } = await supabase
+        .from('affiliate_referrals')
+        .select(`
+          affiliate_code,
+          user_profiles!affiliate_referrals_referrer_id_fkey (
+            full_name,
+            email
+          )
+        `)
+        .eq('affiliate_code', referralCode)
+        .single();
+
+      if (affiliateData) {
+        setReferralInfo({
+          type: 'affiliate',
+          name: (affiliateData.user_profiles as any)?.full_name || null,
+          email: (affiliateData.user_profiles as any)?.email || null
+        });
+        return;
+      }
+
+      // Se não encontrou em nenhuma tabela
+      setReferralInfo(null);
+    } catch (error) {
+      console.error('Error fetching referral info:', error);
+      setReferralInfo(null);
+    }
+  };
 
   // Função para calcular o deadline do I-20
   const calculateI20Deadline = (studentData: StudentRecord) => {
@@ -271,6 +424,11 @@ const AdminStudentDetails: React.FC = () => {
         
         // Calcular deadline do I-20
         calculateI20Deadline(formatted);
+        
+        // Buscar informações de referência
+        if (formatted.seller_referral_code) {
+          fetchReferralInfo(formatted.seller_referral_code);
+        }
       } catch (e) {
         // noop
       } finally {
@@ -1365,7 +1523,46 @@ const AdminStudentDetails: React.FC = () => {
                           className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-mono"
                         />
                       ) : (
-                        <dd className="text-base text-slate-900 mt-1 font-mono bg-slate-200 px-3 py-2 rounded-lg">{student.seller_referral_code}</dd>
+                        <div className="mt-1 space-y-2">
+                          <dd className="text-base text-slate-900 font-mono bg-slate-200 px-3 py-2 rounded-lg">{student.seller_referral_code}</dd>
+                          {referralInfo && (
+                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                              <div className="flex items-center space-x-2 mb-2">
+                                <div className={`w-2 h-2 rounded-full ${
+                                  referralInfo.type === 'seller' ? 'bg-green-500' :
+                                  referralInfo.type === 'affiliate' ? 'bg-blue-500' :
+                                  'bg-purple-500'
+                                }`}></div>
+                                <span className="text-sm font-medium text-slate-700">
+                                  {referralInfo.type === 'seller' ? 'Seller' :
+                                   referralInfo.type === 'affiliate' ? 'Affiliate' :
+                                   (referralInfo.isRewards ? 'Student Referral (Rewards)' : 'Student')} Referral
+                                </span>
+                              </div>
+                              <div className="text-sm text-slate-600">
+                                <div className="font-medium">{referralInfo.name || 'Unknown'}</div>
+                                <div className="text-slate-500">{referralInfo.email || 'No email'}</div>
+                                {referralInfo.type === 'seller' && (referralInfo.affiliateName || referralInfo.affiliateEmail) && (
+                                  <div className="mt-2 pl-3 border-l-2 border-blue-200">
+                                    <div className="text-xs text-slate-500 mb-1">Affiliate</div>
+                                    <div className="text-sm font-medium text-slate-700">{referralInfo.affiliateName || 'Unknown'}</div>
+                                    <div className="text-sm text-slate-500">{referralInfo.affiliateEmail || 'No email'}</div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                          {!referralInfo && (
+                            <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                              <div className="text-sm text-slate-500">
+                                <div className="flex items-center space-x-2">
+                                  <div className="w-2 h-2 rounded-full bg-slate-400"></div>
+                                  <span>Referral source not found</span>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       )}
                     </div>
                   )}
