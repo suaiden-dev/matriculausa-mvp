@@ -31,6 +31,8 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
   const [realScholarshipApplication, setRealScholarshipApplication] = useState<any>(null);
   const [loadingApplication, setLoadingApplication] = useState(false);
   const [internalDocumentRequests, setInternalDocumentRequests] = useState<any[]>([]);
+  const [acceptanceLetterFile, setAcceptanceLetterFile] = useState<File | null>(null);
+  const [uploadingAcceptanceLetter, setUploadingAcceptanceLetter] = useState(false);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US');
@@ -643,7 +645,92 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                     >
                       Download
                     </button>
+                    {isAdmin && (
+                      <label className="inline-flex items-center px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium rounded-lg cursor-pointer transition-colors w-full sm:w-auto text-center">
+                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                        </svg>
+                        {uploadingAcceptanceLetter ? 'Replacing...' : (acceptanceLetterFile ? 'Change file' : 'Replace Letter')}
+                        <input
+                          type="file"
+                          className="hidden"
+                          accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                          onChange={(e) => setAcceptanceLetterFile(e.target.files ? e.target.files[0] : null)}
+                          disabled={uploadingAcceptanceLetter}
+                        />
+                      </label>
+                    )}
                   </div>
+                  {isAdmin && acceptanceLetterFile && (
+                    <div className="mt-2 flex justify-end">
+                      <button
+                        onClick={async () => {
+                          if (!currentApplication?.id || !studentId || !acceptanceLetterFile) return;
+                          try {
+                            setUploadingAcceptanceLetter(true);
+                            const sanitized = acceptanceLetterFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+                            const storageKey = `acceptance_letters/${Date.now()}_${sanitized}`;
+                            const { data: uploadData, error: uploadError } = await supabase.storage
+                              .from('document-attachments')
+                              .upload(storageKey, acceptanceLetterFile);
+                            if (uploadError) throw uploadError;
+                            const { data: { publicUrl } } = supabase.storage
+                              .from('document-attachments')
+                              .getPublicUrl(uploadData?.path || storageKey);
+
+                            const { error: updateError } = await supabase
+                              .from('scholarship_applications')
+                              .update({
+                                acceptance_letter_url: publicUrl,
+                                acceptance_letter_status: 'sent',
+                                acceptance_letter_sent_at: new Date().toISOString()
+                              })
+                              .eq('id', currentApplication.id);
+                            if (updateError) throw updateError;
+
+                            setRealScholarshipApplication((prev: any) => prev ? ({
+                              ...prev,
+                              acceptance_letter_url: publicUrl,
+                              acceptance_letter_status: 'sent',
+                              acceptance_letter_sent_at: new Date().toISOString()
+                            }) : prev);
+
+                            try {
+                              const { data: { session } } = await supabase.auth.getSession();
+                              const accessToken = session?.access_token;
+                              if (accessToken) {
+                                const FUNCTIONS_URL = (import.meta as any).env.VITE_SUPABASE_FUNCTIONS_URL as string;
+                                await fetch(`${FUNCTIONS_URL}/create-student-notification`, {
+                                  method: 'POST',
+                                  headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': `Bearer ${accessToken}`
+                                  },
+                                  body: JSON.stringify({
+                                    user_id: studentId,
+                                    title: 'Acceptance letter sent',
+                                    message: 'Your acceptance letter was sent. Check your dashboard for details.',
+                                    type: 'acceptance_letter_sent',
+                                    link: '/student/dashboard'
+                                  })
+                                });
+                              }
+                            } catch { /* ignore notify errors */ }
+
+                            setAcceptanceLetterFile(null);
+                          } catch (err) {
+                            console.error('Error replacing acceptance letter:', err);
+                          } finally {
+                            setUploadingAcceptanceLetter(false);
+                          }
+                        }}
+                        disabled={uploadingAcceptanceLetter}
+                        className="bg-[#05294E] hover:bg-[#041f38] text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
+                      >
+                        {uploadingAcceptanceLetter ? 'Saving...' : 'Confirm Replace'}
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -665,6 +752,112 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                   </svg>
                   <span>Please wait for the university to send your acceptance letter</span>
                 </div>
+                {isAdmin && (
+                  <div className="mt-6">
+                    <div className="flex items-center justify-center gap-3">
+                      <label className="flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-100 transition font-medium text-slate-700">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                        </svg>
+                        <span>{acceptanceLetterFile ? 'Change file' : 'Select file'}</span>
+                        <input
+                          type="file"
+                          className="sr-only"
+                          accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                          onChange={(e) => setAcceptanceLetterFile(e.target.files ? e.target.files[0] : null)}
+                          disabled={uploadingAcceptanceLetter}
+                        />
+                      </label>
+                      {acceptanceLetterFile && (
+                        <span className="text-xs text-slate-700 truncate max-w-[240px]">{acceptanceLetterFile.name}</span>
+                      )}
+                    </div>
+                    <div className="flex justify-center mt-3">
+                      <button
+                        onClick={async () => {
+                          if (!acceptanceLetterFile || !studentId) return;
+                          try {
+                            setUploadingAcceptanceLetter(true);
+                            const sanitized = acceptanceLetterFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+                            const storageKey = `acceptance_letters/${Date.now()}_${sanitized}`;
+                            const { data: uploadData, error: uploadError } = await supabase.storage
+                              .from('document-attachments')
+                              .upload(storageKey, acceptanceLetterFile);
+                            if (uploadError) throw uploadError;
+                            const { data: { publicUrl } } = supabase.storage
+                              .from('document-attachments')
+                              .getPublicUrl(uploadData?.path || storageKey);
+
+                            // Se não temos currentApplication ainda, tentar buscar o mais recente
+                            let applicationId = currentApplication?.id;
+                            if (!applicationId && realScholarshipApplication?.id) applicationId = realScholarshipApplication.id;
+
+                            if (!applicationId) {
+                              // Buscar a aplicação mais recente do perfil
+                              const { data: apps } = await supabase
+                                .from('scholarship_applications')
+                                .select('id')
+                                .order('created_at', { ascending: false })
+                                .limit(1);
+                              applicationId = apps?.[0]?.id;
+                            }
+
+                            if (!applicationId) throw new Error('No application found for this student');
+
+                            const { error: updateError } = await supabase
+                              .from('scholarship_applications')
+                              .update({
+                                acceptance_letter_url: publicUrl,
+                                acceptance_letter_status: 'sent',
+                                acceptance_letter_sent_at: new Date().toISOString()
+                              })
+                              .eq('id', applicationId);
+                            if (updateError) throw updateError;
+
+                            setRealScholarshipApplication((prev: any) => prev ? ({
+                              ...prev,
+                              acceptance_letter_url: publicUrl,
+                              acceptance_letter_status: 'sent',
+                              acceptance_letter_sent_at: new Date().toISOString()
+                            }) : prev);
+
+                            try {
+                              const { data: { session } } = await supabase.auth.getSession();
+                              const accessToken = session?.access_token;
+                              if (accessToken) {
+                                const FUNCTIONS_URL = (import.meta as any).env.VITE_SUPABASE_FUNCTIONS_URL as string;
+                                await fetch(`${FUNCTIONS_URL}/create-student-notification`, {
+                                  method: 'POST',
+                                  headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': `Bearer ${accessToken}`
+                                  },
+                                  body: JSON.stringify({
+                                    user_id: studentId,
+                                    title: 'Acceptance letter sent',
+                                    message: 'Your acceptance letter was sent. Check your dashboard for details.',
+                                    type: 'acceptance_letter_sent',
+                                    link: '/student/dashboard'
+                                  })
+                                });
+                              }
+                            } catch { /* ignore notify errors */ }
+
+                            setAcceptanceLetterFile(null);
+                          } catch (err) {
+                            console.error('Error uploading acceptance letter:', err);
+                          } finally {
+                            setUploadingAcceptanceLetter(false);
+                          }
+                        }}
+                        disabled={!acceptanceLetterFile || uploadingAcceptanceLetter}
+                        className="bg-[#05294E] hover:bg-[#041f38] text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
+                      >
+                        {uploadingAcceptanceLetter ? 'Uploading...' : 'Send Acceptance Letter'}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}

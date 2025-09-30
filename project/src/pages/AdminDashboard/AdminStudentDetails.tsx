@@ -95,6 +95,18 @@ const AdminStudentDetails: React.FC = () => {
   const [loadingDocuments, setLoadingDocuments] = useState(false);
   const [uploadingDocumentRequest, setUploadingDocumentRequest] = useState<{[key: string]: boolean}>({});
   const [approvingDocumentRequest, setApprovingDocumentRequest] = useState<{[key: string]: boolean}>({});
+  // Criação de Document Request pelo Admin
+  const [showNewRequestModal, setShowNewRequestModal] = useState(false);
+  const [creatingDocumentRequest, setCreatingDocumentRequest] = useState(false);
+  const [newDocumentRequest, setNewDocumentRequest] = useState<{ title: string; description: string; due_date: string; attachment: File | null }>({
+    title: '',
+    description: '',
+    due_date: '',
+    attachment: null
+  });
+  // Upload de Acceptance Letter (Admin)
+  const [acceptanceLetterFile, setAcceptanceLetterFile] = useState<File | null>(null);
+  const [uploadingAcceptanceLetter, setUploadingAcceptanceLetter] = useState(false);
   const [isProgressExpanded, setIsProgressExpanded] = useState(false);
   const [i20Deadline, setI20Deadline] = useState<Date | null>(null);
 
@@ -747,6 +759,136 @@ const AdminStudentDetails: React.FC = () => {
       console.error('Error fetching document requests:', error);
     } finally {
       setLoadingDocuments(false);
+    }
+  };
+
+  // Utilitário para sanitizar nome de arquivo
+  const sanitizeFileName = (fileName: string): string => {
+    return fileName
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9.-]/g, '_')
+      .replace(/_+/g, '_')
+      .replace(/^_|_$/g, '');
+  };
+
+  // Criar Document Request (Admin)
+  const handleCreateDocumentRequest = async () => {
+    if (!student) return;
+    try {
+      setCreatingDocumentRequest(true);
+
+      // Selecionar uma aplicação alvo (prioriza com acceptance letter, senão primeira)
+      const apps = student.all_applications || [];
+      const targetApp = apps.find((a: any) => !!a.acceptance_letter_url) || apps[0];
+      if (!targetApp) {
+        showToast('No application found for this student.', 'error');
+        return;
+      }
+
+      // Identificar university_id
+      let university_id: string | undefined = undefined;
+      if (targetApp?.scholarships) {
+        university_id = (targetApp.scholarships as any)?.university_id;
+      }
+
+      // Upload do anexo (opcional)
+      let attachment_url = '';
+      if (newDocumentRequest.attachment) {
+        const sanitized = sanitizeFileName(newDocumentRequest.attachment.name);
+        const storagePath = `individual/${Date.now()}_${sanitized}`;
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('document-attachments')
+          .upload(storagePath, newDocumentRequest.attachment);
+        if (uploadError) throw uploadError;
+        const { data: { publicUrl } } = supabase.storage
+          .from('document-attachments')
+          .getPublicUrl(uploadData?.path || storagePath);
+        attachment_url = publicUrl;
+      }
+
+      // Chamar Edge Function para criar request (mesmo fluxo usado pela universidade)
+      const { data: { session } } = await supabase.auth.getSession();
+      const accessToken = session?.access_token;
+      if (!accessToken) throw new Error('Sessão inválida. Faça login novamente.');
+
+      const payload = {
+        title: newDocumentRequest.title,
+        description: newDocumentRequest.description,
+        due_date: newDocumentRequest.due_date || null,
+        attachment_url,
+        university_id,
+        is_global: false,
+        status: 'open',
+        created_by: user?.id || '',
+        scholarship_application_id: targetApp.id
+      };
+
+      const FUNCTIONS_URL = (import.meta as any).env.VITE_SUPABASE_FUNCTIONS_URL as string;
+      const resp = await fetch(`${FUNCTIONS_URL}/create-document-request`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`
+        },
+        body: JSON.stringify(payload)
+      });
+      let result: any = {};
+      try { result = await resp.json(); } catch { /* noop */ }
+      if (!resp.ok || !result?.success) throw new Error(result?.error || 'Failed to create request');
+
+      // Recarregar lista
+      await fetchDocumentRequests();
+      // Limpar formulário
+      setNewDocumentRequest({ title: '', description: '', due_date: '', attachment: null });
+      setShowNewRequestModal(false);
+
+      // Notificar aluno (email + sino) - melhor esforço
+      try {
+        const { data: userData } = await supabase
+          .from('user_profiles')
+          .select('email, full_name')
+          .eq('user_id', student.user_id)
+          .single();
+        if (userData?.email) {
+          const webhookPayload = {
+            tipo_notf: 'Nova solicitação de documento',
+            email_aluno: userData.email,
+            nome_aluno: userData.full_name || student.student_name,
+            email_universidade: user?.email,
+            o_que_enviar: `A new document request has been submitted for your review: <strong>${newDocumentRequest.title}</strong>. Please log in to your dashboard to view the details and upload the requested document.`
+          };
+          await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(webhookPayload)
+          });
+        }
+        // Sino in-app
+        if (accessToken) {
+          await fetch(`${FUNCTIONS_URL}/create-student-notification`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${accessToken}`
+            },
+            body: JSON.stringify({
+              user_id: student.user_id,
+              title: 'New document request',
+              message: `A new document request was created: ${newDocumentRequest.title}.`,
+              type: 'document_request_created',
+              link: '/student/documents'
+            })
+          });
+        }
+      } catch { /* ignore notification errors */ }
+
+      showToast('Document request created successfully!', 'success');
+    } catch (err: any) {
+      console.error('Error creating document request:', err);
+      showToast(`Failed to create document request: ${err?.message || 'Unknown error'}`, 'error');
+    } finally {
+      setCreatingDocumentRequest(false);
     }
   };
 
@@ -1955,8 +2097,106 @@ const AdminStudentDetails: React.FC = () => {
         </div>
       )}
 
+      {/* Modal: New Document Request (Admin) */}
+      {showNewRequestModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+          <div className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-lg mx-4 border border-slate-200">
+            <h3 className="font-extrabold text-xl mb-6 text-[#05294E] text-center">New Document Request</h3>
+            <p className="text-sm text-slate-600 mb-6 text-center">
+              Request a new document from {student?.student_name}
+            </p>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Document Title <span className="text-red-500">*</span></label>
+                <input
+                  className="border border-slate-300 rounded-lg px-4 py-2 w-full focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition text-base"
+                  placeholder="e.g., Additional Bank Statement"
+                  value={newDocumentRequest.title}
+                  onChange={(e) => setNewDocumentRequest(prev => ({ ...prev, title: e.target.value }))}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Description</label>
+                <textarea
+                  className="border border-slate-300 rounded-lg px-4 py-2 w-full focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition text-base min-h-[80px] resize-vertical"
+                  placeholder="Describe what document you need and any specific requirements..."
+                  value={newDocumentRequest.description}
+                  onChange={(e) => setNewDocumentRequest(prev => ({ ...prev, description: e.target.value }))}
+                  rows={3}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Due Date</label>
+                <input
+                  className="border border-slate-300 rounded-lg px-4 py-2 w-full focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition text-base"
+                  type="date"
+                  value={newDocumentRequest.due_date}
+                  onChange={(e) => setNewDocumentRequest(prev => ({ ...prev, due_date: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Template/Attachment (Optional)</label>
+                <div className="flex items-center gap-3">
+                  <label className="flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-100 transition font-medium text-slate-700">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 002.828 2.828l6.586-6.586M16 5v6a2 2 0 002 2h6" />
+                    </svg>
+                    <span>{newDocumentRequest.attachment ? 'Change file' : 'Select file'}</span>
+                    <input
+                      type="file"
+                      className="sr-only"
+                      onChange={(e) => setNewDocumentRequest(prev => ({ ...prev, attachment: e.target.files ? e.target.files[0] : null }))}
+                      disabled={creatingDocumentRequest}
+                    />
+                  </label>
+                  {newDocumentRequest.attachment && (
+                    <span className="text-xs text-slate-700 truncate max-w-[180px]">{newDocumentRequest.attachment.name}</span>
+                  )}
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-3 mt-8">
+              <button
+                className="flex-1 bg-slate-200 text-slate-800 px-4 py-2 rounded-lg font-medium hover:bg-slate-300 transition disabled:opacity-50"
+                onClick={() => { setShowNewRequestModal(false); setNewDocumentRequest({ title: '', description: '', due_date: '', attachment: null }); }}
+                disabled={creatingDocumentRequest}
+              >
+                Cancel
+              </button>
+              <button
+                className="flex-1 bg-[#05294E] text-white px-4 py-2 rounded-lg font-medium hover:bg-[#041f38] transition disabled:opacity-50 flex items-center justify-center"
+                onClick={handleCreateDocumentRequest}
+                disabled={creatingDocumentRequest || !newDocumentRequest.title.trim()}
+              >
+                {creatingDocumentRequest ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Creating...
+                  </>
+                ) : (
+                  'Create Request'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {activeTab === 'documents' && (
         <div className="space-y-6">
+          {/* Botão para criar novo Document Request (somente Admin) */}
+          {isPlatformAdmin && (
+            <div className="flex justify-end">
+              <button
+                onClick={() => setShowNewRequestModal(true)}
+                className="bg-[#05294E] hover:bg-[#041f38] text-white px-4 py-2 rounded-lg text-sm font-medium"
+              >
+                New Request
+              </button>
+            </div>
+          )}
+
           {loadingDocuments ? (
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
               <div className="text-center">
