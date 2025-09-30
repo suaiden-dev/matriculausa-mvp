@@ -49,10 +49,10 @@ export const MicrosoftConnectionStatus: React.FC = () => {
         <div className="text-center">
           <p className="text-sm text-gray-600 mb-3">Nenhuma conta Microsoft conectada</p>
           <button
-            disabled={true}
-            className="bg-gray-400 text-white text-sm px-4 py-2 rounded-lg cursor-not-allowed opacity-50"
+            onClick={connectMicrosoft}
+            className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded-lg"
           >
-            Microsoft (Coming Soon)
+            Conectar Conta Microsoft
           </button>
         </div>
       </div>
@@ -66,10 +66,10 @@ export const MicrosoftConnectionStatus: React.FC = () => {
           Contas Microsoft Conectadas ({connections.length})
         </h4>
         <button
-          disabled={true}
-          className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded cursor-not-allowed opacity-50"
+          onClick={connectMicrosoft}
+          className="text-xs bg-green-100 hover:bg-green-200 text-green-800 px-2 py-1 rounded"
         >
-          Microsoft (Desabilitado)
+          Adicionar Conta
         </button>
       </div>
 

@@ -730,19 +730,23 @@ const EmailConfigurationContent = () => {
             }`}>
               <button
                 type="button"
-                disabled={true}
-                className="p-4 sm:p-6 border-2 rounded-xl transition-all text-left opacity-50 cursor-not-allowed border-slate-200 bg-slate-50"
+                onClick={() => setProvider('gmail')}
+                className={`p-4 sm:p-6 border-2 rounded-xl transition-all text-left hover:shadow-md ${
+                  provider === 'gmail'
+                    ? 'border-red-500 bg-red-50 shadow-md'
+                    : 'border-slate-200 hover:border-slate-300 bg-white'
+                }`}
               >
                 <div className="flex items-center space-x-3 sm:space-x-4">
                   <div className="w-10 h-10 sm:w-12 sm:h-12 bg-red-500 rounded-xl flex items-center justify-center shadow-sm flex-shrink-0">
                     <span className="text-white font-bold text-base sm:text-lg">G</span>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-slate-900 text-base sm:text-lg">Gmail (Coming Soon)</p>
+                    <p className="font-semibold text-slate-900 text-base sm:text-lg">Gmail</p>
                     <p className="text-sm text-slate-500">Google Workspace, @gmail.com</p>
                     <div className="flex items-center mt-2">
-                      <div className="w-2 h-2 bg-yellow-500 rounded-full mr-2"></div>
-                      <span className="text-xs text-slate-600">Integration in development</span>
+                      <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                      <span className="text-xs text-slate-600">App password required</span>
                     </div>
                   </div>
                   {provider === 'gmail' && (
@@ -759,22 +763,31 @@ const EmailConfigurationContent = () => {
               })() && (
                 <button
                   type="button"
-                  disabled={true}
-                  className="p-4 sm:p-6 border-2 rounded-xl transition-all text-left relative opacity-50 cursor-not-allowed border-slate-200 bg-slate-50"
+                  onClick={() => setProvider('microsoft')}
+                  disabled={!isMicrosoftConfigured}
+                  className={`p-4 sm:p-6 border-2 rounded-xl transition-all text-left relative hover:shadow-md ${
+                    provider === 'microsoft'
+                      ? 'border-blue-500 bg-blue-50 shadow-md'
+                      : isMicrosoftConfigured
+                      ? 'border-slate-200 hover:border-slate-300 bg-white'
+                      : 'border-slate-200 opacity-50 cursor-not-allowed bg-slate-50'
+                  }`}
                 >
                   <div className="flex items-center space-x-3 sm:space-x-4">
                     <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-600 rounded-xl flex items-center justify-center shadow-sm flex-shrink-0">
                       <span className="text-white font-bold text-base sm:text-lg">M</span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-slate-900 text-base sm:text-lg">Microsoft (Coming Soon)</p>
+                      <p className="font-semibold text-slate-900 text-base sm:text-lg">Microsoft</p>
                       <p className="text-sm text-slate-500">
-                        Outlook, Hotmail, Office 365
+                        {isMicrosoftConfigured ? 'Outlook, Hotmail, Office 365' : 'Configuration required'}
                       </p>
                       <div className="flex items-center mt-2">
-                        <div className="w-2 h-2 bg-yellow-500 rounded-full mr-2"></div>
+                        <div className={`w-2 h-2 rounded-full mr-2 ${
+                          isMicrosoftConfigured ? 'bg-green-500' : 'bg-yellow-500'
+                        }`}></div>
                         <span className="text-xs text-slate-600">
-                          Integration in development
+                          {isMicrosoftConfigured ? 'OAuth2 authentication' : 'Setup needed'}
                         </span>
                       </div>
                     </div>
