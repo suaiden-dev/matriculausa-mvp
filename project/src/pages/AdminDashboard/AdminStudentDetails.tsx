@@ -95,6 +95,14 @@ const AdminStudentDetails: React.FC = () => {
   const [loadingDocuments, setLoadingDocuments] = useState(false);
   const [uploadingDocumentRequest, setUploadingDocumentRequest] = useState<{[key: string]: boolean}>({});
   const [approvingDocumentRequest, setApprovingDocumentRequest] = useState<{[key: string]: boolean}>({});
+  // Modal de confirmação de pagamento
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [pendingPayment, setPendingPayment] = useState<{
+    feeType: 'selection_process' | 'application' | 'scholarship' | 'i20_control';
+    applicationId?: string;
+    feeName: string;
+  } | null>(null);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'stripe' | 'zelle' | 'manual'>('manual');
   // Criação de Document Request pelo Admin
   const [showNewRequestModal, setShowNewRequestModal] = useState(false);
   const [creatingDocumentRequest, setCreatingDocumentRequest] = useState(false);
@@ -633,7 +641,40 @@ const AdminStudentDetails: React.FC = () => {
     }
   };
 
-  const markFeeAsPaid = async (feeType: 'selection_process' | 'scholarship' | 'i20_control', applicationId?: string) => {
+  const openPaymentModal = (
+    feeType: 'selection_process' | 'application' | 'scholarship' | 'i20_control',
+    applicationId?: string
+  ) => {
+    const feeNames = {
+      'selection_process': 'Selection Process Fee',
+      'application': 'Application Fee',
+      'scholarship': 'Scholarship Fee',
+      'i20_control': 'I-20 Control Fee'
+    };
+
+    setPendingPayment({
+      feeType,
+      applicationId,
+      feeName: feeNames[feeType]
+    });
+    setSelectedPaymentMethod('manual');
+    setShowPaymentModal(true);
+  };
+
+  const confirmPayment = async () => {
+    if (!pendingPayment) return;
+
+    const { feeType, applicationId } = pendingPayment;
+    await markFeeAsPaid(feeType, applicationId, selectedPaymentMethod);
+    setShowPaymentModal(false);
+    setPendingPayment(null);
+  };
+
+  const markFeeAsPaid = async (
+    feeType: 'selection_process' | 'application' | 'scholarship' | 'i20_control',
+    applicationId?: string,
+    method?: 'stripe' | 'zelle' | 'manual'
+  ) => {
     if (!student || !isPlatformAdmin) return;
 
     const key = `${student.student_id}:${feeType}`;
@@ -651,6 +692,42 @@ const AdminStudentDetails: React.FC = () => {
 
         // Atualizar estado local
         setStudent(prev => prev ? { ...prev, has_paid_selection_process_fee: true } : prev);
+      } else if (feeType === 'application') {
+        // Marcar application fee como pago na scholarship_applications
+        let targetApplicationId = applicationId;
+        
+        // Se não foi fornecido applicationId, buscar a aplicação aprovada ou mais recente
+        if (!targetApplicationId) {
+          const { data: applications, error: fetchError } = await supabase
+            .from('scholarship_applications')
+            .select('id, status')
+            .eq('student_id', student.student_id)
+            .order('created_at', { ascending: false });
+
+          if (fetchError) throw fetchError;
+
+          // Se há uma aplicação aprovada, usar ela; senão usar a mais recente
+          const targetApplication = applications?.find(app => app.status === 'approved') || applications?.[0];
+          
+          if (!targetApplication) {
+            throw new Error('No application found for this student');
+          }
+          
+          targetApplicationId = targetApplication.id;
+        }
+
+        const { error } = await supabase
+          .from('scholarship_applications')
+          .update({
+            is_application_fee_paid: true,
+            ...(method ? { payment_status: method } : {})
+          })
+          .eq('id', targetApplicationId);
+
+        if (error) throw error;
+
+        // Atualizar estado local
+        setStudent(prev => prev ? { ...prev, is_application_fee_paid: true } : prev);
       } else if (feeType === 'scholarship') {
         // Marcar scholarship fee como pago na scholarship_applications
         let targetApplicationId = applicationId;
@@ -677,7 +754,10 @@ const AdminStudentDetails: React.FC = () => {
 
         const { error } = await supabase
           .from('scholarship_applications')
-          .update({ is_scholarship_fee_paid: true })
+          .update({
+            is_scholarship_fee_paid: true,
+            ...(method ? { payment_status: method } : {})
+          })
           .eq('id', targetApplicationId);
 
         if (error) throw error;
@@ -697,10 +777,11 @@ const AdminStudentDetails: React.FC = () => {
         setStudent(prev => prev ? { ...prev, has_paid_i20_control_fee: true } : prev);
       }
 
-      showToast(`${feeType === 'selection_process' ? 'Selection Process Fee' : feeType === 'scholarship' ? 'Scholarship Fee' : 'I-20 Control Fee'} marked as paid successfully!`, 'success');
+      showToast(`${feeType === 'selection_process' ? 'Selection Process Fee' : feeType === 'application' ? 'Application Fee' : feeType === 'scholarship' ? 'Scholarship Fee' : 'I-20 Control Fee'} marked as paid successfully!`, 'success');
     } catch (error) {
       console.error(`Error marking ${feeType} as paid:`, error);
       const feeName = feeType === 'selection_process' ? 'Selection Process Fee' : 
+                     feeType === 'application' ? 'Application Fee' :
                      feeType === 'scholarship' ? 'Scholarship Fee' : 'I-20 Control Fee';
       showToast(`Error marking ${feeName} as paid`, 'error');
     } finally {
@@ -1538,7 +1619,7 @@ const AdminStudentDetails: React.FC = () => {
                                    referralInfo.type === 'affiliate' ? 'Affiliate' :
                                    (referralInfo.isRewards ? 'Student Referral (Rewards)' : 'Student')} Referral
                                 </span>
-                              </div>
+              </div>
                               <div className="text-sm text-slate-600">
                                 <div className="font-medium">{referralInfo.name || 'Unknown'}</div>
                                 <div className="text-slate-500">{referralInfo.email || 'No email'}</div>
@@ -2101,22 +2182,22 @@ const AdminStudentDetails: React.FC = () => {
                   )}
                 </div>
                 <div className="flex items-center space-x-2">
-                  {student.has_paid_selection_process_fee ? (
+                   {student.has_paid_selection_process_fee ? (
                     <><CheckCircle className="h-5 w-5 text-green-600" /><span className="text-sm font-medium text-green-600">Paid</span></>
                   ) : (
-                    <div className="flex items-center space-x-2">
+                     <div className="flex items-center space-x-2">
                       <XCircle className="h-5 w-5 text-red-600" />
                       <span className="text-sm font-medium text-red-600">Not Paid</span>
-                      {isPlatformAdmin && (
-                        <button
-                          onClick={() => markFeeAsPaid('selection_process')}
-                          disabled={markingAsPaid[`${student.student_id}:selection_process`]}
-                          className="px-2 py-1 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-xs rounded-md flex items-center space-x-1"
-                        >
-                          <CheckCircle className="w-3 h-3" />
-                          <span>{markingAsPaid[`${student.student_id}:selection_process`] ? 'Marking...' : 'Mark as Paid'}</span>
-                        </button>
-                      )}
+                       {isPlatformAdmin && (
+                         <button
+                           onClick={() => openPaymentModal('selection_process')}
+                           disabled={markingAsPaid[`${student.student_id}:selection_process`]}
+                           className="px-2 py-1 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-xs rounded-md flex items-center space-x-1"
+                         >
+                           <CheckCircle className="w-3 h-3" />
+                           <span>{markingAsPaid[`${student.student_id}:selection_process`] ? 'Marking...' : 'Mark as Paid'}</span>
+                         </button>
+                       )}
                     </div>
                   )}
                 </div>
@@ -2128,7 +2209,28 @@ const AdminStudentDetails: React.FC = () => {
                   <dd className="text-sm font-semibold text-slate-700 mt-1">$400.00</dd>
                 </div>
                 <div className="flex items-center space-x-2">
-                  {student.is_application_fee_paid ? (<><CheckCircle className="h-5 w-5 text-green-600" /><span className="text-sm font-medium text-green-600">Paid</span></>) : (<><XCircle className="h-5 w-5 text-red-600" /><span className="text-sm font-medium text-red-600">Not Paid</span></>)}
+                  {student.is_application_fee_paid ? (
+                    <><CheckCircle className="h-5 w-5 text-green-600" /><span className="text-sm font-medium text-green-600">Paid</span></>
+                  ) : (
+                    <div className="flex items-center space-x-2">
+                      <XCircle className="h-5 w-5 text-red-600" />
+                      <span className="text-sm font-medium text-red-600">Not Paid</span>
+                       {isPlatformAdmin && (() => {
+                         // Buscar aplicação aprovada para application fee
+                         const approvedApp = student.all_applications?.find((app: any) => app.status === 'approved');
+                         return approvedApp && (
+                           <button
+                             onClick={() => openPaymentModal('application', approvedApp.id)}
+                             disabled={markingAsPaid[`${student.student_id}:application`]}
+                             className="px-2 py-1 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-xs rounded-md flex items-center space-x-1"
+                           >
+                             <CheckCircle className="w-3 h-3" />
+                             <span>{markingAsPaid[`${student.student_id}:application`] ? 'Marking...' : 'Mark as Paid'}</span>
+                           </button>
+                         );
+                       })()}
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="bg-slate-50 rounded-xl p-4 flex items-center justify-between">
@@ -2156,26 +2258,26 @@ const AdminStudentDetails: React.FC = () => {
                   )}
                 </div>
                 <div className="flex items-center space-x-2">
-                  {student.is_scholarship_fee_paid ? (
+                   {student.is_scholarship_fee_paid ? (
                     <><CheckCircle className="h-5 w-5 text-green-600" /><span className="text-sm font-medium text-green-600">Paid</span></>
                   ) : (
-                    <div className="flex items-center space-x-2">
+                     <div className="flex items-center space-x-2">
                       <XCircle className="h-5 w-5 text-red-600" />
                       <span className="text-sm font-medium text-red-600">Not Paid</span>
-                      {isPlatformAdmin && student.scholarship_title && (() => {
-                        // Buscar aplicação aprovada para scholarship fee
-                        const approvedApp = student.all_applications?.find((app: any) => app.status === 'approved');
-                        return approvedApp && (
-                          <button
-                            onClick={() => markFeeAsPaid('scholarship', approvedApp.id)}
-                            disabled={markingAsPaid[`${student.student_id}:scholarship`]}
-                            className="px-2 py-1 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-xs rounded-md flex items-center space-x-1"
-                          >
-                            <CheckCircle className="w-3 h-3" />
-                            <span>{markingAsPaid[`${student.student_id}:scholarship`] ? 'Marking...' : 'Mark as Paid'}</span>
-                          </button>
-                        );
-                      })()}
+                       {isPlatformAdmin && (() => {
+                         // Buscar aplicação aprovada para scholarship fee
+                         const approvedApp = student.all_applications?.find((app: any) => app.status === 'approved');
+                         return approvedApp && (
+                           <button
+                             onClick={() => openPaymentModal('scholarship', approvedApp.id)}
+                             disabled={markingAsPaid[`${student.student_id}:scholarship`]}
+                             className="px-2 py-1 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-xs rounded-md flex items-center space-x-1"
+                           >
+                             <CheckCircle className="w-3 h-3" />
+                             <span>{markingAsPaid[`${student.student_id}:scholarship`] ? 'Marking...' : 'Mark as Paid'}</span>
+                           </button>
+                         );
+                       })()}
                     </div>
                   )}
                 </div>
@@ -2205,22 +2307,22 @@ const AdminStudentDetails: React.FC = () => {
                   )}
                 </div>
                 <div className="flex items-center space-x-2">
-                  {student.has_paid_i20_control_fee ? (
+                   {student.has_paid_i20_control_fee ? (
                     <><CheckCircle className="h-5 w-5 text-green-600" /><span className="text-sm font-medium text-green-600">Paid</span></>
                   ) : (
-                    <div className="flex items-center space-x-2">
+                     <div className="flex items-center space-x-2">
                       <XCircle className="h-5 w-5 text-red-600" />
                       <span className="text-sm font-medium text-red-600">Not Paid</span>
-                      {isPlatformAdmin && (
-                        <button
-                          onClick={() => markFeeAsPaid('i20_control')}
-                          disabled={markingAsPaid[`${student.student_id}:i20_control`]}
-                          className="px-2 py-1 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-xs rounded-md flex items-center space-x-1"
-                        >
-                          <CheckCircle className="w-3 h-3" />
-                          <span>{markingAsPaid[`${student.student_id}:i20_control`] ? 'Marking...' : 'Mark as Paid'}</span>
-                        </button>
-                      )}
+                       {isPlatformAdmin && (
+                         <button
+                           onClick={() => openPaymentModal('i20_control')}
+                           disabled={markingAsPaid[`${student.student_id}:i20_control`]}
+                           className="px-2 py-1 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-xs rounded-md flex items-center space-x-1"
+                         >
+                           <CheckCircle className="w-3 h-3" />
+                           <span>{markingAsPaid[`${student.student_id}:i20_control`] ? 'Marking...' : 'Mark as Paid'}</span>
+                         </button>
+                       )}
                 </div>
                   )}
               </div>
@@ -2424,6 +2526,63 @@ const AdminStudentDetails: React.FC = () => {
               approvingStates={approvingDocumentRequest}
             />
           )}
+        </div>
+      )}
+
+      {/* Payment Confirmation Modal */}
+      {showPaymentModal && pendingPayment && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md mx-4">
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <CheckCircle className="w-6 h-6 text-blue-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-slate-900">
+                Confirm Payment
+              </h3>
+            </div>
+            
+            <p className="text-sm text-slate-600 mb-6">
+              Are you sure you want to mark the <strong>{pendingPayment.feeName}</strong> as paid?
+            </p>
+            
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Payment Method
+              </label>
+              <select
+                value={selectedPaymentMethod}
+                onChange={(e) => setSelectedPaymentMethod(e.target.value as 'stripe' | 'zelle' | 'manual')}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="stripe">Stripe</option>
+                <option value="zelle">Zelle</option>
+                <option value="manual">Manual</option>
+              </select>
+            </div>
+            
+            <div className="flex space-x-3">
+              <button
+                onClick={() => {
+                  setShowPaymentModal(false);
+                  setPendingPayment(null);
+                }}
+                className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmPayment}
+                disabled={markingAsPaid[`${student?.student_id}:${pendingPayment.feeType}`]}
+                className="flex-1 px-4 py-2 bg-[#05294E] text-white rounded-lg hover:bg-[#041f38] disabled:opacity-50 transition-colors flex items-center justify-center space-x-2"
+              >
+                <CheckCircle className="w-4 h-4" />
+                <span>
+                  {markingAsPaid[`${student?.student_id}:${pendingPayment.feeType}`] ? 'Processing...' : 'Confirm Payment'}
+                </span>
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

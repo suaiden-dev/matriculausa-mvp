@@ -1388,7 +1388,7 @@ const PaymentManagement = (): React.JSX.Element => {
                 phone_affiliate_admin: affiliateAdminData.user_profiles.phone || "",
                 email_aluno: payment.student_email,
                 nome_aluno: payment.student_name,
-                phone_aluno: payment.student_phone || "",
+                phone_aluno: "",
                 email_seller: sellerData.email,
                 nome_seller: sellerData.name,
                 phone_seller: sellerPhone || "",
@@ -1955,7 +1955,7 @@ const PaymentManagement = (): React.JSX.Element => {
             status: 'paid',
             payment_date: app.created_at,
           created_at: app.created_at,
-          payment_method: 'stripe'
+          payment_method: 'manual' // Selection process sempre manual quando marcado pelo admin
         });
         }
 
@@ -1975,7 +1975,7 @@ const PaymentManagement = (): React.JSX.Element => {
             status: 'paid',
             payment_date: app.created_at,
           created_at: app.created_at,
-          payment_method: 'stripe'
+          payment_method: 'manual' // Application fee sempre manual quando marcado pelo admin
         });
         }
 
@@ -1995,7 +1995,7 @@ const PaymentManagement = (): React.JSX.Element => {
             status: 'paid',
             payment_date: app.created_at,
             created_at: app.created_at,
-            payment_method: 'stripe'
+            payment_method: app.payment_status || 'manual' // Usar payment_status da aplicação ou fallback para manual
           });
         } else if (app.is_scholarship_fee_paid && scholarship.id === '31c9b8e6-af11-4462-8494-c79854f3f66e') {
           console.log('🚫 Excluding Current Students Scholarship payment for:', studentName, '- $', (scholarshipFee / 100).toFixed(2));
@@ -2017,7 +2017,7 @@ const PaymentManagement = (): React.JSX.Element => {
             status: 'paid',
             payment_date: app.created_at,
           created_at: app.created_at,
-          payment_method: 'stripe'
+          payment_method: 'manual' // I-20 control sempre manual quando marcado pelo admin
         });
         }
       });
