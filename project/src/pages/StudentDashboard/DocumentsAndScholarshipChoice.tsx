@@ -206,6 +206,32 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
             })
             .eq('user_id', user.id);
 
+          // Log the document approval and application creation
+          try {
+            const { data: profile } = await supabase
+              .from('user_profiles')
+              .select('id')
+              .eq('user_id', user.id)
+              .single();
+            
+            if (profile) {
+              await supabase.rpc('log_student_action', {
+                p_student_id: profile.id,
+                p_action_type: 'document_approval',
+                p_action_description: `Documents approved automatically by AI - proceeding to scholarship applications`,
+                p_performed_by: user.id,
+                p_performed_by_type: 'student',
+                p_metadata: {
+                  document_types: ['passport', 'diploma', 'funds_proof'],
+                  approval_method: 'ai_automatic',
+                  process_type: processType
+                }
+              });
+            }
+          } catch (logError) {
+            console.error('Failed to log document approval:', logError);
+          }
+
           // Processar aplicações, limpar carrinho E notificar universidade
           await processApplicationsAndClearCart(docUrls, true);
           
@@ -228,6 +254,37 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
               documents_status: 'under_review',
             })
             .eq('user_id', user.id);
+
+          // Log the document rejection and manual review requirement
+          try {
+            const { data: profile } = await supabase
+              .from('user_profiles')
+              .select('id')
+              .eq('user_id', user.id)
+              .single();
+            
+            if (profile) {
+              await supabase.rpc('log_student_action', {
+                p_student_id: profile.id,
+                p_action_type: 'document_rejection',
+                p_action_description: `Documents rejected by AI - requires manual review`,
+                p_performed_by: user.id,
+                p_performed_by_type: 'student',
+                p_metadata: {
+                  document_types: ['passport', 'diploma', 'funds_proof'],
+                  rejection_reason: 'ai_analysis_failed',
+                  errors: {
+                    passport: passportErr,
+                    diploma: degreeErr,
+                    funds_proof: fundsErr
+                  },
+                  process_type: processType
+                }
+              });
+            }
+          } catch (logError) {
+            console.error('Failed to log document rejection:', logError);
+          }
 
           // NÃO chamar saveDocumentsForManualReview aqui
           // As aplicações só serão criadas quando o usuário completar o manual review
@@ -369,6 +426,27 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
               .select('id')
               .single();
             applicationId = newApp?.id || null;
+            
+            // Log the scholarship application creation
+            if (applicationId) {
+              try {
+                await supabase.rpc('log_student_action', {
+                  p_student_id: profile.id,
+                  p_action_type: 'scholarship_application_created',
+                  p_action_description: `Scholarship application created for scholarship ID: ${scholarshipId}`,
+                  p_performed_by: user.id,
+                  p_performed_by_type: 'student',
+                  p_metadata: {
+                    application_id: applicationId,
+                    scholarship_id: scholarshipId,
+                    process_type: localStorage.getItem('studentProcessType') || null,
+                    application_method: 'ai_approved_documents'
+                  }
+                });
+              } catch (logError) {
+                console.error('Failed to log application creation:', logError);
+              }
+            }
           }
           
           if (applicationId) {
