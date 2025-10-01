@@ -242,6 +242,9 @@ const StudentLogsView: React.FC<StudentLogsViewProps> = ({ studentId, studentNam
                   <div className="flex items-center space-x-4 text-xs text-slate-500">
                     <span>By: {getPerformerDisplayName(log)}</span>
                     <span>{formatDate(log.created_at)}</span>
+                    {log.metadata && (log.metadata.ip || log.metadata.client_ip || log.metadata.request_ip) && (
+                      <span>IP: {log.metadata.ip || log.metadata.client_ip || log.metadata.request_ip}</span>
+                    )}
                   </div>
                   
                   {log.metadata && Object.keys(log.metadata).length > 0 && (

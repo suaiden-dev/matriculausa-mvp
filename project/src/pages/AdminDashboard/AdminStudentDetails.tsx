@@ -1210,6 +1210,26 @@ const AdminStudentDetails: React.FC = () => {
       setNewDocumentRequest({ title: '', description: '', due_date: '', attachment: null });
       setShowNewRequestModal(false);
 
+      // Log: Document Request criado pelo admin
+      try {
+        await logAction(
+          'document_request_created',
+          `Document request created by admin: ${newDocumentRequest.title}`,
+          user?.id || '',
+          'admin',
+          {
+            title: newDocumentRequest.title,
+            description: newDocumentRequest.description,
+            due_date: newDocumentRequest.due_date || null,
+            is_global: false,
+            university_id,
+            application_id: targetApp.id
+          }
+        );
+      } catch (logErr) {
+        console.error('Failed to log document request creation:', logErr);
+      }
+
       // Notificar aluno (email + sino) - melhor esforço
       try {
         const { data: userData } = await supabase
@@ -1317,6 +1337,23 @@ const AdminStudentDetails: React.FC = () => {
       // Recarregar document requests para mostrar o novo upload
       await fetchDocumentRequests();
       
+      // Log: Upload feito pelo admin para um document request
+      try {
+        await logAction(
+          'document_request_uploaded',
+          `Admin uploaded a document for request ${requestId}`,
+          user?.id || '',
+          'admin',
+          {
+            request_id: requestId,
+            file_url: publicUrl,
+            filename: fileName
+          }
+        );
+      } catch (logErr) {
+        console.error('Failed to log admin document upload:', logErr);
+      }
+
       showToast('Document uploaded successfully!', 'success');
     } catch (error: any) {
       console.error('Error uploading document:', error);

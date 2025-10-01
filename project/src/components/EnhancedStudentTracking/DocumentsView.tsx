@@ -34,6 +34,57 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
   const [acceptanceLetterFile, setAcceptanceLetterFile] = useState<File | null>(null);
   const [uploadingAcceptanceLetter, setUploadingAcceptanceLetter] = useState(false);
 
+  // Utilitário para logar ação de acceptance letter (admin)
+  const logAcceptanceAction = async (
+    actionType: 'acceptance_letter_sent' | 'acceptance_letter_replaced',
+    description: string,
+    targetApplicationId: string,
+    acceptanceUrl: string | null
+  ) => {
+    try {
+      // Descobrir profile_id do estudante
+      let profileId: string | null = null;
+      if (currentApplication?.student_id) {
+        profileId = currentApplication.student_id;
+      } else if (studentId) {
+        // Tentar mapear user_id -> profile_id
+        const { data: upByUser } = await supabase
+          .from('user_profiles')
+          .select('id')
+          .eq('user_id', studentId as string)
+          .maybeSingle();
+        if (upByUser?.id) profileId = upByUser.id;
+        if (!profileId) {
+          const { data: upById } = await supabase
+            .from('user_profiles')
+            .select('id')
+            .eq('id', studentId as string)
+            .maybeSingle();
+          if (upById?.id) profileId = upById.id;
+        }
+      }
+
+      if (!profileId) return;
+
+      const { data: { user } } = await supabase.auth.getUser();
+      const performedBy = user?.id || '';
+      await supabase.rpc('log_student_action', {
+        p_student_id: profileId,
+        p_action_type: actionType,
+        p_action_description: description,
+        p_performed_by: performedBy,
+        p_performed_by_type: 'admin',
+        p_metadata: {
+          application_id: targetApplicationId,
+          acceptance_letter_url: acceptanceUrl
+        }
+      });
+    } catch (e) {
+      // Apenas logar no console; não bloquear UX
+      console.error('Failed to log acceptance letter action:', e);
+    }
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US');
   };
@@ -695,6 +746,14 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                               acceptance_letter_sent_at: new Date().toISOString()
                             }) : prev);
 
+                            // Log: acceptance letter substituída/enviada novamente
+                            await logAcceptanceAction(
+                              'acceptance_letter_replaced',
+                              'Acceptance letter replaced by admin',
+                              currentApplication.id,
+                              publicUrl
+                            );
+
                             try {
                               const { data: { session } } = await supabase.auth.getSession();
                               const accessToken = session?.access_token;
@@ -813,6 +872,14 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                               })
                               .eq('id', applicationId);
                             if (updateError) throw updateError;
+
+                            // Log: acceptance letter enviada
+                            await logAcceptanceAction(
+                              'acceptance_letter_sent',
+                              'Acceptance letter sent by admin',
+                              applicationId,
+                              publicUrl
+                            );
 
                             setRealScholarshipApplication((prev: any) => prev ? ({
                               ...prev,
