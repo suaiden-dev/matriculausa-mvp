@@ -224,7 +224,8 @@ const StudentLogsView: React.FC<StudentLogsViewProps> = ({ studentId, studentNam
         ) : (
           logs.map((log) => (
             <div key={log.id} className="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-sm transition-shadow">
-              <div className="flex items-start justify-between">
+              <div className="flex items-start justify-between gap-4">
+                {/* Left: Type badge, Action type, Description */}
                 <div className="flex-1">
                   <div className="flex items-center space-x-3 mb-2">
                     <span className={`px-2 py-1 text-xs font-medium rounded-full border ${getPerformerTypeColor(log.performed_by_type)}`}>
@@ -234,28 +235,17 @@ const StudentLogsView: React.FC<StudentLogsViewProps> = ({ studentId, studentNam
                       {getActionTypeLabel(log.action_type)}
                     </span>
                   </div>
-                  
-                  <p className="text-sm text-slate-900 mb-2">
+                  <p className="text-sm text-slate-900">
                     {log.action_description}
                   </p>
-                  
-                  <div className="flex items-center space-x-4 text-xs text-slate-500">
-                    <span>By: {getPerformerDisplayName(log)}</span>
-                    <span>{formatDate(log.created_at)}</span>
-                    {log.metadata && (log.metadata.ip || log.metadata.client_ip || log.metadata.request_ip) && (
-                      <span>IP: {log.metadata.ip || log.metadata.client_ip || log.metadata.request_ip}</span>
-                    )}
-                  </div>
-                  
-                  {log.metadata && Object.keys(log.metadata).length > 0 && (
-                    <details className="mt-2">
-                      <summary className="text-xs text-slate-500 cursor-pointer hover:text-slate-700">
-                        View Details
-                      </summary>
-                      <div className="mt-2 p-2 bg-slate-50 rounded text-xs font-mono">
-                        <pre>{JSON.stringify(log.metadata, null, 2)}</pre>
-                      </div>
-                    </details>
+                </div>
+
+                {/* Right: By, Date, IP */}
+                <div className="flex flex-col items-end text-xs space-y-2 text-slate-600 whitespace-nowrap">
+                  <span>By: {getPerformerDisplayName(log)}</span>
+                  <span>{formatDate(log.created_at)}</span>
+                  {log.metadata && (log.metadata.ip || log.metadata.client_ip || log.metadata.request_ip) && (
+                    <span>IP: {log.metadata.ip || log.metadata.client_ip || log.metadata.request_ip}</span>
                   )}
                 </div>
               </div>
