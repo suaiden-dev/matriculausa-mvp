@@ -72,6 +72,7 @@ interface StudentRecord {
   is_locked: boolean;
   total_applications: number;
   all_applications: any[];
+  admin_notes?: string | null;
 }
 
 const AdminStudentDetails: React.FC = () => {
@@ -98,6 +99,10 @@ const AdminStudentDetails: React.FC = () => {
   const [loadingDocuments, setLoadingDocuments] = useState(false);
   const [uploadingDocumentRequest, setUploadingDocumentRequest] = useState<{[key: string]: boolean}>({});
   const [approvingDocumentRequest, setApprovingDocumentRequest] = useState<{[key: string]: boolean}>({});
+  // Campo de notas do admin
+  const [adminNotes, setAdminNotes] = useState<string>('');
+  const [editingNotes, setEditingNotes] = useState(false);
+  const [savingNotes, setSavingNotes] = useState(false);
   // Modal de confirmação de pagamento
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [pendingPayment, setPendingPayment] = useState<{
@@ -359,6 +364,7 @@ const AdminStudentDetails: React.FC = () => {
             has_paid_i20_control_fee,
             role,
             seller_referral_code,
+            admin_notes,
             scholarship_applications (
               id,
               scholarship_id,
@@ -416,6 +422,7 @@ const AdminStudentDetails: React.FC = () => {
           has_paid_selection_process_fee: s.has_paid_selection_process_fee || false,
           has_paid_i20_control_fee: s.has_paid_i20_control_fee || false,
           seller_referral_code: s.seller_referral_code || null,
+          admin_notes: s.admin_notes || null,
           application_id: lockedApplication?.id || null,
           scholarship_id: lockedApplication?.scholarship_id || null,
           application_status: lockedApplication?.status || null,
@@ -435,6 +442,7 @@ const AdminStudentDetails: React.FC = () => {
 
         setStudent(formatted);
         setDependents(Number(s.dependents || 0));
+        setAdminNotes(s.admin_notes || '');
         
         // Calcular deadline do I-20
         calculateI20Deadline(formatted);
@@ -575,6 +583,32 @@ const AdminStudentDetails: React.FC = () => {
       console.error('Error saving profile:', error);
     } finally {
       setSavingProfile(false);
+    }
+  };
+
+  const handleSaveNotes = async () => {
+    if (!student) return;
+    
+    setSavingNotes(true);
+    try {
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({
+          admin_notes: adminNotes,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', student.student_id);
+
+      if (error) throw error;
+      
+      setEditingNotes(false);
+      setStudent(prev => prev ? { ...prev, admin_notes: adminNotes } : prev);
+      showToast('Notes saved successfully');
+    } catch (error) {
+      console.error('Error saving notes:', error);
+      showToast('Error saving notes', 'error');
+    } finally {
+      setSavingNotes(false);
     }
   };
 
@@ -1880,6 +1914,79 @@ const AdminStudentDetails: React.FC = () => {
                   )}
                 </div>
               </div>
+
+              {/* Admin Notes - Only for Platform Admins */}
+              {isPlatformAdmin && (
+                <div className="bg-slate-50 rounded-xl p-4">
+                  <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center">
+                    <FileText className="w-5 h-5 mr-2 text-[#05294E]" />
+                    Admin Notes
+                  </h3>
+                  <div className="space-y-4">
+                    {editingNotes ? (
+                      <div className="space-y-3">
+                        <label className="block text-sm font-medium text-slate-700">
+                          Add notes about this student
+                        </label>
+                        <textarea
+                          value={adminNotes}
+                          onChange={(e) => setAdminNotes(e.target.value)}
+                          placeholder="Enter any notes, observations, or comments about this student..."
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] resize-none"
+                          rows={3}
+                        />
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs text-slate-500">
+                            These notes are only visible to platform administrators.
+                          </p>
+                          <div className="flex items-center space-x-2">
+                            <button
+                              onClick={handleSaveNotes}
+                              disabled={savingNotes}
+                              className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg flex items-center space-x-1"
+                            >
+                              <Save className="w-4 h-4" />
+                              <span>{savingNotes ? 'Saving...' : 'Save'}</span>
+                            </button>
+                            <button
+                              onClick={() => {
+                                setEditingNotes(false);
+                                setAdminNotes(student?.admin_notes || '');
+                              }}
+                              className="px-3 py-1 bg-slate-600 hover:bg-slate-700 text-white text-sm rounded-lg flex items-center space-x-1"
+                            >
+                              <X className="w-4 h-4" />
+                              <span>Cancel</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {adminNotes ? (
+                          <div className="bg-white border border-slate-200 rounded-lg p-3">
+                            <p className="text-slate-900 whitespace-pre-wrap text-sm">{adminNotes}</p>
+                          </div>
+                        ) : (
+                          <div className="text-center py-4">
+                            <FileText className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                            <p className="text-slate-500 text-sm">No notes added yet</p>
+                          </div>
+                        )}
+                        <div className="flex justify-end">
+                          <button
+                            onClick={() => setEditingNotes(true)}
+                            className="px-3 py-1 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-sm rounded-lg flex items-center space-x-1"
+                          >
+                            <Edit3 className="w-4 h-4" />
+                            <span>Edit Notes</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
