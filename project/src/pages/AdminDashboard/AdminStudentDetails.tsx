@@ -5,6 +5,7 @@ import { useFeeConfig } from '../../hooks/useFeeConfig';
 import { useAuth } from '../../hooks/useAuth';
 import { useStudentLogs } from '../../hooks/useStudentLogs';
 import DocumentsView from '../../components/EnhancedStudentTracking/DocumentsView';
+import AdminScholarshipSelection from '../../components/AdminDashboard/AdminScholarshipSelection';
 import StudentLogsView from '../../components/AdminDashboard/StudentLogsView';
 // Função simples de toast
 const showToast = (message: string, type: 'success' | 'error' = 'success') => {
@@ -92,7 +93,7 @@ const AdminStudentDetails: React.FC = () => {
   const [showRejectStudentModal, setShowRejectStudentModal] = useState(false);
   const [rejectStudentReason, setRejectStudentReason] = useState('');
   const [pendingRejectAppId, setPendingRejectAppId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'documents' | 'logs'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'documents' | 'scholarships' | 'logs'>('overview');
   const [documentRequests, setDocumentRequests] = useState<any[]>([]);
   const [loadingDocuments, setLoadingDocuments] = useState(false);
   const [uploadingDocumentRequest, setUploadingDocumentRequest] = useState<{[key: string]: boolean}>({});
@@ -391,7 +392,9 @@ const AdminStudentDetails: React.FC = () => {
         const s = data as any;
         let lockedApplication = null;
         if (s.scholarship_applications && s.scholarship_applications.length > 0) {
-          lockedApplication = s.scholarship_applications.find((app: any) => app.status === 'approved' && app.is_application_fee_paid);
+          // Priorizar aplicação enrolled, depois approved
+          lockedApplication = s.scholarship_applications.find((app: any) => app.status === 'enrolled') ||
+                             s.scholarship_applications.find((app: any) => app.status === 'approved');
         }
 
         const formatted: StudentRecord = {
@@ -417,7 +420,7 @@ const AdminStudentDetails: React.FC = () => {
           scholarship_id: lockedApplication?.scholarship_id || null,
           application_status: lockedApplication?.status || null,
           applied_at: lockedApplication?.applied_at || null,
-          is_application_fee_paid: !!lockedApplication,
+          is_application_fee_paid: lockedApplication?.is_application_fee_paid || false,
           is_scholarship_fee_paid: lockedApplication?.is_scholarship_fee_paid || false,
           acceptance_letter_status: lockedApplication?.acceptance_letter_status || null,
           payment_status: lockedApplication?.payment_status || null,
@@ -460,9 +463,9 @@ const AdminStudentDetails: React.FC = () => {
       case 'selection_fee':
         return st.has_paid_selection_process_fee ? 'completed' : 'pending';
       case 'apply':
-        return st.applied_at ? 'completed' : 'pending';
+        return st.total_applications > 0 ? 'completed' : 'pending';
       case 'review':
-        if (st.application_status === 'approved') return 'completed';
+        if (st.application_status === 'enrolled' || st.application_status === 'approved') return 'completed';
         if (st.application_status === 'rejected') return 'rejected';
         if (st.application_status === 'under_review') return 'in_progress';
         return 'pending';
@@ -471,8 +474,7 @@ const AdminStudentDetails: React.FC = () => {
       case 'scholarship_fee':
         return st.is_scholarship_fee_paid ? 'completed' : 'pending';
       case 'acceptance_letter':
-        if (st.acceptance_letter_status === 'approved') return 'completed';
-        if (st.acceptance_letter_status === 'sent') return 'in_progress';
+        if (st.acceptance_letter_status === 'approved' || st.acceptance_letter_status === 'sent') return 'completed';
         return 'pending';
       case 'i20_fee':
         return st.has_paid_i20_control_fee ? 'completed' : 'pending';
@@ -868,6 +870,33 @@ const AdminStudentDetails: React.FC = () => {
         } catch (logError) {
           console.error('Failed to log action:', logError);
         }
+
+        // Se houver uma aplicação aprovada, matricular (enrolled)
+        try {
+          const approvedApp = student.all_applications?.find((app: any) => app.status === 'approved' || app.status === 'enrolled');
+          if (approvedApp?.id) {
+            const { error: enrollErr } = await supabase
+              .from('scholarship_applications')
+              .update({ status: 'enrolled' })
+              .eq('id', approvedApp.id);
+            if (enrollErr) {
+              console.error('Error setting application to enrolled:', enrollErr);
+            } else {
+              setStudent(prev => prev ? { ...prev, application_status: 'enrolled' } : prev);
+              try {
+                await logAction(
+                  'application_enrolled',
+                  'Student enrolled after I-20 fee payment',
+                  user?.id || '',
+                  'admin',
+                  { application_id: approvedApp.id }
+                );
+              } catch (e) { /* noop */ }
+            }
+          }
+        } catch (e) {
+          console.error('Enroll update failed:', e);
+        }
       }
 
       showToast(`${feeType === 'selection_process' ? 'Selection Process Fee' : feeType === 'application' ? 'Application Fee' : feeType === 'scholarship' ? 'Scholarship Fee' : 'I-20 Control Fee'} marked as paid successfully!`, 'success');
@@ -1210,6 +1239,26 @@ const AdminStudentDetails: React.FC = () => {
       setNewDocumentRequest({ title: '', description: '', due_date: '', attachment: null });
       setShowNewRequestModal(false);
 
+      // Log: Document Request criado pelo admin
+      try {
+        await logAction(
+          'document_request_created',
+          `Document request created by admin: ${newDocumentRequest.title}`,
+          user?.id || '',
+          'admin',
+          {
+            title: newDocumentRequest.title,
+            description: newDocumentRequest.description,
+            due_date: newDocumentRequest.due_date || null,
+            is_global: false,
+            university_id,
+            application_id: targetApp.id
+          }
+        );
+      } catch (logErr) {
+        console.error('Failed to log document request creation:', logErr);
+      }
+
       // Notificar aluno (email + sino) - melhor esforço
       try {
         const { data: userData } = await supabase
@@ -1317,6 +1366,23 @@ const AdminStudentDetails: React.FC = () => {
       // Recarregar document requests para mostrar o novo upload
       await fetchDocumentRequests();
       
+      // Log: Upload feito pelo admin para um document request
+      try {
+        await logAction(
+          'document_request_uploaded',
+          `Admin uploaded a document for request ${requestId}`,
+          user?.id || '',
+          'admin',
+          {
+            request_id: requestId,
+            file_url: publicUrl,
+            filename: fileName
+          }
+        );
+      } catch (logErr) {
+        console.error('Failed to log admin document upload:', logErr);
+      }
+
       showToast('Document uploaded successfully!', 'success');
     } catch (error: any) {
       console.error('Error uploading document:', error);
@@ -1491,6 +1557,16 @@ const AdminStudentDetails: React.FC = () => {
               }`}
             >
               Documents
+            </button>
+            <button
+              onClick={() => setActiveTab('scholarships')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'scholarships'
+                  ? 'border-[#05294E] text-[#05294E]'
+                  : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+              }`}
+            >
+              Scholarships
             </button>
             <button
               onClick={() => setActiveTab('logs')}
@@ -1838,23 +1914,20 @@ const AdminStudentDetails: React.FC = () => {
             </div>
             <div className="p-6">
               {(() => {
-                const applicationsWithDocs: any[] = [];
-                (student.all_applications || []).forEach((app: any) => {
-                  if (Array.isArray(app.documents) && app.documents.length > 0) applicationsWithDocs.push(app);
-                });
-                if (applicationsWithDocs.length === 0) {
+                const allApplications = student.all_applications || [];
+                if (allApplications.length === 0) {
                   return (
                     <div className="text-center py-8">
                       <div className="mx-auto w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
                         <FileText className="w-8 h-8 text-slate-400" />
                       </div>
-                      <h3 className="text-lg font-medium text-slate-900 mb-2">No Documents Yet</h3>
+                      <h3 className="text-lg font-medium text-slate-900 mb-2">No Applications Yet</h3>
                     </div>
                   );
                 }
                 return (
                   <div className="space-y-4">
-                    {applicationsWithDocs
+                    {allApplications
                       .sort((a: any, b: any) => {
                         // Aplicações aprovadas primeiro
                         if (a.status === 'approved' && b.status !== 'approved') return -1;
@@ -1888,15 +1961,16 @@ const AdminStudentDetails: React.FC = () => {
                                     </span>
                                   )}
                                 </h4>
-                              <p className="text-sm text-slate-600">{app.scholarships?.universities?.name || 'University'} • {app.documents.length} documents</p>
+                              <p className="text-sm text-slate-600">{app.scholarships?.universities?.name || 'University'} • {app.documents ? app.documents.length : 0} documents</p>
                               </div>
                             </div>
                             <svg className={`w-5 h-5 text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
                           </button>
                           {isExpanded && (
                             <div className="p-4 bg-white border-t border-slate-200">
-                              <div className="grid gap-3">
-                                {app.documents.map((doc: any, docIndex: number) => (
+                              {app.documents && app.documents.length > 0 ? (
+                                <div className="grid gap-3">
+                                  {app.documents.map((doc: any, docIndex: number) => (
                                   <div key={`${app.id}-${doc.type}-${docIndex}`} className="border border-slate-200 rounded-lg p-4">
                                     <div className="flex flex-col md:flex-row items-start justify-between gap-2 mb-3">
                                       <div className="flex-1 min-w-0">
@@ -1982,58 +2056,62 @@ const AdminStudentDetails: React.FC = () => {
                                     )}
                                   </div>
                                 ))}
-                              </div>
+                                </div>
+                              ) : (
+                                <div className="text-center py-6">
+                                  <div className="mx-auto w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mb-3">
+                                    <FileText className="w-6 h-6 text-slate-400" />
+                                  </div>
+                                  <h4 className="text-sm font-medium text-slate-900 mb-1">No Documents Submitted</h4>
+                                  <p className="text-xs text-slate-500">Student has not uploaded any documents yet.</p>
+                                </div>
+                              )}
                               
                               {/* Application Approval Section - Only for Platform Admins */}
-                              {isPlatformAdmin && (() => {
-                                // Verificar se todos os documentos desta aplicação foram aprovados
-                                const allDocsApproved = app.documents.every((doc: any) => doc.status === 'approved');
-                                
-                                return allDocsApproved && (
-                                  <div className={`mt-4 p-4 rounded-lg border ${
-                                    app.status === 'approved' 
-                                      ? 'bg-green-50 border-green-200' 
-                                      : 'bg-slate-50 border-slate-200'
-                                  }`}>
-                                    <div className="flex items-center justify-between mb-3">
-                                      <div>
-                                        <h4 className="font-semibold text-slate-900">Application Approval</h4>
-                                        <p className="text-sm text-slate-600">
-                                          {app.status === 'approved' 
-                                            ? 'This application has been approved.' 
-                                            : 'All documents approved. You can now approve this application.'
-                                          }
-                                        </p>
+                              {isPlatformAdmin && (
+                                <div className={`mt-4 p-4 rounded-lg border ${
+                                  app.status === 'approved' 
+                                    ? 'bg-green-50 border-green-200' 
+                                    : 'bg-slate-50 border-slate-200'
+                                }`}>
+                                  <div className="flex items-center justify-between mb-3">
+                                    <div>
+                                      <h4 className="font-semibold text-slate-900">Application Approval</h4>
+                                      <p className="text-sm text-slate-600">
+                                        {app.status === 'approved' 
+                                          ? 'This application has been approved.' 
+                                          : 'You can approve this application regardless of document status.'
+                                        }
+                                      </p>
+                                    </div>
+                                    {app.status === 'approved' && (
+                                      <div className="flex items-center space-x-1 text-green-600">
+                                        <CheckCircle className="w-4 h-4" />
+                                        <span className="text-sm font-medium">Approved</span>
                                       </div>
-                                      {app.status === 'approved' && (
-                                        <div className="flex items-center space-x-1 text-green-600">
-                                          <CheckCircle className="w-4 h-4" />
-                                          <span className="text-sm font-medium">Approved</span>
-                                        </div>
-                                      )}
-                                    </div>
-                                    <div className="flex flex-col sm:flex-row gap-2">
-                                      <button
-                                        onClick={() => {
-                                          setPendingRejectAppId(app.id);
-                                          setShowRejectStudentModal(true);
-                                        }}
-                                        disabled={approvingStudent || rejectingStudent || app.status === 'approved'}
-                                        className="px-4 py-2 rounded-lg font-medium text-red-600 border border-red-200 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-center text-sm"
-                                      >
-                                        {app.status === 'approved' ? 'Application Approved' : 'Reject Application'}
-                                      </button>
-                                      <button
-                                        disabled={approvingStudent || rejectingStudent || app.status === 'approved'}
-                                        onClick={() => approveApplication(app.id)}
-                                        className="px-4 py-2 rounded-lg font-medium bg-[#05294E] text-white hover:bg-[#041f38] disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-center text-sm"
-                                      >
-                                        {app.status === 'approved' ? 'Approved' : (approvingStudent ? 'Approving...' : 'Approve Application')}
-                                      </button>
-                                    </div>
+                                    )}
                                   </div>
-                                );
-                              })()}
+                                  <div className="flex flex-col sm:flex-row gap-2">
+                                    <button
+                                      onClick={() => {
+                                        setPendingRejectAppId(app.id);
+                                        setShowRejectStudentModal(true);
+                                      }}
+                                      disabled={approvingStudent || rejectingStudent || app.status === 'approved'}
+                                      className="px-4 py-2 rounded-lg font-medium text-red-600 border border-red-200 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-center text-sm"
+                                    >
+                                      {app.status === 'approved' ? 'Application Approved' : 'Reject Application'}
+                                    </button>
+                                    <button
+                                      disabled={approvingStudent || rejectingStudent || app.status === 'approved'}
+                                      onClick={() => approveApplication(app.id)}
+                                      className="px-4 py-2 rounded-lg font-medium bg-[#05294E] text-white hover:bg-[#041f38] disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-center text-sm"
+                                    >
+                                      {app.status === 'approved' ? 'Approved' : (approvingStudent ? 'Approving...' : 'Approve Application')}
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>
@@ -2468,16 +2546,23 @@ const AdminStudentDetails: React.FC = () => {
                      <div className="flex items-center space-x-2">
                       <XCircle className="h-5 w-5 text-red-600" />
                       <span className="text-sm font-medium text-red-600">Not Paid</span>
-                       {isPlatformAdmin && (
-                         <button
-                           onClick={() => openPaymentModal('i20_control')}
-                           disabled={markingAsPaid[`${student.student_id}:i20_control`]}
-                           className="px-2 py-1 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-xs rounded-md flex items-center space-x-1"
-                         >
-                           <CheckCircle className="w-3 h-3" />
-                           <span>{markingAsPaid[`${student.student_id}:i20_control`] ? 'Marking...' : 'Mark as Paid'}</span>
-                         </button>
-                       )}
+                        {isPlatformAdmin && (() => {
+                          // Guardas: só pode marcar I-20 se SP Fee, Application Fee, Scholarship Fee pagos e acceptance letter enviada
+                          const approvedApp = student.all_applications?.find((app: any) => app.status === 'approved' || app.status === 'enrolled');
+                          const acceptanceSent = !!approvedApp?.acceptance_letter_status && approvedApp.acceptance_letter_status === 'sent';
+                          const canMarkI20 = student.has_paid_selection_process_fee && student.is_application_fee_paid && student.is_scholarship_fee_paid && acceptanceSent;
+                          return (
+                            <button
+                              onClick={() => openPaymentModal('i20_control')}
+                              disabled={markingAsPaid[`${student.student_id}:i20_control`] || !canMarkI20}
+                              className="px-2 py-1 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-xs rounded-md flex items-center space-x-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                              title={!canMarkI20 ? 'Complete previous steps: Selection Process Fee, Application Fee, Scholarship Fee, and Acceptance Letter must be completed first' : ''}
+                            >
+                              <CheckCircle className="w-3 h-3" />
+                              <span>{markingAsPaid[`${student.student_id}:i20_control`] ? 'Marking...' : (!canMarkI20 ? 'Complete previous steps' : 'Mark as Paid')}</span>
+                            </button>
+                          );
+                        })()}
                 </div>
                   )}
               </div>
@@ -2681,6 +2766,15 @@ const AdminStudentDetails: React.FC = () => {
               approvingStates={approvingDocumentRequest}
             />
           )}
+        </div>
+        )}
+
+      {activeTab === 'scholarships' && student && (
+        <div className="space-y-6">
+          <AdminScholarshipSelection
+            studentProfileId={student.student_id}
+            studentUserId={student.user_id}
+          />
         </div>
       )}
 

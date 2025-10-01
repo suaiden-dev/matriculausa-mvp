@@ -71,6 +71,47 @@ const ScholarshipFeeSuccess: React.FC = () => {
           }
         } catch {}
         setLoading(false);
+
+        // Log Stripe payment success
+        try {
+          // IP best-effort
+          let clientIp: string | undefined = undefined;
+          try {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 2000);
+            const res = await fetch('https://api.ipify.org?format=json', { signal: controller.signal });
+            clearTimeout(timeout);
+            if (res.ok) {
+              const j = await res.json();
+              clientIp = j?.ip;
+            }
+          } catch (_) {}
+
+          const { data: authUser } = await supabase.auth.getUser();
+          const authUserId = authUser.user?.id;
+          if (authUserId) {
+            const { data: profile } = await supabase.from('user_profiles').select('id').eq('user_id', authUserId).single();
+            if (profile?.id) {
+              await supabase.rpc('log_student_action', {
+                p_student_id: profile.id,
+                p_action_type: 'fee_payment',
+                p_action_description: 'Scholarship Fee paid via Stripe',
+                p_performed_by: authUserId,
+                p_performed_by_type: 'student',
+                p_metadata: {
+                  fee_type: 'scholarship',
+                  payment_method: 'stripe',
+                  amount: scholarshipFeeAmount || 0,
+                  session_id: sessionId,
+                  application_id: appId,
+                  ip: clientIp
+                }
+              });
+            }
+          }
+        } catch (logErr) {
+          console.error('[ScholarshipFeeSuccess] Failed to log stripe payment:', logErr);
+        }
       } catch (err: any) {
         console.error('[ScholarshipFeeSuccess] Erro:', err.message);
         setError(err.message);

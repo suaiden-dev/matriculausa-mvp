@@ -33,6 +33,58 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
   const [internalDocumentRequests, setInternalDocumentRequests] = useState<any[]>([]);
   const [acceptanceLetterFile, setAcceptanceLetterFile] = useState<File | null>(null);
   const [uploadingAcceptanceLetter, setUploadingAcceptanceLetter] = useState(false);
+  const [markSentSuccess, setMarkSentSuccess] = useState<string | null>(null);
+
+  // Utilitário para logar ação de acceptance letter (admin)
+  const logAcceptanceAction = async (
+    actionType: 'acceptance_letter_sent' | 'acceptance_letter_replaced',
+    description: string,
+    targetApplicationId: string,
+    acceptanceUrl: string | null
+  ) => {
+    try {
+      // Descobrir profile_id do estudante
+      let profileId: string | null = null;
+      if (currentApplication?.student_id) {
+        profileId = currentApplication.student_id;
+      } else if (studentId) {
+        // Tentar mapear user_id -> profile_id
+        const { data: upByUser } = await supabase
+          .from('user_profiles')
+          .select('id')
+          .eq('user_id', studentId as string)
+          .maybeSingle();
+        if (upByUser?.id) profileId = upByUser.id;
+        if (!profileId) {
+          const { data: upById } = await supabase
+            .from('user_profiles')
+            .select('id')
+            .eq('id', studentId as string)
+            .maybeSingle();
+          if (upById?.id) profileId = upById.id;
+        }
+      }
+
+      if (!profileId) return;
+
+      const { data: { user } } = await supabase.auth.getUser();
+      const performedBy = user?.id || '';
+      await supabase.rpc('log_student_action', {
+        p_student_id: profileId,
+        p_action_type: actionType,
+        p_action_description: description,
+        p_performed_by: performedBy,
+        p_performed_by_type: 'admin',
+        p_metadata: {
+          application_id: targetApplicationId,
+          acceptance_letter_url: acceptanceUrl
+        }
+      });
+    } catch (e) {
+      // Apenas logar no console; não bloquear UX
+      console.error('Failed to log acceptance letter action:', e);
+    }
+  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US');
@@ -695,6 +747,14 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                               acceptance_letter_sent_at: new Date().toISOString()
                             }) : prev);
 
+                            // Log: acceptance letter substituída/enviada novamente
+                            await logAcceptanceAction(
+                              'acceptance_letter_replaced',
+                              'Acceptance letter replaced by admin',
+                              currentApplication.id,
+                              publicUrl
+                            );
+
                             try {
                               const { data: { session } } = await supabase.auth.getSession();
                               const accessToken = session?.access_token;
@@ -772,7 +832,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                         <span className="text-xs text-slate-700 truncate max-w-[240px]">{acceptanceLetterFile.name}</span>
                       )}
                     </div>
-                    <div className="flex justify-center mt-3">
+                    <div className="flex justify-center mt-3 gap-3 flex-wrap">
                       <button
                         onClick={async () => {
                           if (!acceptanceLetterFile || !studentId) return;
@@ -814,6 +874,14 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                               .eq('id', applicationId);
                             if (updateError) throw updateError;
 
+                            // Log: acceptance letter enviada
+                            await logAcceptanceAction(
+                              'acceptance_letter_sent',
+                              'Acceptance letter sent by admin',
+                              applicationId,
+                              publicUrl
+                            );
+
                             setRealScholarshipApplication((prev: any) => prev ? ({
                               ...prev,
                               acceptance_letter_url: publicUrl,
@@ -844,6 +912,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                             } catch { /* ignore notify errors */ }
 
                             setAcceptanceLetterFile(null);
+                            setMarkSentSuccess('Acceptance letter sent successfully.');
                           } catch (err) {
                             console.error('Error uploading acceptance letter:', err);
                           } finally {
@@ -855,7 +924,58 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                       >
                         {uploadingAcceptanceLetter ? 'Uploading...' : 'Send Acceptance Letter'}
                       </button>
+                      <button
+                        onClick={async () => {
+                          try {
+                            // Resolver applicationId como acima
+                            let applicationId = currentApplication?.id;
+                            if (!applicationId && realScholarshipApplication?.id) applicationId = realScholarshipApplication.id;
+                            if (!applicationId) {
+                              const { data: apps } = await supabase
+                                .from('scholarship_applications')
+                                .select('id')
+                                .order('created_at', { ascending: false })
+                                .limit(1);
+                              applicationId = apps?.[0]?.id;
+                            }
+                            if (!applicationId) throw new Error('No application found for this student');
+
+                            const { error: updateError } = await supabase
+                              .from('scholarship_applications')
+                              .update({
+                                acceptance_letter_status: 'sent',
+                                acceptance_letter_sent_at: new Date().toISOString()
+                              })
+                              .eq('id', applicationId);
+                            if (updateError) throw updateError;
+
+                            await logAcceptanceAction(
+                              'acceptance_letter_sent',
+                              'Acceptance letter marked as sent by admin (no file)',
+                              applicationId,
+                              null
+                            );
+
+                            setRealScholarshipApplication((prev: any) => prev ? ({
+                              ...prev,
+                              acceptance_letter_status: 'sent',
+                              acceptance_letter_sent_at: new Date().toISOString()
+                            }) : prev);
+                            setMarkSentSuccess('Acceptance letter marked as sent.');
+                          } catch (err) {
+                            console.error('Error marking acceptance letter as sent:', err);
+                          }
+                        }}
+                        className="bg-amber-100 hover:bg-amber-200 text-amber-800 px-4 py-2 rounded-lg text-sm font-medium"
+                      >
+                        Mark as Sent (no file)
+                      </button>
                     </div>
+                    {markSentSuccess && (
+                      <div className="mt-3 mx-auto max-w-xl bg-green-50 border border-green-200 text-green-700 text-sm rounded-lg p-3">
+                        {markSentSuccess}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

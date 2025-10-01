@@ -79,6 +79,27 @@ Deno.serve(async (req)=>{
       }).eq('student_id', userProfile.id).in('scholarship_id', scholarshipIdsArray).select('id');
       if (appError) throw new Error(`Failed to update scholarship_applications: ${appError.message}`);
       console.log('Scholarship applications updated to approved status');
+
+      // Log the payment action
+      try {
+        await supabase.rpc('log_student_action', {
+          p_student_id: userProfile.id,
+          p_action_type: 'fee_payment',
+          p_action_description: `Scholarship Fee paid via Stripe (${sessionId})`,
+          p_performed_by: userId,
+          p_performed_by_type: 'student',
+          p_metadata: {
+            fee_type: 'scholarship',
+            payment_method: 'stripe',
+            amount: session.amount_total / 100,
+            session_id: sessionId,
+            scholarship_ids: scholarshipIdsArray,
+            updated_applications: updatedApps?.map(app => app.id) || []
+          }
+        });
+      } catch (logError) {
+        console.error('Failed to log payment action:', logError);
+      }
       // --- NOTIFICAÇÕES VIA WEBHOOK N8N ---
       try {
         console.log(`📤 [verify-stripe-session-scholarship-fee] Iniciando notificações...`);

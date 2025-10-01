@@ -125,3 +125,4 @@ BEGIN
     RETURN log_id;
 END;
 $$;
+
