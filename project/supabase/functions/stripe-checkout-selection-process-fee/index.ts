@@ -287,6 +287,31 @@ Deno.serve(async (req) => {
       console.log('[stripe-checkout-selection-process-fee] Session URL:', session.url);
       console.log('[stripe-checkout-selection-process-fee] Metadata da sessão:', session.metadata);
 
+      // Log the checkout session creation
+      try {
+        const { data: userProfile } = await supabase.from('user_profiles').select('id, full_name').eq('user_id', user.id).single();
+        if (userProfile) {
+          await supabase.rpc('log_student_action', {
+            p_student_id: userProfile.id,
+            p_action_type: 'checkout_session_created',
+            p_action_description: `Stripe checkout session created for Selection Process Fee (${session.id})`,
+            p_performed_by: user.id,
+            p_performed_by_type: 'student',
+            p_metadata: {
+              fee_type: 'selection_process',
+              payment_method: 'stripe',
+              session_id: session.id,
+              amount: amount,
+              has_discount: activeDiscount ? true : false,
+              discount_amount: activeDiscount?.discount_amount || 0,
+              package_name: userPackageFees?.package_name || null
+            }
+          });
+        }
+      } catch (logError) {
+        console.error('Failed to log checkout session creation:', logError);
+      }
+
       return corsResponse({ session_url: session.url }, 200);
     } catch (stripeError: any) {
       console.error('[stripe-checkout-selection-process-fee] ❌ Erro ao criar sessão Stripe:', stripeError);

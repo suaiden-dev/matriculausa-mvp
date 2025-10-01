@@ -144,6 +144,29 @@ Deno.serve(async (req) => {
 
     const session = await stripe.checkout.sessions.create(sessionConfig);
 
+    // Log the checkout session creation
+    try {
+      const { data: userProfile } = await supabase.from('user_profiles').select('id, full_name').eq('user_id', user.id).single();
+      if (userProfile) {
+        await supabase.rpc('log_student_action', {
+          p_student_id: userProfile.id,
+          p_action_type: 'checkout_session_created',
+          p_action_description: `Stripe checkout session created for I-20 Control Fee (${session.id})`,
+          p_performed_by: user.id,
+          p_performed_by_type: 'student',
+          p_metadata: {
+            fee_type: 'i20_control_fee',
+            payment_method: 'stripe',
+            session_id: session.id,
+            amount: amount || userPackageFees?.i20_control_fee || null,
+            package_name: userPackageFees?.package_name || null
+          }
+        });
+      }
+    } catch (logError) {
+      console.error('Failed to log checkout session creation:', logError);
+    }
+
     return corsResponse({ session_url: session.url }, 200);
   } catch (error) {
     console.error('Checkout error:', error);
