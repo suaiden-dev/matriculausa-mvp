@@ -91,7 +91,7 @@ const EmailList: React.FC<EmailListProps> = ({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
                     <p className={`font-medium text-sm truncate ${!email.isRead ? 'font-semibold' : ''}`}>
-                      {email.from}
+                      {typeof email.from === 'string' ? email.from : email.from?.emailAddress?.name || email.from?.emailAddress?.address || 'Desconhecido'}
                     </p>
                     <div className="flex items-center space-x-2 flex-shrink-0">
                       <span className="text-xs text-slate-500">{formatDate(email.date)}</span>

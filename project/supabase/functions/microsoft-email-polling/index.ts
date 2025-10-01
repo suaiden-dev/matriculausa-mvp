@@ -300,7 +300,7 @@ class AIService {
       
       // Criar prompt para email individual
       const basePrompt = universityPrompt || `
-        Você é um assistente de IA especializado em ajudar estudantes brasileiros com o processo de admissão em universidades dos Estados Unidos através da MatriculaUSA.
+        You are an AI assistant specialized in helping Brazilian students with the admission process to universities in the United States through MatriculaUSA.
         
         Analise o email recebido e determine:
         1. Se deve responder (shouldReply: true/false)
@@ -469,7 +469,7 @@ class AIService {
       }
       // Usar prompt personalizado ou genérico
       const basePrompt = universityPrompt || `
-        Você é um assistente virtual especializado em admissões universitárias da Matrícula USA. Analise estes emails e gere respostas personalizadas e profissionais.
+        You are a virtual assistant specialized in university admissions at MatriculaUSA. Analyze these emails and generate personalized and professional responses.
       `;
       // Criar prompt para processar múltiplos emails
       const batchPrompt = this.createBatchPrompt(basePrompt, this.batchQueue);

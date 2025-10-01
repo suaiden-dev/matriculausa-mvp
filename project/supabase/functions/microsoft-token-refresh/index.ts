@@ -38,13 +38,26 @@ async function refreshMicrosoftToken(
         client_secret: MICROSOFT_CLIENT_SECRET,
         refresh_token: refreshToken,
         grant_type: 'refresh_token',
-        scope: 'User.Read Mail.Read Mail.ReadWrite Mail.Send offline_access'
+        scope: 'https://graph.microsoft.com/.default'
       })
     });
 
     if (!response.ok) {
       const errorData = await response.json();
       console.error(`❌ Erro ao renovar token para ${email}:`, errorData);
+      
+      // Tratar erros específicos
+      if (errorData.error === 'invalid_grant' || errorData.error === 'invalid_request') {
+        console.log(`⚠️ Refresh token inválido para ${email}, marcando como desconectado`);
+        await markAccountAsDisconnected(userId, email);
+        return {
+          success: false,
+          message: 'Refresh token inválido - conta desconectada',
+          email,
+          userId
+        };
+      }
+      
       return {
         success: false,
         message: `Erro ao renovar token: ${errorData.error_description || errorData.error}`,
@@ -154,7 +167,7 @@ function isTokenNearExpiry(expiresAt: string): boolean {
 /**
  * Processar refresh de tokens para todas as conexões Microsoft ativas
  */
-async function processTokenRefresh(): Promise<{
+async function processTokenRefresh(req?: Request): Promise<{
   totalProcessed: number;
   successful: number;
   failed: number;
@@ -198,7 +211,7 @@ async function processTokenRefresh(): Promise<{
       console.log(`\n🔍 Processando ${email_address}...`);
       
       // Verificar se tem refresh token
-      if (!oauth_refresh_token || oauth_refresh_token.trim() === '') {
+      if (!oauth_refresh_token || oauth_refresh_token.trim() === '' || oauth_refresh_token === 'msal_token') {
         console.log(`⚠️ ${email_address} não possui refresh token válido`);
         results.push({
           success: false,
@@ -215,7 +228,18 @@ async function processTokenRefresh(): Promise<{
       const tokenExpiry = new Date(oauth_token_expires_at);
       const timeUntilExpiry = tokenExpiry.getTime() - now.getTime();
       
-      if (timeUntilExpiry > 30 * 60 * 1000) { // Mais de 30 minutos restantes
+      // Verificar se é modo de teste (forçar renovação)
+      let isTestMode = false;
+      let forceRefresh = false;
+      
+      if (req) {
+        const url = new URL(req.url);
+        isTestMode = url.searchParams.get('test') === 'true';
+        forceRefresh = url.searchParams.get('force') === 'true';
+      }
+      
+      // Só renovar se token expira em menos de 15 minutos (ou se for modo de teste)
+      if (timeUntilExpiry > 15 * 60 * 1000 && !isTestMode && !forceRefresh) { // Mais de 15 minutos restantes
         console.log(`✅ ${email_address} - Token ainda válido por mais tempo (${Math.round(timeUntilExpiry / 60000)} minutos)`);
         results.push({
           success: true,
@@ -226,25 +250,68 @@ async function processTokenRefresh(): Promise<{
         successful++;
         continue;
       }
+      
+      if (isTestMode || forceRefresh) {
+        console.log(`🧪 ${email_address} - Modo de teste ativado, forçando renovação...`);
+      }
 
-      // Tentar renovar token
-      const refreshResult = await refreshMicrosoftToken(
-        user_id,
-        email_address,
-        oauth_refresh_token
-      );
+      // Verificar se já está sendo renovado por outro processo
+      const lockKey = `token_refresh_${user_id}_${email_address}`;
+      const { data: existingLock } = await supabase
+        .from('worker_locks')
+        .select('id')
+        .eq('lock_key', lockKey)
+        .eq('is_active', true)
+        .single();
 
-      results.push(refreshResult);
-
-      if (refreshResult.success) {
+      if (existingLock) {
+        console.log(`⏳ ${email_address} - Token já está sendo renovado por outro processo`);
+        results.push({
+          success: true,
+          message: 'Token já sendo renovado por outro processo',
+          email: email_address,
+          userId: user_id
+        });
         successful++;
-        console.log(`✅ ${email_address} - Token renovado com sucesso`);
-      } else {
-        failed++;
-        console.log(`❌ ${email_address} - Falha ao renovar token: ${refreshResult.message}`);
-        
-        // Se falhou, marcar conta como desconectada
-        await markAccountAsDisconnected(user_id, email_address);
+        continue;
+      }
+
+      // Criar lock
+      await supabase
+        .from('worker_locks')
+        .insert({
+          lock_key: lockKey,
+          is_active: true,
+          created_at: new Date().toISOString(),
+          expires_at: new Date(Date.now() + 5 * 60 * 1000).toISOString() // 5 minutos
+        });
+
+      try {
+        // Tentar renovar token
+        const refreshResult = await refreshMicrosoftToken(
+          user_id,
+          email_address,
+          oauth_refresh_token
+        );
+
+        results.push(refreshResult);
+
+        if (refreshResult.success) {
+          successful++;
+          console.log(`✅ ${email_address} - Token renovado com sucesso`);
+        } else {
+          failed++;
+          console.log(`❌ ${email_address} - Falha ao renovar token: ${refreshResult.message}`);
+          
+          // Se falhou, marcar conta como desconectada
+          await markAccountAsDisconnected(user_id, email_address);
+        }
+      } finally {
+        // Remover lock
+        await supabase
+          .from('worker_locks')
+          .delete()
+          .eq('lock_key', lockKey);
       }
 
       // Pequena pausa entre requisições para evitar rate limiting
@@ -285,7 +352,7 @@ Deno.serve(async (req) => {
     }
 
     // Processar refresh de tokens
-    const result = await processTokenRefresh();
+    const result = await processTokenRefresh(req);
 
     const response = {
       success: true,

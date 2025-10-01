@@ -150,7 +150,7 @@ const TestNgrokEndpoint: React.FC<TestNgrokEndpointProps> = ({ className = '' })
             >
               {emails.map((email) => (
                 <option key={email.id} value={email.id}>
-                  {email.from} - {email.subject} ({new Date(email.created_at).toLocaleString('pt-BR')})
+                  {typeof email.from === 'string' ? email.from : email.from?.emailAddress?.name || email.from?.emailAddress?.address || 'Desconhecido'} - {email.subject} ({new Date(email.created_at).toLocaleString('pt-BR')})
                 </option>
               ))}
             </select>
