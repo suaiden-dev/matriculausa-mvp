@@ -3,7 +3,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
 import { useAuth } from '../../hooks/useAuth';
+import { useStudentLogs } from '../../hooks/useStudentLogs';
 import DocumentsView from '../../components/EnhancedStudentTracking/DocumentsView';
+import StudentLogsView from '../../components/AdminDashboard/StudentLogsView';
 // Função simples de toast
 const showToast = (message: string, type: 'success' | 'error' = 'success') => {
   const toast = document.createElement('div');
@@ -90,18 +92,192 @@ const AdminStudentDetails: React.FC = () => {
   const [showRejectStudentModal, setShowRejectStudentModal] = useState(false);
   const [rejectStudentReason, setRejectStudentReason] = useState('');
   const [pendingRejectAppId, setPendingRejectAppId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'documents'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'documents' | 'logs'>('overview');
   const [documentRequests, setDocumentRequests] = useState<any[]>([]);
   const [loadingDocuments, setLoadingDocuments] = useState(false);
   const [uploadingDocumentRequest, setUploadingDocumentRequest] = useState<{[key: string]: boolean}>({});
   const [approvingDocumentRequest, setApprovingDocumentRequest] = useState<{[key: string]: boolean}>({});
+  // Modal de confirmação de pagamento
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [pendingPayment, setPendingPayment] = useState<{
+    feeType: 'selection_process' | 'application' | 'scholarship' | 'i20_control';
+    applicationId?: string;
+    feeName: string;
+  } | null>(null);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'stripe' | 'zelle' | 'manual'>('manual');
+  // Criação de Document Request pelo Admin
+  const [showNewRequestModal, setShowNewRequestModal] = useState(false);
+  const [creatingDocumentRequest, setCreatingDocumentRequest] = useState(false);
+  const [newDocumentRequest, setNewDocumentRequest] = useState<{ title: string; description: string; due_date: string; attachment: File | null }>({
+    title: '',
+    description: '',
+    due_date: '',
+    attachment: null
+  });
+  // Upload de Acceptance Letter (Admin) - Removido pois agora está no DocumentsView
   const [isProgressExpanded, setIsProgressExpanded] = useState(false);
   const [i20Deadline, setI20Deadline] = useState<Date | null>(null);
+  const [referralInfo, setReferralInfo] = useState<{
+    type: 'seller' | 'affiliate' | 'student' | null;
+    name: string | null;
+    email: string | null;
+    company?: string | null;
+    affiliateName?: string | null;
+    affiliateEmail?: string | null;
+    isRewards?: boolean;
+  } | null>(null);
 
   const { user } = useAuth();
   const isPlatformAdmin = user?.role === 'admin';
 
   const { getFeeAmount, formatFeeAmount, hasOverride } = useFeeConfig(student?.user_id);
+  const { logAction } = useStudentLogs(student?.student_id || '');
+
+  // Função para buscar informações de referência
+  const fetchReferralInfo = async (referralCode: string) => {
+    if (!referralCode) {
+      setReferralInfo(null);
+      return;
+    }
+
+    try {
+      // 0) Matricula Rewards: códigos iniciados com MATR pertencem à tabela affiliate_codes
+      if (/^MATR/i.test(referralCode)) {
+        // Encontrar o dono do código na affiliate_codes
+        const { data: codeOwner } = await supabase
+          .from('affiliate_codes')
+          .select('user_id')
+          .eq('code', referralCode)
+          .maybeSingle();
+
+        let ownerName: string | null = null;
+        let ownerEmail: string | null = null;
+        if (codeOwner?.user_id) {
+          const { data: ownerProfile } = await supabase
+            .from('user_profiles')
+            .select('full_name, email')
+            .eq('user_id', codeOwner.user_id)
+            .maybeSingle();
+          ownerName = (ownerProfile as any)?.full_name || null;
+          ownerEmail = (ownerProfile as any)?.email || null;
+        }
+
+        setReferralInfo({
+          type: 'student',
+          name: ownerName,
+          email: ownerEmail,
+          isRewards: true
+        });
+        return;
+      }
+
+      // 1) Buscar em sellers (referral_code referencia seller_referral_code do user_profiles)
+      const { data: sellerData } = await supabase
+        .from('sellers')
+        .select('name, email, affiliate_admin_id')
+        .eq('referral_code', referralCode)
+        .single();
+
+      if (sellerData) {
+        // Buscar SEMPRE o affiliate vinculado ao seller via affiliate_admin_id
+        let affiliateName: string | null = null;
+        let affiliateEmail: string | null = null;
+        // 2.1) Mapear affiliate_admin_id -> user_id via affiliate_admins
+        let affiliateUserId: string | null = null;
+        const { data: affiliateAdmin } = await supabase
+          .from('affiliate_admins')
+          .select('user_id')
+          .eq('id', (sellerData as any).affiliate_admin_id)
+          .maybeSingle();
+        affiliateUserId = (affiliateAdmin as any)?.user_id || null;
+
+        // 2.2) Carregar perfil do affiliate via user_id
+        if (affiliateUserId) {
+          const { data: affiliateProfileByUserId } = await supabase
+            .from('user_profiles')
+            .select('full_name, email')
+            .eq('user_id', affiliateUserId)
+            .maybeSingle();
+          if (affiliateProfileByUserId) {
+            affiliateName = (affiliateProfileByUserId as any)?.full_name || null;
+            affiliateEmail = (affiliateProfileByUserId as any)?.email || null;
+          }
+        }
+
+        // 2.3) Fallback final: tentar em user_profiles pelo id (caso id seja o profile_id)
+        if (!affiliateName && !affiliateEmail) {
+          const { data: affiliateProfileById } = await supabase
+            .from('user_profiles')
+            .select('full_name, email')
+            .eq('id', (sellerData as any).affiliate_admin_id)
+            .maybeSingle();
+          if (affiliateProfileById) {
+            affiliateName = (affiliateProfileById as any)?.full_name || null;
+            affiliateEmail = (affiliateProfileById as any)?.email || null;
+          }
+        }
+
+        setReferralInfo({
+          type: 'seller',
+          name: (sellerData as any)?.name || null,
+          email: (sellerData as any)?.email || null,
+          affiliateName,
+          affiliateEmail
+        });
+        return;
+      }
+
+      // 2) Buscar em used_referral_codes (Matricula Rewards - student referrals)
+      const { data: studentData } = await supabase
+        .from('used_referral_codes')
+        .select(`
+          affiliate_code,
+          user_profiles!used_referral_codes_referrer_id_fkey (
+            full_name,
+            email
+          )
+        `)
+        .eq('affiliate_code', referralCode)
+        .single();
+
+      if (studentData) {
+        setReferralInfo({
+          type: 'student',
+          name: (studentData.user_profiles as any)?.full_name || null,
+          email: (studentData.user_profiles as any)?.email || null
+        });
+        return;
+      }
+
+      // 3) Buscar em affiliate_referrals (outras referências via afiliado)
+      const { data: affiliateData } = await supabase
+        .from('affiliate_referrals')
+        .select(`
+          affiliate_code,
+          user_profiles!affiliate_referrals_referrer_id_fkey (
+            full_name,
+            email
+          )
+        `)
+        .eq('affiliate_code', referralCode)
+        .single();
+
+      if (affiliateData) {
+        setReferralInfo({
+          type: 'affiliate',
+          name: (affiliateData.user_profiles as any)?.full_name || null,
+          email: (affiliateData.user_profiles as any)?.email || null
+        });
+        return;
+      }
+
+      // Se não encontrou em nenhuma tabela
+      setReferralInfo(null);
+    } catch (error) {
+      console.error('Error fetching referral info:', error);
+      setReferralInfo(null);
+    }
+  };
 
   // Função para calcular o deadline do I-20
   const calculateI20Deadline = (studentData: StudentRecord) => {
@@ -259,6 +435,11 @@ const AdminStudentDetails: React.FC = () => {
         
         // Calcular deadline do I-20
         calculateI20Deadline(formatted);
+        
+        // Buscar informações de referência
+        if (formatted.seller_referral_code) {
+          fetchReferralInfo(formatted.seller_referral_code);
+        }
       } catch (e) {
         // noop
       } finally {
@@ -337,6 +518,23 @@ const AdminStudentDetails: React.FC = () => {
         const updatedApps = (prev.all_applications || []).map((a: any) => a.id === applicationId ? { ...a, documents: data?.documents || newDocuments } : a);
         return { ...prev, all_applications: updatedApps } as any;
       });
+
+      // Log the action
+      try {
+        await logAction(
+          'document_approval',
+          `Document ${docType} approved by admin`,
+          user?.id || '',
+          'admin',
+          {
+            document_type: docType,
+            application_id: applicationId,
+            approved_by: user?.email || 'Admin'
+          }
+        );
+      } catch (logError) {
+        console.error('Failed to log action:', logError);
+      }
     } finally {
       setApprovingDocs(p => ({ ...p, [k]: false }));
     }
@@ -463,7 +661,40 @@ const AdminStudentDetails: React.FC = () => {
     }
   };
 
-  const markFeeAsPaid = async (feeType: 'selection_process' | 'scholarship' | 'i20_control', applicationId?: string) => {
+  const openPaymentModal = (
+    feeType: 'selection_process' | 'application' | 'scholarship' | 'i20_control',
+    applicationId?: string
+  ) => {
+    const feeNames = {
+      'selection_process': 'Selection Process Fee',
+      'application': 'Application Fee',
+      'scholarship': 'Scholarship Fee',
+      'i20_control': 'I-20 Control Fee'
+    };
+
+    setPendingPayment({
+      feeType,
+      applicationId,
+      feeName: feeNames[feeType]
+    });
+    setSelectedPaymentMethod('manual');
+    setShowPaymentModal(true);
+  };
+
+  const confirmPayment = async () => {
+    if (!pendingPayment) return;
+
+    const { feeType, applicationId } = pendingPayment;
+    await markFeeAsPaid(feeType, applicationId, selectedPaymentMethod);
+    setShowPaymentModal(false);
+    setPendingPayment(null);
+  };
+
+  const markFeeAsPaid = async (
+    feeType: 'selection_process' | 'application' | 'scholarship' | 'i20_control',
+    applicationId?: string,
+    method?: 'stripe' | 'zelle' | 'manual'
+  ) => {
     if (!student || !isPlatformAdmin) return;
 
     const key = `${student.student_id}:${feeType}`;
@@ -481,6 +712,80 @@ const AdminStudentDetails: React.FC = () => {
 
         // Atualizar estado local
         setStudent(prev => prev ? { ...prev, has_paid_selection_process_fee: true } : prev);
+
+        // Log the action
+        try {
+          await logAction(
+            'fee_payment',
+            `Selection Process Fee marked as paid via ${method || 'manual'} payment`,
+            user?.id || '',
+            'admin',
+            {
+              fee_type: 'selection_process',
+              payment_method: method || 'manual',
+              amount: (() => {
+                const base = Number(getFeeAmount('selection_process'));
+                return base + (student?.dependents || 0) * 150;
+              })()
+            }
+          );
+        } catch (logError) {
+          console.error('Failed to log action:', logError);
+        }
+      } else if (feeType === 'application') {
+        // Marcar application fee como pago na scholarship_applications
+        let targetApplicationId = applicationId;
+        
+        // Se não foi fornecido applicationId, buscar a aplicação aprovada ou mais recente
+        if (!targetApplicationId) {
+          const { data: applications, error: fetchError } = await supabase
+            .from('scholarship_applications')
+            .select('id, status')
+            .eq('student_id', student.student_id)
+            .order('created_at', { ascending: false });
+
+          if (fetchError) throw fetchError;
+
+          // Se há uma aplicação aprovada, usar ela; senão usar a mais recente
+          const targetApplication = applications?.find(app => app.status === 'approved') || applications?.[0];
+          
+          if (!targetApplication) {
+            throw new Error('No application found for this student');
+          }
+          
+          targetApplicationId = targetApplication.id;
+        }
+
+        const { error } = await supabase
+          .from('scholarship_applications')
+          .update({
+            is_application_fee_paid: true,
+            ...(method ? { payment_status: method } : {})
+          })
+          .eq('id', targetApplicationId);
+
+        if (error) throw error;
+
+        // Atualizar estado local
+        setStudent(prev => prev ? { ...prev, is_application_fee_paid: true } : prev);
+
+        // Log the action
+        try {
+          await logAction(
+            'fee_payment',
+            `Application Fee marked as paid via ${method || 'manual'} payment`,
+            user?.id || '',
+            'admin',
+            {
+              fee_type: 'application',
+              payment_method: method || 'manual',
+              amount: 400,
+              application_id: targetApplicationId
+            }
+          );
+        } catch (logError) {
+          console.error('Failed to log action:', logError);
+        }
       } else if (feeType === 'scholarship') {
         // Marcar scholarship fee como pago na scholarship_applications
         let targetApplicationId = applicationId;
@@ -507,13 +812,34 @@ const AdminStudentDetails: React.FC = () => {
 
         const { error } = await supabase
           .from('scholarship_applications')
-          .update({ is_scholarship_fee_paid: true })
+          .update({
+            is_scholarship_fee_paid: true,
+            ...(method ? { payment_status: method } : {})
+          })
           .eq('id', targetApplicationId);
 
         if (error) throw error;
 
         // Atualizar estado local
         setStudent(prev => prev ? { ...prev, is_scholarship_fee_paid: true } : prev);
+
+        // Log the action
+        try {
+          await logAction(
+            'fee_payment',
+            `Scholarship Fee marked as paid via ${method || 'manual'} payment`,
+            user?.id || '',
+            'admin',
+            {
+              fee_type: 'scholarship',
+              payment_method: method || 'manual',
+              amount: getFeeAmount('scholarship_fee'),
+              application_id: targetApplicationId
+            }
+          );
+        } catch (logError) {
+          console.error('Failed to log action:', logError);
+        }
       } else if (feeType === 'i20_control') {
         // Marcar I-20 control fee como pago
         const { error } = await supabase
@@ -525,12 +851,30 @@ const AdminStudentDetails: React.FC = () => {
 
         // Atualizar estado local
         setStudent(prev => prev ? { ...prev, has_paid_i20_control_fee: true } : prev);
+
+        // Log the action
+        try {
+          await logAction(
+            'fee_payment',
+            `I-20 Control Fee marked as paid via ${method || 'manual'} payment`,
+            user?.id || '',
+            'admin',
+            {
+              fee_type: 'i20_control',
+              payment_method: method || 'manual',
+              amount: getFeeAmount('i20_control_fee')
+            }
+          );
+        } catch (logError) {
+          console.error('Failed to log action:', logError);
+        }
       }
 
-      showToast(`${feeType === 'selection_process' ? 'Selection Process Fee' : feeType === 'scholarship' ? 'Scholarship Fee' : 'I-20 Control Fee'} marked as paid successfully!`, 'success');
+      showToast(`${feeType === 'selection_process' ? 'Selection Process Fee' : feeType === 'application' ? 'Application Fee' : feeType === 'scholarship' ? 'Scholarship Fee' : 'I-20 Control Fee'} marked as paid successfully!`, 'success');
     } catch (error) {
       console.error(`Error marking ${feeType} as paid:`, error);
       const feeName = feeType === 'selection_process' ? 'Selection Process Fee' : 
+                     feeType === 'application' ? 'Application Fee' :
                      feeType === 'scholarship' ? 'Scholarship Fee' : 'I-20 Control Fee';
       showToast(`Error marking ${feeName} as paid`, 'error');
     } finally {
@@ -629,6 +973,23 @@ const AdminStudentDetails: React.FC = () => {
       // Atualizar o estado local
       setStudent(prev => prev ? { ...prev, application_status: 'approved' } : prev);
       
+      // Log the action
+      try {
+        await logAction(
+          'application_approval',
+          `Scholarship application approved by admin`,
+          user?.id || '',
+          'admin',
+          {
+            application_id: applicationId,
+            student_name: student.student_name,
+            approved_by: user?.email || 'Admin'
+          }
+        );
+      } catch (logError) {
+        console.error('Failed to log action:', logError);
+      }
+      
       showToast('Application approved successfully! The student will be notified.', 'success');
     } catch (error: any) {
       console.error('Error approving application:', error);
@@ -652,6 +1013,24 @@ const AdminStudentDetails: React.FC = () => {
       setShowRejectStudentModal(false);
       setRejectStudentReason('');
       setPendingRejectAppId(null);
+      
+      // Log the action
+      try {
+        await logAction(
+          'application_rejection',
+          `Scholarship application rejected by admin${rejectStudentReason ? `: ${rejectStudentReason}` : ''}`,
+          user?.id || '',
+          'admin',
+          {
+            application_id: applicationId,
+            student_name: student.student_name,
+            rejection_reason: rejectStudentReason,
+            rejected_by: user?.email || 'Admin'
+          }
+        );
+      } catch (logError) {
+        console.error('Failed to log action:', logError);
+      }
       
       showToast('Application rejected successfully.', 'success');
     } catch (error: any) {
@@ -750,6 +1129,136 @@ const AdminStudentDetails: React.FC = () => {
     }
   };
 
+  // Utilitário para sanitizar nome de arquivo
+  const sanitizeFileName = (fileName: string): string => {
+    return fileName
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9.-]/g, '_')
+      .replace(/_+/g, '_')
+      .replace(/^_|_$/g, '');
+  };
+
+  // Criar Document Request (Admin)
+  const handleCreateDocumentRequest = async () => {
+    if (!student) return;
+    try {
+      setCreatingDocumentRequest(true);
+
+      // Selecionar uma aplicação alvo (prioriza com acceptance letter, senão primeira)
+      const apps = student.all_applications || [];
+      const targetApp = apps.find((a: any) => !!a.acceptance_letter_url) || apps[0];
+      if (!targetApp) {
+        showToast('No application found for this student.', 'error');
+        return;
+      }
+
+      // Identificar university_id
+      let university_id: string | undefined = undefined;
+      if (targetApp?.scholarships) {
+        university_id = (targetApp.scholarships as any)?.university_id;
+      }
+
+      // Upload do anexo (opcional)
+      let attachment_url = '';
+      if (newDocumentRequest.attachment) {
+        const sanitized = sanitizeFileName(newDocumentRequest.attachment.name);
+        const storagePath = `individual/${Date.now()}_${sanitized}`;
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('document-attachments')
+          .upload(storagePath, newDocumentRequest.attachment);
+        if (uploadError) throw uploadError;
+        const { data: { publicUrl } } = supabase.storage
+          .from('document-attachments')
+          .getPublicUrl(uploadData?.path || storagePath);
+        attachment_url = publicUrl;
+      }
+
+      // Chamar Edge Function para criar request (mesmo fluxo usado pela universidade)
+      const { data: { session } } = await supabase.auth.getSession();
+      const accessToken = session?.access_token;
+      if (!accessToken) throw new Error('Sessão inválida. Faça login novamente.');
+
+      const payload = {
+        title: newDocumentRequest.title,
+        description: newDocumentRequest.description,
+        due_date: newDocumentRequest.due_date || null,
+        attachment_url,
+        university_id,
+        is_global: false,
+        status: 'open',
+        created_by: user?.id || '',
+        scholarship_application_id: targetApp.id
+      };
+
+      const FUNCTIONS_URL = (import.meta as any).env.VITE_SUPABASE_FUNCTIONS_URL as string;
+      const resp = await fetch(`${FUNCTIONS_URL}/create-document-request`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`
+        },
+        body: JSON.stringify(payload)
+      });
+      let result: any = {};
+      try { result = await resp.json(); } catch { /* noop */ }
+      if (!resp.ok || !result?.success) throw new Error(result?.error || 'Failed to create request');
+
+      // Recarregar lista
+      await fetchDocumentRequests();
+      // Limpar formulário
+      setNewDocumentRequest({ title: '', description: '', due_date: '', attachment: null });
+      setShowNewRequestModal(false);
+
+      // Notificar aluno (email + sino) - melhor esforço
+      try {
+        const { data: userData } = await supabase
+          .from('user_profiles')
+          .select('email, full_name')
+          .eq('user_id', student.user_id)
+          .single();
+        if (userData?.email) {
+          const webhookPayload = {
+            tipo_notf: 'Nova solicitação de documento',
+            email_aluno: userData.email,
+            nome_aluno: userData.full_name || student.student_name,
+            email_universidade: user?.email,
+            o_que_enviar: `A new document request has been submitted for your review: <strong>${newDocumentRequest.title}</strong>. Please log in to your dashboard to view the details and upload the requested document.`
+          };
+          await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(webhookPayload)
+          });
+        }
+        // Sino in-app
+        if (accessToken) {
+          await fetch(`${FUNCTIONS_URL}/create-student-notification`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${accessToken}`
+            },
+            body: JSON.stringify({
+              user_id: student.user_id,
+              title: 'New document request',
+              message: `A new document request was created: ${newDocumentRequest.title}.`,
+              type: 'document_request_created',
+              link: '/student/documents'
+            })
+          });
+        }
+      } catch { /* ignore notification errors */ }
+
+      showToast('Document request created successfully!', 'success');
+    } catch (err: any) {
+      console.error('Error creating document request:', err);
+      showToast(`Failed to create document request: ${err?.message || 'Unknown error'}`, 'error');
+    } finally {
+      setCreatingDocumentRequest(false);
+    }
+  };
+
   const handleViewDocument = (doc: any) => {
     if (doc.file_url) {
       window.open(doc.file_url, '_blank');
@@ -844,6 +1353,23 @@ const AdminStudentDetails: React.FC = () => {
       
       // Recarregar document requests para mostrar a mudança
       await fetchDocumentRequests();
+      
+      // Log the action
+      try {
+        await logAction(
+          'document_approval',
+          `Document request upload approved by admin`,
+          user?.id || '',
+          'admin',
+          {
+            upload_id: uploadId,
+            document_type: 'document_request_upload',
+            approved_by: user?.email || 'Admin'
+          }
+        );
+      } catch (logError) {
+        console.error('Failed to log action:', logError);
+      }
       
       showToast('Document approved successfully!', 'success');
     } catch (error: any) {
@@ -965,6 +1491,16 @@ const AdminStudentDetails: React.FC = () => {
               }`}
             >
               Documents
+            </button>
+            <button
+              onClick={() => setActiveTab('logs')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'logs'
+                  ? 'border-[#05294E] text-[#05294E]'
+                  : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+              }`}
+            >
+              Activity Log
             </button>
           </nav>
         </div>
@@ -1223,7 +1759,46 @@ const AdminStudentDetails: React.FC = () => {
                           className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-mono"
                         />
                       ) : (
-                        <dd className="text-base text-slate-900 mt-1 font-mono bg-slate-200 px-3 py-2 rounded-lg">{student.seller_referral_code}</dd>
+                        <div className="mt-1 space-y-2">
+                          <dd className="text-base text-slate-900 font-mono bg-slate-200 px-3 py-2 rounded-lg">{student.seller_referral_code}</dd>
+                          {referralInfo && (
+                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                              <div className="flex items-center space-x-2 mb-2">
+                                <div className={`w-2 h-2 rounded-full ${
+                                  referralInfo.type === 'seller' ? 'bg-green-500' :
+                                  referralInfo.type === 'affiliate' ? 'bg-blue-500' :
+                                  'bg-purple-500'
+                                }`}></div>
+                                <span className="text-sm font-medium text-slate-700">
+                                  {referralInfo.type === 'seller' ? 'Seller' :
+                                   referralInfo.type === 'affiliate' ? 'Affiliate' :
+                                   (referralInfo.isRewards ? 'Student Referral (Rewards)' : 'Student')} Referral
+                                </span>
+              </div>
+                              <div className="text-sm text-slate-600">
+                                <div className="font-medium">{referralInfo.name || 'Unknown'}</div>
+                                <div className="text-slate-500">{referralInfo.email || 'No email'}</div>
+                                {referralInfo.type === 'seller' && (referralInfo.affiliateName || referralInfo.affiliateEmail) && (
+                                  <div className="mt-2 pl-3 border-l-2 border-blue-200">
+                                    <div className="text-xs text-slate-500 mb-1">Affiliate</div>
+                                    <div className="text-sm font-medium text-slate-700">{referralInfo.affiliateName || 'Unknown'}</div>
+                                    <div className="text-sm text-slate-500">{referralInfo.affiliateEmail || 'No email'}</div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                          {!referralInfo && (
+                            <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                              <div className="text-sm text-slate-500">
+                                <div className="flex items-center space-x-2">
+                                  <div className="w-2 h-2 rounded-full bg-slate-400"></div>
+                                  <span>Referral source not found</span>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       )}
                     </div>
                   )}
@@ -1762,22 +2337,22 @@ const AdminStudentDetails: React.FC = () => {
                   )}
                 </div>
                 <div className="flex items-center space-x-2">
-                  {student.has_paid_selection_process_fee ? (
+                   {student.has_paid_selection_process_fee ? (
                     <><CheckCircle className="h-5 w-5 text-green-600" /><span className="text-sm font-medium text-green-600">Paid</span></>
                   ) : (
-                    <div className="flex items-center space-x-2">
+                     <div className="flex items-center space-x-2">
                       <XCircle className="h-5 w-5 text-red-600" />
                       <span className="text-sm font-medium text-red-600">Not Paid</span>
-                      {isPlatformAdmin && (
-                        <button
-                          onClick={() => markFeeAsPaid('selection_process')}
-                          disabled={markingAsPaid[`${student.student_id}:selection_process`]}
-                          className="px-2 py-1 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-xs rounded-md flex items-center space-x-1"
-                        >
-                          <CheckCircle className="w-3 h-3" />
-                          <span>{markingAsPaid[`${student.student_id}:selection_process`] ? 'Marking...' : 'Mark as Paid'}</span>
-                        </button>
-                      )}
+                       {isPlatformAdmin && (
+                         <button
+                           onClick={() => openPaymentModal('selection_process')}
+                           disabled={markingAsPaid[`${student.student_id}:selection_process`]}
+                           className="px-2 py-1 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-xs rounded-md flex items-center space-x-1"
+                         >
+                           <CheckCircle className="w-3 h-3" />
+                           <span>{markingAsPaid[`${student.student_id}:selection_process`] ? 'Marking...' : 'Mark as Paid'}</span>
+                         </button>
+                       )}
                     </div>
                   )}
                 </div>
@@ -1789,7 +2364,28 @@ const AdminStudentDetails: React.FC = () => {
                   <dd className="text-sm font-semibold text-slate-700 mt-1">$400.00</dd>
                 </div>
                 <div className="flex items-center space-x-2">
-                  {student.is_application_fee_paid ? (<><CheckCircle className="h-5 w-5 text-green-600" /><span className="text-sm font-medium text-green-600">Paid</span></>) : (<><XCircle className="h-5 w-5 text-red-600" /><span className="text-sm font-medium text-red-600">Not Paid</span></>)}
+                  {student.is_application_fee_paid ? (
+                    <><CheckCircle className="h-5 w-5 text-green-600" /><span className="text-sm font-medium text-green-600">Paid</span></>
+                  ) : (
+                    <div className="flex items-center space-x-2">
+                      <XCircle className="h-5 w-5 text-red-600" />
+                      <span className="text-sm font-medium text-red-600">Not Paid</span>
+                       {isPlatformAdmin && (() => {
+                         // Buscar aplicação aprovada para application fee
+                         const approvedApp = student.all_applications?.find((app: any) => app.status === 'approved');
+                         return approvedApp && (
+                           <button
+                             onClick={() => openPaymentModal('application', approvedApp.id)}
+                             disabled={markingAsPaid[`${student.student_id}:application`]}
+                             className="px-2 py-1 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-xs rounded-md flex items-center space-x-1"
+                           >
+                             <CheckCircle className="w-3 h-3" />
+                             <span>{markingAsPaid[`${student.student_id}:application`] ? 'Marking...' : 'Mark as Paid'}</span>
+                           </button>
+                         );
+                       })()}
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="bg-slate-50 rounded-xl p-4 flex items-center justify-between">
@@ -1817,26 +2413,26 @@ const AdminStudentDetails: React.FC = () => {
                   )}
                 </div>
                 <div className="flex items-center space-x-2">
-                  {student.is_scholarship_fee_paid ? (
+                   {student.is_scholarship_fee_paid ? (
                     <><CheckCircle className="h-5 w-5 text-green-600" /><span className="text-sm font-medium text-green-600">Paid</span></>
                   ) : (
-                    <div className="flex items-center space-x-2">
+                     <div className="flex items-center space-x-2">
                       <XCircle className="h-5 w-5 text-red-600" />
                       <span className="text-sm font-medium text-red-600">Not Paid</span>
-                      {isPlatformAdmin && student.scholarship_title && (() => {
-                        // Buscar aplicação aprovada para scholarship fee
-                        const approvedApp = student.all_applications?.find((app: any) => app.status === 'approved');
-                        return approvedApp && (
-                          <button
-                            onClick={() => markFeeAsPaid('scholarship', approvedApp.id)}
-                            disabled={markingAsPaid[`${student.student_id}:scholarship`]}
-                            className="px-2 py-1 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-xs rounded-md flex items-center space-x-1"
-                          >
-                            <CheckCircle className="w-3 h-3" />
-                            <span>{markingAsPaid[`${student.student_id}:scholarship`] ? 'Marking...' : 'Mark as Paid'}</span>
-                          </button>
-                        );
-                      })()}
+                       {isPlatformAdmin && (() => {
+                         // Buscar aplicação aprovada para scholarship fee
+                         const approvedApp = student.all_applications?.find((app: any) => app.status === 'approved');
+                         return approvedApp && (
+                           <button
+                             onClick={() => openPaymentModal('scholarship', approvedApp.id)}
+                             disabled={markingAsPaid[`${student.student_id}:scholarship`]}
+                             className="px-2 py-1 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-xs rounded-md flex items-center space-x-1"
+                           >
+                             <CheckCircle className="w-3 h-3" />
+                             <span>{markingAsPaid[`${student.student_id}:scholarship`] ? 'Marking...' : 'Mark as Paid'}</span>
+                           </button>
+                         );
+                       })()}
                     </div>
                   )}
                 </div>
@@ -1866,22 +2462,22 @@ const AdminStudentDetails: React.FC = () => {
                   )}
                 </div>
                 <div className="flex items-center space-x-2">
-                  {student.has_paid_i20_control_fee ? (
+                   {student.has_paid_i20_control_fee ? (
                     <><CheckCircle className="h-5 w-5 text-green-600" /><span className="text-sm font-medium text-green-600">Paid</span></>
                   ) : (
-                    <div className="flex items-center space-x-2">
+                     <div className="flex items-center space-x-2">
                       <XCircle className="h-5 w-5 text-red-600" />
                       <span className="text-sm font-medium text-red-600">Not Paid</span>
-                      {isPlatformAdmin && (
-                        <button
-                          onClick={() => markFeeAsPaid('i20_control')}
-                          disabled={markingAsPaid[`${student.student_id}:i20_control`]}
-                          className="px-2 py-1 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-xs rounded-md flex items-center space-x-1"
-                        >
-                          <CheckCircle className="w-3 h-3" />
-                          <span>{markingAsPaid[`${student.student_id}:i20_control`] ? 'Marking...' : 'Mark as Paid'}</span>
-                        </button>
-                      )}
+                       {isPlatformAdmin && (
+                         <button
+                           onClick={() => openPaymentModal('i20_control')}
+                           disabled={markingAsPaid[`${student.student_id}:i20_control`]}
+                           className="px-2 py-1 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-xs rounded-md flex items-center space-x-1"
+                         >
+                           <CheckCircle className="w-3 h-3" />
+                           <span>{markingAsPaid[`${student.student_id}:i20_control`] ? 'Marking...' : 'Mark as Paid'}</span>
+                         </button>
+                       )}
                 </div>
                   )}
               </div>
@@ -1955,8 +2551,106 @@ const AdminStudentDetails: React.FC = () => {
         </div>
       )}
 
+      {/* Modal: New Document Request (Admin) */}
+      {showNewRequestModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+          <div className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-lg mx-4 border border-slate-200">
+            <h3 className="font-extrabold text-xl mb-6 text-[#05294E] text-center">New Document Request</h3>
+            <p className="text-sm text-slate-600 mb-6 text-center">
+              Request a new document from {student?.student_name}
+            </p>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Document Title <span className="text-red-500">*</span></label>
+                <input
+                  className="border border-slate-300 rounded-lg px-4 py-2 w-full focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition text-base"
+                  placeholder="e.g., Additional Bank Statement"
+                  value={newDocumentRequest.title}
+                  onChange={(e) => setNewDocumentRequest(prev => ({ ...prev, title: e.target.value }))}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Description</label>
+                <textarea
+                  className="border border-slate-300 rounded-lg px-4 py-2 w-full focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition text-base min-h-[80px] resize-vertical"
+                  placeholder="Describe what document you need and any specific requirements..."
+                  value={newDocumentRequest.description}
+                  onChange={(e) => setNewDocumentRequest(prev => ({ ...prev, description: e.target.value }))}
+                  rows={3}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Due Date</label>
+                <input
+                  className="border border-slate-300 rounded-lg px-4 py-2 w-full focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition text-base"
+                  type="date"
+                  value={newDocumentRequest.due_date}
+                  onChange={(e) => setNewDocumentRequest(prev => ({ ...prev, due_date: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Template/Attachment (Optional)</label>
+                <div className="flex items-center gap-3">
+                  <label className="flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-100 transition font-medium text-slate-700">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 002.828 2.828l6.586-6.586M16 5v6a2 2 0 002 2h6" />
+                    </svg>
+                    <span>{newDocumentRequest.attachment ? 'Change file' : 'Select file'}</span>
+                    <input
+                      type="file"
+                      className="sr-only"
+                      onChange={(e) => setNewDocumentRequest(prev => ({ ...prev, attachment: e.target.files ? e.target.files[0] : null }))}
+                      disabled={creatingDocumentRequest}
+                    />
+                  </label>
+                  {newDocumentRequest.attachment && (
+                    <span className="text-xs text-slate-700 truncate max-w-[180px]">{newDocumentRequest.attachment.name}</span>
+                  )}
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-3 mt-8">
+              <button
+                className="flex-1 bg-slate-200 text-slate-800 px-4 py-2 rounded-lg font-medium hover:bg-slate-300 transition disabled:opacity-50"
+                onClick={() => { setShowNewRequestModal(false); setNewDocumentRequest({ title: '', description: '', due_date: '', attachment: null }); }}
+                disabled={creatingDocumentRequest}
+              >
+                Cancel
+              </button>
+              <button
+                className="flex-1 bg-[#05294E] text-white px-4 py-2 rounded-lg font-medium hover:bg-[#041f38] transition disabled:opacity-50 flex items-center justify-center"
+                onClick={handleCreateDocumentRequest}
+                disabled={creatingDocumentRequest || !newDocumentRequest.title.trim()}
+              >
+                {creatingDocumentRequest ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Creating...
+                  </>
+                ) : (
+                  'Create Request'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {activeTab === 'documents' && (
         <div className="space-y-6">
+          {/* Botão para criar novo Document Request (somente Admin) */}
+          {isPlatformAdmin && (
+            <div className="flex justify-end">
+              <button
+                onClick={() => setShowNewRequestModal(true)}
+                className="bg-[#05294E] hover:bg-[#041f38] text-white px-4 py-2 rounded-lg text-sm font-medium"
+              >
+                New Request
+              </button>
+            </div>
+          )}
+
           {loadingDocuments ? (
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
               <div className="text-center">
@@ -1987,6 +2681,72 @@ const AdminStudentDetails: React.FC = () => {
               approvingStates={approvingDocumentRequest}
             />
           )}
+        </div>
+      )}
+
+      {activeTab === 'logs' && student && (
+        <div className="p-6">
+          <StudentLogsView 
+            studentId={student.student_id} 
+            studentName={student.student_name} 
+          />
+        </div>
+      )}
+
+      {/* Payment Confirmation Modal */}
+      {showPaymentModal && pendingPayment && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md mx-4">
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <CheckCircle className="w-6 h-6 text-blue-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-slate-900">
+                Confirm Payment
+              </h3>
+            </div>
+            
+            <p className="text-sm text-slate-600 mb-6">
+              Are you sure you want to mark the <strong>{pendingPayment.feeName}</strong> as paid?
+            </p>
+            
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Payment Method
+              </label>
+              <select
+                value={selectedPaymentMethod}
+                onChange={(e) => setSelectedPaymentMethod(e.target.value as 'stripe' | 'zelle' | 'manual')}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="stripe">Stripe</option>
+                <option value="zelle">Zelle</option>
+                <option value="manual">Manual</option>
+              </select>
+            </div>
+            
+            <div className="flex space-x-3">
+              <button
+                onClick={() => {
+                  setShowPaymentModal(false);
+                  setPendingPayment(null);
+                }}
+                className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmPayment}
+                disabled={markingAsPaid[`${student?.student_id}:${pendingPayment.feeType}`]}
+                className="flex-1 px-4 py-2 bg-[#05294E] text-white rounded-lg hover:bg-[#041f38] disabled:opacity-50 transition-colors flex items-center justify-center space-x-2"
+              >
+                <CheckCircle className="w-4 h-4" />
+                <span>
+                  {markingAsPaid[`${student?.student_id}:${pendingPayment.feeType}`] ? 'Processing...' : 'Confirm Payment'}
+                </span>
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

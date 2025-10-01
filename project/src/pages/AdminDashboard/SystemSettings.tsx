@@ -1,14 +1,32 @@
 import React, { useState } from 'react';
 import { 
   Star,
-  Building
+  Building,
+  Users
 } from 'lucide-react';
 import FeaturedScholarshipsManagement from './FeaturedScholarshipsManagement';
 import FeaturedUniversitiesManagement from './FeaturedUniversitiesManagement';
+import UserManagement from './UserManagement';
 
-const SystemSettings: React.FC = () => {
+interface UserManagementPropsShape {
+  users: any[];
+  stats: {
+    total: number;
+    students: number;
+    schools: number;
+    admins: number;
+    affiliate_admins?: number;
+  };
+  onSuspend: (userId: string) => void;
+  onRefresh?: () => void;
+}
+
+interface SystemSettingsProps {
+  userManagementProps?: UserManagementPropsShape;
+}
+
+const SystemSettings: React.FC<SystemSettingsProps> = ({ userManagementProps }) => {
   const [activeTab, setActiveTab] = useState('featured-scholarships');
-
 
   const tabs = [
     {
@@ -22,9 +40,14 @@ const SystemSettings: React.FC = () => {
       label: 'Featured Universities',
       icon: Building,
       color: 'bg-green-100 text-green-600'
+    },
+    {
+      id: 'user-management',
+      label: 'User Management',
+      icon: Users,
+      color: 'bg-blue-100 text-blue-600'
     }
   ];
-
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -32,6 +55,18 @@ const SystemSettings: React.FC = () => {
         return <FeaturedScholarshipsManagement />;
       case 'featured-universities':
         return <FeaturedUniversitiesManagement />;
+      case 'user-management':
+        return userManagementProps ? (
+          <UserManagement 
+            users={userManagementProps.users}
+            stats={userManagementProps.stats}
+            onSuspend={userManagementProps.onSuspend}
+            onRefresh={userManagementProps.onRefresh}
+            onlyUsersMode
+          />
+        ) : (
+          <div className="text-sm text-slate-600">User management data not available.</div>
+        );
       default:
         return <FeaturedScholarshipsManagement />;
     }
@@ -45,7 +80,6 @@ const SystemSettings: React.FC = () => {
           <h2 className="text-2xl font-bold text-slate-900">Content Management</h2>
           <p className="text-slate-600">Manage featured scholarships and universities</p>
         </div>
-        
       </div>
 
       {/* Tabs */}

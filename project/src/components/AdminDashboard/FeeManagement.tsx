@@ -19,6 +19,7 @@ interface Student {
   dependents?: number;
   has_paid_selection_process_fee: boolean;
   has_paid_i20_control_fee: boolean;
+  seller_referral_code?: string | null;
 }
 
 interface FeeOverride {
@@ -50,6 +51,8 @@ const FeeManagement: React.FC = () => {
   const [students, setStudents] = useState<StudentWithFees[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [affiliates, setAffiliates] = useState<any[]>([]);
+  const [affiliateFilter, setAffiliateFilter] = useState<string>('all');
   const [editingStudent, setEditingStudent] = useState<string | null>(null);
   const [editingFees, setEditingFees] = useState<FeeOverride | null>(null);
   const [saving, setSaving] = useState(false);
@@ -58,6 +61,7 @@ const FeeManagement: React.FC = () => {
 
   useEffect(() => {
     fetchStudents();
+    fetchAffiliates();
   }, []);
 
   const fetchStudents = async () => {
@@ -67,7 +71,7 @@ const FeeManagement: React.FC = () => {
       // Buscar todos os estudantes
       const { data: studentsData, error: studentsError } = await supabase
         .from('user_profiles')
-        .select('id, user_id, full_name, email, dependents, has_paid_selection_process_fee, has_paid_i20_control_fee, created_at')
+        .select('id, user_id, full_name, email, dependents, has_paid_selection_process_fee, has_paid_i20_control_fee, seller_referral_code, created_at')
         .eq('role', 'student')
         .order('created_at', { ascending: false });
 
@@ -105,6 +109,59 @@ const FeeManagement: React.FC = () => {
       console.error('Error fetching students:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAffiliates = async () => {
+    try {
+      // Buscar usuários com role affiliate_admin
+      const { data: affiliateAdminsData, error: affiliateAdminsError } = await supabase
+        .from('user_profiles')
+        .select('user_id, full_name, email')
+        .eq('role', 'affiliate_admin')
+        .eq('status', 'active')
+        .order('created_at', { ascending: false });
+
+      if (affiliateAdminsError) return;
+
+      const affiliatesWithSellers = await Promise.all(
+        (affiliateAdminsData || []).map(async (admin: any) => {
+          const { data: affiliateAdminData } = await supabase
+            .from('affiliate_admins')
+            .select('id')
+            .eq('user_id', admin.user_id)
+            .single();
+
+          let sellers: any[] = [];
+          if (affiliateAdminData) {
+            const { data: sellersData } = await supabase
+              .from('sellers')
+              .select('id, referral_code, name, email')
+              .eq('affiliate_admin_id', affiliateAdminData.id)
+              .eq('is_active', true);
+            sellers = sellersData || [];
+          }
+          if (sellers.length === 0) {
+            const { data: sellersByEmail } = await supabase
+              .from('sellers')
+              .select('id, referral_code, name, email')
+              .eq('email', admin.email)
+              .eq('is_active', true);
+            sellers = sellersByEmail || [];
+          }
+          return {
+            id: admin.user_id,
+            user_id: admin.user_id,
+            name: admin.full_name || admin.email,
+            email: admin.email,
+            referral_code: sellers[0]?.referral_code || null,
+            sellers
+          };
+        })
+      );
+      setAffiliates(affiliatesWithSellers);
+    } catch (e) {
+      // silencioso
     }
   };
 
@@ -223,10 +280,25 @@ const FeeManagement: React.FC = () => {
   };
 
   // Filtrar estudantes
-  const filteredStudents = students.filter(student =>
-    (student.full_name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-    (student.email?.toLowerCase() || '').includes(searchTerm.toLowerCase())
-  );
+  const filteredStudents = students.filter(student => {
+    const matchesSearch = (student.full_name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+      (student.email?.toLowerCase() || '').includes(searchTerm.toLowerCase());
+
+    if (affiliateFilter === 'all') return matchesSearch;
+
+    // Se não tem referral code, exclui quando filtrando por um affiliate específico
+    if (!student.seller_referral_code) return false;
+
+    // Tenta casar pelo referral_code direto do affiliate
+    let affiliate = affiliates.find((aff: any) => aff.referral_code === student.seller_referral_code);
+    if (!affiliate) {
+      // Senão, verifica sellers do affiliate
+      affiliate = affiliates.find((aff: any) => aff.sellers?.some((s: any) => s.referral_code === student.seller_referral_code));
+    }
+
+    const matchesAffiliate = affiliate && affiliate.id === affiliateFilter;
+    return matchesSearch && !!matchesAffiliate;
+  });
 
   // Paginação
   const totalPages = Math.ceil(filteredStudents.length / itemsPerPage);
@@ -268,17 +340,37 @@ const FeeManagement: React.FC = () => {
         </div>
       </div>
 
-      {/* Search */}
+      {/* Search and Affiliate Filter */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <div className="relative">
-          <Search className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search by student name or email..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E]"
-          />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Search</label>
+            <div className="relative">
+              <Search className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search by student name or email..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E]"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Affiliate Admin</label>
+            <select
+              value={affiliateFilter}
+              onChange={(e) => setAffiliateFilter(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] text-sm"
+            >
+              <option value="all">All Affiliates</option>
+              {affiliates.map((affiliate: any) => (
+                <option key={affiliate.id} value={affiliate.id}>
+                  {affiliate.name || affiliate.email || 'Unknown'}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 

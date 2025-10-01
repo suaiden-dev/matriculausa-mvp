@@ -6,10 +6,9 @@ import { useAuth } from '../../hooks/useAuth';
 import AdminDashboardLayout from './AdminDashboardLayout';
 import Overview from './Overview';
 import UniversityManagement from './UniversityManagement';
-import UserManagement from './UserManagement';
+import UsersHub from './UsersHub';
 import ScholarshipManagement from './ScholarshipManagement';
 import PaymentManagement from './PaymentManagement';
-import SystemSettings from './SystemSettings';
 import ApplicationMonitoring from './ApplicationMonitoring';
 import AdminApplicationView from './AdminApplicationView';
 import MatriculaRewardsAdmin from './MatriculaRewardsAdmin';
@@ -23,6 +22,7 @@ import AutoTransferSettings from './AutoTransferSettings';
 import FinancialAnalytics from './FinancialAnalytics';
 import TermsManagement from './TermsManagement';
 import AdminStudentDetails from './AdminStudentDetails';
+import SystemSettings from './SystemSettings';
 import { Dialog } from '@headlessui/react';
 import { CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
 
@@ -541,12 +541,7 @@ const AdminDashboard: React.FC = () => {
         <Route 
           path="users" 
           element={
-            <UserManagement 
-              users={users}
-              stats={componentStats.users}
-              onSuspend={handleSuspendUser}
-              onRefresh={loadAdminData}
-            />
+            <UsersHub />
           } 
         />
         <Route 
@@ -564,7 +559,16 @@ const AdminDashboard: React.FC = () => {
         />
         <Route 
           path="settings" 
-          element={<SystemSettings />} 
+          element={
+            <SystemSettings 
+              userManagementProps={{
+                users: users,
+                stats: componentStats.users,
+                onSuspend: handleSuspendUser,
+                onRefresh: loadAdminData
+              }}
+            />
+          }
         />
         <Route path="/application-monitoring" element={<ApplicationMonitoring />} />
         <Route path="/application-monitoring/:applicationId" element={<AdminApplicationView />} />

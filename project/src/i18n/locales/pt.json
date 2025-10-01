@@ -30,11 +30,11 @@
       },
       "step6": {
         "title": "5. Seleção da Taxa de Candidatura",
-        "description": "Uma vez que seus documentos sejam aprovados, você deve escolher apenas uma bolsa para prosseguir. (Veja a captura de tela para detalhes.)"
+        "description": "Após o envio dos documentos, você deve aguardar a aprovação da universidade para continuar com o processo seletivo. Após a aprovação, você será liberado para pagar a Taxa de Candidatura e a Taxa de Bolsa."
       },
       "step7": {
         "title": "6. Minhas Candidaturas e Taxa de Bolsa",
-        "description": "Dentro de 'Minhas Candidaturas', após pagar a Taxa de Candidatura, você poderá pagar a Taxa de Bolsa para sua bolsa escolhida."
+        "description": "Na seção 'Minhas Candidaturas', você terá acesso ao chat direto com a universidade, onde a universidade pode solicitar pagamentos adicionais, enviar sua carta de aceite e acompanhar todo o processo de candidatura."
       },
       "step8": {
         "title": "7. Chat de Candidatura e Taxa de Controle I-20",
@@ -1189,7 +1189,8 @@
       "weakPassword": "A senha é muito fraca. Escolha uma senha mais forte.",
       "invalidEmail": "Digite um endereço de email válido.",
       "signupDisabled": "Novos registros estão atualmente desabilitados. Entre em contato com o suporte.",
-      "registrationFailed": "Falha no Registro"
+      "registrationFailed": "Falha no Registro",
+      "emailAlreadyRegistered": "Este email já está cadastrado. Faça login ou use outro email."
     },
   "features": {
     "whyChoose": "Por Que Escolher MatriculaUSA?",
@@ -1612,8 +1613,8 @@
       "step2Important": "IMPORTANTE: Todos os documentos devem estar em inglês. Se seus documentos estiverem em outro idioma, você pode solicitar tradução certificada através do nosso parceiro Lush America.",
       "step2PartnerUrl": "www.lushamerica.com",
       "languageError": "Este documento não está em inglês. Forneça uma versão em inglês ou tradução certificada.",
-      "accessError": "Não foi possível acessar os dados do {{documentType}}. O arquivo pode estar corrompido ou em formato não suportado. Tente fazer upload de um novo arquivo.",
-      "fundsDataError": "Dados de extrato não disponíveis no {{documentType}}. O documento pode não conter informações suficientes sobre fundos ou estar em formato não legível. Tente fazer upload de um documento mais claro.",
+      "accessError": "Não foi possível processar o {{documentType}}. O arquivo pode estar corrompido ou em formato não suportado. Por favor, tente fazer upload de um novo arquivo.",
+      "fundsDataError": "Não foi possível validar o comprovante de fundos. O documento pode não conter informações claras sobre saldo bancário ou estar em formato não legível. Tente fazer upload de um extrato bancário mais claro e legível.",
       "currencyFieldError": "Erro interno do sistema ao processar dados de moeda no {{documentType}}. O documento pode não conter informações de moeda válidas ou estar em formato não suportado. Tente fazer upload de um documento mais claro.",
       "passport": "Passaporte",
       "passportDescription": "Documento de passaporte válido",
@@ -2309,12 +2310,13 @@
   },
   "preCheckoutModal": {
     "securePayment": "Pagamento Seguro",
-    "redirectToStripe": "Redirecionando para o Stripe",
+    "securePaymentProcess": "Processo de Pagamento Seguro",
     "closeModal": "Fechar modal",
-    "securePaymentViaStripe": "Pagamento seguro via",
+    "securePaymentGateway": "Gateway de Pagamento Seguro",
     "referralCode": "Código de Referência",
     "yourReferralCode": "Seu Código de Referência",
     "enterReferralCode": "Digite seu código de referência para obter desconto",
+    "haveReferralCode": "Tenho um código de desconto",
     "usingYourReferralCode": "Usando o código de referência que você usou no registro",
     "placeholder": "Digite o código",
     "validate": "Validar",
@@ -2330,7 +2332,7 @@
     "continueWithoutCode": "Continuar sem código",
     "goToPayment": "Ir para pagamento",
     "applyCodeAndContinue": "Aplicar código e continuar",
-    "openingStripe": "Abrindo Stripe...",
+    "processingPayment": "Processando Pagamento...",
     "mustAcceptTerms": "Você deve aceitar os termos e condições antes de continuar",
     "termsAndConditions": {
       "title": "Termos e Condições",

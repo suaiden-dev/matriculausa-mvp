@@ -51,11 +51,12 @@ const MicrosoftAccountSelector: React.FC<MicrosoftAccountSelectorProps> = ({ onA
   if (connections.length === 0) {
     return (
       <button
-        disabled={true}
-        className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-gray-400 border border-gray-400 rounded-lg cursor-not-allowed shadow-sm opacity-50"
+        onClick={connectMicrosoft}
+        disabled={loading}
+        className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
       >
-        <Mail className="w-4 h-4" />
-        Microsoft (Coming Soon)
+        {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
+        {loading ? 'Conectando...' : 'Conectar Microsoft'}
       </button>
     );
   }
@@ -135,13 +136,14 @@ const MicrosoftAccountSelector: React.FC<MicrosoftAccountSelectorProps> = ({ onA
               </div>
             ))}
 
-            {/* Add Account Button - DISABLED FOR SECURITY */}
+            {/* Add Account Button */}
             <button
-              disabled={true}
-              className="w-full px-3 py-2 text-left text-sm text-gray-400 flex items-center gap-2 border-t border-gray-100 cursor-not-allowed opacity-50"
+              onClick={handleAddAccount}
+              disabled={loading}
+              className="w-full px-3 py-2 text-left text-sm text-gray-500 hover:bg-gray-50 flex items-center gap-2 border-t border-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Plus className="w-4 h-4" />
-              Microsoft (Coming Soon)
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+              {loading ? 'Adicionando conta...' : 'Adicionar Conta Microsoft'}
             </button>
           </div>
         </div>

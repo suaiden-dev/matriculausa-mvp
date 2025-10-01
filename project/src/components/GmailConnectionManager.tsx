@@ -50,10 +50,11 @@ const GmailConnectionManager: React.FC = () => {
           </p>
         </div>
         <button
-          disabled={true}
-          className="px-4 py-2 bg-gray-400 text-white rounded-lg cursor-not-allowed opacity-50 transition-all duration-300 font-semibold text-sm"
+          onClick={handleConnectNewAccount}
+          disabled={loading}
+          className="px-4 py-2 bg-gradient-to-r from-[#05294E] to-[#D0151C] text-white rounded-lg hover:from-[#041f3f] hover:to-[#b01218] disabled:opacity-50 transition-all duration-300 font-semibold text-sm"
         >
-          Gmail (Coming Soon)
+          {loading ? 'Connecting...' : 'Connect New Account'}
         </button>
       </div>
 
@@ -156,10 +157,13 @@ const GmailConnectionManager: React.FC = () => {
               </p>
               <div className="flex space-x-3">
                 <button
-                  disabled={true}
-                  className="px-4 py-2 bg-gray-400 text-white rounded-lg cursor-not-allowed opacity-50 transition-colors text-sm font-medium"
+                  onClick={() => {
+                    setShowConnectInfo(false);
+                    connectGmail();
+                  }}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
                 >
-                  Gmail (Coming Soon)
+                  Continue to Google
                 </button>
                 <button
                   onClick={() => setShowConnectInfo(false)}
