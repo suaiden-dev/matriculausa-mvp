@@ -30,11 +30,11 @@
       },
       "step6": {
         "title": "5. Application Fee Selection",
-        "description": "Once your documents are approved, you must choose only one scholarship to proceed. (See the screenshot for details.)"
+        "description": "After submitting your documents, you must wait for university approval to continue with the selection process. Once approved, you will be able to proceed with paying the Application Fee and Scholarship Fee."
       },
       "step7": {
         "title": "6. My Applications & Scholarship Fee",
-        "description": "Inside 'My Applications', after paying the Application Fee, you will be able to pay the Scholarship Fee for your chosen scholarship."
+        "description": "In the 'My Applications' section, you will have access to direct chat with the university, where the university can request additional payments, send your acceptance letter, and track your entire application process."
       },
       "step8": {
         "title": "7. Application Chat & I-20 Control Fee",
@@ -1517,8 +1517,8 @@
       "step2Important": "IMPORTANT: All documents must be in English. If your documents are in another language, you can request certified translation through our partner Lush America.",
       "step2PartnerUrl": "www.lushamerica.com",
       "languageError": "This document is not in English. Please provide an English version or certified translation.",
-      "accessError": "Unable to access {{documentType}} data. The file may be corrupted or in an unsupported format. Please try uploading a new file.",
-      "fundsDataError": "Funds statement data not available in {{documentType}}. The document may not contain sufficient fund information or be in an unreadable format. Please try uploading a clearer document.",
+      "accessError": "Unable to process {{documentType}}. The file may be corrupted or in an unsupported format. Please try uploading a new file.",
+      "fundsDataError": "Unable to validate proof of funds. The document may not contain clear bank balance information or be in an unreadable format. Please try uploading a clearer and more legible bank statement.",
       "currencyFieldError": "Internal system error processing currency data in {{documentType}}. The document may not contain valid currency information or be in an unsupported format. Please try uploading a clearer document.",
       "passport": "Passport",
       "passportDescription": "Valid passport document",
@@ -2182,12 +2182,13 @@
   },
   "preCheckoutModal": {
     "securePayment": "Secure Payment",
-    "redirectToStripe": "Redirecting to Stripe",
+    "securePaymentProcess": "Secure Payment Process",
     "closeModal": "Close modal",
-    "securePaymentViaStripe": "Secure payment via Stripe",
+    "securePaymentGateway": "Secure Payment Gateway",
     "referralCode": "Referral Code",
     "yourReferralCode": "Your Referral Code",
     "enterReferralCode": "Enter your referral code to get a discount",
+    "haveReferralCode": "I have a discount code",
     "usingYourReferralCode": "Using the referral code you used during registration",
     "placeholder": "Enter code",
     "validate": "Validate",
@@ -2208,7 +2209,7 @@
     "continueWithoutCode": "Continue without code",
     "goToPayment": "Go to payment",
     "applyCodeAndContinue": "Apply code and continue",
-    "openingStripe": "Opening Stripe...",
+    "processingPayment": "Processing Payment...",
     "mustAcceptTerms": "You must accept the terms and conditions before continuing",
     "termsAndConditions": {
       "title": "Terms and Conditions",

@@ -91,9 +91,19 @@ const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({ imageUrl, onClose
       onClick={onClose}
     >
       <div 
-        className="relative bg-white p-4 rounded-lg shadow-2xl max-w-4xl max-h-[90vh] flex flex-col"
+        className="relative bg-white p-2 sm:p-4 rounded-lg shadow-2xl max-w-4xl max-h-[90vh] flex flex-col"
         onClick={(e) => e.stopPropagation()} // Prevent closing when clicking on the modal content
       >
+        {/* Botão de fechar discreto no canto superior direito */}
+        <button
+          onClick={onClose}
+          className="absolute top-2 right-2 z-10 p-1.5 bg-black/50 text-white rounded-full hover:bg-black/70 transition-colors"
+          title="Fechar"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
         {loading && !error && (
           <div className="flex items-center justify-center min-h-[300px] min-w-[300px]">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -127,28 +137,7 @@ const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({ imageUrl, onClose
           />
         )}
         
-        <div className="absolute top-2 right-2 flex gap-2">
-          {!error && (
-            <button
-              onClick={handleDownload}
-              className="p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors"
-              title="Download"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-            </button>
-          )}
-          <button
-            onClick={onClose}
-            className="p-2 bg-gray-800 text-white rounded-full hover:bg-gray-600 transition-colors"
-            title="Close"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
+        {/* Botões flutuantes removidos para melhor experiência mobile */}
       </div>
     </div>
   );

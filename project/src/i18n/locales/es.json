@@ -30,11 +30,11 @@
       },
       "step6": {
         "title": "5. Selección de Tarifa de Solicitud",
-        "description": "Una vez que tus documentos sean aprobados, debes elegir solo una beca para proceder. (Ver la captura de pantalla para detalles.)"
+        "description": "Después de enviar tus documentos, debes esperar la aprobación de la universidad para continuar con el proceso de selección. Una vez aprobado, podrás proceder con el pago de la Tarifa de Solicitud y la Tarifa de Beca."
       },
       "step7": {
         "title": "6. Mis Solicitudes y Tarifa de Beca",
-        "description": "Dentro de 'Mis Solicitudes', después de pagar la Tarifa de Solicitud, podrás pagar la Tarifa de Beca para tu beca elegida."
+        "description": "En la sección 'Mis Solicitudes', tendrás acceso al chat directo con la universidad, donde la universidad puede solicitar pagos adicionales, enviar tu carta de aceptación y hacer seguimiento a todo tu proceso de solicitud."
       },
       "step8": {
         "title": "7. Chat de Solicitud y Tarifa de Control I-20",
@@ -1734,8 +1734,8 @@
       "step2Important": "IMPORTANTE: Todos los documentos deben estar en inglés. Si tus documentos están en otro idioma, puedes solicitar traducción certificada a través de nuestro socio Lush America.",
       "step2PartnerUrl": "www.lushamerica.com",
       "languageError": "Este documento no está en inglés. Proporciona una versión en inglés o traducción certificada.",
-      "accessError": "No se pudo acceder a los datos del {{documentType}}. El archivo puede estar corrupto o en un formato no compatible. Intenta subir un nuevo archivo.",
-      "fundsDataError": "Los datos del extracto bancario no están disponibles en {{documentType}}. El documento puede no contener información suficiente sobre fondos o estar en un formato no legible. Intenta subir un documento más claro.",
+      "accessError": "No se pudo procesar el {{documentType}}. El archivo puede estar corrupto o en un formato no compatible. Por favor, intenta subir un nuevo archivo.",
+      "fundsDataError": "No se pudo validar el comprobante de fondos. El documento puede no contener información clara sobre el saldo bancario o estar en un formato no legible. Intenta subir un extracto bancario más claro y legible.",
       "currencyFieldError": "Error interno del sistema al procesar datos de moneda en {{documentType}}. El documento puede no contener información de moneda válida o estar en un formato no compatible. Intenta subir un documento más claro.",
       "passport": "Pasaporte",
       "passportDescription": "Documento de pasaporte válido",
@@ -2429,12 +2429,13 @@
   },
   "preCheckoutModal": {
     "securePayment": "Pago Seguro",
-    "redirectToStripe": "Redirigiendo a Stripe",
+    "securePaymentProcess": "Proceso de Pago Seguro",
     "closeModal": "Cerrar modal",
-    "securePaymentViaStripe": "Pago seguro vía Stripe",
+    "securePaymentGateway": "Gateway de Pago Seguro",
     "referralCode": "Código de Referencia",
     "yourReferralCode": "Tu Código de Referencia",
     "enterReferralCode": "Ingresa tu código de referencia para obtener descuento",
+    "haveReferralCode": "Tengo un código de descuento",
     "usingYourReferralCode": "Usando el código de referencia que usaste durante el registro",
     "placeholder": "Ingresa el código",
     "validate": "Validar",
@@ -2450,7 +2451,7 @@
     "continueWithoutCode": "Continuar sin código",
     "goToPayment": "Ir al pago",
     "applyCodeAndContinue": "Aplicar código y continuar",
-    "openingStripe": "Abriendo Stripe...",
+    "processingPayment": "Procesando Pago...",
     "mustAcceptTerms": "Debes aceptar los términos y condiciones antes de continuar",
     "termsAndConditions": {
       "title": "Términos y Condiciones",

@@ -56,6 +56,8 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
   } | null>(null);
   const [hasUsedReferralCode, setHasUsedReferralCode] = useState(false);
   const [codeApplied, setCodeApplied] = useState(false);
+  const [hasReferralCode, setHasReferralCode] = useState(false);
+  const [showCodeStep, setShowCodeStep] = useState(false);
   // Preço calculado conforme feeType e dependentes (Selection Process inclui dependentes)
   const computedBasePrice = (() => {
     const dependents = Number(userProfile?.dependents) || 0;
@@ -124,6 +126,8 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
       setShowTermsModal(false); // Reset terms modal state
       setActiveTerm(null); // Reset active term
       setUserClickedCheckbox(false); // Reset user interaction flag
+      setHasReferralCode(false); // Reset referral code checkbox
+      setShowCodeStep(false); // Reset code step
       checkReferralCodeUsage();
       
       // iOS Safari zoom prevention
@@ -169,6 +173,8 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
     if (isOpen && hasAffiliateCode && userProfile?.affiliate_code) {
       console.log('🔍 [PreCheckoutModal] Preenchendo campo com affiliate_code do usuário:', userProfile.affiliate_code);
       setDiscountCode(userProfile.affiliate_code);
+      setHasReferralCode(true); // Marcar checkbox automaticamente
+      setShowCodeStep(true); // Mostrar campo automaticamente
       // Automaticamente validar o código preenchido
       setTimeout(() => {
         if (userProfile.affiliate_code) {
@@ -444,8 +450,50 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
         return;
       }
 
-      // Valid code
+      // Valid code - AGORA SALVAR NO BANCO IMEDIATAMENTE
       console.log('🔍 [PreCheckoutModal] ✅ Código preenchido é válido');
+      
+      // Salvar no banco via edge function
+      try {
+        console.log('🔍 [PreCheckoutModal] Salvando código preenchido no banco via edge function...');
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData.session?.access_token;
+        
+        if (!token) {
+          throw new Error('Usuário não autenticado');
+        }
+
+        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/validate-referral-code`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({ affiliate_code: code.trim().toUpperCase() }),
+        });
+
+        const result = await response.json();
+        console.log('🔍 [PreCheckoutModal] Resultado da aplicação do código preenchido:', result);
+        
+        if (!result.success) {
+          console.error('🔍 [PreCheckoutModal] ❌ Erro ao aplicar código preenchido:', result.error);
+          setValidationResult({
+            isValid: false,
+            message: result.error || 'Erro ao aplicar código'
+          });
+          return;
+        }
+        
+        console.log('🔍 [PreCheckoutModal] ✅ Código preenchido salvo no banco com sucesso');
+      } catch (error) {
+        console.error('🔍 [PreCheckoutModal] ❌ Erro ao salvar código preenchido:', error);
+        setValidationResult({
+          isValid: false,
+          message: 'Erro ao salvar código no banco'
+        });
+        return;
+      }
+      
       setValidationResult({
         isValid: true,
         message: t('preCheckoutModal.validCode'),
@@ -527,8 +575,50 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
         return;
       }
 
-      // Valid code
+      // Valid code - AGORA SALVAR NO BANCO IMEDIATAMENTE
       console.log('🔍 [PreCheckoutModal] ✅ Código válido, aplicando desconto...');
+      
+      // Salvar no banco via edge function
+      try {
+        console.log('🔍 [PreCheckoutModal] Salvando código no banco via edge function...');
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData.session?.access_token;
+        
+        if (!token) {
+          throw new Error('Usuário não autenticado');
+        }
+
+        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/validate-referral-code`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({ affiliate_code: discountCode.trim().toUpperCase() }),
+        });
+
+        const result = await response.json();
+        console.log('🔍 [PreCheckoutModal] Resultado da aplicação do código:', result);
+        
+        if (!result.success) {
+          console.error('🔍 [PreCheckoutModal] ❌ Erro ao aplicar código:', result.error);
+          setValidationResult({
+            isValid: false,
+            message: result.error || 'Erro ao aplicar código'
+          });
+          return;
+        }
+        
+        console.log('🔍 [PreCheckoutModal] ✅ Código salvo no banco com sucesso');
+      } catch (error) {
+        console.error('🔍 [PreCheckoutModal] ❌ Erro ao salvar código:', error);
+        setValidationResult({
+          isValid: false,
+          message: 'Erro ao salvar código no banco'
+        });
+        return;
+      }
+      
       setValidationResult({
         isValid: true,
         message: t('preCheckoutModal.validCode'),
@@ -571,31 +661,27 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
       return;
     }
     
-    // ✅ Para usuários sem seller_referral_code: só permite prosseguir se tiver código válido aplicado
-    if (validationResult?.isValid && discountCode.trim() && codeApplied) {
-      console.log('🔍 [PreCheckoutModal] ✅ Aplicando código e continuando para checkout');
-      const discount = validationResult?.discountAmount || 0;
-      const finalAmount = Math.max(productPrice - discount, 0);
-      onProceedToCheckout(finalAmount, discountCode.trim().toUpperCase());
-      onClose();
+    // ✅ Se usuário marcou que tem código, precisa validar
+    if (hasReferralCode) {
+      if (validationResult?.isValid && discountCode.trim() && codeApplied) {
+        console.log('🔍 [PreCheckoutModal] ✅ Aplicando código e continuando para checkout');
+        const discount = validationResult?.discountAmount || 0;
+        const finalAmount = Math.max(productPrice - discount, 0);
+        onProceedToCheckout(finalAmount, discountCode.trim().toUpperCase());
+        onClose();
+      } else {
+        console.log('🔍 [PreCheckoutModal] ❌ Código não válido ou não aplicado - não pode prosseguir');
+        alert(t('preCheckoutModal.mustEnterValidCode'));
+      }
     } else {
-      console.log('🔍 [PreCheckoutModal] ❌ Código não válido ou não aplicado - não pode prosseguir');
-      alert(t('preCheckoutModal.mustEnterValidCode'));
+      // ✅ Se usuário não marcou que tem código, prosseguir sem código
+      console.log('🔍 [PreCheckoutModal] ✅ Usuário não tem código - prosseguindo sem código');
+      const finalAmount = computedBasePrice;
+      onProceedToCheckout(finalAmount);
+      onClose();
     }
   };
 
-  const handleSkip = () => {
-    // Check if terms are accepted
-    if (!termsAccepted) {
-      alert(t('preCheckoutModal.mustAcceptTerms'));
-      return;
-    }
-
-    console.log('🔍 [PreCheckoutModal] handleSkip chamado - prosseguindo sem código');
-    const finalAmount = computedBasePrice; // calculado localmente
-    onProceedToCheckout(finalAmount);
-    onClose();
-  };
 
   // Don't render if not open
   if (!isOpen) {
@@ -657,9 +743,6 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
                   <Dialog.Title className="text-xl sm:text-2xl font-bold">
                     {t('preCheckoutModal.securePayment')}
                   </Dialog.Title>
-                  <p className="text-blue-100 text-sm sm:text-base">
-                    {t('preCheckoutModal.redirectToStripe')}
-                  </p>
                 </div>
               </div>
             </div>
@@ -672,75 +755,99 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
                   <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2 sm:mb-3">{productName}</h3>
                   <div className="inline-flex items-center space-x-2 bg-blue-100 px-3 py-1 rounded-full">
                     <Lock className="w-4 h-4 text-blue-600" />
-                    <span className="text-sm font-medium text-blue-700">{t('preCheckoutModal.securePaymentViaStripe')}</span>
+                    <span className="text-sm font-medium text-blue-700">{t('preCheckoutModal.securePaymentGateway')}</span>
                   </div>
                 </div>
               </div>
 
 
-              {/* Discount Code Input - Apenas para usuários sem seller_referral_code */}
+              {/* Discount Code Section - Apenas para usuários sem seller_referral_code */}
               {!hasUsedReferralCode && !hasSellerReferralCode ? (
                 <div className="space-y-4">
                   <div className="text-center">
-                    <label className="block text-lg font-semibold text-gray-900 mb-2">
-                      {hasAffiliateCode ? t('preCheckoutModal.yourReferralCode') : t('preCheckoutModal.referralCode')}
-                    </label>
-                    <p className="text-sm text-gray-600 mb-4">
-                      {hasAffiliateCode 
-                        ? t('preCheckoutModal.usingYourReferralCode') 
-                        : t('preCheckoutModal.enterReferralCode')
-                      }
-                    </p>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                      {t('preCheckoutModal.referralCode')}
+                    </h3>
                   </div>
                   
-                  <div className="flex flex-col space-y-3">
+                  {/* Checkbox para perguntar se tem código */}
+                  <div className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
                     <input
-                      type="text"
-                      value={discountCode}
-                      onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
-                      placeholder={t('preCheckoutModal.placeholder')}
-                      readOnly={!!hasAffiliateCode}
-                      className={`w-full px-4 sm:px-5 py-3 sm:py-4 border-2 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-center font-mono text-base sm:text-lg tracking-wider ${
-                        hasAffiliateCode 
-                          ? 'border-green-300 bg-green-50 cursor-not-allowed' 
-                          : 'border-gray-300'
-                      }`}
-                      style={{ fontSize: '16px' }}
-                      maxLength={8}
+                      id="hasReferralCode"
+                      name="hasReferralCode"
+                      type="checkbox"
+                      checked={hasReferralCode}
+                      onChange={(e) => {
+                        setHasReferralCode(e.target.checked);
+                        if (!e.target.checked) {
+                          // Se desmarcar, limpar código e validação
+                          setDiscountCode('');
+                          setValidationResult(null);
+                          setCodeApplied(false);
+                          setShowCodeStep(false);
+                        } else {
+                          // Se marcar, mostrar o campo de código
+                          setShowCodeStep(true);
+                        }
+                      }}
+                      className="mt-1 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 flex-shrink-0"
                     />
-                    {!hasAffiliateCode && (
-                      <button
-                        onClick={validateDiscountCode}
-                        disabled={isValidating || !discountCode.trim()}
-                        className="w-full px-6 sm:px-8 py-3 sm:py-4 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
-                      >
-                        {isValidating ? (
-                          <div className="flex items-center space-x-2">
-                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                            <span>{t('preCheckoutModal.validating')}</span>
-                          </div>
-                        ) : (
-                          t('preCheckoutModal.validate')
-                        )}
-                      </button>
-                    )}
+                    <label htmlFor="hasReferralCode" className="text-sm text-gray-700 leading-relaxed cursor-pointer">
+                      {t('preCheckoutModal.haveReferralCode')}
+                    </label>
                   </div>
                   
-                  {/* Validation Result */}
-                  {validationResult && (
-                    <div className={`p-4 rounded-xl border-2 ${
-                      validationResult.isValid 
-                        ? 'bg-green-50 border-green-300 text-green-800' 
-                        : 'bg-red-50 border-red-300 text-red-800'
-                    }`}>
-                      <div className="flex items-center space-x-3">
-                        {validationResult.isValid ? (
-                          <CheckCircle className="w-5 h-5 text-green-600" />
-                        ) : (
-                          <AlertCircle className="w-5 h-5 text-red-600" />
-                        )}
-                        <span className="font-medium text-sm">{validationResult.message}</span>
-                      </div>
+                  {/* Campo de input - só aparece se checkbox marcado */}
+                  {hasReferralCode && showCodeStep && (
+                    <div className="space-y-3">
+                      <input
+                        type="text"
+                        value={discountCode}
+                        onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
+                        placeholder={t('preCheckoutModal.placeholder')}
+                        readOnly={!!hasAffiliateCode}
+                        className={`w-full px-4 sm:px-5 py-3 sm:py-4 border-2 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-center font-mono text-base sm:text-lg tracking-wider ${
+                          hasAffiliateCode 
+                            ? 'border-green-300 bg-green-50 cursor-not-allowed' 
+                            : 'border-gray-300'
+                        }`}
+                        style={{ fontSize: '16px' }}
+                        maxLength={8}
+                      />
+                      {!hasAffiliateCode && (
+                        <button
+                          onClick={validateDiscountCode}
+                          disabled={isValidating || !discountCode.trim()}
+                          className="w-full px-6 sm:px-8 py-3 sm:py-4 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
+                        >
+                          {isValidating ? (
+                            <div className="flex items-center space-x-2">
+                              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                              <span>{t('preCheckoutModal.validating')}</span>
+                            </div>
+                          ) : (
+                            t('preCheckoutModal.validate')
+                          )}
+                        </button>
+                      )}
+                      
+                      {/* Validation Result */}
+                      {validationResult && (
+                        <div className={`p-4 rounded-xl border-2 ${
+                          validationResult.isValid 
+                            ? 'bg-green-50 border-green-300 text-green-800' 
+                            : 'bg-red-50 border-red-300 text-red-800'
+                        }`}>
+                          <div className="flex items-center space-x-3">
+                            {validationResult.isValid ? (
+                              <CheckCircle className="w-5 h-5 text-green-600" />
+                            ) : (
+                              <AlertCircle className="w-5 h-5 text-red-600" />
+                            )}
+                            <span className="font-medium text-sm">{validationResult.message}</span>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -775,60 +882,28 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
                  </label>
               </div>
 
-            {/* Footer */}
-            <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4 px-4 sm:px-6 py-4 sm:py-6 border-t border-gray-200 bg-gray-50 flex-shrink-0">
-              {/* Para usuários COM seller_referral_code: apenas um botão */}
-              {hasSellerReferralCode ? (
-                <button
-                  onClick={handleProceed}
-                  disabled={isLoading || !termsAccepted}
-                  className="flex-1 px-4 sm:px-6 py-3 sm:py-4 rounded-xl font-semibold transition-all shadow-lg hover:shadow-xl transform hover:scale-105 bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 disabled:opacity-75 disabled:cursor-not-allowed text-sm sm:text-base"
-                >
-                  {isLoading ? (
-                    <div className="flex items-center justify-center space-x-2">
-                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      <span>{t('preCheckoutModal.openingStripe')}</span>
-                    </div>
-                  ) : (
-                    t('preCheckoutModal.goToPayment')
-                  )}
-                </button>
-              ) : (
-                /* Para usuários SEM seller_referral_code: dois botões (comportamento original) */
-                <>
-                  <button
-                    onClick={handleSkip}
-                    disabled={!termsAccepted}
-                    className={`flex-1 px-4 sm:px-6 py-3 sm:py-4 border-2 rounded-xl font-semibold transition-all text-sm sm:text-base ${
-                      termsAccepted
-                        ? 'border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400'
-                        : 'border-gray-200 text-gray-400 cursor-not-allowed'
-                    }`}
-                  >
-                    {t('preCheckoutModal.continueWithoutCode')}
-                  </button>
-                  <button
-                    onClick={handleProceed}
-                    disabled={isLoading || !termsAccepted || !(validationResult?.isValid && codeApplied)}
-                    className={`flex-1 px-4 sm:px-6 py-3 sm:py-4 rounded-xl font-semibold transition-all shadow-lg hover:shadow-xl transform hover:scale-105 text-sm sm:text-base ${
-                      validationResult?.isValid && codeApplied
-                        ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700' 
-                        : 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700'
-                    } ${isLoading || !termsAccepted || !(validationResult?.isValid && codeApplied) ? 'opacity-75 cursor-not-allowed' : ''}`}
-                  >
-                    {isLoading ? (
-                      <div className="flex items-center justify-center space-x-2">
-                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        <span>{t('preCheckoutModal.openingStripe')}</span>
-                      </div>
-                    ) : validationResult?.isValid && codeApplied ? (
-                      t('preCheckoutModal.applyCodeAndContinue')
-                    ) : (
-                      t('preCheckoutModal.goToPayment')
-                    )}
-                  </button>
-                </>
-              )}
+            {/* Footer - Botão único simplificado */}
+            <div className="px-4 sm:px-6 py-4 sm:py-6 border-t border-gray-200 bg-gray-50 flex-shrink-0">
+              <button
+                onClick={handleProceed}
+                disabled={isLoading || !termsAccepted || (hasReferralCode && !(validationResult?.isValid && codeApplied))}
+                className={`w-full px-4 sm:px-6 py-3 sm:py-4 rounded-xl font-semibold transition-all shadow-lg hover:shadow-xl transform hover:scale-105 text-sm sm:text-base ${
+                  validationResult?.isValid && codeApplied
+                    ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700' 
+                    : 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700'
+                } ${isLoading || !termsAccepted || (hasReferralCode && !(validationResult?.isValid && codeApplied)) ? 'opacity-75 cursor-not-allowed' : ''}`}
+              >
+                {isLoading ? (
+                  <div className="flex items-center justify-center space-x-2">
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>{t('preCheckoutModal.processingPayment')}</span>
+                  </div>
+                ) : (hasReferralCode || validationResult?.isValid) ? (
+                  t('preCheckoutModal.applyCodeAndContinue')
+                ) : (
+                  t('preCheckoutModal.goToPayment')
+                )}
+              </button>
             </div>
             
           </Dialog.Panel>
