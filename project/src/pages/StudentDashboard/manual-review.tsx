@@ -125,6 +125,34 @@ const ManualReview: React.FC = () => {
           .update({ documents_status: 'under_review' })
           .eq('user_id', user.id);
 
+        // Log the manual review submission
+        try {
+          const { data: profile } = await supabase
+            .from('user_profiles')
+            .select('id')
+            .eq('user_id', user.id)
+            .single();
+          
+          if (profile) {
+            await supabase.rpc('log_student_action', {
+              p_student_id: profile.id,
+              p_action_type: 'manual_review_submission',
+              p_action_description: `Documents submitted for manual review by university`,
+              p_performed_by: user.id,
+              p_performed_by_type: 'student',
+              p_metadata: {
+                document_types: ['passport', 'diploma', 'funds_proof'],
+                submission_method: 'manual_review',
+                process_type: localStorage.getItem('studentProcessType') || null,
+                files_uploaded: Object.keys(files).filter(key => files[key] !== null),
+                files_reused: Object.keys(usePrev).filter(key => usePrev[key])
+              }
+            });
+          }
+        } catch (logError) {
+          console.error('Failed to log manual review submission:', logError);
+        }
+
         // Garantir que apareça na aba da universidade criando/atualizando aplicações para TODAS as bolsas selecionadas
         try {
           const { data: profile } = await supabase
@@ -204,6 +232,27 @@ const ManualReview: React.FC = () => {
                     console.log('✅ [manual-review] Aplicação criada com sucesso:', newApp);
                     applicationId = newApp?.id || null;
                     currentDocs = (newApp as any)?.documents || [];
+                    
+                    // Log the scholarship application creation in manual review
+                    if (applicationId) {
+                      try {
+                        await supabase.rpc('log_student_action', {
+                          p_student_id: profile.id,
+                          p_action_type: 'scholarship_application_created',
+                          p_action_description: `Scholarship application created for manual review - scholarship ID: ${scholarshipId}`,
+                          p_performed_by: user.id,
+                          p_performed_by_type: 'student',
+                          p_metadata: {
+                            application_id: applicationId,
+                            scholarship_id: scholarshipId,
+                            process_type: localStorage.getItem('studentProcessType') || null,
+                            application_method: 'manual_review_submission'
+                          }
+                        });
+                      } catch (logError) {
+                        console.error('Failed to log application creation:', logError);
+                      }
+                    }
                   }
                 }
                 if (applicationId) {
