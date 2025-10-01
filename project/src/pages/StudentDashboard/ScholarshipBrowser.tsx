@@ -45,7 +45,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
   const { t } = useTranslation();
   // Universidades a serem ocultadas (case-insensitive, igualdade exata de nome)
   const EXCLUDED_UNIVERSITY_NAMES = useMemo(() => new Set([
-    'universty',
+    'universt',
   ].map((s) => s.toLowerCase())), []);
   const isExcludedUniversityName = (name?: string) => {
     if (!name) return false;
