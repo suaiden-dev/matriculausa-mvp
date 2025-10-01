@@ -33,6 +33,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
   const [internalDocumentRequests, setInternalDocumentRequests] = useState<any[]>([]);
   const [acceptanceLetterFile, setAcceptanceLetterFile] = useState<File | null>(null);
   const [uploadingAcceptanceLetter, setUploadingAcceptanceLetter] = useState(false);
+  const [markSentSuccess, setMarkSentSuccess] = useState<string | null>(null);
 
   // Utilitário para logar ação de acceptance letter (admin)
   const logAcceptanceAction = async (
@@ -831,7 +832,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                         <span className="text-xs text-slate-700 truncate max-w-[240px]">{acceptanceLetterFile.name}</span>
                       )}
                     </div>
-                    <div className="flex justify-center mt-3">
+                    <div className="flex justify-center mt-3 gap-3 flex-wrap">
                       <button
                         onClick={async () => {
                           if (!acceptanceLetterFile || !studentId) return;
@@ -911,6 +912,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                             } catch { /* ignore notify errors */ }
 
                             setAcceptanceLetterFile(null);
+                            setMarkSentSuccess('Acceptance letter sent successfully.');
                           } catch (err) {
                             console.error('Error uploading acceptance letter:', err);
                           } finally {
@@ -922,7 +924,58 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                       >
                         {uploadingAcceptanceLetter ? 'Uploading...' : 'Send Acceptance Letter'}
                       </button>
+                      <button
+                        onClick={async () => {
+                          try {
+                            // Resolver applicationId como acima
+                            let applicationId = currentApplication?.id;
+                            if (!applicationId && realScholarshipApplication?.id) applicationId = realScholarshipApplication.id;
+                            if (!applicationId) {
+                              const { data: apps } = await supabase
+                                .from('scholarship_applications')
+                                .select('id')
+                                .order('created_at', { ascending: false })
+                                .limit(1);
+                              applicationId = apps?.[0]?.id;
+                            }
+                            if (!applicationId) throw new Error('No application found for this student');
+
+                            const { error: updateError } = await supabase
+                              .from('scholarship_applications')
+                              .update({
+                                acceptance_letter_status: 'sent',
+                                acceptance_letter_sent_at: new Date().toISOString()
+                              })
+                              .eq('id', applicationId);
+                            if (updateError) throw updateError;
+
+                            await logAcceptanceAction(
+                              'acceptance_letter_sent',
+                              'Acceptance letter marked as sent by admin (no file)',
+                              applicationId,
+                              null
+                            );
+
+                            setRealScholarshipApplication((prev: any) => prev ? ({
+                              ...prev,
+                              acceptance_letter_status: 'sent',
+                              acceptance_letter_sent_at: new Date().toISOString()
+                            }) : prev);
+                            setMarkSentSuccess('Acceptance letter marked as sent.');
+                          } catch (err) {
+                            console.error('Error marking acceptance letter as sent:', err);
+                          }
+                        }}
+                        className="bg-amber-100 hover:bg-amber-200 text-amber-800 px-4 py-2 rounded-lg text-sm font-medium"
+                      >
+                        Mark as Sent (no file)
+                      </button>
                     </div>
+                    {markSentSuccess && (
+                      <div className="mt-3 mx-auto max-w-xl bg-green-50 border border-green-200 text-green-700 text-sm rounded-lg p-3">
+                        {markSentSuccess}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
