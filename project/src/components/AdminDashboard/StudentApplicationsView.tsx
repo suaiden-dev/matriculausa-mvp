@@ -41,6 +41,7 @@ interface StudentRecord {
   application_id: string | null;
   scholarship_id: string | null;
   status: string | null;
+  application_status: string | null;
   applied_at: string | null;
   is_application_fee_paid: boolean;
   is_scholarship_fee_paid: boolean;
@@ -317,10 +318,9 @@ const StudentApplicationsView: React.FC = () => {
         let lockedApplication = null;
         
         if (student.scholarship_applications && student.scholarship_applications.length > 0) {
-          // Verificar se existe uma aplicação "locked" (aprovada + application_fee paga)
-          lockedApplication = student.scholarship_applications.find((app: any) => 
-            app.status === 'approved' && app.is_application_fee_paid
-          );
+          // Priorizar aplicação enrolled, depois approved (mesma lógica do AdminStudentDetails)
+          lockedApplication = student.scholarship_applications.find((app: any) => app.status === 'enrolled') ||
+                             student.scholarship_applications.find((app: any) => app.status === 'approved');
           
           // Se há uma aplicação locked, mostrar informações dela no campo scholarship
           if (lockedApplication) {
@@ -346,8 +346,9 @@ const StudentApplicationsView: React.FC = () => {
           application_id: lockedApplication?.id || null,
           scholarship_id: lockedApplication?.scholarship_id || null,
           status: applicationStatus,
+          application_status: applicationStatus, // Adicionar campo para compatibilidade
           applied_at: lockedApplication?.applied_at || null,
-          is_application_fee_paid: !!lockedApplication,
+          is_application_fee_paid: lockedApplication?.is_application_fee_paid || false,
           is_scholarship_fee_paid: lockedApplication?.is_scholarship_fee_paid || false,
           acceptance_letter_status: lockedApplication?.acceptance_letter_status || null,
           payment_status: lockedApplication?.payment_status || null,
@@ -375,24 +376,23 @@ const StudentApplicationsView: React.FC = () => {
       case 'selection_fee':
         return student.has_paid_selection_process_fee ? 'completed' : 'pending';
       case 'apply':
-        return student.applied_at ? 'completed' : 'pending';
+        return student.total_applications > 0 ? 'completed' : 'pending';
       case 'review':
-        if (student.status === 'approved') return 'completed';
-        if (student.status === 'rejected') return 'rejected';
-        if (student.status === 'under_review') return 'in_progress';
+        if (student.application_status === 'enrolled' || student.application_status === 'approved') return 'completed';
+        if (student.application_status === 'rejected') return 'rejected';
+        if (student.application_status === 'under_review') return 'in_progress';
         return 'pending';
       case 'application_fee':
         return student.is_application_fee_paid ? 'completed' : 'pending';
       case 'scholarship_fee':
         return student.is_scholarship_fee_paid ? 'completed' : 'pending';
       case 'acceptance_letter':
-        if (student.acceptance_letter_status === 'approved') return 'completed';
-        if (student.acceptance_letter_status === 'sent') return 'in_progress';
+        if (student.acceptance_letter_status === 'approved' || student.acceptance_letter_status === 'sent') return 'completed';
         return 'pending';
       case 'i20_fee':
         return student.has_paid_i20_control_fee ? 'completed' : 'pending';
       case 'enrollment':
-        return student.status === 'enrolled' ? 'completed' : 'pending';
+        return student.application_status === 'enrolled' ? 'completed' : 'pending';
       default:
         return 'pending';
     }

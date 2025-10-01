@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useAuth } from '../../hooks/useAuth';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
+import { useStudentLogs } from '../../hooks/useStudentLogs';
 import DocumentRequestsCard from '../../components/DocumentRequestsCard';
 import { supabase } from '../../lib/supabase';
 import DocumentViewerModal from '../../components/DocumentViewerModal';
@@ -36,6 +37,7 @@ const ApplicationChatPage: React.FC = () => {
   const { applicationId } = useParams<{ applicationId: string }>();
   const { user, userProfile, refetchUserProfile } = useAuth();
   const { formatFeeAmount, getFeeAmount } = useFeeConfig(user?.id);
+  const { logAction } = useStudentLogs(userProfile?.id || '');
 
   // Todos os hooks devem vir ANTES de qualquer return condicional
   const [i20Loading, setI20Loading] = useState(false);
@@ -289,14 +291,7 @@ const ApplicationChatPage: React.FC = () => {
     }
   };
 
-  // Função utilitária para garantir que a URL seja completa
-  const ensureCompleteUrl = (url: string) => {
-    if (url.startsWith('http://') || url.startsWith('https://')) {
-      return url;
-    }
-    // ✅ CORREÇÃO: Usar a URL correta do Supabase
-    return `https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/student-documents/${url}`;
-  };
+  // (removido) ensureCompleteUrl não utilizado
 
   // Montar as abas dinamicamente com ícones distintos
   const tabs = [
@@ -859,6 +854,26 @@ const ApplicationChatPage: React.FC = () => {
                 isSchool={false} 
                 currentUserId={user.id} 
                 studentType={applicationDetails.student_process_type || 'initial'}
+                onDocumentUploaded={async (requestId: string, fileName: string, isResubmission: boolean) => {
+                  try {
+                    if (logAction && user?.id) {
+                      await logAction(
+                        isResubmission ? 'document_resubmitted' : 'document_uploaded',
+                        `Document "${fileName}" ${isResubmission ? 'resubmitted' : 'uploaded'} for document request`,
+                        user.id,
+                        'student',
+                        {
+                          request_id: requestId,
+                          file_name: fileName,
+                          is_resubmission: isResubmission,
+                          application_id: applicationId
+                        }
+                      );
+                    }
+                  } catch (e) {
+                    console.error('Failed to log document upload action:', e);
+                  }
+                }}
               />
             </div>
           </div>

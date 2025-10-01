@@ -756,6 +756,21 @@ const PaymentManagement = (): React.JSX.Element => {
 
       console.log('🔍 [approveZellePayment] Aprovando pagamento:', payment);
 
+      // Capturar IP público do cliente (melhor esforço) para enriquecer logs
+      let clientIp: string | undefined = undefined;
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 2000);
+        const res = await fetch('https://api.ipify.org?format=json', { signal: controller.signal });
+        clearTimeout(timeout);
+        if (res.ok) {
+          const j = await res.json();
+          clientIp = j?.ip;
+        }
+      } catch (_) {
+        // ignore
+      }
+
       // Atualizar o status do pagamento para aprovado
           const { error } = await supabase
       .from('zelle_payments')
@@ -830,7 +845,8 @@ const PaymentManagement = (): React.JSX.Element => {
                 payment_method: 'zelle',
                 amount: correctAmount,
                 payment_id: paymentId,
-                zelle_payment_id: paymentId
+                zelle_payment_id: paymentId,
+                ip: clientIp
               }
             });
           } catch (logError) {
@@ -990,9 +1006,17 @@ const PaymentManagement = (): React.JSX.Element => {
       }
 
       console.log('🔍 [approveZellePayment] Verificando condição I-20 Control Fee...');
-      console.log('🔍 [approveZellePayment] payment.fee_type_global === "i-20_control_fee":', payment.fee_type_global === 'i-20_control_fee');
+      const feeTypeSafe = String(payment.fee_type || '');
+      const feeTypeGlobalSafe = String(payment.fee_type_global || '');
+      const isI20 =
+        feeTypeGlobalSafe === 'i20_control_fee' ||
+        feeTypeGlobalSafe === 'i-20_control_fee' ||
+        feeTypeSafe === 'i20_control' ||
+        feeTypeSafe === 'i20_control_fee' ||
+        feeTypeSafe === 'i-20_control_fee';
+      console.log('🔍 [approveZellePayment] isI20:', isI20, 'fee_type_global:', feeTypeGlobalSafe, 'fee_type:', feeTypeSafe);
       
-      if (payment.fee_type_global === 'i-20_control_fee') {
+      if (isI20) {
         console.log('🎯 [approveZellePayment] Entrando na condição i20_control_fee');
         console.log('🔍 [approveZellePayment] Executando UPDATE user_profiles SET has_paid_i20_control_fee = true WHERE user_id =', payment.user_id);
         
@@ -1037,7 +1061,7 @@ const PaymentManagement = (): React.JSX.Element => {
 
           // Log the payment action
           try {
-            await supabase.rpc('log_student_action', {
+            const logPayload = {
               p_student_id: updateData[0]?.id,
               p_action_type: 'fee_payment',
               p_action_description: `I-20 Control Fee paid via Zelle (approved by admin)`,
@@ -1048,11 +1072,19 @@ const PaymentManagement = (): React.JSX.Element => {
                 payment_method: 'zelle',
                 amount: correctAmount,
                 payment_id: paymentId,
-                zelle_payment_id: paymentId
+                zelle_payment_id: paymentId,
+                ip: clientIp
               }
-            });
+            } as const;
+            console.log('🧭 [approveZellePayment] Calling log_student_action (i20):', logPayload);
+            const { data: logData, error: logErr } = await supabase.rpc('log_student_action', logPayload);
+            if (logErr) {
+              console.error('❌ [approveZellePayment] log_student_action error (i20):', logErr);
+            } else {
+              console.log('✅ [approveZellePayment] log_student_action success (i20):', logData);
+            }
           } catch (logError) {
-            console.error('Failed to log payment action:', logError);
+            console.error('Failed to log payment action (i20):', logError);
           }
 
           // Registrar no faturamento com valor correto
@@ -1110,7 +1142,8 @@ const PaymentManagement = (): React.JSX.Element => {
                 amount: payment.amount,
                 payment_id: paymentId,
                 zelle_payment_id: paymentId,
-                application_id: updateData[0]?.id
+                application_id: updateData[0]?.id,
+                ip: clientIp
               }
             });
           } catch (logError) {
@@ -1193,7 +1226,8 @@ const PaymentManagement = (): React.JSX.Element => {
                   amount: payment.amount,
                   payment_id: paymentId,
                   zelle_payment_id: paymentId,
-                  table_updated: 'user_profiles'
+                  table_updated: 'user_profiles',
+                  ip: clientIp
                 }
               });
             } catch (logError) {

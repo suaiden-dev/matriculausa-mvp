@@ -94,13 +94,33 @@ export const useStudentLogs = (studentId: string) => {
     metadata?: any
   ) => {
     try {
+      // Tenta enriquecer o metadata com o IP público do cliente, se ainda não fornecido
+      let enrichedMetadata = metadata || null;
+      if (!enrichedMetadata || (enrichedMetadata && !enrichedMetadata.ip)) {
+        try {
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 2000);
+          const res = await fetch('https://api.ipify.org?format=json', { signal: controller.signal });
+          clearTimeout(timeout);
+          if (res.ok) {
+            const json = await res.json();
+            const ip = json?.ip;
+            if (ip) {
+              enrichedMetadata = { ...(metadata || {}), ip };
+            }
+          }
+        } catch (_) {
+          // IP opcional; ignora falhas silenciosamente
+        }
+      }
+
       const { data, error } = await supabase.rpc('log_student_action', {
         p_student_id: studentId,
         p_action_type: actionType,
         p_action_description: actionDescription,
         p_performed_by: performedBy,
         p_performed_by_type: performedByType,
-        p_metadata: metadata || null
+        p_metadata: enrichedMetadata
       });
 
       if (error) throw error;

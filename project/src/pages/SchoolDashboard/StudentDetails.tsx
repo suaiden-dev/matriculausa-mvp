@@ -746,6 +746,42 @@ const StudentDetails: React.FC = () => {
       // Recarregar os dados para mostrar o novo status
       fetchStudentDocuments();
 
+      // Log: aprovação de document request pela universidade
+      try {
+        const studentProfileId = application?.user_profiles?.id;
+        const performedBy = user?.id || '';
+        if (studentProfileId && performedBy) {
+          // Enriquecer metadados com IP público (melhor esforço)
+          let clientIp: string | undefined = undefined;
+          try {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 2000);
+            const res = await fetch('https://api.ipify.org?format=json', { signal: controller.signal });
+            clearTimeout(timeout);
+            if (res.ok) {
+              const j = await res.json();
+              clientIp = j?.ip;
+            }
+          } catch (_) { /* ignore */ }
+
+          await supabase.rpc('log_student_action', {
+            p_student_id: studentProfileId,
+            p_action_type: 'document_approval',
+            p_action_description: `University approved document request upload: ${uploadData.file_url?.split('/').pop() || 'file'} (${uploadData.document_requests?.title || 'Request'})`,
+            p_performed_by: performedBy,
+            p_performed_by_type: 'university',
+            p_metadata: {
+              upload_id: documentId,
+              request_id: uploadData.document_requests?.id || null,
+              request_title: uploadData.document_requests?.title || null,
+              ip: clientIp
+            }
+          });
+        }
+      } catch (logErr) {
+        console.error('Failed to log university document approval:', logErr);
+      }
+
     } catch (err: any) {
       console.error("Error approving document:", err);
       alert(`Failed to approve document: ${err.message}`);
@@ -1369,6 +1405,41 @@ const StudentDetails: React.FC = () => {
       // Recarregar os dados da aplicação para garantir sincronização
       console.log('=== RECARREGANDO DADOS DA APLICAÇÃO ===');
       await fetchApplicationDetails();
+
+      // Log: envio de acceptance letter pela universidade
+      try {
+        const studentProfileId = application?.user_profiles?.id;
+        const performedBy = user?.id || '';
+        if (studentProfileId && performedBy) {
+          // Enriquecer metadados com IP público (melhor esforço)
+          let clientIp: string | undefined = undefined;
+          try {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 2000);
+            const res = await fetch('https://api.ipify.org?format=json', { signal: controller.signal });
+            clearTimeout(timeout);
+            if (res.ok) {
+              const j = await res.json();
+              clientIp = j?.ip;
+            }
+          } catch (_) { /* ignore */ }
+
+          await supabase.rpc('log_student_action', {
+            p_student_id: studentProfileId,
+            p_action_type: 'acceptance_letter_sent',
+            p_action_description: 'University sent acceptance letter',
+            p_performed_by: performedBy,
+            p_performed_by_type: 'university',
+            p_metadata: {
+              application_id: application.id,
+              acceptance_letter_url: publicUrl,
+              ip: clientIp
+            }
+          });
+        }
+      } catch (logErr) {
+        console.error('Failed to log acceptance letter sent (university):', logErr);
+      }
     } catch (error: any) {
       console.error('Error processing acceptance letter:', error);
       alert(`Failed to process acceptance letter: ${error.message}`);

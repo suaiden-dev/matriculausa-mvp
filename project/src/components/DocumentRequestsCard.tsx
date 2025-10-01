@@ -31,9 +31,10 @@ interface DocumentRequestsCardProps {
   currentUserId: string;
   studentType: 'initial' | 'transfer' | 'change_of_status';
   studentUserId?: string; // Novo: id do usuário do aluno
+  onDocumentUploaded?: (requestId: string, fileName: string, isResubmission: boolean) => void; // Callback para logging
 }
 
-const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ applicationId, isSchool, currentUserId, studentType, studentUserId }) => {
+const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ applicationId, isSchool, currentUserId, studentType, studentUserId, onDocumentUploaded }) => {
   const { t } = useTranslation();
   const [requests, setRequests] = useState<DocumentRequest[]>([]);
   const [uploads, setUploads] = useState<{ [requestId: string]: DocumentRequestUpload[] }>({});
@@ -693,6 +694,12 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
       }
 
       setSelectedFiles((prev: typeof selectedFiles) => ({ ...prev, [requestId]: null }));
+      
+      // Chamar callback de logging se fornecido
+      if (onDocumentUploaded) {
+        onDocumentUploaded(requestId, file.name, isResubmission);
+      }
+      
       fetchRequests();
     } finally {
       setUploading(prev => ({ ...prev, [requestId]: false }));
