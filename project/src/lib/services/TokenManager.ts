@@ -1,6 +1,5 @@
 import { supabase } from '../supabase';
-import { getMicrosoftAuthConfig, shouldUseWebAppFlow } from '../microsoftAuthConfig';
-import { MSALAccountManager } from '../msalAccountManager';
+import { refreshWebAppToken } from '../webAppAuthConfig';
 
 export interface TokenResult {
   accessToken: string;
@@ -41,21 +40,20 @@ export class TokenManager {
   }
 
   /**
-   * Renova o token usando MSAL ou Web App flow
+   * Renova o token usando APENAS Web App flow (com client_secret)
+   * SEM MSAL/SPA - Apenas Web App flow
    */
   async renewToken(): Promise<TokenResult | null> {
-    console.log('🔄 Attempting token renewal...');
+    console.log('🔄 Attempting token renewal via Web App flow...');
     
     try {
-      // Priorizar fluxo SPA (MSAL)
-      const msalResult = await this.tryMSALRenewal();
-      if (msalResult) return msalResult;
+      const refreshResult = await this.tryRefreshTokenRenewal();
+      if (refreshResult) {
+        console.log('✅ Token renewed via Web App flow');
+        return refreshResult;
+      }
 
-      // Fallback para Web App flow se MSAL falhar
-      const webAppResult = await this.tryWebAppRenewal();
-      if (webAppResult) return webAppResult;
-
-      console.error('❌ All token renewal methods failed');
+      console.log('❌ Web App flow failed - user needs to reconnect');
       return null;
     } catch (error) {
       console.error('❌ Error during token renewal:', error);
@@ -64,94 +62,41 @@ export class TokenManager {
   }
 
   /**
-   * Tenta renovar token via MSAL (SPA flow)
+   * Tenta renovar token via Refresh Token (Web App flow)
+   * Usa configuração centralizada para Web App
    */
-  private async tryMSALRenewal(): Promise<TokenResult | null> {
+  private async tryRefreshTokenRenewal(): Promise<TokenResult | null> {
     try {
-      console.log('🔄 Trying MSAL renewal...');
-      const msalManager = MSALAccountManager.getInstance();
-      const msalInstance = await msalManager.getMSALInstance();
-      const accounts = msalInstance.getAllAccounts();
-
-      if (accounts.length === 0) {
-        console.log('❌ No MSAL accounts found');
-        return null;
-      }
-
-      let targetAccount = accounts[0];
-      if (accounts.length > 1 && this.configId) {
-        const accountFromConfig = accounts.find(acc => 
-          acc.homeAccountId === this.configId || 
-          acc.localAccountId === this.configId || 
-          acc.username === this.configId
-        );
-        if (accountFromConfig) {
-          targetAccount = accountFromConfig;
-        }
-      }
-
-      const config = getMicrosoftAuthConfig();
-      const response = await msalInstance.acquireTokenSilent({
-        scopes: config.scopes,
-        account: targetAccount,
-        forceRefresh: true
-      });
-
-      console.log('✅ Token renewed successfully via MSAL');
-      return { 
-        accessToken: response.accessToken, 
-        refreshToken: this.refreshToken // MSAL não retorna refreshToken, usar o atual
-      };
-    } catch (error) {
-      console.error('❌ MSAL renewal failed:', error);
-      return null;
-    }
-  }
-
-  /**
-   * Tenta renovar token via Web App flow
-   */
-  private async tryWebAppRenewal(): Promise<TokenResult | null> {
-    try {
-      const useWebAppFlow = shouldUseWebAppFlow();
-      const config = getMicrosoftAuthConfig();
-
-      if (!useWebAppFlow || !config.clientSecret || !this.refreshToken) {
-        console.log('❌ Web App flow not available or refresh token missing');
-        return null;
-      }
-
-      console.log('🔄 Trying Web App flow renewal...');
+      console.log('🔄 Trying refresh token renewal via Web App flow...');
       
-      const response = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-          client_id: config.clientId,
-          client_secret: config.clientSecret,
-          refresh_token: this.refreshToken,
-          grant_type: 'refresh_token',
-          scope: config.scopes.join(' ')
-        })
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ Web App flow renewal failed:', response.status, errorText);
+      if (!this.refreshToken) {
+        console.log('❌ No refresh token available');
         return null;
       }
 
-      const data = await response.json();
+      // Usar função centralizada para Web App flow
+      const tokenData = await refreshWebAppToken(this.refreshToken);
       console.log('✅ Token renewed successfully via Web App flow');
-      return { 
-        accessToken: data.access_token, 
-        refreshToken: data.refresh_token 
+      
+      return {
+        accessToken: tokenData.access_token,
+        refreshToken: tokenData.refresh_token || this.refreshToken
       };
     } catch (error) {
-      console.error('❌ Web App flow renewal failed:', error);
+      console.error('❌ Refresh token renewal failed:', error);
+      
+      // Verificar se é erro AADSTS90023
+      if (error instanceof Error && error.message.includes('AADSTS90023')) {
+        console.error('🚨 Erro AADSTS90023 detectado!');
+        console.error('💡 Solução: Verificar configuração Azure AD - aplicação deve ser registrada como Web App');
+        console.error('🔧 Verifique se não há URLs duplicadas entre Web e SPA no Azure AD Portal');
+      }
+      
       return null;
     }
   }
+
+
 
   /**
    * Atualiza tokens no banco de dados
@@ -180,15 +125,20 @@ export class TokenManager {
   }
 
   /**
-   * Marca conta como desconectada
+   * Marca conta como desconectada e limpa tokens
    */
   async markAccountAsDisconnected(): Promise<void> {
     try {
+      console.log('🔄 Marking account as disconnected and clearing tokens...');
+      
+      // Limpar tokens e marcar como inativa
       const { error } = await supabase
         .from('email_configurations')
         .update({
-          oauth_access_token: null,
-          oauth_refresh_token: null
+          is_active: false,
+          oauth_access_token: '', // Limpar access token
+          oauth_refresh_token: '', // Limpar refresh token
+          oauth_token_expires_at: new Date(0).toISOString() // Marcar como expirado
         })
         .eq('id', this.configId);
 
@@ -196,6 +146,16 @@ export class TokenManager {
         console.error('❌ Error marking account as disconnected:', error);
       } else {
         console.log('✅ Account marked as disconnected and tokens cleared');
+        
+        // Limpar localStorage relacionado ao Microsoft
+        const keys = Object.keys(localStorage);
+        keys.forEach(key => {
+          if (key.includes('microsoft') || key.includes('azure')) {
+            localStorage.removeItem(key);
+          }
+        });
+        console.log('✅ Microsoft localStorage cleared');
+        
         window.dispatchEvent(new CustomEvent('microsoft-connection-updated'));
       }
     } catch (error) {

@@ -59,17 +59,14 @@ export default function EmailCompose({ onClose, onSent }: EmailComposeProps) {
 
       // Criar email
       const emailMessage = {
-        message: {
-          subject: subject,
-          body: {
-            contentType: 'HTML',
-            content: body.replace(/\n/g, '<br>')
-          },
-          toRecipients: toRecipients,
-          ccRecipients: ccRecipients,
-          bccRecipients: bccRecipients
+        subject: subject,
+        body: {
+          contentType: 'HTML',
+          content: body.replace(/\n/g, '<br>')
         },
-        saveToSentItems: true
+        toRecipients: toRecipients,
+        ccRecipients: ccRecipients,
+        bccRecipients: bccRecipients
       };
 
       // Enviar email

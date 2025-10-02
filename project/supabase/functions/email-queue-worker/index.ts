@@ -118,24 +118,52 @@ class QueueAIService {
       // Buscar informações completas do agente
       const { data: agentData } = await supabase
         .from('ai_configurations')
-        .select('ai_name, company_name, personality, final_prompt')
+        .select('id, ai_name, company_name, personality, final_prompt')
         .eq('university_id', userId)
         .eq('is_active', true)
         .maybeSingle();
+        
+      // 🔍 BUSCAR BASE DE CONHECIMENTO ESPECÍFICA DO AGENTE
+      let knowledgeBase = '';
+      try {
+        // Primeiro, buscar documentos específicos do agente
+        const { data: agentDocs, error: agentDocsError } = await supabase
+          .from('ai_agent_knowledge_documents')
+          .select('transcription, document_name')
+          .eq('ai_configuration_id', agentData?.id || '')
+          .eq('transcription_status', 'completed')
+          .not('transcription', 'is', null);
+        
+        if (!agentDocsError && agentDocs && agentDocs.length > 0) {
+          knowledgeBase = agentDocs
+            .map(doc => `## ${doc.document_name}\n\n${doc.transcription}`)
+            .join('\n\n---\n\n');
+          console.log(`📚 [WORKER] Documentos específicos do agente encontrados: ${agentDocs.length} documentos`);
+        } else {
+          console.log(`📚 [WORKER] Nenhum documento específico do agente encontrado`);
+        }
+      } catch (error) {
+        console.error('❌ [WORKER] Erro ao buscar base de conhecimento do agente:', error);
+      }
         
       // Criar prompt personalizado automaticamente
       let universityPrompt;
       if (agentData) {
         const { ai_name, company_name, personality, final_prompt } = agentData;
-        universityPrompt = final_prompt || `Você é ${ai_name}, um assistente de IA da ${company_name}. 
+        universityPrompt = final_prompt || `You are ${ai_name}, an AI assistant for ${company_name}. 
         
-PERSONALIDADE: ${personality}
-UNIVERSIDADE: ${company_name}
-NOME DO AGENTE: ${ai_name}
+PERSONALITY: ${personality}
+UNIVERSITY: ${company_name}
+AGENT NAME: ${ai_name}
 
-Use sempre seu nome real (${ai_name}) e o nome da universidade (${company_name}) nas respostas.`;
+Always use your real name (${ai_name}) and the university name (${company_name}) in your responses.`;
       } else {
-        universityPrompt = 'Você é um assistente universitário.';
+        universityPrompt = 'You are a university assistant.';
+      }
+      
+      // 🔗 INTEGRAR BASE DE CONHECIMENTO NO PROMPT
+      if (knowledgeBase) {
+        universityPrompt += `\n\n<knowledge-base>\n${knowledgeBase}\n</knowledge-base>\n\nIMPORTANTE: Use as informações da base de conhecimento acima para responder às perguntas dos estudantes. Se a informação não estiver na base de conhecimento, responda de forma geral e sugira que o estudante entre em contato diretamente com a universidade para informações específicas.`;
       }
       
       // Preparar prompt para Gemini
@@ -680,27 +708,55 @@ Deno.serve(async (req) => {
             console.log('✅ [WORKER] Uso incrementado:', usageUpdate);
           }
           
-          // Buscar prompt da universidade (já contém base de conhecimento)
+          // Buscar prompt da universidade
           const { data: agentData } = await supabase
             .from('ai_configurations')
-            .select('ai_name, company_name, personality, final_prompt')
+            .select('id, ai_name, company_name, personality, final_prompt')
             .eq('university_id', body.userId)
             .eq('is_active', true)
             .maybeSingle();
+            
+          // 🔍 BUSCAR BASE DE CONHECIMENTO ESPECÍFICA DO AGENTE
+          let knowledgeBase = '';
+          try {
+            // Primeiro, buscar documentos específicos do agente
+            const { data: agentDocs, error: agentDocsError } = await supabase
+              .from('ai_agent_knowledge_documents')
+              .select('transcription, document_name')
+              .eq('ai_configuration_id', agentData?.id || '')
+              .eq('transcription_status', 'completed')
+              .not('transcription', 'is', null);
+            
+            if (!agentDocsError && agentDocs && agentDocs.length > 0) {
+              knowledgeBase = agentDocs
+                .map(doc => `## ${doc.document_name}\n\n${doc.transcription}`)
+                .join('\n\n---\n\n');
+              console.log(`📚 [WORKER] Documentos específicos do agente encontrados: ${agentDocs.length} documentos`);
+            } else {
+              console.log(`📚 [WORKER] Nenhum documento específico do agente encontrado`);
+            }
+          } catch (error) {
+            console.error('❌ [WORKER] Erro ao buscar base de conhecimento do agente:', error);
+          }
             
           // Criar prompt personalizado automaticamente
           let universityPrompt;
           if (agentData) {
             const { ai_name, company_name, personality, final_prompt } = agentData;
-            universityPrompt = final_prompt || `Você é ${ai_name}, um assistente de IA da ${company_name}. 
+            universityPrompt = final_prompt || `You are ${ai_name}, an AI assistant for ${company_name}. 
             
-PERSONALIDADE: ${personality}
-UNIVERSIDADE: ${company_name}
-NOME DO AGENTE: ${ai_name}
+PERSONALITY: ${personality}
+UNIVERSITY: ${company_name}
+AGENT NAME: ${ai_name}
 
-Use sempre seu nome real (${ai_name}) e o nome da universidade (${company_name}) nas respostas.`;
+Always use your real name (${ai_name}) and the university name (${company_name}) in your responses.`;
           } else {
-            universityPrompt = 'Você é um assistente universitário.';
+            universityPrompt = 'You are a university assistant.';
+          }
+          
+          // 🔗 INTEGRAR BASE DE CONHECIMENTO NO PROMPT
+          if (knowledgeBase) {
+            universityPrompt += `\n\n<knowledge-base>\n${knowledgeBase}\n</knowledge-base>\n\nIMPORTANTE: Use as informações da base de conhecimento acima para responder às perguntas dos estudantes. Se a informação não estiver na base de conhecimento, responda de forma geral e sugira que o estudante entre em contato diretamente com a universidade para informações específicas.`;
           }
           
           // Detectar idioma da mensagem

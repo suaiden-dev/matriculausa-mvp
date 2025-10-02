@@ -473,7 +473,7 @@ const EmailDetail: React.FC<EmailDetailProps> = ({
             <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-4 text-sm text-slate-600">
               <div className="flex items-center space-x-2 min-w-0">
                 <User className="h-4 w-4 flex-shrink-0" />
-                <span className="truncate">{email.from}</span>
+                <span className="truncate">{typeof email.from === 'string' ? email.from : email.from?.emailAddress?.name || email.from?.emailAddress?.address || 'Desconhecido'}</span>
               </div>
               <div className="flex items-center space-x-2 flex-shrink-0">
                 <Calendar className="h-4 w-4" />

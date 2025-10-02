@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, HelpCircle, Sparkles } from 'lucide-react';
+import { Route, HelpCircle, Sparkles } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import StepByStepGuide from './StepByStepGuide';
 import { useStepByStepGuide } from '../../hooks/useStepByStepGuide';
@@ -21,7 +21,7 @@ const StepByStepButton: React.FC = () => {
         title={t('stepByStepGuide.title')}
         type="button"
       >
-        <Play className="w-5 h-5 mr-1" />
+        <Route className="w-5 h-5 mr-1" />
         <span className="text-xs font-semibold hidden sm:inline">{t('stepByStepGuide.subtitle')}</span>
       </motion.button>
       <StepByStepGuide isOpen={isGuideOpen} onClose={closeGuide} />

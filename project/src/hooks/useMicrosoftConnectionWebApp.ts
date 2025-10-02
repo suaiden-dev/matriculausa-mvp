@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
-import { activateFetchInterceptor } from '../lib/utils/fetchInterceptor';
 
 // Constante para chave do localStorage
 const ACTIVE_MICROSOFT_CONNECTION_KEY = 'active_microsoft_connection';
@@ -28,7 +27,6 @@ export interface UseMicrosoftConnectionReturn {
   setActiveConnection: (email: string) => Promise<void>;
   clearError: () => void;
   setShowSecurityWarning: (show: boolean) => void;
-  activateFetchInterceptor: () => void;
 }
 
 export const useMicrosoftConnection = (): UseMicrosoftConnectionReturn => {
@@ -221,12 +219,6 @@ export const useMicrosoftConnection = (): UseMicrosoftConnectionReturn => {
     }
   }, [activeConnection, checkConnections]);
 
-  // Função para ativar interceptador de fetch
-  const handleActivateFetchInterceptor = useCallback(() => {
-    activateFetchInterceptor();
-    console.log('✅ Interceptador de fetch ativado');
-  }, []);
-
   return {
     connections,
     activeConnection,
@@ -236,7 +228,6 @@ export const useMicrosoftConnection = (): UseMicrosoftConnectionReturn => {
     disconnectMicrosoft,
     setActiveConnection,
     clearError,
-    setShowSecurityWarning,
-    activateFetchInterceptor: handleActivateFetchInterceptor
+    setShowSecurityWarning
   };
 };
