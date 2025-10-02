@@ -103,10 +103,21 @@ const AdminStudentDetails: React.FC = () => {
   const [loadingDocuments, setLoadingDocuments] = useState(false);
   const [uploadingDocumentRequest, setUploadingDocumentRequest] = useState<{[key: string]: boolean}>({});
   const [approvingDocumentRequest, setApprovingDocumentRequest] = useState<{[key: string]: boolean}>({});
-  // Campo de notas do admin
-  const [adminNotes, setAdminNotes] = useState<string>('');
-  const [editingNotes, setEditingNotes] = useState(false);
+  // Campo de notas do admin - agora como lista
+  const [adminNotes, setAdminNotes] = useState<Array<{
+    id: string;
+    content: string;
+    created_by: string;
+    created_by_name: string;
+    created_at: string;
+  }>>([]);
   const [savingNotes, setSavingNotes] = useState(false);
+  const [isAddingNote, setIsAddingNote] = useState(false);
+  const [newNoteContent, setNewNoteContent] = useState('');
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [editingNoteContent, setEditingNoteContent] = useState('');
+  const [deletingNoteId, setDeletingNoteId] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   // Estados para edição de métodos de pagamento
   const [editingPaymentMethod, setEditingPaymentMethod] = useState<string | null>(null);
   const [newPaymentMethod, setNewPaymentMethod] = useState<'stripe' | 'zelle' | 'manual'>('manual');
@@ -458,7 +469,42 @@ const AdminStudentDetails: React.FC = () => {
 
         setStudent(formatted);
         setDependents(Number(s.dependents || 0));
-        setAdminNotes(s.admin_notes || '');
+        
+        // Processar notas do admin - converter de string para array se necessário
+        if (s.admin_notes) {
+          try {
+            // Se for um array JSON, usar diretamente
+            if (Array.isArray(s.admin_notes)) {
+              setAdminNotes(s.admin_notes);
+            } else {
+              // Se for string, tentar fazer parse ou criar array com nota única
+              const parsed = JSON.parse(s.admin_notes);
+              if (Array.isArray(parsed)) {
+                setAdminNotes(parsed);
+              } else {
+                // Fallback: criar array com nota única
+                setAdminNotes([{
+                  id: `note-${Date.now()}`,
+                  content: s.admin_notes,
+                  created_by: 'unknown',
+                  created_by_name: 'Admin',
+                  created_at: new Date().toISOString()
+                }]);
+              }
+            }
+          } catch {
+            // Se não conseguir fazer parse, criar array com nota única
+            setAdminNotes([{
+              id: `note-${Date.now()}`,
+              content: s.admin_notes,
+              created_by: 'unknown',
+              created_by_name: 'Admin',
+              created_at: new Date().toISOString()
+            }]);
+          }
+        } else {
+          setAdminNotes([]);
+        }
         
         // Calcular deadline do I-20
         calculateI20Deadline(formatted);
@@ -602,30 +648,128 @@ const AdminStudentDetails: React.FC = () => {
     }
   };
 
-  const handleSaveNotes = async () => {
-    if (!student) return;
+  const handleAddNote = async () => {
+    if (!student || !newNoteContent.trim()) return;
     
     setSavingNotes(true);
     try {
+      const newNote = {
+        id: `note-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        content: newNoteContent.trim(),
+        created_by: user?.id || 'unknown',
+        created_by_name: user?.email || 'Admin',
+        created_at: new Date().toISOString()
+      };
+
+      const updatedNotes = [newNote, ...adminNotes];
+      
       const { error } = await supabase
         .from('user_profiles')
         .update({
-          admin_notes: adminNotes,
+          admin_notes: JSON.stringify(updatedNotes),
           updated_at: new Date().toISOString()
         })
         .eq('id', student.student_id);
 
       if (error) throw error;
       
-      setEditingNotes(false);
-      setStudent(prev => prev ? { ...prev, admin_notes: adminNotes } : prev);
-      showToast('Notes saved successfully');
+      setAdminNotes(updatedNotes);
+      setNewNoteContent('');
+      setStudent(prev => prev ? { ...prev, admin_notes: JSON.stringify(updatedNotes) } : prev);
+      showToast('Note added successfully');
     } catch (error) {
-      console.error('Error saving notes:', error);
-      showToast('Error saving notes', 'error');
+      console.error('Error adding note:', error);
+      showToast('Error adding note', 'error');
     } finally {
       setSavingNotes(false);
     }
+  };
+
+  const handleEditNote = (noteId: string) => {
+    const note = adminNotes.find(n => n.id === noteId);
+    if (note) {
+      setEditingNoteId(noteId);
+      setEditingNoteContent(note.content);
+    }
+  };
+
+  const handleSaveEditNote = async () => {
+    if (!student || !editingNoteId || !editingNoteContent.trim()) return;
+    
+    setSavingNotes(true);
+    try {
+      const updatedNotes = adminNotes.map(note => 
+        note.id === editingNoteId 
+          ? { ...note, content: editingNoteContent.trim() }
+          : note
+      );
+      
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({
+          admin_notes: JSON.stringify(updatedNotes),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', student.student_id);
+
+      if (error) throw error;
+      
+      setAdminNotes(updatedNotes);
+      setEditingNoteId(null);
+      setEditingNoteContent('');
+      setStudent(prev => prev ? { ...prev, admin_notes: JSON.stringify(updatedNotes) } : prev);
+      showToast('Note updated successfully');
+    } catch (error) {
+      console.error('Error updating note:', error);
+      showToast('Error updating note', 'error');
+    } finally {
+      setSavingNotes(false);
+    }
+  };
+
+  const handleCancelEditNote = () => {
+    setEditingNoteId(null);
+    setEditingNoteContent('');
+  };
+
+  const handleDeleteNote = (noteId: string) => {
+    setDeletingNoteId(noteId);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDeleteNote = async () => {
+    if (!student || !deletingNoteId) return;
+    
+    setSavingNotes(true);
+    try {
+      const updatedNotes = adminNotes.filter(note => note.id !== deletingNoteId);
+      
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({
+          admin_notes: JSON.stringify(updatedNotes),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', student.student_id);
+
+      if (error) throw error;
+      
+      setAdminNotes(updatedNotes);
+      setStudent(prev => prev ? { ...prev, admin_notes: JSON.stringify(updatedNotes) } : prev);
+      showToast('Note deleted successfully');
+    } catch (error) {
+      console.error('Error deleting note:', error);
+      showToast('Error deleting note', 'error');
+    } finally {
+      setSavingNotes(false);
+      setDeletingNoteId(null);
+      setShowDeleteConfirm(false);
+    }
+  };
+
+  const cancelDeleteNote = () => {
+    setDeletingNoteId(null);
+    setShowDeleteConfirm(false);
   };
 
   const handleUpdatePaymentMethod = async (feeType: 'selection_process' | 'application' | 'scholarship' | 'i20_control') => {
@@ -2035,72 +2179,151 @@ const AdminStudentDetails: React.FC = () => {
               {/* Admin Notes - Only for Platform Admins */}
               {isPlatformAdmin && (
                 <div className="bg-slate-50 rounded-xl p-4">
-                  <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center">
-                    <FileText className="w-5 h-5 mr-2 text-[#05294E]" />
-                    Admin Notes
-                  </h3>
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-slate-900 flex items-center">
+                  <FileText className="w-5 h-5 mr-2 text-[#05294E]" />
+                  Admin Notes
+                </h3>
+                <button
+                  onClick={() => setIsAddingNote(true)}
+                  className="px-3 py-1 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-sm rounded-lg flex items-center space-x-1"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                  <span>New Note</span>
+                </button>
+              </div>
                   <div className="space-y-4">
-                    {editingNotes ? (
-                      <div className="space-y-3">
-                        <label className="block text-sm font-medium text-slate-700">
-                          Add notes about this student
-                        </label>
-                        <textarea
-                          value={adminNotes}
-                          onChange={(e) => setAdminNotes(e.target.value)}
-                          placeholder="Enter any notes, observations, or comments about this student..."
-                          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] resize-none"
-                          rows={3}
-                        />
-                        <div className="flex items-center justify-between">
-                          <p className="text-xs text-slate-500">
-                            These notes are only visible to platform administrators.
-                          </p>
-                          <div className="flex items-center space-x-2">
-                            <button
-                              onClick={handleSaveNotes}
-                              disabled={savingNotes}
-                              className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg flex items-center space-x-1"
-                            >
-                              <Save className="w-4 h-4" />
-                              <span>{savingNotes ? 'Saving...' : 'Save'}</span>
-                            </button>
-                            <button
-                              onClick={() => {
-                                setEditingNotes(false);
-                                setAdminNotes(student?.admin_notes || '');
-                              }}
-                              className="px-3 py-1 bg-slate-600 hover:bg-slate-700 text-white text-sm rounded-lg flex items-center space-x-1"
-                            >
-                              <X className="w-4 h-4" />
-                              <span>Cancel</span>
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        {adminNotes ? (
-                          <div className="bg-white border border-slate-200 rounded-lg p-3">
-                            <p className="text-slate-900 whitespace-pre-wrap text-sm">{adminNotes}</p>
-                          </div>
-                        ) : (
-                          <div className="text-center py-4">
-                            <FileText className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                            <p className="text-slate-500 text-sm">No notes added yet</p>
-                          </div>
-                        )}
-                        <div className="flex justify-end">
+                    {/* Formulário para adicionar nova nota */}
+                    {isAddingNote && (
+                    <div className="bg-white border border-slate-200 rounded-lg p-4">
+                      <label className="block text-sm font-medium text-slate-700 mb-2">
+                        Add a new note
+                      </label>
+                      <textarea
+                        value={newNoteContent}
+                        onChange={(e) => setNewNoteContent(e.target.value)}
+                        placeholder="Enter your note about this student..."
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] resize-none"
+                        rows={3}
+                        disabled={savingNotes}
+                      />
+                      <div className="flex items-center justify-between mt-3">
+                        <p className="text-xs text-slate-500">
+                          These notes are only visible to platform administrators.
+                        </p>
+                        <div className="flex items-center space-x-2">
                           <button
-                            onClick={() => setEditingNotes(true)}
-                            className="px-3 py-1 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-sm rounded-lg flex items-center space-x-1"
+                            onClick={() => { setIsAddingNote(false); setNewNoteContent(''); }}
+                            disabled={savingNotes}
+                            className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white text-sm rounded-lg flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            <Edit3 className="w-4 h-4" />
-                            <span>Edit Notes</span>
+                            <span>Cancel</span>
+                          </button>
+                          <button
+                            onClick={async () => { await handleAddNote(); setIsAddingNote(false); }}
+                            disabled={savingNotes || !newNoteContent.trim()}
+                            className="px-4 py-2 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-sm rounded-lg flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <Save className="w-4 h-4" />
+                            <span>{savingNotes ? 'Adding...' : 'Add Note'}</span>
                           </button>
                         </div>
                       </div>
+                    </div>
                     )}
+
+                    {/* Lista de notas existentes */}
+                    <div className="space-y-3">
+                      {adminNotes.length > 0 ? (
+                        <div className="space-y-3">
+                          {adminNotes.map((note, index) => (
+                            <div key={note.id} className="bg-white border border-slate-200 rounded-lg p-4">
+                              <div className="flex items-start justify-between mb-2">
+                                <div className="flex items-center space-x-2">
+                                  <div className="w-2 h-2 bg-[#05294E] rounded-full flex-shrink-0 mt-2"></div>
+                                  <div>
+                                    <p className="text-sm font-medium text-slate-900">{note.created_by_name}</p>
+                                    <p className="text-xs text-slate-500">
+                                      {new Date(note.created_at).toLocaleString('pt-BR', {
+                                        year: 'numeric',
+                                        month: '2-digit',
+                                        day: '2-digit',
+                                        hour: '2-digit',
+                                        minute: '2-digit'
+                                      })}
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  <span className="text-xs text-slate-400 bg-slate-100 px-2 py-1 rounded-full">
+                                    #{adminNotes.length - index}
+                                  </span>
+                                  <div className="flex items-center space-x-1">
+                                    <button
+                                      onClick={() => handleEditNote(note.id)}
+                                      disabled={savingNotes || editingNoteId === note.id}
+                                      className="p-1 text-slate-400 hover:text-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                      title="Edit note"
+                                    >
+                                      <Edit3 className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteNote(note.id)}
+                                      disabled={savingNotes || editingNoteId === note.id}
+                                      className="p-1 text-slate-400 hover:text-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                      title="Delete note"
+                                    >
+                                      <X className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              {/* Conteúdo da nota - modo visualização ou edição */}
+                              {editingNoteId === note.id ? (
+                                <div className="ml-4 space-y-3">
+                                  <textarea
+                                    value={editingNoteContent}
+                                    onChange={(e) => setEditingNoteContent(e.target.value)}
+                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] resize-none text-sm"
+                                    rows={3}
+                                    disabled={savingNotes}
+                                  />
+                                  <div className="flex items-center space-x-2">
+                                    <button
+                                      onClick={handleSaveEditNote}
+                                      disabled={savingNotes || !editingNoteContent.trim()}
+                                      className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg flex items-center space-x-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                      <Save className="w-3 h-3" />
+                                      <span>{savingNotes ? 'Saving...' : 'Save'}</span>
+                                    </button>
+                                    <button
+                                      onClick={handleCancelEditNote}
+                                      disabled={savingNotes}
+                                      className="px-3 py-1 bg-slate-600 hover:bg-slate-700 text-white text-sm rounded-lg flex items-center space-x-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                      <X className="w-3 h-3" />
+                                      <span>Cancel</span>
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <p className="text-slate-900 text-sm whitespace-pre-wrap ml-4">
+                                  {note.content}
+                                </p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-6">
+                          <FileText className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                          <p className="text-slate-500 text-sm">No notes added yet</p>
+                          <p className="text-xs text-slate-400 mt-1">Add your first note above</p>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
@@ -3235,6 +3458,45 @@ const AdminStudentDetails: React.FC = () => {
             studentId={student.student_id} 
             studentName={student.student_name} 
           />
+        </div>
+      )}
+
+      {/* Delete Note Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md mx-4">
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="p-2 bg-red-100 rounded-lg">
+                <XCircle className="w-6 h-6 text-red-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-slate-900">
+                Delete Note
+              </h3>
+            </div>
+            
+            <p className="text-sm text-slate-600 mb-6">
+              Are you sure you want to delete this note? This action cannot be undone.
+            </p>
+            
+            <div className="flex space-x-3">
+              <button
+                onClick={cancelDeleteNote}
+                className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteNote}
+                disabled={savingNotes}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors flex items-center justify-center space-x-2"
+              >
+                <XCircle className="w-4 h-4" />
+                <span>
+                  {savingNotes ? 'Deleting...' : 'Delete Note'}
+                </span>
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
