@@ -360,6 +360,36 @@ const useDocumentProcessing = () => {
 
     if (updateError) throw updateError;
 
+    // 🔗 VINCULAR DOCUMENTOS AO AGENTE ESPECÍFICO
+    // Copiar documentos para ai_agent_knowledge_documents se for Microsoft
+    if (!activeEmailConfig?.id) { // Microsoft (ai_configurations)
+      try {
+        for (const doc of pendingDocs) {
+          const { error: copyError } = await supabase
+            .from('ai_agent_knowledge_documents')
+            .insert({
+              ai_configuration_id: agentId,
+              document_name: doc.document_name,
+              file_url: doc.file_url || '',
+              file_size: 0, // Tamanho não disponível na tabela origem
+              mime_type: 'application/pdf', // Assumindo PDF
+              uploaded_by_user_id: user?.id || 'system',
+              transcription: doc.transcription,
+              transcription_status: doc.transcription_status,
+              transcription_processed_at: doc.transcription_status === 'completed' ? new Date().toISOString() : null
+            });
+
+          if (copyError) {
+            console.error(`Error copying document ${doc.document_name} to agent:`, copyError);
+          } else {
+            console.log(`✅ Document ${doc.document_name} linked to agent ${agentId}`);
+          }
+        }
+      } catch (error) {
+        console.error('Error linking documents to agent:', error);
+      }
+    }
+
     const webhookResults: WebhookResult[] = [];
             
     for (const doc of pendingDocs) {
@@ -415,26 +445,26 @@ export default function EmailAgentManagement({ activeEmailConfig }: EmailAgentMa
       return '';
     }
 
-    return `Você é ${aiName}, um assistente de IA especializado em ${agentType.toLowerCase()} da ${companyName}.
+    return `You are ${aiName}, an AI assistant specialized in ${agentType.toLowerCase()} at ${companyName}.
 
-PERSONALIDADE: ${personality}
-UNIVERSIDADE: ${companyName}
-NOME DO AGENTE: ${aiName}
-DEPARTAMENTO: ${agentType}
+PERSONALITY: ${personality}
+UNIVERSITY: ${companyName}
+AGENT NAME: ${aiName}
+DEPARTMENT: ${agentType}
 
-INSTRUÇÕES IMPORTANTES:
-- Use sempre seu nome real: ${aiName}
-- Use sempre o nome da universidade: ${companyName}
-- Seja ${personality.toLowerCase()} em suas respostas
-- Forneça informações específicas sobre programas, bolsas e processos de admissão
-- Mencione o MatriculaUSA quando relevante para ajudar estudantes internacionais
-- Seja prestativo e profissional
-- Se não souber algo específico, seja honesto mas ofereça alternativas
+IMPORTANT INSTRUCTIONS:
+- Always use your real name: ${aiName}
+- Always use the university name: ${companyName}
+- Be ${personality.toLowerCase()} in your responses
+- Provide specific information about programs, scholarships, and admission processes
+- Mention MatriculaUSA when relevant to help international students
+- Be helpful and professional
+- If you don't know something specific, be honest but offer alternatives
 
-EXEMPLO DE ASSINATURA:
-Atenciosamente,
+SIGNATURE EXAMPLE:
+Best regards,
 ${aiName}
-Departamento de ${agentType} - ${companyName}`;
+${agentType} Department - ${companyName}`;
   }, []);
 
   // Handlers
@@ -520,25 +550,12 @@ Departamento de ${agentType} - ${companyName}`;
       // 🎯 GERAR PROMPT PERSONALIZADO AUTOMATICAMENTE (como WhatsApp Connect)
       let finalPrompt = formData.custom_prompt;
       if (!finalPrompt) {
-        finalPrompt = `Você é ${formData.ai_name}, um assistente de IA especializado em admissões universitárias da ${formData.company_name}.
-
-PERSONALIDADE: ${formData.personality}
-UNIVERSIDADE: ${formData.company_name}
-NOME DO AGENTE: ${formData.ai_name}
-DEPARTAMENTO: Admissões e Bolsas de Estudo
-
-INSTRUÇÕES IMPORTANTES:
-- Use sempre seu nome real: ${formData.ai_name}
-- Use sempre o nome da universidade: ${formData.company_name}
-- Seja ${formData.personality.toLowerCase()} em suas respostas
-- Forneça informações específicas sobre programas, bolsas e processos de admissão
-- Mencione o MatriculaUSA quando relevante
-- Seja prestativo e profissional
-
-EXEMPLO DE ASSINATURA:
-Atenciosamente,
-${formData.ai_name}
-Departamento de Admissões - ${formData.company_name}`;
+        finalPrompt = generateCustomPrompt(
+          formData.ai_name,
+          formData.company_name,
+          formData.personality,
+          formData.agent_type
+        );
       }
 
       // Processar documentos pendentes se houver
@@ -966,7 +983,7 @@ Departamento de Admissões - ${formData.company_name}`;
                       <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
                         <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                         <span className="text-sm text-green-700 font-medium">
-                          ✨ Prompt personalizado gerado automaticamente
+                          ✨ Custom prompt generated automatically
                         </span>
                       </div>
                     )}
@@ -980,7 +997,7 @@ Departamento de Admissões - ${formData.company_name}`;
                       rows={6}
                     />
                     <p className="text-xs text-gray-500">
-                      💡 <strong>Dica:</strong> O prompt foi gerado automaticamente com base nos dados do agente. Você pode editá-lo conforme necessário.
+                      💡 <strong>Tip:</strong> The prompt was automatically generated based on the agent data. You can edit it as needed.
                     </p>
                   </div>
                 )}

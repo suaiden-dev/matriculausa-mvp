@@ -101,12 +101,12 @@ function createAIPrompt(
   console.log('🤖 Creating AI prompt');
   
   const baseInstructions = aiSettings.custom_instructions || 
-    'Você é um assistente de admissões virtual, amigável e eficiente, trabalhando para esta universidade. Sua comunicação deve ser clara, profissional e encorajadora. Você representa a plataforma Matrícula USA.';
+    'You are a virtual admissions assistant, friendly and efficient, working for this university. Your communication should be clear, professional and encouraging. You represent the MatriculaUSA platform.';
 
   const toneInstructions = {
-    'formal': 'Use um tom formal e profissional em suas respostas.',
-    'friendly': 'Use um tom amigável e acolhedor em suas respostas.',
-    'neutral': 'Use um tom neutro e equilibrado em suas respostas.'
+    'formal': 'Use a formal and professional tone in your responses.',
+    'friendly': 'Use a friendly and welcoming tone in your responses.',
+    'neutral': 'Use a neutral and balanced tone in your responses.'
   };
 
   const historyContext = conversationHistory.length > 0 
@@ -167,7 +167,7 @@ async function callOpenAI(prompt: string, model: string = 'gpt-4o'): Promise<AIR
         messages: [
           {
             role: 'system',
-            content: 'Você é um assistente especializado em admissões universitárias. Responda de forma clara, profissional e útil.'
+            content: 'You are an assistant specialized in university admissions. Respond clearly, professionally and helpfully.'
           },
           {
             role: 'user',

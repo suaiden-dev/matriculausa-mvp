@@ -363,7 +363,7 @@ export default function AIManager() {
                   <div>
                     <p className="text-sm font-medium text-gray-800">{email.subject}</p>
                     <div className="text-xs text-gray-500">
-                      De: {email.from} • {formatDate(email.processedAt)}
+                      De: {typeof email.from === 'string' ? email.from : email.from?.emailAddress?.name || email.from?.emailAddress?.address || 'Desconhecido'} • {formatDate(email.processedAt)}
                     </div>
                   </div>
                   <div className="text-xs text-gray-500">

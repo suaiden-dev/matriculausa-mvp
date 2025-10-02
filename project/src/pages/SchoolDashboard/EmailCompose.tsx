@@ -358,17 +358,14 @@ const EmailCompose = () => {
 
       // Create email message
       const emailMessage = {
-        message: {
-          subject: formData.subject,
-          body: {
-            contentType: formData.html_content.trim() ? 'HTML' : 'Text',
-            content: formData.html_content.trim() || formData.text_content.replace(/\n/g, '<br>')
-          },
-          toRecipients: toRecipients,
-          ccRecipients: ccRecipients.length > 0 ? ccRecipients : undefined,
-          bccRecipients: bccRecipients.length > 0 ? bccRecipients : undefined
+        subject: formData.subject,
+        body: {
+          contentType: formData.html_content.trim() ? 'HTML' : 'Text',
+          content: formData.html_content.trim() || formData.text_content.replace(/\n/g, '<br>')
         },
-        saveToSentItems: true
+        toRecipients: toRecipients,
+        ccRecipients: ccRecipients.length > 0 ? ccRecipients : undefined,
+        bccRecipients: bccRecipients.length > 0 ? bccRecipients : undefined
       };
 
       // Send email via Microsoft Graph

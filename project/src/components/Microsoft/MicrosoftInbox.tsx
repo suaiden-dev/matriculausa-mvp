@@ -17,6 +17,7 @@ import { GraphService } from '../../lib/services/GraphService';
 import EmailAgentManagement from '../../pages/SchoolDashboard/EmailAgentManagement';
 import { useUniversity } from '../../context/UniversityContext';
 import { supabase } from '../../lib/supabase';
+import MicrosoftConnectionStatus from '../MicrosoftConnectionStatus';
 
 
 // Interfaces
@@ -91,6 +92,7 @@ export default function MicrosoftInbox() {
   const [isMobile, setIsMobile] = useState(false);
   // const [sidebarOpen, setSidebarOpen] = useState(false); // Removed - Sidebar always visible
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+  
 
   // Estados para controle de requisições (SIMPLIFICADO)
   const [isLoadingData, setIsLoadingData] = useState(false);
@@ -959,6 +961,78 @@ export default function MicrosoftInbox() {
     setShowComposeModal(true);
   };
 
+  const handleSendEmail = async () => {
+    if (!composeData.to.trim() || !composeData.subject.trim() || !composeData.message.trim()) {
+      alert('Preencha todos os campos obrigatórios.');
+      return;
+    }
+
+    if (!activeConnection) {
+      alert('Microsoft account not connected. Please connect your Microsoft account first.');
+      return;
+    }
+
+    try {
+      console.log('📤 Sending email via Microsoft Graph from inbox...');
+      
+      // Create GraphService with the active connection
+      const graphService = new GraphService(activeConnection.access_token);
+      
+      // Prepare recipients
+      const toRecipients = composeData.to.split(',').map(email => ({
+        emailAddress: {
+          address: email.trim()
+        }
+      }));
+
+      const ccRecipients = composeData.cc ? composeData.cc.split(',').map(email => ({
+        emailAddress: {
+          address: email.trim()
+        }
+      })) : [];
+
+      const bccRecipients = composeData.bcc ? composeData.bcc.split(',').map(email => ({
+        emailAddress: {
+          address: email.trim()
+        }
+      })) : [];
+
+      // Create email message
+      const emailMessage = {
+        subject: composeData.subject,
+        body: {
+          contentType: 'HTML',
+          content: composeData.message.replace(/\n/g, '<br>')
+        },
+        toRecipients: toRecipients,
+        ccRecipients: ccRecipients,
+        bccRecipients: bccRecipients
+      };
+
+      // Send email
+      await graphService.sendEmail(emailMessage);
+      
+      console.log('✅ Email sent successfully from inbox');
+      
+      // Reset form and close modal
+      setComposeData({
+        to: '',
+        cc: '',
+        bcc: '',
+        subject: '',
+        message: ''
+      });
+      setShowComposeModal(false);
+      
+      // Optionally refresh emails
+      // await loadEmails();
+      
+    } catch (error) {
+      console.error('❌ Error sending email from inbox:', error);
+      alert('Erro ao enviar email: ' + (error instanceof Error ? error.message : 'Erro desconhecido'));
+    }
+  };
+
 
   const handleReply = () => {
   };
@@ -1035,8 +1109,18 @@ export default function MicrosoftInbox() {
     return matchesSearch && matchesFilter;
   });
 
+
   return (
     <div className="h-screen flex flex-col bg-gray-50 m-0 p-0 -mt-8">
+      {/* Connection Status */}
+      <MicrosoftConnectionStatus onReconnect={() => {
+        // Recarregar dados após reconexão
+        loadMailFolders();
+        if (activeTab) {
+          loadEmailsForFolder(activeTab);
+        }
+      }} />
+      
       {/* New emails notification */}
       {newEmailNotification.show && (
         <div className="fixed top-4 right-4 z-50 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg flex items-center space-x-2 animate-pulse">
@@ -1902,7 +1986,10 @@ export default function MicrosoftInbox() {
                            >
                              Cancel
                            </button>
-                           <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                           <button 
+                             onClick={handleSendEmail}
+                             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                           >
                              Send
                            </button>
                          </div>

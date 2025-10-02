@@ -12,7 +12,8 @@ import {
   Calendar,
   Building,
   CreditCard,
-  Tag
+  Tag,
+  Route
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
@@ -398,7 +399,7 @@ const Overview: React.FC<OverviewProps> = ({
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow flex flex-col justify-between">
           <div className="flex items-center justify-between mb-4">
             <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-6.518-3.89A1 1 0 007 8.618v6.764a1 1 0 001.234.97l6.518-1.878a1 1 0 00.748-.97v-2.764a1 1 0 00-.748-.97z" /></svg>
+              <Route className="h-7 w-7 text-white" />
             </div>
           </div>
           <h3 className="font-bold text-slate-900 mb-2">{t('studentDashboard.stepByStepTour.title')}</h3>
