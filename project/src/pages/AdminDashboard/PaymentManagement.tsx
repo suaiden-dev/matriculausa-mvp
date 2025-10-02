@@ -240,6 +240,7 @@ interface PaymentStats {
   paidPayments: number;
   pendingPayments: number;
   monthlyGrowth: number;
+  manualRevenue: number;
 }
 
 const FEE_TYPES = [
@@ -268,7 +269,8 @@ const PaymentManagement = (): React.JSX.Element => {
     totalPayments: 0,
     paidPayments: 0,
     pendingPayments: 0,
-    monthlyGrowth: 0
+    monthlyGrowth: 0,
+    manualRevenue: 0
   });
 
   // Filtros - Padrão: mostrar apenas pagamentos aprovados
@@ -798,6 +800,7 @@ const PaymentManagement = (): React.JSX.Element => {
           .from('user_profiles')
           .update({ 
             has_paid_selection_process_fee: true,
+            selection_process_fee_payment_method: 'zelle',
             updated_at: new Date().toISOString()
           })
           .eq('user_id', payment.user_id)
@@ -1025,6 +1028,7 @@ const PaymentManagement = (): React.JSX.Element => {
           .from('user_profiles')
           .update({ 
             has_paid_i20_control_fee: true,
+            i20_control_fee_payment_method: 'zelle',
             updated_at: new Date().toISOString()
           })
           .eq('user_id', payment.user_id)
@@ -1115,6 +1119,7 @@ const PaymentManagement = (): React.JSX.Element => {
           .from('scholarship_applications')
           .update({ 
             [payment.fee_type === 'application_fee' ? 'is_application_fee_paid' : 'is_scholarship_fee_paid']: true,
+            [payment.fee_type === 'application_fee' ? 'application_fee_payment_method' : 'scholarship_fee_payment_method']: 'zelle',
             updated_at: new Date().toISOString()
           })
           .eq('student_id', payment.student_id)
@@ -1739,7 +1744,17 @@ const PaymentManagement = (): React.JSX.Element => {
       const { data: applications, error: appsError } = await supabase
         .from('scholarship_applications')
         .select(`
-          *,
+          id,
+          student_id,
+          scholarship_id,
+          status,
+          applied_at,
+          is_application_fee_paid,
+          is_scholarship_fee_paid,
+          application_fee_payment_method,
+          scholarship_fee_payment_method,
+          payment_status,
+          created_at,
           user_profiles!student_id (
             id,
             user_id,
@@ -1749,6 +1764,8 @@ const PaymentManagement = (): React.JSX.Element => {
             is_application_fee_paid,
             is_scholarship_fee_paid,
             has_paid_i20_control_fee,
+            selection_process_fee_payment_method,
+            i20_control_fee_payment_method,
             scholarship_package_id,
             dependents
           ),
@@ -1782,7 +1799,7 @@ const PaymentManagement = (): React.JSX.Element => {
         const userIds = zellePaymentsRaw.map(p => p.user_id);
         const { data: userProfiles, error: usersError } = await supabase
           .from('user_profiles')
-          .select('id, user_id, full_name, email, has_paid_selection_process_fee, is_application_fee_paid, is_scholarship_fee_paid, has_paid_i20_control_fee, scholarship_package_id, dependents')
+          .select('id, user_id, full_name, email, has_paid_selection_process_fee, is_application_fee_paid, is_scholarship_fee_paid, has_paid_i20_control_fee, selection_process_fee_payment_method, i20_control_fee_payment_method, scholarship_package_id, dependents')
           .in('user_id', userIds);
 
         if (usersError) {
@@ -1809,6 +1826,8 @@ const PaymentManagement = (): React.JSX.Element => {
           is_application_fee_paid,
           is_scholarship_fee_paid,
           has_paid_i20_control_fee,
+          selection_process_fee_payment_method,
+          i20_control_fee_payment_method,
           scholarship_package_id,
           dependents,
           created_at
@@ -2071,7 +2090,7 @@ const PaymentManagement = (): React.JSX.Element => {
             status: 'paid',
             payment_date: app.created_at,
           created_at: app.created_at,
-          payment_method: 'manual' // Selection process sempre manual quando marcado pelo admin
+          payment_method: student.selection_process_fee_payment_method || 'manual'
         });
         }
 
@@ -2091,7 +2110,7 @@ const PaymentManagement = (): React.JSX.Element => {
             status: 'paid',
             payment_date: app.created_at,
           created_at: app.created_at,
-          payment_method: 'manual' // Application fee sempre manual quando marcado pelo admin
+          payment_method: app.application_fee_payment_method || 'manual'
         });
         }
 
@@ -2111,7 +2130,7 @@ const PaymentManagement = (): React.JSX.Element => {
             status: 'paid',
             payment_date: app.created_at,
             created_at: app.created_at,
-            payment_method: app.payment_status || 'manual' // Usar payment_status da aplicação ou fallback para manual
+            payment_method: app.scholarship_fee_payment_method || 'manual'
           });
         } else if (app.is_scholarship_fee_paid && scholarship.id === '31c9b8e6-af11-4462-8494-c79854f3f66e') {
           console.log('🚫 Excluding Current Students Scholarship payment for:', studentName, '- $', (scholarshipFee / 100).toFixed(2));
@@ -2133,7 +2152,7 @@ const PaymentManagement = (): React.JSX.Element => {
             status: 'paid',
             payment_date: app.created_at,
           created_at: app.created_at,
-          payment_method: 'manual' // I-20 control sempre manual quando marcado pelo admin
+          payment_method: student.i20_control_fee_payment_method || 'manual'
         });
         }
       });
@@ -2396,7 +2415,7 @@ const PaymentManagement = (): React.JSX.Element => {
             status: 'paid',
             payment_date: stripeUser.created_at,
             created_at: stripeUser.created_at,
-            payment_method: 'stripe'
+            payment_method: stripeUser.selection_process_fee_payment_method || 'stripe'
           });
         }
 
@@ -2451,7 +2470,7 @@ const PaymentManagement = (): React.JSX.Element => {
           status: stripeUser.has_paid_i20_control_fee ? 'paid' : 'pending',
           payment_date: stripeUser.has_paid_i20_control_fee ? stripeUser.created_at : undefined,
           created_at: stripeUser.created_at,
-          payment_method: 'stripe'
+          payment_method: stripeUser.i20_control_fee_payment_method || 'stripe'
         });
       });
 
@@ -2512,6 +2531,9 @@ const PaymentManagement = (): React.JSX.Element => {
       });
       
       const totalRevenue = paidRecords.reduce((sum, p) => sum + p.amount, 0);
+      const manualRevenue = paidRecords
+        .filter(p => (p.payment_method || '').toLowerCase() === 'manual')
+        .reduce((sum, p) => sum + p.amount, 0);
       console.log('🚨 DEBUG: Total revenue (cents):', totalRevenue);
       console.log('🚨 DEBUG: Total revenue (dollars):', totalRevenue / 100);
       
@@ -2521,7 +2543,8 @@ const PaymentManagement = (): React.JSX.Element => {
         totalPayments,
         paidPayments,
         pendingPayments,
-        monthlyGrowth: 0
+        monthlyGrowth: 0,
+        manualRevenue
       };
 
       setStats(newStats);
@@ -2846,8 +2869,8 @@ const PaymentManagement = (): React.JSX.Element => {
         <div className="bg-[#05294E] rounded-xl p-6 text-white">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-purple-100 text-sm font-medium">Monthly Growth</p>
-              <p className="text-2xl font-bold">+{stats.monthlyGrowth}%</p>
+              <p className="text-purple-100 text-sm font-medium">Outside Payments</p>
+              <p className="text-2xl font-bold">${formatCentsToDollars(stats.manualRevenue).toLocaleString()}</p>
             </div>
             <TrendingUp size={32} className="text-purple-200" />
           </div>
@@ -3191,7 +3214,11 @@ const PaymentManagement = (): React.JSX.Element => {
                             : inferredMethod === 'stripe'
                             ? 'bg-blue-100 text-blue-800'
                             : 'bg-gray-100 text-gray-800';
-                          const label = inferredMethod ? inferredMethod.charAt(0).toUpperCase() + inferredMethod.slice(1) : 'N/A';
+                          const label = inferredMethod === 'manual'
+                            ? 'Outside'
+                            : inferredMethod
+                            ? inferredMethod.charAt(0).toUpperCase() + inferredMethod.slice(1)
+                            : 'N/A';
                           return (
                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${chipClass}`}>
                               {label}
@@ -4695,14 +4722,16 @@ const PaymentManagement = (): React.JSX.Element => {
                   <div>
                     <label className="block text-sm font-medium text-gray-500">Payment Method</label>
                     <p className="mt-1 text-sm text-gray-900">
-                      {(() => {
-                        const inferredMethod = selectedPayment.payment_method
-                          || (selectedPayment.zelle_status ? 'zelle' : undefined)
-                          || (selectedPayment.payment_proof_url ? 'zelle' : undefined)
-                          || (typeof selectedPayment.id === 'string' && selectedPayment.id.startsWith('zelle-') ? 'zelle' : undefined)
-                          || (typeof selectedPayment.id === 'string' && selectedPayment.id.startsWith('stripe-') ? 'stripe' : undefined);
-                        return inferredMethod ? inferredMethod.charAt(0).toUpperCase() + inferredMethod.slice(1) : 'N/A';
-                      })()}
+                      {
+                        selectedPayment.payment_method === 'manual' ? 'Outside'
+                        : (selectedPayment.payment_method === 'zelle' || selectedPayment.zelle_status || selectedPayment.payment_proof_url || (typeof selectedPayment.id === 'string' && selectedPayment.id.startsWith('zelle-')))
+                          ? 'Zelle'
+                          : ((selectedPayment.payment_method === 'stripe') || (typeof selectedPayment.id === 'string' && selectedPayment.id.startsWith('stripe-')))
+                            ? 'Stripe'
+                            : selectedPayment.payment_method
+                              ? String(selectedPayment.payment_method).charAt(0).toUpperCase() + String(selectedPayment.payment_method).slice(1)
+                              : 'N/A'
+                      }
                     </p>
                   </div>
                   <div>

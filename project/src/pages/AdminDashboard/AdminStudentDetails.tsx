@@ -56,6 +56,8 @@ interface StudentRecord {
   student_created_at: string;
   has_paid_selection_process_fee: boolean;
   has_paid_i20_control_fee: boolean;
+  selection_process_fee_payment_method?: string | null;
+  i20_control_fee_payment_method?: string | null;
   seller_referral_code: string | null;
   application_id: string | null;
   scholarship_id: string | null;
@@ -63,6 +65,8 @@ interface StudentRecord {
   applied_at: string | null;
   is_application_fee_paid: boolean;
   is_scholarship_fee_paid: boolean;
+  application_fee_payment_method?: string | null;
+  scholarship_fee_payment_method?: string | null;
   acceptance_letter_status: string | null;
   payment_status: string | null;
   scholarship_title: string | null;
@@ -103,6 +107,10 @@ const AdminStudentDetails: React.FC = () => {
   const [adminNotes, setAdminNotes] = useState<string>('');
   const [editingNotes, setEditingNotes] = useState(false);
   const [savingNotes, setSavingNotes] = useState(false);
+  // Estados para edição de métodos de pagamento
+  const [editingPaymentMethod, setEditingPaymentMethod] = useState<string | null>(null);
+  const [newPaymentMethod, setNewPaymentMethod] = useState<'stripe' | 'zelle' | 'manual'>('manual');
+  const [savingPaymentMethod, setSavingPaymentMethod] = useState(false);
   // Modal de confirmação de pagamento
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [pendingPayment, setPendingPayment] = useState<{
@@ -362,6 +370,8 @@ const AdminStudentDetails: React.FC = () => {
             created_at,
             has_paid_selection_process_fee,
             has_paid_i20_control_fee,
+            selection_process_fee_payment_method,
+            i20_control_fee_payment_method,
             role,
             seller_referral_code,
             admin_notes,
@@ -372,6 +382,8 @@ const AdminStudentDetails: React.FC = () => {
               applied_at,
               is_application_fee_paid,
               is_scholarship_fee_paid,
+              application_fee_payment_method,
+              scholarship_fee_payment_method,
               acceptance_letter_status,
               acceptance_letter_url,
               acceptance_letter_sent_at,
@@ -421,6 +433,8 @@ const AdminStudentDetails: React.FC = () => {
           student_created_at: s.created_at,
           has_paid_selection_process_fee: s.has_paid_selection_process_fee || false,
           has_paid_i20_control_fee: s.has_paid_i20_control_fee || false,
+          selection_process_fee_payment_method: s.selection_process_fee_payment_method || null,
+          i20_control_fee_payment_method: s.i20_control_fee_payment_method || null,
           seller_referral_code: s.seller_referral_code || null,
           admin_notes: s.admin_notes || null,
           application_id: lockedApplication?.id || null,
@@ -429,6 +443,8 @@ const AdminStudentDetails: React.FC = () => {
           applied_at: lockedApplication?.applied_at || null,
           is_application_fee_paid: lockedApplication?.is_application_fee_paid || false,
           is_scholarship_fee_paid: lockedApplication?.is_scholarship_fee_paid || false,
+          application_fee_payment_method: lockedApplication?.application_fee_payment_method || null,
+          scholarship_fee_payment_method: lockedApplication?.scholarship_fee_payment_method || null,
           acceptance_letter_status: lockedApplication?.acceptance_letter_status || null,
           payment_status: lockedApplication?.payment_status || null,
           scholarship_title: lockedApplication?.scholarships?.title || null,
@@ -612,6 +628,101 @@ const AdminStudentDetails: React.FC = () => {
     }
   };
 
+  const handleUpdatePaymentMethod = async (feeType: 'selection_process' | 'application' | 'scholarship' | 'i20_control') => {
+    if (!student || !isPlatformAdmin) return;
+    
+    setSavingPaymentMethod(true);
+    try {
+      if (feeType === 'selection_process' || feeType === 'i20_control') {
+        // Atualizar na tabela user_profiles
+        const fieldName = feeType === 'selection_process' 
+          ? 'selection_process_fee_payment_method' 
+          : 'i20_control_fee_payment_method';
+        
+        const { error } = await supabase
+          .from('user_profiles')
+          .update({ [fieldName]: newPaymentMethod })
+          .eq('id', student.student_id);
+
+        if (error) throw error;
+
+        // Log the action
+        try {
+          await logAction(
+            'payment_method_updated',
+            `${feeType === 'selection_process' ? 'Selection Process Fee' : 'I-20 Control Fee'} payment method updated to ${newPaymentMethod}`,
+            user?.id || '',
+            'admin',
+            {
+              fee_type: feeType,
+              old_method: 'unknown',
+              new_method: newPaymentMethod,
+              student_name: student.student_name
+            }
+          );
+        } catch (logError) {
+          console.error('Failed to log action:', logError);
+        }
+      } else if (feeType === 'application' || feeType === 'scholarship') {
+        // Atualizar na tabela scholarship_applications
+        const fieldName = feeType === 'application' 
+          ? 'application_fee_payment_method' 
+          : 'scholarship_fee_payment_method';
+        
+        // Buscar aplicação aprovada ou mais recente
+        const { data: applications, error: fetchError } = await supabase
+          .from('scholarship_applications')
+          .select('id, status')
+          .eq('student_id', student.student_id)
+          .order('created_at', { ascending: false });
+
+        if (fetchError) throw fetchError;
+
+        const targetApplication = applications?.find(app => app.status === 'approved') || applications?.[0];
+        if (!targetApplication) {
+          throw new Error('No application found for this student');
+        }
+
+        const { error } = await supabase
+          .from('scholarship_applications')
+          .update({ [fieldName]: newPaymentMethod })
+          .eq('id', targetApplication.id);
+
+        if (error) throw error;
+
+        // Log the action
+        try {
+          await logAction(
+            'payment_method_updated',
+            `${feeType === 'application' ? 'Application Fee' : 'Scholarship Fee'} payment method updated to ${newPaymentMethod}`,
+            user?.id || '',
+            'admin',
+            {
+              fee_type: feeType,
+              old_method: 'unknown',
+              new_method: newPaymentMethod,
+              application_id: targetApplication.id,
+              student_name: student.student_name
+            }
+          );
+        } catch (logError) {
+          console.error('Failed to log action:', logError);
+        }
+      }
+
+      setEditingPaymentMethod(null);
+      showToast(`Payment method updated to ${newPaymentMethod}`, 'success');
+      
+      // Recarregar dados do estudante
+      window.location.reload();
+    } catch (error: any) {
+      console.error('Error updating payment method:', error);
+      showToast(`Error updating payment method: ${error.message}`, 'error');
+    } finally {
+      setSavingPaymentMethod(false);
+    }
+  };
+
   const startEditingFees = () => {
     if (!student) return;
     
@@ -741,7 +852,10 @@ const AdminStudentDetails: React.FC = () => {
         // Marcar selection process fee como pago
         const { error } = await supabase
           .from('user_profiles')
-          .update({ has_paid_selection_process_fee: true })
+          .update({ 
+            has_paid_selection_process_fee: true,
+            selection_process_fee_payment_method: method || 'manual'
+          })
           .eq('id', student.student_id);
 
         if (error) throw error;
@@ -796,7 +910,7 @@ const AdminStudentDetails: React.FC = () => {
           .from('scholarship_applications')
           .update({
             is_application_fee_paid: true,
-            ...(method ? { payment_status: method } : {})
+            application_fee_payment_method: method || 'manual'
           })
           .eq('id', targetApplicationId);
 
@@ -850,7 +964,7 @@ const AdminStudentDetails: React.FC = () => {
           .from('scholarship_applications')
           .update({
             is_scholarship_fee_paid: true,
-            ...(method ? { payment_status: method } : {})
+            scholarship_fee_payment_method: method || 'manual'
           })
           .eq('id', targetApplicationId);
 
@@ -880,7 +994,10 @@ const AdminStudentDetails: React.FC = () => {
         // Marcar I-20 control fee como pago
         const { error } = await supabase
           .from('user_profiles')
-          .update({ has_paid_i20_control_fee: true })
+          .update({ 
+            has_paid_i20_control_fee: true,
+            i20_control_fee_payment_method: method || 'manual'
+          })
           .eq('id', student.student_id);
 
         if (error) throw error;
@@ -2492,186 +2609,415 @@ const AdminStudentDetails: React.FC = () => {
               </div>
             </div>
             <div className="p-6 space-y-4">
-              <div className="bg-slate-50 rounded-xl p-4 flex items-center justify-between">
-                <div className="flex-1">
-                  <dt className="text-sm font-medium text-slate-600">Selection Process Fee</dt>
-                  <dd className="text-sm text-slate-500 mt-1">Required to start applications</dd>
-                  {editingFees ? (
-                    <div className="mt-2">
-                      <input
-                        type="number"
-                        value={editingFees.selection_process}
-                        onChange={(e) => setEditingFees(prev => prev ? { ...prev, selection_process: Number(e.target.value) } : null)}
-                        className="w-32 px-3 py-2 border border-slate-300 rounded-lg text-sm"
-                        min="0"
-                        step="0.01"
-                      />
-                    </div>
-                  ) : (
-                    <dd className="text-sm font-semibold text-slate-700 mt-1 flex items-center">
-                      {(() => {
-                    const hasCustomOverride = hasOverride('selection_process');
-                    if (hasCustomOverride) return formatFeeAmount(getFeeAmount('selection_process'));
-                    const base = Number(getFeeAmount('selection_process'));
-                    return formatFeeAmount(base + dependents * 150);
-                      })()}
-                      {hasOverride('selection_process') && (
-                        <span className="ml-2 text-xs text-blue-500">(custom)</span>
-                      )}
-                    </dd>
-                  )}
-                </div>
-                <div className="flex items-center space-x-2">
-                   {student.has_paid_selection_process_fee ? (
-                    <><CheckCircle className="h-5 w-5 text-green-600" /><span className="text-sm font-medium text-green-600">Paid</span></>
-                  ) : (
-                     <div className="flex items-center space-x-2">
-                      <XCircle className="h-5 w-5 text-red-600" />
-                      <span className="text-sm font-medium text-red-600">Not Paid</span>
-                       {isPlatformAdmin && (
-                         <button
-                           onClick={() => openPaymentModal('selection_process')}
-                           disabled={markingAsPaid[`${student.student_id}:selection_process`]}
-                           className="px-2 py-1 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-xs rounded-md flex items-center space-x-1"
-                         >
-                           <CheckCircle className="w-3 h-3" />
-                           <span>{markingAsPaid[`${student.student_id}:selection_process`] ? 'Marking...' : 'Mark as Paid'}</span>
-                         </button>
-                       )}
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div className="bg-slate-50 rounded-xl p-4 flex items-center justify-between">
-                <div className="flex-1">
-                  <dt className="text-sm font-medium text-slate-600">Application Fee</dt>
-                  <dd className="text-sm text-slate-500 mt-1">Paid after scholarship approval</dd>
-                  <dd className="text-sm font-semibold text-slate-700 mt-1">$400.00</dd>
-                </div>
-                <div className="flex items-center space-x-2">
-                  {student.is_application_fee_paid ? (
-                    <><CheckCircle className="h-5 w-5 text-green-600" /><span className="text-sm font-medium text-green-600">Paid</span></>
-                  ) : (
-                    <div className="flex items-center space-x-2">
-                      <XCircle className="h-5 w-5 text-red-600" />
-                      <span className="text-sm font-medium text-red-600">Not Paid</span>
-                       {isPlatformAdmin && (() => {
-                         // Buscar aplicação aprovada para application fee
-                         const approvedApp = student.all_applications?.find((app: any) => app.status === 'approved');
-                         return approvedApp && (
-                           <button
-                             onClick={() => openPaymentModal('application', approvedApp.id)}
-                             disabled={markingAsPaid[`${student.student_id}:application`]}
-                             className="px-2 py-1 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-xs rounded-md flex items-center space-x-1"
-                           >
-                             <CheckCircle className="w-3 h-3" />
-                             <span>{markingAsPaid[`${student.student_id}:application`] ? 'Marking...' : 'Mark as Paid'}</span>
-                           </button>
-                         );
-                       })()}
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div className="bg-slate-50 rounded-xl p-4 flex items-center justify-between">
-                <div className="flex-1">
-                  <dt className="text-sm font-medium text-slate-600">Scholarship Fee</dt>
-                  <dd className="text-sm text-slate-500 mt-1">Paid after application fee</dd>
-                  {editingFees ? (
-                    <div className="mt-2">
-                      <input
-                        type="number"
-                        value={editingFees.scholarship}
-                        onChange={(e) => setEditingFees(prev => prev ? { ...prev, scholarship: Number(e.target.value) } : null)}
-                        className="w-32 px-3 py-2 border border-slate-300 rounded-lg text-sm"
-                        min="0"
-                        step="0.01"
-                      />
-                    </div>
-                  ) : (
-                    <dd className="text-sm font-semibold text-slate-700 mt-1 flex items-center">
-                      {formatFeeAmount(getFeeAmount('scholarship_fee'))}
-                      {hasOverride('scholarship_fee') && (
-                        <span className="ml-2 text-xs text-blue-500">(custom)</span>
-                      )}
-                    </dd>
-                  )}
-                </div>
-                <div className="flex items-center space-x-2">
-                   {student.is_scholarship_fee_paid ? (
-                    <><CheckCircle className="h-5 w-5 text-green-600" /><span className="text-sm font-medium text-green-600">Paid</span></>
-                  ) : (
-                     <div className="flex items-center space-x-2">
-                      <XCircle className="h-5 w-5 text-red-600" />
-                      <span className="text-sm font-medium text-red-600">Not Paid</span>
-                       {isPlatformAdmin && (() => {
-                         // Buscar aplicação aprovada para scholarship fee
-                         const approvedApp = student.all_applications?.find((app: any) => app.status === 'approved');
-                         return approvedApp && (
-                           <button
-                             onClick={() => openPaymentModal('scholarship', approvedApp.id)}
-                             disabled={markingAsPaid[`${student.student_id}:scholarship`]}
-                             className="px-2 py-1 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-xs rounded-md flex items-center space-x-1"
-                           >
-                             <CheckCircle className="w-3 h-3" />
-                             <span>{markingAsPaid[`${student.student_id}:scholarship`] ? 'Marking...' : 'Mark as Paid'}</span>
-                           </button>
-                         );
-                       })()}
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div className="bg-slate-50 rounded-xl p-4 flex items-center justify-between">
-                <div className="flex-1">
-                  <dt className="text-sm font-medium text-slate-600">I-20 Control Fee</dt>
-                  <dd className="text-sm text-slate-500 mt-1">Final step for enrollment</dd>
-                  {editingFees ? (
-                    <div className="mt-2">
-                      <input
-                        type="number"
-                        value={editingFees.i20_control}
-                        onChange={(e) => setEditingFees(prev => prev ? { ...prev, i20_control: Number(e.target.value) } : null)}
-                        className="w-32 px-3 py-2 border border-slate-300 rounded-lg text-sm"
-                        min="0"
-                        step="0.01"
-                      />
-                    </div>
-                  ) : (
-                    <dd className="text-sm font-semibold text-slate-700 mt-1 flex items-center">
-                      {formatFeeAmount(getFeeAmount('i20_control_fee'))}
-                      {hasOverride('i20_control_fee') && (
-                        <span className="ml-2 text-xs text-blue-500">(custom)</span>
-                      )}
-                    </dd>
-                  )}
-                </div>
-                <div className="flex items-center space-x-2">
-                   {student.has_paid_i20_control_fee ? (
-                    <><CheckCircle className="h-5 w-5 text-green-600" /><span className="text-sm font-medium text-green-600">Paid</span></>
-                  ) : (
-                     <div className="flex items-center space-x-2">
-                      <XCircle className="h-5 w-5 text-red-600" />
-                      <span className="text-sm font-medium text-red-600">Not Paid</span>
-                        {isPlatformAdmin && (() => {
-                          // Guardas: só pode marcar I-20 se SP Fee, Application Fee, Scholarship Fee pagos e acceptance letter enviada
-                          const approvedApp = student.all_applications?.find((app: any) => app.status === 'approved' || app.status === 'enrolled');
-                          const acceptanceSent = !!approvedApp?.acceptance_letter_status && approvedApp.acceptance_letter_status === 'sent';
-                          const canMarkI20 = student.has_paid_selection_process_fee && student.is_application_fee_paid && student.is_scholarship_fee_paid && acceptanceSent;
-                          return (
-                            <button
-                              onClick={() => openPaymentModal('i20_control')}
-                              disabled={markingAsPaid[`${student.student_id}:i20_control`] || !canMarkI20}
-                              className="px-2 py-1 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-xs rounded-md flex items-center space-x-1 disabled:opacity-50 disabled:cursor-not-allowed"
-                              title={!canMarkI20 ? 'Complete previous steps: Selection Process Fee, Application Fee, Scholarship Fee, and Acceptance Letter must be completed first' : ''}
-                            >
-                              <CheckCircle className="w-3 h-3" />
-                              <span>{markingAsPaid[`${student.student_id}:i20_control`] ? 'Marking...' : (!canMarkI20 ? 'Complete previous steps' : 'Mark as Paid')}</span>
-                            </button>
-                          );
+              <div className="bg-slate-50 rounded-xl p-4">
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                  <div className="flex-1">
+                    <dt className="text-sm font-medium text-slate-600">Selection Process Fee</dt>
+                    <dd className="text-sm text-slate-500 mt-1">Required to start applications</dd>
+                    {editingFees ? (
+                      <div className="mt-2">
+                        <input
+                          type="number"
+                          value={editingFees.selection_process}
+                          onChange={(e) => setEditingFees(prev => prev ? { ...prev, selection_process: Number(e.target.value) } : null)}
+                          className="w-32 px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                          min="0"
+                          step="0.01"
+                        />
+                      </div>
+                    ) : (
+                      <dd className="text-sm font-semibold text-slate-700 mt-1 flex items-center">
+                        {(() => {
+                      const hasCustomOverride = hasOverride('selection_process');
+                      if (hasCustomOverride) return formatFeeAmount(getFeeAmount('selection_process'));
+                      const base = Number(getFeeAmount('selection_process'));
+                      return formatFeeAmount(base + dependents * 150);
                         })()}
+                        {hasOverride('selection_process') && (
+                          <span className="ml-2 text-xs text-blue-500">(custom)</span>
+                        )}
+                      </dd>
+                    )}
+                  </div>
+                  <div className="flex flex-col gap-3">
+                     {student.has_paid_selection_process_fee ? (
+                      <div className="flex flex-col gap-3">
+                        <div className="flex items-center space-x-2">
+                          <CheckCircle className="h-5 w-5 text-green-600" />
+                          <span className="text-sm font-medium text-green-600">Paid</span>
+                        </div>
+                        {isPlatformAdmin && (
+                          <div className="flex flex-col gap-3">
+                            {editingPaymentMethod === 'selection_process' ? (
+                              <div className="flex flex-col gap-3">
+                                <select
+                                  value={newPaymentMethod}
+                                  onChange={(e) => setNewPaymentMethod(e.target.value as 'stripe' | 'zelle' | 'manual')}
+                                  className="text-sm px-3 py-2 border border-slate-300 rounded-lg w-full max-w-[150px]"
+                                  disabled={savingPaymentMethod}
+                                >
+                                  <option value="manual">Manual</option>
+                                  <option value="stripe">Stripe</option>
+                                  <option value="zelle">Zelle</option>
+                                </select>
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    onClick={() => handleUpdatePaymentMethod('selection_process')}
+                                    disabled={savingPaymentMethod}
+                                    className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg flex items-center space-x-2"
+                                  >
+                                    <Save className="w-4 h-4" />
+                                    <span>{savingPaymentMethod ? 'Saving...' : 'Save'}</span>
+                                  </button>
+                                  <button
+                                    onClick={() => setEditingPaymentMethod(null)}
+                                    className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white text-sm rounded-lg flex items-center space-x-2"
+                                  >
+                                    <X className="w-4 h-4" />
+                                    <span>Cancel</span>
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => {
+                                  setEditingPaymentMethod('selection_process');
+                                  setNewPaymentMethod((student.selection_process_fee_payment_method as 'stripe' | 'zelle' | 'manual') || 'manual');
+                                }}
+                                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg flex items-center space-x-2 w-fit"
+                              >
+                                <Edit3 className="w-4 h-4" />
+                                <span>Edit Method</span>
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                       <div className="flex flex-col gap-3">
+                        <div className="flex items-center space-x-2">
+                          <XCircle className="h-5 w-5 text-red-600" />
+                          <span className="text-sm font-medium text-red-600">Not Paid</span>
+                        </div>
+                         {isPlatformAdmin && (
+                           <button
+                             onClick={() => openPaymentModal('selection_process')}
+                             disabled={markingAsPaid[`${student.student_id}:selection_process`]}
+                             className="px-4 py-2 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-sm rounded-lg flex items-center space-x-2 w-fit"
+                           >
+                             <CheckCircle className="w-4 h-4" />
+                             <span>{markingAsPaid[`${student.student_id}:selection_process`] ? 'Marking...' : 'Mark as Paid'}</span>
+                           </button>
+                         )}
+                      </div>
+                    )}
+                  </div>
                 </div>
-                  )}
+              </div>
+              <div className="bg-slate-50 rounded-xl p-4">
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                  <div className="flex-1">
+                    <dt className="text-sm font-medium text-slate-600">Application Fee</dt>
+                    <dd className="text-sm text-slate-500 mt-1">Paid after scholarship approval</dd>
+                    <dd className="text-sm font-semibold text-slate-700 mt-1">$400.00</dd>
+                  </div>
+                  <div className="flex flex-col gap-3">
+                    {student.is_application_fee_paid ? (
+                      <div className="flex flex-col gap-3">
+                        <div className="flex items-center space-x-2">
+                          <CheckCircle className="h-5 w-5 text-green-600" />
+                          <span className="text-sm font-medium text-green-600">Paid</span>
+                        </div>
+                        {isPlatformAdmin && (
+                          <div className="flex flex-col gap-3">
+                            {editingPaymentMethod === 'application' ? (
+                              <div className="flex flex-col gap-3">
+                                <select
+                                  value={newPaymentMethod}
+                                  onChange={(e) => setNewPaymentMethod(e.target.value as 'stripe' | 'zelle' | 'manual')}
+                                  className="text-sm px-3 py-2 border border-slate-300 rounded-lg w-full max-w-[150px]"
+                                  disabled={savingPaymentMethod}
+                                >
+                                  <option value="manual">Manual</option>
+                                  <option value="stripe">Stripe</option>
+                                  <option value="zelle">Zelle</option>
+                                </select>
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    onClick={() => handleUpdatePaymentMethod('application')}
+                                    disabled={savingPaymentMethod}
+                                    className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg flex items-center space-x-2"
+                                  >
+                                    <Save className="w-4 h-4" />
+                                    <span>{savingPaymentMethod ? 'Saving...' : 'Save'}</span>
+                                  </button>
+                                  <button
+                                    onClick={() => setEditingPaymentMethod(null)}
+                                    className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white text-sm rounded-lg flex items-center space-x-2"
+                                  >
+                                    <X className="w-4 h-4" />
+                                    <span>Cancel</span>
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => {
+                                  setEditingPaymentMethod('application');
+                                  const approvedApp = student.all_applications?.find((app: any) => app.status === 'approved');
+                                  setNewPaymentMethod((approvedApp?.application_fee_payment_method as 'stripe' | 'zelle' | 'manual') || 'manual');
+                                }}
+                                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg flex items-center space-x-2 w-fit"
+                              >
+                                <Edit3 className="w-4 h-4" />
+                                <span>Edit Method</span>
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col gap-3">
+                        <div className="flex items-center space-x-2">
+                          <XCircle className="h-5 w-5 text-red-600" />
+                          <span className="text-sm font-medium text-red-600">Not Paid</span>
+                        </div>
+                         {isPlatformAdmin && (() => {
+                           // Buscar aplicação aprovada para application fee
+                           const approvedApp = student.all_applications?.find((app: any) => app.status === 'approved');
+                           return approvedApp && (
+                             <button
+                               onClick={() => openPaymentModal('application', approvedApp.id)}
+                               disabled={markingAsPaid[`${student.student_id}:application`]}
+                               className="px-4 py-2 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-sm rounded-lg flex items-center space-x-2 w-fit"
+                             >
+                               <CheckCircle className="w-4 h-4" />
+                               <span>{markingAsPaid[`${student.student_id}:application`] ? 'Marking...' : 'Mark as Paid'}</span>
+                             </button>
+                           );
+                         })()}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <div className="bg-slate-50 rounded-xl p-4">
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                  <div className="flex-1">
+                    <dt className="text-sm font-medium text-slate-600">Scholarship Fee</dt>
+                    <dd className="text-sm text-slate-500 mt-1">Paid after application fee</dd>
+                    {editingFees ? (
+                      <div className="mt-2">
+                        <input
+                          type="number"
+                          value={editingFees.scholarship}
+                          onChange={(e) => setEditingFees(prev => prev ? { ...prev, scholarship: Number(e.target.value) } : null)}
+                          className="w-32 px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                          min="0"
+                          step="0.01"
+                        />
+                      </div>
+                    ) : (
+                      <dd className="text-sm font-semibold text-slate-700 mt-1 flex items-center">
+                        {formatFeeAmount(getFeeAmount('scholarship_fee'))}
+                        {hasOverride('scholarship_fee') && (
+                          <span className="ml-2 text-xs text-blue-500">(custom)</span>
+                        )}
+                      </dd>
+                    )}
+                  </div>
+                  <div className="flex flex-col gap-3">
+                    {student.is_scholarship_fee_paid ? (
+                      <div className="flex flex-col gap-3">
+                        <div className="flex items-center space-x-2">
+                          <CheckCircle className="h-5 w-5 text-green-600" />
+                          <span className="text-sm font-medium text-green-600">Paid</span>
+                        </div>
+                        {isPlatformAdmin && (
+                          <div className="flex flex-col gap-3">
+                            {editingPaymentMethod === 'scholarship' ? (
+                              <div className="flex flex-col gap-3">
+                                <select
+                                  value={newPaymentMethod}
+                                  onChange={(e) => setNewPaymentMethod(e.target.value as 'stripe' | 'zelle' | 'manual')}
+                                  className="text-sm px-3 py-2 border border-slate-300 rounded-lg w-full max-w-[150px]"
+                                  disabled={savingPaymentMethod}
+                                >
+                                  <option value="manual">Manual</option>
+                                  <option value="stripe">Stripe</option>
+                                  <option value="zelle">Zelle</option>
+                                </select>
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    onClick={() => handleUpdatePaymentMethod('scholarship')}
+                                    disabled={savingPaymentMethod}
+                                    className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg flex items-center space-x-2"
+                                  >
+                                    <Save className="w-4 h-4" />
+                                    <span>{savingPaymentMethod ? 'Saving...' : 'Save'}</span>
+                                  </button>
+                                  <button
+                                    onClick={() => setEditingPaymentMethod(null)}
+                                    className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white text-sm rounded-lg flex items-center space-x-2"
+                                  >
+                                    <X className="w-4 h-4" />
+                                    <span>Cancel</span>
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => {
+                                  setEditingPaymentMethod('scholarship');
+                                  const approvedApp = student.all_applications?.find((app: any) => app.status === 'approved');
+                                  setNewPaymentMethod((approvedApp?.scholarship_fee_payment_method as 'stripe' | 'zelle' | 'manual') || 'manual');
+                                }}
+                                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg flex items-center space-x-2 w-fit"
+                              >
+                                <Edit3 className="w-4 h-4" />
+                                <span>Edit Method</span>
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col gap-3">
+                        <div className="flex items-center space-x-2">
+                          <XCircle className="h-5 w-5 text-red-600" />
+                          <span className="text-sm font-medium text-red-600">Not Paid</span>
+                        </div>
+                         {isPlatformAdmin && (() => {
+                           // Buscar aplicação aprovada para scholarship fee
+                           const approvedApp = student.all_applications?.find((app: any) => app.status === 'approved');
+                           return approvedApp && (
+                             <button
+                               onClick={() => openPaymentModal('scholarship', approvedApp.id)}
+                               disabled={markingAsPaid[`${student.student_id}:scholarship`]}
+                               className="px-4 py-2 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-sm rounded-lg flex items-center space-x-2 w-fit"
+                             >
+                               <CheckCircle className="w-4 h-4" />
+                               <span>{markingAsPaid[`${student.student_id}:scholarship`] ? 'Marking...' : 'Mark as Paid'}</span>
+                             </button>
+                           );
+                         })()}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <div className="bg-slate-50 rounded-xl p-4">
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                  <div className="flex-1">
+                    <dt className="text-sm font-medium text-slate-600">I-20 Control Fee</dt>
+                    <dd className="text-sm text-slate-500 mt-1">Final step for enrollment</dd>
+                    {editingFees ? (
+                      <div className="mt-2">
+                        <input
+                          type="number"
+                          value={editingFees.i20_control}
+                          onChange={(e) => setEditingFees(prev => prev ? { ...prev, i20_control: Number(e.target.value) } : null)}
+                          className="w-32 px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                          min="0"
+                          step="0.01"
+                        />
+                      </div>
+                    ) : (
+                      <dd className="text-sm font-semibold text-slate-700 mt-1 flex items-center">
+                        {formatFeeAmount(getFeeAmount('i20_control_fee'))}
+                        {hasOverride('i20_control_fee') && (
+                          <span className="ml-2 text-xs text-blue-500">(custom)</span>
+                        )}
+                      </dd>
+                    )}
+                  </div>
+                  <div className="flex flex-col gap-3">
+                     {student.has_paid_i20_control_fee ? (
+                      <div className="flex flex-col gap-3">
+                        <div className="flex items-center space-x-2">
+                          <CheckCircle className="h-5 w-5 text-green-600" />
+                          <span className="text-sm font-medium text-green-600">Paid</span>
+                        </div>
+                        {isPlatformAdmin && (
+                          <div className="flex flex-col gap-3">
+                            {editingPaymentMethod === 'i20_control' ? (
+                              <div className="flex flex-col gap-3">
+                                <select
+                                  value={newPaymentMethod}
+                                  onChange={(e) => setNewPaymentMethod(e.target.value as 'stripe' | 'zelle' | 'manual')}
+                                  className="text-sm px-3 py-2 border border-slate-300 rounded-lg w-full max-w-[150px]"
+                                  disabled={savingPaymentMethod}
+                                >
+                                  <option value="manual">Manual</option>
+                                  <option value="stripe">Stripe</option>
+                                  <option value="zelle">Zelle</option>
+                                </select>
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    onClick={() => handleUpdatePaymentMethod('i20_control')}
+                                    disabled={savingPaymentMethod}
+                                    className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg flex items-center space-x-2"
+                                  >
+                                    <Save className="w-4 h-4" />
+                                    <span>{savingPaymentMethod ? 'Saving...' : 'Save'}</span>
+                                  </button>
+                                  <button
+                                    onClick={() => setEditingPaymentMethod(null)}
+                                    className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white text-sm rounded-lg flex items-center space-x-2"
+                                  >
+                                    <X className="w-4 h-4" />
+                                    <span>Cancel</span>
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => {
+                                  setEditingPaymentMethod('i20_control');
+                                  setNewPaymentMethod((student.i20_control_fee_payment_method as 'stripe' | 'zelle' | 'manual') || 'manual');
+                                }}
+                                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg flex items-center space-x-2 w-fit"
+                              >
+                                <Edit3 className="w-4 h-4" />
+                                <span>Edit Method</span>
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                       <div className="flex flex-col gap-3">
+                        <div className="flex items-center space-x-2">
+                          <XCircle className="h-5 w-5 text-red-600" />
+                          <span className="text-sm font-medium text-red-600">Not Paid</span>
+                        </div>
+                          {isPlatformAdmin && (() => {
+                            // Guardas: só pode marcar I-20 se SP Fee pago e acceptance letter enviada
+                            // Se o aluno já está enrolled, permitir marcar I-20 como pago independente dos outros fees
+                            const approvedApp = student.all_applications?.find((app: any) => app.status === 'approved' || app.status === 'enrolled');
+                            const acceptanceSent = !!approvedApp?.acceptance_letter_status && approvedApp.acceptance_letter_status === 'sent';
+                            const isEnrolled = student.application_status === 'enrolled';
+                            
+                            // Se está enrolled, pode marcar I-20 independente dos outros fees
+                            // Se não está enrolled, precisa ter SP fee pago e acceptance letter enviada
+                            const canMarkI20 = isEnrolled || (student.has_paid_selection_process_fee && acceptanceSent);
+                            
+                            return (
+                              <button
+                                onClick={() => openPaymentModal('i20_control')}
+                                disabled={markingAsPaid[`${student.student_id}:i20_control`] || !canMarkI20}
+                                className="px-4 py-2 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-sm rounded-lg flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed w-fit"
+                                title={!canMarkI20 ? (isEnrolled ? 'I-20 can be marked as paid for enrolled students' : 'Complete previous steps: Selection Process Fee and Acceptance Letter must be completed first') : ''}
+                              >
+                                <CheckCircle className="w-4 h-4" />
+                                <span>{markingAsPaid[`${student.student_id}:i20_control`] ? 'Marking...' : (!canMarkI20 ? 'Complete previous steps' : 'Mark as Paid')}</span>
+                              </button>
+                            );
+                          })()}
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -2685,13 +3031,11 @@ const AdminStudentDetails: React.FC = () => {
                   hasPaid={student.has_paid_i20_control_fee}
                   studentName={student.student_name}
                 />
-        </div>
-      </div>
+              </div>
+            </div>
           )}
 
-    </div>
-
-      </div>
+        </div>
       </div>
       )}
 
