@@ -41,6 +41,9 @@ const AdminScholarshipSelection: React.FC<AdminScholarshipSelectionProps> = ({ s
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
   const [scholarships, setScholarships] = useState<ScholarshipItem[]>([]);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [total, setTotal] = useState(0);
   const [cart, setCart] = useState<string[]>([]);
   const [applications, setApplications] = useState<any[]>([]);
   const [processType, setProcessType] = useState<'initial' | 'transfer' | 'change_of_status' | ''>('');
@@ -52,19 +55,20 @@ const AdminScholarshipSelection: React.FC<AdminScholarshipSelectionProps> = ({ s
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      // Buscar bolsas (com busca por título) - incluir relação com universities
-      const baseSelect = supabase
-        .from('scholarships')
-        .select(`
-          *,
-          universities(name, location)
-        `)
-        .order('title', { ascending: true })
-        .limit(50);
+      // Buscar bolsas (com busca por título) - incluir relação com universities e paginação
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
 
-      const { data: scholarshipsData, error: scholarshipsError } = query
-        ? await baseSelect.ilike('title', `%${query}%`)
-        : await baseSelect;
+      let baseSelect = supabase
+        .from('scholarships')
+        .select(`*, universities(name, location)`, { count: 'exact' })
+        .order('title', { ascending: true });
+
+      if (query) {
+        baseSelect = baseSelect.ilike('title', `%${query}%`);
+      }
+
+      const { data: scholarshipsData, error: scholarshipsError, count } = await baseSelect.range(from, to);
       
       if (scholarshipsError) {
         console.error('Erro ao buscar bolsas:', scholarshipsError);
@@ -72,6 +76,7 @@ const AdminScholarshipSelection: React.FC<AdminScholarshipSelectionProps> = ({ s
       }
       
       setScholarships((scholarshipsData as any) || []);
+      setTotal(count || 0);
 
       // Carrinho do aluno
       const { data: cartRows, error: cartError } = await supabase
@@ -103,7 +108,7 @@ const AdminScholarshipSelection: React.FC<AdminScholarshipSelectionProps> = ({ s
     } finally {
       setLoading(false);
     }
-  }, [query, studentProfileId, studentUserId]);
+  }, [query, page, pageSize, studentProfileId, studentUserId]);
 
   useEffect(() => {
     loadData();
@@ -310,6 +315,15 @@ const AdminScholarshipSelection: React.FC<AdminScholarshipSelectionProps> = ({ s
             >
               {loading ? 'Searching...' : 'Search'}
             </button>
+            {!!query && (
+              <button
+                onClick={() => { setQuery(''); setPage(1); }}
+                disabled={loading}
+                className="px-3 py-2 rounded-lg border border-slate-300 text-slate-600 text-sm hover:bg-slate-50 disabled:opacity-50"
+              >
+                Clear
+              </button>
+            )}
           </div>
 
           <div className="mb-4">
@@ -374,6 +388,37 @@ const AdminScholarshipSelection: React.FC<AdminScholarshipSelectionProps> = ({ s
                   </div>
                 );
               })}
+            </div>
+            {/* Pagination Controls */}
+            <div className="px-4 py-3 bg-white border-t border-slate-200 flex items-center justify-between">
+              <div className="text-xs text-slate-600">
+                Page {page} of {Math.max(1, Math.ceil(total / pageSize))} • {total} results
+              </div>
+              <div className="flex items-center gap-2">
+                <select
+                  className="text-xs px-2 py-1 border border-slate-300 rounded-md"
+                  value={pageSize}
+                  onChange={(e) => { setPage(1); setPageSize(Number(e.target.value)); }}
+                >
+                  {[10, 20, 50].map((n) => (
+                    <option key={n} value={n}>{n}/page</option>
+                  ))}
+                </select>
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page <= 1}
+                  className="px-2 py-1 text-xs border border-slate-300 rounded-md disabled:opacity-50 hover:bg-slate-50"
+                >
+                  Prev
+                </button>
+                <button
+                  onClick={() => setPage((p) => (p < Math.ceil(total / pageSize) ? p + 1 : p))}
+                  disabled={page >= Math.ceil(total / pageSize) || total === 0}
+                  className="px-2 py-1 text-xs border border-slate-300 rounded-md disabled:opacity-50 hover:bg-slate-50"
+                >
+                  Next
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -1421,29 +1421,7 @@ const AdminStudentDetails: React.FC = () => {
         allRequests = [...allRequests, ...(globalRequests || [])];
       }
       
-      // Também buscar TODOS os requests globais ativos (independente da universidade)
-      // Isso garante que requests globais de outras universidades também apareçam
-      const { data: allGlobalRequests, error: allGlobalError } = await supabase
-        .from('document_requests')
-        .select(`
-          *,
-          document_request_uploads (
-            *,
-            reviewed_by,
-            reviewed_at
-          )
-        `)
-        .eq('is_global', true)
-        .eq('status', 'open')
-        .order('created_at', { ascending: false });
-
-      if (allGlobalError) throw allGlobalError;
-      console.log('All global requests found:', allGlobalRequests);
-      
-      // Adicionar requests globais que ainda não foram adicionados
-      const existingIds = allRequests.map(req => req.id);
-      const newGlobalRequests = (allGlobalRequests || []).filter(req => !existingIds.includes(req.id));
-      allRequests = [...allRequests, ...newGlobalRequests];
+      // Remover busca de TODOS os requests globais - apenas mostrar os específicos do aluno
 
       setDocumentRequests(allRequests);
     } catch (error) {
