@@ -3755,7 +3755,7 @@ const PaymentManagement = (): React.JSX.Element => {
       {activeTab === 'affiliate-requests' && (
         <div className="space-y-6">
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
             <div className="bg-white p-6 rounded-xl shadow border">
               <div className="flex items-center">
                 <div className="p-2 bg-purple-100 rounded-lg">
@@ -3797,6 +3797,17 @@ const PaymentManagement = (): React.JSX.Element => {
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">Affiliate Total Requested</p>
                   <p className="text-2xl font-bold text-gray-900">${affiliateRequests.reduce((s,r)=> s + (Number(r.amount_usd)||0), 0).toLocaleString()}</p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white p-6 rounded-xl shadow border">
+              <div className="flex items-center">
+                <div className="p-2 bg-purple-100 rounded-lg">
+                  <Shield className="w-6 h-6 text-purple-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Available Balance</p>
+                  <p className="text-2xl font-bold text-gray-900">${adminBalance.toLocaleString()}</p>
                 </div>
               </div>
             </div>
