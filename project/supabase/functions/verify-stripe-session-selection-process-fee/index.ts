@@ -264,7 +264,8 @@ Deno.serve(async (req)=>{
       }, 400);
       // Atualiza perfil do usuário
       const { error: profileError } = await supabase.from('user_profiles').update({
-        has_paid_selection_process_fee: true
+        has_paid_selection_process_fee: true,
+        selection_process_fee_payment_method: 'stripe'
       }).eq('user_id', userId);
       if (profileError) throw new Error(`Failed to update user_profiles: ${profileError.message}`);
 

@@ -136,27 +136,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
         allRequests = [...allRequests, ...(globalRequests || [])];
       }
       
-      // Também buscar TODOS os requests globais ativos
-      const { data: allGlobalRequests, error: allGlobalError } = await supabase
-        .from('document_requests')
-        .select(`
-          *,
-          document_request_uploads (
-            *,
-            reviewed_by,
-            reviewed_at
-          )
-        `)
-        .eq('is_global', true)
-        .eq('status', 'open')
-        .order('created_at', { ascending: false });
-
-      if (allGlobalError) throw allGlobalError;
-      
-      // Adicionar requests globais que ainda não foram adicionados
-      const existingIds = allRequests.map(req => req.id);
-      const newGlobalRequests = (allGlobalRequests || []).filter(req => !existingIds.includes(req.id));
-      allRequests = [...allRequests, ...newGlobalRequests];
+      // Remover busca de TODOS os requests globais - apenas mostrar os específicos do aluno
 
       console.log('🔍 [DOCUMENTS VIEW] Found document requests:', allRequests);
       setInternalDocumentRequests(allRequests);
@@ -273,7 +253,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
               applications = studentApp;
               error = null;
             } else {
-              // Fallback: buscar aplicação que tenha paid application fee como alternativa
+              // Fallback: buscar aplicação do MESMO estudante com application fee pago
               const { data, error: paidAppError } = await supabase
                 .from('scholarship_applications')
                 .select(`
@@ -287,6 +267,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                     )
                   )
                 `)
+                .eq('student_id', profileData.id)
                 .eq('is_application_fee_paid', true)
                 .order('acceptance_letter_url', { ascending: false, nullsFirst: false })
                 .order('created_at', { ascending: false })
@@ -296,7 +277,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                 applications = data;
                 error = null;
               } else {
-                // Último fallback: buscar a mais recente
+                // Último fallback: buscar a mais recente do MESMO estudante
                 const { data, error: recentError } = await supabase
                   .from('scholarship_applications')
                   .select(`
@@ -310,6 +291,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                       )
                     )
                   `)
+                  .eq('student_id', profileData.id)
                   .order('created_at', { ascending: false })
                   .limit(1);
                 

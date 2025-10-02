@@ -59,7 +59,7 @@ export const generateTermAcceptancePDF = (data: StudentTermAcceptanceData): void
     pdf.setFontSize(12);
     pdf.setFont('helvetica', 'normal');
     pdf.text('MatriculaUSA - Academic Management System', pageWidth / 2, currentY, { align: 'center' });
-    currentY += 20;
+    currentY += 15;
 
     currentY = addSeparator(currentY);
 
@@ -76,14 +76,14 @@ export const generateTermAcceptancePDF = (data: StudentTermAcceptanceData): void
     pdf.setFont('helvetica', 'bold');
     pdf.text('Name:', margin, currentY);
     pdf.setFont('helvetica', 'normal');
-    pdf.text(data.student_name, margin + 30, currentY);
+    pdf.text(data.student_name, margin + 15, currentY);
     currentY += 8;
 
     // Email
     pdf.setFont('helvetica', 'bold');
     pdf.text('Email:', margin, currentY);
     pdf.setFont('helvetica', 'normal');
-    pdf.text(data.student_email, margin + 30, currentY);
+    pdf.text(data.student_email, margin + 15, currentY);
     currentY += 8;
 
     // País (se disponível)
@@ -91,7 +91,7 @@ export const generateTermAcceptancePDF = (data: StudentTermAcceptanceData): void
       pdf.setFont('helvetica', 'bold');
       pdf.text('Country:', margin, currentY);
       pdf.setFont('helvetica', 'normal');
-      pdf.text(data.country, margin + 40, currentY);
+      pdf.text(data.country, margin + 15, currentY);
       currentY += 8;
     }
 
@@ -183,7 +183,7 @@ export const generateTermAcceptancePDF = (data: StudentTermAcceptanceData): void
               pdf.setFontSize(13);
               pdf.setFont('helvetica', 'bold');
               currentY = addWrappedText(element.text, margin, currentY, pageWidth - margin - 20, 13);
-              currentY += 8;
+              currentY += 5;
               break;
               
             case 'h2':
@@ -191,7 +191,7 @@ export const generateTermAcceptancePDF = (data: StudentTermAcceptanceData): void
               pdf.setFontSize(11);
               pdf.setFont('helvetica', 'bold');
               currentY = addWrappedText(element.text, margin, currentY, pageWidth - margin - 20, 11);
-              currentY += 5;
+              currentY += 3;
               break;
               
             case 'h3':
@@ -200,7 +200,7 @@ export const generateTermAcceptancePDF = (data: StudentTermAcceptanceData): void
               pdf.setFontSize(10);
               pdf.setFont('helvetica', 'bold');
               currentY = addWrappedText(element.text, margin, currentY, pageWidth - margin - 20, 10);
-              currentY += 4;
+              currentY += 2;
               break;
               
             case 'p':
@@ -208,17 +208,17 @@ export const generateTermAcceptancePDF = (data: StudentTermAcceptanceData): void
               pdf.setFontSize(9);
               pdf.setFont('helvetica', 'normal');
               currentY = addWrappedText(element.text, margin, currentY, pageWidth - margin - 20, 9);
-              currentY += 4;
+              currentY += 2;
               break;
           }
         });
         
-        return currentY + 5;
+        return currentY + 3;
       };
 
       try {
         currentY = formatTermContent(data.term_content);
-        currentY += 15; // Espaço extra após o conteúdo
+        currentY += 10; // Espaço extra após o conteúdo
       } catch (error) {
         console.error('Error formatting term content:', error);
         // Fallback to simple text if formatting fails
@@ -241,7 +241,7 @@ export const generateTermAcceptancePDF = (data: StudentTermAcceptanceData): void
           : plainTextContent;
         
         currentY = addWrappedText(termContent, margin, currentY, pageWidth - margin - 20, 10);
-        currentY += 15;
+        currentY += 10;
       }
 
       currentY = addSeparator(currentY);
@@ -260,7 +260,7 @@ export const generateTermAcceptancePDF = (data: StudentTermAcceptanceData): void
     pdf.setFont('helvetica', 'bold');
     pdf.text('Accepted Term:', margin, currentY);
     pdf.setFont('helvetica', 'normal');
-    currentY = addWrappedText(data.term_title, margin + 70, currentY, pageWidth - margin - 90, 11);
+    currentY = addWrappedText(data.term_title, margin + 30, currentY, pageWidth - margin - 90, 11); 
     currentY += 3;
 
     // Data e hora da aceitação (formato americano)
@@ -276,14 +276,14 @@ export const generateTermAcceptancePDF = (data: StudentTermAcceptanceData): void
       second: '2-digit',
       hour12: true
     });
-    pdf.text(formattedDate, margin + 55, currentY);
+    pdf.text(formattedDate, margin + 25, currentY);
     currentY += 8;
 
     // Endereço IP
     pdf.setFont('helvetica', 'bold');
     pdf.text('IP Address:', margin, currentY);
     pdf.setFont('helvetica', 'normal');
-    pdf.text(data.ip_address || 'Not available', margin + 55, currentY);
+    pdf.text(data.ip_address || 'Not available', margin + 25, currentY);
     currentY += 8;
 
     // User Agent (navegador/dispositivo)
@@ -292,9 +292,6 @@ export const generateTermAcceptancePDF = (data: StudentTermAcceptanceData): void
     pdf.setFont('helvetica', 'normal');
     currentY = addWrappedText(data.user_agent || 'Not available', margin, currentY + 8, pageWidth - margin - 20, 9);
     currentY += 5;
-
-    currentY = addSeparator(currentY);
-
 
     // Rodapé com informações legais
     const footerY = pdf.internal.pageSize.getHeight() - 30;

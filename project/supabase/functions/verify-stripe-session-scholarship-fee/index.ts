@@ -75,7 +75,8 @@ Deno.serve(async (req)=>{
       console.log(`Updating applications for student_id: ${userProfile.id}, scholarship_ids: ${scholarshipIdsArray}`);
       const { data: updatedApps, error: appError } = await supabase.from('scholarship_applications').update({
         status: 'approved',
-        is_scholarship_fee_paid: true
+        is_scholarship_fee_paid: true,
+        scholarship_fee_payment_method: 'stripe'
       }).eq('student_id', userProfile.id).in('scholarship_id', scholarshipIdsArray).select('id');
       if (appError) throw new Error(`Failed to update scholarship_applications: ${appError.message}`);
       console.log('Scholarship applications updated to approved status');
