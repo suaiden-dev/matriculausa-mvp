@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Pencil, Trash2, X, CheckCircle, Eye, EyeOff, History, Users, Calendar, Globe, FileText } from 'lucide-react';
+import { Pencil, Trash2, X, CheckCircle, Eye, EyeOff, History, Users, Calendar, Globe, FileText, Download } from 'lucide-react';
 import { CKEditor } from '@ckeditor/ckeditor5-react';
 import { supabase } from '../../lib/supabase';
 import { ckEditorConfig, ckEditorStyles } from '../../config/ckeditor';
+import { generateTermAcceptancePDF, StudentTermAcceptanceData } from '../../utils/pdfGenerator';
 
 // Importar Editor dinamicamente - usando build decoupled-document para melhor suporte HTML
 let DecoupledDocumentEditor: any = null;
@@ -132,6 +133,7 @@ interface TermAcceptance {
   user_email?: string;
   user_full_name?: string;
   term_title?: string;
+  term_content?: string;
 }
 
 const TermsManagement: React.FC = () => {
@@ -147,6 +149,7 @@ const TermsManagement: React.FC = () => {
   const [acceptanceHistory, setAcceptanceHistory] = useState<TermAcceptance[]>([]);
   const [acceptanceHistoryLoading, setAcceptanceHistoryLoading] = useState(false);
   const [selectedTermForHistory, setSelectedTermForHistory] = useState<Term | null>(null);
+  const [historySearchTerm, setHistorySearchTerm] = useState('');
   
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
@@ -229,34 +232,16 @@ const TermsManagement: React.FC = () => {
     }
   };
 
-  // Carregar histórico de aceitações
-  const loadAcceptanceHistory = async (termId?: string, page: number = 1) => {
+  // Carregar histórico de aceitações (carrega todos; paginação client-side)
+  const loadAcceptanceHistory = async (termId?: string) => {
     try {
       setAcceptanceHistoryLoading(true);
       
-      // Calcular offset para paginação
-      const offset = (page - 1) * itemsPerPage;
-      
-      // Buscar total de itens para paginação
-      let countQuery = supabase
-        .from('comprehensive_term_acceptance')
-        .select('*', { count: 'exact', head: true });
-
-      if (termId) {
-        countQuery = countQuery.eq('term_id', termId);
-      }
-
-      const { count, error: countError } = await countQuery;
-      if (countError) throw countError;
-      
-      setTotalItems(count || 0);
-      
-      // Buscar as aceitações com paginação
+      // Buscar todas as aceitações (sem paginação no servidor)
       let query = supabase
         .from('comprehensive_term_acceptance')
         .select('*')
-        .order('accepted_at', { ascending: false })
-        .range(offset, offset + itemsPerPage - 1);
+        .order('accepted_at', { ascending: false });
 
       if (termId) {
         query = query.eq('term_id', termId);
@@ -283,7 +268,7 @@ const TermsManagement: React.FC = () => {
       const termIds = [...new Set(acceptances.map(a => a.term_id))];
       const { data: terms, error: termsError } = await supabase
         .from('application_terms')
-        .select('id, title')
+        .select('id, title, content')
         .in('id', termIds);
 
       if (termsError) throw termsError;
@@ -304,10 +289,12 @@ const TermsManagement: React.FC = () => {
         created_at: acceptance.created_at,
         user_email: userMap.get(acceptance.user_id)?.email || 'N/A',
         user_full_name: userMap.get(acceptance.user_id)?.full_name || 'N/A',
-        term_title: termMap.get(acceptance.term_id)?.title || 'N/A'
+        term_title: termMap.get(acceptance.term_id)?.title || 'N/A',
+        term_content: termMap.get(acceptance.term_id)?.content || ''
       }));
 
       setAcceptanceHistory(transformedData);
+      setTotalItems(transformedData.length);
     } catch (error: any) {
       console.error('Error loading acceptance history:', error);
       setError(error.message);
@@ -325,7 +312,7 @@ const TermsManagement: React.FC = () => {
   useEffect(() => {
     if (activeTab === 'history') {
       setCurrentPage(1); // Reset to first page when switching to history tab
-      loadAcceptanceHistory(undefined, 1);
+      loadAcceptanceHistory(undefined);
     }
   }, [activeTab]);
 
@@ -438,20 +425,29 @@ const TermsManagement: React.FC = () => {
   // Funções de paginação
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
-    const termId = selectedTermForHistory?.id;
-    loadAcceptanceHistory(termId, newPage);
   };
 
   const handleItemsPerPageChange = (newItemsPerPage: number) => {
     setItemsPerPage(newItemsPerPage);
     setCurrentPage(1); // Reset to first page
-    const termId = selectedTermForHistory?.id;
-    loadAcceptanceHistory(termId, 1);
   };
 
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
-  const startItem = (currentPage - 1) * itemsPerPage + 1;
-  const endItem = Math.min(currentPage * itemsPerPage, totalItems);
+  // Filtragem client-side para histórico
+  const filteredAcceptanceHistory = acceptanceHistory.filter((a) => {
+    if (!historySearchTerm) return true;
+    const q = historySearchTerm.toLowerCase();
+    return (
+      (a.user_full_name || '').toLowerCase().includes(q) ||
+      (a.user_email || '').toLowerCase().includes(q) ||
+      (a.term_title || '').toLowerCase().includes(q) ||
+      (a.ip_address || '').toLowerCase().includes(q)
+    );
+  });
+
+  const totalPages = Math.ceil(filteredAcceptanceHistory.length / itemsPerPage);
+  const startItem = filteredAcceptanceHistory.length === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1;
+  const endItem = Math.min(currentPage * itemsPerPage, filteredAcceptanceHistory.length);
+  const paginatedAcceptanceHistory = filteredAcceptanceHistory.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   if (loading) {
     return (
@@ -483,7 +479,7 @@ const TermsManagement: React.FC = () => {
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            Gerenciar Contratos
+            Manage Terms
           </button>
           <button
             onClick={() => {
@@ -497,7 +493,7 @@ const TermsManagement: React.FC = () => {
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            Histórico de Aceitações
+            Acceptance History
           </button>
         </div>
         
@@ -652,7 +648,7 @@ const TermsManagement: React.FC = () => {
                         setSelectedTermForHistory(term);
                         setActiveTab('history');
                         setCurrentPage(1); // Reset to first page
-                        loadAcceptanceHistory(term.id, 1);
+                        loadAcceptanceHistory(term.id);
                       }}
                       className="p-2 text-green-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
                       title="Ver histórico de aceitações"
@@ -726,22 +722,33 @@ const TermsManagement: React.FC = () => {
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-lg font-medium text-gray-900">
                 {selectedTermForHistory 
-                  ? `Histórico de Aceitações - ${selectedTermForHistory.title}`
-                  : 'Histórico Geral de Aceitações de Termos'
+                  ? `Acceptance History - ${selectedTermForHistory.title}`
+                  : 'General Terms Acceptance History'
                 }
               </h3>
-              {selectedTermForHistory && (
-                <button
-                  onClick={() => {
-                    setSelectedTermForHistory(null);
-                    setCurrentPage(1); // Reset to first page
-                    loadAcceptanceHistory(undefined, 1);
-                  }}
-                  className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-                >
-                  Ver Todos os Termos
-                </button>
-              )}
+              <div className="flex items-center gap-3">
+                {selectedTermForHistory && (
+                  <button
+                    onClick={() => {
+                      setSelectedTermForHistory(null);
+                      setCurrentPage(1); // Reset to first page
+                    loadAcceptanceHistory(undefined);
+                    }}
+                    className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                  >
+                    View All Terms
+                  </button>
+                )}
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={historySearchTerm}
+                    onChange={(e) => setHistorySearchTerm(e.target.value)}
+                    placeholder="Search by user, email, term or IP"
+                    className="w-64 pl-3 pr-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
             </div>
 
             {acceptanceHistoryLoading ? (
@@ -780,10 +787,13 @@ const TermsManagement: React.FC = () => {
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Navegador/Dispositivo
                         </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Ações
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {acceptanceHistory.map((acceptance) => (
+                      {paginatedAcceptanceHistory.map((acceptance) => (
                         <tr key={acceptance.id} className="hover:bg-gray-50">
                           <td className="px-4 py-4 whitespace-nowrap">
                             <div className="flex items-center">
@@ -839,6 +849,29 @@ const TermsManagement: React.FC = () => {
                               </span>
                             </div>
                           </td>
+                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <button
+                              onClick={() => {
+                                const pdfData: StudentTermAcceptanceData = {
+                                  student_name: acceptance.user_full_name || 'N/A',
+                                  student_email: acceptance.user_email || 'N/A',
+                                  term_title: acceptance.term_title || 'N/A',
+                                  accepted_at: new Date(acceptance.accepted_at).toLocaleString('en-US'),
+                                  ip_address: acceptance.ip_address || 'N/A',
+                                  user_agent: acceptance.user_agent || 'N/A',
+                                  country: 'N/A',
+                                  affiliate_code: undefined,
+                                  term_content: acceptance.term_content || ''
+                                };
+                                generateTermAcceptancePDF(pdfData);
+                              }}
+                              className="inline-flex items-center px-3 py-1 rounded-md text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                              title="Baixar documento (PDF)"
+                            >
+                              <Download className="h-3 w-3 mr-1" />
+                              PDF
+                            </button>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -888,55 +921,63 @@ const TermsManagement: React.FC = () => {
 
                       {/* Números das páginas */}
                       <div className="flex items-center space-x-1">
-                        {/* Primeira página */}
-                        {currentPage > 3 && (
-                          <>
-                            <button
-                              onClick={() => handlePageChange(1)}
-                              className="px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
-                            >
-                              1
-                            </button>
-                            {currentPage > 4 && (
-                              <span className="px-2 text-gray-400">...</span>
-                            )}
-                          </>
-                        )}
+                        {(() => {
+                          const pages: number[] = [];
+                          const windowSize = 5;
+                          let start = Math.max(1, currentPage - Math.floor(windowSize / 2));
+                          let end = start + windowSize - 1;
+                          if (end > totalPages) {
+                            end = totalPages;
+                            start = Math.max(1, end - windowSize + 1);
+                          }
+                          for (let p = start; p <= end; p++) pages.push(p);
 
-                        {/* Páginas ao redor da atual */}
-                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                          const pageNum = Math.max(1, Math.min(totalPages, currentPage - 2 + i));
-                          if (pageNum < 1 || pageNum > totalPages) return null;
-                          
                           return (
-                            <button
-                              key={pageNum}
-                              onClick={() => handlePageChange(pageNum)}
-                              className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                                pageNum === currentPage
-                                  ? 'bg-blue-600 text-white'
-                                  : 'text-gray-700 hover:bg-gray-50'
-                              }`}
-                            >
-                              {pageNum}
-                            </button>
-                          );
-                        })}
+                            <>
+                              {start > 1 && (
+                                <>
+                                  <button
+                                    onClick={() => handlePageChange(1)}
+                                    className="px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
+                                  >
+                                    1
+                                  </button>
+                                  {start > 2 && (
+                                    <span className="px-2 text-gray-400">...</span>
+                                  )}
+                                </>
+                              )}
 
-                        {/* Última página */}
-                        {currentPage < totalPages - 2 && (
-                          <>
-                            {currentPage < totalPages - 3 && (
-                              <span className="px-2 text-gray-400">...</span>
-                            )}
-                            <button
-                              onClick={() => handlePageChange(totalPages)}
-                              className="px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
-                            >
-                              {totalPages}
-                            </button>
-                          </>
-                        )}
+                              {pages.map((pageNum) => (
+                                <button
+                                  key={pageNum}
+                                  onClick={() => handlePageChange(pageNum)}
+                                  className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                                    pageNum === currentPage
+                                      ? 'bg-blue-600 text-white'
+                                      : 'text-gray-700 hover:bg-gray-50'
+                                  }`}
+                                >
+                                  {pageNum}
+                                </button>
+                              ))}
+
+                              {end < totalPages && (
+                                <>
+                                  {end < totalPages - 1 && (
+                                    <span className="px-2 text-gray-400">...</span>
+                                  )}
+                                  <button
+                                    onClick={() => handlePageChange(totalPages)}
+                                    className="px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
+                                  >
+                                    {totalPages}
+                                  </button>
+                                </>
+                              )}
+                            </>
+                          );
+                        })()}
                       </div>
 
                       {/* Botão Próximo */}
