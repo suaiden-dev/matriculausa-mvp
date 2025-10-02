@@ -1,6 +1,5 @@
 import { supabase } from '../supabase';
-import { getMicrosoftAuthConfig, shouldUseWebAppFlow } from '../microsoftAuthConfig';
-import { MSALAccountManager } from '../msalAccountManager';
+import { refreshWebAppToken } from '../webAppAuthConfig';
 
 export interface TokenResult {
   accessToken: string;
@@ -42,22 +41,19 @@ export class TokenManager {
 
   /**
    * Renova o token usando APENAS Web App flow (com client_secret)
-   * Sem MSAL/SPA - Apenas Web App flow
+   * SEM MSAL/SPA - Apenas Web App flow
    */
   async renewToken(): Promise<TokenResult | null> {
-    console.log('🔄 Attempting token renewal...');
+    console.log('🔄 Attempting token renewal via Web App flow...');
     
     try {
-      // USAR APENAS WEB APP FLOW - Sem MSAL/SPA
-      console.log('🔄 Using Web App flow for token renewal...');
       const refreshResult = await this.tryRefreshTokenRenewal();
       if (refreshResult) {
         console.log('✅ Token renewed via Web App flow');
         return refreshResult;
       }
 
-      console.log('❌ Web App flow failed');
-      console.log('💡 User will need to reconnect manually');
+      console.log('❌ Web App flow failed - user needs to reconnect');
       return null;
     } catch (error) {
       console.error('❌ Error during token renewal:', error);
@@ -67,48 +63,20 @@ export class TokenManager {
 
   /**
    * Tenta renovar token via Refresh Token (Web App flow)
-   * Mais confiável para aplicações Web com client_secret
+   * Usa configuração centralizada para Web App
    */
   private async tryRefreshTokenRenewal(): Promise<TokenResult | null> {
     try {
-      console.log('🔄 Trying refresh token renewal...');
+      console.log('🔄 Trying refresh token renewal via Web App flow...');
       
       if (!this.refreshToken) {
         console.log('❌ No refresh token available');
         return null;
       }
 
-      const clientSecret = import.meta.env.VITE_AZURE_CLIENT_SECRET;
-      if (!clientSecret) {
-        console.log('❌ No client secret available for refresh token renewal');
-        return null;
-      }
-
-      const tokenUrl = 'https://login.microsoftonline.com/common/oauth2/v2.0/token';
-      const params = new URLSearchParams({
-        client_id: import.meta.env.VITE_AZURE_CLIENT_ID,
-        client_secret: clientSecret,
-        refresh_token: this.refreshToken,
-        grant_type: 'refresh_token',
-        scope: 'User.Read Mail.Read Mail.ReadWrite Mail.Send offline_access'
-      });
-
-      const response = await fetch(tokenUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: params
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('❌ Refresh token renewal failed:', errorData);
-        return null;
-      }
-
-      const tokenData = await response.json();
-      console.log('✅ Token renewed successfully via refresh token');
+      // Usar função centralizada para Web App flow
+      const tokenData = await refreshWebAppToken(this.refreshToken);
+      console.log('✅ Token renewed successfully via Web App flow');
       
       return {
         accessToken: tokenData.access_token,
@@ -116,6 +84,14 @@ export class TokenManager {
       };
     } catch (error) {
       console.error('❌ Refresh token renewal failed:', error);
+      
+      // Verificar se é erro AADSTS90023
+      if (error instanceof Error && error.message.includes('AADSTS90023')) {
+        console.error('🚨 Erro AADSTS90023 detectado!');
+        console.error('💡 Solução: Verificar configuração Azure AD - aplicação deve ser registrada como Web App');
+        console.error('🔧 Verifique se não há URLs duplicadas entre Web e SPA no Azure AD Portal');
+      }
+      
       return null;
     }
   }
@@ -171,24 +147,14 @@ export class TokenManager {
       } else {
         console.log('✅ Account marked as disconnected and tokens cleared');
         
-        // Limpar instância MSAL global
-        if ((window as any).msalInstance) {
-          try {
-            await (window as any).msalInstance.clearCache();
-            console.log('✅ MSAL cache cleared');
-          } catch (msalError) {
-            console.warn('⚠️ Error clearing MSAL cache:', msalError);
-          }
-        }
-        
-        // Limpar localStorage relacionado ao MSAL
+        // Limpar localStorage relacionado ao Microsoft
         const keys = Object.keys(localStorage);
         keys.forEach(key => {
-          if (key.includes('msal') || key.includes('azure')) {
+          if (key.includes('microsoft') || key.includes('azure')) {
             localStorage.removeItem(key);
           }
         });
-        console.log('✅ MSAL localStorage cleared');
+        console.log('✅ Microsoft localStorage cleared');
         
         window.dispatchEvent(new CustomEvent('microsoft-connection-updated'));
       }

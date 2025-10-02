@@ -2,6 +2,7 @@ import { Client, AuthenticationProvider } from '@microsoft/microsoft-graph-clien
 import { TokenManager } from './TokenManager';
 import { withRetries } from '../utils/retryUtils';
 import { GraphEmail, GraphMailFolder, GraphUser, GraphResponse } from '../types/graphTypes';
+import { activateFetchInterceptor } from '../utils/fetchInterceptor';
 
 /**
  * Serviço para comunicação com Microsoft Graph API
@@ -12,6 +13,9 @@ export class GraphService {
   private tokenManager: TokenManager;
 
   constructor(accessToken: string, refreshToken: string = '', configId: string = '') {
+    // Ativar interceptador de fetch para resolver AADSTS90023
+    activateFetchInterceptor();
+    
     this.tokenManager = new TokenManager(accessToken, refreshToken, configId);
     
     const authProvider: AuthenticationProvider = {
