@@ -463,6 +463,9 @@ const FinancialAnalytics: React.FC = () => {
       }, {});
     }
 
+    // Mapas para evitar duplicação de taxas globais (selection_process, i20_control e application_fee)
+    const globalFeesProcessed: { [userId: string]: { selection_process: boolean; i20_control: boolean; application_fee: boolean } } = {};
+
     // Processar aplicações - criar registros apenas para taxas pagas (igual ao PaymentManagement)
     applications.forEach((app: any) => {
       const student = app.user_profiles;
@@ -541,10 +544,11 @@ const FinancialAnalytics: React.FC = () => {
       }
 
       // Criar registros apenas para taxas que foram pagas (igual ao PaymentManagement)
-      if (student.has_paid_selection_process_fee) {
+      // Selection Process Fee - apenas uma vez por usuário (taxa global)
+      if (student.has_paid_selection_process_fee && !globalFeesProcessed[student.user_id]?.selection_process) {
         console.log(`✅ [FA] Creating selection_process record for ${student.full_name}: $${(selectionProcessFee / 100).toFixed(2)}`);
         paymentRecords.push({
-          id: `${app.id}-selection`,
+          id: `${student.user_id}-selection`,
           fee_type: 'selection_process',
           amount: selectionProcessFee,
           status: 'paid',
@@ -554,12 +558,19 @@ const FinancialAnalytics: React.FC = () => {
           university_name: university.name,
           created_at: student.created_at || app.created_at
         });
+        
+        // Marcar como processado para este usuário
+        if (!globalFeesProcessed[student.user_id]) {
+          globalFeesProcessed[student.user_id] = { selection_process: false, i20_control: false, application_fee: false };
+        }
+        globalFeesProcessed[student.user_id].selection_process = true;
       }
 
-      if (app.is_application_fee_paid) {
+      // Application Fee - apenas uma vez por usuário (taxa global)
+      if (app.is_application_fee_paid && !globalFeesProcessed[student.user_id]?.application_fee) {
         console.log(`✅ [FA] Creating application record for ${student.full_name}: $${(applicationFee / 100).toFixed(2)}`);
         paymentRecords.push({
-          id: `${app.id}-application`,
+          id: `${student.user_id}-application`,
           fee_type: 'application',
           amount: applicationFee,
           status: 'paid',
@@ -569,6 +580,12 @@ const FinancialAnalytics: React.FC = () => {
           university_name: university.name,
           created_at: student.created_at || app.created_at
         });
+        
+        // Marcar como processado para este usuário
+        if (!globalFeesProcessed[student.user_id]) {
+          globalFeesProcessed[student.user_id] = { selection_process: false, i20_control: false, application_fee: false };
+        }
+        globalFeesProcessed[student.user_id].application_fee = true;
       }
 
       if (app.is_scholarship_fee_paid) {
@@ -586,10 +603,11 @@ const FinancialAnalytics: React.FC = () => {
         });
       }
 
-      if (student.has_paid_i20_control_fee) {
+      // I-20 Control Fee - apenas uma vez por usuário (taxa global)
+      if (student.has_paid_i20_control_fee && !globalFeesProcessed[student.user_id]?.i20_control) {
         console.log(`✅ [FA] Creating i20_control_fee record for ${student.full_name}: $${(i20ControlFee / 100).toFixed(2)}`);
         paymentRecords.push({
-          id: `${app.id}-i20`,
+          id: `${student.user_id}-i20`,
           fee_type: 'i20_control_fee',
           amount: i20ControlFee,
           status: 'paid',
@@ -599,6 +617,12 @@ const FinancialAnalytics: React.FC = () => {
           university_name: university.name,
           created_at: student.created_at || app.created_at
         });
+        
+        // Marcar como processado para este usuário
+        if (!globalFeesProcessed[student.user_id]) {
+          globalFeesProcessed[student.user_id] = { selection_process: false, i20_control: false, application_fee: false };
+        }
+        globalFeesProcessed[student.user_id].i20_control = true;
       }
     });
 

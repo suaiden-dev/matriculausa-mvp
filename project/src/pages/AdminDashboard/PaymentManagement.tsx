@@ -1949,6 +1949,9 @@ const PaymentManagement = (): React.JSX.Element => {
       // Converter aplicações e pagamentos Zelle em registros de pagamento
       const paymentRecords: PaymentRecord[] = [];
       
+      // Mapas para evitar duplicação de taxas globais (selection_process, i20_control e application_fee)
+      const globalFeesProcessed: { [userId: string]: { selection_process: boolean; i20_control: boolean; application_fee: boolean } } = {};
+      
       console.log('🔄 Processing applications:', applications?.length || 0);
       console.log('🔄 Processing Zelle payments:', zellePayments?.length || 0);
       
@@ -2076,43 +2079,56 @@ const PaymentManagement = (): React.JSX.Element => {
         
 
         // Criar registros apenas para taxas que foram pagas
-        if (student.has_paid_selection_process_fee) {
-        paymentRecords.push({
-          id: `${app.id}-selection`,
-          student_id: student.id,
-          student_name: studentName,
-          student_email: studentEmail,
-          university_id: university.id,
-          university_name: universityName,
-          scholarship_id: scholarship.id,
-          scholarship_title: scholarshipTitle,
-          fee_type: 'selection_process',
-          amount: selectionProcessFee,
+        // Selection Process Fee - apenas uma vez por usuário (taxa global)
+        if (student.has_paid_selection_process_fee && !globalFeesProcessed[student.user_id]?.selection_process) {
+          paymentRecords.push({
+            id: `${student.user_id}-selection`,
+            student_id: student.id,
+            student_name: studentName,
+            student_email: studentEmail,
+            university_id: university.id,
+            university_name: universityName,
+            scholarship_id: scholarship.id,
+            scholarship_title: scholarshipTitle,
+            fee_type: 'selection_process',
+            amount: selectionProcessFee,
             status: 'paid',
             payment_date: app.created_at,
-          created_at: app.created_at,
-          payment_method: student.selection_process_fee_payment_method || 'manual'
-        });
+            created_at: app.created_at,
+            payment_method: student.selection_process_fee_payment_method || 'manual'
+          });
+          
+          // Marcar como processado para este usuário
+          if (!globalFeesProcessed[student.user_id]) {
+            globalFeesProcessed[student.user_id] = { selection_process: false, i20_control: false, application_fee: false };
+          }
+          globalFeesProcessed[student.user_id].selection_process = true;
         }
 
-        // Application Fee - criar apenas se foi paga
-        if (app.is_application_fee_paid) {
-        paymentRecords.push({
-          id: `${app.id}-application`,
-          student_id: student.id,
-          student_name: studentName,
-          student_email: studentEmail,
-          university_id: university.id,
-          university_name: universityName,
-          scholarship_id: scholarship.id,
-          scholarship_title: scholarshipTitle,
-          fee_type: 'application',
-          amount: applicationFee,
+        // Application Fee - apenas uma vez por usuário (taxa global)
+        if (app.is_application_fee_paid && !globalFeesProcessed[student.user_id]?.application_fee) {
+          paymentRecords.push({
+            id: `${student.user_id}-application`,
+            student_id: student.id,
+            student_name: studentName,
+            student_email: studentEmail,
+            university_id: university.id,
+            university_name: universityName,
+            scholarship_id: scholarship.id,
+            scholarship_title: scholarshipTitle,
+            fee_type: 'application',
+            amount: applicationFee,
             status: 'paid',
             payment_date: app.created_at,
-          created_at: app.created_at,
-          payment_method: app.application_fee_payment_method || 'manual'
-        });
+            created_at: app.created_at,
+            payment_method: app.application_fee_payment_method || 'manual'
+          });
+          
+          // Marcar como processado para este usuário
+          if (!globalFeesProcessed[student.user_id]) {
+            globalFeesProcessed[student.user_id] = { selection_process: false, i20_control: false, application_fee: false };
+          }
+          globalFeesProcessed[student.user_id].application_fee = true;
         }
 
         // Scholarship Fee - criar apenas se foi paga E não for da bolsa "Current Students Scholarship"
@@ -2137,24 +2153,30 @@ const PaymentManagement = (): React.JSX.Element => {
           console.log('🚫 Excluding Current Students Scholarship payment for:', studentName, '- $', (scholarshipFee / 100).toFixed(2));
         }
 
-        // I-20 Control Fee - criar apenas se foi paga
-        if (student.has_paid_i20_control_fee) {
-        paymentRecords.push({
-          id: `${app.id}-i20`,
-          student_id: student.id,
-          student_name: studentName,
-          student_email: studentEmail,
-          university_id: university.id,
-          university_name: universityName,
-          scholarship_id: scholarship.id,
-          scholarship_title: scholarshipTitle,
-          fee_type: 'i20_control_fee',
-          amount: i20ControlFee,
+        // I-20 Control Fee - apenas uma vez por usuário (taxa global)
+        if (student.has_paid_i20_control_fee && !globalFeesProcessed[student.user_id]?.i20_control) {
+          paymentRecords.push({
+            id: `${student.user_id}-i20`,
+            student_id: student.id,
+            student_name: studentName,
+            student_email: studentEmail,
+            university_id: university.id,
+            university_name: universityName,
+            scholarship_id: scholarship.id,
+            scholarship_title: scholarshipTitle,
+            fee_type: 'i20_control_fee',
+            amount: i20ControlFee,
             status: 'paid',
             payment_date: app.created_at,
-          created_at: app.created_at,
-          payment_method: student.i20_control_fee_payment_method || 'manual'
-        });
+            created_at: app.created_at,
+            payment_method: student.i20_control_fee_payment_method || 'manual'
+          });
+          
+          // Marcar como processado para este usuário
+          if (!globalFeesProcessed[student.user_id]) {
+            globalFeesProcessed[student.user_id] = { selection_process: false, i20_control: false, application_fee: false };
+          }
+          globalFeesProcessed[student.user_id].i20_control = true;
         }
       });
 
