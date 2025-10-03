@@ -2413,7 +2413,7 @@ const PaymentManagement = (): React.JSX.Element => {
 
         console.log('💳 Processing Stripe user for:', studentName);
 
-        // Selection Process Fee
+        // Selection Process Fee - criar apenas se foi paga
         if (stripeUser.has_paid_selection_process_fee) {
           paymentRecords.push({
             id: `stripe-${stripeUser.user_id}-selection`,
@@ -2429,63 +2429,69 @@ const PaymentManagement = (): React.JSX.Element => {
             status: 'paid',
             payment_date: stripeUser.created_at,
             created_at: stripeUser.created_at,
-            payment_method: stripeUser.selection_process_fee_payment_method || 'stripe'
+            payment_method: stripeUser.selection_process_fee_payment_method || 'manual'
           });
         }
 
-        // Application Fee
-        paymentRecords.push({
-          id: `stripe-${stripeUser.user_id}-application`,
-          student_id: stripeUser.id,
-          student_name: studentName,
-          student_email: studentEmail,
-          university_id: '00000000-0000-0000-0000-000000000000',
-          university_name: 'No University Selected',
-          scholarship_id: '00000000-0000-0000-0000-000000000000',
-          scholarship_title: 'No Scholarship Selected',
-          fee_type: 'application',
-          amount: applicationFee,
-          status: stripeUser.is_application_fee_paid ? 'paid' : 'pending',
-          payment_date: stripeUser.is_application_fee_paid ? stripeUser.created_at : undefined,
-          created_at: stripeUser.created_at,
-          payment_method: 'stripe'
-        });
+        // Application Fee - criar apenas se foi paga
+        if (stripeUser.is_application_fee_paid) {
+          paymentRecords.push({
+            id: `stripe-${stripeUser.user_id}-application`,
+            student_id: stripeUser.id,
+            student_name: studentName,
+            student_email: studentEmail,
+            university_id: '00000000-0000-0000-0000-000000000000',
+            university_name: 'No University Selected',
+            scholarship_id: '00000000-0000-0000-0000-000000000000',
+            scholarship_title: 'No Scholarship Selected',
+            fee_type: 'application',
+            amount: applicationFee,
+            status: 'paid',
+            payment_date: stripeUser.created_at,
+            created_at: stripeUser.created_at,
+            payment_method: 'manual'
+          });
+        }
 
-        // Scholarship Fee
-        paymentRecords.push({
-          id: `stripe-${stripeUser.user_id}-scholarship`,
-          student_id: stripeUser.id,
-          student_name: studentName,
-          student_email: studentEmail,
-          university_id: '00000000-0000-0000-0000-000000000000',
-          university_name: 'No University Selected',
-          scholarship_id: '00000000-0000-0000-0000-000000000000',
-          scholarship_title: 'No Scholarship Selected',
-          fee_type: 'scholarship',
-          amount: scholarshipFee,
-          status: stripeUser.is_scholarship_fee_paid ? 'paid' : 'pending',
-          payment_date: stripeUser.is_scholarship_fee_paid ? stripeUser.created_at : undefined,
-          created_at: stripeUser.created_at,
-          payment_method: 'stripe'
-        });
+        // Scholarship Fee - criar apenas se foi paga
+        if (stripeUser.is_scholarship_fee_paid) {
+          paymentRecords.push({
+            id: `stripe-${stripeUser.user_id}-scholarship`,
+            student_id: stripeUser.id,
+            student_name: studentName,
+            student_email: studentEmail,
+            university_id: '00000000-0000-0000-0000-000000000000',
+            university_name: 'No University Selected',
+            scholarship_id: '00000000-0000-0000-0000-000000000000',
+            scholarship_title: 'No Scholarship Selected',
+            fee_type: 'scholarship',
+            amount: scholarshipFee,
+            status: 'paid',
+            payment_date: stripeUser.created_at,
+            created_at: stripeUser.created_at,
+            payment_method: 'manual'
+          });
+        }
 
-        // I-20 Control Fee
-        paymentRecords.push({
-          id: `stripe-${stripeUser.user_id}-i20`,
-          student_id: stripeUser.id,
-          student_name: studentName,
-          student_email: studentEmail,
-          university_id: '00000000-0000-0000-0000-000000000000',
-          university_name: 'No University Selected',
-          scholarship_id: '00000000-0000-0000-0000-000000000000',
-          scholarship_title: 'No Scholarship Selected',
-          fee_type: 'i20_control_fee',
-          amount: i20ControlFee,
-          status: stripeUser.has_paid_i20_control_fee ? 'paid' : 'pending',
-          payment_date: stripeUser.has_paid_i20_control_fee ? stripeUser.created_at : undefined,
-          created_at: stripeUser.created_at,
-          payment_method: stripeUser.i20_control_fee_payment_method || 'stripe'
-        });
+        // I-20 Control Fee - criar apenas se foi paga
+        if (stripeUser.has_paid_i20_control_fee) {
+          paymentRecords.push({
+            id: `stripe-${stripeUser.user_id}-i20`,
+            student_id: stripeUser.id,
+            student_name: studentName,
+            student_email: studentEmail,
+            university_id: '00000000-0000-0000-0000-000000000000',
+            university_name: 'No University Selected',
+            scholarship_id: '00000000-0000-0000-0000-000000000000',
+            scholarship_title: 'No Scholarship Selected',
+            fee_type: 'i20_control_fee',
+            amount: i20ControlFee,
+            status: 'paid',
+            payment_date: stripeUser.created_at,
+            created_at: stripeUser.created_at,
+            payment_method: stripeUser.i20_control_fee_payment_method || 'manual'
+          });
+        }
       });
 
       // Se não há dados reais, vamos criar alguns dados de exemplo para testar
