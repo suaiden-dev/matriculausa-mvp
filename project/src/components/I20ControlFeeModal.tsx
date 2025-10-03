@@ -8,8 +8,8 @@ import { useAuth } from '../hooks/useAuth';
 interface I20ControlFeeModalProps {
   isOpen: boolean;
   onClose: () => void;
-  selectedPaymentMethod: 'stripe' | 'zelle' | null;
-  onPaymentMethodSelect: (method: 'stripe' | 'zelle') => void;
+  selectedPaymentMethod: 'stripe' | 'zelle' | 'pix' | null;
+  onPaymentMethodSelect: (method: 'stripe' | 'zelle' | 'pix') => void;
 }
 
 export const I20ControlFeeModal: React.FC<I20ControlFeeModalProps> = ({
@@ -37,7 +37,7 @@ export const I20ControlFeeModal: React.FC<I20ControlFeeModalProps> = ({
   }, [isOpen]);
   
   // Função para selecionar o método de pagamento (não processa automaticamente)
-  const handlePaymentMethodSelect = (method: 'stripe' | 'zelle') => {
+  const handlePaymentMethodSelect = (method: 'stripe' | 'zelle' | 'pix') => {
     console.log('🔍 [I20ControlFeeModal] Método selecionado:', method);
     onPaymentMethodSelect(method);
   };

@@ -2300,6 +2300,10 @@
           "title": "Stripe",
           "description": "Pague com segurança com cartão de crédito ou débito via Stripe"
         },
+        "pix": {
+          "title": "PIX",
+          "description": "Pagamento instantâneo brasileiro - Valores em reais via Stripe"
+        },
         "zelle": {
           "title": "Zelle",
           "description": "Pague via transferência Zelle",
@@ -2884,6 +2888,10 @@
         "title": "Cartão de Crédito",
         "description": "Pague com segurança com cartão de crédito ou débito via Stripe"
       },
+      "pix": {
+        "title": "PIX",
+        "description": "Pagamento instantâneo brasileiro - Valores em reais via Stripe"
+      },
       "zelle": {
         "title": "Zelle",
         "description": "Pague via transferência Zelle (requer verificação manual)"
@@ -2937,6 +2945,12 @@
     "processing": "Processando..."
   },
   "successPages": {
+    "pixPayment": {
+      "processing": "Processando Pagamento PIX",
+      "message": "Seu pagamento PIX foi recebido e está sendo processado. Você será redirecionado automaticamente em alguns segundos.",
+      "verifying": "Verificando pagamento...",
+      "pleaseWait": "Por favor, aguarde..."
+    },
     "selectionProcessFee": {
       "title": "Pagamento da Taxa de Processo de Seleção Realizado com Sucesso!",
       "description": "Seu pagamento de {amount} foi processado com sucesso.",

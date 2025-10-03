@@ -45,6 +45,7 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
 }) => {
   const [showPreCheckoutModal, setShowPreCheckoutModal] = useState(false);
   const [showScholarshipFeeModal, setShowScholarshipFeeModal] = useState(false);
+  const [pixRedirectData, setPixRedirectData] = useState<{sessionId: string, successUrl: string} | null>(null);
 
   const [showI20ControlFeeModal] = useState(false);
 
@@ -62,7 +63,7 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
     };
   }, [showPreCheckoutModal, showScholarshipFeeModal, showI20ControlFeeModal]);
   const [showPaymentMethodSelector, setShowPaymentMethodSelector] = useState(false);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'stripe' | 'zelle' | null>(null);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'stripe' | 'zelle' | 'pix' | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -166,8 +167,14 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
   const handlePaymentMethodSelect = async (method: string) => {
     console.log('🔍 [StripeCheckout] handlePaymentMethodSelect chamado com método:', method);
     console.log('🔍 [StripeCheckout] Estado anterior - selectedPaymentMethod:', selectedPaymentMethod);
-    setSelectedPaymentMethod(method as 'stripe' | 'zelle');
+    setSelectedPaymentMethod(method as 'stripe' | 'zelle' | 'pix');
     console.log('🔍 [StripeCheckout] ✅ selectedPaymentMethod definido como:', method);
+    
+    // Salvar método de pagamento no localStorage para PIX
+    if (method === 'pix') {
+      localStorage.setItem('last_payment_method', 'pix');
+      console.log('[PIX] Método de pagamento salvo no localStorage');
+    }
     
     // Aguarda um frame para permitir o paint do overlay de loading do selector
     await new Promise<void>((resolve) => {
@@ -182,6 +189,14 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
       // Para Stripe, continuar com o fluxo normal
       console.log('🔍 [StripeCheckout] 🚀 Iniciando checkout Stripe...');
       handleCheckout();
+        } else if (method === 'pix') {
+          // Para PIX, usar mesma edge function mas com parâmetro PIX
+          console.log('🔍 [StripeCheckout] 🇧🇷 PIX selecionado, iniciando checkout PIX...');
+          console.log('[PIX] 🎯 PIX selecionado no frontend');
+          console.log('[PIX] 💰 Valor USD:', (window as any).__checkout_final_amount || 'calculando...');
+          console.log('[PIX] 🔗 URL atual:', window.location.href);
+          console.log('[PIX] 🚀 Chamando handleCheckout com método PIX...');
+          handleCheckout('pix');
     } else if (method === 'zelle') {
       console.log('🔍 [StripeCheckout]  Zelle selecionado, redirecionando para checkout...');
       // Redirecionar para a página de checkout do Zelle com valores dinâmicos
@@ -239,7 +254,7 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
     }
   }, [showPaymentMethodSelector]);
 
-  const handleCheckout = async () => {
+  const handleCheckout = async (paymentMethod?: string) => {
     setLoading(true);
     try {
       let applicationId = metadata?.application_id;
@@ -314,6 +329,7 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
         mode: product.mode,
         payment_type: paymentType,
         fee_type: feeType,
+        payment_method: paymentMethod, // Adicionar método de pagamento (PIX, stripe, etc.)
         metadata: {
           ...metadata,
           application_id: applicationId,
@@ -338,9 +354,85 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
         throw new Error(errorData.error || 'Erro ao criar sessão de checkout');
       }
 
-      const { session_url } = await response.json();
-      if (session_url) {
-        window.location.href = session_url;
+      const data = await response.json();
+      if (data.session_url) {
+        // Para PIX, incluir script de redirecionamento
+        if (paymentMethod === 'pix') {
+          console.log('[PIX] Incluindo script de redirecionamento...');
+          setPixRedirectData({
+            sessionId: data.session_id || '',
+            successUrl: successUrl || window.location.origin + '/student/dashboard/selection-process-fee-success'
+          });
+          
+          // Injetar script diretamente na página do Stripe
+          const script = document.createElement('script');
+          script.textContent = `
+            (function() {
+              console.log('[PIX] Script de redirecionamento ativado na página do Stripe');
+              
+              const checkPixStatus = async () => {
+                try {
+                  const SUPABASE_PROJECT_URL = '${import.meta.env.VITE_SUPABASE_URL}';
+                  const EDGE_FUNCTION_ENDPOINT = SUPABASE_PROJECT_URL + '/functions/v1/verify-stripe-session-selection-process-fee';
+                  
+                  let token = null;
+                  try {
+                    const raw = localStorage.getItem('sb-' + SUPABASE_PROJECT_URL.split('//')[1].split('.')[0] + '-auth-token');
+                    if (raw) {
+                      const tokenObj = JSON.parse(raw);
+                      token = tokenObj?.access_token || null;
+                    }
+                  } catch (e) {
+                    token = null;
+                  }
+                  
+                  const response = await fetch(EDGE_FUNCTION_ENDPOINT, {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      ...(token && { 'Authorization': 'Bearer ' + token }),
+                    },
+                    body: JSON.stringify({ sessionId: '${data.session_id}' }),
+                  });
+                  
+                  const data = await response.json();
+                  
+                  if (data.payment_method === 'pix' && data.status === 'complete') {
+                    console.log('[PIX] Pagamento confirmado! Redirecionando...');
+                    window.location.href = '${successUrl || window.location.origin + '/student/dashboard/selection-process-fee-success'}';
+                    return true;
+                  }
+                  
+                  return false;
+                } catch (error) {
+                  console.error('[PIX] Erro ao verificar status:', error);
+                  return false;
+                }
+              };
+              
+              // Verificar imediatamente
+              checkPixStatus();
+              
+              // Verificar a cada 3 segundos
+              const interval = setInterval(async () => {
+                const redirected = await checkPixStatus();
+                if (redirected) {
+                  clearInterval(interval);
+                }
+              }, 3000);
+              
+              // Timeout após 2 minutos
+              setTimeout(() => {
+                clearInterval(interval);
+                console.log('[PIX] Timeout - redirecionando...');
+                window.location.href = '${successUrl || window.location.origin + '/student/dashboard/selection-process-fee-success'}';
+              }, 120000);
+              
+            })();
+          `;
+          document.head.appendChild(script);
+        }
+        window.location.href = data.session_url;
       } else {
         throw new Error('URL da sessão não encontrada na resposta');
       }
@@ -535,6 +627,7 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
           {error}
         </div>
       )}
+
     </>
   );
 };

@@ -35,7 +35,7 @@ Deno.serve(async (req) => {
       return corsResponse(null, 204);
     }
 
-    const { price_id, success_url, cancel_url, mode, metadata } = await req.json();
+    const { price_id, success_url, cancel_url, mode, metadata, payment_method } = await req.json();
     
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
@@ -52,6 +52,9 @@ Deno.serve(async (req) => {
     console.log('[stripe-checkout-application-fee] Received payload:', { price_id, success_url, cancel_url, mode, metadata });
     console.log('[stripe-checkout-application-fee] Metadata recebido:', metadata);
     console.log('[stripe-checkout-application-fee] selected_scholarship_id no metadata:', metadata?.selected_scholarship_id);
+
+    // Lógica para PIX (conversão USD -> BRL)
+    let exchangeRate = 1;
 
     // Busca o perfil do usuário para obter o user_profiles.id correto
     const { data: userProfile, error: profileError } = await supabase
@@ -163,13 +166,12 @@ Deno.serve(async (req) => {
         });
         
         if (!scholarshipError && scholarshipData) {
-          // O valor já está em centavos no banco, converter para dólares
-          const feeAmountInCents = scholarshipData.application_fee_amount || 35000;
-          applicationFeeAmount = feeAmountInCents / 100; // Converter centavos para dólares
+          // O valor já está em dólares no banco
+          applicationFeeAmount = scholarshipData.application_fee_amount || 0.50;
           universityId = scholarshipData.university_id;
           
           console.log('[stripe-checkout-application-fee] Valores extraídos da bolsa:', {
-            originalAmountInCents: feeAmountInCents,
+            originalAmount: scholarshipData.application_fee_amount,
             applicationFeeAmount,
             universityId
           });
@@ -206,6 +208,13 @@ Deno.serve(async (req) => {
       console.log('[stripe-checkout-application-fee] Nenhum scholarship_id encontrado na aplicação');
     }
 
+    // Garantir valor mínimo de $0.50 USD
+    const minAmount = 0.50;
+    if (applicationFeeAmount < minAmount) {
+      console.log(`[stripe-checkout-application-fee] Valor muito baixo (${applicationFeeAmount}), ajustando para mínimo: ${minAmount}`);
+      applicationFeeAmount = minAmount;
+    }
+    
     // Calcular valor em centavos para o Stripe
     const amountInCents = Math.round(applicationFeeAmount * 100);
     
@@ -226,31 +235,66 @@ Deno.serve(async (req) => {
       university_id: universityId,
       stripe_connect_account_id: stripeConnectAccountId,
       selected_scholarship_id: application.scholarship_id,
+      payment_method: payment_method || 'stripe', // Adicionar método de pagamento
+      exchange_rate: exchangeRate.toString(), // Adicionar taxa de câmbio para PIX
     };
 
     console.log('[stripe-checkout-application-fee] Metadata final configurado:', sessionMetadata);
+    if (payment_method === 'pix') {
+      console.log('[PIX] 🇧🇷 PIX selecionado para Application Fee - Configurando sessão PIX...');
+      console.log('[PIX] 💰 Valor USD:', applicationFeeAmount);
+      try {
+        console.log('[stripe-checkout-application-fee] 💱 Obtendo taxa de câmbio com margem comercial...');
+        
+        // Usar API externa com margem comercial (mais realista que Stripe)
+        const response = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
+        if (response.ok) {
+          const data = await response.json();
+          const baseRate = parseFloat(data.rates.BRL);
+          
+          // Aplicar margem comercial (3-5% acima da taxa oficial)
+          exchangeRate = baseRate * 1.04; // 4% de margem
+          console.log('[stripe-checkout-application-fee] 💱 Taxa base (ExchangeRates-API):', baseRate);
+          console.log('[stripe-checkout-application-fee] 💱 Taxa com margem comercial (+4%):', exchangeRate);
+        } else {
+          throw new Error('API externa falhou');
+        }
+        
+        // Logs específicos para PIX após cálculo da taxa
+        console.log('[PIX] 💱 Taxa de conversão:', exchangeRate);
+        console.log('[PIX] 💰 Valor BRL:', Math.round(applicationFeeAmount * exchangeRate * 100));
+        console.log('[PIX] 🔗 Success URL PIX:', `${success_url}`);
+        
+      } catch (apiError) {
+        console.error('[stripe-checkout-application-fee] ❌ Erro na API externa:', apiError);
+        exchangeRate = 5.6; // Taxa de fallback
+        console.log('[stripe-checkout-application-fee] 💱 Usando taxa de fallback:', exchangeRate);
+      }
+    }
 
     // Configuração da sessão Stripe
     const sessionConfig: any = {
-      payment_method_types: ['card'],
+      payment_method_types: payment_method === 'pix' ? ['pix'] : ['card'],
       client_reference_id: user.id,
       customer_email: user.email,
       line_items: [
         {
           price_data: {
-            currency: 'usd',
+            currency: payment_method === 'pix' ? 'brl' : 'usd',
             product_data: {
               name: 'Application Fee',
               description: `Application fee for scholarship application`,
             },
-            unit_amount: amountInCents,
+            unit_amount: payment_method === 'pix' ? Math.round(applicationFeeAmount * exchangeRate * 100) : amountInCents,
           },
           quantity: 1,
         },
       ],
       mode: mode || 'payment',
-      success_url: success_url,
-      cancel_url: cancel_url,
+      success_url: payment_method === 'pix' 
+        ? `${success_url}&pix_payment=true`
+        : success_url,
+      cancel_url: cancel_url, // Mesma página de erro para PIX e Stripe
       metadata: sessionMetadata,
     };
 

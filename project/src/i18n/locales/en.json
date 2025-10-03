@@ -2761,6 +2761,10 @@
         "title": "Credit Card",
         "description": "Pay securely with credit or debit card via Stripe"
       },
+      "pix": {
+        "title": "PIX",
+        "description": "Brazilian instant payment - Values in reais via Stripe"
+      },
       "zelle": {
         "title": "Zelle",
         "description": "Pay via Zelle transfer (requires manual verification)"
@@ -2830,6 +2834,10 @@
         "title": "Stripe",
         "description": "Pay securely with credit or debit card via Stripe"
       },
+      "pix": {
+        "title": "PIX",
+        "description": "Brazilian instant payment - Values in reais via Stripe"
+      },
       "zelle": {
         "title": "Zelle",
         "description": "Pay via Zelle transfer",
@@ -2838,6 +2846,12 @@
     }
   },
   "successPages": {
+    "pixPayment": {
+      "processing": "Processing PIX Payment",
+      "message": "Your PIX payment has been received and is being processed. You will be redirected automatically in a few seconds.",
+      "verifying": "Verifying payment...",
+      "pleaseWait": "Please wait..."
+    },
     "selectionProcessFee": {
       "title": "Selection Process Fee Payment Successful!",
       "description": "Your payment of {amount} was processed successfully.",

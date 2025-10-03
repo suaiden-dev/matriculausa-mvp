@@ -47,7 +47,7 @@ const ApplicationChatPage: React.FC = () => {
   const [i20Countdown, setI20Countdown] = useState<string | null>(null);
   const [scholarshipFeeDeadline, setScholarshipFeeDeadline] = useState<Date | null>(null);
   const [showI20ControlFeeModal, setShowI20ControlFeeModal] = useState(false);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'stripe' | 'zelle' | null>(null);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'stripe' | 'zelle' | 'pix' | null>(null);
   // Ajustar tipo de activeTab para incluir 'welcome'
   const [activeTab, setActiveTab] = useState<'welcome' | 'details' | 'i20' | 'documents'>('welcome');
 
@@ -167,7 +167,7 @@ const ApplicationChatPage: React.FC = () => {
   };
 
   // Função para lidar com a seleção do método de pagamento
-  const handlePaymentMethodSelect = (method: 'stripe' | 'zelle') => {
+  const handlePaymentMethodSelect = (method: 'stripe' | 'zelle' | 'pix') => {
     console.log('🔍 [ApplicationChatPage] Método de pagamento selecionado:', method);
     setSelectedPaymentMethod(method);
     console.log('🔍 [ApplicationChatPage] Estado setSelectedPaymentMethod atualizado para:', method);
@@ -213,6 +213,37 @@ const ApplicationChatPage: React.FC = () => {
             cancel_url: window.location.origin + '/student/dashboard/i20-control-fee-error',
             price_id: STRIPE_PRODUCTS.controlFee.priceId,
             amount: finalAmount, // Valor fixo do I-20 (sem dependentes)
+            payment_method: 'stripe'
+          }),
+        });
+        const data = await res.json();
+        if (data.session_url) {
+          window.location.href = data.session_url;
+        } else {
+          setI20Error(t('studentDashboard.applicationChatPage.errors.paymentSessionError'));
+        }
+      } else if (selectedPaymentMethod === 'pix') {
+        // Redirecionar para o PIX
+        const token = (await supabase.auth.getSession()).data.session?.access_token;
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const apiUrl = `${supabaseUrl}/functions/v1/stripe-checkout-i20-control-fee`;
+        
+        // Novo modelo: I-20 NÃO recebe adicionais por dependentes
+        const baseAmount = getFeeAmount('i20_control_fee');
+        const finalAmount = baseAmount;
+        
+        const res = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            success_url: window.location.origin + '/student/dashboard/i20-control-fee-success?session_id={CHECKOUT_SESSION_ID}',
+            cancel_url: window.location.origin + '/student/dashboard/i20-control-fee-error',
+            price_id: STRIPE_PRODUCTS.controlFee.priceId,
+            amount: finalAmount, // Valor fixo do I-20 (sem dependentes)
+            payment_method: 'pix'
           }),
         });
         const data = await res.json();

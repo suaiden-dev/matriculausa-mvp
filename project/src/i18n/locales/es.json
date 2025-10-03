@@ -2419,6 +2419,10 @@
           "title": "Stripe",
           "description": "Paga de forma segura con tarjeta de crédito o débito vía Stripe"
         },
+        "pix": {
+          "title": "PIX",
+          "description": "Pago instantáneo brasileño - Valores en reales vía Stripe"
+        },
         "zelle": {
           "title": "Zelle",
           "description": "Paga vía transferencia Zelle",
@@ -3003,6 +3007,10 @@
         "title": "Tarjeta de Crédito",
         "description": "Paga de forma segura con tarjeta de crédito o débito vía Stripe"
       },
+      "pix": {
+        "title": "PIX",
+        "description": "Pago instantáneo brasileño - Valores en reales vía Stripe"
+      },
       "zelle": {
         "title": "Zelle",
         "description": "Paga vía transferencia Zelle (requiere verificación manual)"
@@ -3051,6 +3059,12 @@
     }
   },
   "successPages": {
+    "pixPayment": {
+      "processing": "Procesando Pago PIX",
+      "message": "Su pago PIX ha sido recibido y está siendo procesado. Será redirigido automáticamente en unos segundos.",
+      "verifying": "Verificando pago...",
+      "pleaseWait": "Por favor, espere..."
+    },
     "selectionProcessFee": {
       "title": "¡Pago de Tarifa de Proceso de Selección Exitoso!",
       "description": "Tu pago de {amount} fue procesado exitosamente.",

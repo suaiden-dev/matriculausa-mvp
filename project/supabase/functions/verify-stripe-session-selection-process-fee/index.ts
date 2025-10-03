@@ -271,7 +271,8 @@ Deno.serve(async (req)=>{
     if (session.payment_status === 'paid' && session.status === 'complete') {
       const userId = session.client_reference_id;
       const applicationId = session.metadata?.application_id;
-      console.log(`Processing successful payment. UserID: ${userId}, ApplicationID: ${applicationId}`);
+      const paymentMethod = session.payment_method_types?.[0];
+      console.log(`Processing successful payment. UserID: ${userId}, ApplicationID: ${applicationId}, PaymentMethod: ${paymentMethod}`);
       if (!userId) return corsResponse({
         error: 'User ID (client_reference_id) missing in session.'
       }, 400);
@@ -582,6 +583,18 @@ Deno.serve(async (req)=>{
         console.error('[NOTIFICAÇÃO] Erro ao notificar selection process via n8n:', notifErr);
       }
       // --- FIM DAS NOTIFICAÇÕES ---
+      // Para PIX, retornar resposta especial que força redirecionamento
+      if (paymentMethod === 'pix') {
+        console.log('[PIX] Forçando redirecionamento para PIX...');
+        return corsResponse({
+          status: 'complete',
+          message: 'PIX payment verified and processed successfully.',
+          payment_method: 'pix',
+          redirect_required: true,
+          redirect_url: 'http://localhost:5173/student/dashboard/scholarships'
+        }, 200);
+      }
+      
       return corsResponse({
         status: 'complete',
         message: 'Session verified and processed successfully.'
