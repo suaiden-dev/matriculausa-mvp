@@ -211,6 +211,23 @@ const AdminStudentDetails: React.FC = () => {
 
       if (termsError) throw termsError;
 
+      // Buscar informações do usuário se não estiver disponível
+      let userEmail = student?.student_email;
+      let userFullName = student?.student_name;
+      
+      if (!userEmail || !userFullName) {
+        const { data: userProfile, error: userError } = await supabase
+          .from('user_profiles')
+          .select('email, full_name')
+          .eq('user_id', userId)
+          .single();
+          
+        if (!userError && userProfile) {
+          userEmail = userEmail || userProfile.email;
+          userFullName = userFullName || userProfile.full_name;
+        }
+      }
+
       // Criar mapa para lookup rápido
       const termMap = new Map(terms?.map(t => [t.id, t]) || []);
 
@@ -224,16 +241,23 @@ const AdminStudentDetails: React.FC = () => {
         ip_address: acceptance.ip_address,
         user_agent: acceptance.user_agent,
         created_at: acceptance.created_at,
-        user_email: student?.student_email || 'N/A',
-        user_full_name: student?.student_name || 'N/A',
+        user_email: userEmail || acceptance.user_email || 'N/A',
+        user_full_name: userFullName || acceptance.user_full_name || 'N/A',
         term_title: termMap.get(acceptance.term_id)?.title || 'N/A',
         term_content: termMap.get(acceptance.term_id)?.content || ''
       }));
 
+      // Debug log para verificar os dados
+      console.log('🔍 [TermAcceptances] Debug data for user:', userId);
+      console.log('  - userEmail:', userEmail);
+      console.log('  - userFullName:', userFullName);
+      console.log('  - student?.student_email:', student?.student_email);
+      console.log('  - student?.student_name:', student?.student_name);
+      console.log('  - transformedData:', transformedData);
+
       setTermAcceptances(transformedData);
     } catch (error: any) {
       console.error('Error loading term acceptances:', error);
-      setError(error.message);
     } finally {
       setLoadingTermAcceptances(false);
     }
