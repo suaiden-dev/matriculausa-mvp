@@ -124,6 +124,7 @@ serve(async (req) => {
         .from('user_profiles')
         .update({ 
           has_paid_selection_process_fee: true,
+          selection_process_fee_payment_method: 'zelle',
           updated_at: new Date().toISOString()
         })
         .eq('user_id', user_id)
@@ -207,6 +208,7 @@ serve(async (req) => {
         .from('user_profiles')
         .update({ 
           has_paid_i20_control_fee: true,
+          i20_control_fee_payment_method: 'zelle',
           updated_at: new Date().toISOString()
         })
         .eq('user_id', user_id)
@@ -289,6 +291,7 @@ serve(async (req) => {
               student_id: correctUserId,
               scholarship_id: scholarshipId,
               [normalizedFeeTypeGlobal === 'application_fee' ? 'is_application_fee_paid' : 'is_scholarship_fee_paid']: true,
+              [normalizedFeeTypeGlobal === 'application_fee' ? 'application_fee_payment_method' : 'scholarship_fee_payment_method']: 'zelle',
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString()
             })
@@ -340,6 +343,7 @@ serve(async (req) => {
             .from('scholarship_applications')
             .update({ 
               [normalizedFeeTypeGlobal === 'application_fee' ? 'is_application_fee_paid' : 'is_scholarship_fee_paid']: true,
+              [normalizedFeeTypeGlobal === 'application_fee' ? 'application_fee_payment_method' : 'scholarship_fee_payment_method']: 'zelle',
               updated_at: new Date().toISOString()
             })
             .eq('id', existingApp.id)

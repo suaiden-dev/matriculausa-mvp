@@ -107,9 +107,11 @@ const PaymentManagement: React.FC = () => {
           user_id,
           has_paid_selection_process_fee, 
           has_paid_i20_control_fee, 
+          selection_process_fee_payment_method,
+          i20_control_fee_payment_method,
           dependents,
           seller_referral_code,
-          scholarship_applications(is_scholarship_fee_paid)
+          scholarship_applications(is_scholarship_fee_paid, scholarship_fee_payment_method)
         `)
         .in('seller_referral_code', referralCodes);
       if (profilesErr || !profiles) {
@@ -165,6 +167,38 @@ const PaymentManagement: React.FC = () => {
         return sum + selPaid + schPaid + i20Paid;
       }, 0);
 
+      // Manual revenue (outside) não deve contar no Available Balance
+      // Calcular receita manual (pagamentos por fora) com a mesma lógica do FinancialOverview
+      const manualRevenue = (profiles || []).reduce((sum, p) => {
+        const deps = Number(p?.dependents || 0);
+        const ov = overridesMap[p?.user_id] || {};
+
+        // Selection Process manual
+        let selManual = 0;
+        const isSelManual = !!p?.has_paid_selection_process_fee && p?.selection_process_fee_payment_method === 'manual';
+        if (isSelManual) {
+          const baseSel = ov.selection_process_fee != null ? Number(ov.selection_process_fee) : 400;
+          selManual = ov.selection_process_fee != null ? baseSel : baseSel + (deps * 150);
+        }
+
+        // Scholarship manual (se qualquer application estiver paga via manual)
+        const hasScholarshipPaidManual = Array.isArray(p?.scholarship_applications)
+          ? p.scholarship_applications.some((a: any) => !!a?.is_scholarship_fee_paid && a?.scholarship_fee_payment_method === 'manual')
+          : false;
+        const schBase = ov.scholarship_fee != null ? Number(ov.scholarship_fee) : 900;
+        const schManual = hasScholarshipPaidManual ? schBase : 0;
+
+        // I-20 Control manual (seguir mesma regra base: exigir scholarship pago para contar I-20)
+        const hasAnyScholarshipPaid = Array.isArray(p?.scholarship_applications)
+          ? p.scholarship_applications.some((a: any) => !!a?.is_scholarship_fee_paid)
+          : false;
+        const isI20Manual = !!p?.has_paid_i20_control_fee && p?.i20_control_fee_payment_method === 'manual';
+        const i20Base = ov.i20_control_fee != null ? Number(ov.i20_control_fee) : 900;
+        const i20Manual = (hasAnyScholarshipPaid && isI20Manual) ? i20Base : 0;
+
+        return sum + selManual + schManual + i20Manual;
+      }, 0);
+
       console.groupCollapsed('🔎 [PaymentManagement][AdjustedRevenue] calculated');
       console.log('userId:', uid);
       console.log('profiles.length:', profiles?.length || 0);
@@ -188,9 +222,9 @@ const PaymentManagement: React.FC = () => {
         .filter((r: any) => r.status === 'pending')
         .reduce((sum: number, r: any) => sum + (Number(r.amount_usd) || 0), 0);
 
-      const availableBalance = Math.max(0, totalRevenue - totalPaidOut - totalApproved - totalPending);
+      const availableBalance = Math.max(0, (totalRevenue - manualRevenue) - totalPaidOut - totalApproved - totalPending);
 
-      console.log('✅ [Affiliate] AvailableBalance:', availableBalance, 'TotalRevenue:', totalRevenue);
+      console.log('✅ [Affiliate] AvailableBalance:', availableBalance, 'TotalRevenue:', totalRevenue, 'ManualRevenueExcluded:', manualRevenue);
       setAffiliateBalance(availableBalance); // Available Balance
       setTotalEarned(totalRevenue); // Total Revenue
       // keep pending credits disabled in UI for now

@@ -93,6 +93,12 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
   const [studentFeeOverrides, setStudentFeeOverrides] = useStateReact<{[key: string]: any}>({});
   // Estado para controlar requisições em andamento
   const [loadingRequests, setLoadingRequests] = useStateReact<Set<string>>(new Set());
+  // Métodos de pagamento por estudante (para calcular valor pago manualmente)
+  const [studentPaymentMethods, setStudentPaymentMethods] = useStateReact<{[key: string]: {
+    selection_process?: string | null;
+    i20_control?: string | null;
+    scholarship?: Array<{ is_paid: boolean; method: string | null }>; // múltiplas aplicações
+  }}>({});
   // Flag para desabilitar user_fee_overrides se não estiver disponível
   const [userFeeOverridesDisabled, setUserFeeOverridesDisabled] = useStateReact<boolean>(() => {
     try {
@@ -175,6 +181,60 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
       setStudentDependents(prev => ({ ...prev, [studentUserId]: 0 }));
     } finally {
       // Remover da lista de carregando
+      setLoadingRequests(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(requestKey);
+        return newSet;
+      });
+    }
+  };
+
+  // Buscar métodos de pagamento por estudante (selection, i20 no profile; scholarship nas applications)
+  const loadStudentPaymentMethods = async (studentUserId: string, studentProfileId?: string) => {
+    if (!studentUserId || studentPaymentMethods[studentUserId] !== undefined) return;
+
+    const requestKey = `paymethods_${studentUserId}`;
+    if (loadingRequests.has(requestKey)) return;
+
+    setLoadingRequests(prev => new Set([...prev, requestKey]));
+
+    try {
+      // user_profiles: selection_process_fee_payment_method, i20_control_fee_payment_method
+      const { data: profileData } = await supabase
+        .from('user_profiles')
+        .select('selection_process_fee_payment_method, i20_control_fee_payment_method, id')
+        .eq('user_id', studentUserId)
+        .single();
+
+      const profileSelection = profileData?.selection_process_fee_payment_method ?? null;
+      const profileI20 = profileData?.i20_control_fee_payment_method ?? null;
+
+      // scholarship_applications: buscar por student_id (profile id)
+      let scholarshipList: Array<{ is_paid: boolean; method: string | null }> = [];
+      const resolvedProfileId = studentProfileId || profileData?.id;
+      if (resolvedProfileId) {
+        const { data: apps } = await supabase
+          .from('scholarship_applications')
+          .select('is_scholarship_fee_paid, scholarship_fee_payment_method, student_id')
+          .eq('student_id', resolvedProfileId);
+        scholarshipList = (apps || []).map(a => ({
+          is_paid: !!a.is_scholarship_fee_paid,
+          method: a.scholarship_fee_payment_method ?? null
+        }));
+      }
+
+      setStudentPaymentMethods(prev => ({
+        ...prev,
+        [studentUserId]: {
+          selection_process: profileSelection,
+          i20_control: profileI20,
+          scholarship: scholarshipList
+        }
+      }));
+    } catch (error) {
+      // silencioso
+      setStudentPaymentMethods(prev => ({ ...prev, [studentUserId]: { selection_process: null, i20_control: null, scholarship: [] } }));
+    } finally {
       setLoadingRequests(prev => {
         const newSet = new Set(prev);
         newSet.delete(requestKey);
@@ -293,6 +353,9 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
           console.log('🔄 [MY_STUDENTS] Forçando carregamento de overrides para:', studentId);
           loadStudentFeeOverrides(studentId);
         }
+        // Carregar métodos de pagamento (usa userId e tenta resolver profileId quando possível)
+        const s = students.find(st => st.id === studentId);
+        loadStudentPaymentMethods(s ? s.id : studentId, s?.profile_id);
       });
     }, 100);
 
@@ -684,6 +747,46 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
     return total;
   };
 
+  // Calcular total pago manualmente por um aluno (considera apenas taxas do seller: selection, scholarship, i20)
+  const calculateStudentManualPaid = (student: Student): number => {
+    let total = 0;
+    const deps = studentDependents[student.id] || 0;
+    const overrides = studentFeeOverrides[student.id];
+    const methods = studentPaymentMethods[student.id];
+
+    // Selection Process (pago e método manual)
+    if (student.has_paid_selection_process_fee && methods?.selection_process === 'manual') {
+      if (overrides && overrides.selection_process_fee !== undefined && overrides.selection_process_fee !== null) {
+        total += Number(overrides.selection_process_fee);
+      } else {
+        const baseSelectionFee = getFeeAmount('selection_process');
+        total += baseSelectionFee + (deps * 150);
+      }
+    }
+
+    // Scholarship Fee (qualquer app paga com manual)
+    if (student.is_scholarship_fee_paid && methods?.scholarship && methods.scholarship.some(a => a.is_paid && a.method === 'manual')) {
+      if (overrides && overrides.scholarship_fee !== undefined && overrides.scholarship_fee !== null) {
+        total += Number(overrides.scholarship_fee);
+      } else {
+        const scholarshipFee = getFeeAmount('scholarship_fee');
+        total += scholarshipFee;
+      }
+    }
+
+    // I-20 Control (pago e método manual)
+    if (student.has_paid_i20_control_fee && methods?.i20_control === 'manual') {
+      if (overrides && overrides.i20_control_fee !== undefined && overrides.i20_control_fee !== null) {
+        total += Number(overrides.i20_control_fee);
+      } else {
+        const baseI20Fee = getFeeAmount('i20_control_fee');
+        total += baseI20Fee;
+      }
+    }
+
+    return total;
+  };
+
   const stats = React.useMemo(() => {
     const totalRevenue = filteredStudents.reduce((sum, student) => sum + calculateStudentTotalPaid(student), 0);
     
@@ -716,12 +819,14 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
     );
     
     const activeStudents = uniqueActiveStudentIds.size;
+    const manualRevenue = filteredStudents.reduce((sum, student) => sum + calculateStudentManualPaid(student), 0);
     const avgRevenuePerStudent = uniqueStudentIds.size > 0 ? totalRevenue / uniqueStudentIds.size : 0;
     const topPerformingUniversity = availableUniversities.length > 0 ? availableUniversities[0]?.name : 'N/A';
 
     return {
       totalRevenue,
       activeStudents,
+      manualRevenue,
       avgRevenuePerStudent,
       topPerformingUniversity,
       totalUniqueStudents: uniqueStudentIds.size
@@ -804,8 +909,12 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-slate-600">Active Students</p>
-              <p className="text-3xl font-bold text-orange-600 mt-1">{stats.activeStudents}</p>
+              <p className="text-sm font-medium text-slate-600">Manual Paid (Outside)</p>
+              {Object.keys(studentPaymentMethods).length === 0 && Object.keys(studentDependents).length === 0 && Object.keys(studentFeeOverrides).length === 0 ? (
+                <div className="h-8 w-40 bg-slate-200 rounded animate-pulse mt-1" />
+              ) : (
+                <p className="text-3xl font-bold text-orange-600 mt-1">{formatCurrency(stats.manualRevenue)}</p>
+              )}
             </div>
             <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
               <Calendar className="h-6 w-6 text-orange-600" />

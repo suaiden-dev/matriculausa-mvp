@@ -59,54 +59,54 @@ const ApplicationFeeSuccess: React.FC = () => {
         setStatus('success');
 
         // Log Stripe payment success
-        try {
-          // IP best-effort
-          let clientIp: string | undefined = undefined;
-          try {
-            const controller = new AbortController();
-            const timeout = setTimeout(() => controller.abort(), 2000);
-            const res = await fetch('https://api.ipify.org?format=json', { signal: controller.signal });
-            clearTimeout(timeout);
-            if (res.ok) {
-              const j = await res.json();
-              clientIp = j?.ip;
-            }
-          } catch (_) {}
+        // try {
+        //   // IP best-effort
+        //   let clientIp: string | undefined = undefined;
+        //   try {
+        //     const controller = new AbortController();
+        //     const timeout = setTimeout(() => controller.abort(), 2000);
+        //     const res = await fetch('https://api.ipify.org?format=json', { signal: controller.signal });
+        //     clearTimeout(timeout);
+        //     if (res.ok) {
+        //       const j = await res.json();
+        //       clientIp = j?.ip;
+        //     }
+        //   } catch (_) {}
 
-          // Resolve student profile
-          const { data: authUser } = await supabase.auth.getUser();
-          const authUserId = authUser.user?.id;
-          if (authUserId) {
-            const { data: profile } = await supabase.from('user_profiles').select('id').eq('user_id', authUserId).single();
-            const amount = (() => {
-              try {
-                if (application && Array.isArray(application.scholarships) && application.scholarships[0]?.application_fee_amount) {
-                  return Number(application.scholarships[0].application_fee_amount) || 0;
-                }
-              } catch {}
-              return 0;
-            })();
-            if (profile?.id) {
-              await supabase.rpc('log_student_action', {
-                p_student_id: profile.id,
-                p_action_type: 'fee_payment',
-                p_action_description: 'Application Fee paid via Stripe',
-                p_performed_by: authUserId,
-                p_performed_by_type: 'student',
-                p_metadata: {
-                  fee_type: 'application',
-                  payment_method: 'stripe',
-                  amount,
-                  session_id: sessionId,
-                  application_id: sessionData?.applicationId || null,
-                  ip: clientIp
-                }
-              });
-            }
-          }
-        } catch (logErr) {
-          console.error('[ApplicationFeeSuccess] Failed to log stripe payment:', logErr);
-        }
+        //   // Resolve student profile
+        //   const { data: authUser } = await supabase.auth.getUser();
+        //   const authUserId = authUser.user?.id;
+        //   if (authUserId) {
+        //     const { data: profile } = await supabase.from('user_profiles').select('id').eq('user_id', authUserId).single();
+        //     const amount = (() => {
+        //       try {
+        //         if (application && Array.isArray(application.scholarships) && application.scholarships[0]?.application_fee_amount) {
+        //           return Number(application.scholarships[0].application_fee_amount) || 0;
+        //         }
+        //       } catch {}
+        //       return 0;
+        //     })();
+        //     if (profile?.id) {
+        //       await supabase.rpc('log_student_action', {
+        //         p_student_id: profile.id,
+        //         p_action_type: 'fee_payment',
+        //         p_action_description: 'Application Fee paid via Stripe',
+        //         p_performed_by: authUserId,
+        //         p_performed_by_type: 'student',
+        //         p_metadata: {
+        //           fee_type: 'application',
+        //           payment_method: 'stripe',
+        //           amount,
+        //           session_id: sessionId,
+        //           application_id: sessionData?.applicationId || null,
+        //           ip: clientIp
+        //         }
+        //       });
+        //     }
+        //   }
+        // } catch (logErr) {
+        //   console.error('[ApplicationFeeSuccess] Failed to log stripe payment:', logErr);
+        // }
 
       } catch (e: any) {
         setError(e.message || 'An unknown error occurred during verification.');
