@@ -348,6 +348,7 @@ function EnhancedStudentTracking(props) {
             <StudentDetailsView
               studentDetails={studentDetails}
               studentDocuments={studentDocuments}
+              scholarshipApplication={scholarshipApplication}
               i20ControlFeeDeadline={i20ControlFeeDeadline}
               onBack={backToList}
               activeTab={activeTab}
