@@ -241,7 +241,9 @@ const FinancialAnalytics: React.FC = () => {
             has_paid_i20_control_fee,
             scholarship_package_id,
             dependents,
-            created_at
+            created_at,
+            selection_process_fee_payment_method,
+            i20_control_fee_payment_method
           ),
           scholarships (
             id,
@@ -324,7 +326,9 @@ const FinancialAnalytics: React.FC = () => {
           has_paid_i20_control_fee,
           scholarship_package_id,
           dependents,
-          created_at
+          created_at,
+          selection_process_fee_payment_method,
+          i20_control_fee_payment_method
         `)
         .eq('role', 'student')
         .or('has_paid_selection_process_fee.eq.true,is_application_fee_paid.eq.true,is_scholarship_fee_paid.eq.true,has_paid_i20_control_fee.eq.true')
@@ -472,7 +476,7 @@ const FinancialAnalytics: React.FC = () => {
         return;
       }
 
-      const universityKey = university.id;
+      const universityKey = university.name;
       if (!universityRevenue[universityKey]) {
         universityRevenue[universityKey] = {
           revenue: 0,
@@ -544,10 +548,11 @@ const FinancialAnalytics: React.FC = () => {
           fee_type: 'selection_process',
           amount: selectionProcessFee,
           status: 'paid',
-          payment_method: 'stripe',
+          payment_method: student.selection_process_fee_payment_method || 'manual',
           student_name: student.full_name,
           student_email: student.email,
-          university_name: university.name
+          university_name: university.name,
+          created_at: student.created_at || app.created_at
         });
       }
 
@@ -558,10 +563,11 @@ const FinancialAnalytics: React.FC = () => {
           fee_type: 'application',
           amount: applicationFee,
           status: 'paid',
-          payment_method: 'stripe',
+          payment_method: app.application_fee_payment_method || 'manual',
           student_name: student.full_name,
           student_email: student.email,
-          university_name: university.name
+          university_name: university.name,
+          created_at: student.created_at || app.created_at
         });
       }
 
@@ -572,10 +578,11 @@ const FinancialAnalytics: React.FC = () => {
           fee_type: 'scholarship',
           amount: scholarshipFee,
           status: 'paid',
-          payment_method: 'stripe',
+          payment_method: app.scholarship_fee_payment_method || 'manual',
           student_name: student.full_name,
           student_email: student.email,
-          university_name: university.name
+          university_name: university.name,
+          created_at: student.created_at || app.created_at
         });
       }
 
@@ -586,10 +593,11 @@ const FinancialAnalytics: React.FC = () => {
           fee_type: 'i20_control_fee',
           amount: i20ControlFee,
           status: 'paid',
-          payment_method: 'manual',
+          payment_method: student.i20_control_fee_payment_method || 'manual',
           student_name: student.full_name,
           student_email: student.email,
-          university_name: university.name
+          university_name: university.name,
+          created_at: student.created_at || app.created_at
         });
       }
     });
@@ -653,7 +661,8 @@ const FinancialAnalytics: React.FC = () => {
               payment_method: 'zelle',
               student_name: student.full_name,
               student_email: student.email,
-              university_name: 'No University Selected'
+              university_name: 'No University Selected',
+              created_at: payment.created_at
             });
           }
         }
@@ -730,10 +739,11 @@ const FinancialAnalytics: React.FC = () => {
           fee_type: 'selection_process',
           amount: selectionProcessFee,
           status: 'paid',
-          payment_method: 'stripe',
+          payment_method: stripeUser.selection_process_fee_payment_method || 'manual',
           student_name: studentName,
           student_email: studentEmail,
-          university_name: 'No University Selected'
+          university_name: 'No University Selected',
+          created_at: stripeUser.created_at
         });
       }
 
@@ -743,10 +753,11 @@ const FinancialAnalytics: React.FC = () => {
           fee_type: 'application',
           amount: applicationFee,
           status: 'paid',
-          payment_method: 'stripe',
+          payment_method: 'manual',
           student_name: studentName,
           student_email: studentEmail,
-          university_name: 'No University Selected'
+          university_name: 'No University Selected',
+          created_at: stripeUser.created_at
         });
       }
 
@@ -756,10 +767,11 @@ const FinancialAnalytics: React.FC = () => {
           fee_type: 'scholarship',
           amount: scholarshipFee,
           status: 'paid',
-          payment_method: 'stripe',
+          payment_method: 'manual',
           student_name: studentName,
           student_email: studentEmail,
-          university_name: 'No University Selected'
+          university_name: 'No University Selected',
+          created_at: stripeUser.created_at
         });
       }
 
@@ -769,10 +781,11 @@ const FinancialAnalytics: React.FC = () => {
           fee_type: 'i20_control_fee',
           amount: i20ControlFee,
           status: 'paid',
-          payment_method: 'manual',
+          payment_method: stripeUser.i20_control_fee_payment_method || 'manual',
           student_name: studentName,
           student_email: studentEmail,
-          university_name: 'No University Selected'
+          university_name: 'No University Selected',
+          created_at: stripeUser.created_at
         });
       }
     });
@@ -823,7 +836,7 @@ const FinancialAnalytics: React.FC = () => {
     
     const totalMethodRevenue = Object.values(paymentsByMethod).reduce((sum, method) => sum + method.revenue, 0);
     const paymentMethodData: PaymentMethodData[] = Object.entries(paymentsByMethod).map(([method, data]) => ({
-      method: method === 'stripe' ? 'Stripe' : method === 'zelle' ? 'Zelle' : 'Manual',
+      method: method === 'stripe' ? 'Stripe' : method === 'zelle' ? 'Zelle' : 'Outside',
       count: data.count,
       revenue: data.revenue,
       percentage: totalMethodRevenue > 0 ? (data.revenue / totalMethodRevenue) * 100 : 0
