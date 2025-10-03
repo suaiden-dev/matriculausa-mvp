@@ -54,7 +54,7 @@ interface StudentRecord {
   academic_level?: string | null;
   gpa?: number | null;
   english_proficiency?: string | null;
-  profile_status?: string | null;
+  status?: string | null;
   avatar_url?: string | null;
   dependents?: number;
   desired_scholarship_range?: number | null;
@@ -73,6 +73,7 @@ interface StudentRecord {
   application_fee_payment_method?: string | null;
   scholarship_fee_payment_method?: string | null;
   acceptance_letter_status: string | null;
+  student_process_type: string | null;
   payment_status: string | null;
   scholarship_title: string | null;
   university_name: string | null;
@@ -166,6 +167,10 @@ const AdminStudentDetails: React.FC = () => {
   // Estados para termos aceitos
   const [termAcceptances, setTermAcceptances] = useState<TermAcceptance[]>([]);
   const [loadingTermAcceptances, setLoadingTermAcceptances] = useState(false);
+  
+  // Estados para formulário de transferência
+  const [transferFormFile, setTransferFormFile] = useState<File | null>(null);
+  const [uploadingTransferForm, setUploadingTransferForm] = useState(false);
   const [referralInfo, setReferralInfo] = useState<{
     type: 'seller' | 'affiliate' | 'student' | null;
     name: string | null;
@@ -504,6 +509,10 @@ const AdminStudentDetails: React.FC = () => {
               acceptance_letter_sent_at,
               acceptance_letter_signed_at,
               acceptance_letter_approved_at,
+              transfer_form_url,
+              transfer_form_status,
+              transfer_form_sent_at,
+              student_process_type,
               payment_status,
               reviewed_at,
               reviewed_by,
@@ -541,7 +550,7 @@ const AdminStudentDetails: React.FC = () => {
           academic_level: s.academic_level || null,
           gpa: s.gpa || null,
           english_proficiency: s.english_proficiency || null,
-          profile_status: s.status || null,
+          status: s.status || null,
           avatar_url: s.avatar_url || null,
           dependents: s.dependents || 0,
           desired_scholarship_range: s.desired_scholarship_range || null,
@@ -561,6 +570,7 @@ const AdminStudentDetails: React.FC = () => {
           application_fee_payment_method: lockedApplication?.application_fee_payment_method || null,
           scholarship_fee_payment_method: lockedApplication?.scholarship_fee_payment_method || null,
           acceptance_letter_status: lockedApplication?.acceptance_letter_status || null,
+          student_process_type: lockedApplication?.student_process_type || null,
           payment_status: lockedApplication?.payment_status || null,
           scholarship_title: lockedApplication?.scholarships?.title || null,
           university_name: lockedApplication?.scholarships?.universities?.name || null,
@@ -655,6 +665,15 @@ const AdminStudentDetails: React.FC = () => {
       case 'acceptance_letter':
         if (st.acceptance_letter_status === 'approved' || st.acceptance_letter_status === 'sent') return 'completed';
         return 'pending';
+      case 'transfer_form':
+        // Só aparece para alunos com process_type = 'transfer'
+        if (st.student_process_type !== 'transfer') return 'skipped';
+        // Verificar se existe um documento de transfer form aprovado
+        const transferApp = st.all_applications?.find((app: any) => 
+          app.student_process_type === 'transfer' && 
+          (app.transfer_form_status === 'approved' || app.transfer_form_status === 'sent')
+        );
+        return transferApp ? 'completed' : 'pending';
       case 'i20_fee':
         return st.has_paid_i20_control_fee ? 'completed' : 'pending';
       case 'enrollment':
@@ -672,6 +691,7 @@ const AdminStudentDetails: React.FC = () => {
     { key: 'application_fee', label: 'App Fee', icon: CreditCard },
     { key: 'scholarship_fee', label: 'Scholarship Fee', icon: Award },
     { key: 'acceptance_letter', label: 'Acceptance', icon: FileText },
+    { key: 'transfer_form', label: 'Transfer Form', icon: FileText },
     { key: 'i20_fee', label: 'I-20 Fee', icon: CreditCard },
     { key: 'enrollment', label: 'Enrollment', icon: Award }
   ];
@@ -741,7 +761,7 @@ const AdminStudentDetails: React.FC = () => {
           academic_level: student.academic_level,
           gpa: student.gpa,
           english_proficiency: student.english_proficiency,
-          status: student.profile_status,
+          status: student.status,
           dependents: dependents,
           desired_scholarship_range: student.desired_scholarship_range,
           seller_referral_code: student.seller_referral_code
@@ -1893,6 +1913,189 @@ const AdminStudentDetails: React.FC = () => {
     }
   };
 
+  // Função para enviar formulário de transferência
+  const handleUploadTransferForm = async () => {
+    if (!isPlatformAdmin || !student || !transferFormFile) return;
+    
+    try {
+      setUploadingTransferForm(true);
+      
+      // Encontrar aplicação do aluno transfer
+      const transferApp = student.all_applications?.find((app: any) => 
+        app.student_process_type === 'transfer'
+      );
+      
+      if (!transferApp) {
+        showToast('No transfer application found for this student', 'error');
+        return;
+      }
+      
+      // Se já existe um formulário, deletar o arquivo anterior
+      if (transferApp.transfer_form_url) {
+        try {
+          const oldPath = transferApp.transfer_form_url.split('/').pop();
+          if (oldPath) {
+            await supabase.storage
+              .from('document-attachments')
+              .remove([`transfer-forms/${oldPath}`]);
+          }
+        } catch (deleteError) {
+          console.warn('Could not delete old transfer form:', deleteError);
+          // Continuar mesmo se não conseguir deletar o arquivo antigo
+        }
+      }
+      
+      // Sanitizar nome do arquivo
+      const sanitized = sanitizeFileName(transferFormFile.name);
+      const storagePath = `transfer-forms/${Date.now()}_${sanitized}`;
+      
+      // Upload para Supabase Storage (upsert para substituir se existir)
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('document-attachments')
+        .upload(storagePath, transferFormFile, { upsert: true });
+        
+      if (uploadError) throw uploadError;
+      
+      // Obter URL pública
+      const { data: { publicUrl } } = supabase.storage
+        .from('document-attachments')
+        .getPublicUrl(uploadData?.path || storagePath);
+      
+      // Atualizar a aplicação com o formulário de transferência
+      const { error: updateError } = await supabase
+        .from('scholarship_applications')
+        .update({
+          transfer_form_url: publicUrl,
+          transfer_form_status: 'sent',
+          transfer_form_sent_at: new Date().toISOString()
+        })
+        .eq('id', transferApp.id);
+        
+      if (updateError) throw updateError;
+      
+      const isReplacement = transferApp.transfer_form_url ? 'replaced' : 'sent';
+      showToast(`Transfer form ${isReplacement} successfully!`, 'success');
+      
+      // Não limpar o arquivo selecionado - deixar o usuário decidir quando cancelar
+      // setTransferFormFile(null);
+      
+      // Recarregar dados do estudante
+      if (profileId) {
+        const { data: s, error } = await supabase
+          .from('user_profiles')
+          .select(`
+            id,
+            user_id,
+            full_name,
+            email,
+            phone,
+            country,
+            field_of_interest,
+            academic_level,
+            gpa,
+            english_proficiency,
+            status,
+            avatar_url,
+            dependents,
+            desired_scholarship_range,
+            created_at,
+            has_paid_selection_process_fee,
+            has_paid_i20_control_fee,
+            selection_process_fee_payment_method,
+            i20_control_fee_payment_method,
+            role,
+            seller_referral_code,
+            admin_notes,
+            scholarship_applications (
+              id,
+              scholarship_id,
+              status,
+              applied_at,
+              is_application_fee_paid,
+              is_scholarship_fee_paid,
+              application_fee_payment_method,
+              scholarship_fee_payment_method,
+              acceptance_letter_status,
+              acceptance_letter_url,
+              acceptance_letter_sent_at,
+              acceptance_letter_signed_at,
+              acceptance_letter_approved_at,
+              transfer_form_url,
+              transfer_form_status,
+              transfer_form_sent_at,
+              student_process_type,
+              payment_status,
+              reviewed_at,
+              reviewed_by,
+              documents,
+              scholarships (
+                title,
+                university_id,
+                universities (
+                  name
+                )
+              )
+            )
+          `)
+          .eq('id', profileId)
+          .single();
+
+        if (error) throw error;
+        if (s) {
+          // Processar dados do estudante
+          const lockedApplication = s.scholarship_applications?.find((app: any) => app.status === 'locked');
+          setStudent({
+            student_id: s.id,
+            user_id: s.user_id,
+            student_name: s.full_name || 'Unknown Student',
+            student_email: s.email || '',
+            phone: s.phone,
+            country: s.country,
+            field_of_interest: s.field_of_interest,
+            academic_level: s.academic_level,
+            gpa: s.gpa,
+            english_proficiency: s.english_proficiency,
+            status: s.status,
+            avatar_url: s.avatar_url,
+            dependents: s.dependents || 0,
+            desired_scholarship_range: s.desired_scholarship_range,
+            student_created_at: s.created_at,
+            has_paid_selection_process_fee: s.has_paid_selection_process_fee || false,
+            has_paid_i20_control_fee: s.has_paid_i20_control_fee || false,
+            selection_process_fee_payment_method: s.selection_process_fee_payment_method,
+            i20_control_fee_payment_method: s.i20_control_fee_payment_method,
+            seller_referral_code: s.seller_referral_code,
+            application_id: lockedApplication?.id || null,
+            scholarship_id: lockedApplication?.scholarship_id || null,
+            application_status: lockedApplication?.status || null,
+            applied_at: lockedApplication?.applied_at || null,
+            is_application_fee_paid: lockedApplication?.is_application_fee_paid || false,
+            is_scholarship_fee_paid: lockedApplication?.is_scholarship_fee_paid || false,
+            application_fee_payment_method: lockedApplication?.application_fee_payment_method || null,
+            scholarship_fee_payment_method: lockedApplication?.scholarship_fee_payment_method || null,
+            acceptance_letter_status: lockedApplication?.acceptance_letter_status || null,
+            student_process_type: lockedApplication?.student_process_type || null,
+            payment_status: lockedApplication?.payment_status || null,
+            scholarship_title: Array.isArray(lockedApplication?.scholarships) ? null : (lockedApplication?.scholarships as any)?.title || null,
+            university_name: Array.isArray(lockedApplication?.scholarships) ? null : (lockedApplication?.scholarships as any)?.universities?.name || null,
+            reviewed_at: lockedApplication?.reviewed_at || null,
+            reviewed_by: lockedApplication?.reviewed_by || null,
+            is_locked: !!lockedApplication,
+            total_applications: s.scholarship_applications ? s.scholarship_applications.length : 0,
+            all_applications: s.scholarship_applications || [],
+            admin_notes: s.admin_notes
+          });
+        }
+      }
+      
+    } catch (error: any) {
+      console.error('Error uploading transfer form:', error);
+      showToast(error.message || 'Failed to upload transfer form', 'error');
+    } finally {
+      setUploadingTransferForm(false);
+    }
+  };
+
   if (loading || !student) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
@@ -2715,6 +2918,7 @@ const AdminStudentDetails: React.FC = () => {
                                 case 'application_fee': return 'Student pays the application fee';
                                 case 'scholarship_fee': return 'Student pays the scholarship fee';
                                 case 'acceptance_letter': return 'University sends acceptance letter';
+                                case 'transfer_form': return 'University sends transfer form (for transfer students)';
                                 case 'i20_fee': return 'Student pays I-20 control fee';
                                 case 'enrollment': return 'Student enrolls in the program';
                                 default: return 'Process step';
@@ -3595,6 +3799,243 @@ const AdminStudentDetails: React.FC = () => {
               >
                 New Request
               </button>
+            </div>
+          )}
+
+          {/* Transfer Form Section - Only for transfer students */}
+          {student?.student_process_type === 'transfer' && (
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-3xl shadow-sm relative overflow-hidden">
+              <div className="bg-gradient-to-r from-[#05294E] to-[#041f38] px-6 py-5 rounded-t-3xl">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                  <div className="flex items-start sm:items-center space-x-4 min-w-0">
+                    <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg flex-shrink-0">
+                      <svg className="w-6 h-6 text-[#05294E]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="text-xl font-bold text-white break-words">Transfer Form</h3>
+                      <p className="text-blue-100 text-sm break-words">Transfer form for current F-1 students</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="p-6">
+                {(() => {
+                  // Encontrar aplicação transfer
+                  const transferApp = student.all_applications?.find((app: any) => 
+                    app.student_process_type === 'transfer'
+                  );
+                  
+                  if (transferApp?.transfer_form_url) {
+                    // Formulário já enviado
+                    return (
+                      <div className="bg-white rounded-3xl p-6">
+                        <div className="flex items-start space-x-4">
+                          <div className="flex-shrink-0">
+                            <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                              <CheckCircle className="w-5 h-5 text-green-600" />
+                            </div>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-wrap gap-2 mb-1">
+                              <p className="font-medium text-slate-900 break-words">
+                                {transferApp.transfer_form_url.split('/').pop() || 'Transfer Form'}
+                              </p>
+                              <span className="px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 whitespace-nowrap">
+                                {transferApp.transfer_form_status === 'sent' ? 'Sent' : 'Available'}
+                              </span>
+                            </div>
+                            <p className="text-sm text-slate-500 break-words">
+                              Sent on {transferApp.transfer_form_sent_at ? new Date(transferApp.transfer_form_sent_at).toLocaleDateString('pt-BR') : 'N/A'}
+                            </p>
+                            
+                            <div className="flex flex-col sm:flex-row gap-2 mt-3">
+                              <button
+                                onClick={() => handleViewDocument({
+                                  file_url: transferApp.transfer_form_url,
+                                  filename: transferApp.transfer_form_url.split('/').pop() || 'Transfer Form'
+                                })}
+                                className="bg-[#05294E] hover:bg-[#041f38] text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto text-center"
+                              >
+                                View
+                              </button>
+                              
+                              <button
+                                onClick={() => handleDownloadDocument({
+                                  file_url: transferApp.transfer_form_url,
+                                  filename: transferApp.transfer_form_url.split('/').pop() || 'Transfer Form'
+                                })}
+                                className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto text-center"
+                              >
+                                Download
+                              </button>
+                              
+                              {isPlatformAdmin && (
+                                <button
+                                  onClick={() => {
+                                    // Limpar arquivo selecionado e mostrar seção de substituição
+                                    setTransferFormFile(null);
+                                    // Forçar um novo arquivo para mostrar a seção
+                                    const input = document.createElement('input');
+                                    input.type = 'file';
+                                    input.accept = '.pdf,.doc,.docx';
+                                    input.onchange = (e) => {
+                                      const file = (e.target as HTMLInputElement).files?.[0];
+                                      if (file) {
+                                        setTransferFormFile(file);
+                                      }
+                                    };
+                                    input.click();
+                                  }}
+                                  className="bg-[#05294E] hover:bg-[#041f38] text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto text-center"
+                                >
+                                  Replace
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Seção de upload para substituição */}
+                        {isPlatformAdmin && (transferFormFile || uploadingTransferForm) && (
+                          <div className="mt-6 bg-blue-50 border border-blue-200 rounded-2xl p-6">
+                            <h4 className="text-lg font-semibold text-[#05294E] mb-4 flex items-center">
+                              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                              </svg>
+                              {uploadingTransferForm ? 'Uploading Transfer Form...' : 'Replace Transfer Form'}
+                            </h4>
+                            
+                            <div className="space-y-4">
+                              {uploadingTransferForm ? (
+                                <div className="text-center py-4">
+                                  <div className="w-8 h-8 border-4 border-[#05294E] border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                                  <p className="text-[#05294E] font-medium">Uploading transfer form...</p>
+                                </div>
+                              ) : transferFormFile ? (
+                                <>
+                                  <div>
+                                    <label className="block text-sm font-medium text-[#05294E] mb-2">
+                                      New Transfer Form File
+                                    </label>
+                                    <div className="flex items-center justify-center">
+                                      <label className="flex items-center gap-2 px-4 py-2 bg-blue-100 border-2 border-dashed border-blue-300 rounded-lg cursor-pointer hover:bg-blue-200 transition font-medium text-[#05294E]">
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                        </svg>
+                                        <span>Change file</span>
+                                        <input
+                                          type="file"
+                                          className="sr-only"
+                                          accept=".pdf,.doc,.docx"
+                                          onChange={(e) => setTransferFormFile(e.target.files ? e.target.files[0] : null)}
+                                          disabled={uploadingTransferForm}
+                                        />
+                                      </label>
+                                    </div>
+                                    <p className="text-sm text-blue-600 mt-2 text-center">
+                                      Selected: {transferFormFile?.name || 'Unknown file'}
+                                    </p>
+                                  </div>
+                                  
+                                  <div className="flex gap-3">
+                                    <button
+                                      onClick={handleUploadTransferForm}
+                                      disabled={!transferFormFile || uploadingTransferForm}
+                                      className="bg-[#05294E] hover:bg-[#041f38] text-white px-6 py-2 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed flex-1"
+                                    >
+                                      Replace Transfer Form
+                                    </button>
+                                    
+                                    <button
+                                      onClick={() => setTransferFormFile(null)}
+                                      className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg font-medium"
+                                    >
+                                      Cancel
+                                    </button>
+                                  </div>
+                                </>
+                              ) : (
+                                <div className="text-center py-4">
+                                  <p className="text-[#05294E] font-medium mb-4">Transfer form uploaded successfully!</p>
+                                  <button
+                                    onClick={() => setTransferFormFile(null)}
+                                    className="bg-[#05294E] hover:bg-[#041f38] text-white px-6 py-2 rounded-lg font-medium"
+                                  >
+                                    Done
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  } else {
+                    // Formulário não enviado - mostrar upload
+                    return (
+                      <div className="bg-white rounded-3xl p-6" data-transfer-upload>
+                        <div className="text-center">
+                          <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                          </div>
+                          <h4 className="text-lg font-semibold text-slate-700 mb-2">
+                            {transferFormFile ? 'Replace Transfer Form' : 'Transfer Form Not Sent'}
+                          </h4>
+                          <p className="text-slate-500 max-w-md mx-auto mb-6">
+                            {transferFormFile 
+                              ? 'Select a new file to replace the current transfer form.'
+                              : 'Upload and send the transfer form for this transfer student.'
+                            }
+                          </p>
+                          
+                          {isPlatformAdmin && (
+                            <div className="space-y-4">
+                              <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-2">
+                                  Select Transfer Form File
+                                </label>
+                                <div className="flex items-center justify-center">
+                                  <label className="flex items-center gap-2 px-4 py-2 bg-blue-100 border-2 border-dashed border-blue-300 rounded-lg cursor-pointer hover:bg-blue-200 transition font-medium text-blue-700">
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                    </svg>
+                                    <span>{transferFormFile ? 'Change file' : 'Select Transfer Form'}</span>
+                                    <input
+                                      type="file"
+                                      className="sr-only"
+                                      accept=".pdf,.doc,.docx"
+                                      onChange={(e) => setTransferFormFile(e.target.files ? e.target.files[0] : null)}
+                                      disabled={uploadingTransferForm}
+                                    />
+                                  </label>
+                                </div>
+                                {transferFormFile && (
+                                  <p className="text-sm text-slate-600 mt-2 text-center">
+                                    Selected: {transferFormFile.name}
+                                  </p>
+                                )}
+                              </div>
+                              
+                              <button
+                                onClick={handleUploadTransferForm}
+                                disabled={!transferFormFile || uploadingTransferForm}
+                                className="bg-[#05294E] hover:bg-[#041f38] text-white px-6 py-2 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                {uploadingTransferForm ? 'Sending...' : 'Send Transfer Form'}
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  }
+                })()}
+              </div>
             </div>
           )}
 

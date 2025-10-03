@@ -59,7 +59,11 @@ const ApplicationChatPage: React.FC = () => {
         .select(`*, user_profiles!student_id(*), scholarships(*, universities(*))`)
         .eq('id', applicationId)
         .single()
-        .then(({ data }) => setApplicationDetails(data));
+        .then(({ data }) => {
+          console.log('🔍 [ApplicationChatPage] Application details loaded:', data);
+          console.log('🔍 [ApplicationChatPage] Student process type:', data?.student_process_type);
+          setApplicationDetails(data);
+        });
     }
   }, [applicationId]);
 
