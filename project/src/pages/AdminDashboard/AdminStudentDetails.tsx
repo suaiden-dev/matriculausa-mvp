@@ -7,6 +7,7 @@ import { useStudentLogs } from '../../hooks/useStudentLogs';
 import DocumentsView from '../../components/EnhancedStudentTracking/DocumentsView';
 import AdminScholarshipSelection from '../../components/AdminDashboard/AdminScholarshipSelection';
 import StudentLogsView from '../../components/AdminDashboard/StudentLogsView';
+import { generateTermAcceptancePDF, StudentTermAcceptanceData } from '../../utils/pdfGenerator';
 // Função simples de toast
 const showToast = (message: string, type: 'success' | 'error' = 'success') => {
   const toast = document.createElement('div');
@@ -35,7 +36,11 @@ import {
   Edit3,
   Save,
   X,
-  AlertTriangle
+  AlertTriangle,
+  Download,
+  Calendar,
+  Globe,
+  Users
 } from 'lucide-react';
 
 interface StudentRecord {
@@ -77,6 +82,21 @@ interface StudentRecord {
   total_applications: number;
   all_applications: any[];
   admin_notes?: string | null;
+}
+
+interface TermAcceptance {
+  id: string;
+  user_id: string;
+  term_id: string;
+  term_type: string;
+  accepted_at: string;
+  ip_address?: string;
+  user_agent?: string;
+  created_at: string;
+  user_email?: string;
+  user_full_name?: string;
+  term_title?: string;
+  term_content?: string;
 }
 
 const AdminStudentDetails: React.FC = () => {
@@ -142,6 +162,10 @@ const AdminStudentDetails: React.FC = () => {
   // Upload de Acceptance Letter (Admin) - Removido pois agora está no DocumentsView
   const [isProgressExpanded, setIsProgressExpanded] = useState(false);
   const [i20Deadline, setI20Deadline] = useState<Date | null>(null);
+  
+  // Estados para termos aceitos
+  const [termAcceptances, setTermAcceptances] = useState<TermAcceptance[]>([]);
+  const [loadingTermAcceptances, setLoadingTermAcceptances] = useState(false);
   const [referralInfo, setReferralInfo] = useState<{
     type: 'seller' | 'affiliate' | 'student' | null;
     name: string | null;
@@ -159,6 +183,62 @@ const AdminStudentDetails: React.FC = () => {
   const { logAction } = useStudentLogs(student?.student_id || '');
 
   // Função para buscar informações de referência
+  // Função para buscar termos aceitos pelo estudante
+  const fetchTermAcceptances = async (userId: string) => {
+    try {
+      setLoadingTermAcceptances(true);
+      
+      // Buscar aceitações do estudante
+      const { data: acceptances, error: acceptancesError } = await supabase
+        .from('comprehensive_term_acceptance')
+        .select('*')
+        .eq('user_id', userId)
+        .order('accepted_at', { ascending: false });
+
+      if (acceptancesError) throw acceptancesError;
+
+      if (!acceptances || acceptances.length === 0) {
+        setTermAcceptances([]);
+        return;
+      }
+
+      // Buscar informações dos termos
+      const termIds = [...new Set(acceptances.map(a => a.term_id))];
+      const { data: terms, error: termsError } = await supabase
+        .from('application_terms')
+        .select('id, title, content')
+        .in('id', termIds);
+
+      if (termsError) throw termsError;
+
+      // Criar mapa para lookup rápido
+      const termMap = new Map(terms?.map(t => [t.id, t]) || []);
+
+      // Combinar os dados
+      const transformedData = acceptances.map(acceptance => ({
+        id: acceptance.id,
+        user_id: acceptance.user_id,
+        term_id: acceptance.term_id,
+        term_type: acceptance.term_type,
+        accepted_at: acceptance.accepted_at,
+        ip_address: acceptance.ip_address,
+        user_agent: acceptance.user_agent,
+        created_at: acceptance.created_at,
+        user_email: student?.student_email || 'N/A',
+        user_full_name: student?.student_name || 'N/A',
+        term_title: termMap.get(acceptance.term_id)?.title || 'N/A',
+        term_content: termMap.get(acceptance.term_id)?.content || ''
+      }));
+
+      setTermAcceptances(transformedData);
+    } catch (error: any) {
+      console.error('Error loading term acceptances:', error);
+      setError(error.message);
+    } finally {
+      setLoadingTermAcceptances(false);
+    }
+  };
+
   const fetchReferralInfo = async (referralCode: string) => {
     if (!referralCode) {
       setReferralInfo(null);
@@ -469,6 +549,11 @@ const AdminStudentDetails: React.FC = () => {
 
         setStudent(formatted);
         setDependents(Number(s.dependents || 0));
+        
+        // Buscar termos aceitos pelo estudante
+        if (s.user_id) {
+          fetchTermAcceptances(s.user_id);
+        }
         
         // Processar notas do admin - converter de string para array se necessário
         if (s.admin_notes) {
@@ -3235,6 +3320,107 @@ const AdminStudentDetails: React.FC = () => {
               </div>
             </div>
           )}
+
+          {/* Term Acceptance History */}
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
+            <div className="bg-gradient-to-r rounded-t-2xl from-blue-600 to-blue-700 px-6 py-4">
+              <h2 className="text-xl font-semibold text-white flex items-center">
+                <FileText className="w-6 h-6 mr-3" />
+                Term Acceptance History
+              </h2>
+            </div>
+            <div className="p-6">
+              {loadingTermAcceptances ? (
+                <div className="flex items-center justify-center p-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                </div>
+              ) : termAcceptances.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <FileText className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                  <p className="text-lg">No terms accepted yet</p>
+                  <p className="text-sm text-gray-400 mt-2">
+                    This student hasn't accepted any terms yet.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {termAcceptances.map((acceptance) => (
+                    <div key={acceptance.id} className="border border-slate-200 rounded-lg p-4 hover:bg-slate-50 transition-colors">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center space-x-3 mb-3">
+                            <div className="flex-shrink-0 h-8 w-8">
+                              <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
+                                <FileText className="w-4 h-4 text-green-600" />
+                              </div>
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <h3 className="text-sm font-medium text-gray-900 truncate">
+                                {acceptance.term_title || 'N/A'}
+                              </h3>
+                              <p className="text-sm text-gray-500 capitalize truncate">
+                                {acceptance.term_type.replace(/_/g, ' ')}
+                              </p>
+                            </div>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <div className="flex items-center text-sm text-gray-600">
+                              <Calendar className="w-4 h-4 mr-2 text-gray-400 flex-shrink-0" />
+                              <span className="truncate">
+                                Accepted: {new Date(acceptance.accepted_at).toLocaleString('pt-BR')}
+                              </span>
+                            </div>
+                            <div className="flex items-center text-sm text-gray-600">
+                              <Globe className="w-4 h-4 mr-2 text-gray-400 flex-shrink-0" />
+                              <span className="truncate" title={acceptance.ip_address || 'N/A'}>
+                                IP: {acceptance.ip_address || 'N/A'}
+                              </span>
+                            </div>
+                            {acceptance.user_agent && (
+                              <div className="flex items-start text-sm text-gray-600">
+                                <Users className="w-4 h-4 mr-2 text-gray-400 flex-shrink-0 mt-0.5" />
+                                <span className="truncate" title={acceptance.user_agent}>
+                                  {acceptance.user_agent.length > 80 
+                                    ? acceptance.user_agent.substring(0, 80) + '...' 
+                                    : acceptance.user_agent
+                                  }
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        
+                        <div className="flex-shrink-0">
+                          <button
+                            onClick={() => {
+                              const pdfData: StudentTermAcceptanceData = {
+                                student_name: acceptance.user_full_name || 'N/A',
+                                student_email: acceptance.user_email || 'N/A',
+                                term_title: acceptance.term_title || 'N/A',
+                                accepted_at: new Date(acceptance.accepted_at).toLocaleString('en-US'),
+                                ip_address: acceptance.ip_address || 'N/A',
+                                user_agent: acceptance.user_agent || 'N/A',
+                                country: 'N/A',
+                                affiliate_code: undefined,
+                                term_content: acceptance.term_content || ''
+                              };
+                              generateTermAcceptancePDF(pdfData);
+                            }}
+                            className="inline-flex items-center px-3 py-1 rounded-md text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                            title="Download PDF certificate"
+                          >
+                            <Download className="h-3 w-3 mr-1" />
+                            PDF
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
 
         </div>
       </div>
