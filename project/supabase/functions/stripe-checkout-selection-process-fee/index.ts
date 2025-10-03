@@ -2,9 +2,13 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import Stripe from 'npm:stripe@17.7.0';
 import { createClient } from 'npm:@supabase/supabase-js@2.49.1';
 
+// O Stripe fará a conversão de moeda automaticamente
+// quando payment_method_types incluir 'pix' e a moeda for USD
+
 const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
 const stripeSecret = Deno.env.get('STRIPE_SECRET_KEY')!;
 const stripe = new Stripe(stripeSecret, {
+  apiVersion: '2025-07-30.preview', // Versão preview para FX Quotes API
   appInfo: {
     name: 'Bolt Integration',
     version: '1.0.0',
@@ -50,7 +54,7 @@ Deno.serve(async (req) => {
 
     console.log('[stripe-checkout-selection-process-fee] ✅ Variáveis de ambiente verificadas');
 
-    const { price_id, amount, success_url, cancel_url, mode, metadata } = await req.json();
+    const { price_id, amount, success_url, cancel_url, mode, metadata, payment_method } = await req.json();
     
     console.log('[stripe-checkout-selection-process-fee] 📥 Payload recebido:', { price_id, amount, success_url, cancel_url, mode, metadata });
     
@@ -151,16 +155,56 @@ Deno.serve(async (req) => {
       console.error('[stripe-checkout-selection-process-fee] ❌ Erro ao verificar desconto:', error);
     }
 
-    // Configuração da sessão Stripe
+    // Configuração da sessão Stripe baseada no método escolhido
     let sessionConfig: any = {
-      payment_method_types: ['card'],
+      payment_method_types: payment_method === 'pix' ? ['pix'] : ['card'], // PIX ou cartões
       client_reference_id: user.id,
       customer_email: user.email,
       mode: mode || 'payment',
-      success_url: success_url,
+      success_url: payment_method === 'pix' 
+        ? `${success_url}&pix_payment=true`
+        : success_url,
       cancel_url: cancel_url,
       metadata: sessionMetadata,
     };
+
+    console.log('[stripe-checkout-selection-process-fee] 🎯 Método de pagamento selecionado:', payment_method);
+    
+    // Para PIX, tentar obter taxa em tempo real usando FX Quotes API
+    // A API retorna: to_currency=brl, from_currencies=usd
+    // Resultado: rates.usd.exchange_rate (taxa USD->BRL)
+    let exchangeRate = 1;
+    if (payment_method === 'pix') {
+      console.log('[PIX] 🇧🇷 PIX selecionado - Configurando sessão PIX...');
+      console.log('[PIX] 💰 Valor USD:', amount);
+      try {
+        console.log('[stripe-checkout-selection-process-fee] 💱 Obtendo taxa de câmbio com margem comercial...');
+        
+        // Usar API externa com margem comercial (mais realista que Stripe)
+        const response = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
+        if (response.ok) {
+          const data = await response.json();
+          const baseRate = parseFloat(data.rates.BRL);
+          
+          // Aplicar margem comercial (3-5% acima da taxa oficial)
+          exchangeRate = baseRate * 1.04; // 4% de margem
+          console.log('[stripe-checkout-selection-process-fee] 💱 Taxa base (ExchangeRates-API):', baseRate);
+          console.log('[stripe-checkout-selection-process-fee] 💱 Taxa com margem comercial (+4%):', exchangeRate);
+        } else {
+          throw new Error('API externa falhou');
+        }
+        
+        // Logs específicos para PIX após cálculo da taxa
+        console.log('[PIX] 💱 Taxa de conversão:', exchangeRate);
+        console.log('[PIX] 💰 Valor BRL:', Math.round(amount * exchangeRate * 100));
+        console.log('[PIX] 🔗 Success URL PIX:', `http://localhost:5173/student/dashboard/pix-payment-success?session_id={CHECKOUT_SESSION_ID}`);
+        
+      } catch (apiError) {
+        console.error('[stripe-checkout-selection-process-fee] ❌ Erro na API externa:', apiError);
+        exchangeRate = 5.6; // Taxa de fallback
+        console.log('[stripe-checkout-selection-process-fee] 💱 Usando taxa de fallback:', exchangeRate);
+      }
+    }
 
     // Se o frontend enviou um amount específico (incluindo dependentes), usar esse valor
     if (amount && typeof amount === 'number' && amount > 0) {
@@ -168,12 +212,12 @@ Deno.serve(async (req) => {
       sessionConfig.line_items = [
         {
           price_data: {
-            currency: 'usd',
+            currency: payment_method === 'pix' ? 'brl' : 'usd', // BRL para PIX, USD para cartões
             product_data: {
               name: 'Selection Process Fee',
               description: userPackageFees ? `Selection Process Fee - ${userPackageFees.package_name}` : 'Selection Process Fee',
             },
-            unit_amount: finalAmount,
+            unit_amount: payment_method === 'pix' ? Math.round(finalAmount * exchangeRate) : finalAmount, // Conversão manual para PIX
           },
           quantity: 1,
         },
@@ -189,12 +233,12 @@ Deno.serve(async (req) => {
       sessionConfig.line_items = [
         {
           price_data: {
-            currency: 'usd',
+            currency: payment_method === 'pix' ? 'brl' : 'usd', // BRL para PIX, USD para cartões
             product_data: {
               name: 'Selection Process Fee',
               description: `Selection Process Fee - ${userPackageFees.package_name}`,
             },
-            unit_amount: dynamicAmount,
+            unit_amount: payment_method === 'pix' ? Math.round(dynamicAmount * exchangeRate) : dynamicAmount, // Conversão manual para PIX
           },
           quantity: 1,
         },
@@ -282,9 +326,20 @@ Deno.serve(async (req) => {
     
     try {
       const session = await stripe.checkout.sessions.create(sessionConfig);
-      console.log('[stripe-checkout-selection-process-fee] ✅ Sessão Stripe criada com sucesso!');
-      console.log('[stripe-checkout-selection-process-fee] Session ID:', session.id);
-      console.log('[stripe-checkout-selection-process-fee] Session URL:', session.url);
+    console.log('[stripe-checkout-selection-process-fee] ✅ Sessão Stripe criada com sucesso!');
+    console.log('[stripe-checkout-selection-process-fee] Session ID:', session.id);
+    console.log('[stripe-checkout-selection-process-fee] Session URL:', session.url);
+    
+    // Logs específicos para PIX
+    if (payment_method === 'pix') {
+      console.log('[PIX] ✅ Sessão PIX criada com sucesso!');
+      console.log('[PIX] 🆔 Session ID:', session.id);
+      console.log('[PIX] 🔗 Session URL:', session.url);
+      console.log('[PIX] 💰 Valor final BRL:', session.amount_total);
+      console.log('[PIX] 💱 Moeda:', session.currency);
+      console.log('[PIX] 🎯 Métodos de pagamento:', session.payment_method_types);
+      console.log('[PIX] 🔗 Success URL configurada:', session.success_url);
+    }
       console.log('[stripe-checkout-selection-process-fee] Metadata da sessão:', session.metadata);
 
       // Log the checkout session creation

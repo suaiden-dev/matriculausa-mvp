@@ -11,18 +11,21 @@ const SelectionProcessFeeSuccess: React.FC = () => {
   const location = useLocation();
   const params = new URLSearchParams(location.search);
   const sessionId = params.get('session_id');
+  const isPixPayment = params.get('pix_payment') === 'true';
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { selectionProcessFeeAmount } = useDynamicFees();
   const { t } = useTranslation();
 
-  useEffect(() => {
-    const verifySession = async () => {
-      if (!sessionId) {
-        setError('Session ID not found in URL.');
-        setLoading(false);
-        return;
-      }
+  // Função para fazer polling do status do PIX (otimizada para webhook)
+  const pollPixPaymentStatus = async () => {
+    const maxAttempts = 30; // 5 minutos (10s * 30)
+    let attempts = 0;
+    
+    const poll = async () => {
+      attempts++;
+      console.log(`[PIX] Tentativa ${attempts}/${maxAttempts} - Verificando se webhook processou PIX...`);
+      
       try {
         const SUPABASE_PROJECT_URL = import.meta.env.VITE_SUPABASE_URL;
         const EDGE_FUNCTION_ENDPOINT = `${SUPABASE_PROJECT_URL}/functions/v1/verify-stripe-session-selection-process-fee`;
@@ -36,6 +39,7 @@ const SelectionProcessFeeSuccess: React.FC = () => {
         } catch (e) {
           token = null;
         }
+        
         const response = await fetch(EDGE_FUNCTION_ENDPOINT, {
           method: 'POST',
           headers: {
@@ -44,55 +48,121 @@ const SelectionProcessFeeSuccess: React.FC = () => {
           },
           body: JSON.stringify({ sessionId }),
         });
+        
         const data = await response.json();
-        if (!response.ok || data.status !== 'complete') {
-          throw new Error(data.error || data.message || 'Failed to verify session.');
+        console.log(`[PIX] Resposta da API (tentativa ${attempts}):`, data);
+        
+        // Se for PIX e estiver completo, redirecionar imediatamente
+        if (data.payment_method === 'pix' && data.status === 'complete') {
+          console.log('[PIX] ✅ Webhook processou PIX! Redirecionando...');
+          localStorage.removeItem('last_payment_method');
+          navigate('/student/dashboard/scholarships');
+          return;
         }
-
-        // Log Stripe payment success
-        try {
-          // Fetch client IP (best-effort)
-          let clientIp: string | undefined = undefined;
-          try {
-            const controller = new AbortController();
-            const timeout = setTimeout(() => controller.abort(), 2000);
-            const res = await fetch('https://api.ipify.org?format=json', { signal: controller.signal });
-            clearTimeout(timeout);
-            if (res.ok) {
-              const j = await res.json();
-              clientIp = j?.ip;
-            }
-          } catch (_) {}
-
-          // Resolve student profile id
-          const { data: authUser } = await supabase.auth.getUser();
-          const authUserId = authUser.user?.id;
-          if (authUserId) {
-            const { data: profile } = await supabase.from('user_profiles').select('id').eq('user_id', authUserId).single();
-            if (profile?.id) {
-              await supabase.rpc('log_student_action', {
-                p_student_id: profile.id,
-                p_action_type: 'fee_payment',
-                p_action_description: 'Selection Process Fee paid via Stripe',
-                p_performed_by: authUserId,
-                p_performed_by_type: 'student',
-                p_metadata: {
-                  fee_type: 'selection_process',
-                  payment_method: 'stripe',
-                  amount: selectionProcessFeeAmount || 0,
-                  session_id: sessionId,
-                  ip: clientIp
-                }
-              });
-            }
-          }
-        } catch (logErr) {
-          console.error('[SelectionProcessFeeSuccess] Failed to log stripe payment:', logErr);
+        
+        // Se não for PIX, processar normalmente
+        if (data.payment_method !== 'pix' && data.status === 'complete') {
+          console.log('[PIX] Pagamento não-PIX confirmado, processando normalmente...');
+          setLoading(false);
+          return;
         }
-      } catch (err: any) {
-        setError(err.message || 'Error verifying payment.');
-      } finally {
+        
+        if (attempts >= maxAttempts) {
+          console.log('[PIX] ⏰ Timeout após 5 minutos - Redirecionando mesmo assim...');
+          localStorage.removeItem('last_payment_method');
+          navigate('/student/dashboard/scholarships');
+          return;
+        }
+        
+        // Aguardar 10 segundos antes da próxima tentativa
+        console.log(`[PIX] ⏳ Aguardando webhook processar... (${attempts}/${maxAttempts})`);
+        setTimeout(poll, 10000);
+        
+      } catch (error) {
+        console.error('[PIX] ❌ Erro no polling:', error);
+        if (attempts >= maxAttempts) {
+          console.log('[PIX] ❌ Erro persistente - Redirecionando para dashboard...');
+          localStorage.removeItem('last_payment_method');
+          navigate('/student/dashboard/scholarships');
+        } else {
+          console.log(`[PIX] ⏳ Tentando novamente em 10s... (${attempts}/${maxAttempts})`);
+          setTimeout(poll, 10000);
+        }
+      }
+    };
+    
+    poll();
+  };
+
+  useEffect(() => {
+    const verifySession = async () => {
+      if (!sessionId) {
+        setError('Session ID not found in URL.');
         setLoading(false);
+        return;
+      }
+
+      // Verificar se é pagamento PIX
+      if (isPixPayment) {
+        console.log('[PIX] Pagamento PIX detectado - iniciando polling para webhook...');
+        // Iniciar polling para verificar se webhook já processou
+        await pollPixPaymentStatus();
+        return;
+      }
+
+      // Verificar imediatamente se PIX já foi pago
+      console.log('[PIX] Verificando status imediato do PIX...');
+      try {
+        const SUPABASE_PROJECT_URL = import.meta.env.VITE_SUPABASE_URL;
+        const EDGE_FUNCTION_ENDPOINT = `${SUPABASE_PROJECT_URL}/functions/v1/verify-stripe-session-selection-process-fee`;
+        let token = null;
+        try {
+          const raw = localStorage.getItem(`sb-${SUPABASE_PROJECT_URL.split('//')[1].split('.')[0]}-auth-token`);
+          if (raw) {
+            const tokenObj = JSON.parse(raw);
+            token = tokenObj?.access_token || null;
+          }
+        } catch (e) {
+          token = null;
+        }
+        
+        const response = await fetch(EDGE_FUNCTION_ENDPOINT, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token && { 'Authorization': `Bearer ${token}` }),
+          },
+          body: JSON.stringify({ sessionId }),
+        });
+        
+        const data = await response.json();
+        console.log('[PIX] Resposta da verificação:', data);
+        
+        // Se PIX já foi pago, redirecionar imediatamente
+        if (data.payment_method === 'pix' && data.status === 'complete') {
+          console.log('[PIX] PIX já foi pago! Redirecionando imediatamente...');
+          localStorage.removeItem('last_payment_method');
+          const redirectUrl = data.redirect_url || '/student/dashboard/scholarships';
+          console.log('[PIX] Redirecionando para:', redirectUrl);
+          navigate(redirectUrl);
+          return;
+        }
+        
+        // Se não for PIX, processar normalmente
+        if (data.payment_method !== 'pix' && data.status === 'complete') {
+          console.log('[PIX] Pagamento não-PIX confirmado, processando normalmente...');
+          setLoading(false);
+          return;
+        }
+        
+        // Se ainda não foi pago, iniciar polling
+        console.log('[PIX] PIX ainda não foi pago, iniciando polling...');
+        await pollPixPaymentStatus();
+        
+      } catch (error) {
+        console.error('[PIX] Erro na verificação inicial:', error);
+        // Em caso de erro, iniciar polling mesmo assim
+        await pollPixPaymentStatus();
       }
     };
     verifySession();

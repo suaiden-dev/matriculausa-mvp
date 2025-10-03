@@ -48,6 +48,7 @@ Deno.serve(async (req)=>{
     console.log('Session metadata:', session.metadata);
     if (session.payment_status === 'paid' && session.status === 'complete') {
       const userId = session.client_reference_id;
+      const paymentMethod = session.payment_method_types?.[0];
       const applicationId = session.metadata?.application_id;
       console.log(`Processing successful payment. UserID: ${userId}, ApplicationID: ${applicationId}`);
       if (!userId) return corsResponse({
@@ -411,6 +412,19 @@ Deno.serve(async (req)=>{
         console.error('[NOTIFICAÇÃO] Erro ao notificar application fee via n8n:', notifErr);
       }
       // --- FIM DAS NOTIFICAÇÕES ---
+      
+      // Para PIX, retornar resposta especial que força redirecionamento
+      if (paymentMethod === 'pix') {
+        console.log('[PIX] Forçando redirecionamento para PIX...');
+        return corsResponse({
+          status: 'complete',
+          message: 'PIX payment verified and processed successfully.',
+          payment_method: 'pix',
+          redirect_required: true,
+          redirect_url: 'http://localhost:5173/student/dashboard/application-fee-success'
+        }, 200);
+      }
+      
       return corsResponse({
         status: 'complete',
         message: 'Session verified and processed successfully.',

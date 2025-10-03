@@ -69,6 +69,9 @@ const MyApplications: React.FC = () => {
   const [pendingApplication, setPendingApplication] = useState<ApplicationWithScholarship | null>(null);
   const [isProcessingCheckout, setIsProcessingCheckout] = useState(false);
 
+  // Payment method selection states
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'stripe' | 'zelle' | 'pix' | null>(null);
+
   // Modal confirmation states para Scholarship Fee
   const [showScholarshipFeeModal, setShowScholarshipFeeModal] = useState(false);
   const [pendingScholarshipFeeApplication, setPendingScholarshipFeeApplication] = useState<ApplicationWithScholarship | null>(null);
@@ -702,6 +705,21 @@ const getLevelColor = (level: any) => {
   const handleCancelPayment = () => {
     setShowConfirmationModal(false);
     setPendingApplication(null);
+    setSelectedPaymentMethod(null);
+  };
+
+  // Função para lidar com seleção de método de pagamento
+  const handlePaymentMethodSelect = (method: 'stripe' | 'zelle' | 'pix') => {
+    setSelectedPaymentMethod(method);
+    
+    // Processar pagamento baseado no método selecionado
+    if (method === 'stripe') {
+      handleStripeCheckout();
+    } else if (method === 'pix') {
+      handlePixCheckout();
+    } else if (method === 'zelle') {
+      handleZelleCheckout();
+    }
   };
 
   // Count other approved applications
@@ -775,6 +793,91 @@ const getLevelColor = (level: any) => {
     } finally {
       // Desativar loading
       setIsProcessingCheckout(false);
+    }
+  };
+
+  // Função para processar checkout PIX
+  const handlePixCheckout = async () => {
+    if (!pendingApplication) return;
+    
+    try {
+      setIsProcessingCheckout(true);
+      
+      console.log('Iniciando checkout PIX para application fee com application ID:', pendingApplication.id);
+      
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      
+      if (!token) {
+        throw new Error('Usuário não autenticado');
+      }
+
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout-application-fee`;
+      
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          price_id: 'price_application_fee',
+          success_url: `${window.location.origin}/student/dashboard/application-fee-success?session_id={CHECKOUT_SESSION_ID}`,
+          cancel_url: `${window.location.origin}/student/dashboard/application-fee-error`,
+          mode: 'payment',
+          payment_type: 'application_fee',
+          fee_type: 'application_fee',
+          payment_method: 'pix', // Especificar PIX
+          metadata: {
+            application_id: pendingApplication.id,
+            selected_scholarship_id: pendingApplication.scholarship_id,
+            fee_type: 'application_fee',
+            amount: pendingApplication.scholarships?.application_fee_amount || 350,
+            application_fee_amount: pendingApplication.scholarships?.application_fee_amount || 350
+          },
+          scholarships_ids: [pendingApplication.scholarship_id],
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erro ao criar sessão de checkout PIX');
+      }
+
+      const { session_url } = await response.json();
+      if (session_url) {
+        window.location.href = session_url;
+      } else {
+        throw new Error('URL da sessão não encontrada na resposta');
+      }
+      
+    } catch (error) {
+      console.error('Erro ao processar checkout PIX:', error);
+      setShowConfirmationModal(true);
+    } finally {
+      setIsProcessingCheckout(false);
+    }
+  };
+
+  // Função para processar checkout Zelle
+  const handleZelleCheckout = async () => {
+    if (!pendingApplication) return;
+    
+    try {
+      const applicationFeeAmount = pendingApplication.scholarships?.application_fee_amount || 350;
+      
+      const params = new URLSearchParams({
+        feeType: 'application_fee',
+        amount: applicationFeeAmount.toString(),
+        scholarshipsIds: pendingApplication.scholarship_id
+      });
+      
+      // Adicionar campo específico para Application Fee
+      params.append('applicationFeeAmount', applicationFeeAmount.toString());
+      
+      window.location.href = `/checkout/zelle?${params.toString()}`;
+    } catch (error) {
+      console.error('Erro ao processar checkout Zelle:', error);
     }
   };
 
@@ -977,35 +1080,127 @@ const getLevelColor = (level: any) => {
                  </div>
                </div>
                
-               {/* Modal Footer - Fixed at bottom */}
-               <div className="flex-shrink-0 pt-3 mt-2 space-y-2 sm:space-y-0 sm:flex sm:flex-row-reverse sm:gap-2 border-t border-gray-100">
-                <StripeCheckout
-                  productId="applicationFee"
-                  feeType="application_fee"
-                  paymentType="application_fee"
-                  buttonText={`${t('studentDashboard.myApplications.confirmationModal.secureMyScholarship')} ($${pendingApplication.scholarships?.application_fee_amount ? 
-                    Number(pendingApplication.scholarships.application_fee_amount).toFixed(2) : 
-                    '350.00'
-                  })`}
-                  className="w-full bg-gradient-to-r from-green-600 to-green-700 text-white px-3 py-2 rounded-lg font-bold hover:from-green-700 hover:to-green-800 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 text-sm text-center"
-                  successUrl={`${window.location?.origin || ''}/student/dashboard/application-fee-success?session_id={CHECKOUT_SESSION_ID}`}
-                  cancelUrl={`${window.location?.origin || ''}/student/dashboard/application-fee-error`}
-                  disabled={false}
-                  scholarshipsIds={[pendingApplication.scholarship_id]}
-                  metadata={{ 
-                    application_id: pendingApplication.id, 
-                    selected_scholarship_id: pendingApplication.scholarship_id,
-                    student_process_type: localStorage.getItem('studentProcessType') || null
-                  }}
-                  studentProcessType={localStorage.getItem('studentProcessType') || null}
-                />
+               {/* Choose Payment Method */}
+               <div className="flex-shrink-0 pt-3 mt-2 border-t border-gray-100">
+                 <h3 className="font-semibold text-gray-900 mb-3">{t('studentDashboard.myApplications.confirmationModal.choosePaymentMethod')}</h3>
+                 
+                 <div className="grid gap-3 mb-4">
+                   {/* Stripe Option */}
+                   <label className="relative flex items-center p-3 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-300 hover:bg-blue-50">
+                     <input
+                       type="radio"
+                       name="payment-method"
+                       value="stripe"
+                       checked={selectedPaymentMethod === 'stripe'}
+                       onChange={() => handlePaymentMethodSelect('stripe')}
+                       className="sr-only"
+                     />
+                     <div className={`w-5 h-5 border-2 rounded-full mr-3 flex items-center justify-center ${
+                       selectedPaymentMethod === 'stripe' 
+                         ? 'border-blue-600 bg-blue-600' 
+                         : 'border-gray-300'
+                     }`}>
+                       {selectedPaymentMethod === 'stripe' && (
+                         <div className="w-2 h-2 bg-white rounded-full"></div>
+                       )}
+                     </div>
+                     
+                     <div className="flex items-center gap-3">
+                       <div className="p-2 bg-blue-100 rounded-lg">
+                         <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
+                           <path d="M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 0-.831.683-1.305 1.901-1.305 2.227 0 4.515.858 6.09 1.631l.89-5.494C18.252.274 15.697 0 12.165 0 9.667 0 7.589.654 6.104 1.872 4.56 3.147 3.757 4.992 3.757 7.218c0 4.039 2.467 5.76 6.476 7.219 2.585.92 3.445 1.574 3.445 2.583 0 .98-.84 1.581-2.354 1.581-1.412 0-2.686-.292-4.978-1.348L5.016 22.38c1.125.405 2.125.57 3.418.57 2.125 0 3.663-.654 5.09-1.86 1.48-1.26 2.298-3.09 2.298-5.282 0-4.237-2.467-5.76-6.476-7.219z"/>
+                         </svg>
+                       </div>
+                       <div>
+                         <div className="font-medium text-gray-900">Stripe</div>
+                         <div className="text-sm text-gray-600">Pay securely with credit or debit card</div>
+                       </div>
+                     </div>
+                   </label>
+
+                   {/* PIX Option */}
+                   <label className="relative flex items-center p-3 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-300 hover:bg-blue-50">
+                     <input
+                       type="radio"
+                       name="payment-method"
+                       value="pix"
+                       checked={selectedPaymentMethod === 'pix'}
+                       onChange={() => handlePaymentMethodSelect('pix')}
+                       className="sr-only"
+                     />
+                     <div className={`w-5 h-5 border-2 rounded-full mr-3 flex items-center justify-center ${
+                       selectedPaymentMethod === 'pix' 
+                         ? 'border-blue-600 bg-blue-600' 
+                         : 'border-gray-300'
+                     }`}>
+                       {selectedPaymentMethod === 'pix' && (
+                         <div className="w-2 h-2 bg-white rounded-full"></div>
+                       )}
+                     </div>
+                     
+                     <div className="flex items-center gap-3">
+                       <div className="p-2 bg-green-100 rounded-lg">
+                         <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 48 48">
+                           <path fill="#4db6ac" d="M11.9,12h-0.68l8.04-8.04c2.62-2.61,6.86-2.61,9.48,0L36.78,12H36.1c-1.6,0-3.11,0.62-4.24,1.76l-6.8,6.77c-0.59,0.59-1.53,0.59-2.12,0l-6.8-6.77C15.01,12.62,13.5,12,11.9,12z"/>
+                           <path fill="#4db6ac" d="M36.1,36h0.68l-8.04,8.04c-2.62,2.61-6.86,2.61-9.48,0L11.22,36h0.68c1.6,0,3.11-0.62,4.24-1.76l6.8-6.77c0.59-0.59,1.53-0.59,2.12,0l6.8,6.77C32.99,35.38,34.5,36,36.1,36z"/>
+                           <path fill="#4db6ac" d="M44.04,28.74L38.78,34H36.1c-1.07,0-2.07-0.42-2.83-1.17l-6.8-6.78c-1.36-1.36-3.58-1.36-4.94,0l-6.8,6.78C13.97,33.58,12.97,34,11.9,34H9.22l-5.26-5.26c-2.61-2.62-2.61-6.86,0-9.48L9.22,14h2.68c1.07,0,2.07,0.42,2.83,1.17l6.8,6.78c0.68,0.68,1.58,1.02,2.47,1.02s1.79-0.34,2.47-1.02l6.8-6.78C34.03,14.42,35.03,14,36.1,14h2.68l5.26,5.26C46.65,21.88,46.65,26.12,44.04,28.74z"/>
+                         </svg>
+                       </div>
+                       <div>
+                         <div className="font-medium text-gray-900">PIX</div>
+                         <div className="text-sm text-gray-600">Pay instantly with PIX (Brazil)</div>
+                       </div>
+                     </div>
+                   </label>
+
+                   {/* Zelle Option */}
+                   <label className="relative flex items-center p-3 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-300 hover:bg-blue-50">
+                     <input
+                       type="radio"
+                       name="payment-method"
+                       value="zelle"
+                       checked={selectedPaymentMethod === 'zelle'}
+                       onChange={() => handlePaymentMethodSelect('zelle')}
+                       className="sr-only"
+                     />
+                     <div className={`w-5 h-5 border-2 rounded-full mr-3 flex items-center justify-center ${
+                       selectedPaymentMethod === 'zelle' 
+                         ? 'border-blue-600 bg-blue-600' 
+                         : 'border-gray-300'
+                     }`}>
+                       {selectedPaymentMethod === 'zelle' && (
+                         <div className="w-2 h-2 bg-white rounded-full"></div>
+                       )}
+                     </div>
+                     
+                     <div className="flex items-center gap-3">
+                       <div className="p-2 bg-green-100 rounded-lg">
+                         <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 48 48">
+                           <path fill="#a0f" d="M35,42H13c-3.866,0-7-3.134-7-7V13c0-3.866,3.134-7,7-7h22c3.866,0,7,3.134,7,7v22C42,38.866,38.866,42,35,42z"/>
+                           <path fill="#fff" d="M17.5,18.5h14c0.552,0,1-0.448,1-1V15c0-0.552-0.448-1-1-1h-14c-0.552,0-1,0.448-1,1v2.5C16.5,18.052,16.948,18.5,17.5,18.5z"/>
+                           <path fill="#fff" d="M17,34.5h14.5c0.552,0,1-0.448,1-1V31c0-0.552-0.448-1-1-1H17c-0.552,0-1,0.448-1,1v2.5C16,34.052,16.448,34.5,17,34.5z"/>
+                           <path fill="#fff" d="M22.25,11v6c0,0.276,0.224,0.5,0.5,0.5h3.5c0.276,0,0.5-0.224,0.5-0.5v-6c0-0.276-0.224-0.5-0.5-0.5h-3.5C22.474,10.5,22.25,10.724,22.25,11z"/>
+                           <path fill="#fff" d="M22.25,32v6c0,0.276,0.224,0.5,0.5,0.5h3.5c0.276,0,0.5-0.224,0.5-0.5v-6c0-0.276-0.224-0.5-0.5-0.5h-3.5C22.474,31.5,22.25,31.724,22.25,32z"/>
+                           <path fill="#fff" d="M16.578,30.938H22l10.294-12.839c0.178-0.222,0.019-0.552-0.266-0.552H26.5L16.275,30.298C16.065,30.553,16.247,30.938,16.578,30.938z"/>
+                         </svg>
+                       </div>
+                       <div>
+                         <div className="font-medium text-gray-900">Zelle</div>
+                         <div className="text-sm text-gray-600">Pay via Zelle transfer (requires manual verification)</div>
+                       </div>
+                     </div>
+                   </label>
+                 </div>
+
+                 <div className="flex gap-2">
                 <button
                   type="button"
-                  className="w-full bg-white text-gray-700 px-3 py-2 rounded-lg font-semibold border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 text-sm"
+                     className="flex-1 bg-white text-gray-700 px-3 py-2 rounded-lg font-semibold border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 text-sm"
                   onClick={handleCancelPayment}
                 >
                   {t('studentDashboard.myApplications.confirmationModal.letMeThink')}
                 </button>
+                 </div>
               </div>
             </div>
           </div>
@@ -1753,6 +1948,7 @@ const getLevelColor = (level: any) => {
           onClose={() => setShowConfirmationModal(false)}
           scholarship={pendingApplication.scholarships!}
           onStripeCheckout={handleStripeCheckout}
+          onPixCheckout={handlePixCheckout}
           isProcessing={isProcessingCheckout}
         />
       )}

@@ -36,7 +36,7 @@ Deno.serve(async (req) => {
       return corsResponse(null, 204);
     }
 
-    const { success_url, cancel_url, price_id: incomingPriceId, amount, metadata } = await req.json();
+    const { success_url, cancel_url, price_id: incomingPriceId, amount, metadata, payment_method } = await req.json();
     const price_id = incomingPriceId;
     const mode = 'payment';
     
@@ -70,11 +70,38 @@ Deno.serve(async (req) => {
       console.error('[stripe-checkout-i20-control-fee] ❌ Erro ao buscar taxas do pacote:', err);
     }
 
+    // Lógica para PIX (conversão USD -> BRL)
+    let exchangeRate = 1;
+    if (payment_method === 'pix') {
+      try {
+        console.log('[stripe-checkout-i20-control-fee] 💱 Obtendo taxa de câmbio com margem comercial...');
+        
+        // Usar API externa com margem comercial (mais realista que Stripe)
+        const response = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
+        if (response.ok) {
+          const data = await response.json();
+          const baseRate = parseFloat(data.rates.BRL);
+          
+          // Aplicar margem comercial (3-5% acima da taxa oficial)
+          exchangeRate = baseRate * 1.04; // 4% de margem
+          console.log('[stripe-checkout-i20-control-fee] 💱 Taxa base (ExchangeRates-API):', baseRate);
+          console.log('[stripe-checkout-i20-control-fee] 💱 Taxa com margem comercial (+4%):', exchangeRate);
+        } else {
+          throw new Error('API externa falhou');
+        }
+      } catch (apiError) {
+        console.error('[stripe-checkout-i20-control-fee] ❌ Erro na API externa:', apiError);
+        exchangeRate = 5.6; // Taxa de fallback
+        console.log('[stripe-checkout-i20-control-fee] 💱 Usando taxa de fallback:', exchangeRate);
+      }
+    }
+
     // Metadata para rastreamento
     const sessionMetadata = {
       student_id: user.id,
       fee_type: 'i20_control_fee',
       ...metadata,
+      ...(payment_method === 'pix' ? { payment_method: 'pix', exchange_rate: exchangeRate.toString() } : {})
     };
 
     // Adicionar informações do pacote como strings no metadata
@@ -90,48 +117,61 @@ Deno.serve(async (req) => {
 
     // Configuração da sessão Stripe
     let sessionConfig: any = {
-      payment_method_types: ['card'],
+      payment_method_types: payment_method === 'pix' ? ['pix'] : ['card'],
       client_reference_id: user.id,
       customer_email: user.email,
       mode,
-      success_url,
+      success_url: payment_method === 'pix' ? `${success_url}&pix_payment=true` : success_url,
       cancel_url,
       metadata: sessionMetadata,
     };
 
+    // Garantir valor mínimo de $0.50 USD
+    const minAmount = 0.50;
+    
     // Se o frontend enviou um amount específico (incluindo dependentes), usar esse valor
     if (amount && typeof amount === 'number' && amount > 0) {
-      const finalAmount = Math.round(amount * 100); // Converter para centavos
+      let finalAmount = amount;
+      if (finalAmount < minAmount) {
+        console.log(`[stripe-checkout-i20-control-fee] Valor muito baixo (${finalAmount}), ajustando para mínimo: ${minAmount}`);
+        finalAmount = minAmount;
+      }
+      
+      const unitAmountCents = Math.round(finalAmount * 100);
       sessionConfig.line_items = [
         {
           price_data: {
-            currency: 'usd',
+            currency: payment_method === 'pix' ? 'brl' : 'usd',
             product_data: {
               name: 'I-20 Control Fee',
               description: userPackageFees ? `I-20 Control Fee - ${userPackageFees.package_name}` : 'I-20 Control Fee',
             },
-            unit_amount: finalAmount,
+            unit_amount: payment_method === 'pix' ? Math.round(finalAmount * exchangeRate * 100) : unitAmountCents,
           },
           quantity: 1,
         },
       ];
+      console.log('[stripe-checkout-i20-control-fee] ✅ Usando amount explícito:', payment_method === 'pix' ? `BRL ${finalAmount * exchangeRate}` : `USD ${finalAmount}`);
     }
     // Se o usuário tem pacote mas não foi enviado amount, usar preço dinâmico do pacote
     else if (userPackageFees) {
-      const dynamicAmount = Math.round(userPackageFees.i20_control_fee * 100); // Converter para centavos
+      // Garantir valor mínimo para pacote também
+      const packageAmount = userPackageFees.i20_control_fee < minAmount ? minAmount : userPackageFees.i20_control_fee;
+      const dynamicAmount = Math.round(packageAmount * 100);
       sessionConfig.line_items = [
         {
           price_data: {
-            currency: 'usd',
+            currency: payment_method === 'pix' ? 'brl' : 'usd',
             product_data: {
               name: 'I-20 Control Fee',
               description: `I-20 Control Fee - ${userPackageFees.package_name}`,
             },
-            unit_amount: dynamicAmount,
+            unit_amount: payment_method === 'pix' ? Math.round(packageAmount * exchangeRate * 100) : dynamicAmount,
           },
           quantity: 1,
         },
       ];
+      console.log('[stripe-checkout-i20-control-fee] ✅ Usando valor do pacote:', payment_method === 'pix' ? `BRL ${packageAmount * exchangeRate}` : `USD ${packageAmount}`);
     } else {
       // Usar price_id padrão se não tiver pacote
       sessionConfig.line_items = [
