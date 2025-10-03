@@ -690,13 +690,11 @@ const Scholarships: React.FC = () => {
                         <div className={`flex flex-wrap items-center gap-2 mb-3`}>
                           <span className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-semibold text-white shadow-sm ${getFieldBadgeColor(scholarship.field_of_study)} flex items-center gap-1`}>
                             <GraduationCap className="h-3 w-3 flex-shrink-0" />
-                            <span className="hidden sm:inline">{scholarship.field_of_study || t('scholarshipsPage.filters.anyField')}</span>
-                            <span className="sm:hidden">{(scholarship.field_of_study || t('scholarshipsPage.filters.anyField')).slice(0, 4)}</span>
+                            <span className="truncate max-w-[160px]">{scholarship.field_of_study || t('scholarshipsPage.filters.anyField')}</span>
                           </span>
                           <span className="px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 flex items-center gap-1">
                             {getLevelIcon(scholarship.level || 'undergraduate')}
-                            <span className="hidden sm:inline">{levelOptions.find(option => option.value === scholarship.level)?.label || t('scholarshipsPage.filters.allLevels')}</span>
-                            <span className="sm:hidden">{(levelOptions.find(option => option.value === scholarship.level)?.label || t('scholarshipsPage.filters.allLevels')).slice(0, 5)}</span>
+                            <span className="truncate max-w-[160px]">{levelOptions.find(option => option.value === scholarship.level)?.label || t('scholarshipsPage.filters.allLevels')}</span>
                           </span>
                         </div>
                         
@@ -997,18 +995,16 @@ const Scholarships: React.FC = () => {
                          </h3>
                          
                          {/* Field and Level Badges */}
-                         <div className={`flex flex-wrap items-center gap-2 mb-3`}>
-                           <span className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-semibold text-white shadow-sm ${getFieldBadgeColor(scholarship.field_of_study)} flex items-center gap-1`}>
-                             <GraduationCap className="h-3 w-3 flex-shrink-0" />
-                             <span className="hidden sm:inline">{scholarship.field_of_study || 'Any Field'}</span>
-                             <span className="sm:hidden">{(scholarship.field_of_study || 'Any').slice(0, 4)}</span>
-                           </span>
-                           <span className="px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 flex items-center gap-1">
-                             {getLevelIcon(scholarship.level || 'undergraduate')}
-                             <span className="hidden sm:inline">{levelOptions.find(option => option.value === scholarship.level)?.label || 'Undergraduate'}</span>
-                             <span className="sm:hidden">{(levelOptions.find(option => option.value === scholarship.level)?.label || 'Undergraduate').slice(0, 5)}</span>
-                           </span>
-                         </div>
+                        <div className={`flex flex-wrap items-center gap-2 mb-3`}>
+                          <span className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-semibold text-white shadow-sm ${getFieldBadgeColor(scholarship.field_of_study)} flex items-center gap-1`}>
+                            <GraduationCap className="h-3 w-3 flex-shrink-0" />
+                            <span className="truncate max-w-[160px]">{scholarship.field_of_study || 'Any Field'}</span>
+                          </span>
+                          <span className="px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 flex items-center gap-1">
+                            {getLevelIcon(scholarship.level || 'undergraduate')}
+                            <span className="truncate max-w-[160px]">{levelOptions.find(option => option.value === scholarship.level)?.label || 'Undergraduate'}</span>
+                          </span>
+                        </div>
                          
                          {/* University Info */}
                          <div className={`flex items-center text-slate-600 mb-4 p-3 bg-gradient-to-r from-slate-50 to-slate-100 rounded-xl border border-slate-200`}>
