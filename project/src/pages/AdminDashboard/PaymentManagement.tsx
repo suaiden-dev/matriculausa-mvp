@@ -2071,6 +2071,7 @@ const PaymentManagement = (): React.JSX.Element => {
         } else {
           // Fallback para valor padrão do sistema (converter dólares para centavos)
           applicationFee = Math.round(getFeeAmount('application_fee') * 100);
+          console.log(`🔍 [PM] Application fee from getFeeAmount for ${student.full_name}: $${getFeeAmount('application_fee')} -> ${applicationFee} cents`);
         }
         
 
@@ -2364,15 +2365,26 @@ const PaymentManagement = (): React.JSX.Element => {
         const dependentCost = dependents * 150; // $150 por dependente apenas para Selection Process (em centavos)
         const userOverrides = overridesMap[stripeUser?.user_id] || {};
         
+
+        
         // Selection Process Fee - prioridade: override > pacote > padrão
         let selectionProcessFee: number;
         if (userOverrides.selection_process_fee !== undefined) {
           // Se há override, usar exatamente o valor do override (já inclui dependentes se necessário)
           selectionProcessFee = Math.round(userOverrides.selection_process_fee * 100);
+          if (studentName.includes('Sara Bianey') || studentName.includes('Alondra')) {
+            console.log(`  - [PM] Using override: ${userOverrides.selection_process_fee} -> ${selectionProcessFee} cents`);
+          }
         } else if (packageData?.selection_process_fee) {
           selectionProcessFee = Math.round((packageData.selection_process_fee + dependentCost) * 100);
+          if (studentName.includes('Sara Bianey') || studentName.includes('Alondra')) {
+            console.log(`  - [PM] Using package: ${packageData.selection_process_fee} + ${dependentCost} = ${packageData.selection_process_fee + dependentCost} -> ${selectionProcessFee} cents`);
+          }
         } else {
           selectionProcessFee = Math.round((getFeeAmount('selection_process') + dependentCost) * 100);
+          if (studentName.includes('Sara Bianey') || studentName.includes('Alondra')) {
+            console.log(`  - [PM] Using default: ${getFeeAmount('selection_process')} + ${dependentCost} = ${getFeeAmount('selection_process') + dependentCost} -> ${selectionProcessFee} cents`);
+          }
         }
         
         // I-20 Control Fee - prioridade: override > pacote > padrão (sem dependentes)
@@ -2396,6 +2408,8 @@ const PaymentManagement = (): React.JSX.Element => {
         }
         // Application Fee - para usuários Stripe, usar valor padrão do sistema
         const applicationFee = Math.round(getFeeAmount('application_fee') * 100);
+        console.log(`🔍 [PM] Stripe user application fee for ${studentName}: $${getFeeAmount('application_fee')} -> ${applicationFee} cents`);
+        console.log(`📋 [PM] Processing Stripe user: ${studentName} with fees: SPF=${stripeUser.has_paid_selection_process_fee}, APP=${stripeUser.is_application_fee_paid}, SCH=${stripeUser.is_scholarship_fee_paid}, I20=${stripeUser.has_paid_i20_control_fee}`);
 
         console.log('💳 Processing Stripe user for:', studentName);
 
@@ -2534,8 +2548,27 @@ const PaymentManagement = (): React.JSX.Element => {
       const manualRevenue = paidRecords
         .filter(p => (p.payment_method || '').toLowerCase() === 'manual')
         .reduce((sum, p) => sum + p.amount, 0);
-      console.log('🚨 DEBUG: Total revenue (cents):', totalRevenue);
-      console.log('🚨 DEBUG: Total revenue (dollars):', totalRevenue / 100);
+      console.log('🚨 [PM] DEBUG: Total revenue (cents):', totalRevenue);
+      console.log('🚨 [PM] DEBUG: Total revenue (dollars):', totalRevenue / 100);
+      
+      // Breakdown por fee type
+      const feeBreakdown: {[key: string]: {count: number, revenue: number}} = {};
+      paidRecords.forEach(record => {
+        const feeType = record.fee_type;
+        if (!feeBreakdown[feeType]) feeBreakdown[feeType] = {count: 0, revenue: 0};
+        feeBreakdown[feeType].count++;
+        feeBreakdown[feeType].revenue += record.amount;
+      });
+      
+      Object.entries(feeBreakdown).forEach(([feeType, data]) => {
+        console.log(`💳 [PM] ${feeType}: ${data.count} payments, $${(data.revenue / 100).toFixed(2)} revenue`);
+      });
+      
+      // Log detalhado de cada registro de pagamento
+      console.log('📋 [PM] Detailed payment records:');
+      paidRecords.forEach((record, index) => {
+        console.log(`  ${index + 1}. ${record.student_name} - ${record.fee_type}: $${(record.amount / 100).toFixed(2)} (method: ${record.payment_method})`);
+      });
       
 
       const newStats = {
@@ -3204,20 +3237,20 @@ const PaymentManagement = (): React.JSX.Element => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         {(() => {
-                          const inferredMethod = payment.payment_method
-                            || (payment.zelle_status ? 'zelle' : undefined)
-                            || (payment.payment_proof_url ? 'zelle' : undefined)
-                            || (typeof payment.id === 'string' && payment.id.startsWith('zelle-') ? 'zelle' : undefined)
-                            || (typeof payment.id === 'string' && payment.id.startsWith('stripe-') ? 'stripe' : undefined);
-                          const chipClass = inferredMethod === 'zelle'
+                          const paymentMethod = payment.payment_method || 'manual';
+                          const chipClass = paymentMethod === 'zelle'
                             ? 'bg-purple-100 text-purple-800'
-                            : inferredMethod === 'stripe'
+                            : paymentMethod === 'stripe'
                             ? 'bg-blue-100 text-blue-800'
                             : 'bg-gray-100 text-gray-800';
-                          const label = inferredMethod === 'manual'
+                          const label = paymentMethod === 'manual'
                             ? 'Outside'
-                            : inferredMethod
-                            ? inferredMethod.charAt(0).toUpperCase() + inferredMethod.slice(1)
+                            : paymentMethod === 'zelle'
+                            ? 'Zelle'
+                            : paymentMethod === 'stripe'
+                            ? 'Stripe'
+                            : paymentMethod
+                            ? paymentMethod.charAt(0).toUpperCase() + paymentMethod.slice(1)
                             : 'N/A';
                           return (
                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${chipClass}`}>
@@ -4734,14 +4767,15 @@ const PaymentManagement = (): React.JSX.Element => {
                     <label className="block text-sm font-medium text-gray-500">Payment Method</label>
                     <p className="mt-1 text-sm text-gray-900">
                       {
-                        selectedPayment.payment_method === 'manual' ? 'Outside'
-                        : (selectedPayment.payment_method === 'zelle' || selectedPayment.zelle_status || selectedPayment.payment_proof_url || (typeof selectedPayment.id === 'string' && selectedPayment.id.startsWith('zelle-')))
+                        selectedPayment.payment_method === 'manual' 
+                          ? 'Outside'
+                          : selectedPayment.payment_method === 'zelle'
                           ? 'Zelle'
-                          : ((selectedPayment.payment_method === 'stripe') || (typeof selectedPayment.id === 'string' && selectedPayment.id.startsWith('stripe-')))
-                            ? 'Stripe'
-                            : selectedPayment.payment_method
-                              ? String(selectedPayment.payment_method).charAt(0).toUpperCase() + String(selectedPayment.payment_method).slice(1)
-                              : 'N/A'
+                          : selectedPayment.payment_method === 'stripe'
+                          ? 'Stripe'
+                          : selectedPayment.payment_method
+                          ? String(selectedPayment.payment_method).charAt(0).toUpperCase() + String(selectedPayment.payment_method).slice(1)
+                          : 'N/A'
                       }
                     </p>
                   </div>
