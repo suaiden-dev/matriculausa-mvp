@@ -33,8 +33,8 @@
         "description": "Após o envio dos documentos, você deve aguardar a aprovação da universidade para continuar com o processo seletivo. Após a aprovação, você será liberado para pagar a Taxa de Candidatura e a Taxa de Bolsa."
       },
       "step7": {
-        "title": "6. Minhas Candidaturas e Taxa de Bolsa",
-        "description": "Na seção 'Minhas Candidaturas', você terá acesso ao chat direto com a universidade, onde a universidade pode solicitar pagamentos adicionais, enviar sua carta de aceite e acompanhar todo o processo de candidatura."
+        "title": "6. Chat com a Universidade e Acompanhamento",
+        "description": "Na seção 'Minhas Candidaturas', você terá acesso ao chat direto com a universidade, onde a universidade pode solicitar pagamentos adicionais, enviar sua carta de aceite para você e acompanhar todo o processo de candidatura."
       },
       "step8": {
         "title": "7. Chat de Candidatura e Taxa de Controle I-20",
@@ -1616,6 +1616,9 @@
       "accessError": "Não foi possível processar o {{documentType}}. O arquivo pode estar corrompido ou em formato não suportado. Por favor, tente fazer upload de um novo arquivo.",
       "fundsDataError": "Não foi possível validar o comprovante de fundos. O documento pode não conter informações claras sobre saldo bancário ou estar em formato não legível. Tente fazer upload de um extrato bancário mais claro e legível.",
       "currencyFieldError": "Erro interno do sistema ao processar dados de moeda no {{documentType}}. O documento pode não conter informações de moeda válidas ou estar em formato não suportado. Tente fazer upload de um documento mais claro.",
+      "passportFormatError": "O formato do documento de passaporte não foi reconhecido. Faça upload de uma foto clara e sem danos do passaporte.",
+      "diplomaProcessError": "Não foi possível processar o Diploma do Ensino Médio. O arquivo pode estar corrompido ou em formato não suportado. Tente fazer upload de um novo arquivo.",
+      "fundsValidationError": "Não foi possível validar o documento. O arquivo pode estar corrompido ou em formato não suportado. Tente fazer upload de um novo arquivo.",
       "passport": "Passaporte",
       "passportDescription": "Documento de passaporte válido",
       "diploma": "Diploma do Ensino Médio",
@@ -1971,6 +1974,12 @@
         "paymentRedirectError": "Erro ao redirecionar para o pagamento."
       }
     },
+    "notifications": {
+      "documentRejected": {
+        "title": "Documento Rejeitado",
+        "message": "Seu documento {{fileName}} foi rejeitado. Motivo: {{reason}}"
+      }
+    },
     "documentRequests": {
       "status": {
         "downloading": "Baixando...",
@@ -2020,6 +2029,7 @@
         "transferFormDescriptionSchool": "Envie o formulário de transferência para este estudante. Visível apenas para estudantes de transferência.",
         "transferFormDescriptionStudent": "Sua universidade enviará seu formulário de transferência aqui. Baixe-o quando disponível.",
         "transferForm": "Formulário de Transferência",
+        "sentOn": "Enviado em",
         "studentUploads": "Uploads do estudante:",
         "yourUploads": "Seus uploads:",
         "uploading": "Enviando...",
@@ -2299,6 +2309,10 @@
         "stripe": {
           "title": "Stripe",
           "description": "Pague com segurança com cartão de crédito ou débito via Stripe"
+        },
+        "pix": {
+          "title": "PIX",
+          "description": "Pagamento instantâneo brasileiro - Valores em reais via Stripe"
         },
         "zelle": {
           "title": "Zelle",
@@ -2884,6 +2898,10 @@
         "title": "Cartão de Crédito",
         "description": "Pague com segurança com cartão de crédito ou débito via Stripe"
       },
+      "pix": {
+        "title": "PIX",
+        "description": "Pagamento instantâneo brasileiro - Valores em reais via Stripe"
+      },
       "zelle": {
         "title": "Zelle",
         "description": "Pague via transferência Zelle (requer verificação manual)"
@@ -2937,6 +2955,12 @@
     "processing": "Processando..."
   },
   "successPages": {
+    "pixPayment": {
+      "processing": "Processando Pagamento PIX",
+      "message": "Seu pagamento PIX foi recebido e está sendo processado. Você será redirecionado automaticamente em alguns segundos.",
+      "verifying": "Verificando pagamento...",
+      "pleaseWait": "Por favor, aguarde..."
+    },
     "selectionProcessFee": {
       "title": "Pagamento da Taxa de Processo de Seleção Realizado com Sucesso!",
       "description": "Seu pagamento de {amount} foi processado com sucesso.",

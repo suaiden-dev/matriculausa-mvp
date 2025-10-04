@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useAuth } from '../../hooks/useAuth';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
+import { useStudentLogs } from '../../hooks/useStudentLogs';
 import DocumentRequestsCard from '../../components/DocumentRequestsCard';
 import { supabase } from '../../lib/supabase';
 import DocumentViewerModal from '../../components/DocumentViewerModal';
@@ -36,6 +37,7 @@ const ApplicationChatPage: React.FC = () => {
   const { applicationId } = useParams<{ applicationId: string }>();
   const { user, userProfile, refetchUserProfile } = useAuth();
   const { formatFeeAmount, getFeeAmount } = useFeeConfig(user?.id);
+  const { logAction } = useStudentLogs(userProfile?.id || '');
 
   // Todos os hooks devem vir ANTES de qualquer return condicional
   const [i20Loading, setI20Loading] = useState(false);
@@ -45,7 +47,7 @@ const ApplicationChatPage: React.FC = () => {
   const [i20Countdown, setI20Countdown] = useState<string | null>(null);
   const [scholarshipFeeDeadline, setScholarshipFeeDeadline] = useState<Date | null>(null);
   const [showI20ControlFeeModal, setShowI20ControlFeeModal] = useState(false);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'stripe' | 'zelle' | null>(null);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'stripe' | 'zelle' | 'pix' | null>(null);
   // Ajustar tipo de activeTab para incluir 'welcome'
   const [activeTab, setActiveTab] = useState<'welcome' | 'details' | 'i20' | 'documents'>('welcome');
 
@@ -57,7 +59,11 @@ const ApplicationChatPage: React.FC = () => {
         .select(`*, user_profiles!student_id(*), scholarships(*, universities(*))`)
         .eq('id', applicationId)
         .single()
-        .then(({ data }) => setApplicationDetails(data));
+        .then(({ data }) => {
+          console.log('🔍 [ApplicationChatPage] Application details loaded:', data);
+          console.log('🔍 [ApplicationChatPage] Student process type:', data?.student_process_type);
+          setApplicationDetails(data);
+        });
     }
   }, [applicationId]);
 
@@ -165,7 +171,7 @@ const ApplicationChatPage: React.FC = () => {
   };
 
   // Função para lidar com a seleção do método de pagamento
-  const handlePaymentMethodSelect = (method: 'stripe' | 'zelle') => {
+  const handlePaymentMethodSelect = (method: 'stripe' | 'zelle' | 'pix') => {
     console.log('🔍 [ApplicationChatPage] Método de pagamento selecionado:', method);
     setSelectedPaymentMethod(method);
     console.log('🔍 [ApplicationChatPage] Estado setSelectedPaymentMethod atualizado para:', method);
@@ -211,6 +217,37 @@ const ApplicationChatPage: React.FC = () => {
             cancel_url: window.location.origin + '/student/dashboard/i20-control-fee-error',
             price_id: STRIPE_PRODUCTS.controlFee.priceId,
             amount: finalAmount, // Valor fixo do I-20 (sem dependentes)
+            payment_method: 'stripe'
+          }),
+        });
+        const data = await res.json();
+        if (data.session_url) {
+          window.location.href = data.session_url;
+        } else {
+          setI20Error(t('studentDashboard.applicationChatPage.errors.paymentSessionError'));
+        }
+      } else if (selectedPaymentMethod === 'pix') {
+        // Redirecionar para o PIX
+        const token = (await supabase.auth.getSession()).data.session?.access_token;
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const apiUrl = `${supabaseUrl}/functions/v1/stripe-checkout-i20-control-fee`;
+        
+        // Novo modelo: I-20 NÃO recebe adicionais por dependentes
+        const baseAmount = getFeeAmount('i20_control_fee');
+        const finalAmount = baseAmount;
+        
+        const res = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            success_url: window.location.origin + '/student/dashboard/i20-control-fee-success?session_id={CHECKOUT_SESSION_ID}',
+            cancel_url: window.location.origin + '/student/dashboard/i20-control-fee-error',
+            price_id: STRIPE_PRODUCTS.controlFee.priceId,
+            amount: finalAmount, // Valor fixo do I-20 (sem dependentes)
+            payment_method: 'pix'
           }),
         });
         const data = await res.json();
@@ -289,14 +326,7 @@ const ApplicationChatPage: React.FC = () => {
     }
   };
 
-  // Função utilitária para garantir que a URL seja completa
-  const ensureCompleteUrl = (url: string) => {
-    if (url.startsWith('http://') || url.startsWith('https://')) {
-      return url;
-    }
-    // ✅ CORREÇÃO: Usar a URL correta do Supabase
-    return `https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/student-documents/${url}`;
-  };
+  // (removido) ensureCompleteUrl não utilizado
 
   // Montar as abas dinamicamente com ícones distintos
   const tabs = [
@@ -859,6 +889,26 @@ const ApplicationChatPage: React.FC = () => {
                 isSchool={false} 
                 currentUserId={user.id} 
                 studentType={applicationDetails.student_process_type || 'initial'}
+                onDocumentUploaded={async (requestId: string, fileName: string, isResubmission: boolean) => {
+                  try {
+                    if (logAction && user?.id) {
+                      await logAction(
+                        isResubmission ? 'document_resubmitted' : 'document_uploaded',
+                        `Document "${fileName}" ${isResubmission ? 'resubmitted' : 'uploaded'} for document request`,
+                        user.id,
+                        'student',
+                        {
+                          request_id: requestId,
+                          file_name: fileName,
+                          is_resubmission: isResubmission,
+                          application_id: applicationId
+                        }
+                      );
+                    }
+                  } catch (e) {
+                    console.error('Failed to log document upload action:', e);
+                  }
+                }}
               />
             </div>
           </div>

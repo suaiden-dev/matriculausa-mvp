@@ -37,7 +37,7 @@ Deno.serve(async (req) => {
     }
 
     // scholarships_ids pode vir como array (frontend envia string[])
-    const { price_id, success_url, cancel_url, mode, metadata, scholarships_ids, amount } = await req.json();
+    const { price_id, success_url, cancel_url, mode, metadata, scholarships_ids, amount, payment_method } = await req.json();
     
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
@@ -100,15 +100,46 @@ Deno.serve(async (req) => {
       sessionMetadata.user_has_package = 'false';
     }
 
+    // Lógica para PIX (conversão USD -> BRL)
+    let exchangeRate = 1;
+    if (payment_method === 'pix') {
+      console.log('[PIX] 🇧🇷 PIX selecionado para Scholarship Fee - Configurando sessão PIX...');
+      console.log('[PIX] 💰 Valor USD:', amount);
+      try {
+        console.log('[stripe-checkout-scholarship-fee] 💱 Obtendo taxa de câmbio com margem comercial...');
+        
+        // Usar API externa com margem comercial (mais realista que Stripe)
+        const response = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
+        if (response.ok) {
+          const data = await response.json();
+          const baseRate = parseFloat(data.rates.BRL);
+          
+          // Aplicar margem comercial (3-5% acima da taxa oficial)
+          exchangeRate = baseRate * 1.04; // 4% de margem
+          console.log('[stripe-checkout-scholarship-fee] 💱 Taxa base (ExchangeRates-API):', baseRate);
+          console.log('[stripe-checkout-scholarship-fee] 💱 Taxa com margem comercial (+4%):', exchangeRate);
+        } else {
+          throw new Error('API externa falhou');
+        }
+      } catch (apiError) {
+        console.error('[stripe-checkout-scholarship-fee] ❌ Erro na API externa:', apiError);
+        exchangeRate = 5.6; // Taxa de fallback
+        console.log('[stripe-checkout-scholarship-fee] 💱 Usando taxa de fallback:', exchangeRate);
+      }
+    }
+
     // Configuração da sessão Stripe
     let sessionConfig: any = {
-      payment_method_types: ['card'],
+      payment_method_types: payment_method === 'pix' ? ['pix'] : ['card'],
       client_reference_id: user.id,
       customer_email: user.email,
       mode: mode || 'payment',
-      success_url: success_url,
+      success_url: payment_method === 'pix' ? `${success_url}&pix_payment=true` : success_url,
       cancel_url: cancel_url,
-      metadata: sessionMetadata,
+      metadata: {
+        ...sessionMetadata,
+        ...(payment_method === 'pix' ? { payment_method: 'pix', exchange_rate: exchangeRate.toString() } : {})
+      },
     };
 
     // Definição das line_items priorizando amount explícito ou valor do pacote.
@@ -116,38 +147,48 @@ Deno.serve(async (req) => {
     // 2) Senão, se usuário tem pacote, usa o scholarship_fee do pacote
     // 3) Senão, fallback para price_id (mantém compatibilidade)
     const explicitAmount = Number(metadata?.final_amount ?? amount);
+    
+    // Garantir valor mínimo de $0.50 USD
+    const minAmount = 0.50;
+    let finalAmount = explicitAmount;
     if (!Number.isNaN(explicitAmount) && explicitAmount > 0) {
-      const unitAmountCents = Math.round(explicitAmount * 100);
+      if (explicitAmount < minAmount) {
+        console.log(`[stripe-checkout-scholarship-fee] Valor muito baixo (${explicitAmount}), ajustando para mínimo: ${minAmount}`);
+        finalAmount = minAmount;
+      }
+      const unitAmountCents = Math.round(finalAmount * 100);
       sessionConfig.line_items = [
         {
           price_data: {
-            currency: 'usd',
+            currency: payment_method === 'pix' ? 'brl' : 'usd',
             product_data: {
               name: 'Scholarship Fee',
               description: 'Scholarship application processing fee',
             },
-            unit_amount: unitAmountCents,
+            unit_amount: payment_method === 'pix' ? Math.round(finalAmount * exchangeRate * 100) : unitAmountCents,
           },
           quantity: 1,
         },
       ];
-      console.log('[stripe-checkout-scholarship-fee] ✅ Usando amount explícito (USD):', explicitAmount);
+      console.log('[stripe-checkout-scholarship-fee] ✅ Usando amount explícito:', payment_method === 'pix' ? `BRL ${finalAmount * exchangeRate}` : `USD ${finalAmount}`);
     } else if (userPackageFees && typeof userPackageFees.scholarship_fee === 'number') {
-      const dynamicAmount = Math.round(userPackageFees.scholarship_fee * 100);
+      // Garantir valor mínimo para pacote também
+      const packageAmount = userPackageFees.scholarship_fee < minAmount ? minAmount : userPackageFees.scholarship_fee;
+      const dynamicAmount = Math.round(packageAmount * 100);
       sessionConfig.line_items = [
         {
           price_data: {
-            currency: 'usd',
+            currency: payment_method === 'pix' ? 'brl' : 'usd',
             product_data: {
               name: 'Scholarship Fee',
               description: `Scholarship Fee - ${userPackageFees.package_name}`,
             },
-            unit_amount: dynamicAmount,
+            unit_amount: payment_method === 'pix' ? Math.round(packageAmount * exchangeRate * 100) : dynamicAmount,
           },
           quantity: 1,
         },
       ];
-      console.log('[stripe-checkout-scholarship-fee] ✅ Usando valor do pacote (USD):', userPackageFees.scholarship_fee);
+      console.log('[stripe-checkout-scholarship-fee] ✅ Usando valor do pacote:', payment_method === 'pix' ? `BRL ${packageAmount * exchangeRate}` : `USD ${packageAmount}`);
     } else {
       sessionConfig.line_items = [
         {
@@ -161,6 +202,17 @@ Deno.serve(async (req) => {
     const session = await stripe.checkout.sessions.create(sessionConfig);
 
     console.log('[stripe-checkout-scholarship-fee] Created Stripe session with metadata:', session.metadata);
+    
+    // Logs específicos para PIX
+    if (payment_method === 'pix') {
+      console.log('[PIX] ✅ Sessão PIX criada com sucesso!');
+      console.log('[PIX] 🆔 Session ID:', session.id);
+      console.log('[PIX] 🔗 Session URL:', session.url);
+      console.log('[PIX] 💰 Valor final BRL:', session.amount_total);
+      console.log('[PIX] 💱 Moeda:', session.currency);
+      console.log('[PIX] 🎯 Métodos de pagamento:', session.payment_method_types);
+      console.log('[PIX] 🔗 Success URL configurada:', session.success_url);
+    }
 
     // Log the checkout session creation
     try {

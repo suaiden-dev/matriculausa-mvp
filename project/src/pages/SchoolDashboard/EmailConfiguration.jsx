@@ -11,6 +11,7 @@ import {
   ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
 import { supabase } from '../../lib/supabase';
+import EmailAgentManagement from './EmailAgentManagement';
 import MsalProviderWrapper from '../../providers/MsalProvider';
 import { useMsal } from '@azure/msal-react';
  
@@ -57,6 +58,9 @@ const EmailConfigurationContent = () => {
 
   const [errors, setErrors] = useState({});
   const [notification, setNotification] = useState(null); // { type: 'success'|'error'|'info', message: string }
+  const [showAgentModal, setShowAgentModal] = useState(false);
+  const [createdConfigId, setCreatedConfigId] = useState(null);
+  const [enforceAgentCreation, setEnforceAgentCreation] = useState(false);
   
   
 
@@ -78,6 +82,7 @@ const EmailConfigurationContent = () => {
       const params = new URLSearchParams(window.location.search);
       const qp = params.get('provider');
       const qn = params.get('name');
+      const createAgent = params.get('createAgent');
       if (qp === 'microsoft') {
         setProvider('microsoft');
       } else if (qp === 'gmail') {
@@ -86,6 +91,9 @@ const EmailConfigurationContent = () => {
       if (qn) {
         forcedNameRef.current = qn;
         setFormData(prev => ({ ...prev, name: qn }));
+      }
+      if (createAgent === 'true') {
+        setShowAgentModal(true);
       }
     } catch (_) {}
     
@@ -361,6 +369,15 @@ const EmailConfigurationContent = () => {
           setFormData(prev => ({ ...prev, name: forcedNameRef.current }));
         }
 
+        // Se chegamos com ?createAgent=true e temos configId, manter modal aberto
+        try {
+          const params = new URLSearchParams(window.location.search);
+          const createAgent = params.get('createAgent');
+          if (createAgent === 'true') {
+            setShowAgentModal(true);
+          }
+        } catch (_) {}
+
         
       }
     } catch (error) {
@@ -369,6 +386,35 @@ const EmailConfigurationContent = () => {
       setLoading(false);
     }
   };
+
+  // Enforce agent creation for Gmail right after config creation
+  useEffect(() => {
+    let intervalId;
+    const shouldPoll = enforceAgentCreation && !!createdConfigId && provider === 'gmail';
+    if (shouldPoll) {
+      const poll = async () => {
+        try {
+          const { count, error } = await supabase
+            .from('ai_email_agents')
+            .select('*', { count: 'exact', head: true })
+            .eq('email_configuration_id', createdConfigId);
+          if (error) return;
+          if ((count || 0) > 0) {
+            setShowAgentModal(false);
+            setEnforceAgentCreation(false);
+            setNotification({ type: 'success', message: 'Email account and AI agent configured successfully!' });
+            navigate('/school/dashboard/email');
+          }
+        } catch (_) {}
+      };
+      // start immediate, then every 2s
+      poll();
+      intervalId = setInterval(poll, 2000);
+    }
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [enforceAgentCreation, createdConfigId, provider, navigate]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -623,12 +669,31 @@ const EmailConfigurationContent = () => {
 
       
 
-      // Success
-      setNotification({
-        type: 'success',
-        message: editMode ? 'Configuration updated successfully!' : 'Email account configured successfully!'
-      });
-      navigate('/school/dashboard/email');
+      // Success flow
+      if (provider === 'gmail') {
+        // For Gmail: enforce creating AI agent right after creating the configuration (only for create, not edit)
+        const saved = result?.data || result;
+        const newId = (saved && saved.id) || (editMode ? configId : null);
+        if (!editMode && newId) {
+          setCreatedConfigId(newId);
+          setEnforceAgentCreation(true);
+          setShowAgentModal(true);
+          // Do not navigate yet; wait until an agent is created (polling above)
+        } else {
+          setNotification({
+            type: 'success',
+            message: editMode ? 'Configuration updated successfully!' : 'Email account configured successfully!'
+          });
+          navigate('/school/dashboard/email');
+        }
+      } else {
+        // Microsoft or others: keep existing behavior
+        setNotification({
+          type: 'success',
+          message: editMode ? 'Configuration updated successfully!' : 'Email account configured successfully!'
+        });
+        navigate('/school/dashboard/email');
+      }
       
     } catch (error) {
       
@@ -652,6 +717,39 @@ const EmailConfigurationContent = () => {
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="space-y-4 lg:space-y-8">
+      {/* Agent Creation/Management Modal inside Configuration */}
+      {showAgentModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden relative">
+            <button
+              onClick={() => {
+                if (enforceAgentCreation && provider === 'gmail') {
+                  // Bloquear fechamento enquanto obrigatório
+                  alert('Finalize a criação do AI agent para concluir a configuração.');
+                  return;
+                }
+                setShowAgentModal(false);
+              }}
+              className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 transition-colors rounded-lg hover:bg-gray-100"
+              title="Close modal"
+            >
+              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
+            <div className="p-6 overflow-y-auto max-h-[90vh]">
+              <EmailAgentManagement
+                activeEmailConfig={(() => {
+                  // Preferir configId da rota quando em edição
+                  const id = (createdConfigId || configId) || null;
+                  return id ? {
+                    id,
+                    email_address: formData.email_address || ''
+                  } : undefined;
+                })()}
+              />
+            </div>
+          </div>
+        </div>
+      )}
       {notification && (
         <div className={`mx-auto max-w-4xl px-3 sm:px-6 lg:px-8`}>
           <div className={`rounded-xl p-3 sm:p-4 border ${

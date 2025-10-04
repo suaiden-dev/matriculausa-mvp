@@ -37,6 +37,7 @@ interface FinancialStats {
   last7DaysRevenue: number;
   pendingCredits: number;
   averageCommissionPerReferral: number;
+  manualRevenue: number;
 }
 
 interface FinancialAnalytics {
@@ -76,7 +77,8 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
     completedReferrals: 0,
     last7DaysRevenue: 0,
     pendingCredits: 0,
-    averageCommissionPerReferral: 0
+    averageCommissionPerReferral: 0,
+    manualRevenue: 0
   });
 
   // Detailed financial analytics state
@@ -196,10 +198,12 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
           user_id,
           has_paid_selection_process_fee, 
           has_paid_i20_control_fee, 
+          selection_process_fee_payment_method,
+          i20_control_fee_payment_method,
           dependents,
           seller_referral_code,
           created_at,
-          scholarship_applications(is_scholarship_fee_paid)
+          scholarship_applications(is_scholarship_fee_paid, scholarship_fee_payment_method)
         `)
         .in('seller_referral_code', referralCodes);
       if (profilesErr || !profiles) {
@@ -251,6 +255,37 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
         const i20Paid = (hasAnyScholarshipPaid && p?.has_paid_i20_control_fee) ? i20Base : 0;
 
         return sum + selPaid + schPaid + i20Paid;
+      }, 0);
+
+      // 5.1 Calcular receita manual (pagamentos por fora)
+      const manualRevenue = (profiles || []).reduce((sum, p) => {
+        const deps = Number(p?.dependents || 0);
+        const ov = overridesMap[p?.user_id] || {};
+
+        // Selection Process manual
+        let selManual = 0;
+        const isSelManual = !!p?.has_paid_selection_process_fee && p?.selection_process_fee_payment_method === 'manual';
+        if (isSelManual) {
+          const baseSel = ov.selection_process_fee != null ? Number(ov.selection_process_fee) : 400;
+          selManual = ov.selection_process_fee != null ? baseSel : baseSel + (deps * 150);
+        }
+
+        // Scholarship manual (se qualquer application estiver paga via manual)
+        const hasScholarshipPaidManual = Array.isArray(p?.scholarship_applications)
+          ? p.scholarship_applications.some((a: any) => !!a?.is_scholarship_fee_paid && a?.scholarship_fee_payment_method === 'manual')
+          : false;
+        const schBase = ov.scholarship_fee != null ? Number(ov.scholarship_fee) : 900;
+        const schManual = hasScholarshipPaidManual ? schBase : 0;
+
+        // I-20 Control manual (seguir mesma regra base: exigir scholarship pago para contar I-20)
+        const hasAnyScholarshipPaid = Array.isArray(p?.scholarship_applications)
+          ? p.scholarship_applications.some((a: any) => !!a?.is_scholarship_fee_paid)
+          : false;
+        const isI20Manual = !!p?.has_paid_i20_control_fee && p?.i20_control_fee_payment_method === 'manual';
+        const i20Base = ov.i20_control_fee != null ? Number(ov.i20_control_fee) : 900;
+        const i20Manual = (hasAnyScholarshipPaid && isI20Manual) ? i20Base : 0;
+
+        return sum + selManual + schManual + i20Manual;
       }, 0);
 
       const rows = profiles || []; // Usar profiles em vez de studentsAnalytics
@@ -306,7 +341,8 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
       const averageCommissionPerReferral = totalReferrals > 0 ? totalRevenue / totalReferrals : 0;
 
       // Carregar payment requests do afiliado para calcular saldo (excluir rejeitados)
-      let availableBalance = totalRevenue;
+      // Available balance NÃO deve contar valores pagos por fora (manual)
+      let availableBalance = Math.max(0, totalRevenue - manualRevenue);
       try {
         const affiliateRequests = await AffiliatePaymentRequestService.listAffiliatePaymentRequests(userId);
         const totalPaidOut = affiliateRequests
@@ -319,7 +355,7 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
           .filter((r: any) => r.status === 'pending')
           .reduce((sum: number, r: any) => sum + (Number(r.amount_usd) || 0), 0);
 
-        availableBalance = Math.max(0, totalRevenue - totalPaidOut - totalApproved - totalPending);
+        availableBalance = Math.max(0, (totalRevenue - manualRevenue) - totalPaidOut - totalApproved - totalPending);
       } catch (err) {
         console.error('Error loading affiliate payment requests for balance:', err);
       }
@@ -333,7 +369,8 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
         completedReferrals,
         last7DaysRevenue,
         pendingCredits: activeReferrals * 50,
-        averageCommissionPerReferral
+        averageCommissionPerReferral,
+        manualRevenue
       });
 
       // Processar dados para analytics detalhados a partir de studentsAnalytics
@@ -925,7 +962,7 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
           </div>
         </div>
 
-        {/* Average Commission Card */}
+        {/* Manual Paid (Outside) Card */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between mb-4">
             <div className="p-3 bg-gradient-to-br from-yellow-100 to-yellow-50 rounded-xl">
@@ -933,17 +970,15 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
             </div>
             <div className="flex items-center text-yellow-600">
               <Activity className="w-4 h-4 mr-1" />
-              <span className="text-sm font-medium">
-                {calculatedMetrics.totalReferrals} refs
-              </span>
+              <span className="text-sm font-medium">Outside</span>
             </div>
           </div>
           <div>
-            <p className="text-sm font-medium text-slate-600 mb-1">Avg. Commission</p>
+            <p className="text-sm font-medium text-slate-600 mb-1">Outside Payments</p>
             <p className="text-3xl font-bold text-slate-900 mb-1">
-              {formatCurrency(financialStats.averageCommissionPerReferral)}
+              {formatCurrency(financialStats.manualRevenue)}
             </p>
-            <p className="text-xs text-slate-500">Per referral</p>
+            <p className="text-xs text-slate-500">Consolidated</p>
           </div>
         </div>
       </div>

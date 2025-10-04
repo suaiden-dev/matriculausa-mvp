@@ -79,6 +79,9 @@ interface MyStudentsProps {
 }
 
 const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStudent }) => {
+  console.log('🚨🚨🚨 [MYSTUDENTS_RENDER] MyStudents component rendered with students:', students.length);
+  console.log('🚨🚨🚨 [MYSTUDENTS_RENDER] Students emails:', students.map(s => s.email));
+  
   const { getFeeAmount } = useFeeConfig(); // Usar sem parâmetro para valores padrão, será usado para overrides específicos por estudante
   const [currentPage, setCurrentPage] = useState(1);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
@@ -93,6 +96,12 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
   const [studentFeeOverrides, setStudentFeeOverrides] = useStateReact<{[key: string]: any}>({});
   // Estado para controlar requisições em andamento
   const [loadingRequests, setLoadingRequests] = useStateReact<Set<string>>(new Set());
+  // Métodos de pagamento por estudante (para calcular valor pago manualmente)
+  const [studentPaymentMethods, setStudentPaymentMethods] = useStateReact<{[key: string]: {
+    selection_process?: string | null;
+    i20_control?: string | null;
+    scholarship?: Array<{ is_paid: boolean; method: string | null }>; // múltiplas aplicações
+  }}>({});
   // Flag para desabilitar user_fee_overrides se não estiver disponível
   const [userFeeOverridesDisabled, setUserFeeOverridesDisabled] = useStateReact<boolean>(() => {
     try {
@@ -175,6 +184,60 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
       setStudentDependents(prev => ({ ...prev, [studentUserId]: 0 }));
     } finally {
       // Remover da lista de carregando
+      setLoadingRequests(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(requestKey);
+        return newSet;
+      });
+    }
+  };
+
+  // Buscar métodos de pagamento por estudante (selection, i20 no profile; scholarship nas applications)
+  const loadStudentPaymentMethods = async (studentUserId: string, studentProfileId?: string) => {
+    if (!studentUserId || studentPaymentMethods[studentUserId] !== undefined) return;
+
+    const requestKey = `paymethods_${studentUserId}`;
+    if (loadingRequests.has(requestKey)) return;
+
+    setLoadingRequests(prev => new Set([...prev, requestKey]));
+
+    try {
+      // user_profiles: selection_process_fee_payment_method, i20_control_fee_payment_method
+      const { data: profileData } = await supabase
+        .from('user_profiles')
+        .select('selection_process_fee_payment_method, i20_control_fee_payment_method, id')
+        .eq('user_id', studentUserId)
+        .single();
+
+      const profileSelection = profileData?.selection_process_fee_payment_method ?? null;
+      const profileI20 = profileData?.i20_control_fee_payment_method ?? null;
+
+      // scholarship_applications: buscar por student_id (profile id)
+      let scholarshipList: Array<{ is_paid: boolean; method: string | null }> = [];
+      const resolvedProfileId = studentProfileId || profileData?.id;
+      if (resolvedProfileId) {
+        const { data: apps } = await supabase
+          .from('scholarship_applications')
+          .select('is_scholarship_fee_paid, scholarship_fee_payment_method, student_id')
+          .eq('student_id', resolvedProfileId);
+        scholarshipList = (apps || []).map(a => ({
+          is_paid: !!a.is_scholarship_fee_paid,
+          method: a.scholarship_fee_payment_method ?? null
+        }));
+      }
+
+      setStudentPaymentMethods(prev => ({
+        ...prev,
+        [studentUserId]: {
+          selection_process: profileSelection,
+          i20_control: profileI20,
+          scholarship: scholarshipList
+        }
+      }));
+    } catch (error) {
+      // silencioso
+      setStudentPaymentMethods(prev => ({ ...prev, [studentUserId]: { selection_process: null, i20_control: null, scholarship: [] } }));
+    } finally {
       setLoadingRequests(prev => {
         const newSet = new Set(prev);
         newSet.delete(requestKey);
@@ -293,6 +356,9 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
           console.log('🔄 [MY_STUDENTS] Forçando carregamento de overrides para:', studentId);
           loadStudentFeeOverrides(studentId);
         }
+        // Carregar métodos de pagamento (usa userId e tenta resolver profileId quando possível)
+        const s = students.find(st => st.id === studentId);
+        loadStudentPaymentMethods(s ? s.id : studentId, s?.profile_id);
       });
     }, 100);
 
@@ -615,6 +681,37 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
     const deps = studentDependents[student.id] || 0;
     const overrides = studentFeeOverrides[student.id];
 
+    // Debug específico para crashroiali0@gmail.com
+    if (student.email === 'crashroiali0@gmail.com') {
+      console.log('🚨🚨🚨 [CRASHROI_DEBUG] ===== CALCULANDO TOTAL PARA crashroiali0@gmail.com =====');
+      console.log('🚨🚨🚨 [CRASHROI_DEBUG] Student data:', {
+        id: student.id,
+        email: student.email,
+        has_paid_selection_process_fee: student.has_paid_selection_process_fee,
+        has_paid_i20_control_fee: student.has_paid_i20_control_fee,
+        is_scholarship_fee_paid: student.is_scholarship_fee_paid,
+        is_application_fee_paid: student.is_application_fee_paid
+      });
+      console.log('🚨🚨🚨 [CRASHROI_DEBUG] Dependents:', deps);
+      console.log('🚨🚨🚨 [CRASHROI_DEBUG] Overrides:', overrides);
+      console.log('🚨🚨🚨 [CRASHROI_DEBUG] Package fees:', studentPackageFees[student.id]);
+    }
+
+    // Debug específico para zhenhua4777@uorak.com
+    if (student.email === 'zhenhua4777@uorak.com') {
+      console.log('🚨🚨🚨 [ZHENHUA_DEBUG] ===== CALCULANDO TOTAL PARA zhenhua4777@uorak.com =====');
+      console.log('🚨🚨🚨 [ZHENHUA_DEBUG] Student data:', {
+        id: student.id,
+        email: student.email,
+        has_paid_selection_process_fee: student.has_paid_selection_process_fee,
+        has_paid_i20_control_fee: student.has_paid_i20_control_fee,
+        is_scholarship_fee_paid: student.is_scholarship_fee_paid,
+        is_application_fee_paid: student.is_application_fee_paid
+      });
+      console.log('🚨🚨🚨 [ZHENHUA_DEBUG] Dependents:', deps);
+      console.log('🚨🚨🚨 [ZHENHUA_DEBUG] Overrides:', overrides);
+      console.log('🚨🚨🚨 [ZHENHUA_DEBUG] Package fees:', studentPackageFees[student.id]);
+    }
 
     if (student.has_paid_selection_process_fee) {
       // Para Selection Process, verificar se há override primeiro
@@ -622,7 +719,7 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
         // ✅ CORREÇÃO: Se há override, usar exatamente o valor do override (já inclui dependentes)
         const selectionAmount = Number(overrides.selection_process_fee);
         total += selectionAmount;
-        if (student.email === 'wilfried8078@uorak.com') {
+        if (student.email === 'wilfried8078@uorak.com' || student.email === 'crashroiali0@gmail.com' || student.email === 'zhenhua4777@uorak.com') {
           console.log('🔍 [MYSTUDENTS_DEBUG] Selection Process (override):', selectionAmount, 'de', overrides.selection_process_fee);
         }
       } else {
@@ -630,7 +727,7 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
         const baseSelectionFee = getFeeAmount('selection_process');
         const selectionAmount = baseSelectionFee + (deps * 150);
         total += selectionAmount;
-        if (student.email === 'wilfried8078@uorak.com') {
+        if (student.email === 'wilfried8078@uorak.com' || student.email === 'crashroiali0@gmail.com' || student.email === 'zhenhua4777@uorak.com') {
           console.log('🔍 [MYSTUDENTS_DEBUG] Selection Process (padrão + deps):', selectionAmount, '=', baseSelectionFee, '+', (deps * 150));
         }
       }
@@ -642,14 +739,14 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
         // Se há override, usar exatamente o valor do override
         const i20Amount = Number(overrides.i20_control_fee);
         total += i20Amount;
-        if (student.email === 'wilfried8078@uorak.com') {
+        if (student.email === 'wilfried8078@uorak.com' || student.email === 'crashroiali0@gmail.com' || student.email === 'zhenhua4777@uorak.com') {
           console.log('🔍 [MYSTUDENTS_DEBUG] I-20 Control (override):', i20Amount, 'de', overrides.i20_control_fee);
         }
       } else {
         // Sem override: usar taxa padrão (I-20 normalmente não tem dependentes, mas mantendo consistência)
         const baseI20Fee = getFeeAmount('i20_control_fee');
         total += baseI20Fee;
-        if (student.email === 'wilfried8078@uorak.com') {
+        if (student.email === 'wilfried8078@uorak.com' || student.email === 'crashroiali0@gmail.com' || student.email === 'zhenhua4777@uorak.com') {
           console.log('🔍 [MYSTUDENTS_DEBUG] I-20 Control (padrão):', baseI20Fee);
         }
       }
@@ -661,24 +758,71 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
         // Se há override, usar exatamente o valor do override
         const scholarshipAmount = Number(overrides.scholarship_fee);
         total += scholarshipAmount;
-        if (student.email === 'wilfried8078@uorak.com') {
+        if (student.email === 'wilfried8078@uorak.com' || student.email === 'crashroiali0@gmail.com' || student.email === 'zhenhua4777@uorak.com') {
           console.log('🔍 [MYSTUDENTS_DEBUG] Scholarship (override):', scholarshipAmount, 'de', overrides.scholarship_fee);
         }
       } else {
         // Sem override: usar taxa padrão
         const scholarshipFee = getFeeAmount('scholarship_fee');
         total += scholarshipFee;
-        if (student.email === 'wilfried8078@uorak.com') {
+        if (student.email === 'wilfried8078@uorak.com' || student.email === 'crashroiali0@gmail.com' || student.email === 'zhenhua4777@uorak.com') {
           console.log('🔍 [MYSTUDENTS_DEBUG] Scholarship (padrão):', scholarshipFee);
         }
+      }
+    } else {
+      // Log para quando scholarship_fee NÃO foi pago
+      if (student.email === 'crashroiali0@gmail.com') {
+        console.log('🚨🚨🚨 [CRASHROI_DEBUG] Scholarship fee NÃO foi pago - is_scholarship_fee_paid:', student.is_scholarship_fee_paid);
+        console.log('🚨🚨🚨 [CRASHROI_DEBUG] Overrides scholarship_fee:', overrides?.scholarship_fee);
+        console.log('🚨🚨🚨 [CRASHROI_DEBUG] Package fees scholarship_fee:', studentPackageFees[student.id]?.scholarship_fee);
       }
     }
     
     // Application fee não é contabilizada na receita do seller (é exclusiva da universidade)
 
-    if (student.email === 'wilfried8078@uorak.com') {
+    if (student.email === 'wilfried8078@uorak.com' || student.email === 'crashroiali0@gmail.com' || student.email === 'zhenhua4777@uorak.com') {
       console.log('🔍 [MYSTUDENTS_DEBUG] Total final:', total);
       console.log('🔍 [MYSTUDENTS_DEBUG] =================================');
+    }
+
+    return total;
+  };
+
+  // Calcular total pago manualmente por um aluno (considera apenas taxas do seller: selection, scholarship, i20)
+  const calculateStudentManualPaid = (student: Student): number => {
+    let total = 0;
+    const deps = studentDependents[student.id] || 0;
+    const overrides = studentFeeOverrides[student.id];
+    const methods = studentPaymentMethods[student.id];
+
+    // Selection Process (pago e método manual)
+    if (student.has_paid_selection_process_fee && methods?.selection_process === 'manual') {
+      if (overrides && overrides.selection_process_fee !== undefined && overrides.selection_process_fee !== null) {
+        total += Number(overrides.selection_process_fee);
+      } else {
+        const baseSelectionFee = getFeeAmount('selection_process');
+        total += baseSelectionFee + (deps * 150);
+      }
+    }
+
+    // Scholarship Fee (qualquer app paga com manual)
+    if (student.is_scholarship_fee_paid && methods?.scholarship && methods.scholarship.some(a => a.is_paid && a.method === 'manual')) {
+      if (overrides && overrides.scholarship_fee !== undefined && overrides.scholarship_fee !== null) {
+        total += Number(overrides.scholarship_fee);
+      } else {
+        const scholarshipFee = getFeeAmount('scholarship_fee');
+        total += scholarshipFee;
+      }
+    }
+
+    // I-20 Control (pago e método manual)
+    if (student.has_paid_i20_control_fee && methods?.i20_control === 'manual') {
+      if (overrides && overrides.i20_control_fee !== undefined && overrides.i20_control_fee !== null) {
+        total += Number(overrides.i20_control_fee);
+      } else {
+        const baseI20Fee = getFeeAmount('i20_control_fee');
+        total += baseI20Fee;
+      }
     }
 
     return total;
@@ -716,12 +860,14 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
     );
     
     const activeStudents = uniqueActiveStudentIds.size;
+    const manualRevenue = filteredStudents.reduce((sum, student) => sum + calculateStudentManualPaid(student), 0);
     const avgRevenuePerStudent = uniqueStudentIds.size > 0 ? totalRevenue / uniqueStudentIds.size : 0;
     const topPerformingUniversity = availableUniversities.length > 0 ? availableUniversities[0]?.name : 'N/A';
 
     return {
       totalRevenue,
       activeStudents,
+      manualRevenue,
       avgRevenuePerStudent,
       topPerformingUniversity,
       totalUniqueStudents: uniqueStudentIds.size
@@ -804,8 +950,12 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-slate-600">Active Students</p>
-              <p className="text-3xl font-bold text-orange-600 mt-1">{stats.activeStudents}</p>
+              <p className="text-sm font-medium text-slate-600">Manual Paid (Outside)</p>
+              {Object.keys(studentPaymentMethods).length === 0 && Object.keys(studentDependents).length === 0 && Object.keys(studentFeeOverrides).length === 0 ? (
+                <div className="h-8 w-40 bg-slate-200 rounded animate-pulse mt-1" />
+              ) : (
+                <p className="text-3xl font-bold text-orange-600 mt-1">{formatCurrency(stats.manualRevenue)}</p>
+              )}
             </div>
             <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
               <Calendar className="h-6 w-6 text-orange-600" />

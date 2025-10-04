@@ -11,7 +11,7 @@ export interface FeeConfig {
 
 const DEFAULT_FEE_CONFIG: FeeConfig = {
   selection_process_fee: 400,
-  application_fee_default: 400,
+  application_fee_default: 350,
   scholarship_fee_default: 900,
   i20_control_fee: 900
 };

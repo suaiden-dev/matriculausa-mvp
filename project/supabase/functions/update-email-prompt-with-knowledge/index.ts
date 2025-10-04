@@ -66,7 +66,7 @@ serve(async (req) => {
     }
 
     // Generate updated prompt with knowledge base
-    const basePrompt = aiSettings.custom_instructions || 'Você é um assistente de admissões virtual, amigável e eficiente, trabalhando para esta universidade. Sua comunicação deve ser clara, profissional e encorajadora. Você representa a plataforma Matrícula USA.';
+    const basePrompt = aiSettings.custom_instructions || 'You are a virtual admissions assistant, friendly and efficient, working for this university. Your communication should be clear, professional and encouraging. You represent the MatriculaUSA platform.';
 
     const updatedPrompt = `${basePrompt}
 

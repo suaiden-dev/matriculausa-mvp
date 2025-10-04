@@ -33,6 +33,58 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
   const [internalDocumentRequests, setInternalDocumentRequests] = useState<any[]>([]);
   const [acceptanceLetterFile, setAcceptanceLetterFile] = useState<File | null>(null);
   const [uploadingAcceptanceLetter, setUploadingAcceptanceLetter] = useState(false);
+  const [markSentSuccess, setMarkSentSuccess] = useState<string | null>(null);
+
+  // Utilitário para logar ação de acceptance letter (admin)
+  const logAcceptanceAction = async (
+    actionType: 'acceptance_letter_sent' | 'acceptance_letter_replaced',
+    description: string,
+    targetApplicationId: string,
+    acceptanceUrl: string | null
+  ) => {
+    try {
+      // Descobrir profile_id do estudante
+      let profileId: string | null = null;
+      if (currentApplication?.student_id) {
+        profileId = currentApplication.student_id;
+      } else if (studentId) {
+        // Tentar mapear user_id -> profile_id
+        const { data: upByUser } = await supabase
+          .from('user_profiles')
+          .select('id')
+          .eq('user_id', studentId as string)
+          .maybeSingle();
+        if (upByUser?.id) profileId = upByUser.id;
+        if (!profileId) {
+          const { data: upById } = await supabase
+            .from('user_profiles')
+            .select('id')
+            .eq('id', studentId as string)
+            .maybeSingle();
+          if (upById?.id) profileId = upById.id;
+        }
+      }
+
+      if (!profileId) return;
+
+      const { data: { user } } = await supabase.auth.getUser();
+      const performedBy = user?.id || '';
+      await supabase.rpc('log_student_action', {
+        p_student_id: profileId,
+        p_action_type: actionType,
+        p_action_description: description,
+        p_performed_by: performedBy,
+        p_performed_by_type: 'admin',
+        p_metadata: {
+          application_id: targetApplicationId,
+          acceptance_letter_url: acceptanceUrl
+        }
+      });
+    } catch (e) {
+      // Apenas logar no console; não bloquear UX
+      console.error('Failed to log acceptance letter action:', e);
+    }
+  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US');
@@ -66,6 +118,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
       
       // Buscar requests globais se tivermos university_id
       if (universityId) {
+        console.log('🔍 [DOCUMENTS VIEW] Fetching global requests for university:', universityId);
         const { data: globalRequests, error: globalError } = await supabase
           .from('document_requests')
           .select(`
@@ -80,31 +133,17 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
           .eq('university_id', universityId)
           .order('created_at', { ascending: false });
 
-        if (globalError) throw globalError;
+        if (globalError) {
+          console.error('❌ [DOCUMENTS VIEW] Error fetching global requests:', globalError);
+          throw globalError;
+        }
+        console.log('🔍 [DOCUMENTS VIEW] Global requests found:', globalRequests);
         allRequests = [...allRequests, ...(globalRequests || [])];
+      } else {
+        console.log('⚠️ [DOCUMENTS VIEW] No university_id provided, skipping global requests');
       }
       
-      // Também buscar TODOS os requests globais ativos
-      const { data: allGlobalRequests, error: allGlobalError } = await supabase
-        .from('document_requests')
-        .select(`
-          *,
-          document_request_uploads (
-            *,
-            reviewed_by,
-            reviewed_at
-          )
-        `)
-        .eq('is_global', true)
-        .eq('status', 'open')
-        .order('created_at', { ascending: false });
-
-      if (allGlobalError) throw allGlobalError;
-      
-      // Adicionar requests globais que ainda não foram adicionados
-      const existingIds = allRequests.map(req => req.id);
-      const newGlobalRequests = (allGlobalRequests || []).filter(req => !existingIds.includes(req.id));
-      allRequests = [...allRequests, ...newGlobalRequests];
+      // Remover busca de TODOS os requests globais - apenas mostrar os específicos do aluno
 
       console.log('🔍 [DOCUMENTS VIEW] Found document requests:', allRequests);
       setInternalDocumentRequests(allRequests);
@@ -221,7 +260,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
               applications = studentApp;
               error = null;
             } else {
-              // Fallback: buscar aplicação que tenha paid application fee como alternativa
+              // Fallback: buscar aplicação do MESMO estudante com application fee pago
               const { data, error: paidAppError } = await supabase
                 .from('scholarship_applications')
                 .select(`
@@ -235,6 +274,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                     )
                   )
                 `)
+                .eq('student_id', profileData.id)
                 .eq('is_application_fee_paid', true)
                 .order('acceptance_letter_url', { ascending: false, nullsFirst: false })
                 .order('created_at', { ascending: false })
@@ -244,7 +284,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                 applications = data;
                 error = null;
               } else {
-                // Último fallback: buscar a mais recente
+                // Último fallback: buscar a mais recente do MESMO estudante
                 const { data, error: recentError } = await supabase
                   .from('scholarship_applications')
                   .select(`
@@ -258,6 +298,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                       )
                     )
                   `)
+                  .eq('student_id', profileData.id)
                   .order('created_at', { ascending: false })
                   .limit(1);
                 
@@ -274,11 +315,11 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
             console.log('🔍 [DOCUMENTS VIEW] Acceptance letter status:', app.acceptance_letter_status);
             setRealScholarshipApplication(app);
             
-            // Buscar document requests se não foram fornecidos como prop
-            if (!documentRequests || documentRequests.length === 0) {
-              const universityId = app.scholarships?.university_id;
-              await fetchDocumentRequests(app.id, universityId);
-            }
+            // Sempre buscar document requests para garantir que temos global requests
+            const universityId = app.scholarships?.universities?.id;
+            console.log('🔍 [DOCUMENTS VIEW] University ID from app:', universityId);
+            console.log('🔍 [DOCUMENTS VIEW] App scholarships:', app.scholarships);
+            await fetchDocumentRequests(app.id, universityId);
           } else {
             console.log('❌ [DOCUMENTS VIEW] No application found for student:', studentId, 'profile_id:', profileData?.id);
             console.log('❌ [DOCUMENTS VIEW] Applications found:', applications);
@@ -360,19 +401,56 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
         
         <div className="p-6">
           {(() => {
-            // Usar document requests internos se os externos não estiverem disponíveis
-            const requestsToUse = (documentRequests && documentRequests.length > 0) ? documentRequests : internalDocumentRequests;
-            // ✅ CORREÇÃO: Filtrar acceptance letter dos document requests
-            const filteredRequests = requestsToUse?.filter(request => request.id !== 'acceptance_letter') || [];
-            return filteredRequests;
+            // Combinar document requests da prop com os internos para garantir global requests
+            const propRequests = documentRequests || [];
+            const internalRequests = internalDocumentRequests || [];
+            
+            // Criar um mapa para evitar duplicatas
+            const requestsMap = new Map();
+            
+            // Adicionar requests da prop
+            propRequests.forEach(request => {
+              if (request.id !== 'acceptance_letter') {
+                requestsMap.set(request.id, request);
+              }
+            });
+            
+            // Adicionar requests internos (global requests)
+            internalRequests.forEach(request => {
+              if (request.id !== 'acceptance_letter') {
+                requestsMap.set(request.id, request);
+              }
+            });
+            
+            const allRequests = Array.from(requestsMap.values());
+            
+            console.log('🔍 [DOCUMENTS VIEW] Prop requests:', propRequests);
+            console.log('🔍 [DOCUMENTS VIEW] Internal requests:', internalRequests);
+            console.log('🔍 [DOCUMENTS VIEW] Combined requests:', allRequests);
+            
+            return allRequests;
           })().length > 0 ? (
             <div className="space-y-4">
               {(() => {
-                // Usar document requests internos se os externos não estiverem disponíveis
-                const requestsToUse = (documentRequests && documentRequests.length > 0) ? documentRequests : internalDocumentRequests;
-                // ✅ CORREÇÃO: Filtrar acceptance letter dos document requests
-                const filteredRequests = requestsToUse?.filter(request => request.id !== 'acceptance_letter') || [];
-                return filteredRequests;
+                // Usar a mesma lógica de combinação
+                const propRequests = documentRequests || [];
+                const internalRequests = internalDocumentRequests || [];
+                
+                const requestsMap = new Map();
+                
+                propRequests.forEach(request => {
+                  if (request.id !== 'acceptance_letter') {
+                    requestsMap.set(request.id, request);
+                  }
+                });
+                
+                internalRequests.forEach(request => {
+                  if (request.id !== 'acceptance_letter') {
+                    requestsMap.set(request.id, request);
+                  }
+                });
+                
+                return Array.from(requestsMap.values());
               })().map((request) => (
                 <div key={request.id} className="bg-white p-4 sm:p-6 rounded-xl border border-slate-200">
                   <div className="flex flex-col sm:flex-row items-start gap-4">
@@ -695,6 +773,14 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                               acceptance_letter_sent_at: new Date().toISOString()
                             }) : prev);
 
+                            // Log: acceptance letter substituída/enviada novamente
+                            await logAcceptanceAction(
+                              'acceptance_letter_replaced',
+                              'Acceptance letter replaced by admin',
+                              currentApplication.id,
+                              publicUrl
+                            );
+
                             try {
                               const { data: { session } } = await supabase.auth.getSession();
                               const accessToken = session?.access_token;
@@ -772,7 +858,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                         <span className="text-xs text-slate-700 truncate max-w-[240px]">{acceptanceLetterFile.name}</span>
                       )}
                     </div>
-                    <div className="flex justify-center mt-3">
+                    <div className="flex justify-center mt-3 gap-3 flex-wrap">
                       <button
                         onClick={async () => {
                           if (!acceptanceLetterFile || !studentId) return;
@@ -814,6 +900,14 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                               .eq('id', applicationId);
                             if (updateError) throw updateError;
 
+                            // Log: acceptance letter enviada
+                            await logAcceptanceAction(
+                              'acceptance_letter_sent',
+                              'Acceptance letter sent by admin',
+                              applicationId,
+                              publicUrl
+                            );
+
                             setRealScholarshipApplication((prev: any) => prev ? ({
                               ...prev,
                               acceptance_letter_url: publicUrl,
@@ -844,6 +938,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                             } catch { /* ignore notify errors */ }
 
                             setAcceptanceLetterFile(null);
+                            setMarkSentSuccess('Acceptance letter sent successfully.');
                           } catch (err) {
                             console.error('Error uploading acceptance letter:', err);
                           } finally {
@@ -855,7 +950,58 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                       >
                         {uploadingAcceptanceLetter ? 'Uploading...' : 'Send Acceptance Letter'}
                       </button>
+                      <button
+                        onClick={async () => {
+                          try {
+                            // Resolver applicationId como acima
+                            let applicationId = currentApplication?.id;
+                            if (!applicationId && realScholarshipApplication?.id) applicationId = realScholarshipApplication.id;
+                            if (!applicationId) {
+                              const { data: apps } = await supabase
+                                .from('scholarship_applications')
+                                .select('id')
+                                .order('created_at', { ascending: false })
+                                .limit(1);
+                              applicationId = apps?.[0]?.id;
+                            }
+                            if (!applicationId) throw new Error('No application found for this student');
+
+                            const { error: updateError } = await supabase
+                              .from('scholarship_applications')
+                              .update({
+                                acceptance_letter_status: 'sent',
+                                acceptance_letter_sent_at: new Date().toISOString()
+                              })
+                              .eq('id', applicationId);
+                            if (updateError) throw updateError;
+
+                            await logAcceptanceAction(
+                              'acceptance_letter_sent',
+                              'Acceptance letter marked as sent by admin (no file)',
+                              applicationId,
+                              null
+                            );
+
+                            setRealScholarshipApplication((prev: any) => prev ? ({
+                              ...prev,
+                              acceptance_letter_status: 'sent',
+                              acceptance_letter_sent_at: new Date().toISOString()
+                            }) : prev);
+                            setMarkSentSuccess('Acceptance letter marked as sent.');
+                          } catch (err) {
+                            console.error('Error marking acceptance letter as sent:', err);
+                          }
+                        }}
+                        className="bg-amber-100 hover:bg-amber-200 text-amber-800 px-4 py-2 rounded-lg text-sm font-medium"
+                      >
+                        Mark as Sent (no file)
+                      </button>
                     </div>
+                    {markSentSuccess && (
+                      <div className="mt-3 mx-auto max-w-xl bg-green-50 border border-green-200 text-green-700 text-sm rounded-lg p-3">
+                        {markSentSuccess}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -863,6 +1009,109 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
           )}
         </div>
       </div>
+      
+      {/* Transfer Form Section - Only for transfer students */}
+      {currentApplication?.student_process_type === 'transfer' && (
+        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-3xl shadow-sm relative overflow-hidden">
+          <div className="bg-gradient-to-r from-[#05294E] to-[#041f38] px-6 py-5 rounded-t-3xl">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+              <div className="flex items-start sm:items-center space-x-4 min-w-0">
+                <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg flex-shrink-0">
+                  <svg className="w-6 h-6 text-[#05294E]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-xl font-bold text-white break-words">Transfer Form</h3>
+                  <p className="text-blue-100 text-sm break-words">Transfer form for current F-1 students</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="p-6">
+            {(() => {
+              if (currentApplication?.transfer_form_url) {
+                // Formulário já enviado
+                return (
+                  <div className="bg-white rounded-3xl p-6">
+                    <div className="flex items-start space-x-4">
+                      <div className="flex-shrink-0">
+                        <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                          <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                        </div>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap gap-2 mb-1">
+                          <p className="font-medium text-slate-900 break-words">
+                            {currentApplication.transfer_form_url.split('/').pop() || 'Transfer Form'}
+                          </p>
+                          <span className="px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 whitespace-nowrap">
+                            {currentApplication.transfer_form_status === 'approved' ? 'Approved' : 'Sent'}
+                          </span>
+                        </div>
+                        <p className="text-sm text-slate-500 break-words">
+                          Sent on {formatDate(currentApplication.transfer_form_sent_at)}
+                        </p>
+                        <p className="text-xs text-slate-400 mt-1 break-words">
+                          Transfer form for F-1 students
+                        </p>
+                        
+                        <div className="flex flex-col sm:flex-row gap-2 mt-3">
+                          <button
+                            onClick={() => onViewDocument({
+                              file_url: currentApplication.transfer_form_url,
+                              filename: (currentApplication.transfer_form_url.split('/').pop() || 'Transfer Form')
+                            })}
+                            className="bg-[#05294E] hover:bg-[#041f38] text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto text-center"
+                          >
+                            View
+                          </button>
+                          
+                          <button
+                            onClick={() => onDownloadDocument({
+                              file_url: currentApplication.transfer_form_url,
+                              filename: (currentApplication.transfer_form_url.split('/').pop() || 'Transfer Form')
+                            })}
+                            className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto text-center"
+                          >
+                            Download
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              } else {
+                // Formulário não enviado
+                return (
+                  <div className="bg-white rounded-3xl p-8">
+                    <div className="text-center">
+                      <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                      </div>
+                      <h4 className="text-lg font-semibold text-slate-700 mb-2">No Transfer Form Yet</h4>
+                      <p className="text-slate-500 max-w-md mx-auto">
+                        The transfer form will appear here once the university processes your application and sends it to you.
+                      </p>
+                      <div className="mt-4 flex items-center justify-center space-x-2 text-sm text-slate-400">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span>Please wait for the university to send your transfer form</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+            })()}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

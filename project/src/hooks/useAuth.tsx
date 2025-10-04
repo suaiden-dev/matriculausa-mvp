@@ -810,6 +810,43 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     
     console.log('✅ [USEAUTH] SignUp bem-sucedido');
     console.log('🔍 [USEAUTH] data.user:', data?.user);
+    
+    // Se o usuário tem scholarship_package_number, converter para scholarship_package_id
+    if (userData.scholarship_package_number && data?.user) {
+      try {
+        console.log('🔍 [USEAUTH] Convertendo scholarship_package_number para scholarship_package_id...');
+        
+        const { data: packageData, error: packageError } = await supabase
+          .from('scholarship_packages')
+          .select('id, scholarship_amount')
+          .eq('package_number', userData.scholarship_package_number)
+          .eq('is_active', true)
+          .single();
+        
+        if (packageError) {
+          console.warn('⚠️ [USEAUTH] Erro ao buscar pacote:', packageError);
+        } else if (packageData) {
+          console.log('🔍 [USEAUTH] Pacote encontrado:', packageData.id);
+          
+          // Atualizar o user_profiles com o scholarship_package_id e desired_scholarship_range
+          const { error: updateError } = await supabase
+            .from('user_profiles')
+            .update({ 
+              scholarship_package_id: packageData.id,
+              desired_scholarship_range: userData.desired_scholarship_range || packageData.scholarship_amount
+            })
+            .eq('user_id', data.user.id);
+          
+          if (updateError) {
+            console.warn('⚠️ [USEAUTH] Erro ao atualizar scholarship_package_id:', updateError);
+          } else {
+            console.log('✅ [USEAUTH] scholarship_package_id atualizado com sucesso');
+          }
+        }
+      } catch (err) {
+        console.warn('⚠️ [USEAUTH] Erro na conversão do pacote:', err);
+      }
+    }
   };
 
   // Função para trocar role do usuário (apenas para desenvolvimento/admin)

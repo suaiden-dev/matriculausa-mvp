@@ -6,7 +6,7 @@ import {
   X, 
   ChevronLeft, 
   ChevronRight, 
-  Play, 
+  Route, 
   CheckCircle, 
   BookOpen, 
   FileText, 
@@ -61,7 +61,7 @@ const StepByStepGuide: React.FC<StepByStepGuideProps> = ({ isOpen, onClose }) =>
       id: 3,
       title: t('stepByStepGuide.steps.step3.title'),
       description: t('stepByStepGuide.steps.step3.description'),
-      icon: <GraduationCap className="w-8 h-8" />,
+      icon: <Users className="w-8 h-8" />,
       color: "text-purple-600",
       bgColor: "bg-purple-50",
       image: "/page 3.png"
@@ -206,7 +206,7 @@ const StepByStepGuide: React.FC<StepByStepGuideProps> = ({ isOpen, onClose }) =>
               
               <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-4 pr-6 sm:pr-8">
                 <div className="p-1 sm:p-2 bg-white/20 rounded-lg flex-shrink-0">
-                  <Play className="w-4 h-4 sm:w-6 sm:h-6" />
+                  <Route className="w-4 h-4 sm:w-6 sm:h-6" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <Dialog.Title className="text-base sm:text-2xl font-bold truncate">

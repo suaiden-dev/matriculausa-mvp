@@ -51,10 +51,34 @@ Deno.serve(async (req)=>{
       // Atualiza user_profiles para marcar o pagamento do I-20 Control Fee
       const { error: profileError } = await supabase.from('user_profiles').update({
         has_paid_i20_control_fee: true,
+        i20_control_fee_payment_method: 'stripe',
         i20_control_fee_due_date: new Date().toISOString(),
         i20_control_fee_payment_intent_id: paymentIntentId
       }).eq('user_id', userId);
       if (profileError) throw new Error(`Failed to update user_profiles: ${profileError.message}`);
+
+      // Log the payment action
+      try {
+        const { data: userProfile } = await supabase.from('user_profiles').select('id, full_name').eq('user_id', userId).single();
+        if (userProfile) {
+          await supabase.rpc('log_student_action', {
+            p_student_id: userProfile.id,
+            p_action_type: 'fee_payment',
+            p_action_description: `I-20 Control Fee paid via Stripe (${sessionId})`,
+            p_performed_by: userId,
+            p_performed_by_type: 'student',
+            p_metadata: {
+              fee_type: 'i20_control',
+              payment_method: 'stripe',
+              amount: session.amount_total / 100,
+              session_id: sessionId,
+              payment_intent_id: paymentIntentId
+            }
+          });
+        }
+      } catch (logError) {
+        console.error('Failed to log payment action:', logError);
+      }
       // Buscar o application_id mais recente do usuário
       const { data: userProfile } = await supabase.from('user_profiles').select('id').eq('user_id', userId).single();
       console.log('[I20ControlFee] userId do Stripe:', userId);

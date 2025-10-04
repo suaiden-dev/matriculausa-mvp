@@ -829,9 +829,9 @@ const EmailInbox = () => {
             </button>
           </div>
 
-          {/* AI Agent Area: mostra o agente se existir; caso contrário, botão de criação */}
+          {/* AI Agent Area: apenas gerenciamento quando já existir agente */}
           <div className="px-4 pb-3">
-            {selectedConfig && (existingAgent ? (
+            {selectedConfig && existingAgent ? (
               <div className="w-full border border-green-200 bg-green-50 text-green-900 px-4 py-3 rounded-lg flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <div className="text-sm font-semibold truncate">{existingAgent.ai_name}</div>
@@ -851,15 +851,7 @@ const EmailInbox = () => {
                   </button>
                 </div>
               </div>
-            ) : (
-              <button
-                onClick={() => setShowKnowledgeBase(true)}
-                disabled={!selectedConfig || loadingAgent}
-                className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-4 py-2 rounded-full font-medium flex items-center justify-center gap-2 transition-colors shadow-sm"
-              >
-                <span>{loadingAgent ? 'Checking agent...' : 'Create AI Agent'}</span>
-              </button>
-            ))}
+            ) : null}
           </div>
 
           {/* Account Selector */}
@@ -1448,8 +1440,8 @@ const EmailInbox = () => {
           </div>
         </div>
       )}
-      {/* AI Agent Creation Modal */}
-      {showKnowledgeBase && (
+      {/* AI Agent Management Modal (somente edição/gerenciamento no Inbox) */}
+      {showKnowledgeBase && existingAgent && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden relative">
             <button

@@ -6,7 +6,6 @@ import { useDynamicFees } from '../hooks/useDynamicFees';
 import { useUniversities } from '../hooks/useUniversities';
 import { StripeCheckout } from '../components/StripeCheckout';
 import { useAuth } from '../hooks/useAuth';
-import { useSubscription } from '../hooks/useSubscription';
 import { supabase } from '../lib/supabase';
 // Removido SmartChat pois não é utilizado
 import { slugify } from '../utils/slugify';

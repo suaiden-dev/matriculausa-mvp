@@ -33,8 +33,8 @@
         "description": "After submitting your documents, you must wait for university approval to continue with the selection process. Once approved, you will be able to proceed with paying the Application Fee and Scholarship Fee."
       },
       "step7": {
-        "title": "6. My Applications & Scholarship Fee",
-        "description": "In the 'My Applications' section, you will have access to direct chat with the university, where the university can request additional payments, send your acceptance letter, and track your entire application process."
+        "title": "6. University Chat & Application Tracking",
+        "description": "In the 'My Applications' section, you will have access to direct chat with the university, where the university can request additional payments, send you your acceptance letter, and track your entire application process."
       },
       "step8": {
         "title": "7. Application Chat & I-20 Control Fee",
@@ -1520,6 +1520,9 @@
       "accessError": "Unable to process {{documentType}}. The file may be corrupted or in an unsupported format. Please try uploading a new file.",
       "fundsDataError": "Unable to validate proof of funds. The document may not contain clear bank balance information or be in an unreadable format. Please try uploading a clearer and more legible bank statement.",
       "currencyFieldError": "Internal system error processing currency data in {{documentType}}. The document may not contain valid currency information or be in an unsupported format. Please try uploading a clearer document.",
+      "passportFormatError": "The passport document format is not recognized. Please upload a clear, undamaged passport photo.",
+      "diplomaProcessError": "Unable to process High School Diploma. The file may be corrupted or in an unsupported format. Please try uploading a new file.",
+      "fundsValidationError": "Unable to validate document. The file may be corrupted or in an unsupported format. Please try uploading a new file.",
       "passport": "Passport",
       "passportDescription": "Valid passport document",
       "diploma": "High School Diploma",
@@ -1875,6 +1878,12 @@
         "paymentRedirectError": "Error redirecting to payment."
       }
     },
+    "notifications": {
+      "documentRejected": {
+        "title": "Document Rejected",
+        "message": "Your document {{fileName}} was rejected. Reason: {{reason}}"
+      }
+    },
     "documentRequests": {
       "status": {
         "downloading": "Downloading...",
@@ -1924,6 +1933,7 @@
         "transferFormDescriptionSchool": "Upload the transfer form for this student. Only visible for transfer students.",
         "transferFormDescriptionStudent": "Your university will upload your transfer form here. Download it when available.",
         "transferForm": "Transfer Form",
+        "sentOn": "Sent on",
         "studentUploads": "Student uploads:",
         "yourUploads": "Your uploads:",
         "uploading": "Uploading...",
@@ -2761,6 +2771,10 @@
         "title": "Credit Card",
         "description": "Pay securely with credit or debit card via Stripe"
       },
+      "pix": {
+        "title": "PIX",
+        "description": "Brazilian instant payment - Values in reais via Stripe"
+      },
       "zelle": {
         "title": "Zelle",
         "description": "Pay via Zelle transfer (requires manual verification)"
@@ -2830,6 +2844,10 @@
         "title": "Stripe",
         "description": "Pay securely with credit or debit card via Stripe"
       },
+      "pix": {
+        "title": "PIX",
+        "description": "Brazilian instant payment - Values in reais via Stripe"
+      },
       "zelle": {
         "title": "Zelle",
         "description": "Pay via Zelle transfer",
@@ -2838,6 +2856,12 @@
     }
   },
   "successPages": {
+    "pixPayment": {
+      "processing": "Processing PIX Payment",
+      "message": "Your PIX payment has been received and is being processed. You will be redirected automatically in a few seconds.",
+      "verifying": "Verifying payment...",
+      "pleaseWait": "Please wait..."
+    },
     "selectionProcessFee": {
       "title": "Selection Process Fee Payment Successful!",
       "description": "Your payment of {amount} was processed successfully.",

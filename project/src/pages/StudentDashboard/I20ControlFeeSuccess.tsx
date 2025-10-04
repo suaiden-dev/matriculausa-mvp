@@ -3,6 +3,7 @@ import { CheckCircle } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
+import { supabase } from '../../lib/supabase';
 
 const I20ControlFeeSuccess: React.FC = () => {
   const [loading, setLoading] = useState(true);
@@ -56,6 +57,46 @@ const I20ControlFeeSuccess: React.FC = () => {
 
         console.log('✅ [I20ControlFeeSuccess] Sessão verificada com sucesso:', data);
         setLoading(false);
+
+        // Log Stripe payment success
+        // try {
+        //   // IP best-effort
+        //   let clientIp: string | undefined = undefined;
+        //   try {
+        //     const controller = new AbortController();
+        //     const timeout = setTimeout(() => controller.abort(), 2000);
+        //     const res = await fetch('https://api.ipify.org?format=json', { signal: controller.signal });
+        //     clearTimeout(timeout);
+        //     if (res.ok) {
+        //       const j = await res.json();
+        //       clientIp = j?.ip;
+        //     }
+        //   } catch (_) {}
+
+        //   const { data: authUser } = await supabase.auth.getUser();
+        //   const authUserId = authUser.user?.id;
+        //   if (authUserId) {
+        //     const { data: profile } = await supabase.from('user_profiles').select('id').eq('user_id', authUserId).single();
+        //     if (profile?.id) {
+        //       await supabase.rpc('log_student_action', {
+        //         p_student_id: profile.id,
+        //         p_action_type: 'fee_payment',
+        //         p_action_description: 'I-20 Control Fee paid via Stripe',
+        //         p_performed_by: authUserId,
+        //         p_performed_by_type: 'student',
+        //         p_metadata: {
+        //           fee_type: 'i20_control',
+        //           payment_method: 'stripe',
+        //           amount: getFeeAmount('i20_control_fee') || 0,
+        //           session_id: sessionId,
+        //           ip: clientIp
+        //         }
+        //       });
+        //     }
+        //   }
+        // } catch (logErr) {
+        //   console.error('[I20ControlFeeSuccess] Failed to log stripe payment:', logErr);
+        // }
       } catch (err: any) {
         console.error('❌ [I20ControlFeeSuccess] Erro ao verificar sessão:', err);
         setError(err.message || 'Error verifying payment.');

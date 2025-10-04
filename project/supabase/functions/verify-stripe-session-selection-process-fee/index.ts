@@ -1,7 +1,9 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import Stripe from 'npm:stripe@17.7.0';
 import { createClient } from 'npm:@supabase/supabase-js@2.49.1';
-import jsPDF from 'npm:jspdf@2.5.1';
+// Import jsPDF for Deno environment
+// @ts-ignore
+import jsPDF from "https://esm.sh/jspdf@2.5.1?target=deno";
 const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
 const stripeSecret = Deno.env.get('STRIPE_SECRET_KEY');
 const stripe = new Stripe(stripeSecret, {
@@ -46,23 +48,12 @@ async function sendTermAcceptanceNotificationAfterPayment(userId, feeType) {
     // Get affiliate admin data if seller has affiliate_admin_id
     let affiliateAdminData = null;
     if (sellerData?.affiliate_admin_id) {
-      console.log('[NOTIFICAÇÃO] Buscando affiliate admin com ID:', sellerData.affiliate_admin_id);
-      // First get the affiliate admin to get the user_id
-      const { data: affiliateResult, error: affiliateError } = await supabase.from('affiliate_admins').select('user_id').eq('id', sellerData.affiliate_admin_id).single();
-      if (affiliateError) {
-        console.error('[NOTIFICAÇÃO] Erro ao buscar affiliate admin:', affiliateError);
-      } else if (affiliateResult?.user_id) {
-        // Then get the user profile data
-        const { data: userProfileResult, error: userProfileError } = await supabase.from('user_profiles').select('full_name, email').eq('user_id', affiliateResult.user_id).single();
-        if (userProfileError) {
-          console.error('[NOTIFICAÇÃO] Erro ao buscar user profile do affiliate admin:', userProfileError);
-        } else if (userProfileResult) {
-          affiliateAdminData = {
-            full_name: userProfileResult.full_name,
-            email: userProfileResult.email
-          };
-          console.log('[NOTIFICAÇÃO] Dados do affiliate admin carregados:', affiliateAdminData);
-        }
+      const { data: affiliateResult } = await supabase.from('affiliate_admins').select('name, email').eq('id', sellerData.affiliate_admin_id).single();
+      if (affiliateResult) {
+        affiliateAdminData = {
+          full_name: affiliateResult.name,
+          email: affiliateResult.email
+        };
       }
     }
     // Generate PDF for the term acceptance
@@ -168,8 +159,9 @@ async function sendTermAcceptanceNotificationAfterPayment(userId, feeType) {
       console.log('[NOTIFICAÇÃO] PDF gerado com sucesso!');
     } catch (pdfError) {
       console.error('[NOTIFICAÇÃO] Erro ao gerar PDF:', pdfError);
-      // Don't continue without PDF as it's required for this notification
-      throw new Error('Failed to generate PDF for term acceptance notification');
+      // Continue without PDF but log the error
+      console.warn('[NOTIFICAÇÃO] Continuando sem PDF devido ao erro na geração');
+      // Don't throw error to avoid breaking the payment process
     }
     // Prepare notification payload
     const webhookPayload = {
@@ -193,23 +185,35 @@ async function sendTermAcceptanceNotificationAfterPayment(userId, feeType) {
       affiliate_admin_id: sellerData?.affiliate_admin_id || ""
     };
     console.log('[NOTIFICAÇÃO] Enviando webhook com payload:', webhookPayload);
-    // Send webhook notification with PDF (always required for term acceptance)
-    if (!pdfBlob) {
-      throw new Error('PDF is required for term acceptance notification but was not generated');
+    
+    let webhookResponse;
+    if (pdfBlob) {
+      // Send webhook notification with PDF
+      const formData = new FormData();
+      // Add each field individually for n8n to process correctly
+      Object.entries(webhookPayload).forEach(([key, value])=>{
+        formData.append(key, value !== null && value !== undefined ? value.toString() : '');
+      });
+      // Add PDF with descriptive filename
+      const fileName = `term_acceptance_${userProfile.full_name.replace(/\s+/g, '_').toLowerCase()}_${new Date().toISOString().split('T')[0]}.pdf`;
+      formData.append('pdf', pdfBlob, fileName);
+      console.log('[NOTIFICAÇÃO] PDF anexado à notificação:', fileName);
+      webhookResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+        method: 'POST',
+        body: formData
+      });
+    } else {
+      // Send webhook notification without PDF
+      console.log('[NOTIFICAÇÃO] Enviando notificação sem PDF devido ao erro na geração');
+      webhookResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'User-Agent': 'PostmanRuntime/7.36.3'
+        },
+        body: JSON.stringify(webhookPayload)
+      });
     }
-    const formData = new FormData();
-    // Add each field individually for n8n to process correctly
-    Object.entries(webhookPayload).forEach(([key, value])=>{
-      formData.append(key, value !== null && value !== undefined ? value.toString() : '');
-    });
-    // Add PDF with descriptive filename
-    const fileName = `term_acceptance_${userProfile.full_name.replace(/\s+/g, '_').toLowerCase()}_${new Date().toISOString().split('T')[0]}.pdf`;
-    formData.append('pdf', pdfBlob, fileName);
-    console.log('[NOTIFICAÇÃO] PDF anexado à notificação:', fileName);
-    const webhookResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
-      method: 'POST',
-      body: formData
-    });
     if (webhookResponse.ok) {
       console.log('[NOTIFICAÇÃO] Notificação enviada com sucesso!');
     } else {
@@ -253,20 +257,54 @@ Deno.serve(async (req)=>{
       error: 'Session ID is required'
     }, 400);
     console.log(`Verifying session ID: ${sessionId}`);
-    const session = await stripe.checkout.sessions.retrieve(sessionId);
-    console.log(`Session status: ${session.status}, Payment status: ${session.payment_status}`);
+    let session;
+    try {
+      session = await stripe.checkout.sessions.retrieve(sessionId);
+      console.log(`Session status: ${session.status}, Payment status: ${session.payment_status}`);
+    } catch (stripeError) {
+      console.error(`Stripe error retrieving session ${sessionId}:`, stripeError.message);
+      return corsResponse({
+        error: 'Session not found or invalid.',
+        details: stripeError.message
+      }, 404);
+    }
     if (session.payment_status === 'paid' && session.status === 'complete') {
       const userId = session.client_reference_id;
       const applicationId = session.metadata?.application_id;
-      console.log(`Processing successful payment. UserID: ${userId}, ApplicationID: ${applicationId}`);
+      const paymentMethod = session.payment_method_types?.[0];
+      console.log(`Processing successful payment. UserID: ${userId}, ApplicationID: ${applicationId}, PaymentMethod: ${paymentMethod}`);
       if (!userId) return corsResponse({
         error: 'User ID (client_reference_id) missing in session.'
       }, 400);
       // Atualiza perfil do usuário
       const { error: profileError } = await supabase.from('user_profiles').update({
-        has_paid_selection_process_fee: true
+        has_paid_selection_process_fee: true,
+        selection_process_fee_payment_method: 'stripe'
       }).eq('user_id', userId);
       if (profileError) throw new Error(`Failed to update user_profiles: ${profileError.message}`);
+
+      // Log the payment action
+      try {
+        const { data: userProfile } = await supabase.from('user_profiles').select('id, full_name').eq('user_id', userId).single();
+        if (userProfile) {
+          await supabase.rpc('log_student_action', {
+            p_student_id: userProfile.id,
+            p_action_type: 'fee_payment',
+            p_action_description: `Selection Process Fee paid via Stripe (${sessionId})`,
+            p_performed_by: userId,
+            p_performed_by_type: 'student',
+            p_metadata: {
+              fee_type: 'selection_process',
+              payment_method: 'stripe',
+              amount: session.amount_total / 100,
+              session_id: sessionId,
+              application_id: applicationId
+            }
+          });
+        }
+      } catch (logError) {
+        console.error('Failed to log payment action:', logError);
+      }
       // Se houver applicationId, atualiza a aplicação
       if (applicationId) {
         const { error: updateError } = await supabase.from('scholarship_applications').update({
@@ -545,6 +583,18 @@ Deno.serve(async (req)=>{
         console.error('[NOTIFICAÇÃO] Erro ao notificar selection process via n8n:', notifErr);
       }
       // --- FIM DAS NOTIFICAÇÕES ---
+      // Para PIX, retornar resposta especial que força redirecionamento
+      if (paymentMethod === 'pix') {
+        console.log('[PIX] Forçando redirecionamento para PIX...');
+        return corsResponse({
+          status: 'complete',
+          message: 'PIX payment verified and processed successfully.',
+          payment_method: 'pix',
+          redirect_required: true,
+          redirect_url: 'http://localhost:5173/student/dashboard/scholarships'
+        }, 200);
+      }
+      
       return corsResponse({
         status: 'complete',
         message: 'Session verified and processed successfully.'

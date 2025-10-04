@@ -2,6 +2,7 @@ import { Client, AuthenticationProvider } from '@microsoft/microsoft-graph-clien
 import { TokenManager } from './TokenManager';
 import { withRetries } from '../utils/retryUtils';
 import { GraphEmail, GraphMailFolder, GraphUser, GraphResponse } from '../types/graphTypes';
+import { activateFetchInterceptor } from '../utils/fetchInterceptor';
 
 /**
  * Serviço para comunicação com Microsoft Graph API
@@ -12,6 +13,9 @@ export class GraphService {
   private tokenManager: TokenManager;
 
   constructor(accessToken: string, refreshToken: string = '', configId: string = '') {
+    // Ativar interceptador de fetch para resolver AADSTS90023
+    activateFetchInterceptor();
+    
     this.tokenManager = new TokenManager(accessToken, refreshToken, configId);
     
     const authProvider: AuthenticationProvider = {
@@ -48,9 +52,13 @@ export class GraphService {
         return this.tokenManager.accessToken;
       }
 
+      console.log('🔄 Token inválido, tentando renovação...');
+      
       // Tentar renovar token
       const tokenResult = await this.tokenManager.renewToken();
       if (tokenResult) {
+        console.log('✅ Token renovado com sucesso');
+        
         // Atualizar tokens no banco
         await this.tokenManager.updateTokensInDatabase(
           tokenResult.accessToken, 
@@ -65,9 +73,12 @@ export class GraphService {
       }
 
       // Se chegou aqui, token inválido e renovação falhou
-      console.log('🔄 Token expired and refresh failed, marking account as disconnected');
-      await this.tokenManager.markAccountAsDisconnected();
-      throw new Error('Token inválido - conta precisa ser reconectada');
+      console.log('❌ Falha na renovação do token, mas não desconectando automaticamente');
+      console.log('⚠️ Usuário precisará reconectar manualmente');
+      
+      // Em vez de marcar como desconectado automaticamente, 
+      // apenas lançar erro para que o usuário seja notificado
+      throw new Error('Token expirado - faça login novamente para continuar');
     } catch (error) {
       console.error('❌ Error getting valid token:', error);
       throw error;
@@ -199,14 +210,31 @@ export class GraphService {
     bccRecipients?: Array<{ emailAddress: { address: string; name?: string } }>;
   }): Promise<void> {
     return withRetries(async () => {
-      await this.graphClient
-        .api('/me/sendMail')
-        .post({
-          message: {
-            ...email,
-            from: { emailAddress: { address: this.tokenManager.accessToken } }
-          }
-        });
+      const payload = {
+        message: {
+          ...email
+        },
+        saveToSentItems: true
+      };
+      
+      // Usar fetch diretamente em vez da biblioteca SDK
+      const accessToken = await this.getValidToken();
+      const response = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Graph API Error:', response.status, errorText);
+        throw new Error(`Graph API Error: ${response.status} - ${errorText}`);
+      }
+      
+      console.log('✅ Email sent successfully');
     });
   }
 

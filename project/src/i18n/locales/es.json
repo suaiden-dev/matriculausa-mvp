@@ -33,8 +33,8 @@
         "description": "Después de enviar tus documentos, debes esperar la aprobación de la universidad para continuar con el proceso de selección. Una vez aprobado, podrás proceder con el pago de la Tarifa de Solicitud y la Tarifa de Beca."
       },
       "step7": {
-        "title": "6. Mis Solicitudes y Tarifa de Beca",
-        "description": "En la sección 'Mis Solicitudes', tendrás acceso al chat directo con la universidad, donde la universidad puede solicitar pagos adicionales, enviar tu carta de aceptación y hacer seguimiento a todo tu proceso de solicitud."
+        "title": "6. Chat con la Universidad y Seguimiento",
+        "description": "En la sección 'Mis Solicitudes', tendrás acceso al chat directo con la universidad, donde la universidad puede solicitar pagos adicionales, enviarte tu carta de aceptación y hacer seguimiento a todo tu proceso de solicitud."
       },
       "step8": {
         "title": "7. Chat de Solicitud y Tarifa de Control I-20",
@@ -1737,6 +1737,9 @@
       "accessError": "No se pudo procesar el {{documentType}}. El archivo puede estar corrupto o en un formato no compatible. Por favor, intenta subir un nuevo archivo.",
       "fundsDataError": "No se pudo validar el comprobante de fondos. El documento puede no contener información clara sobre el saldo bancario o estar en un formato no legible. Intenta subir un extracto bancario más claro y legible.",
       "currencyFieldError": "Error interno del sistema al procesar datos de moneda en {{documentType}}. El documento puede no contener información de moneda válida o estar en un formato no compatible. Intenta subir un documento más claro.",
+      "passportFormatError": "El formato del documento de pasaporte no fue reconocido. Sube una foto clara y sin daños del pasaporte.",
+      "diplomaProcessError": "No se pudo procesar el Diploma de Secundaria. El archivo puede estar corrupto o en un formato no compatible. Intenta subir un nuevo archivo.",
+      "fundsValidationError": "No se pudo validar el documento. El archivo puede estar corrupto o en un formato no compatible. Intenta subir un nuevo archivo.",
       "passport": "Pasaporte",
       "passportDescription": "Documento de pasaporte válido",
       "diploma": "Diploma de Secundaria",
@@ -2092,6 +2095,12 @@
         "paymentRedirectError": "Error al redirigir al pago."
       }
     },
+    "notifications": {
+      "documentRejected": {
+        "title": "Documento Rechazado",
+        "message": "Su documento {{fileName}} fue rechazado. Razón: {{reason}}"
+      }
+    },
     "documentRequests": {
       "status": {
         "downloading": "Descargando...",
@@ -2418,6 +2427,10 @@
         "stripe": {
           "title": "Stripe",
           "description": "Paga de forma segura con tarjeta de crédito o débito vía Stripe"
+        },
+        "pix": {
+          "title": "PIX",
+          "description": "Pago instantáneo brasileño - Valores en reales vía Stripe"
         },
         "zelle": {
           "title": "Zelle",
@@ -3003,6 +3016,10 @@
         "title": "Tarjeta de Crédito",
         "description": "Paga de forma segura con tarjeta de crédito o débito vía Stripe"
       },
+      "pix": {
+        "title": "PIX",
+        "description": "Pago instantáneo brasileño - Valores en reales vía Stripe"
+      },
       "zelle": {
         "title": "Zelle",
         "description": "Paga vía transferencia Zelle (requiere verificación manual)"
@@ -3051,6 +3068,12 @@
     }
   },
   "successPages": {
+    "pixPayment": {
+      "processing": "Procesando Pago PIX",
+      "message": "Su pago PIX ha sido recibido y está siendo procesado. Será redirigido automáticamente en unos segundos.",
+      "verifying": "Verificando pago...",
+      "pleaseWait": "Por favor, espere..."
+    },
     "selectionProcessFee": {
       "title": "¡Pago de Tarifa de Proceso de Selección Exitoso!",
       "description": "Tu pago de {amount} fue procesado exitosamente.",

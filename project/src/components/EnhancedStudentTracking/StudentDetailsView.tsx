@@ -9,6 +9,7 @@ import I20DeadlineTimer from './I20DeadlineTimer';
 export interface StudentDetailsViewProps {
   studentDetails: StudentInfo;
   studentDocuments: any[];
+  scholarshipApplication?: any;
   i20ControlFeeDeadline: Date | null;
   onBack: () => void;
   activeTab: 'details' | 'documents';
@@ -20,6 +21,7 @@ export interface StudentDetailsViewProps {
 const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
   studentDetails,
   studentDocuments,
+  scholarshipApplication,
   i20ControlFeeDeadline,
   activeTab,
   onTabChange,
@@ -28,7 +30,7 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
 }) => {
   // Hook para configurações dinâmicas de taxas (usando student_id para ver overrides do estudante)
   const { getFeeAmount, formatFeeAmount, userFeeOverrides, hasOverride } = useFeeConfig(studentDetails?.student_id);
-  
+
   // Debug: Verificar se os overrides estão sendo carregados
   useEffect(() => {
     if (studentDetails?.student_id) {
@@ -38,8 +40,13 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
       console.log('🔍 [StudentDetailsView] Debug - getFeeAmount(selection_process):', getFeeAmount('selection_process'));
       console.log('🔍 [StudentDetailsView] Debug - getFeeAmount(scholarship_fee):', getFeeAmount('scholarship_fee'));
       console.log('🔍 [StudentDetailsView] Debug - getFeeAmount(i20_control_fee):', getFeeAmount('i20_control_fee'));
+      console.log('🔍 [StudentDetailsView] Debug - scholarshipApplication:', scholarshipApplication);
+      console.log('🔍 [StudentDetailsView] Debug - is_scholarship_fee_paid:', scholarshipApplication?.is_scholarship_fee_paid);
+      console.log('🔍 [StudentDetailsView] Debug - is_application_fee_paid:', scholarshipApplication?.is_application_fee_paid);
+      console.log('🔍 [StudentDetailsView] Debug - application_fee_amount:', scholarshipApplication?.scholarships?.application_fee_amount);
+      console.log('🔍 [StudentDetailsView] Debug - scholarship_fee_amount:', scholarshipApplication?.scholarships?.scholarship_fee_amount);
     }
-  }, [studentDetails?.student_id, studentDetails?.email, userFeeOverrides, getFeeAmount]);
+  }, [studentDetails?.student_id, studentDetails?.email, userFeeOverrides, getFeeAmount, scholarshipApplication]);
   
   
   // Estado para armazenar as taxas do pacote do estudante
@@ -771,24 +778,27 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                     <div className="w-full flex items-center justify-between p-3 rounded-lg border border-slate-200">
                       <div className="flex items-center justify-between w-full">
                         <div className="flex items-center space-x-3">
-                          <div className={`w-3 h-3 rounded-full ${studentDetails?.is_application_fee_paid ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                          <div className={`w-3 h-3 rounded-full ${scholarshipApplication?.is_application_fee_paid ? 'bg-green-500' : 'bg-red-500'}`}></div>
                           <span className="text-sm font-medium text-slate-900">Application Fee</span>
                         </div>
                         <div className="flex flex-col items-end">
-                          <span className={`text-sm font-medium ${studentDetails?.is_application_fee_paid ? 'text-green-700' : 'text-red-700'}`}>
-                            {studentDetails?.is_application_fee_paid ? 'Paid' : 'Pending'}
+                          <span className={`text-sm font-medium ${scholarshipApplication?.is_application_fee_paid ? 'text-green-700' : 'text-red-700'}`}>
+                            {scholarshipApplication?.is_application_fee_paid ? 'Paid' : 'Pending'}
                           </span>
-                          <span className="text-xs text-slate-500">
-                            {(() => {
-                              // ✅ CORREÇÃO: Mostrar valor sempre, priorizando scholarship amount
-                              if (studentDetails?.scholarship?.application_fee_amount) {
-                                const amount = Number(studentDetails.scholarship.application_fee_amount);
-                                return formatFeeAmount(amount);
-                              } else {
-                                return formatFeeAmount(getFeeAmount('application_fee'));
-                              }
-                            })()}
-                          </span>
+                           <span className="text-xs text-slate-500">
+                             {(() => {
+                               // ✅ CORREÇÃO: Mostrar valor da bolsa aplicada (scholarship amount)
+                               if (scholarshipApplication?.scholarships?.application_fee_amount) {
+                                 const amount = Number(scholarshipApplication.scholarships.application_fee_amount);
+                                 console.log('🔍 [StudentDetailsView] Application Fee - Using scholarship amount:', amount);
+                                 return formatFeeAmount(amount);
+                               } else {
+                                 const fallbackAmount = getFeeAmount('application_fee');
+                                 console.log('🔍 [StudentDetailsView] Application Fee - Using fallback amount:', fallbackAmount);
+                                 return formatFeeAmount(fallbackAmount);
+                               }
+                             })()}
+                           </span>
                         </div>
                       </div>
                     </div>
@@ -797,24 +807,27 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                     <div className="w-full flex items-center justify-between p-3 rounded-lg border border-slate-200">
                       <div className="flex items-center justify-between w-full">
                         <div className="flex items-center space-x-3">
-                          <div className={`w-3 h-3 rounded-full ${studentDetails?.is_scholarship_fee_paid ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                          <div className={`w-3 h-3 rounded-full ${scholarshipApplication?.is_scholarship_fee_paid ? 'bg-green-500' : 'bg-red-500'}`}></div>
                           <span className="text-sm font-medium text-slate-900">Scholarship Fee</span>
                         </div>
                         <div className="flex flex-col items-end">
-                          <span className={`text-sm font-medium ${studentDetails?.is_scholarship_fee_paid ? 'text-green-700' : 'text-red-700'}`}>
-                            {studentDetails?.is_scholarship_fee_paid ? 'Paid' : 'Pending'}
+                          <span className={`text-sm font-medium ${scholarshipApplication?.is_scholarship_fee_paid ? 'text-green-700' : 'text-red-700'}`}>
+                            {scholarshipApplication?.is_scholarship_fee_paid ? 'Paid' : 'Pending'}
                           </span>
-                          <span className="text-xs text-slate-500">
-                            {(() => {
-                              // ✅ CORREÇÃO: Mostrar valor sempre, considerando overrides
-                              if (studentDetails?.scholarship?.scholarship_fee_amount) {
-                                const amount = Number(studentDetails.scholarship.scholarship_fee_amount);
-                                return formatFeeAmount(amount);
-                              } else {
-                                return formatFeeAmount(getFeeAmount('scholarship_fee'));
-                              }
-                            })()}
-                          </span>
+                           <span className="text-xs text-slate-500">
+                             {(() => {
+                               // ✅ CORREÇÃO: Mostrar valor sempre, considerando overrides
+                               if (scholarshipApplication?.scholarships?.scholarship_fee_amount) {
+                                 const amount = Number(scholarshipApplication.scholarships.scholarship_fee_amount);
+                                 console.log('🔍 [StudentDetailsView] Scholarship Fee - Using scholarship amount:', amount);
+                                 return formatFeeAmount(amount);
+                               } else {
+                                 const fallbackAmount = getFeeAmount('scholarship_fee');
+                                 console.log('🔍 [StudentDetailsView] Scholarship Fee - Using fallback amount:', fallbackAmount);
+                                 return formatFeeAmount(fallbackAmount);
+                               }
+                             })()}
+                           </span>
                         </div>
                       </div>
                     </div>

@@ -5,7 +5,9 @@ import { useFeeConfig } from '../../hooks/useFeeConfig';
 import { useAuth } from '../../hooks/useAuth';
 import { useStudentLogs } from '../../hooks/useStudentLogs';
 import DocumentsView from '../../components/EnhancedStudentTracking/DocumentsView';
+import AdminScholarshipSelection from '../../components/AdminDashboard/AdminScholarshipSelection';
 import StudentLogsView from '../../components/AdminDashboard/StudentLogsView';
+import { generateTermAcceptancePDF, StudentTermAcceptanceData } from '../../utils/pdfGenerator';
 // Função simples de toast
 const showToast = (message: string, type: 'success' | 'error' = 'success') => {
   const toast = document.createElement('div');
@@ -34,7 +36,11 @@ import {
   Edit3,
   Save,
   X,
-  AlertTriangle
+  AlertTriangle,
+  Download,
+  Calendar,
+  Globe,
+  Users
 } from 'lucide-react';
 
 interface StudentRecord {
@@ -48,13 +54,15 @@ interface StudentRecord {
   academic_level?: string | null;
   gpa?: number | null;
   english_proficiency?: string | null;
-  profile_status?: string | null;
+  status?: string | null;
   avatar_url?: string | null;
   dependents?: number;
   desired_scholarship_range?: number | null;
   student_created_at: string;
   has_paid_selection_process_fee: boolean;
   has_paid_i20_control_fee: boolean;
+  selection_process_fee_payment_method?: string | null;
+  i20_control_fee_payment_method?: string | null;
   seller_referral_code: string | null;
   application_id: string | null;
   scholarship_id: string | null;
@@ -62,7 +70,10 @@ interface StudentRecord {
   applied_at: string | null;
   is_application_fee_paid: boolean;
   is_scholarship_fee_paid: boolean;
+  application_fee_payment_method?: string | null;
+  scholarship_fee_payment_method?: string | null;
   acceptance_letter_status: string | null;
+  student_process_type: string | null;
   payment_status: string | null;
   scholarship_title: string | null;
   university_name: string | null;
@@ -71,6 +82,22 @@ interface StudentRecord {
   is_locked: boolean;
   total_applications: number;
   all_applications: any[];
+  admin_notes?: string | null;
+}
+
+interface TermAcceptance {
+  id: string;
+  user_id: string;
+  term_id: string;
+  term_type: string;
+  accepted_at: string;
+  ip_address?: string;
+  user_agent?: string;
+  created_at: string;
+  user_email?: string;
+  user_full_name?: string;
+  term_title?: string;
+  term_content?: string;
 }
 
 const AdminStudentDetails: React.FC = () => {
@@ -92,11 +119,30 @@ const AdminStudentDetails: React.FC = () => {
   const [showRejectStudentModal, setShowRejectStudentModal] = useState(false);
   const [rejectStudentReason, setRejectStudentReason] = useState('');
   const [pendingRejectAppId, setPendingRejectAppId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'documents' | 'logs'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'documents' | 'scholarships' | 'logs'>('overview');
   const [documentRequests, setDocumentRequests] = useState<any[]>([]);
   const [loadingDocuments, setLoadingDocuments] = useState(false);
   const [uploadingDocumentRequest, setUploadingDocumentRequest] = useState<{[key: string]: boolean}>({});
   const [approvingDocumentRequest, setApprovingDocumentRequest] = useState<{[key: string]: boolean}>({});
+  // Campo de notas do admin - agora como lista
+  const [adminNotes, setAdminNotes] = useState<Array<{
+    id: string;
+    content: string;
+    created_by: string;
+    created_by_name: string;
+    created_at: string;
+  }>>([]);
+  const [savingNotes, setSavingNotes] = useState(false);
+  const [isAddingNote, setIsAddingNote] = useState(false);
+  const [newNoteContent, setNewNoteContent] = useState('');
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [editingNoteContent, setEditingNoteContent] = useState('');
+  const [deletingNoteId, setDeletingNoteId] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  // Estados para edição de métodos de pagamento
+  const [editingPaymentMethod, setEditingPaymentMethod] = useState<string | null>(null);
+  const [newPaymentMethod, setNewPaymentMethod] = useState<'stripe' | 'zelle' | 'manual'>('manual');
+  const [savingPaymentMethod, setSavingPaymentMethod] = useState(false);
   // Modal de confirmação de pagamento
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [pendingPayment, setPendingPayment] = useState<{
@@ -117,6 +163,14 @@ const AdminStudentDetails: React.FC = () => {
   // Upload de Acceptance Letter (Admin) - Removido pois agora está no DocumentsView
   const [isProgressExpanded, setIsProgressExpanded] = useState(false);
   const [i20Deadline, setI20Deadline] = useState<Date | null>(null);
+  
+  // Estados para termos aceitos
+  const [termAcceptances, setTermAcceptances] = useState<TermAcceptance[]>([]);
+  const [loadingTermAcceptances, setLoadingTermAcceptances] = useState(false);
+  
+  // Estados para formulário de transferência
+  const [transferFormFile, setTransferFormFile] = useState<File | null>(null);
+  const [uploadingTransferForm, setUploadingTransferForm] = useState(false);
   const [referralInfo, setReferralInfo] = useState<{
     type: 'seller' | 'affiliate' | 'student' | null;
     name: string | null;
@@ -134,6 +188,86 @@ const AdminStudentDetails: React.FC = () => {
   const { logAction } = useStudentLogs(student?.student_id || '');
 
   // Função para buscar informações de referência
+  // Função para buscar termos aceitos pelo estudante
+  const fetchTermAcceptances = async (userId: string) => {
+    try {
+      setLoadingTermAcceptances(true);
+      
+      // Buscar aceitações do estudante
+      const { data: acceptances, error: acceptancesError } = await supabase
+        .from('comprehensive_term_acceptance')
+        .select('*')
+        .eq('user_id', userId)
+        .order('accepted_at', { ascending: false });
+
+      if (acceptancesError) throw acceptancesError;
+
+      if (!acceptances || acceptances.length === 0) {
+        setTermAcceptances([]);
+        return;
+      }
+
+      // Buscar informações dos termos
+      const termIds = [...new Set(acceptances.map(a => a.term_id))];
+      const { data: terms, error: termsError } = await supabase
+        .from('application_terms')
+        .select('id, title, content')
+        .in('id', termIds);
+
+      if (termsError) throw termsError;
+
+      // Buscar informações do usuário se não estiver disponível
+      let userEmail = student?.student_email;
+      let userFullName = student?.student_name;
+      
+      if (!userEmail || !userFullName) {
+        const { data: userProfile, error: userError } = await supabase
+          .from('user_profiles')
+          .select('email, full_name')
+          .eq('user_id', userId)
+          .single();
+          
+        if (!userError && userProfile) {
+          userEmail = userEmail || userProfile.email;
+          userFullName = userFullName || userProfile.full_name;
+        }
+      }
+
+      // Criar mapa para lookup rápido
+      const termMap = new Map(terms?.map(t => [t.id, t]) || []);
+
+      // Combinar os dados
+      const transformedData = acceptances.map(acceptance => ({
+        id: acceptance.id,
+        user_id: acceptance.user_id,
+        term_id: acceptance.term_id,
+        term_type: acceptance.term_type,
+        accepted_at: acceptance.accepted_at,
+        ip_address: acceptance.ip_address,
+        user_agent: acceptance.user_agent,
+        created_at: acceptance.created_at,
+        user_email: userEmail || acceptance.user_email || 'N/A',
+        user_full_name: userFullName || acceptance.user_full_name || 'N/A',
+        term_title: termMap.get(acceptance.term_id)?.title || 'N/A',
+        term_content: termMap.get(acceptance.term_id)?.content || ''
+      }));
+
+      // Debug log para verificar os dados
+      console.log('🔍 [TermAcceptances] Debug data for user:', userId);
+      console.log('  - userEmail:', userEmail);
+      console.log('  - userFullName:', userFullName);
+      console.log('  - student?.student_email:', student?.student_email);
+      console.log('  - student?.student_name:', student?.student_name);
+      console.log('  - transformedData:', transformedData);
+
+      setTermAcceptances(transformedData);
+    } catch (error: any) {
+      console.error('Error loading term acceptances:', error);
+    } finally {
+      setLoadingTermAcceptances(false);
+    }
+  };
+
   const fetchReferralInfo = async (referralCode: string) => {
     if (!referralCode) {
       setReferralInfo(null);
@@ -356,8 +490,11 @@ const AdminStudentDetails: React.FC = () => {
             created_at,
             has_paid_selection_process_fee,
             has_paid_i20_control_fee,
+            selection_process_fee_payment_method,
+            i20_control_fee_payment_method,
             role,
             seller_referral_code,
+            admin_notes,
             scholarship_applications (
               id,
               scholarship_id,
@@ -365,11 +502,17 @@ const AdminStudentDetails: React.FC = () => {
               applied_at,
               is_application_fee_paid,
               is_scholarship_fee_paid,
+              application_fee_payment_method,
+              scholarship_fee_payment_method,
               acceptance_letter_status,
               acceptance_letter_url,
               acceptance_letter_sent_at,
               acceptance_letter_signed_at,
               acceptance_letter_approved_at,
+              transfer_form_url,
+              transfer_form_status,
+              transfer_form_sent_at,
+              student_process_type,
               payment_status,
               reviewed_at,
               reviewed_by,
@@ -391,7 +534,9 @@ const AdminStudentDetails: React.FC = () => {
         const s = data as any;
         let lockedApplication = null;
         if (s.scholarship_applications && s.scholarship_applications.length > 0) {
-          lockedApplication = s.scholarship_applications.find((app: any) => app.status === 'approved' && app.is_application_fee_paid);
+          // Priorizar aplicação enrolled, depois approved
+          lockedApplication = s.scholarship_applications.find((app: any) => app.status === 'enrolled') ||
+                             s.scholarship_applications.find((app: any) => app.status === 'approved');
         }
 
         const formatted: StudentRecord = {
@@ -405,21 +550,27 @@ const AdminStudentDetails: React.FC = () => {
           academic_level: s.academic_level || null,
           gpa: s.gpa || null,
           english_proficiency: s.english_proficiency || null,
-          profile_status: s.status || null,
+          status: s.status || null,
           avatar_url: s.avatar_url || null,
           dependents: s.dependents || 0,
           desired_scholarship_range: s.desired_scholarship_range || null,
           student_created_at: s.created_at,
           has_paid_selection_process_fee: s.has_paid_selection_process_fee || false,
           has_paid_i20_control_fee: s.has_paid_i20_control_fee || false,
+          selection_process_fee_payment_method: s.selection_process_fee_payment_method || null,
+          i20_control_fee_payment_method: s.i20_control_fee_payment_method || null,
           seller_referral_code: s.seller_referral_code || null,
+          admin_notes: s.admin_notes || null,
           application_id: lockedApplication?.id || null,
           scholarship_id: lockedApplication?.scholarship_id || null,
           application_status: lockedApplication?.status || null,
           applied_at: lockedApplication?.applied_at || null,
-          is_application_fee_paid: !!lockedApplication,
+          is_application_fee_paid: lockedApplication?.is_application_fee_paid || false,
           is_scholarship_fee_paid: lockedApplication?.is_scholarship_fee_paid || false,
+          application_fee_payment_method: lockedApplication?.application_fee_payment_method || null,
+          scholarship_fee_payment_method: lockedApplication?.scholarship_fee_payment_method || null,
           acceptance_letter_status: lockedApplication?.acceptance_letter_status || null,
+          student_process_type: lockedApplication?.student_process_type || null,
           payment_status: lockedApplication?.payment_status || null,
           scholarship_title: lockedApplication?.scholarships?.title || null,
           university_name: lockedApplication?.scholarships?.universities?.name || null,
@@ -432,6 +583,47 @@ const AdminStudentDetails: React.FC = () => {
 
         setStudent(formatted);
         setDependents(Number(s.dependents || 0));
+        
+        // Buscar termos aceitos pelo estudante
+        if (s.user_id) {
+          fetchTermAcceptances(s.user_id);
+        }
+        
+        // Processar notas do admin - converter de string para array se necessário
+        if (s.admin_notes) {
+          try {
+            // Se for um array JSON, usar diretamente
+            if (Array.isArray(s.admin_notes)) {
+              setAdminNotes(s.admin_notes);
+            } else {
+              // Se for string, tentar fazer parse ou criar array com nota única
+              const parsed = JSON.parse(s.admin_notes);
+              if (Array.isArray(parsed)) {
+                setAdminNotes(parsed);
+              } else {
+                // Fallback: criar array com nota única
+                setAdminNotes([{
+                  id: `note-${Date.now()}`,
+                  content: s.admin_notes,
+                  created_by: 'unknown',
+                  created_by_name: 'Admin',
+                  created_at: new Date().toISOString()
+                }]);
+              }
+            }
+          } catch {
+            // Se não conseguir fazer parse, criar array com nota única
+            setAdminNotes([{
+              id: `note-${Date.now()}`,
+              content: s.admin_notes,
+              created_by: 'unknown',
+              created_by_name: 'Admin',
+              created_at: new Date().toISOString()
+            }]);
+          }
+        } else {
+          setAdminNotes([]);
+        }
         
         // Calcular deadline do I-20
         calculateI20Deadline(formatted);
@@ -460,9 +652,9 @@ const AdminStudentDetails: React.FC = () => {
       case 'selection_fee':
         return st.has_paid_selection_process_fee ? 'completed' : 'pending';
       case 'apply':
-        return st.applied_at ? 'completed' : 'pending';
+        return st.total_applications > 0 ? 'completed' : 'pending';
       case 'review':
-        if (st.application_status === 'approved') return 'completed';
+        if (st.application_status === 'enrolled' || st.application_status === 'approved') return 'completed';
         if (st.application_status === 'rejected') return 'rejected';
         if (st.application_status === 'under_review') return 'in_progress';
         return 'pending';
@@ -471,9 +663,17 @@ const AdminStudentDetails: React.FC = () => {
       case 'scholarship_fee':
         return st.is_scholarship_fee_paid ? 'completed' : 'pending';
       case 'acceptance_letter':
-        if (st.acceptance_letter_status === 'approved') return 'completed';
-        if (st.acceptance_letter_status === 'sent') return 'in_progress';
+        if (st.acceptance_letter_status === 'approved' || st.acceptance_letter_status === 'sent') return 'completed';
         return 'pending';
+      case 'transfer_form':
+        // Só aparece para alunos com process_type = 'transfer'
+        if (st.student_process_type !== 'transfer') return 'skipped';
+        // Verificar se existe um documento de transfer form aprovado
+        const transferApp = st.all_applications?.find((app: any) => 
+          app.student_process_type === 'transfer' && 
+          (app.transfer_form_status === 'approved' || app.transfer_form_status === 'sent')
+        );
+        return transferApp ? 'completed' : 'pending';
       case 'i20_fee':
         return st.has_paid_i20_control_fee ? 'completed' : 'pending';
       case 'enrollment':
@@ -491,6 +691,7 @@ const AdminStudentDetails: React.FC = () => {
     { key: 'application_fee', label: 'App Fee', icon: CreditCard },
     { key: 'scholarship_fee', label: 'Scholarship Fee', icon: Award },
     { key: 'acceptance_letter', label: 'Acceptance', icon: FileText },
+    { key: 'transfer_form', label: 'Transfer Form', icon: FileText },
     { key: 'i20_fee', label: 'I-20 Fee', icon: CreditCard },
     { key: 'enrollment', label: 'Enrollment', icon: Award }
   ];
@@ -560,7 +761,7 @@ const AdminStudentDetails: React.FC = () => {
           academic_level: student.academic_level,
           gpa: student.gpa,
           english_proficiency: student.english_proficiency,
-          status: student.profile_status,
+          status: student.status,
           dependents: dependents,
           desired_scholarship_range: student.desired_scholarship_range,
           seller_referral_code: student.seller_referral_code
@@ -573,6 +774,225 @@ const AdminStudentDetails: React.FC = () => {
       console.error('Error saving profile:', error);
     } finally {
       setSavingProfile(false);
+    }
+  };
+
+  const handleAddNote = async () => {
+    if (!student || !newNoteContent.trim()) return;
+    
+    setSavingNotes(true);
+    try {
+      const newNote = {
+        id: `note-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        content: newNoteContent.trim(),
+        created_by: user?.id || 'unknown',
+        created_by_name: user?.email || 'Admin',
+        created_at: new Date().toISOString()
+      };
+
+      const updatedNotes = [newNote, ...adminNotes];
+      
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({
+          admin_notes: JSON.stringify(updatedNotes),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', student.student_id);
+
+      if (error) throw error;
+      
+      setAdminNotes(updatedNotes);
+      setNewNoteContent('');
+      setStudent(prev => prev ? { ...prev, admin_notes: JSON.stringify(updatedNotes) } : prev);
+      showToast('Note added successfully');
+    } catch (error) {
+      console.error('Error adding note:', error);
+      showToast('Error adding note', 'error');
+    } finally {
+      setSavingNotes(false);
+    }
+  };
+
+  const handleEditNote = (noteId: string) => {
+    const note = adminNotes.find(n => n.id === noteId);
+    if (note) {
+      setEditingNoteId(noteId);
+      setEditingNoteContent(note.content);
+    }
+  };
+
+  const handleSaveEditNote = async () => {
+    if (!student || !editingNoteId || !editingNoteContent.trim()) return;
+    
+    setSavingNotes(true);
+    try {
+      const updatedNotes = adminNotes.map(note => 
+        note.id === editingNoteId 
+          ? { ...note, content: editingNoteContent.trim() }
+          : note
+      );
+      
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({
+          admin_notes: JSON.stringify(updatedNotes),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', student.student_id);
+
+      if (error) throw error;
+      
+      setAdminNotes(updatedNotes);
+      setEditingNoteId(null);
+      setEditingNoteContent('');
+      setStudent(prev => prev ? { ...prev, admin_notes: JSON.stringify(updatedNotes) } : prev);
+      showToast('Note updated successfully');
+    } catch (error) {
+      console.error('Error updating note:', error);
+      showToast('Error updating note', 'error');
+    } finally {
+      setSavingNotes(false);
+    }
+  };
+
+  const handleCancelEditNote = () => {
+    setEditingNoteId(null);
+    setEditingNoteContent('');
+  };
+
+  const handleDeleteNote = (noteId: string) => {
+    setDeletingNoteId(noteId);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDeleteNote = async () => {
+    if (!student || !deletingNoteId) return;
+    
+    setSavingNotes(true);
+    try {
+      const updatedNotes = adminNotes.filter(note => note.id !== deletingNoteId);
+      
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({
+          admin_notes: JSON.stringify(updatedNotes),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', student.student_id);
+
+      if (error) throw error;
+      
+      setAdminNotes(updatedNotes);
+      setStudent(prev => prev ? { ...prev, admin_notes: JSON.stringify(updatedNotes) } : prev);
+      showToast('Note deleted successfully');
+    } catch (error) {
+      console.error('Error deleting note:', error);
+      showToast('Error deleting note', 'error');
+    } finally {
+      setSavingNotes(false);
+      setDeletingNoteId(null);
+      setShowDeleteConfirm(false);
+    }
+  };
+
+  const cancelDeleteNote = () => {
+    setDeletingNoteId(null);
+    setShowDeleteConfirm(false);
+  };
+
+  const handleUpdatePaymentMethod = async (feeType: 'selection_process' | 'application' | 'scholarship' | 'i20_control') => {
+    if (!student || !isPlatformAdmin) return;
+    
+    setSavingPaymentMethod(true);
+    try {
+      if (feeType === 'selection_process' || feeType === 'i20_control') {
+        // Atualizar na tabela user_profiles
+        const fieldName = feeType === 'selection_process' 
+          ? 'selection_process_fee_payment_method' 
+          : 'i20_control_fee_payment_method';
+        
+        const { error } = await supabase
+          .from('user_profiles')
+          .update({ [fieldName]: newPaymentMethod })
+          .eq('id', student.student_id);
+
+        if (error) throw error;
+
+        // Log the action
+        try {
+          await logAction(
+            'payment_method_updated',
+            `${feeType === 'selection_process' ? 'Selection Process Fee' : 'I-20 Control Fee'} payment method updated to ${newPaymentMethod}`,
+            user?.id || '',
+            'admin',
+            {
+              fee_type: feeType,
+              old_method: 'unknown',
+              new_method: newPaymentMethod,
+              student_name: student.student_name
+            }
+          );
+        } catch (logError) {
+          console.error('Failed to log action:', logError);
+        }
+      } else if (feeType === 'application' || feeType === 'scholarship') {
+        // Atualizar na tabela scholarship_applications
+        const fieldName = feeType === 'application' 
+          ? 'application_fee_payment_method' 
+          : 'scholarship_fee_payment_method';
+        
+        // Buscar aplicação aprovada ou mais recente
+        const { data: applications, error: fetchError } = await supabase
+          .from('scholarship_applications')
+          .select('id, status')
+          .eq('student_id', student.student_id)
+          .order('created_at', { ascending: false });
+
+        if (fetchError) throw fetchError;
+
+        const targetApplication = applications?.find(app => app.status === 'approved') || applications?.[0];
+        if (!targetApplication) {
+          throw new Error('No application found for this student');
+        }
+
+        const { error } = await supabase
+          .from('scholarship_applications')
+          .update({ [fieldName]: newPaymentMethod })
+          .eq('id', targetApplication.id);
+
+        if (error) throw error;
+
+        // Log the action
+        try {
+          await logAction(
+            'payment_method_updated',
+            `${feeType === 'application' ? 'Application Fee' : 'Scholarship Fee'} payment method updated to ${newPaymentMethod}`,
+            user?.id || '',
+            'admin',
+            {
+              fee_type: feeType,
+              old_method: 'unknown',
+              new_method: newPaymentMethod,
+              application_id: targetApplication.id,
+              student_name: student.student_name
+            }
+          );
+        } catch (logError) {
+          console.error('Failed to log action:', logError);
+        }
+      }
+
+      setEditingPaymentMethod(null);
+      showToast(`Payment method updated to ${newPaymentMethod}`, 'success');
+      
+      // Recarregar dados do estudante
+      window.location.reload();
+    } catch (error: any) {
+      console.error('Error updating payment method:', error);
+      showToast(`Error updating payment method: ${error.message}`, 'error');
+    } finally {
+      setSavingPaymentMethod(false);
     }
   };
 
@@ -705,7 +1125,10 @@ const AdminStudentDetails: React.FC = () => {
         // Marcar selection process fee como pago
         const { error } = await supabase
           .from('user_profiles')
-          .update({ has_paid_selection_process_fee: true })
+          .update({ 
+            has_paid_selection_process_fee: true,
+            selection_process_fee_payment_method: method || 'manual'
+          })
           .eq('id', student.student_id);
 
         if (error) throw error;
@@ -760,7 +1183,7 @@ const AdminStudentDetails: React.FC = () => {
           .from('scholarship_applications')
           .update({
             is_application_fee_paid: true,
-            ...(method ? { payment_status: method } : {})
+            application_fee_payment_method: method || 'manual'
           })
           .eq('id', targetApplicationId);
 
@@ -814,7 +1237,7 @@ const AdminStudentDetails: React.FC = () => {
           .from('scholarship_applications')
           .update({
             is_scholarship_fee_paid: true,
-            ...(method ? { payment_status: method } : {})
+            scholarship_fee_payment_method: method || 'manual'
           })
           .eq('id', targetApplicationId);
 
@@ -844,7 +1267,10 @@ const AdminStudentDetails: React.FC = () => {
         // Marcar I-20 control fee como pago
         const { error } = await supabase
           .from('user_profiles')
-          .update({ has_paid_i20_control_fee: true })
+          .update({ 
+            has_paid_i20_control_fee: true,
+            i20_control_fee_payment_method: method || 'manual'
+          })
           .eq('id', student.student_id);
 
         if (error) throw error;
@@ -867,6 +1293,33 @@ const AdminStudentDetails: React.FC = () => {
           );
         } catch (logError) {
           console.error('Failed to log action:', logError);
+        }
+
+        // Se houver uma aplicação aprovada, matricular (enrolled)
+        try {
+          const approvedApp = student.all_applications?.find((app: any) => app.status === 'approved' || app.status === 'enrolled');
+          if (approvedApp?.id) {
+            const { error: enrollErr } = await supabase
+              .from('scholarship_applications')
+              .update({ status: 'enrolled' })
+              .eq('id', approvedApp.id);
+            if (enrollErr) {
+              console.error('Error setting application to enrolled:', enrollErr);
+            } else {
+              setStudent(prev => prev ? { ...prev, application_status: 'enrolled' } : prev);
+              try {
+                await logAction(
+                  'application_enrolled',
+                  'Student enrolled after I-20 fee payment',
+                  user?.id || '',
+                  'admin',
+                  { application_id: approvedApp.id }
+                );
+              } catch (e) { /* noop */ }
+            }
+          }
+        } catch (e) {
+          console.error('Enroll update failed:', e);
         }
       }
 
@@ -1097,29 +1550,7 @@ const AdminStudentDetails: React.FC = () => {
         allRequests = [...allRequests, ...(globalRequests || [])];
       }
       
-      // Também buscar TODOS os requests globais ativos (independente da universidade)
-      // Isso garante que requests globais de outras universidades também apareçam
-      const { data: allGlobalRequests, error: allGlobalError } = await supabase
-        .from('document_requests')
-        .select(`
-          *,
-          document_request_uploads (
-            *,
-            reviewed_by,
-            reviewed_at
-          )
-        `)
-        .eq('is_global', true)
-        .eq('status', 'open')
-        .order('created_at', { ascending: false });
-
-      if (allGlobalError) throw allGlobalError;
-      console.log('All global requests found:', allGlobalRequests);
-      
-      // Adicionar requests globais que ainda não foram adicionados
-      const existingIds = allRequests.map(req => req.id);
-      const newGlobalRequests = (allGlobalRequests || []).filter(req => !existingIds.includes(req.id));
-      allRequests = [...allRequests, ...newGlobalRequests];
+      // Remover busca de TODOS os requests globais - apenas mostrar os específicos do aluno
 
       setDocumentRequests(allRequests);
     } catch (error) {
@@ -1209,6 +1640,26 @@ const AdminStudentDetails: React.FC = () => {
       // Limpar formulário
       setNewDocumentRequest({ title: '', description: '', due_date: '', attachment: null });
       setShowNewRequestModal(false);
+
+      // Log: Document Request criado pelo admin
+      try {
+        await logAction(
+          'document_request_created',
+          `Document request created by admin: ${newDocumentRequest.title}`,
+          user?.id || '',
+          'admin',
+          {
+            title: newDocumentRequest.title,
+            description: newDocumentRequest.description,
+            due_date: newDocumentRequest.due_date || null,
+            is_global: false,
+            university_id,
+            application_id: targetApp.id
+          }
+        );
+      } catch (logErr) {
+        console.error('Failed to log document request creation:', logErr);
+      }
 
       // Notificar aluno (email + sino) - melhor esforço
       try {
@@ -1317,6 +1768,23 @@ const AdminStudentDetails: React.FC = () => {
       // Recarregar document requests para mostrar o novo upload
       await fetchDocumentRequests();
       
+      // Log: Upload feito pelo admin para um document request
+      try {
+        await logAction(
+          'document_request_uploaded',
+          `Admin uploaded a document for request ${requestId}`,
+          user?.id || '',
+          'admin',
+          {
+            request_id: requestId,
+            file_url: publicUrl,
+            filename: fileName
+          }
+        );
+      } catch (logErr) {
+        console.error('Failed to log admin document upload:', logErr);
+      }
+
       showToast('Document uploaded successfully!', 'success');
     } catch (error: any) {
       console.error('Error uploading document:', error);
@@ -1445,6 +1913,189 @@ const AdminStudentDetails: React.FC = () => {
     }
   };
 
+  // Função para enviar formulário de transferência
+  const handleUploadTransferForm = async () => {
+    if (!isPlatformAdmin || !student || !transferFormFile) return;
+    
+    try {
+      setUploadingTransferForm(true);
+      
+      // Encontrar aplicação do aluno transfer
+      const transferApp = student.all_applications?.find((app: any) => 
+        app.student_process_type === 'transfer'
+      );
+      
+      if (!transferApp) {
+        showToast('No transfer application found for this student', 'error');
+        return;
+      }
+      
+      // Se já existe um formulário, deletar o arquivo anterior
+      if (transferApp.transfer_form_url) {
+        try {
+          const oldPath = transferApp.transfer_form_url.split('/').pop();
+          if (oldPath) {
+            await supabase.storage
+              .from('document-attachments')
+              .remove([`transfer-forms/${oldPath}`]);
+          }
+        } catch (deleteError) {
+          console.warn('Could not delete old transfer form:', deleteError);
+          // Continuar mesmo se não conseguir deletar o arquivo antigo
+        }
+      }
+      
+      // Sanitizar nome do arquivo
+      const sanitized = sanitizeFileName(transferFormFile.name);
+      const storagePath = `transfer-forms/${Date.now()}_${sanitized}`;
+      
+      // Upload para Supabase Storage (upsert para substituir se existir)
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('document-attachments')
+        .upload(storagePath, transferFormFile, { upsert: true });
+        
+      if (uploadError) throw uploadError;
+      
+      // Obter URL pública
+      const { data: { publicUrl } } = supabase.storage
+        .from('document-attachments')
+        .getPublicUrl(uploadData?.path || storagePath);
+      
+      // Atualizar a aplicação com o formulário de transferência
+      const { error: updateError } = await supabase
+        .from('scholarship_applications')
+        .update({
+          transfer_form_url: publicUrl,
+          transfer_form_status: 'sent',
+          transfer_form_sent_at: new Date().toISOString()
+        })
+        .eq('id', transferApp.id);
+        
+      if (updateError) throw updateError;
+      
+      const isReplacement = transferApp.transfer_form_url ? 'replaced' : 'sent';
+      showToast(`Transfer form ${isReplacement} successfully!`, 'success');
+      
+      // Não limpar o arquivo selecionado - deixar o usuário decidir quando cancelar
+      // setTransferFormFile(null);
+      
+      // Recarregar dados do estudante
+      if (profileId) {
+        const { data: s, error } = await supabase
+          .from('user_profiles')
+          .select(`
+            id,
+            user_id,
+            full_name,
+            email,
+            phone,
+            country,
+            field_of_interest,
+            academic_level,
+            gpa,
+            english_proficiency,
+            status,
+            avatar_url,
+            dependents,
+            desired_scholarship_range,
+            created_at,
+            has_paid_selection_process_fee,
+            has_paid_i20_control_fee,
+            selection_process_fee_payment_method,
+            i20_control_fee_payment_method,
+            role,
+            seller_referral_code,
+            admin_notes,
+            scholarship_applications (
+              id,
+              scholarship_id,
+              status,
+              applied_at,
+              is_application_fee_paid,
+              is_scholarship_fee_paid,
+              application_fee_payment_method,
+              scholarship_fee_payment_method,
+              acceptance_letter_status,
+              acceptance_letter_url,
+              acceptance_letter_sent_at,
+              acceptance_letter_signed_at,
+              acceptance_letter_approved_at,
+              transfer_form_url,
+              transfer_form_status,
+              transfer_form_sent_at,
+              student_process_type,
+              payment_status,
+              reviewed_at,
+              reviewed_by,
+              documents,
+              scholarships (
+                title,
+                university_id,
+                universities (
+                  name
+                )
+              )
+            )
+          `)
+          .eq('id', profileId)
+          .single();
+
+        if (error) throw error;
+        if (s) {
+          // Processar dados do estudante
+          const lockedApplication = s.scholarship_applications?.find((app: any) => app.status === 'locked');
+          setStudent({
+            student_id: s.id,
+            user_id: s.user_id,
+            student_name: s.full_name || 'Unknown Student',
+            student_email: s.email || '',
+            phone: s.phone,
+            country: s.country,
+            field_of_interest: s.field_of_interest,
+            academic_level: s.academic_level,
+            gpa: s.gpa,
+            english_proficiency: s.english_proficiency,
+            status: s.status,
+            avatar_url: s.avatar_url,
+            dependents: s.dependents || 0,
+            desired_scholarship_range: s.desired_scholarship_range,
+            student_created_at: s.created_at,
+            has_paid_selection_process_fee: s.has_paid_selection_process_fee || false,
+            has_paid_i20_control_fee: s.has_paid_i20_control_fee || false,
+            selection_process_fee_payment_method: s.selection_process_fee_payment_method,
+            i20_control_fee_payment_method: s.i20_control_fee_payment_method,
+            seller_referral_code: s.seller_referral_code,
+            application_id: lockedApplication?.id || null,
+            scholarship_id: lockedApplication?.scholarship_id || null,
+            application_status: lockedApplication?.status || null,
+            applied_at: lockedApplication?.applied_at || null,
+            is_application_fee_paid: lockedApplication?.is_application_fee_paid || false,
+            is_scholarship_fee_paid: lockedApplication?.is_scholarship_fee_paid || false,
+            application_fee_payment_method: lockedApplication?.application_fee_payment_method || null,
+            scholarship_fee_payment_method: lockedApplication?.scholarship_fee_payment_method || null,
+            acceptance_letter_status: lockedApplication?.acceptance_letter_status || null,
+            student_process_type: lockedApplication?.student_process_type || null,
+            payment_status: lockedApplication?.payment_status || null,
+            scholarship_title: Array.isArray(lockedApplication?.scholarships) ? null : (lockedApplication?.scholarships as any)?.title || null,
+            university_name: Array.isArray(lockedApplication?.scholarships) ? null : (lockedApplication?.scholarships as any)?.universities?.name || null,
+            reviewed_at: lockedApplication?.reviewed_at || null,
+            reviewed_by: lockedApplication?.reviewed_by || null,
+            is_locked: !!lockedApplication,
+            total_applications: s.scholarship_applications ? s.scholarship_applications.length : 0,
+            all_applications: s.scholarship_applications || [],
+            admin_notes: s.admin_notes
+          });
+        }
+      }
+      
+    } catch (error: any) {
+      console.error('Error uploading transfer form:', error);
+      showToast(error.message || 'Failed to upload transfer form', 'error');
+    } finally {
+      setUploadingTransferForm(false);
+    }
+  };
+
   if (loading || !student) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
@@ -1491,6 +2142,16 @@ const AdminStudentDetails: React.FC = () => {
               }`}
             >
               Documents
+            </button>
+            <button
+              onClick={() => setActiveTab('scholarships')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'scholarships'
+                  ? 'border-[#05294E] text-[#05294E]'
+                  : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+              }`}
+            >
+              Scholarships
             </button>
             <button
               onClick={() => setActiveTab('logs')}
@@ -1804,6 +2465,158 @@ const AdminStudentDetails: React.FC = () => {
                   )}
                 </div>
               </div>
+
+              {/* Admin Notes - Only for Platform Admins */}
+              {isPlatformAdmin && (
+                <div className="bg-slate-50 rounded-xl p-4">
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-slate-900 flex items-center">
+                  <FileText className="w-5 h-5 mr-2 text-[#05294E]" />
+                  Admin Notes
+                </h3>
+                <button
+                  onClick={() => setIsAddingNote(true)}
+                  className="px-3 py-1 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-sm rounded-lg flex items-center space-x-1"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                  <span>New Note</span>
+                </button>
+              </div>
+                  <div className="space-y-4">
+                    {/* Formulário para adicionar nova nota */}
+                    {isAddingNote && (
+                    <div className="bg-white border border-slate-200 rounded-lg p-4">
+                      <label className="block text-sm font-medium text-slate-700 mb-2">
+                        Add a new note
+                      </label>
+                      <textarea
+                        value={newNoteContent}
+                        onChange={(e) => setNewNoteContent(e.target.value)}
+                        placeholder="Enter your note about this student..."
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] resize-none"
+                        rows={3}
+                        disabled={savingNotes}
+                      />
+                      <div className="flex items-center justify-between mt-3">
+                        <p className="text-xs text-slate-500">
+                          These notes are only visible to platform administrators.
+                        </p>
+                        <div className="flex items-center space-x-2">
+                          <button
+                            onClick={() => { setIsAddingNote(false); setNewNoteContent(''); }}
+                            disabled={savingNotes}
+                            className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white text-sm rounded-lg flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <span>Cancel</span>
+                          </button>
+                          <button
+                            onClick={async () => { await handleAddNote(); setIsAddingNote(false); }}
+                            disabled={savingNotes || !newNoteContent.trim()}
+                            className="px-4 py-2 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-sm rounded-lg flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <Save className="w-4 h-4" />
+                            <span>{savingNotes ? 'Adding...' : 'Add Note'}</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                    )}
+
+                    {/* Lista de notas existentes */}
+                    <div className="space-y-3">
+                      {adminNotes.length > 0 ? (
+                        <div className="space-y-3">
+                          {adminNotes.map((note, index) => (
+                            <div key={note.id} className="bg-white border border-slate-200 rounded-lg p-4">
+                              <div className="flex items-start justify-between mb-2">
+                                <div className="flex items-center space-x-2">
+                                  <div className="w-2 h-2 bg-[#05294E] rounded-full flex-shrink-0 mt-2"></div>
+                                  <div>
+                                    <p className="text-sm font-medium text-slate-900">{note.created_by_name}</p>
+                                    <p className="text-xs text-slate-500">
+                                      {new Date(note.created_at).toLocaleString('pt-BR', {
+                                        year: 'numeric',
+                                        month: '2-digit',
+                                        day: '2-digit',
+                                        hour: '2-digit',
+                                        minute: '2-digit'
+                                      })}
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  <span className="text-xs text-slate-400 bg-slate-100 px-2 py-1 rounded-full">
+                                    #{adminNotes.length - index}
+                                  </span>
+                                  <div className="flex items-center space-x-1">
+                                    <button
+                                      onClick={() => handleEditNote(note.id)}
+                                      disabled={savingNotes || editingNoteId === note.id}
+                                      className="p-1 text-slate-400 hover:text-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                      title="Edit note"
+                                    >
+                                      <Edit3 className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteNote(note.id)}
+                                      disabled={savingNotes || editingNoteId === note.id}
+                                      className="p-1 text-slate-400 hover:text-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                      title="Delete note"
+                                    >
+                                      <X className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              {/* Conteúdo da nota - modo visualização ou edição */}
+                              {editingNoteId === note.id ? (
+                                <div className="ml-4 space-y-3">
+                                  <textarea
+                                    value={editingNoteContent}
+                                    onChange={(e) => setEditingNoteContent(e.target.value)}
+                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] resize-none text-sm"
+                                    rows={3}
+                                    disabled={savingNotes}
+                                  />
+                                  <div className="flex items-center space-x-2">
+                                    <button
+                                      onClick={handleSaveEditNote}
+                                      disabled={savingNotes || !editingNoteContent.trim()}
+                                      className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg flex items-center space-x-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                      <Save className="w-3 h-3" />
+                                      <span>{savingNotes ? 'Saving...' : 'Save'}</span>
+                                    </button>
+                                    <button
+                                      onClick={handleCancelEditNote}
+                                      disabled={savingNotes}
+                                      className="px-3 py-1 bg-slate-600 hover:bg-slate-700 text-white text-sm rounded-lg flex items-center space-x-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                      <X className="w-3 h-3" />
+                                      <span>Cancel</span>
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <p className="text-slate-900 text-sm whitespace-pre-wrap ml-4">
+                                  {note.content}
+                                </p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-6">
+                          <FileText className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                          <p className="text-slate-500 text-sm">No notes added yet</p>
+                          <p className="text-xs text-slate-400 mt-1">Add your first note above</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -1838,23 +2651,20 @@ const AdminStudentDetails: React.FC = () => {
             </div>
             <div className="p-6">
               {(() => {
-                const applicationsWithDocs: any[] = [];
-                (student.all_applications || []).forEach((app: any) => {
-                  if (Array.isArray(app.documents) && app.documents.length > 0) applicationsWithDocs.push(app);
-                });
-                if (applicationsWithDocs.length === 0) {
+                const allApplications = student.all_applications || [];
+                if (allApplications.length === 0) {
                   return (
                     <div className="text-center py-8">
                       <div className="mx-auto w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
                         <FileText className="w-8 h-8 text-slate-400" />
                       </div>
-                      <h3 className="text-lg font-medium text-slate-900 mb-2">No Documents Yet</h3>
+                      <h3 className="text-lg font-medium text-slate-900 mb-2">No Applications Yet</h3>
                     </div>
                   );
                 }
                 return (
                   <div className="space-y-4">
-                    {applicationsWithDocs
+                    {allApplications
                       .sort((a: any, b: any) => {
                         // Aplicações aprovadas primeiro
                         if (a.status === 'approved' && b.status !== 'approved') return -1;
@@ -1888,15 +2698,16 @@ const AdminStudentDetails: React.FC = () => {
                                     </span>
                                   )}
                                 </h4>
-                              <p className="text-sm text-slate-600">{app.scholarships?.universities?.name || 'University'} • {app.documents.length} documents</p>
+                              <p className="text-sm text-slate-600">{app.scholarships?.universities?.name || 'University'} • {app.documents ? app.documents.length : 0} documents</p>
                               </div>
                             </div>
                             <svg className={`w-5 h-5 text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
                           </button>
                           {isExpanded && (
                             <div className="p-4 bg-white border-t border-slate-200">
-                              <div className="grid gap-3">
-                                {app.documents.map((doc: any, docIndex: number) => (
+                              {app.documents && app.documents.length > 0 ? (
+                                <div className="grid gap-3">
+                                  {app.documents.map((doc: any, docIndex: number) => (
                                   <div key={`${app.id}-${doc.type}-${docIndex}`} className="border border-slate-200 rounded-lg p-4">
                                     <div className="flex flex-col md:flex-row items-start justify-between gap-2 mb-3">
                                       <div className="flex-1 min-w-0">
@@ -1982,58 +2793,62 @@ const AdminStudentDetails: React.FC = () => {
                                     )}
                                   </div>
                                 ))}
-                              </div>
+                                </div>
+                              ) : (
+                                <div className="text-center py-6">
+                                  <div className="mx-auto w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mb-3">
+                                    <FileText className="w-6 h-6 text-slate-400" />
+                                  </div>
+                                  <h4 className="text-sm font-medium text-slate-900 mb-1">No Documents Submitted</h4>
+                                  <p className="text-xs text-slate-500">Student has not uploaded any documents yet.</p>
+                                </div>
+                              )}
                               
                               {/* Application Approval Section - Only for Platform Admins */}
-                              {isPlatformAdmin && (() => {
-                                // Verificar se todos os documentos desta aplicação foram aprovados
-                                const allDocsApproved = app.documents.every((doc: any) => doc.status === 'approved');
-                                
-                                return allDocsApproved && (
-                                  <div className={`mt-4 p-4 rounded-lg border ${
-                                    app.status === 'approved' 
-                                      ? 'bg-green-50 border-green-200' 
-                                      : 'bg-slate-50 border-slate-200'
-                                  }`}>
-                                    <div className="flex items-center justify-between mb-3">
-                                      <div>
-                                        <h4 className="font-semibold text-slate-900">Application Approval</h4>
-                                        <p className="text-sm text-slate-600">
-                                          {app.status === 'approved' 
-                                            ? 'This application has been approved.' 
-                                            : 'All documents approved. You can now approve this application.'
-                                          }
-                                        </p>
+                              {isPlatformAdmin && (
+                                <div className={`mt-4 p-4 rounded-lg border ${
+                                  app.status === 'approved' 
+                                    ? 'bg-green-50 border-green-200' 
+                                    : 'bg-slate-50 border-slate-200'
+                                }`}>
+                                  <div className="flex items-center justify-between mb-3">
+                                    <div>
+                                      <h4 className="font-semibold text-slate-900">Application Approval</h4>
+                                      <p className="text-sm text-slate-600">
+                                        {app.status === 'approved' 
+                                          ? 'This application has been approved.' 
+                                          : 'You can approve this application regardless of document status.'
+                                        }
+                                      </p>
+                                    </div>
+                                    {app.status === 'approved' && (
+                                      <div className="flex items-center space-x-1 text-green-600">
+                                        <CheckCircle className="w-4 h-4" />
+                                        <span className="text-sm font-medium">Approved</span>
                                       </div>
-                                      {app.status === 'approved' && (
-                                        <div className="flex items-center space-x-1 text-green-600">
-                                          <CheckCircle className="w-4 h-4" />
-                                          <span className="text-sm font-medium">Approved</span>
-                                        </div>
-                                      )}
-                                    </div>
-                                    <div className="flex flex-col sm:flex-row gap-2">
-                                      <button
-                                        onClick={() => {
-                                          setPendingRejectAppId(app.id);
-                                          setShowRejectStudentModal(true);
-                                        }}
-                                        disabled={approvingStudent || rejectingStudent || app.status === 'approved'}
-                                        className="px-4 py-2 rounded-lg font-medium text-red-600 border border-red-200 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-center text-sm"
-                                      >
-                                        {app.status === 'approved' ? 'Application Approved' : 'Reject Application'}
-                                      </button>
-                                      <button
-                                        disabled={approvingStudent || rejectingStudent || app.status === 'approved'}
-                                        onClick={() => approveApplication(app.id)}
-                                        className="px-4 py-2 rounded-lg font-medium bg-[#05294E] text-white hover:bg-[#041f38] disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-center text-sm"
-                                      >
-                                        {app.status === 'approved' ? 'Approved' : (approvingStudent ? 'Approving...' : 'Approve Application')}
-                                      </button>
-                                    </div>
+                                    )}
                                   </div>
-                                );
-                              })()}
+                                  <div className="flex flex-col sm:flex-row gap-2">
+                                    <button
+                                      onClick={() => {
+                                        setPendingRejectAppId(app.id);
+                                        setShowRejectStudentModal(true);
+                                      }}
+                                      disabled={approvingStudent || rejectingStudent || app.status === 'approved'}
+                                      className="px-4 py-2 rounded-lg font-medium text-red-600 border border-red-200 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-center text-sm"
+                                    >
+                                      {app.status === 'approved' ? 'Application Approved' : 'Reject Application'}
+                                    </button>
+                                    <button
+                                      disabled={approvingStudent || rejectingStudent || app.status === 'approved'}
+                                      onClick={() => approveApplication(app.id)}
+                                      className="px-4 py-2 rounded-lg font-medium bg-[#05294E] text-white hover:bg-[#041f38] disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-center text-sm"
+                                    >
+                                      {app.status === 'approved' ? 'Approved' : (approvingStudent ? 'Approving...' : 'Approve Application')}
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>
@@ -2103,6 +2918,7 @@ const AdminStudentDetails: React.FC = () => {
                                 case 'application_fee': return 'Student pays the application fee';
                                 case 'scholarship_fee': return 'Student pays the scholarship fee';
                                 case 'acceptance_letter': return 'University sends acceptance letter';
+                                case 'transfer_form': return 'University sends transfer form (for transfer students)';
                                 case 'i20_fee': return 'Student pays I-20 control fee';
                                 case 'enrollment': return 'Student enrolls in the program';
                                 default: return 'Process step';
@@ -2307,179 +3123,415 @@ const AdminStudentDetails: React.FC = () => {
               </div>
             </div>
             <div className="p-6 space-y-4">
-              <div className="bg-slate-50 rounded-xl p-4 flex items-center justify-between">
-                <div className="flex-1">
-                  <dt className="text-sm font-medium text-slate-600">Selection Process Fee</dt>
-                  <dd className="text-sm text-slate-500 mt-1">Required to start applications</dd>
-                  {editingFees ? (
-                    <div className="mt-2">
-                      <input
-                        type="number"
-                        value={editingFees.selection_process}
-                        onChange={(e) => setEditingFees(prev => prev ? { ...prev, selection_process: Number(e.target.value) } : null)}
-                        className="w-32 px-3 py-2 border border-slate-300 rounded-lg text-sm"
-                        min="0"
-                        step="0.01"
-                      />
-                    </div>
-                  ) : (
-                    <dd className="text-sm font-semibold text-slate-700 mt-1 flex items-center">
-                      {(() => {
-                    const hasCustomOverride = hasOverride('selection_process');
-                    if (hasCustomOverride) return formatFeeAmount(getFeeAmount('selection_process'));
-                    const base = Number(getFeeAmount('selection_process'));
-                    return formatFeeAmount(base + dependents * 150);
-                      })()}
-                      {hasOverride('selection_process') && (
-                        <span className="ml-2 text-xs text-blue-500">(custom)</span>
-                      )}
-                    </dd>
-                  )}
-                </div>
-                <div className="flex items-center space-x-2">
-                   {student.has_paid_selection_process_fee ? (
-                    <><CheckCircle className="h-5 w-5 text-green-600" /><span className="text-sm font-medium text-green-600">Paid</span></>
-                  ) : (
-                     <div className="flex items-center space-x-2">
-                      <XCircle className="h-5 w-5 text-red-600" />
-                      <span className="text-sm font-medium text-red-600">Not Paid</span>
-                       {isPlatformAdmin && (
-                         <button
-                           onClick={() => openPaymentModal('selection_process')}
-                           disabled={markingAsPaid[`${student.student_id}:selection_process`]}
-                           className="px-2 py-1 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-xs rounded-md flex items-center space-x-1"
-                         >
-                           <CheckCircle className="w-3 h-3" />
-                           <span>{markingAsPaid[`${student.student_id}:selection_process`] ? 'Marking...' : 'Mark as Paid'}</span>
-                         </button>
-                       )}
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div className="bg-slate-50 rounded-xl p-4 flex items-center justify-between">
-                <div className="flex-1">
-                  <dt className="text-sm font-medium text-slate-600">Application Fee</dt>
-                  <dd className="text-sm text-slate-500 mt-1">Paid after scholarship approval</dd>
-                  <dd className="text-sm font-semibold text-slate-700 mt-1">$400.00</dd>
-                </div>
-                <div className="flex items-center space-x-2">
-                  {student.is_application_fee_paid ? (
-                    <><CheckCircle className="h-5 w-5 text-green-600" /><span className="text-sm font-medium text-green-600">Paid</span></>
-                  ) : (
-                    <div className="flex items-center space-x-2">
-                      <XCircle className="h-5 w-5 text-red-600" />
-                      <span className="text-sm font-medium text-red-600">Not Paid</span>
-                       {isPlatformAdmin && (() => {
-                         // Buscar aplicação aprovada para application fee
-                         const approvedApp = student.all_applications?.find((app: any) => app.status === 'approved');
-                         return approvedApp && (
+              <div className="bg-slate-50 rounded-xl p-4">
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                  <div className="flex-1">
+                    <dt className="text-sm font-medium text-slate-600">Selection Process Fee</dt>
+                    <dd className="text-sm text-slate-500 mt-1">Required to start applications</dd>
+                    {editingFees ? (
+                      <div className="mt-2">
+                        <input
+                          type="number"
+                          value={editingFees.selection_process}
+                          onChange={(e) => setEditingFees(prev => prev ? { ...prev, selection_process: Number(e.target.value) } : null)}
+                          className="w-32 px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                          min="0"
+                          step="0.01"
+                        />
+                      </div>
+                    ) : (
+                      <dd className="text-sm font-semibold text-slate-700 mt-1 flex items-center">
+                        {(() => {
+                      const hasCustomOverride = hasOverride('selection_process');
+                      if (hasCustomOverride) return formatFeeAmount(getFeeAmount('selection_process'));
+                      const base = Number(getFeeAmount('selection_process'));
+                      return formatFeeAmount(base + dependents * 150);
+                        })()}
+                        {hasOverride('selection_process') && (
+                          <span className="ml-2 text-xs text-blue-500">(custom)</span>
+                        )}
+                      </dd>
+                    )}
+                  </div>
+                  <div className="flex flex-col gap-3">
+                     {student.has_paid_selection_process_fee ? (
+                      <div className="flex flex-col gap-3">
+                        <div className="flex items-center space-x-2">
+                          <CheckCircle className="h-5 w-5 text-green-600" />
+                          <span className="text-sm font-medium text-green-600">Paid</span>
+                        </div>
+                        {isPlatformAdmin && (
+                          <div className="flex flex-col gap-3">
+                            {editingPaymentMethod === 'selection_process' ? (
+                              <div className="flex flex-col gap-3">
+                                <select
+                                  value={newPaymentMethod}
+                                  onChange={(e) => setNewPaymentMethod(e.target.value as 'stripe' | 'zelle' | 'manual')}
+                                  className="text-sm px-3 py-2 border border-slate-300 rounded-lg w-full max-w-[150px]"
+                                  disabled={savingPaymentMethod}
+                                >
+                                  <option value="manual">Manual</option>
+                                  <option value="stripe">Stripe</option>
+                                  <option value="zelle">Zelle</option>
+                                </select>
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    onClick={() => handleUpdatePaymentMethod('selection_process')}
+                                    disabled={savingPaymentMethod}
+                                    className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg flex items-center space-x-2"
+                                  >
+                                    <Save className="w-4 h-4" />
+                                    <span>{savingPaymentMethod ? 'Saving...' : 'Save'}</span>
+                                  </button>
+                                  <button
+                                    onClick={() => setEditingPaymentMethod(null)}
+                                    className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white text-sm rounded-lg flex items-center space-x-2"
+                                  >
+                                    <X className="w-4 h-4" />
+                                    <span>Cancel</span>
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => {
+                                  setEditingPaymentMethod('selection_process');
+                                  setNewPaymentMethod((student.selection_process_fee_payment_method as 'stripe' | 'zelle' | 'manual') || 'manual');
+                                }}
+                                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg flex items-center space-x-2 w-fit"
+                              >
+                                <Edit3 className="w-4 h-4" />
+                                <span>Edit Method</span>
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                       <div className="flex flex-col gap-3">
+                        <div className="flex items-center space-x-2">
+                          <XCircle className="h-5 w-5 text-red-600" />
+                          <span className="text-sm font-medium text-red-600">Not Paid</span>
+                        </div>
+                         {isPlatformAdmin && (
                            <button
-                             onClick={() => openPaymentModal('application', approvedApp.id)}
-                             disabled={markingAsPaid[`${student.student_id}:application`]}
-                             className="px-2 py-1 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-xs rounded-md flex items-center space-x-1"
+                             onClick={() => openPaymentModal('selection_process')}
+                             disabled={markingAsPaid[`${student.student_id}:selection_process`]}
+                             className="px-4 py-2 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-sm rounded-lg flex items-center space-x-2 w-fit"
                            >
-                             <CheckCircle className="w-3 h-3" />
-                             <span>{markingAsPaid[`${student.student_id}:application`] ? 'Marking...' : 'Mark as Paid'}</span>
+                             <CheckCircle className="w-4 h-4" />
+                             <span>{markingAsPaid[`${student.student_id}:selection_process`] ? 'Marking...' : 'Mark as Paid'}</span>
                            </button>
-                         );
-                       })()}
-                    </div>
-                  )}
+                         )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-              <div className="bg-slate-50 rounded-xl p-4 flex items-center justify-between">
-                <div className="flex-1">
-                  <dt className="text-sm font-medium text-slate-600">Scholarship Fee</dt>
-                  <dd className="text-sm text-slate-500 mt-1">Paid after application fee</dd>
-                  {editingFees ? (
-                    <div className="mt-2">
-                      <input
-                        type="number"
-                        value={editingFees.scholarship}
-                        onChange={(e) => setEditingFees(prev => prev ? { ...prev, scholarship: Number(e.target.value) } : null)}
-                        className="w-32 px-3 py-2 border border-slate-300 rounded-lg text-sm"
-                        min="0"
-                        step="0.01"
-                      />
-                    </div>
-                  ) : (
-                    <dd className="text-sm font-semibold text-slate-700 mt-1 flex items-center">
-                      {formatFeeAmount(getFeeAmount('scholarship_fee'))}
-                      {hasOverride('scholarship_fee') && (
-                        <span className="ml-2 text-xs text-blue-500">(custom)</span>
-                      )}
-                    </dd>
-                  )}
-                </div>
-                <div className="flex items-center space-x-2">
-                   {student.is_scholarship_fee_paid ? (
-                    <><CheckCircle className="h-5 w-5 text-green-600" /><span className="text-sm font-medium text-green-600">Paid</span></>
-                  ) : (
-                     <div className="flex items-center space-x-2">
-                      <XCircle className="h-5 w-5 text-red-600" />
-                      <span className="text-sm font-medium text-red-600">Not Paid</span>
-                       {isPlatformAdmin && (() => {
-                         // Buscar aplicação aprovada para scholarship fee
-                         const approvedApp = student.all_applications?.find((app: any) => app.status === 'approved');
-                         return approvedApp && (
-                           <button
-                             onClick={() => openPaymentModal('scholarship', approvedApp.id)}
-                             disabled={markingAsPaid[`${student.student_id}:scholarship`]}
-                             className="px-2 py-1 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-xs rounded-md flex items-center space-x-1"
-                           >
-                             <CheckCircle className="w-3 h-3" />
-                             <span>{markingAsPaid[`${student.student_id}:scholarship`] ? 'Marking...' : 'Mark as Paid'}</span>
-                           </button>
-                         );
-                       })()}
-                    </div>
-                  )}
+              <div className="bg-slate-50 rounded-xl p-4">
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                  <div className="flex-1">
+                    <dt className="text-sm font-medium text-slate-600">Application Fee</dt>
+                    <dd className="text-sm text-slate-500 mt-1">Paid after scholarship approval</dd>
+                    <dd className="text-sm font-semibold text-slate-700 mt-1">$400.00</dd>
+                  </div>
+                  <div className="flex flex-col gap-3">
+                    {student.is_application_fee_paid ? (
+                      <div className="flex flex-col gap-3">
+                        <div className="flex items-center space-x-2">
+                          <CheckCircle className="h-5 w-5 text-green-600" />
+                          <span className="text-sm font-medium text-green-600">Paid</span>
+                        </div>
+                        {isPlatformAdmin && (
+                          <div className="flex flex-col gap-3">
+                            {editingPaymentMethod === 'application' ? (
+                              <div className="flex flex-col gap-3">
+                                <select
+                                  value={newPaymentMethod}
+                                  onChange={(e) => setNewPaymentMethod(e.target.value as 'stripe' | 'zelle' | 'manual')}
+                                  className="text-sm px-3 py-2 border border-slate-300 rounded-lg w-full max-w-[150px]"
+                                  disabled={savingPaymentMethod}
+                                >
+                                  <option value="manual">Manual</option>
+                                  <option value="stripe">Stripe</option>
+                                  <option value="zelle">Zelle</option>
+                                </select>
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    onClick={() => handleUpdatePaymentMethod('application')}
+                                    disabled={savingPaymentMethod}
+                                    className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg flex items-center space-x-2"
+                                  >
+                                    <Save className="w-4 h-4" />
+                                    <span>{savingPaymentMethod ? 'Saving...' : 'Save'}</span>
+                                  </button>
+                                  <button
+                                    onClick={() => setEditingPaymentMethod(null)}
+                                    className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white text-sm rounded-lg flex items-center space-x-2"
+                                  >
+                                    <X className="w-4 h-4" />
+                                    <span>Cancel</span>
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => {
+                                  setEditingPaymentMethod('application');
+                                  const approvedApp = student.all_applications?.find((app: any) => app.status === 'approved');
+                                  setNewPaymentMethod((approvedApp?.application_fee_payment_method as 'stripe' | 'zelle' | 'manual') || 'manual');
+                                }}
+                                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg flex items-center space-x-2 w-fit"
+                              >
+                                <Edit3 className="w-4 h-4" />
+                                <span>Edit Method</span>
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col gap-3">
+                        <div className="flex items-center space-x-2">
+                          <XCircle className="h-5 w-5 text-red-600" />
+                          <span className="text-sm font-medium text-red-600">Not Paid</span>
+                        </div>
+                         {isPlatformAdmin && (() => {
+                           // Buscar aplicação aprovada para application fee
+                           const approvedApp = student.all_applications?.find((app: any) => app.status === 'approved');
+                           return approvedApp && (
+                             <button
+                               onClick={() => openPaymentModal('application', approvedApp.id)}
+                               disabled={markingAsPaid[`${student.student_id}:application`]}
+                               className="px-4 py-2 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-sm rounded-lg flex items-center space-x-2 w-fit"
+                             >
+                               <CheckCircle className="w-4 h-4" />
+                               <span>{markingAsPaid[`${student.student_id}:application`] ? 'Marking...' : 'Mark as Paid'}</span>
+                             </button>
+                           );
+                         })()}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-              <div className="bg-slate-50 rounded-xl p-4 flex items-center justify-between">
-                <div className="flex-1">
-                  <dt className="text-sm font-medium text-slate-600">I-20 Control Fee</dt>
-                  <dd className="text-sm text-slate-500 mt-1">Final step for enrollment</dd>
-                  {editingFees ? (
-                    <div className="mt-2">
-                      <input
-                        type="number"
-                        value={editingFees.i20_control}
-                        onChange={(e) => setEditingFees(prev => prev ? { ...prev, i20_control: Number(e.target.value) } : null)}
-                        className="w-32 px-3 py-2 border border-slate-300 rounded-lg text-sm"
-                        min="0"
-                        step="0.01"
-                      />
-                    </div>
-                  ) : (
-                    <dd className="text-sm font-semibold text-slate-700 mt-1 flex items-center">
-                      {formatFeeAmount(getFeeAmount('i20_control_fee'))}
-                      {hasOverride('i20_control_fee') && (
-                        <span className="ml-2 text-xs text-blue-500">(custom)</span>
-                      )}
-                    </dd>
-                  )}
+              <div className="bg-slate-50 rounded-xl p-4">
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                  <div className="flex-1">
+                    <dt className="text-sm font-medium text-slate-600">Scholarship Fee</dt>
+                    <dd className="text-sm text-slate-500 mt-1">Paid after application fee</dd>
+                    {editingFees ? (
+                      <div className="mt-2">
+                        <input
+                          type="number"
+                          value={editingFees.scholarship}
+                          onChange={(e) => setEditingFees(prev => prev ? { ...prev, scholarship: Number(e.target.value) } : null)}
+                          className="w-32 px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                          min="0"
+                          step="0.01"
+                        />
+                      </div>
+                    ) : (
+                      <dd className="text-sm font-semibold text-slate-700 mt-1 flex items-center">
+                        {formatFeeAmount(getFeeAmount('scholarship_fee'))}
+                        {hasOverride('scholarship_fee') && (
+                          <span className="ml-2 text-xs text-blue-500">(custom)</span>
+                        )}
+                      </dd>
+                    )}
+                  </div>
+                  <div className="flex flex-col gap-3">
+                    {student.is_scholarship_fee_paid ? (
+                      <div className="flex flex-col gap-3">
+                        <div className="flex items-center space-x-2">
+                          <CheckCircle className="h-5 w-5 text-green-600" />
+                          <span className="text-sm font-medium text-green-600">Paid</span>
+                        </div>
+                        {isPlatformAdmin && (
+                          <div className="flex flex-col gap-3">
+                            {editingPaymentMethod === 'scholarship' ? (
+                              <div className="flex flex-col gap-3">
+                                <select
+                                  value={newPaymentMethod}
+                                  onChange={(e) => setNewPaymentMethod(e.target.value as 'stripe' | 'zelle' | 'manual')}
+                                  className="text-sm px-3 py-2 border border-slate-300 rounded-lg w-full max-w-[150px]"
+                                  disabled={savingPaymentMethod}
+                                >
+                                  <option value="manual">Manual</option>
+                                  <option value="stripe">Stripe</option>
+                                  <option value="zelle">Zelle</option>
+                                </select>
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    onClick={() => handleUpdatePaymentMethod('scholarship')}
+                                    disabled={savingPaymentMethod}
+                                    className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg flex items-center space-x-2"
+                                  >
+                                    <Save className="w-4 h-4" />
+                                    <span>{savingPaymentMethod ? 'Saving...' : 'Save'}</span>
+                                  </button>
+                                  <button
+                                    onClick={() => setEditingPaymentMethod(null)}
+                                    className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white text-sm rounded-lg flex items-center space-x-2"
+                                  >
+                                    <X className="w-4 h-4" />
+                                    <span>Cancel</span>
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => {
+                                  setEditingPaymentMethod('scholarship');
+                                  const approvedApp = student.all_applications?.find((app: any) => app.status === 'approved');
+                                  setNewPaymentMethod((approvedApp?.scholarship_fee_payment_method as 'stripe' | 'zelle' | 'manual') || 'manual');
+                                }}
+                                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg flex items-center space-x-2 w-fit"
+                              >
+                                <Edit3 className="w-4 h-4" />
+                                <span>Edit Method</span>
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col gap-3">
+                        <div className="flex items-center space-x-2">
+                          <XCircle className="h-5 w-5 text-red-600" />
+                          <span className="text-sm font-medium text-red-600">Not Paid</span>
+                        </div>
+                         {isPlatformAdmin && (() => {
+                           // Buscar aplicação aprovada para scholarship fee
+                           const approvedApp = student.all_applications?.find((app: any) => app.status === 'approved');
+                           return approvedApp && (
+                             <button
+                               onClick={() => openPaymentModal('scholarship', approvedApp.id)}
+                               disabled={markingAsPaid[`${student.student_id}:scholarship`]}
+                               className="px-4 py-2 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-sm rounded-lg flex items-center space-x-2 w-fit"
+                             >
+                               <CheckCircle className="w-4 h-4" />
+                               <span>{markingAsPaid[`${student.student_id}:scholarship`] ? 'Marking...' : 'Mark as Paid'}</span>
+                             </button>
+                           );
+                         })()}
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                   {student.has_paid_i20_control_fee ? (
-                    <><CheckCircle className="h-5 w-5 text-green-600" /><span className="text-sm font-medium text-green-600">Paid</span></>
-                  ) : (
-                     <div className="flex items-center space-x-2">
-                      <XCircle className="h-5 w-5 text-red-600" />
-                      <span className="text-sm font-medium text-red-600">Not Paid</span>
-                       {isPlatformAdmin && (
-                         <button
-                           onClick={() => openPaymentModal('i20_control')}
-                           disabled={markingAsPaid[`${student.student_id}:i20_control`]}
-                           className="px-2 py-1 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-xs rounded-md flex items-center space-x-1"
-                         >
-                           <CheckCircle className="w-3 h-3" />
-                           <span>{markingAsPaid[`${student.student_id}:i20_control`] ? 'Marking...' : 'Mark as Paid'}</span>
-                         </button>
-                       )}
+              </div>
+              <div className="bg-slate-50 rounded-xl p-4">
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                  <div className="flex-1">
+                    <dt className="text-sm font-medium text-slate-600">I-20 Control Fee</dt>
+                    <dd className="text-sm text-slate-500 mt-1">Final step for enrollment</dd>
+                    {editingFees ? (
+                      <div className="mt-2">
+                        <input
+                          type="number"
+                          value={editingFees.i20_control}
+                          onChange={(e) => setEditingFees(prev => prev ? { ...prev, i20_control: Number(e.target.value) } : null)}
+                          className="w-32 px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                          min="0"
+                          step="0.01"
+                        />
+                      </div>
+                    ) : (
+                      <dd className="text-sm font-semibold text-slate-700 mt-1 flex items-center">
+                        {formatFeeAmount(getFeeAmount('i20_control_fee'))}
+                        {hasOverride('i20_control_fee') && (
+                          <span className="ml-2 text-xs text-blue-500">(custom)</span>
+                        )}
+                      </dd>
+                    )}
+                  </div>
+                  <div className="flex flex-col gap-3">
+                     {student.has_paid_i20_control_fee ? (
+                      <div className="flex flex-col gap-3">
+                        <div className="flex items-center space-x-2">
+                          <CheckCircle className="h-5 w-5 text-green-600" />
+                          <span className="text-sm font-medium text-green-600">Paid</span>
+                        </div>
+                        {isPlatformAdmin && (
+                          <div className="flex flex-col gap-3">
+                            {editingPaymentMethod === 'i20_control' ? (
+                              <div className="flex flex-col gap-3">
+                                <select
+                                  value={newPaymentMethod}
+                                  onChange={(e) => setNewPaymentMethod(e.target.value as 'stripe' | 'zelle' | 'manual')}
+                                  className="text-sm px-3 py-2 border border-slate-300 rounded-lg w-full max-w-[150px]"
+                                  disabled={savingPaymentMethod}
+                                >
+                                  <option value="manual">Manual</option>
+                                  <option value="stripe">Stripe</option>
+                                  <option value="zelle">Zelle</option>
+                                </select>
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    onClick={() => handleUpdatePaymentMethod('i20_control')}
+                                    disabled={savingPaymentMethod}
+                                    className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg flex items-center space-x-2"
+                                  >
+                                    <Save className="w-4 h-4" />
+                                    <span>{savingPaymentMethod ? 'Saving...' : 'Save'}</span>
+                                  </button>
+                                  <button
+                                    onClick={() => setEditingPaymentMethod(null)}
+                                    className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white text-sm rounded-lg flex items-center space-x-2"
+                                  >
+                                    <X className="w-4 h-4" />
+                                    <span>Cancel</span>
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => {
+                                  setEditingPaymentMethod('i20_control');
+                                  setNewPaymentMethod((student.i20_control_fee_payment_method as 'stripe' | 'zelle' | 'manual') || 'manual');
+                                }}
+                                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg flex items-center space-x-2 w-fit"
+                              >
+                                <Edit3 className="w-4 h-4" />
+                                <span>Edit Method</span>
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                       <div className="flex flex-col gap-3">
+                        <div className="flex items-center space-x-2">
+                          <XCircle className="h-5 w-5 text-red-600" />
+                          <span className="text-sm font-medium text-red-600">Not Paid</span>
+                        </div>
+                          {isPlatformAdmin && (() => {
+                            // Guardas: só pode marcar I-20 se SP Fee pago e acceptance letter enviada
+                            // Se o aluno já está enrolled, permitir marcar I-20 como pago independente dos outros fees
+                            const approvedApp = student.all_applications?.find((app: any) => app.status === 'approved' || app.status === 'enrolled');
+                            const acceptanceSent = !!approvedApp?.acceptance_letter_status && approvedApp.acceptance_letter_status === 'sent';
+                            const isEnrolled = student.application_status === 'enrolled';
+                            
+                            // Se está enrolled, pode marcar I-20 independente dos outros fees
+                            // Se não está enrolled, precisa ter SP fee pago e acceptance letter enviada
+                            const canMarkI20 = isEnrolled || (student.has_paid_selection_process_fee && acceptanceSent);
+                            
+                            return (
+                              <button
+                                onClick={() => openPaymentModal('i20_control')}
+                                disabled={markingAsPaid[`${student.student_id}:i20_control`] || !canMarkI20}
+                                className="px-4 py-2 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-sm rounded-lg flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed w-fit"
+                                title={!canMarkI20 ? (isEnrolled ? 'I-20 can be marked as paid for enrolled students' : 'Complete previous steps: Selection Process Fee and Acceptance Letter must be completed first') : ''}
+                              >
+                                <CheckCircle className="w-4 h-4" />
+                                <span>{markingAsPaid[`${student.student_id}:i20_control`] ? 'Marking...' : (!canMarkI20 ? 'Complete previous steps' : 'Mark as Paid')}</span>
+                              </button>
+                            );
+                          })()}
+                      </div>
+                    )}
+                  </div>
                 </div>
-                  )}
               </div>
             </div>
           </div>
@@ -2493,13 +3545,112 @@ const AdminStudentDetails: React.FC = () => {
                   hasPaid={student.has_paid_i20_control_fee}
                   studentName={student.student_name}
                 />
-        </div>
-      </div>
+              </div>
+            </div>
           )}
 
-    </div>
+          {/* Term Acceptance History */}
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
+            <div className="bg-gradient-to-r rounded-t-2xl from-blue-600 to-blue-700 px-6 py-4">
+              <h2 className="text-xl font-semibold text-white flex items-center">
+                <FileText className="w-6 h-6 mr-3" />
+                Term Acceptance History
+              </h2>
+            </div>
+            <div className="p-6">
+              {loadingTermAcceptances ? (
+                <div className="flex items-center justify-center p-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                </div>
+              ) : termAcceptances.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <FileText className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                  <p className="text-lg">No terms accepted yet</p>
+                  <p className="text-sm text-gray-400 mt-2">
+                    This student hasn't accepted any terms yet.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {termAcceptances.map((acceptance) => (
+                    <div key={acceptance.id} className="border border-slate-200 rounded-lg p-4 hover:bg-slate-50 transition-colors">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center space-x-3 mb-3">
+                            <div className="flex-shrink-0 h-8 w-8">
+                              <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
+                                <FileText className="w-4 h-4 text-green-600" />
+                              </div>
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <h3 className="text-sm font-medium text-gray-900 truncate">
+                                {acceptance.term_title || 'N/A'}
+                              </h3>
+                              <p className="text-sm text-gray-500 capitalize truncate">
+                                {acceptance.term_type.replace(/_/g, ' ')}
+                              </p>
+                            </div>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <div className="flex items-center text-sm text-gray-600">
+                              <Calendar className="w-4 h-4 mr-2 text-gray-400 flex-shrink-0" />
+                              <span className="truncate">
+                                Accepted: {new Date(acceptance.accepted_at).toLocaleString('pt-BR')}
+                              </span>
+                            </div>
+                            <div className="flex items-center text-sm text-gray-600">
+                              <Globe className="w-4 h-4 mr-2 text-gray-400 flex-shrink-0" />
+                              <span className="truncate" title={acceptance.ip_address || 'N/A'}>
+                                IP: {acceptance.ip_address || 'N/A'}
+                              </span>
+                            </div>
+                            {acceptance.user_agent && (
+                              <div className="flex items-start text-sm text-gray-600">
+                                <Users className="w-4 h-4 mr-2 text-gray-400 flex-shrink-0 mt-0.5" />
+                                <span className="truncate" title={acceptance.user_agent}>
+                                  {acceptance.user_agent.length > 80 
+                                    ? acceptance.user_agent.substring(0, 80) + '...' 
+                                    : acceptance.user_agent
+                                  }
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        
+                        <div className="flex-shrink-0">
+                          <button
+                            onClick={() => {
+                              const pdfData: StudentTermAcceptanceData = {
+                                student_name: acceptance.user_full_name || 'N/A',
+                                student_email: acceptance.user_email || 'N/A',
+                                term_title: acceptance.term_title || 'N/A',
+                                accepted_at: new Date(acceptance.accepted_at).toLocaleString('en-US'),
+                                ip_address: acceptance.ip_address || 'N/A',
+                                user_agent: acceptance.user_agent || 'N/A',
+                                country: 'N/A',
+                                affiliate_code: undefined,
+                                term_content: acceptance.term_content || ''
+                              };
+                              generateTermAcceptancePDF(pdfData);
+                            }}
+                            className="inline-flex items-center px-3 py-1 rounded-md text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                            title="Download PDF certificate"
+                          >
+                            <Download className="h-3 w-3 mr-1" />
+                            PDF
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
 
-      </div>
+        </div>
       </div>
       )}
 
@@ -2651,6 +3802,243 @@ const AdminStudentDetails: React.FC = () => {
             </div>
           )}
 
+          {/* Transfer Form Section - Only for transfer students */}
+          {student?.student_process_type === 'transfer' && (
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-3xl shadow-sm relative overflow-hidden">
+              <div className="bg-gradient-to-r from-[#05294E] to-[#041f38] px-6 py-5 rounded-t-3xl">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                  <div className="flex items-start sm:items-center space-x-4 min-w-0">
+                    <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg flex-shrink-0">
+                      <svg className="w-6 h-6 text-[#05294E]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="text-xl font-bold text-white break-words">Transfer Form</h3>
+                      <p className="text-blue-100 text-sm break-words">Transfer form for current F-1 students</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="p-6">
+                {(() => {
+                  // Encontrar aplicação transfer
+                  const transferApp = student.all_applications?.find((app: any) => 
+                    app.student_process_type === 'transfer'
+                  );
+                  
+                  if (transferApp?.transfer_form_url) {
+                    // Formulário já enviado
+                    return (
+                      <div className="bg-white rounded-3xl p-6">
+                        <div className="flex items-start space-x-4">
+                          <div className="flex-shrink-0">
+                            <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                              <CheckCircle className="w-5 h-5 text-green-600" />
+                            </div>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-wrap gap-2 mb-1">
+                              <p className="font-medium text-slate-900 break-words">
+                                {transferApp.transfer_form_url.split('/').pop() || 'Transfer Form'}
+                              </p>
+                              <span className="px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 whitespace-nowrap">
+                                {transferApp.transfer_form_status === 'sent' ? 'Sent' : 'Available'}
+                              </span>
+                            </div>
+                            <p className="text-sm text-slate-500 break-words">
+                              Sent on {transferApp.transfer_form_sent_at ? new Date(transferApp.transfer_form_sent_at).toLocaleDateString('pt-BR') : 'N/A'}
+                            </p>
+                            
+                            <div className="flex flex-col sm:flex-row gap-2 mt-3">
+                              <button
+                                onClick={() => handleViewDocument({
+                                  file_url: transferApp.transfer_form_url,
+                                  filename: transferApp.transfer_form_url.split('/').pop() || 'Transfer Form'
+                                })}
+                                className="bg-[#05294E] hover:bg-[#041f38] text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto text-center"
+                              >
+                                View
+                              </button>
+                              
+                              <button
+                                onClick={() => handleDownloadDocument({
+                                  file_url: transferApp.transfer_form_url,
+                                  filename: transferApp.transfer_form_url.split('/').pop() || 'Transfer Form'
+                                })}
+                                className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto text-center"
+                              >
+                                Download
+                              </button>
+                              
+                              {isPlatformAdmin && (
+                                <button
+                                  onClick={() => {
+                                    // Limpar arquivo selecionado e mostrar seção de substituição
+                                    setTransferFormFile(null);
+                                    // Forçar um novo arquivo para mostrar a seção
+                                    const input = document.createElement('input');
+                                    input.type = 'file';
+                                    input.accept = '.pdf,.doc,.docx';
+                                    input.onchange = (e) => {
+                                      const file = (e.target as HTMLInputElement).files?.[0];
+                                      if (file) {
+                                        setTransferFormFile(file);
+                                      }
+                                    };
+                                    input.click();
+                                  }}
+                                  className="bg-[#05294E] hover:bg-[#041f38] text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto text-center"
+                                >
+                                  Replace
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Seção de upload para substituição */}
+                        {isPlatformAdmin && (transferFormFile || uploadingTransferForm) && (
+                          <div className="mt-6 bg-blue-50 border border-blue-200 rounded-2xl p-6">
+                            <h4 className="text-lg font-semibold text-[#05294E] mb-4 flex items-center">
+                              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                              </svg>
+                              {uploadingTransferForm ? 'Uploading Transfer Form...' : 'Replace Transfer Form'}
+                            </h4>
+                            
+                            <div className="space-y-4">
+                              {uploadingTransferForm ? (
+                                <div className="text-center py-4">
+                                  <div className="w-8 h-8 border-4 border-[#05294E] border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                                  <p className="text-[#05294E] font-medium">Uploading transfer form...</p>
+                                </div>
+                              ) : transferFormFile ? (
+                                <>
+                                  <div>
+                                    <label className="block text-sm font-medium text-[#05294E] mb-2">
+                                      New Transfer Form File
+                                    </label>
+                                    <div className="flex items-center justify-center">
+                                      <label className="flex items-center gap-2 px-4 py-2 bg-blue-100 border-2 border-dashed border-blue-300 rounded-lg cursor-pointer hover:bg-blue-200 transition font-medium text-[#05294E]">
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                        </svg>
+                                        <span>Change file</span>
+                                        <input
+                                          type="file"
+                                          className="sr-only"
+                                          accept=".pdf,.doc,.docx"
+                                          onChange={(e) => setTransferFormFile(e.target.files ? e.target.files[0] : null)}
+                                          disabled={uploadingTransferForm}
+                                        />
+                                      </label>
+                                    </div>
+                                    <p className="text-sm text-blue-600 mt-2 text-center">
+                                      Selected: {transferFormFile?.name || 'Unknown file'}
+                                    </p>
+                                  </div>
+                                  
+                                  <div className="flex gap-3">
+                                    <button
+                                      onClick={handleUploadTransferForm}
+                                      disabled={!transferFormFile || uploadingTransferForm}
+                                      className="bg-[#05294E] hover:bg-[#041f38] text-white px-6 py-2 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed flex-1"
+                                    >
+                                      Replace Transfer Form
+                                    </button>
+                                    
+                                    <button
+                                      onClick={() => setTransferFormFile(null)}
+                                      className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg font-medium"
+                                    >
+                                      Cancel
+                                    </button>
+                                  </div>
+                                </>
+                              ) : (
+                                <div className="text-center py-4">
+                                  <p className="text-[#05294E] font-medium mb-4">Transfer form uploaded successfully!</p>
+                                  <button
+                                    onClick={() => setTransferFormFile(null)}
+                                    className="bg-[#05294E] hover:bg-[#041f38] text-white px-6 py-2 rounded-lg font-medium"
+                                  >
+                                    Done
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  } else {
+                    // Formulário não enviado - mostrar upload
+                    return (
+                      <div className="bg-white rounded-3xl p-6" data-transfer-upload>
+                        <div className="text-center">
+                          <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                          </div>
+                          <h4 className="text-lg font-semibold text-slate-700 mb-2">
+                            {transferFormFile ? 'Replace Transfer Form' : 'Transfer Form Not Sent'}
+                          </h4>
+                          <p className="text-slate-500 max-w-md mx-auto mb-6">
+                            {transferFormFile 
+                              ? 'Select a new file to replace the current transfer form.'
+                              : 'Upload and send the transfer form for this transfer student.'
+                            }
+                          </p>
+                          
+                          {isPlatformAdmin && (
+                            <div className="space-y-4">
+                              <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-2">
+                                  Select Transfer Form File
+                                </label>
+                                <div className="flex items-center justify-center">
+                                  <label className="flex items-center gap-2 px-4 py-2 bg-blue-100 border-2 border-dashed border-blue-300 rounded-lg cursor-pointer hover:bg-blue-200 transition font-medium text-blue-700">
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                    </svg>
+                                    <span>{transferFormFile ? 'Change file' : 'Select Transfer Form'}</span>
+                                    <input
+                                      type="file"
+                                      className="sr-only"
+                                      accept=".pdf,.doc,.docx"
+                                      onChange={(e) => setTransferFormFile(e.target.files ? e.target.files[0] : null)}
+                                      disabled={uploadingTransferForm}
+                                    />
+                                  </label>
+                                </div>
+                                {transferFormFile && (
+                                  <p className="text-sm text-slate-600 mt-2 text-center">
+                                    Selected: {transferFormFile.name}
+                                  </p>
+                                )}
+                              </div>
+                              
+                              <button
+                                onClick={handleUploadTransferForm}
+                                disabled={!transferFormFile || uploadingTransferForm}
+                                className="bg-[#05294E] hover:bg-[#041f38] text-white px-6 py-2 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                {uploadingTransferForm ? 'Sending...' : 'Send Transfer Form'}
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  }
+                })()}
+              </div>
+            </div>
+          )}
+
           {loadingDocuments ? (
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
               <div className="text-center">
@@ -2682,6 +4070,15 @@ const AdminStudentDetails: React.FC = () => {
             />
           )}
         </div>
+        )}
+
+      {activeTab === 'scholarships' && student && (
+        <div className="space-y-6">
+          <AdminScholarshipSelection
+            studentProfileId={student.student_id}
+            studentUserId={student.user_id}
+          />
+        </div>
       )}
 
       {activeTab === 'logs' && student && (
@@ -2690,6 +4087,45 @@ const AdminStudentDetails: React.FC = () => {
             studentId={student.student_id} 
             studentName={student.student_name} 
           />
+        </div>
+      )}
+
+      {/* Delete Note Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md mx-4">
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="p-2 bg-red-100 rounded-lg">
+                <XCircle className="w-6 h-6 text-red-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-slate-900">
+                Delete Note
+              </h3>
+            </div>
+            
+            <p className="text-sm text-slate-600 mb-6">
+              Are you sure you want to delete this note? This action cannot be undone.
+            </p>
+            
+            <div className="flex space-x-3">
+              <button
+                onClick={cancelDeleteNote}
+                className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteNote}
+                disabled={savingNotes}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors flex items-center justify-center space-x-2"
+              >
+                <XCircle className="w-4 h-4" />
+                <span>
+                  {savingNotes ? 'Deleting...' : 'Delete Note'}
+                </span>
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
