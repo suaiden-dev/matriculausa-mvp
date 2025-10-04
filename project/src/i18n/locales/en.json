@@ -1933,6 +1933,7 @@
         "transferFormDescriptionSchool": "Upload the transfer form for this student. Only visible for transfer students.",
         "transferFormDescriptionStudent": "Your university will upload your transfer form here. Download it when available.",
         "transferForm": "Transfer Form",
+        "sentOn": "Sent on",
         "studentUploads": "Student uploads:",
         "yourUploads": "Your uploads:",
         "uploading": "Uploading...",

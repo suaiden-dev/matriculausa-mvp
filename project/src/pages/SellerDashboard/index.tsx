@@ -256,8 +256,11 @@ const SellerDashboard: React.FC = () => {
           });
         } else {
           // Aplicar filtro baseado na application fee paga (mesmo comportamento do StudentDashboard)
+          // Priorizar aplicações com scholarship_fee_paid: true
           const chosenPaidApp = studentApplications.find(
-            (app) => !!app.is_application_fee_paid || !!app.is_scholarship_fee_paid
+            (app) => !!app.is_scholarship_fee_paid
+          ) || studentApplications.find(
+            (app) => !!app.is_application_fee_paid
           );
           const applicationsToShow = chosenPaidApp
             ? studentApplications.filter((app) => app.id === chosenPaidApp.id)
@@ -447,6 +450,8 @@ const SellerDashboard: React.FC = () => {
           />
         );
       case 'students':
+        console.log('🚨🚨🚨 [INDEX] Rendering MyStudents with students:', students.length);
+        console.log('🚨🚨🚨 [INDEX] Students emails:', students.map(s => s.email));
         return (
           <MyStudents 
             students={students}

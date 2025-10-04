@@ -1949,6 +1949,9 @@ const PaymentManagement = (): React.JSX.Element => {
       // Converter aplicações e pagamentos Zelle em registros de pagamento
       const paymentRecords: PaymentRecord[] = [];
       
+      // Mapas para evitar duplicação de taxas globais (selection_process, i20_control e application_fee)
+      const globalFeesProcessed: { [userId: string]: { selection_process: boolean; i20_control: boolean; application_fee: boolean } } = {};
+      
       console.log('🔄 Processing applications:', applications?.length || 0);
       console.log('🔄 Processing Zelle payments:', zellePayments?.length || 0);
       
@@ -2071,47 +2074,61 @@ const PaymentManagement = (): React.JSX.Element => {
         } else {
           // Fallback para valor padrão do sistema (converter dólares para centavos)
           applicationFee = Math.round(getFeeAmount('application_fee') * 100);
+          console.log(`🔍 [PM] Application fee from getFeeAmount for ${student.full_name}: $${getFeeAmount('application_fee')} -> ${applicationFee} cents`);
         }
         
 
         // Criar registros apenas para taxas que foram pagas
-        if (student.has_paid_selection_process_fee) {
-        paymentRecords.push({
-          id: `${app.id}-selection`,
-          student_id: student.id,
-          student_name: studentName,
-          student_email: studentEmail,
-          university_id: university.id,
-          university_name: universityName,
-          scholarship_id: scholarship.id,
-          scholarship_title: scholarshipTitle,
-          fee_type: 'selection_process',
-          amount: selectionProcessFee,
+        // Selection Process Fee - apenas uma vez por usuário (taxa global)
+        if (student.has_paid_selection_process_fee && !globalFeesProcessed[student.user_id]?.selection_process) {
+          paymentRecords.push({
+            id: `${student.user_id}-selection`,
+            student_id: student.id,
+            student_name: studentName,
+            student_email: studentEmail,
+            university_id: university.id,
+            university_name: universityName,
+            scholarship_id: scholarship.id,
+            scholarship_title: scholarshipTitle,
+            fee_type: 'selection_process',
+            amount: selectionProcessFee,
             status: 'paid',
             payment_date: app.created_at,
-          created_at: app.created_at,
-          payment_method: student.selection_process_fee_payment_method || 'manual'
-        });
+            created_at: app.created_at,
+            payment_method: student.selection_process_fee_payment_method || 'manual'
+          });
+          
+          // Marcar como processado para este usuário
+          if (!globalFeesProcessed[student.user_id]) {
+            globalFeesProcessed[student.user_id] = { selection_process: false, i20_control: false, application_fee: false };
+          }
+          globalFeesProcessed[student.user_id].selection_process = true;
         }
 
-        // Application Fee - criar apenas se foi paga
-        if (app.is_application_fee_paid) {
-        paymentRecords.push({
-          id: `${app.id}-application`,
-          student_id: student.id,
-          student_name: studentName,
-          student_email: studentEmail,
-          university_id: university.id,
-          university_name: universityName,
-          scholarship_id: scholarship.id,
-          scholarship_title: scholarshipTitle,
-          fee_type: 'application',
-          amount: applicationFee,
+        // Application Fee - apenas uma vez por usuário (taxa global)
+        if (app.is_application_fee_paid && !globalFeesProcessed[student.user_id]?.application_fee) {
+          paymentRecords.push({
+            id: `${student.user_id}-application`,
+            student_id: student.id,
+            student_name: studentName,
+            student_email: studentEmail,
+            university_id: university.id,
+            university_name: universityName,
+            scholarship_id: scholarship.id,
+            scholarship_title: scholarshipTitle,
+            fee_type: 'application',
+            amount: applicationFee,
             status: 'paid',
             payment_date: app.created_at,
-          created_at: app.created_at,
-          payment_method: app.application_fee_payment_method || 'manual'
-        });
+            created_at: app.created_at,
+            payment_method: app.application_fee_payment_method || 'manual'
+          });
+          
+          // Marcar como processado para este usuário
+          if (!globalFeesProcessed[student.user_id]) {
+            globalFeesProcessed[student.user_id] = { selection_process: false, i20_control: false, application_fee: false };
+          }
+          globalFeesProcessed[student.user_id].application_fee = true;
         }
 
         // Scholarship Fee - criar apenas se foi paga E não for da bolsa "Current Students Scholarship"
@@ -2136,24 +2153,30 @@ const PaymentManagement = (): React.JSX.Element => {
           console.log('🚫 Excluding Current Students Scholarship payment for:', studentName, '- $', (scholarshipFee / 100).toFixed(2));
         }
 
-        // I-20 Control Fee - criar apenas se foi paga
-        if (student.has_paid_i20_control_fee) {
-        paymentRecords.push({
-          id: `${app.id}-i20`,
-          student_id: student.id,
-          student_name: studentName,
-          student_email: studentEmail,
-          university_id: university.id,
-          university_name: universityName,
-          scholarship_id: scholarship.id,
-          scholarship_title: scholarshipTitle,
-          fee_type: 'i20_control_fee',
-          amount: i20ControlFee,
+        // I-20 Control Fee - apenas uma vez por usuário (taxa global)
+        if (student.has_paid_i20_control_fee && !globalFeesProcessed[student.user_id]?.i20_control) {
+          paymentRecords.push({
+            id: `${student.user_id}-i20`,
+            student_id: student.id,
+            student_name: studentName,
+            student_email: studentEmail,
+            university_id: university.id,
+            university_name: universityName,
+            scholarship_id: scholarship.id,
+            scholarship_title: scholarshipTitle,
+            fee_type: 'i20_control_fee',
+            amount: i20ControlFee,
             status: 'paid',
             payment_date: app.created_at,
-          created_at: app.created_at,
-          payment_method: student.i20_control_fee_payment_method || 'manual'
-        });
+            created_at: app.created_at,
+            payment_method: student.i20_control_fee_payment_method || 'manual'
+          });
+          
+          // Marcar como processado para este usuário
+          if (!globalFeesProcessed[student.user_id]) {
+            globalFeesProcessed[student.user_id] = { selection_process: false, i20_control: false, application_fee: false };
+          }
+          globalFeesProcessed[student.user_id].i20_control = true;
         }
       });
 
@@ -2364,15 +2387,26 @@ const PaymentManagement = (): React.JSX.Element => {
         const dependentCost = dependents * 150; // $150 por dependente apenas para Selection Process (em centavos)
         const userOverrides = overridesMap[stripeUser?.user_id] || {};
         
+
+        
         // Selection Process Fee - prioridade: override > pacote > padrão
         let selectionProcessFee: number;
         if (userOverrides.selection_process_fee !== undefined) {
           // Se há override, usar exatamente o valor do override (já inclui dependentes se necessário)
           selectionProcessFee = Math.round(userOverrides.selection_process_fee * 100);
+          if (studentName.includes('Sara Bianey') || studentName.includes('Alondra')) {
+            console.log(`  - [PM] Using override: ${userOverrides.selection_process_fee} -> ${selectionProcessFee} cents`);
+          }
         } else if (packageData?.selection_process_fee) {
           selectionProcessFee = Math.round((packageData.selection_process_fee + dependentCost) * 100);
+          if (studentName.includes('Sara Bianey') || studentName.includes('Alondra')) {
+            console.log(`  - [PM] Using package: ${packageData.selection_process_fee} + ${dependentCost} = ${packageData.selection_process_fee + dependentCost} -> ${selectionProcessFee} cents`);
+          }
         } else {
           selectionProcessFee = Math.round((getFeeAmount('selection_process') + dependentCost) * 100);
+          if (studentName.includes('Sara Bianey') || studentName.includes('Alondra')) {
+            console.log(`  - [PM] Using default: ${getFeeAmount('selection_process')} + ${dependentCost} = ${getFeeAmount('selection_process') + dependentCost} -> ${selectionProcessFee} cents`);
+          }
         }
         
         // I-20 Control Fee - prioridade: override > pacote > padrão (sem dependentes)
@@ -2396,10 +2430,12 @@ const PaymentManagement = (): React.JSX.Element => {
         }
         // Application Fee - para usuários Stripe, usar valor padrão do sistema
         const applicationFee = Math.round(getFeeAmount('application_fee') * 100);
+        console.log(`🔍 [PM] Stripe user application fee for ${studentName}: $${getFeeAmount('application_fee')} -> ${applicationFee} cents`);
+        console.log(`📋 [PM] Processing Stripe user: ${studentName} with fees: SPF=${stripeUser.has_paid_selection_process_fee}, APP=${stripeUser.is_application_fee_paid}, SCH=${stripeUser.is_scholarship_fee_paid}, I20=${stripeUser.has_paid_i20_control_fee}`);
 
         console.log('💳 Processing Stripe user for:', studentName);
 
-        // Selection Process Fee
+        // Selection Process Fee - criar apenas se foi paga
         if (stripeUser.has_paid_selection_process_fee) {
           paymentRecords.push({
             id: `stripe-${stripeUser.user_id}-selection`,
@@ -2415,63 +2451,69 @@ const PaymentManagement = (): React.JSX.Element => {
             status: 'paid',
             payment_date: stripeUser.created_at,
             created_at: stripeUser.created_at,
-            payment_method: stripeUser.selection_process_fee_payment_method || 'stripe'
+            payment_method: stripeUser.selection_process_fee_payment_method || 'manual'
           });
         }
 
-        // Application Fee
-        paymentRecords.push({
-          id: `stripe-${stripeUser.user_id}-application`,
-          student_id: stripeUser.id,
-          student_name: studentName,
-          student_email: studentEmail,
-          university_id: '00000000-0000-0000-0000-000000000000',
-          university_name: 'No University Selected',
-          scholarship_id: '00000000-0000-0000-0000-000000000000',
-          scholarship_title: 'No Scholarship Selected',
-          fee_type: 'application',
-          amount: applicationFee,
-          status: stripeUser.is_application_fee_paid ? 'paid' : 'pending',
-          payment_date: stripeUser.is_application_fee_paid ? stripeUser.created_at : undefined,
-          created_at: stripeUser.created_at,
-          payment_method: 'stripe'
-        });
+        // Application Fee - criar apenas se foi paga
+        if (stripeUser.is_application_fee_paid) {
+          paymentRecords.push({
+            id: `stripe-${stripeUser.user_id}-application`,
+            student_id: stripeUser.id,
+            student_name: studentName,
+            student_email: studentEmail,
+            university_id: '00000000-0000-0000-0000-000000000000',
+            university_name: 'No University Selected',
+            scholarship_id: '00000000-0000-0000-0000-000000000000',
+            scholarship_title: 'No Scholarship Selected',
+            fee_type: 'application',
+            amount: applicationFee,
+            status: 'paid',
+            payment_date: stripeUser.created_at,
+            created_at: stripeUser.created_at,
+            payment_method: 'manual'
+          });
+        }
 
-        // Scholarship Fee
-        paymentRecords.push({
-          id: `stripe-${stripeUser.user_id}-scholarship`,
-          student_id: stripeUser.id,
-          student_name: studentName,
-          student_email: studentEmail,
-          university_id: '00000000-0000-0000-0000-000000000000',
-          university_name: 'No University Selected',
-          scholarship_id: '00000000-0000-0000-0000-000000000000',
-          scholarship_title: 'No Scholarship Selected',
-          fee_type: 'scholarship',
-          amount: scholarshipFee,
-          status: stripeUser.is_scholarship_fee_paid ? 'paid' : 'pending',
-          payment_date: stripeUser.is_scholarship_fee_paid ? stripeUser.created_at : undefined,
-          created_at: stripeUser.created_at,
-          payment_method: 'stripe'
-        });
+        // Scholarship Fee - criar apenas se foi paga
+        if (stripeUser.is_scholarship_fee_paid) {
+          paymentRecords.push({
+            id: `stripe-${stripeUser.user_id}-scholarship`,
+            student_id: stripeUser.id,
+            student_name: studentName,
+            student_email: studentEmail,
+            university_id: '00000000-0000-0000-0000-000000000000',
+            university_name: 'No University Selected',
+            scholarship_id: '00000000-0000-0000-0000-000000000000',
+            scholarship_title: 'No Scholarship Selected',
+            fee_type: 'scholarship',
+            amount: scholarshipFee,
+            status: 'paid',
+            payment_date: stripeUser.created_at,
+            created_at: stripeUser.created_at,
+            payment_method: 'manual'
+          });
+        }
 
-        // I-20 Control Fee
-        paymentRecords.push({
-          id: `stripe-${stripeUser.user_id}-i20`,
-          student_id: stripeUser.id,
-          student_name: studentName,
-          student_email: studentEmail,
-          university_id: '00000000-0000-0000-0000-000000000000',
-          university_name: 'No University Selected',
-          scholarship_id: '00000000-0000-0000-0000-000000000000',
-          scholarship_title: 'No Scholarship Selected',
-          fee_type: 'i20_control_fee',
-          amount: i20ControlFee,
-          status: stripeUser.has_paid_i20_control_fee ? 'paid' : 'pending',
-          payment_date: stripeUser.has_paid_i20_control_fee ? stripeUser.created_at : undefined,
-          created_at: stripeUser.created_at,
-          payment_method: stripeUser.i20_control_fee_payment_method || 'stripe'
-        });
+        // I-20 Control Fee - criar apenas se foi paga
+        if (stripeUser.has_paid_i20_control_fee) {
+          paymentRecords.push({
+            id: `stripe-${stripeUser.user_id}-i20`,
+            student_id: stripeUser.id,
+            student_name: studentName,
+            student_email: studentEmail,
+            university_id: '00000000-0000-0000-0000-000000000000',
+            university_name: 'No University Selected',
+            scholarship_id: '00000000-0000-0000-0000-000000000000',
+            scholarship_title: 'No Scholarship Selected',
+            fee_type: 'i20_control_fee',
+            amount: i20ControlFee,
+            status: 'paid',
+            payment_date: stripeUser.created_at,
+            created_at: stripeUser.created_at,
+            payment_method: stripeUser.i20_control_fee_payment_method || 'manual'
+          });
+        }
       });
 
       // Se não há dados reais, vamos criar alguns dados de exemplo para testar
@@ -2534,8 +2576,27 @@ const PaymentManagement = (): React.JSX.Element => {
       const manualRevenue = paidRecords
         .filter(p => (p.payment_method || '').toLowerCase() === 'manual')
         .reduce((sum, p) => sum + p.amount, 0);
-      console.log('🚨 DEBUG: Total revenue (cents):', totalRevenue);
-      console.log('🚨 DEBUG: Total revenue (dollars):', totalRevenue / 100);
+      console.log('🚨 [PM] DEBUG: Total revenue (cents):', totalRevenue);
+      console.log('🚨 [PM] DEBUG: Total revenue (dollars):', totalRevenue / 100);
+      
+      // Breakdown por fee type
+      const feeBreakdown: {[key: string]: {count: number, revenue: number}} = {};
+      paidRecords.forEach(record => {
+        const feeType = record.fee_type;
+        if (!feeBreakdown[feeType]) feeBreakdown[feeType] = {count: 0, revenue: 0};
+        feeBreakdown[feeType].count++;
+        feeBreakdown[feeType].revenue += record.amount;
+      });
+      
+      Object.entries(feeBreakdown).forEach(([feeType, data]) => {
+        console.log(`💳 [PM] ${feeType}: ${data.count} payments, $${(data.revenue / 100).toFixed(2)} revenue`);
+      });
+      
+      // Log detalhado de cada registro de pagamento
+      console.log('📋 [PM] Detailed payment records:');
+      paidRecords.forEach((record, index) => {
+        console.log(`  ${index + 1}. ${record.student_name} - ${record.fee_type}: $${(record.amount / 100).toFixed(2)} (method: ${record.payment_method})`);
+      });
       
 
       const newStats = {
@@ -3204,20 +3265,20 @@ const PaymentManagement = (): React.JSX.Element => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         {(() => {
-                          const inferredMethod = payment.payment_method
-                            || (payment.zelle_status ? 'zelle' : undefined)
-                            || (payment.payment_proof_url ? 'zelle' : undefined)
-                            || (typeof payment.id === 'string' && payment.id.startsWith('zelle-') ? 'zelle' : undefined)
-                            || (typeof payment.id === 'string' && payment.id.startsWith('stripe-') ? 'stripe' : undefined);
-                          const chipClass = inferredMethod === 'zelle'
+                          const paymentMethod = payment.payment_method || 'manual';
+                          const chipClass = paymentMethod === 'zelle'
                             ? 'bg-purple-100 text-purple-800'
-                            : inferredMethod === 'stripe'
+                            : paymentMethod === 'stripe'
                             ? 'bg-blue-100 text-blue-800'
                             : 'bg-gray-100 text-gray-800';
-                          const label = inferredMethod === 'manual'
+                          const label = paymentMethod === 'manual'
                             ? 'Outside'
-                            : inferredMethod
-                            ? inferredMethod.charAt(0).toUpperCase() + inferredMethod.slice(1)
+                            : paymentMethod === 'zelle'
+                            ? 'Zelle'
+                            : paymentMethod === 'stripe'
+                            ? 'Stripe'
+                            : paymentMethod
+                            ? paymentMethod.charAt(0).toUpperCase() + paymentMethod.slice(1)
                             : 'N/A';
                           return (
                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${chipClass}`}>
@@ -4734,14 +4795,15 @@ const PaymentManagement = (): React.JSX.Element => {
                     <label className="block text-sm font-medium text-gray-500">Payment Method</label>
                     <p className="mt-1 text-sm text-gray-900">
                       {
-                        selectedPayment.payment_method === 'manual' ? 'Outside'
-                        : (selectedPayment.payment_method === 'zelle' || selectedPayment.zelle_status || selectedPayment.payment_proof_url || (typeof selectedPayment.id === 'string' && selectedPayment.id.startsWith('zelle-')))
+                        selectedPayment.payment_method === 'manual' 
+                          ? 'Outside'
+                          : selectedPayment.payment_method === 'zelle'
                           ? 'Zelle'
-                          : ((selectedPayment.payment_method === 'stripe') || (typeof selectedPayment.id === 'string' && selectedPayment.id.startsWith('stripe-')))
-                            ? 'Stripe'
-                            : selectedPayment.payment_method
-                              ? String(selectedPayment.payment_method).charAt(0).toUpperCase() + String(selectedPayment.payment_method).slice(1)
-                              : 'N/A'
+                          : selectedPayment.payment_method === 'stripe'
+                          ? 'Stripe'
+                          : selectedPayment.payment_method
+                          ? String(selectedPayment.payment_method).charAt(0).toUpperCase() + String(selectedPayment.payment_method).slice(1)
+                          : 'N/A'
                       }
                     </p>
                   </div>
