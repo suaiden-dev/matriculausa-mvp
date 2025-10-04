@@ -20,6 +20,7 @@ import {
 import { useAuth } from '../../hooks/useAuth';
 import AffiliateAdminNotifications from '../../components/AffiliateAdminNotifications';
 import { useI20DeadlineMonitor } from '../../hooks/useI20DeadlineMonitor';
+import { useSystemType } from '../../hooks/useSystemType';
 
 interface AffiliateAdminDashboardLayoutProps {
   user: any;
@@ -35,6 +36,7 @@ const AffiliateAdminDashboardLayout: React.FC<AffiliateAdminDashboardLayoutProps
   const location = useLocation();
   const navigate = useNavigate();
   const { logout } = useAuth();
+  const { systemType } = useSystemType();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
@@ -57,15 +59,29 @@ const AffiliateAdminDashboardLayout: React.FC<AffiliateAdminDashboardLayoutProps
 
   const activeTab = getActiveTab();
 
-  const sidebarItems = [
-    { id: 'overview', label: 'Overview', icon: BarChart3, path: '/affiliate-admin/dashboard', badge: null },
-    { id: 'users', label: 'Seller Management', icon: Users, path: '/affiliate-admin/dashboard/users', badge: null },
-    { id: 'payments', label: 'Payment Management', icon: CreditCard, path: '/affiliate-admin/dashboard/payments', badge: null },
-    { id: 'students', label: 'Seller Tracking', icon: GraduationCap, path: '/affiliate-admin/dashboard/students', badge: null },
-    { id: 'my-students', label: 'My Students', icon: UserPlus, path: '/affiliate-admin/dashboard/my-students', badge: null },
-    { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/affiliate-admin/dashboard/analytics', badge: null },
-    { id: 'profile', label: 'Profile Settings', icon: Settings, path: '/affiliate-admin/dashboard/profile', badge: null }
-  ];
+  // Sidebar items based on system type
+  const getSidebarItems = () => {
+    const baseItems = [
+      { id: 'overview', label: 'Overview', icon: BarChart3, path: '/affiliate-admin/dashboard', badge: null },
+      { id: 'users', label: 'Seller Management', icon: Users, path: '/affiliate-admin/dashboard/users', badge: null },
+      { id: 'payments', label: 'Payment Management', icon: CreditCard, path: '/affiliate-admin/dashboard/payments', badge: null },
+      { id: 'students', label: 'Seller Tracking', icon: GraduationCap, path: '/affiliate-admin/dashboard/students', badge: null },
+      { id: 'my-students', label: 'My Students', icon: UserPlus, path: '/affiliate-admin/dashboard/my-students', badge: null },
+      { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/affiliate-admin/dashboard/analytics', badge: null },
+      { id: 'profile', label: 'Profile Settings', icon: Settings, path: '/affiliate-admin/dashboard/profile', badge: null }
+    ];
+
+    // For simplified system, we might want to hide or modify certain items
+    if (systemType === 'simplified') {
+      // For now, show all items but we can modify this later
+      return baseItems;
+    }
+
+    // For legacy system (Matheus), show all items
+    return baseItems;
+  };
+
+  const sidebarItems = getSidebarItems();
 
   const handleLogout = async () => {
     try {
@@ -117,9 +133,13 @@ const AffiliateAdminDashboardLayout: React.FC<AffiliateAdminDashboardLayoutProps
             </div>
             
             <div className="flex items-center justify-center mt-3">
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-[#05294E]">
+              <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                systemType === 'legacy' 
+                  ? 'bg-blue-100 text-[#05294E]' 
+                  : 'bg-green-100 text-green-800'
+              }`}>
                 <Shield className="h-3 w-3 mr-1" />
-                Affiliate Access
+                {systemType === 'legacy' ? 'Legacy System' : 'Simplified System'}
               </span>
             </div>
           </div>

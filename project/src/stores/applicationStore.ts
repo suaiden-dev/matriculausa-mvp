@@ -136,10 +136,10 @@ export const useCartStore = create<CartState>((set, get) => ({
   lastFetchUserId: null,
   
   fetchCart: async (userId) => {
-    const { lastFetchUserId, isLoading } = get();
+    const { isLoading } = get();
     
-    // Evita fetch desnecessário se já está carregando ou é o mesmo usuário
-    if (isLoading || lastFetchUserId === userId) {
+    // Evita fetch desnecessário se já está carregando
+    if (isLoading) {
       return;
     }
 
@@ -284,14 +284,22 @@ export const useCartStore = create<CartState>((set, get) => ({
   syncCartWithDatabase: async (userId: string) => {
     const { cart, isLoading } = get();
     
-    if (isLoading || cart.length === 0) {
-      console.log('syncCartWithDatabase: Skipping sync - isLoading:', isLoading, 'cart.length:', cart.length);
+    if (isLoading) {
+      console.log('syncCartWithDatabase: Skipping sync - isLoading:', isLoading);
       return;
     }
 
     console.log('syncCartWithDatabase: Starting sync for user:', userId, 'cart items:', cart.length);
     
     try {
+      // Se o carrinho local está vazio, buscar do banco de dados
+      if (cart.length === 0) {
+        console.log('syncCartWithDatabase: Cart is empty, fetching from database');
+        const cartItems = await getCartItemsFromDB(userId);
+        set({ cart: cartItems });
+        return;
+      }
+
       // Verifica cada item do cart para garantir que ainda existe no banco
       const validatedCart = [];
       

@@ -175,7 +175,7 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
         n8nData = webhookResult;
       }
 
-      console.log('n8nData', n8nData);
+      console.log('🔍 [DEBUG] n8nData received:', n8nData);
       
       if (n8nData) {
         const respPassport = n8nData[0].response_passaport;
@@ -186,12 +186,19 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
         const fundsOk = respFunds === true;
         const degreeOk = respDegree === true;
 
-        const passportErr = typeof respPassport === 'string' ? respPassport : 
-                           (passportOk ? '' : (n8nData[0].details_passport || 'Invalid document.'));
-        const fundsErr = typeof respFunds === 'string' ? respFunds : 
-                        (fundsOk ? '' : (n8nData[0].details_funds || 'Invalid document.'));
-        const degreeErr = typeof respDegree === 'string' ? respDegree : 
-                         (degreeOk ? '' : (n8nData[0].details_degree || 'Invalid document.'));
+        console.log('🔍 [DEBUG] n8nData[0]:', n8nData[0]);
+        console.log('🔍 [DEBUG] respPassport:', respPassport, 'passportOk:', passportOk);
+        console.log('🔍 [DEBUG] respFunds:', respFunds, 'fundsOk:', fundsOk);
+        console.log('🔍 [DEBUG] respDegree:', respDegree, 'degreeOk:', degreeOk);
+        
+        const passportErr = typeof respPassport === 'string' ? getFormattedErrorMessage(respPassport, 'passport') : 
+                           (passportOk ? '' : getFormattedErrorMessage(n8nData[0].details_passport || 'Invalid document.', 'passport'));
+        const fundsErr = typeof respFunds === 'string' ? getFormattedErrorMessage(respFunds, 'funds_proof') : 
+                        (fundsOk ? '' : getFormattedErrorMessage(n8nData[0].details_funds || 'Invalid document.', 'funds_proof'));
+        const degreeErr = typeof respDegree === 'string' ? getFormattedErrorMessage(respDegree, 'diploma') : 
+                         (degreeOk ? '' : getFormattedErrorMessage(n8nData[0].details_degree || 'Invalid document.', 'diploma'));
+        
+        console.log('🔍 [DEBUG] Final errors:', { passportErr, fundsErr, degreeErr });
 
         const allValid = passportOk && fundsOk && degreeOk;
         
@@ -656,17 +663,9 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
 
   // Função para obter mensagem de erro formatada
   const getFormattedErrorMessage = (errorMessage: string, documentType: string): string => {
+    console.log('🔍 [DEBUG] getFormattedErrorMessage called with:', { errorMessage, documentType, currentLanguage: t('common.language') });
     if (isLanguageError(errorMessage)) {
-      // Mensagens específicas para cada tipo de documento
-      if (documentType === 'diploma') {
-        return "Your high school diploma must be in English. Please provide an English version or certified translation.";
-      } else if (documentType === 'funds_proof') {
-        return "Your bank statement must be in English. Please provide an English version or certified translation.";
-      } else if (documentType === 'passport') {
-        return "Your passport must be in English. Please provide an English version or certified translation.";
-      }
-      
-      // Fallback para outros tipos
+      // Usar tradução para mensagens de erro de idioma
       return t('studentDashboard.documentsAndScholarshipChoice.languageError', { 
         documentType: t(`studentDashboard.documentsAndScholarshipChoice.${documentType}`) 
       });
@@ -690,6 +689,44 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
       });
     }
     
+    // Detectar mensagens específicas da API e traduzi-las
+    if (errorMessage.includes('passport document format is not recognized') || 
+        errorMessage.includes('format is not recognized') ||
+        errorMessage.includes('passport document format') ||
+        errorMessage.includes('format is not recognized')) {
+      return t('studentDashboard.documentsAndScholarshipChoice.passportFormatError');
+    }
+    
+    if (errorMessage.includes('Unable to process High School Diploma') || 
+        errorMessage.includes('Unable to process') ||
+        errorMessage.includes('Unable to process High School') ||
+        errorMessage.includes('process High School Diploma')) {
+      return t('studentDashboard.documentsAndScholarshipChoice.diplomaProcessError');
+    }
+    
+    if (errorMessage.includes('Unable to validate document') || 
+        errorMessage.includes('Unable to validate') ||
+        errorMessage.includes('validate document') ||
+        errorMessage.includes('Unable to validate proof of funds') ||
+        errorMessage.includes('Não foi possível validar o documento') ||
+        errorMessage.includes('No se pudo validar el documento')) {
+      return t('studentDashboard.documentsAndScholarshipChoice.fundsValidationError');
+    }
+    
+    // Detectar mensagens genéricas de erro e traduzi-las baseadas no tipo de documento
+    if (documentType === 'passport' && (errorMessage.includes('format') || errorMessage.includes('recognized') || errorMessage.includes('formato') || errorMessage.includes('reconocido'))) {
+      return t('studentDashboard.documentsAndScholarshipChoice.passportFormatError');
+    }
+    
+    if (documentType === 'diploma' && (errorMessage.includes('process') || errorMessage.includes('corrupted') || errorMessage.includes('procesar') || errorMessage.includes('corrupto'))) {
+      return t('studentDashboard.documentsAndScholarshipChoice.diplomaProcessError');
+    }
+    
+    if (documentType === 'funds_proof' && (errorMessage.includes('validate') || errorMessage.includes('corrupted') || errorMessage.includes('validar') || errorMessage.includes('corrupto'))) {
+      return t('studentDashboard.documentsAndScholarshipChoice.fundsValidationError');
+    }
+    
+    console.log('🔍 [DEBUG] Returning original errorMessage:', errorMessage);
     return errorMessage;
   };
 
@@ -934,7 +971,7 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
                                   ? t('studentDashboard.documentsAndScholarshipChoice.fundsDataError')
                                   : isCurrencyFieldError(hasError)
                                   ? t('studentDashboard.documentsAndScholarshipChoice.currencyFieldError')
-                                  : hasError
+                                  : getFormattedErrorMessage(hasError, doc.key)
                                 }
                               </span>
                             </div>

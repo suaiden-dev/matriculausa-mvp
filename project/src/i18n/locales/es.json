@@ -1737,6 +1737,9 @@
       "accessError": "No se pudo procesar el {{documentType}}. El archivo puede estar corrupto o en un formato no compatible. Por favor, intenta subir un nuevo archivo.",
       "fundsDataError": "No se pudo validar el comprobante de fondos. El documento puede no contener información clara sobre el saldo bancario o estar en un formato no legible. Intenta subir un extracto bancario más claro y legible.",
       "currencyFieldError": "Error interno del sistema al procesar datos de moneda en {{documentType}}. El documento puede no contener información de moneda válida o estar en un formato no compatible. Intenta subir un documento más claro.",
+      "passportFormatError": "El formato del documento de pasaporte no fue reconocido. Sube una foto clara y sin daños del pasaporte.",
+      "diplomaProcessError": "No se pudo procesar el Diploma de Secundaria. El archivo puede estar corrupto o en un formato no compatible. Intenta subir un nuevo archivo.",
+      "fundsValidationError": "No se pudo validar el documento. El archivo puede estar corrupto o en un formato no compatible. Intenta subir un nuevo archivo.",
       "passport": "Pasaporte",
       "passportDescription": "Documento de pasaporte válido",
       "diploma": "Diploma de Secundaria",
@@ -2090,6 +2093,12 @@
         "downloadFailed": "Error al descargar archivo.",
         "paymentSessionError": "Error al crear sesión de pago.",
         "paymentRedirectError": "Error al redirigir al pago."
+      }
+    },
+    "notifications": {
+      "documentRejected": {
+        "title": "Documento Rechazado",
+        "message": "Su documento {{fileName}} fue rechazado. Razón: {{reason}}"
       }
     },
     "documentRequests": {

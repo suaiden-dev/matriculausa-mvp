@@ -21,6 +21,50 @@ const ManualReview: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const clearCart = useCartStore(state => state.clearCart);
 
+  // Função para traduzir mensagens de erro
+  const translateErrorMessage = (errorMessage: string, documentType: string): string => {
+    console.log('🔍 [DEBUG] translateErrorMessage called with:', { errorMessage, documentType, currentLanguage: t('common.language') });
+    // Detectar mensagens específicas da API e traduzi-las
+    if (errorMessage.includes('passport document format is not recognized') || 
+        errorMessage.includes('format is not recognized') ||
+        errorMessage.includes('passport document format') ||
+        errorMessage.includes('format is not recognized')) {
+      return t('studentDashboard.documentsAndScholarshipChoice.passportFormatError');
+    }
+    
+    if (errorMessage.includes('Unable to process High School Diploma') || 
+        errorMessage.includes('Unable to process') ||
+        errorMessage.includes('Unable to process High School') ||
+        errorMessage.includes('process High School Diploma')) {
+      return t('studentDashboard.documentsAndScholarshipChoice.diplomaProcessError');
+    }
+    
+    if (errorMessage.includes('Unable to validate document') || 
+        errorMessage.includes('Unable to validate') ||
+        errorMessage.includes('validate document') ||
+        errorMessage.includes('Unable to validate proof of funds') ||
+        errorMessage.includes('Não foi possível validar o documento') ||
+        errorMessage.includes('No se pudo validar el documento')) {
+      return t('studentDashboard.documentsAndScholarshipChoice.fundsValidationError');
+    }
+    
+    // Detectar mensagens genéricas de erro e traduzi-las baseadas no tipo de documento
+    if (documentType === 'passport' && (errorMessage.includes('format') || errorMessage.includes('recognized') || errorMessage.includes('formato') || errorMessage.includes('reconocido'))) {
+      return t('studentDashboard.documentsAndScholarshipChoice.passportFormatError');
+    }
+    
+    if (documentType === 'diploma' && (errorMessage.includes('process') || errorMessage.includes('corrupted') || errorMessage.includes('procesar') || errorMessage.includes('corrupto'))) {
+      return t('studentDashboard.documentsAndScholarshipChoice.diplomaProcessError');
+    }
+    
+    if (documentType === 'funds_proof' && (errorMessage.includes('validate') || errorMessage.includes('corrupted') || errorMessage.includes('validar') || errorMessage.includes('corrupto'))) {
+      return t('studentDashboard.documentsAndScholarshipChoice.fundsValidationError');
+    }
+    
+    console.log('🔍 [DEBUG] translateErrorMessage returning original:', errorMessage);
+    return errorMessage;
+  };
+
   useEffect(() => {
     try {
       const e = JSON.parse(localStorage.getItem('documentAnalysisErrors') || '{}');
@@ -30,7 +74,17 @@ const ManualReview: React.FC = () => {
       console.log('Errors:', e);
       console.log('Documents:', d);
       
-      setFieldErrors(e || {});
+      // Traduzir as mensagens de erro antes de definir no estado
+      const translatedErrors: Record<string, string> = {};
+      for (const [key, value] of Object.entries(e)) {
+        if (typeof value === 'string') {
+          const translated = translateErrorMessage(value, key);
+          console.log('🔍 [DEBUG] Translating error:', { key, original: value, translated });
+          translatedErrors[key] = translated;
+        }
+      }
+      
+      setFieldErrors(translatedErrors);
       setPrevDocs(Array.isArray(d) ? d : []);
       
       // Se há erros, forçar checkboxes como desmarcados para exigir escolha explícita

@@ -1520,6 +1520,9 @@
       "accessError": "Unable to process {{documentType}}. The file may be corrupted or in an unsupported format. Please try uploading a new file.",
       "fundsDataError": "Unable to validate proof of funds. The document may not contain clear bank balance information or be in an unreadable format. Please try uploading a clearer and more legible bank statement.",
       "currencyFieldError": "Internal system error processing currency data in {{documentType}}. The document may not contain valid currency information or be in an unsupported format. Please try uploading a clearer document.",
+      "passportFormatError": "The passport document format is not recognized. Please upload a clear, undamaged passport photo.",
+      "diplomaProcessError": "Unable to process High School Diploma. The file may be corrupted or in an unsupported format. Please try uploading a new file.",
+      "fundsValidationError": "Unable to validate document. The file may be corrupted or in an unsupported format. Please try uploading a new file.",
       "passport": "Passport",
       "passportDescription": "Valid passport document",
       "diploma": "High School Diploma",
@@ -1873,6 +1876,12 @@
         "downloadFailed": "Failed to download file.",
         "paymentSessionError": "Error creating payment session.",
         "paymentRedirectError": "Error redirecting to payment."
+      }
+    },
+    "notifications": {
+      "documentRejected": {
+        "title": "Document Rejected",
+        "message": "Your document {{fileName}} was rejected. Reason: {{reason}}"
       }
     },
     "documentRequests": {
