@@ -36,6 +36,9 @@ interface DocumentRequestsCardProps {
 
 const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ applicationId, isSchool, currentUserId, studentType, studentUserId, onDocumentUploaded }) => {
   const { t } = useTranslation();
+  
+  // Debug: verificar se studentType está chegando corretamente
+  console.log('🔍 [DocumentRequestsCard] studentType received:', studentType);
   const [requests, setRequests] = useState<DocumentRequest[]>([]);
   const [uploads, setUploads] = useState<{ [requestId: string]: DocumentRequestUpload[] }>({});
   const [loading, setLoading] = useState(true);
@@ -63,6 +66,8 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
   const [viewingAcceptanceLetter, setViewingAcceptanceLetter] = useState(false);
   // Estado para o modal da carta de aceite
   const [acceptanceLetterPreviewUrl, setAcceptanceLetterPreviewUrl] = useState<string | null>(null);
+  // Estado para transfer form
+  const [transferForm, setTransferForm] = useState<any>(null);
   const universityContext = isSchool ? useUniversity() : null;
   const refreshData = universityContext ? universityContext.refreshData : undefined;
   // 1. Adicionar estado para logo da universidade
@@ -99,6 +104,33 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
     };
     
     fetchAcceptanceLetter();
+  }, [applicationId]);
+
+  useEffect(() => {
+    // Buscar dados do transfer form da aplicação
+    const fetchTransferForm = async () => {
+      console.log('=== DEBUG fetchTransferForm ===');
+      console.log('applicationId:', applicationId);
+      
+      const { data, error } = await supabase
+        .from('scholarship_applications')
+        .select('id, transfer_form_url, transfer_form_status, transfer_form_sent_at')
+        .eq('id', applicationId)
+        .maybeSingle();
+      
+      console.log('Resultado da busca transfer form:', { data, error });
+      
+      if (!error && data) {
+        console.log('Transfer form encontrado:', data);
+        setTransferForm(data);
+      } else if (error) {
+        console.error('Erro ao buscar transfer form:', error);
+      } else {
+        console.log('Nenhum transfer form encontrado para applicationId:', applicationId);
+      }
+    };
+    
+    fetchTransferForm();
   }, [applicationId]);
 
   useEffect(() => {
@@ -1198,36 +1230,33 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
           ) : (
             // Download/visualização para aluno
             <div className="flex flex-col gap-2 mt-2">
-              {/* Exibir botão de download se houver upload feito pela escola */}
-              {uploads['transfer_form'] && uploads['transfer_form'].length > 0 ? (
-                uploads['transfer_form'].map(upload => (
-                  <div key={upload.id} className="flex items-center gap-3">
-                    <button
-                      className="bg-blue-600 text-white px-4 py-2 rounded font-semibold shadow hover:bg-blue-700 transition"
-                      onClick={async () => {
-                        await getSignedUrl(upload.file_url, upload.id);
-                        const signedUrl = signedUrls[upload.id];
-                        if (signedUrl) {
-                          handleForceDownload(signedUrl, upload.file_url.split('/').pop() || 'transfer_form.pdf');
-                        }
-                      }}
-                    >
-                      {t('studentDashboard.documentRequests.forms.downloadTransferForm')}
-                    </button>
-                    <button
-                      className="bg-white text-blue-600 border border-blue-600 px-4 py-2 rounded font-semibold shadow hover:bg-blue-50 transition"
-                      onClick={async () => {
-                        await getSignedUrl(upload.file_url, upload.id);
-                        const signedUrl = signedUrls[upload.id];
-                        if (signedUrl) {
-                          setPreviewUrl(signedUrl);
-                        }
-                      }}
-                    >
-                      {t('studentDashboard.documentRequests.forms.view')}
-                    </button>
-                  </div>
-                ))
+              {/* Exibir botão de download se houver transfer form enviado pela escola */}
+              {transferForm?.transfer_form_url ? (
+                <div className="flex items-center gap-3">
+                  <button
+                    className="bg-blue-600 text-white px-4 py-2 rounded font-semibold shadow hover:bg-blue-700 transition"
+                    onClick={() => {
+                      // Usar a URL pública diretamente para download
+                      handleForceDownload(transferForm.transfer_form_url, transferForm.transfer_form_url.split('/').pop() || 'transfer_form.pdf');
+                    }}
+                  >
+                    {t('studentDashboard.documentRequests.forms.downloadTransferForm')}
+                  </button>
+                  <button
+                    className="bg-white text-blue-600 border border-blue-600 px-4 py-2 rounded font-semibold shadow hover:bg-blue-50 transition"
+                    onClick={() => {
+                      // Usar a URL pública diretamente para visualização
+                      setPreviewUrl(transferForm.transfer_form_url);
+                    }}
+                  >
+                    {t('studentDashboard.documentRequests.forms.view')}
+                  </button>
+                  {transferForm.transfer_form_sent_at && (
+                    <span className="text-xs text-slate-500">
+                      {t('studentDashboard.documentRequests.forms.sentOn')} {new Date(transferForm.transfer_form_sent_at).toLocaleDateString()}
+                    </span>
+                  )}
+                </div>
               ) : (
                 <span className="text-slate-400 text-xs">{t('studentDashboard.documentRequests.forms.noTransferFormUploadedYet')}</span>
               )}

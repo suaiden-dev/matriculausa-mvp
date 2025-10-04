@@ -226,7 +226,13 @@ export const useStudentDetails = () => {
           error: applicationError,
           hasData: !!applicationData,
           applicationId: applicationData?.id,
-          documents: applicationData?.documents
+          documents: applicationData?.documents,
+          scholarships: applicationData?.scholarships,
+          university_id: applicationData?.scholarships?.universities?.id,
+          is_application_fee_paid: applicationData?.is_application_fee_paid,
+          is_scholarship_fee_paid: applicationData?.is_scholarship_fee_paid,
+          application_fee_amount: applicationData?.scholarships?.application_fee_amount,
+          scholarship_fee_amount: applicationData?.scholarships?.scholarship_fee_amount
         });
 
         studentData.documents = applicationData?.documents;
@@ -569,7 +575,6 @@ export const useStudentDetails = () => {
           if (studentData.has_paid_i20_control_fee) {
             setI20ControlFeeDeadline(null);
             console.log('🔍 [I20_DEADLINE] I-20 already paid, no deadline');
-            return;
           }
 
           // Se a carta de aceite foi enviada, devemos mostrar o deadline
@@ -597,26 +602,37 @@ export const useStudentDetails = () => {
           setI20ControlFeeDeadline(null);
         }
 
-        // Definir aplicação de bolsa
-        if (studentData.selected_scholarship_id) {
-          setScholarshipApplication({
-            id: studentData.selected_scholarship_id,
-            status: studentData.application_status || 'pending',
-            student_process_type: studentData.student_process_type || 'Not specified',
-            applied_at: studentData.registration_date || new Date().toISOString(),
-            reviewed_at: new Date().toISOString(),
-            notes: '',
-            documents: studentData.documents || [],
-            acceptance_letter_status: 'pending',
-            acceptance_letter_url: '',
-            acceptance_letter_sent_at: studentData.acceptance_letter_sent_at || null, // ✅ Adicionar campo faltante
-            is_application_fee_paid: studentData.is_application_fee_paid || false,
-            is_scholarship_fee_paid: studentData.is_scholarship_fee_paid || false,
-            paid_at: new Date().toISOString(),
-            payment_status: 'pending',
-            has_paid_selection_process_fee: studentData.has_paid_selection_process_fee || false,
-            has_paid_i20_control_fee: studentData.has_paid_i20_control_fee || false
-          });
+        // Definir aplicação de bolsa usando os dados reais da aplicação
+        console.log('🔍 [AFFILIATE_DEBUG] Checking applicationData:', !!applicationData, applicationData);
+        if (applicationData) {
+          const scholarshipApp = {
+            id: applicationData.id,
+            status: applicationData.status || 'pending',
+            student_process_type: applicationData.student_process_type || 'Not specified',
+            applied_at: applicationData.applied_at || new Date().toISOString(),
+            reviewed_at: applicationData.reviewed_at || new Date().toISOString(),
+            notes: applicationData.notes || '',
+            documents: applicationData.documents || [],
+            acceptance_letter_status: applicationData.acceptance_letter_status || 'pending',
+            acceptance_letter_url: applicationData.acceptance_letter_url || '',
+            acceptance_letter_sent_at: applicationData.acceptance_letter_sent_at || null,
+            is_application_fee_paid: applicationData.is_application_fee_paid || false,
+            is_scholarship_fee_paid: applicationData.is_scholarship_fee_paid || false,
+            paid_at: applicationData.paid_at || new Date().toISOString(),
+            payment_status: applicationData.payment_status || 'pending',
+            has_paid_selection_process_fee: applicationData.has_paid_selection_process_fee || false,
+            has_paid_i20_control_fee: applicationData.has_paid_i20_control_fee || false,
+            // ✅ CORREÇÃO: Incluir dados de scholarships e universities
+            scholarships: applicationData.scholarships || null
+          };
+          
+          console.log('🔍 [AFFILIATE_DEBUG] Setting scholarship application:', scholarshipApp);
+          console.log('🔍 [AFFILIATE_DEBUG] Scholarship app scholarships:', scholarshipApp.scholarships);
+          console.log('🔍 [AFFILIATE_DEBUG] Scholarship app is_application_fee_paid:', scholarshipApp.is_application_fee_paid);
+          console.log('🔍 [AFFILIATE_DEBUG] Scholarship app is_scholarship_fee_paid:', scholarshipApp.is_scholarship_fee_paid);
+          setScholarshipApplication(scholarshipApp);
+        } else {
+          console.log('🔍 [AFFILIATE_DEBUG] No applicationData found, scholarshipApplication will remain null');
         }
 
         // Definir histórico de taxas

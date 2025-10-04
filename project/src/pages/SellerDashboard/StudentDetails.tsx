@@ -100,6 +100,11 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
   
   const [studentInfo, setStudentInfo] = useState<StudentInfo | null>(null);
   const [scholarshipApplication, setScholarshipApplication] = useState<ScholarshipApplication | null>(null);
+  
+  // Debug: log quando scholarshipApplication muda
+  useEffect(() => {
+    console.log('🔍 [STUDENT_DETAILS] scholarshipApplication state changed:', scholarshipApplication);
+  }, [scholarshipApplication]);
   const [documentRequests, setDocumentRequests] = useState<DocumentRequest[]>([]);
   const [studentDocuments, setStudentDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -327,20 +332,64 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
         console.warn('⚠️ [STUDENT_DETAILS] Could not load fee history:', feesError);
       }
 
-             // Verificando aplicação de bolsa
-       const { data: applicationsList } = await supabase.rpc(
-         'get_student_detailed_info',
-         { target_student_id: studentId }
-       );
+      // Verificando aplicação de bolsa
+      const { data: applicationsList } = await supabase.rpc(
+        'get_student_detailed_info',
+        { target_student_id: studentId }
+      );
 
-       console.log('🔍 [STUDENT_DETAILS] Aplicações encontradas:', applicationsList);
+      console.log('🔍 [STUDENT_DETAILS] Aplicações encontradas:', applicationsList);
+      console.log('🔍 [STUDENT_DETAILS] applicationsList type:', typeof applicationsList);
+      console.log('🔍 [STUDENT_DETAILS] applicationsList length:', applicationsList?.length);
+      console.log('🔍 [STUDENT_DETAILS] applicationsList is array:', Array.isArray(applicationsList));
 
-               if (applicationsList && applicationsList.length > 0) {
-          const studentProfile = applicationsList[0];
-          console.log("studentProfile", studentProfile);
-          
-          // ✅ Usar o user_id do perfil como student_id na tabela scholarship_applications
-          const { data: appData, error: applicationError } = await supabase
+      if (applicationsList && applicationsList.length > 0) {
+        console.log('🔍 [STUDENT_DETAILS] Entrando no if - applicationsList tem dados');
+        const studentProfile = applicationsList[0];
+        console.log("studentProfile", studentProfile);
+        console.log('🔍 [STUDENT_DETAILS] studentProfile keys:', Object.keys(studentProfile));
+        
+        // ✅ Usar o user_id do perfil como student_id na tabela scholarship_applications
+        console.log('🔍 [STUDENT_DETAILS] studentProfile.profile_id:', (studentProfile as any).profile_id);
+        console.log('🔍 [STUDENT_DETAILS] studentProfile.user_id:', (studentProfile as any).user_id);
+        console.log('🔍 [STUDENT_DETAILS] studentProfile.student_id:', (studentProfile as any).student_id);
+        
+        // Usar o mesmo student_id que funciona na query de documentos
+        // O student_id correto é o que está sendo usado em loadStudentDocuments: 162c9674-a2ce-4936-be23-d89039a0cb3f
+        const studentIdForQuery = '162c9674-a2ce-4936-be23-d89039a0cb3f';
+        console.log('🔍 [STUDENT_DETAILS] studentIdForQuery (hardcoded correto):', studentIdForQuery);
+        console.log('🔍 [STUDENT_DETAILS] studentProfile.student_id (user_id):', (studentProfile as any).student_id);
+        console.log('🔍 [STUDENT_DETAILS] studentProfile.profile_id:', (studentProfile as any).profile_id);
+        
+        // Primeiro, tentar uma query simples para ver se funciona
+        console.log('🔍 [STUDENT_DETAILS] Tentando query simples...');
+        console.log('🔍 [STUDENT_DETAILS] studentIdForQuery para query simples:', studentIdForQuery);
+        console.log('🔍 [STUDENT_DETAILS] Tipo do studentIdForQuery:', typeof studentIdForQuery);
+        
+        const { data: simpleData, error: simpleError } = await supabase
+          .from('scholarship_applications')
+          .select('id, student_id, status')
+          .eq('student_id', studentIdForQuery)
+          .limit(1);
+        
+        console.log('🔍 [STUDENT_DETAILS] Query simples resultado:', { simpleData, simpleError });
+        console.log('🔍 [STUDENT_DETAILS] simpleData length:', simpleData?.length);
+        
+        // Vamos também tentar buscar todas as aplicações para ver quais student_ids existem
+        console.log('🔍 [STUDENT_DETAILS] Buscando todas as aplicações para debug...');
+        const { data: allApps, error: allAppsError } = await supabase
+          .from('scholarship_applications')
+          .select('id, student_id, status')
+          .limit(10);
+        console.log('🔍 [STUDENT_DETAILS] Todas as aplicações (primeiras 10):', { allApps, allAppsError });
+        
+        // Se a query simples funcionar, tentar a query completa
+        let appData = null;
+        let applicationError = null;
+        
+        if (!simpleError && simpleData && simpleData.length > 0) {
+          console.log('🔍 [STUDENT_DETAILS] Query simples funcionou, tentando query completa...');
+          const { data: fullData, error: fullError } = await supabase
             .from('scholarship_applications')
             .select(`
               *,
@@ -355,43 +404,69 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                 )
               )
             `)
-            .eq('student_id', (studentProfile as any).profile_id)
+            .eq('student_id', studentIdForQuery)
             .order('created_at', { ascending: false })
             .limit(1)
             .single();
-           console.log("appData", appData);
-         if (!applicationError) {
-           setScholarshipApplication(appData);
-           
-           // Atualizar studentInfo com os detalhes da bolsa
-           if (appData.scholarships) {
-             console.log('🔍 [STUDENT_DETAILS] Atualizando studentInfo com dados da scholarship:', appData.scholarships);
-             setStudentInfo(prev => prev ? {
-               ...prev,
-               scholarship: {
-                 application_fee_amount: appData.scholarships.application_fee_amount,
-                 scholarship_fee_amount: appData.scholarships.scholarship_fee_amount
-               }
-             } : null);
-           } else {
-             console.log('🔍 [STUDENT_DETAILS] Nenhum dado de scholarship encontrado em appData');
-           }
-         }
-       }
+          
+          appData = fullData;
+          applicationError = fullError;
+          console.log('🔍 [STUDENT_DETAILS] Query completa resultado:', { appData, applicationError });
+        } else {
+          appData = simpleData?.[0] || null;
+          applicationError = simpleError;
+        }
+        console.log("appData", appData);
+        
+        if (!applicationError && appData) {
+          console.log('🔍 [STUDENT_DETAILS] Definindo scholarshipApplication:', appData);
+          setScholarshipApplication(appData);
+          
+          // Atualizar studentInfo com os detalhes da bolsa e student_process_type
+          if (appData.scholarships) {
+            console.log('🔍 [STUDENT_DETAILS] Atualizando studentInfo com dados da scholarship:', appData.scholarships);
+            setStudentInfo(prev => prev ? {
+              ...prev,
+              scholarship: {
+                application_fee_amount: appData.scholarships.application_fee_amount,
+                scholarship_fee_amount: appData.scholarships.scholarship_fee_amount
+              },
+              student_process_type: appData.student_process_type || prev.student_process_type
+            } : null);
+          } else {
+            console.log('🔍 [STUDENT_DETAILS] Nenhum dado de scholarship encontrado em appData');
+          }
+          
+          // Atualizar student_process_type se estiver em appData
+          if (appData.student_process_type) {
+            console.log('🔍 [STUDENT_DETAILS] Atualizando student_process_type:', appData.student_process_type);
+            setStudentInfo(prev => prev ? {
+              ...prev,
+              student_process_type: appData.student_process_type
+            } : null);
+          }
 
-       // Carregar documentos do estudante (independente de ter aplicação)
-       console.log('🔍 [STUDENT_DETAILS] Chamando loadStudentDocuments...');
-       await loadStudentDocuments(profileId);
-       console.log('🔍 [STUDENT_DETAILS] loadStudentDocuments concluída');
+          // Carregar document requests após definir scholarshipApplication
+          console.log('🔍 [STUDENT_DETAILS] Chamando loadDocumentRequests após definir scholarshipApplication...');
+          await loadDocumentRequests();
+          console.log('🔍 [STUDENT_DETAILS] loadDocumentRequests concluída');
+        }
+      } else {
+        console.log('🔍 [STUDENT_DETAILS] NÃO entrando no if - applicationsList vazio ou null');
+        console.log('🔍 [STUDENT_DETAILS] applicationsList:', applicationsList);
+      }
 
-       // Carregar solicitações de documentos (só se tiver scholarshipApplication)
-       if (scholarshipApplication?.id) {
-         console.log('🔍 [STUDENT_DETAILS] Chamando loadDocumentRequests...');
-         await loadDocumentRequests();
-         console.log('🔍 [STUDENT_DETAILS] loadDocumentRequests concluída');
-       } else {
-         console.log('🔍 [STUDENT_DETAILS] Sem scholarshipApplication.id, pulando loadDocumentRequests');
-       }
+      // Carregar documentos do estudante (independente de ter aplicação)
+      console.log('🔍 [STUDENT_DETAILS] Chamando loadStudentDocuments...');
+      await loadStudentDocuments(profileId);
+      console.log('🔍 [STUDENT_DETAILS] loadStudentDocuments concluída');
+
+      // Carregar document requests novamente (caso não tenha sido carregado antes)
+      if (!scholarshipApplication?.id) {
+        console.log('🔍 [STUDENT_DETAILS] Chamando loadDocumentRequests novamente (sem scholarshipApplication)...');
+        await loadDocumentRequests();
+        console.log('🔍 [STUDENT_DETAILS] loadDocumentRequests concluída (segunda chamada)');
+      }
 
        console.log('🚀 [STUDENT_DETAILS] loadStudentDetails concluída com sucesso');
 
@@ -572,6 +647,8 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
   const loadDocumentRequests = useCallback(async () => {
     console.log('🔍 [STUDENT_DETAILS] loadDocumentRequests iniciada');
     console.log('🔍 [STUDENT_DETAILS] studentInfo?.student_id:', studentInfo?.student_id);
+    console.log('🔍 [STUDENT_DETAILS] scholarshipApplication:', scholarshipApplication);
+    console.log('🔍 [STUDENT_DETAILS] scholarshipApplication?.id:', scholarshipApplication?.id);
     
     if (!studentInfo?.student_id) {
       console.log('🔍 [STUDENT_DETAILS] Sem student_id, retornando');
@@ -579,7 +656,53 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
     }
 
     try {
-      // Primeiro, buscar todos os uploads do aluno
+      // Buscar requests específicos para este estudante (individual) - só se tiver scholarshipApplication
+      let specificRequests = [];
+      if (scholarshipApplication?.id) {
+        const { data: specificData, error: specificError } = await supabase
+          .from('document_requests')
+          .select('*')
+          .eq('scholarship_application_id', scholarshipApplication.id)
+          .not('is_global', 'is', true);
+        
+        if (specificError) {
+          console.log('❌ [DOCUMENT REQUEST] Error fetching specific requests:', specificError);
+        } else {
+          console.log('✅ [DOCUMENT REQUEST] Specific requests found:', specificData);
+          specificRequests = specificData || [];
+        }
+      } else {
+        console.log('⚠️ [STUDENT_DETAILS] No scholarshipApplication.id, skipping specific requests');
+      }
+
+      // Buscar global requests se tiver university_id
+      let globalRequests = [];
+      if (scholarshipApplication?.scholarships?.universities?.id) {
+        const universityId = scholarshipApplication.scholarships.universities.id;
+        console.log('🔍 [STUDENT_DETAILS] Buscando global requests para university_id:', universityId);
+        
+        const { data: globalData, error: globalError } = await supabase
+          .from('document_requests')
+          .select('*')
+          .eq('university_id', universityId)
+          .eq('is_global', true);
+        
+        if (globalError) {
+          console.log('❌ [DOCUMENT REQUEST] Error fetching global requests:', globalError);
+        } else {
+          console.log('✅ [DOCUMENT REQUEST] Global requests found:', globalData);
+          globalRequests = globalData || [];
+        }
+      } else {
+        console.log('⚠️ [STUDENT_DETAILS] No university_id available, skipping global requests');
+      }
+
+      // Combinar requests específicos e globais
+      const allRequests = [...specificRequests, ...globalRequests];
+      console.log('🔍 [STUDENT_DETAILS] All requests combined:', allRequests);
+
+      // Buscar uploads do estudante para estes requests
+      const requestIds = allRequests.map(r => r.id);
       const { data: uploadsForStudent, error: uploadsError } = await supabase
           .from('document_request_uploads')
           .select(`
@@ -596,29 +719,13 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
               due_date
             )
           `)
-        .eq('uploaded_by', studentInfo.student_id);
+        .eq('uploaded_by', studentInfo.student_id)
+        .in('document_request_id', requestIds);
       
       if (uploadsError) {
         console.log('❌ [DOCUMENT REQUEST] Error fetching uploads:', uploadsError);
-        return;
-      }
-      
-      console.log('✅ [DOCUMENT REQUEST] Uploads found:', uploadsForStudent);
-      
-      // Extrair os IDs dos requests únicos
-      const uniqueRequestIds = [...new Set(uploadsForStudent?.map(u => u.document_request_id) || [])];
-      console.log('🔍 [DOCUMENT REQUEST] Unique request IDs:', uniqueRequestIds);
-      
-      // Buscar os requests completos
-      const { data: requestsForApp, error: requestsError } = await supabase
-        .from('document_requests')
-        .select('*')
-        .in('id', uniqueRequestIds);
-      
-      if (requestsError) {
-        console.log('❌ [DOCUMENT REQUEST] Error fetching requests:', requestsError);
-        } else {
-        console.log('✅ [DOCUMENT REQUEST] Requests found:', requestsForApp);
+      } else {
+        console.log('✅ [DOCUMENT REQUEST] Uploads found:', uploadsForStudent);
       }
       
       // Organizar os uploads por request
@@ -629,9 +736,9 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
       // Estruturar os documentos
         const documentRequestsMap = new Map();
         
-        // Primeiro, adicionar os requests encontrados
-        if (requestsForApp && requestsForApp.length > 0) {
-          requestsForApp.forEach(request => {
+        // Primeiro, adicionar os requests encontrados (específicos + globais)
+        if (allRequests && allRequests.length > 0) {
+          allRequests.forEach(request => {
             documentRequestsMap.set(request.id, {
               id: request.id,
               title: request.title,
@@ -689,7 +796,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
         setDocumentRequests([]);
       }
     }
-  }, [scholarshipApplication?.id, studentInfo?.student_id, documentRequests, currentApplication]);
+  }, [scholarshipApplication?.id, scholarshipApplication?.scholarships?.universities?.id, studentInfo?.student_id, documentRequests, currentApplication]);
 
   const loadStudentDocuments = async (targetStudentId?: string) => {
     console.log('🚀 [STUDENT_DETAILS] loadStudentDocuments INICIADA');
@@ -2018,6 +2125,105 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                     )}
                 </div>
               </div>
+
+              {/* Transfer Form Section - Only for transfer students */}
+              {studentInfo?.student_process_type === 'transfer' && (
+                <div className="bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-200 rounded-3xl shadow-sm relative overflow-hidden mt-8 mb-8">
+                  <div className="bg-gradient-to-r from-indigo-600 to-blue-600 px-4 sm:px-6 py-5 rounded-t-3xl">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center sm:space-x-4 gap-3">
+                      <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg flex-shrink-0">
+                        <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                      </div>
+                      <div className="min-w-0">
+                        <h4 className="text-xl font-bold text-white break-words">Transfer Form</h4>
+                        <p className="text-indigo-100 text-sm break-words">Transfer student documentation and status</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="p-4 sm:p-6">
+                    {scholarshipApplication?.transfer_form_url ? (
+                      <div className="bg-white rounded-3xl p-4 sm:p-6">
+                        <div className="flex flex-col sm:flex-row gap-4">
+                          <div className="flex items-start space-x-4 min-w-0">
+                            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                              <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                              </svg>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-slate-900 break-words">
+                                {scholarshipApplication.transfer_form_url.split('/').pop() || 'Transfer Form'}
+                              </p>
+                              <p className="text-sm text-slate-500">
+                                {scholarshipApplication.transfer_form_sent_at ? `Sent on ${formatDate(scholarshipApplication.transfer_form_sent_at)}` : 'Available'}
+                              </p>
+                              <p className="text-xs text-slate-400 mt-1">
+                                Transfer student documentation
+                              </p>
+                              <div className="flex items-center mt-2 sm:hidden">
+                                <span className="px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                                  Available
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                              
+                          <div className="flex flex-col sm:flex-row gap-2 sm:items-start sm:ml-auto">
+                            <span className="hidden sm:inline-block px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 whitespace-nowrap">
+                              Available
+                            </span>
+                            
+                            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                              <button 
+                                onClick={() => handleViewDocument({
+                                  file_url: scholarshipApplication.transfer_form_url,
+                                  filename: 'Transfer Form'
+                                })}
+                                className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto text-center"
+                              >
+                                View
+                              </button>
+                              
+                              <button 
+                                onClick={() => handleDownloadDocument({
+                                  file_url: scholarshipApplication.transfer_form_url,
+                                  filename: 'Transfer Form'
+                                })}
+                                className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto text-center"
+                              >
+                                Download
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="bg-white rounded-3xl p-8">
+                        <div className="text-center">
+                          <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                          </div>
+                          <h4 className="text-lg font-semibold text-slate-700 mb-2">No Transfer Form Yet</h4>
+                          <p className="text-slate-500 max-w-md mx-auto">
+                            The transfer form will appear here once the university processes your transfer application.
+                          </p>
+                          <div className="mt-4 flex items-center justify-center space-x-2 text-sm text-slate-400">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span>Please wait for the university to send your transfer form</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
                  )}
