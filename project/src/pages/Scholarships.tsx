@@ -39,6 +39,7 @@ const Scholarships: React.FC = () => {
   ? (userProfile as any).desired_scholarship_range 
   : null;
   
+  
   // TODOS OS HOOKS DEVEM VIR ANTES DE QUALQUER LÓGICA CONDICIONAL
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLevel, setSelectedLevel] = useState('all');

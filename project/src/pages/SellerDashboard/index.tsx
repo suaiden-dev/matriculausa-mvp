@@ -478,10 +478,9 @@ const SellerDashboard: React.FC = () => {
         );
               case 'affiliate-tools':
         return (
-                      <AffiliateTools 
-              sellerProfile={sellerProfile}
-              stats={stats}
-            />
+          <AffiliateTools 
+            sellerProfile={sellerProfile}
+          />
         );
       case 'performance':
         return (

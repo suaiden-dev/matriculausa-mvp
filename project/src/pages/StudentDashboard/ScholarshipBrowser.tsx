@@ -77,7 +77,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
   const [sortBy] = useState('deadline');
   const [filtersExpanded, setFiltersExpanded] = useState(false);
   const navigate = useNavigate();
-  const { cart, addToCart, removeFromCart } = useCartStore();
+  const { cart, addToCart, removeFromCart, fetchCart } = useCartStore();
   const [minValue, setMinValue] = useState('');
   const [maxValue, setMaxValue] = useState('');
   const [deadlineDays, setDeadlineDays] = useState('');
@@ -311,6 +311,13 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
   useEffect(() => {
     loadFeaturedScholarships();
   }, []);
+
+  // Carregar carrinho do banco de dados quando o usuário estiver disponível
+  useEffect(() => {
+    if (user?.id) {
+      fetchCart(user.id);
+    }
+  }, [user?.id, fetchCart]);
 
   // Load approved universities (ids) so we can exclude scholarships from unapproved schools
   useEffect(() => {

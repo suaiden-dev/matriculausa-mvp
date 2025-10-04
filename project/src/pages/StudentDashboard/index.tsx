@@ -65,7 +65,7 @@ const StudentDashboard: React.FC = () => {
   const { user, userProfile } = useAuth();
   const [dashboardLoading, setDashboardLoading] = useState(true);
   const [hasLoadedData, setHasLoadedData] = useState(false);
-  const cart = useCartStore((state) => state.cart);
+  const { cart, fetchCart } = useCartStore();
   const navigate = useNavigate();
   const [dashboardError, setDashboardError] = useState<string | null>(null);
   const [recentApplications, setRecentApplications] = useState<Application[]>([]);
@@ -190,6 +190,13 @@ const StudentDashboard: React.FC = () => {
       loadDashboardData();
     }
   }, [user, userProfile, hasLoadedData]);
+
+  // Load cart from database when user is available
+  useEffect(() => {
+    if (user?.id) {
+      fetchCart(user.id);
+    }
+  }, [user?.id, fetchCart]);
 
   // Fase 5: Aplicar código de referência da URL automaticamente
   useEffect(() => {

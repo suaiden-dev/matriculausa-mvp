@@ -20,6 +20,7 @@ import {
 import { useAuth } from '../../hooks/useAuth';
 import SellerNotifications from '../../components/SellerNotifications';
 import { useSellerI20DeadlineMonitor } from '../../hooks/useSellerI20DeadlineMonitor';
+import { useSystemType } from '../../hooks/useSystemType';
 
 interface SellerDashboardLayoutProps {
   user: any;
@@ -39,6 +40,7 @@ const SellerDashboardLayout: React.FC<SellerDashboardLayoutProps> = ({
   const location = useLocation();
   const navigate = useNavigate();
   const { logout } = useAuth();
+  const { systemType } = useSystemType();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
@@ -66,13 +68,27 @@ const SellerDashboardLayout: React.FC<SellerDashboardLayoutProps> = ({
 
   const activeTab = getActiveTab();
 
-  const sidebarItems = [
-    { id: 'overview', label: 'Overview', icon: BarChart3, path: '/seller/dashboard', badge: null },
-    { id: 'students', label: 'My Students', icon: GraduationCap, path: '/seller/dashboard/students', badge: null },
-    { id: 'affiliate-tools', label: 'Affiliate Tools', icon: Target, path: '/seller/dashboard/affiliate-tools', badge: null },
-    { id: 'performance', label: 'Performance', icon: Activity, path: '/seller/dashboard/performance', badge: null },
-    { id: 'profile', label: 'Settings', icon: Settings, path: '/seller/dashboard/profile', badge: null }
-  ];
+  // Sidebar items based on system type
+  const getSidebarItems = () => {
+    const baseItems = [
+      { id: 'overview', label: 'Overview', icon: BarChart3, path: '/seller/dashboard', badge: null },
+      { id: 'students', label: 'My Students', icon: GraduationCap, path: '/seller/dashboard/students', badge: null },
+      { id: 'affiliate-tools', label: 'Affiliate Tools', icon: Target, path: '/seller/dashboard/affiliate-tools', badge: null },
+      { id: 'performance', label: 'Performance', icon: Activity, path: '/seller/dashboard/performance', badge: null },
+      { id: 'profile', label: 'Settings', icon: Settings, path: '/seller/dashboard/profile', badge: null }
+    ];
+
+    // For simplified system, we might want to modify certain items
+    if (systemType === 'simplified') {
+      // For now, show all items but we can modify this later
+      return baseItems;
+    }
+
+    // For legacy system (Matheus), show all items
+    return baseItems;
+  };
+
+  const sidebarItems = getSidebarItems();
 
   const handleNavigation = (href: string, view: string) => {
     // Always navigate

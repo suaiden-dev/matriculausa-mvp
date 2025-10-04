@@ -7,6 +7,7 @@ import { supabase } from '../../lib/supabase';
 import { getDocumentStatusDisplay } from '../../utils/documentStatusMapper';
 // import { useApplicationChat } from '../../hooks/useApplicationChat'; // Removido pois não está sendo usado
 import { useAuth } from '../../hooks/useAuth';
+import { useTranslation } from 'react-i18next';
 const FUNCTIONS_URL = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL as string;
 import DocumentViewerModal from '../../components/DocumentViewerModal';
 
@@ -40,6 +41,7 @@ const TABS = [
 const SelectionProcess: React.FC = () => {
   const { applications, university, refreshData } = useUniversity();
   const { user } = useAuth();
+  const { t } = useTranslation();
   
   // States para filtros e pesquisa
   const [searchTerm, setSearchTerm] = useState('');
@@ -1216,8 +1218,11 @@ const SelectionProcess: React.FC = () => {
           if (accessToken) {
             const notificationPayload = {
               student_user_id: selectedStudent?.user_profiles.user_id,
-              title: 'Document rejected',
-              message: `Your document ${uploadData.file_url?.split('/').pop()} was rejected. Reason: ${reason}`,
+              title: t('notifications.documentRejected.title'),
+              message: t('notifications.documentRejected.message', { 
+                fileName: uploadData.file_url?.split('/').pop(),
+                reason: reason 
+              }),
               type: 'document_rejected',
               link: '/student/dashboard',
             };

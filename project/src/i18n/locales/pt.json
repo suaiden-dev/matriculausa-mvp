@@ -1616,6 +1616,9 @@
       "accessError": "Não foi possível processar o {{documentType}}. O arquivo pode estar corrompido ou em formato não suportado. Por favor, tente fazer upload de um novo arquivo.",
       "fundsDataError": "Não foi possível validar o comprovante de fundos. O documento pode não conter informações claras sobre saldo bancário ou estar em formato não legível. Tente fazer upload de um extrato bancário mais claro e legível.",
       "currencyFieldError": "Erro interno do sistema ao processar dados de moeda no {{documentType}}. O documento pode não conter informações de moeda válidas ou estar em formato não suportado. Tente fazer upload de um documento mais claro.",
+      "passportFormatError": "O formato do documento de passaporte não foi reconhecido. Faça upload de uma foto clara e sem danos do passaporte.",
+      "diplomaProcessError": "Não foi possível processar o Diploma do Ensino Médio. O arquivo pode estar corrompido ou em formato não suportado. Tente fazer upload de um novo arquivo.",
+      "fundsValidationError": "Não foi possível validar o documento. O arquivo pode estar corrompido ou em formato não suportado. Tente fazer upload de um novo arquivo.",
       "passport": "Passaporte",
       "passportDescription": "Documento de passaporte válido",
       "diploma": "Diploma do Ensino Médio",
@@ -1969,6 +1972,12 @@
         "downloadFailed": "Falha ao baixar arquivo.",
         "paymentSessionError": "Erro ao criar sessão de pagamento.",
         "paymentRedirectError": "Erro ao redirecionar para o pagamento."
+      }
+    },
+    "notifications": {
+      "documentRejected": {
+        "title": "Documento Rejeitado",
+        "message": "Seu documento {{fileName}} foi rejeitado. Motivo: {{reason}}"
       }
     },
     "documentRequests": {

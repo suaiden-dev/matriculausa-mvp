@@ -5,6 +5,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useScholarshipPackages } from '../hooks/useScholarshipPackages';
 import { supabase } from '../lib/supabase';
 import PhoneInput from 'react-phone-number-input';
+import { useSystemType } from '../hooks/useSystemType';
 
 const SellerStudentRegistration: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -36,11 +37,36 @@ const SellerStudentRegistration: React.FC = () => {
 
   const { register, user, userProfile } = useAuth();
   const { packages, loading: packagesLoading } = useScholarshipPackages();
+  const { systemType } = useSystemType();
   const navigate = useNavigate();
 
   // Guardar acesso: apenas equipe interna (admin/affiliate_admin)
   const allowedRoles = new Set(['admin', 'affiliate_admin', 'seller']);
   const isAllowed = !!user && allowedRoles.has(String(userProfile?.role || '').toLowerCase());
+
+  // Esconder página para sistema simplified
+  if (systemType === 'simplified') {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8 text-center">
+          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <UserCheck className="w-8 h-8 text-blue-600" />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Registration Not Available</h1>
+          <p className="text-gray-600 mb-6">
+            This registration page is not available for simplified system. 
+            Please use the referral link provided by your seller.
+          </p>
+          <Link
+            to="/"
+            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Go to Homepage
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   // Validar código do vendedor ao carregar a página
   useEffect(() => {
