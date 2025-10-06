@@ -12,6 +12,14 @@ export class GlobalErrorBoundary extends React.Component<{ children: React.React
   }
 
   componentDidCatch(error: any, info: any) {
+    // Log mais detalhado para erros de rede
+    if (error?.message?.includes('Failed to fetch')) {
+      console.error('🌐 Erro de rede detectado:', {
+        error: error.message,
+        componentStack: info.componentStack,
+        timestamp: new Date().toISOString()
+      });
+    }
     logError(error, info);
   }
 

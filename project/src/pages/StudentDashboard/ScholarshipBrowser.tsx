@@ -87,6 +87,10 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
   const [featuredLoading, setFeaturedLoading] = useState(false);
   // Approved universities filter: keep only scholarships from approved universities
   const [approvedUniversityIds, setApprovedUniversityIds] = useState<Set<number>>(new Set());
+  
+  // Paginação
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(12); // 12 bolsas por página
 
   // Estados para o PreCheckoutModal (Matricula Rewards)
   const [showPreCheckoutModal, setShowPreCheckoutModal] = useState(false);
@@ -175,7 +179,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
     setTimeout(() => {
       setFiltersApplied(false);
       setIsApplyingFilters(false);
-    }, 1500);
+    }, 2000);
   };
 
   // Função para limpar todos os filtros
@@ -314,10 +318,10 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
 
   // Carregar carrinho do banco de dados quando o usuário estiver disponível
   useEffect(() => {
-    if (user?.id) {
+    if (user?.id && !cart.length) { // Só buscar se o carrinho estiver vazio
       fetchCart(user.id);
     }
-  }, [user?.id, fetchCart]);
+  }, [user?.id, fetchCart, cart.length]);
 
   // Load approved universities (ids) so we can exclude scholarships from unapproved schools
   useEffect(() => {
@@ -482,10 +486,21 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
     return { status: 'normal', color: 'text-green-600', bg: 'bg-green-50' };
   };
 
-  // Memoização dos filtros e ordenação
+  // Memoização dos filtros e ordenação com debounce
   const filteredScholarships = useMemo(() => {
+    // Proteção contra dados inválidos
+    if (!Array.isArray(scholarships) || scholarships.length === 0) {
+      return [];
+    }
     
-    // Busca por múltiplas palavras-chave
+    // Debounce para evitar filtros excessivos
+    const now = Date.now();
+    if (now - (window as any).lastFilterTime < 500) { // 500ms debounce
+      return [];
+    }
+    (window as any).lastFilterTime = now;
+    
+    // Busca por múltiplas palavras-chave (otimizada)
     const searchWords = appliedSearch.trim().toLowerCase().split(/\s+/).filter(Boolean);
     
     const filtered = scholarships.filter(scholarship => {
@@ -549,20 +564,6 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
 
   const passes = matchesSearch && matchesLevel && matchesField && matchesDeliveryMode && matchesWorkPermission && matchesMin && matchesMax && matchesDeadline && matchesDesiredRange && fromApprovedUniversity && matchesUniversity && notExcludedUniversity;
       
-      // Log detalhado para a primeira bolsa que não passa nos filtros (debug)
-      if (!passes && scholarships.indexOf(scholarship) === 0) {
-        console.log('❌ First scholarship failed filters:', {
-          title: scholarship.title,
-          matchesSearch,
-          matchesLevel,
-          matchesField,
-          matchesDeliveryMode,
-          matchesWorkPermission,
-          matchesMin,
-          matchesMax,
-          matchesDeadline
-        });
-      }
       
       return passes;
     });
@@ -604,6 +605,28 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
   // Memoização dos IDs aplicados e no carrinho
   const appliedScholarshipIds = useMemo(() => new Set(applications.map(app => app.scholarship_id)), [applications]);
   const cartScholarshipIds = useMemo(() => new Set(cart.map(s => s.scholarships.id)), [cart]);
+
+  // Lógica de paginação
+  const totalPages = Math.ceil(filteredScholarships.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedScholarships = filteredScholarships.slice(startIndex, endIndex);
+
+  // Resetar página quando filtros mudam (apenas se necessário)
+  useEffect(() => {
+    const newTotalPages = Math.ceil(filteredScholarships.length / itemsPerPage);
+    
+    // Se a página atual é maior que o total de páginas, voltar para a última página
+    if (currentPage > newTotalPages && newTotalPages > 0) {
+      setCurrentPage(newTotalPages);
+    }
+    // Se não há resultados, voltar para página 1
+    else if (newTotalPages === 0) {
+      setCurrentPage(1);
+    }
+    // Caso contrário, manter a página atual
+  }, [filteredScholarships.length, currentPage, itemsPerPage]);
+
 
   // Apply same applied-* filters to featured scholarships so featureds respect the user's filters
   const filteredFeaturedScholarships = useMemo(() => {
@@ -786,20 +809,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
   // Exibir apenas bolsas com deadline hoje ou futuro
   const today = new Date();
   today.setHours(0,0,0,0);
-  const visibleScholarships = filteredScholarships.filter(s => {
-    const deadlineDate = new Date(s.deadline);
-    return deadlineDate >= today;
-  });
 
-  // Filtrar bolsas destacadas - remover as que já estão em featuredScholarships
-  const regularScholarships = visibleScholarships.filter(s => {
-    // Não incluir bolsas que são destacadas
-    if (s.is_highlighted === true) return false;
-    
-    // Também não incluir bolsas que estão no array featuredScholarships
-    const isInFeatured = featuredScholarships.some(fs => fs.id === s.id);
-    return !isInFeatured;
-  });
 
   // Se usuário já tem application fee paga, mostrar mensagem de bloqueio
   if (!applicationFeeLoading && hasPaidApplicationFee) {
@@ -1092,6 +1102,23 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
             <span className="font-medium text-blue-600">{filteredScholarships.length}</span> 
             <span className="hidden sm:inline"> {t('studentDashboard.findScholarships.scholarshipsFound')}</span>
             <span className="sm:hidden"> {t('studentDashboard.findScholarships.scholarshipsFound')}</span>
+            {totalPages > 1 && (
+              <span className="text-slate-500 ml-2">
+                {t('studentDashboard.findScholarships.pagination.pageOf', { 
+                  current: currentPage, 
+                  total: totalPages 
+                })}
+              </span>
+            )}
+            {filteredScholarships.length > 0 && (
+              <span className="text-green-600 ml-2 text-xs">
+                {t('studentDashboard.findScholarships.pagination.showing', { 
+                  start: startIndex + 1, 
+                  end: Math.min(endIndex, filteredScholarships.length), 
+                  total: filteredScholarships.length 
+                })}
+              </span>
+            )}
           </span>
         </div>
       </div>
@@ -1412,7 +1439,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
 
       {/* Scholarships Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
-        {regularScholarships.map((scholarship) => {
+        {paginatedScholarships.map((scholarship) => {
           const alreadyApplied = appliedScholarshipIds.has(scholarship.id);
           const inCart = cartScholarshipIds.has(scholarship.id);
           const layoutId = `scholarship-card-${scholarship.id}`;
@@ -1667,6 +1694,87 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
           );
         })}
       </div>
+
+      {/* Paginação */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center space-x-2 mt-8 mb-4">
+          {/* Botão Primeira Página */}
+          {currentPage > 3 && (
+            <button
+              onClick={() => setCurrentPage(1)}
+              className="px-3 py-2 rounded-lg font-medium transition-all duration-200 bg-slate-100 text-slate-600 hover:bg-slate-200"
+            >
+              «
+            </button>
+          )}
+          
+          {/* Botão Anterior */}
+          <button
+            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+            disabled={currentPage === 1}
+            className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+              currentPage === 1
+                ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                : 'bg-blue-600 text-white hover:bg-blue-700 hover:scale-105'
+            }`}
+          >
+            {t('studentDashboard.findScholarships.pagination.previous')}
+          </button>
+
+          {/* Números das páginas */}
+          <div className="flex items-center space-x-1">
+            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+              let pageNum;
+              if (totalPages <= 5) {
+                pageNum = i + 1;
+              } else if (currentPage <= 3) {
+                pageNum = i + 1;
+              } else if (currentPage >= totalPages - 2) {
+                pageNum = totalPages - 4 + i;
+              } else {
+                pageNum = currentPage - 2 + i;
+              }
+
+              return (
+                <button
+                  key={pageNum}
+                  onClick={() => setCurrentPage(pageNum)}
+                  className={`w-10 h-10 rounded-lg font-medium transition-all duration-200 ${
+                    currentPage === pageNum
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  {pageNum}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Botão Próximo */}
+          <button
+            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+            disabled={currentPage === totalPages}
+            className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+              currentPage === totalPages
+                ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                : 'bg-blue-600 text-white hover:bg-blue-700 hover:scale-105'
+            }`}
+          >
+            {t('studentDashboard.findScholarships.pagination.next')}
+          </button>
+          
+          {/* Botão Última Página */}
+          {currentPage < totalPages - 2 && (
+            <button
+              onClick={() => setCurrentPage(totalPages)}
+              className="px-3 py-2 rounded-lg font-medium transition-all duration-200 bg-slate-100 text-slate-600 hover:bg-slate-200"
+            >
+              »
+            </button>
+          )}
+        </div>
+      )}
 
       {/* No Results */}
       {filteredScholarships.length === 0 && (

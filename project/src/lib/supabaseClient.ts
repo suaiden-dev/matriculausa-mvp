@@ -17,6 +17,19 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     detectSessionInUrl: true,
     storage: window.localStorage,
     storageKey: 'supabase.auth.token'
+  },
+  global: {
+    headers: {
+      'X-Client-Info': 'matriculausa-web'
+    }
+  },
+  db: {
+    schema: 'public'
+  },
+  realtime: {
+    params: {
+      eventsPerSecond: 10
+    }
   }
 });
 

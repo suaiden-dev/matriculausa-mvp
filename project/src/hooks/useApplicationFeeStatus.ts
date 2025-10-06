@@ -17,13 +17,21 @@ export const useApplicationFeeStatus = (): ApplicationFeeStatus => {
   const [committedScholarship, setCommittedScholarship] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [hasChecked, setHasChecked] = useState(false);
 
   useEffect(() => {
     const checkApplicationFeeStatus = async () => {
-      if (!user?.id) {
+      if (!user?.id || hasChecked) {
         setLoading(false);
         return;
       }
+
+      // Debounce: evitar múltiplas verificações em sequência
+      const now = Date.now();
+      if (now - (window as any).lastApplicationFeeCheck < 10000) { // 10 segundos de debounce
+        return;
+      }
+      (window as any).lastApplicationFeeCheck = now;
 
       try {
         setLoading(true);
@@ -59,8 +67,8 @@ export const useApplicationFeeStatus = (): ApplicationFeeStatus => {
           
           // Pegar a primeira aplicação (assumindo que só pode ter uma)
           const firstApplication = applications[0];
-          setCommittedUniversity(firstApplication.scholarships?.universities?.name || null);
-          setCommittedScholarship(firstApplication.scholarships?.title || null);
+          setCommittedUniversity((firstApplication.scholarships as any)?.universities?.name || null);
+          setCommittedScholarship((firstApplication.scholarships as any)?.title || null);
           
         } else {
           setHasPaidApplicationFee(false);
@@ -71,11 +79,12 @@ export const useApplicationFeeStatus = (): ApplicationFeeStatus => {
         setError('Erro inesperado ao verificar status');
       } finally {
         setLoading(false);
+        setHasChecked(true);
       }
     };
 
     checkApplicationFeeStatus();
-  }, [user?.id]);
+  }, [user?.id, hasChecked]);
 
   return {
     hasPaidApplicationFee,
