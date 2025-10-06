@@ -13,7 +13,8 @@ import {
   Shield,
   Star,
   Gift,
-  Bell
+  Bell,
+  MessageSquare
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
@@ -130,6 +131,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
     if (path.includes('/cart')) return 'cart';
     if (path.includes('/applications') || path.includes('/application/')) return 'applications';
     if (path.includes('/rewards')) return 'rewards';
+    if (path.includes('/chat')) return 'chat';
     if (path.includes('/profile')) return 'profile';
     if (path.includes('/manual-review')) return 'cart';
     if (path.includes('/documents-and-scholarship-choice')) return 'cart';
@@ -166,6 +168,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
     { id: 'scholarships', label: t('studentDashboard.sidebar.browseScholarships'), icon: Award, path: '/student/dashboard/scholarships' },
     { id: 'cart', label: t('studentDashboard.sidebar.selectedScholarships'), icon: GraduationCap, path: '/student/dashboard/cart' },
     { id: 'applications', label: t('studentDashboard.sidebar.myApplications'), icon: FileText, path: '/student/dashboard/applications' },
+    { id: 'chat', label: 'Support Chat', icon: MessageSquare, path: '/student/dashboard/chat' },
     { id: 'rewards', label: t('studentDashboard.sidebar.matriculaRewards'), icon: Gift, path: '/student/dashboard/rewards' },
     { id: 'profile', label: t('studentDashboard.sidebar.profile'), icon: User, path: '/student/dashboard/profile' }
   ];

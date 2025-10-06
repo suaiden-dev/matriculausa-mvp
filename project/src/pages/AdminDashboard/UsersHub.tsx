@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { GraduationCap, DollarSign } from 'lucide-react';
+import { GraduationCap, DollarSign, MessageSquare } from 'lucide-react';
 import StudentApplicationsView from '../../components/AdminDashboard/StudentApplicationsView';
 import FeeManagement from '../../components/AdminDashboard/FeeManagement';
+import AdminStudentChatPage from './AdminChatPage';
 
 const UsersHub: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'applications' | 'feeManagement'>('applications');
+  const [activeTab, setActiveTab] = useState<'applications' | 'feeManagement' | 'messages'>('applications');
 
   return (
     <div className="space-y-8">
@@ -36,13 +37,28 @@ const UsersHub: React.FC = () => {
               <span>Fee Management</span>
             </div>
           </button>
+          <button
+            onClick={() => setActiveTab('messages')}
+            className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'messages'
+                ? 'border-[#05294E] text-[#05294E]'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            <div className="flex items-center space-x-2">
+              <MessageSquare className="h-5 w-5" />
+              <span>Student Messages</span>
+            </div>
+          </button>
         </nav>
       </div>
 
       {activeTab === 'applications' ? (
         <StudentApplicationsView />
-      ) : (
+      ) : activeTab === 'feeManagement' ? (
         <FeeManagement />
+      ) : (
+        <AdminStudentChatPage />
       )}
     </div>
   );
