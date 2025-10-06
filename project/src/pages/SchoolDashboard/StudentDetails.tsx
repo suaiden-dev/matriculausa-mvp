@@ -2439,6 +2439,86 @@ const StudentDetails: React.FC = () => {
                   )}
                 </div>
               </div>
+
+              {/* Transfer Form Section - Only for transfer students */}
+              {application?.student_process_type === 'transfer' && (
+                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-3xl shadow-sm relative mt-8 overflow-hidden">
+                  <div className="bg-gradient-to-r from-[#05294E] to-[#041f38] px-6 py-5 rounded-t-3xl">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg">
+                        <svg className="w-6 h-6 text-[#05294E]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <h4 className="text-xl font-bold text-white">Transfer Form</h4>
+                        <p className="text-blue-100 text-sm">Transfer form for current F-1 students</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-6">
+                    {application?.transfer_form_url ? (
+                      <div className="bg-white rounded-3xl p-6">
+                        <div className="flex items-start space-x-4">
+                          <div className="flex-shrink-0">
+                            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                              <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                              </svg>
+                            </div>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-wrap gap-2 mb-1">
+                              <p className="font-medium text-slate-900 break-words">
+                                {application.transfer_form_url.split('/').pop() || 'Transfer Form'}
+                              </p>
+                              <span className="px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 whitespace-nowrap">
+                                {application.transfer_form_status === 'approved' ? 'Approved' : 'Sent'}
+                              </span>
+                            </div>
+                            <p className="text-sm text-slate-500 break-words">
+                              Sent on {application.transfer_form_sent_at ? new Date(application.transfer_form_sent_at).toLocaleDateString() : new Date().toLocaleDateString()}
+                            </p>
+                            <p className="text-xs text-slate-400 mt-1 break-words">
+                              Transfer form for F-1 students
+                            </p>
+
+                            <div className="flex flex-col sm:flex-row gap-2 mt-3">
+                              <button
+                                onClick={() => handleViewDocument({ file_url: application.transfer_form_url, filename: (application.transfer_form_url.split('/').pop() || 'Transfer Form') })}
+                                className="bg-[#05294E] hover:bg-[#041f38] text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto text-center"
+                              >
+                                View
+                              </button>
+                              <button
+                                onClick={() => handleDownloadDocument({ file_url: application.transfer_form_url, filename: (application.transfer_form_url.split('/').pop() || 'Transfer Form') })}
+                                className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto text-center"
+                              >
+                                Download
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="bg-white rounded-3xl p-8">
+                        <div className="text-center">
+                          <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                          </div>
+                          <h4 className="text-lg font-semibold text-slate-700 mb-2">No Transfer Form Yet</h4>
+                          <p className="text-slate-500 max-w-md mx-auto">
+                            The transfer form will appear here once the university processes your application and sends it to you.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
