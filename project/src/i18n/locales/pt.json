@@ -1847,6 +1847,7 @@
       "tabs": {
         "welcome": "Bem-vindo",
         "details": "Detalhes",
+        "chat": "Chat",
         "i20": "Taxa de Controle I-20",
         "documents": "Documentos"
       },
@@ -1870,6 +1871,9 @@
           "description": "Após receber sua carta de aceitação, você poderá pagar a Taxa de Controle I-20. Esta taxa é necessária para a emissão do seu documento I-20, essencial para seu visto F-1. Você tem 10 dias para pagar após ser liberada.",
           "button": "Pagar Taxa de Controle I-20"
         }
+      },
+      "chat": {
+        "title": "Chat da Aplicação"
       },
       "details": {
         "studentInformation": {

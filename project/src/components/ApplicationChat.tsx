@@ -9,7 +9,13 @@ export interface ChatMessage {
   sentAt: string;
   isOwn: boolean;
   status?: 'pending' | 'sent' | 'error';
-  attachments?: { file_url: string; file_name?: string; uploaded_at?: string }[];
+  readAt?: string | null;
+  attachments?: { 
+    file_url: string; 
+    file_name?: string; 
+    uploaded_at?: string;
+    isUploading?: boolean;
+  }[];
 }
 
 interface ApplicationChatProps {
@@ -20,6 +26,7 @@ interface ApplicationChatProps {
   error?: string | null;
   currentUserId: string;
   messageContainerClassName?: string;
+  onMarkAllAsRead?: () => void;
 }
 
 interface I20ControlFeeCardProps {
@@ -116,15 +123,17 @@ const ApplicationChat: React.FC<ApplicationChatProps & {
   loading = false,
   isSending = false,
   error = null,
-  currentUserId,
+  currentUserId: _currentUserId,
   i20ControlFee,
   messageContainerClassName,
+  onMarkAllAsRead: _onMarkAllAsRead,
 }) => {
   const [text, setText] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Auto-scroll inteligente: só rola se o usuário já estiver perto do final
   useEffect(() => {
@@ -136,6 +145,13 @@ const ApplicationChat: React.FC<ApplicationChatProps & {
     }
   }, [messages.length]);
 
+  // Focus no input quando o chat é aberto
+  useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, []);
+
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
     if (text.trim() || file) {
@@ -145,11 +161,19 @@ const ApplicationChat: React.FC<ApplicationChatProps & {
     }
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSend(e);
+    }
+  };
+
   const isImage = (fileName?: string) => {
     if (!fileName) return false;
     const extension = fileName.split('.').pop()?.toLowerCase();
     return ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension || '');
   };
+
+  // Count unread messages (removed unused variable)
 
   return (
     <>
@@ -163,129 +187,272 @@ const ApplicationChat: React.FC<ApplicationChatProps & {
           paymentDate={i20ControlFee.paymentDate}
         />
       )}
-      <div className="flex flex-col h-full max-h-[90vh] min-h-[70vh] w-full overflow-hidden">
-        {/* Messages */}
-        <div
-          ref={messagesContainerRef}
-          className={`flex-1 overflow-y-auto p-3 space-y-2 bg-white ${messageContainerClassName || ''}`}
-          style={{ minHeight: '400px', maxHeight: '75vh' }}
-        >
+      
+      {/* Área de Mensagens */}
+      <div 
+        ref={messagesContainerRef}
+        className={`flex-1 overflow-y-auto p-4 bg-gradient-to-br from-gray-50 to-white flex flex-col gap-3 ${messageContainerClassName || ''}`}
+        style={{ 
+          minHeight: '400px', 
+          maxHeight: '75vh',
+          scrollbarWidth: 'thin',
+          scrollbarColor: '#e5e7eb transparent'
+        }}
+      >
           {messages.length === 0 && (
-            <div className="text-center text-gray-400 mt-8">No messages yet.</div>
+            <div className="text-center text-gray-400 mt-8 flex flex-col items-center gap-2">
+              <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center">
+                <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+              </div>
+              <p className="text-sm font-medium">No messages yet</p>
+              <p className="text-xs text-gray-500">Start a conversation</p>
+            </div>
           )}
-          {messages.map((msg) => (
+          
+          {messages.map((msg, index) => (
             <div
               key={msg.id}
-              className={`flex flex-col max-w-[85%] ${msg.isOwn ? 'self-end items-end' : 'self-start items-start'}`}
+              className={`max-w-[85%] transform transition-all duration-500 ease-out ${
+                msg.isOwn 
+                  ? 'self-end ml-auto animate-slide-in-right' 
+                  : 'self-start animate-slide-in-left'
+              }`}
+              style={{
+                animationDelay: `${index * 0.1}s`
+              }}
             >
-              <div
-                className={`rounded-lg px-4 py-2 shadow-sm mb-1 text-sm whitespace-pre-line break-words transition-opacity duration-300 ${
-                  msg.isOwn
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-gray-200 text-gray-900'
-                } ${msg.status === 'pending' ? 'opacity-70' : 'opacity-100'}`}
-              >
+              <div className={`p-3 rounded-2xl shadow-lg border ${
+                msg.isOwn 
+                  ? 'bg-[#05294E] text-white shadow-[#05294E]/20' 
+                  : 'bg-white text-gray-800 border-gray-200 shadow-gray-100'
+              } transition-all duration-300 hover:shadow-xl`}>
+                <div className="flex items-center gap-2 mb-2">
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
+                    msg.isOwn 
+                      ? 'bg-white/20 text-white' 
+                      : 'bg-[#05294E] text-white'
+                  }`}>
+                    {msg.isOwn ? 'Y' : 'U'}
+                  </div>
+                  <span className="font-semibold text-xs truncate flex-1">
+                    {msg.isOwn ? 'You' : 'University Staff'}
+                  </span>
+                  <span className="text-xs opacity-70 flex-shrink-0">
+                    {new Date(msg.sentAt).toLocaleTimeString('en-US', { 
+                      hour: '2-digit', 
+                      minute: '2-digit' 
+                    })}
+                  </span>
+                </div>
+                
                 {msg.attachments && msg.attachments.length > 0 && (
                   <div className="mb-2">
-                    {msg.attachments.map((att, i) => (
-                      <div key={att.file_url + i}>
-                        {isImage(att.file_name) ? (
-                          <button onClick={() => setSelectedImage(att.file_url)} className="cursor-pointer">
-                            <img
-                              src={att.file_url}
-                              alt={att.file_name || 'Attached image'}
-                              className="max-w-xs max-h-48 rounded-md object-cover"
-                            />
-                          </button>
-                        ) : (
-                          <a
-                            href={att.file_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-2 p-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"
-                          >
-                            <DocumentIcon />
-                            <span className="text-sm text-gray-800 break-all">
-                              {att.file_name || 'Attachment'}
-                            </span>
-                          </a>
-                        )}
-                      </div>
-                    ))}
+                    {msg.attachments.map((att, i) => {
+                      // Verificar se o arquivo está sendo enviado
+                      const isUploading = msg.status === 'pending' || 
+                                        att.file_url.startsWith('blob:') || 
+                                        att.file_url.includes('temp_') ||
+                                        !att.file_url || 
+                                        att.file_url === '';
+                      
+                      // Debug log
+                      console.log('🔍 [Attachment Debug]', {
+                        messageId: msg.id,
+                        messageStatus: msg.status,
+                        fileUrl: att.file_url,
+                        fileName: att.file_name,
+                        isUploading,
+                        isBlob: att.file_url.startsWith('blob:'),
+                        hasTemp: att.file_url.includes('temp_'),
+                        isEmpty: !att.file_url || att.file_url === ''
+                      });
+                      
+                      return (
+                        <div key={att.file_url + i}>
+                          {isUploading ? (
+                            <div className="flex items-center gap-3 p-4 rounded-lg bg-gray-100 animate-pulse">
+                              <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center">
+                                <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                              </div>
+                              <div className="flex-1">
+                                <div className="h-4 bg-gray-300 rounded w-3/4 mb-2"></div>
+                                <div className="h-3 bg-gray-300 rounded w-1/2"></div>
+                                <div className="text-xs text-gray-500 mt-1">Uploading...</div>
+                              </div>
+                            </div>
+                          ) : isImage(att.file_name) ? (
+                            <button onClick={() => setSelectedImage(att.file_url)} className="cursor-pointer">
+                              <img
+                                src={att.file_url}
+                                alt={att.file_name || 'Attached image'}
+                                className="max-w-xs max-h-48 rounded-md object-cover"
+                              />
+                            </button>
+                          ) : (
+                            <a
+                              href={att.file_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-2 p-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"
+                            >
+                              <DocumentIcon />
+                              <span className="text-sm text-gray-800 break-all">
+                                {att.file_name || 'Attachment'}
+                              </span>
+                            </a>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
-                {msg.message}
-              </div>
-              <div className="flex items-center gap-1.5 pr-1">
-                <span className="text-[10px] text-gray-400 mt-0.5">
-                  {new Date(msg.sentAt).toLocaleString('en-US', { hour: '2-digit', minute: '2-digit' })}
-                </span>
-                {msg.isOwn && msg.status && (
-                  <div className="mt-0.5">
+                
+                <div className="text-sm leading-relaxed break-words whitespace-pre-line">
+                  {msg.message}
+                </div>
+                
+                {/* Status indicators */}
+                {msg.isOwn && (
+                  <div className="flex items-center justify-end gap-1 mt-2">
                     {msg.status === 'pending' && <ClockIcon />}
                     {msg.status === 'error' && <ErrorIcon />}
+                    {msg.status === 'sent' && !msg.readAt && <SentIcon />}
+                    {msg.status === 'sent' && msg.readAt && <ReadIcon />}
                   </div>
                 )}
               </div>
             </div>
           ))}
+          
+          
           <div ref={messagesEndRef} />
-        </div>
-        {/* Input */}
-        <form
-          onSubmit={handleSend}
-          className="border-t bg-white px-4 py-3 flex items-center gap-2 sticky bottom-0 z-10"
-        >
-          <label className="flex items-center cursor-pointer">
-            <input
-              type="file"
-              className="hidden"
-              onChange={(e) => setFile(e.target.files?.[0] || null)}
-              accept="*"
-            />
-            <span className="inline-flex items-center justify-center w-8 h-8 rounded-full hover:bg-gray-100 transition">
-              <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.586-6.586a4 4 0 10-5.656-5.656l-6.586 6.586a6 6 0 108.485 8.485l6.586-6.586" />
-              </svg>
-            </span>
-          </label>
-          <input
-            type="text"
-            className="flex-1 rounded-full border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-gray-100"
-            placeholder="Type your message..."
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            disabled={loading}
-            maxLength={1000}
-          />
-          <button
-            type="submit"
-            className="bg-blue-500 hover:bg-blue-600 text-white rounded-full px-4 py-2 text-sm font-semibold disabled:opacity-50"
-            disabled={loading || isSending || (!text.trim() && !file)}
-          >
-            Send
-          </button>
-        </form>
-        {file && (
-          <div className="px-3 py-1 text-xs text-gray-600 bg-gray-100 border-t border-gray-200 flex items-center gap-2">
-            <span>Attachment: {file.name}</span>
+      </div>
+
+      {/* Área de Input */}
+      <div className="bg-white border-t border-gray-100 p-4">
+          {file && (
+            <div className="mb-3 px-3 py-2 text-xs text-gray-600 bg-gray-100 rounded-lg flex items-center gap-2">
+              <span>Attachment: {file.name}</span>
+              <button
+                type="button"
+                className="text-red-500 hover:underline ml-2"
+                onClick={() => setFile(null)}
+              >
+                Remove
+              </button>
+            </div>
+          )}
+          
+          <form onSubmit={handleSend} className="flex gap-3">
+            <div className="flex-1 relative group">
+              <input
+                ref={inputRef}
+                type="text"
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Type your message..."
+                disabled={loading || isSending}
+                maxLength={1000}
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-gray-50 text-gray-800 text-sm focus:outline-none focus:border-[#05294E] focus:bg-white transition-all duration-300 disabled:opacity-50 group-hover:border-gray-300 group-hover:bg-white"
+              />
+            </div>
+            
+            <label className="flex items-center cursor-pointer">
+              <input
+                type="file"
+                className="hidden"
+                onChange={(e) => setFile(e.target.files?.[0] || null)}
+                accept="*"
+              />
+              <span className="inline-flex items-center justify-center w-12 h-12 rounded-xl hover:bg-gray-100 transition-colors">
+                <svg className="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.586-6.586a4 4 0 10-5.656-5.656l-6.586 6.586a6 6 0 108.485 8.485l6.586-6.586" />
+                </svg>
+              </span>
+            </label>
+            
             <button
-              type="button"
-              className="text-red-500 hover:underline ml-2"
-              onClick={() => setFile(null)}
+              type="submit"
+              disabled={loading || isSending || (!text.trim() && !file)}
+              className="px-6 py-3 bg-[#05294E] text-white border-none rounded-xl cursor-pointer font-semibold text-sm shadow-lg transition-all duration-300 hover:bg-[#041f3f] hover:shadow-xl hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-lg flex items-center justify-center gap-2"
             >
-              Remove
+              <span>Send</span>
+              <svg width="18" height="18" className="group-hover:translate-x-1 transition-transform duration-300" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M22 2L11 13M22 2L15 22L11 13M22 2L2 9L11 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
             </button>
-          </div>
-        )}
-        {error && (
-          <div className="px-3 py-1 text-xs text-red-600 bg-red-50 border-t border-red-200">{error}</div>
-        )}
+          </form>
+          
+          {error && (
+            <div className="mt-3 px-3 py-2 text-xs text-red-600 bg-red-50 rounded-lg border border-red-200">
+              {error}
+            </div>
+          )}
       </div>
 
       {selectedImage && (
         <ImagePreviewModal imageUrl={selectedImage} onClose={() => setSelectedImage(null)} />
       )}
+
+      {/* Estilos CSS para animações */}
+      <style dangerouslySetInnerHTML={{
+        __html: `
+          @keyframes slide-in-right {
+            from {
+              opacity: 0;
+              transform: translateX(30px);
+            }
+            to {
+              opacity: 1;
+              transform: translateX(0);
+            }
+          }
+
+          @keyframes slide-in-left {
+            from {
+              opacity: 0;
+              transform: translateX(-30px);
+            }
+            to {
+              opacity: 1;
+              transform: translateX(0);
+            }
+          }
+
+          @keyframes fade-in {
+            from {
+              opacity: 0;
+              transform: translateY(10px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+
+          .animate-slide-in-right {
+            animation: slide-in-right 0.5s ease-out forwards;
+          }
+
+          .animate-slide-in-left {
+            animation: slide-in-left 0.5s ease-out forwards;
+          }
+
+          .animate-fade-in {
+            animation: fade-in 0.5s ease-out forwards;
+          }
+
+          /* Melhorias específicas para iOS */
+          @supports (-webkit-touch-callout: none) {
+            .overflow-y-auto {
+              -webkit-overflow-scrolling: touch;
+            }
+          }
+        `
+      }} />
     </>
   );
 };
@@ -308,4 +475,16 @@ const ErrorIcon = () => (
   </svg>
 );
 
-export default ApplicationChat; 
+const SentIcon = () => (
+  <svg className="w-3 h-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+  </svg>
+);
+
+const ReadIcon = () => (
+  <svg className="w-3 h-3 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+  </svg>
+);
+
+export default ApplicationChat;

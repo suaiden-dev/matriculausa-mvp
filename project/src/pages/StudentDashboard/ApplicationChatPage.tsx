@@ -8,6 +8,8 @@ import { useStudentLogs } from '../../hooks/useStudentLogs';
 import DocumentRequestsCard from '../../components/DocumentRequestsCard';
 import { supabase } from '../../lib/supabase';
 import DocumentViewerModal from '../../components/DocumentViewerModal';
+import ApplicationChat from '../../components/ApplicationChat';
+import { useApplicationChat } from '../../hooks/useApplicationChat';
 import { STRIPE_PRODUCTS } from '../../stripe-config';
 import { FileText, UserCircle, GraduationCap, CheckCircle, Building, Award, Home, Info, FileCheck, FolderOpen } from 'lucide-react';
 import { I20ControlFeeModal } from '../../components/I20ControlFeeModal';
@@ -49,7 +51,7 @@ const ApplicationChatPage: React.FC = () => {
   const [showI20ControlFeeModal, setShowI20ControlFeeModal] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'stripe' | 'zelle' | 'pix' | null>(null);
   // Ajustar tipo de activeTab para incluir 'welcome'
-  const [activeTab, setActiveTab] = useState<'welcome' | 'details' | 'i20' | 'documents'>('welcome');
+  const [activeTab, setActiveTab] = useState<'welcome' | 'details' | 'i20' | 'documents' | 'chat'>('welcome');
 
   // useEffect também deve vir antes de qualquer return condicional
   useEffect(() => {
@@ -302,6 +304,9 @@ const ApplicationChatPage: React.FC = () => {
     return <div className="text-center text-gray-500 py-10">Authenticating...</div>;
   }
 
+  // Hook do chat da aplicação (mensagens em tempo real)
+  const chat = useApplicationChat(applicationId);
+
   // Array de informações dos documentos
   const DOCUMENTS_INFO: DocumentInfo[] = [
     { key: 'passport', label: t('studentDashboard.applicationChatPage.documentTypes.passport.label'), description: t('studentDashboard.applicationChatPage.documentTypes.passport.description') },
@@ -332,6 +337,7 @@ const ApplicationChatPage: React.FC = () => {
   const tabs = [
     { id: 'welcome', label: t('studentDashboard.applicationChatPage.tabs.welcome'), icon: Home },
     { id: 'details', label: t('studentDashboard.applicationChatPage.tabs.details'), icon: Info },
+    { id: 'chat', label: t('studentDashboard.applicationChatPage.tabs.chat') || 'Chat', icon: FileText },
     ...(applicationDetails && applicationDetails.status === 'enrolled' ? [
       { id: 'i20', label: t('studentDashboard.applicationChatPage.tabs.i20'), icon: FileCheck }
     ] : []),
@@ -431,6 +437,29 @@ const ApplicationChatPage: React.FC = () => {
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+        )}
+        {activeTab === 'chat' && (
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <div className="bg-gradient-to-r from-[#05294E] to-[#0a4a7a] px-6 py-4">
+              <h2 className="text-xl font-semibold text-white flex items-center">
+                <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.86 9.86 0 01-4-.8l-4 1 1.1-3.7A7.82 7.82 0 013 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+                {t('studentDashboard.applicationChatPage.chat.title') || 'Application Chat'}
+              </h2>
+            </div>
+            <div className="p-0">
+              <ApplicationChat
+                messages={chat.messages}
+                onSend={chat.sendMessage as any}
+                loading={chat.loading}
+                isSending={chat.isSending}
+                error={chat.error}
+                currentUserId={user?.id || ''}
+                messageContainerClassName="gap-6 py-4"
+              />
             </div>
           </div>
         )}
