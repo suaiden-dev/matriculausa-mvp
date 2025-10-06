@@ -1161,6 +1161,7 @@
       "tabs": {
         "welcome": "Bienvenido",
         "details": "Detalles",
+        "chat": "Chat",
         "i20": "Tarifa de Control I-20",
         "documents": "Documentos"
       },
@@ -1184,6 +1185,9 @@
           "description": "Después de recibir tu carta de aceptación, podrás pagar la Tarifa de Control I-20. Esta tarifa es necesaria para la emisión de tu documento I-20, esencial para tu visa F-1. Tienes 10 días para pagar después de que sea liberada.",
           "button": "Pagar Tarifa de Control I-20"
         }
+      },
+      "chat": {
+        "title": "Chat de la Aplicación"
       },
       "details": {
         "studentInformation": {

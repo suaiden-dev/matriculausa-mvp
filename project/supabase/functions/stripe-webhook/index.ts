@@ -584,7 +584,8 @@ async function handleCheckoutSessionCompleted(session) {
         is_application_fee_paid: true,
         payment_status: 'paid',
         paid_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+          application_fee_payment_method: 'stripe',
+          updated_at: new Date().toISOString()
       };
         
       // Só alterar status se não estiver 'approved' (universidade já aprovou)
@@ -1380,7 +1381,8 @@ async function handleCheckoutSessionCompleted(session) {
         if (scholarshipsIds) {
           const scholarshipIdsArray = scholarshipsIds.split(',').map(id => id.trim());
           const { error: appError } = await supabase.from('scholarship_applications').update({
-        is_scholarship_fee_paid: true,
+            is_scholarship_fee_paid: true,
+            scholarship_fee_payment_method: 'stripe',
             payment_status: 'paid',
             paid_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
@@ -1397,8 +1399,8 @@ async function handleCheckoutSessionCompleted(session) {
         const { error: profileUpdateError } = await supabase.from('user_profiles').update({
           is_scholarship_fee_paid: true,
           last_payment_date: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }).eq('user_id', userId);
+          updated_at: new Date().toISOString()
+        }).eq('user_id', userId);
         if (profileUpdateError) {
           console.error('[stripe-webhook] Error updating user profile:', profileUpdateError);
       } else {
@@ -1714,10 +1716,12 @@ async function handleCheckoutSessionCompleted(session) {
         }
         
         // Atualizar também o perfil do usuário para manter consistência
+        const i20PaymentMethod = (session?.payment_method_types?.[0] as string) || 'stripe';
         const { error: profileUpdateError } = await supabase.from('user_profiles').update({
           has_paid_i20_control_fee: true,
           i20_control_fee_due_date: new Date().toISOString(),
           i20_control_fee_payment_intent_id: sessionData.payment_intent,
+          i20_control_fee_payment_method: i20PaymentMethod,
           last_payment_date: new Date().toISOString(),
           updated_at: new Date().toISOString()
         }).eq('user_id', userId);
@@ -1978,8 +1982,10 @@ async function handleCheckoutSessionCompleted(session) {
     const userId = metadata?.user_id || metadata?.student_id;
     console.log('[NOTIFICAÇÃO] Processando selection_process para userId:', userId);
     if (userId) {
+      const selectionPaymentMethod = (session?.payment_method_types?.[0] as string) || 'stripe';
       const { error } = await supabase.from('user_profiles').update({
         has_paid_selection_process_fee: true,
+        selection_process_fee_payment_method: selectionPaymentMethod,
         updated_at: new Date().toISOString()
       }).eq('user_id', userId);
       if (error) {
