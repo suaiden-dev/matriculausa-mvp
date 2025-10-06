@@ -52,8 +52,8 @@ export const useSmartPollingNotifications = ({
     };
   }, []);
 
-  // Função para buscar notificações
-  const fetchNotifications = async (checkNewOnly = false) => {
+  // Função para buscar notificações com retry logic
+  const fetchNotifications = async (checkNewOnly = false, retryCount = 0) => {
     if (!isOnline) return;
 
     try {
@@ -144,6 +144,14 @@ export const useSmartPollingNotifications = ({
 
     } catch (error) {
       console.error('Erro ao verificar notificações:', error);
+      
+      // Retry logic para erros de rede
+      if (retryCount < 3 && (error as any)?.message?.includes('Failed to fetch')) {
+        console.log(`🔄 Tentativa ${retryCount + 1}/3 de reconexão...`);
+        setTimeout(() => {
+          fetchNotifications(checkNewOnly, retryCount + 1);
+        }, 2000 * (retryCount + 1)); // Backoff exponencial
+      }
     }
   };
 
@@ -161,7 +169,8 @@ export const useSmartPollingNotifications = ({
         clearInterval(intervalRef.current);
       }
 
-      const interval = isVisible && isOnline ? 60000 : 300000; // 1min ativo, 5min em background
+      // AUMENTAR intervalos para reduzir requisições
+      const interval = isVisible && isOnline ? 300000 : 600000; // 5min ativo, 10min em background
       
       intervalRef.current = setInterval(() => {
         fetchNotifications(true); // Verificar apenas novas

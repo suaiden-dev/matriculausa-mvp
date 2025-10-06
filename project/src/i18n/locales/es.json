@@ -1483,6 +1483,12 @@
     "findScholarships": {
       "title": "Encontrar Becas",
       "subtitle": "Descubre oportunidades adaptadas a tu perfil académico",
+      "pagination": {
+        "previous": "Anterior",
+        "next": "Siguiente",
+        "showing": "Mostrando {{start}}-{{end}} de {{total}}",
+        "pageOf": "(Página {{current}} de {{total}})"
+      },
       "searchPlaceholder": "Buscar becas...",
       "allLevels": "Todos los Niveles",
       "allFields": "Todos los Campos", 
