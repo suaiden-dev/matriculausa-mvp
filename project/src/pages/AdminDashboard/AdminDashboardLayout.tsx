@@ -51,7 +51,7 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
     if (path.includes('/scholarships')) return 'scholarships';
     if (path.includes('/payments')) return 'payments';
     if (path.includes('/affiliate-payment-requests')) return 'affiliate-payment-requests';
-
+    if (path.includes('/affiliate-management')) return 'affiliate-management';
     if (path.includes('/matricula-rewards')) return 'matricula-rewards';
     if (path.includes('/financial-analytics')) return 'financial-analytics';
     if (path.includes('/terms')) return 'terms';
@@ -104,7 +104,7 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
     { id: 'scholarships', label: 'Scholarships', icon: Award, path: '/admin/dashboard/scholarships', badge: null },
     { id: 'payments', label: 'Payment Management', icon: CreditCard, path: '/admin/dashboard/payments', badge: null },
     { id: 'financial-analytics', label: 'Financial Analytics', icon: BarChart3, path: '/admin/dashboard/financial-analytics', badge: null },
-
+    { id: 'affiliate-management', label: 'Affiliate Management', icon: Users, path: '/admin/dashboard/affiliate-management', badge: null },
 
     { id: 'application-monitoring', label: 'Application Monitoring', icon: Activity, path: '/admin/dashboard/application-monitoring', badge: null },
     { id: 'matricula-rewards', label: 'Matricula Rewards', icon: Award, path: '/admin/dashboard/matricula-rewards', badge: null },
