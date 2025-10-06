@@ -11,7 +11,6 @@ import {
   Phone,
   Calendar,
   Activity,
-  UserCheck,
   AlertCircle,
   CheckCircle2,
   Loader2,
@@ -350,10 +349,69 @@ const AffiliateManagement: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="flex flex-col items-center space-y-4">
-          <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
-          <p className="text-slate-600 font-medium">Loading affiliate data...</p>
+      <div className="space-y-6">
+        {/* Header skeleton */}
+        <div className="bg-white rounded-2xl border border-slate-200 p-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 animate-pulse">
+            <div className="space-y-2 w-full">
+              <div className="h-6 bg-slate-200 rounded w-48"></div>
+              <div className="h-4 bg-slate-200 rounded w-72"></div>
+            </div>
+            <div className="h-10 bg-slate-200 rounded w-36"></div>
+          </div>
+        </div>
+
+        {/* Stats skeleton */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 animate-pulse">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="bg-white rounded-xl border border-slate-200 p-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-2 w-full">
+                  <div className="h-4 bg-slate-200 rounded w-24"></div>
+                  <div className="h-6 bg-slate-200 rounded w-20"></div>
+                </div>
+                <div className="p-3 bg-slate-100 rounded-lg w-12 h-12"></div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Filters skeleton */}
+        <div className="bg-white rounded-2xl border border-slate-200 p-6 animate-pulse">
+          <div className="flex flex-col lg:flex-row gap-4">
+            <div className="h-10 bg-slate-200 rounded w-full"></div>
+            <div className="h-10 bg-slate-200 rounded w-full lg:w-48"></div>
+            <div className="h-10 bg-slate-200 rounded w-full lg:w-48"></div>
+            <div className="h-10 bg-slate-200 rounded w-24"></div>
+          </div>
+          <div className="mt-4 h-4 bg-slate-200 rounded w-56"></div>
+        </div>
+
+        {/* Affiliates list skeleton */}
+        <div className="space-y-4 animate-pulse">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+              <div className="p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-12 h-12 bg-slate-200 rounded-xl"></div>
+                    <div className="space-y-2">
+                      <div className="h-5 bg-slate-200 rounded w-40"></div>
+                      <div className="h-4 bg-slate-200 rounded w-64"></div>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-4 gap-4 w-80">
+                    {Array.from({ length: 4 }).map((_, j) => (
+                      <div key={j} className="space-y-2">
+                        <div className="h-5 bg-slate-200 rounded w-12"></div>
+                        <div className="h-3 bg-slate-200 rounded w-14"></div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     );
@@ -401,7 +459,7 @@ const AffiliateManagement: React.FC = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
         <div className="bg-white rounded-xl border border-slate-200 p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -410,18 +468,6 @@ const AffiliateManagement: React.FC = () => {
             </div>
             <div className="p-3 bg-blue-100 rounded-lg">
               <Users className="h-6 w-6 text-blue-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl border border-slate-200 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-slate-600">Active Affiliates</p>
-              <p className="text-2xl font-bold text-green-600">{totalStats.activeAffiliates}</p>
-            </div>
-            <div className="p-3 bg-green-100 rounded-lg">
-              <UserCheck className="h-6 w-6 text-green-600" />
             </div>
           </div>
         </div>
@@ -683,7 +729,7 @@ const AffiliateManagement: React.FC = () => {
                           </div>
                         ) : (
                           <div className="gap-6 space-y-3">
-                            {affiliate.sellers.map((seller) => {
+                            {affiliate.sellers.map((seller: any) => {
                               const isSellerExpanded = expandedSellers.has(seller.id);
                               const sellerStudents = adjustedStudents.filter((student: any) => 
                                 student.referred_by_seller_id === seller.id
