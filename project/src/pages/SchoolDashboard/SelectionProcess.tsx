@@ -1217,7 +1217,7 @@ const SelectionProcess: React.FC = () => {
           
           if (accessToken) {
             const notificationPayload = {
-              student_user_id: selectedStudent?.user_profiles.user_id,
+              user_id: selectedStudent?.user_profiles.user_id,
               title: t('notifications.documentRejected.title'),
               message: t('notifications.documentRejected.message', { 
                 fileName: uploadData.file_url?.split('/').pop(),
@@ -1241,10 +1241,13 @@ const SelectionProcess: React.FC = () => {
             } catch (parseError) {
               console.error('Erro ao fazer parse da resposta da Edge Function:', parseError);
               const responseText = await response.text();
+              console.error('Resposta da Edge Function (texto):', responseText);
             }
             
             if (!response.ok) {
               console.error('Erro na Edge Function:', responseData);
+            } else {
+              console.log('✅ Notificação de rejeição enviada com sucesso:', responseData);
             }
           } else {
             console.error('Access token não encontrado');

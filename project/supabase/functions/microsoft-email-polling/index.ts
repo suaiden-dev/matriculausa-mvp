@@ -1412,47 +1412,36 @@ async function processUserEmails(config) {
       console.log('Processamento desativado para este usuário');
       return;
     }
-    // Renovar token se necessário
+    // Usar SOMENTE o access token salvo. Não renovar aqui, nem usar client credentials.
     let accessToken = config.accessToken;
-    let refreshToken = config.refreshToken;
-    try {
-      // Tentar usar o token atual primeiro
-      const testService = new MicrosoftGraphService(accessToken);
-      await testService.getEmails();
-      console.log('✅ Token atual ainda válido');
-    } catch (error) {
-      console.log('🔄 Token expirado, tentando renovar...');
-      try {
-        const newTokens = await refreshAccessToken(refreshToken);
-        accessToken = newTokens.access_token;
-        refreshToken = newTokens.refresh_token || refreshToken;
-        // Atualizar tokens no banco
-        await supabase.from('email_configurations').update({
-          oauth_access_token: accessToken,
-          oauth_refresh_token: refreshToken,
-          updated_at: new Date().toISOString()
-        }).eq('user_id', config.userId).eq('provider_type', 'microsoft');
-        console.log('✅ Tokens renovados e salvos no banco');
-      } catch (refreshError) {
-        console.error('❌ Não foi possível renovar token:', refreshError.message);
-        console.log('🔄 Tentando fallback para Client Credentials...');
-        try {
-          // Tentar Client Credentials como último recurso
-          const clientCredentialsToken = await getClientCredentialsToken();
-          accessToken = clientCredentialsToken.access_token;
-          console.log('✅ Token Client Credentials obtido como fallback');
-        } catch (clientError) {
-          console.error('❌ Client Credentials também falhou:', clientError.message);
-          // Desativar processamento para este usuário
-          await supabase.from('email_configurations').update({
-            is_active: false,
-            updated_at: new Date().toISOString()
-          }).eq('user_id', config.userId).eq('provider_type', 'microsoft');
-          throw new Error(`Token expirado e não foi possível renovar. Processamento desativado para usuário ${config.userId}. Usuário precisa fazer login novamente.`);
-        }
-      }
-    }
     const graphService = new MicrosoftGraphService(accessToken);
+    try {
+      // Valida rapidamente o token atual antes de seguir
+      await graphService.getEmails();
+      console.log('✅ Token atual válido para Microsoft Graph');
+    } catch (tokenErr: any) {
+      console.warn('⚠️ Token inválido/expirado no polling. Delegando para microsoft-token-refresh e encerrando ciclo. Motivo:', tokenErr?.message || tokenErr);
+      try {
+        // Dispara a função oficial de refresh (best-effort) e retorna
+        const refreshResp = await fetch(`${supabaseUrl}/functions/v1/microsoft-token-refresh`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${supabaseServiceKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({})
+        });
+        if (!refreshResp.ok) {
+          console.warn('⚠️ microsoft-token-refresh retornou status não-OK:', refreshResp.status);
+        } else {
+          console.log('✅ microsoft-token-refresh acionada com sucesso (polling aguardará próximo ciclo)');
+        }
+      } catch (callErr) {
+        console.warn('⚠️ Falha ao acionar microsoft-token-refresh:', callErr);
+      }
+      // Encerrar processamento deste usuário; próximo ciclo usará token renovado
+      return;
+    }
     
     // 🚨 MODO CONSERVADOR: Usar instância global do AIService
     if (!globalAIService) {
@@ -1555,6 +1544,44 @@ async function processUserEmails(config) {
     for (const email of newEmails){
       try {
         const emailStartTime = Date.now();
+        console.log(`📧 Verificando email: ${email.subject} (${email.from?.emailAddress?.address})`);
+        
+        // 🛡️ VERIFICAÇÃO ANTI-DUPLICAÇÃO: Verificar se email já está na fila ou foi processado
+        const { data: existingQueue, error: queueCheckError } = await supabase
+          .from('email_queue')
+          .select('id, status')
+          .eq('user_id', config.userId)
+          .eq('email_data->>id', email.id)
+          .limit(1);
+        
+        if (queueCheckError) {
+          console.error('❌ Erro ao verificar duplicatas na fila:', queueCheckError);
+          continue;
+        }
+        
+        if (existingQueue && existingQueue.length > 0) {
+          console.log(`⚠️ Email já está na fila (${existingQueue[0].status}), pulando: ${email.subject}`);
+          continue;
+        }
+        
+        // 🛡️ VERIFICAÇÃO ADICIONAL: Verificar se já foi processado
+        const { data: alreadyProcessed, error: processedError } = await supabase
+          .from('processed_microsoft_emails')
+          .select('id')
+          .eq('microsoft_message_id', email.id)
+          .in('status', ['processed', 'replied'])
+          .limit(1);
+        
+        if (processedError) {
+          console.error('❌ Erro ao verificar emails processados:', processedError);
+          continue;
+        }
+        
+        if (alreadyProcessed && alreadyProcessed.length > 0) {
+          console.log(`⚠️ Email já foi processado, pulando: ${email.subject}`);
+          continue;
+        }
+        
         console.log(`📧 Adicionando email à fila: ${email.subject} (${email.from?.emailAddress?.address})`);
         
         // 🗃️ ADICIONAR À FILA ao invés de processar diretamente
@@ -1654,9 +1681,71 @@ Deno.serve(async (req)=>{
     if (req.method === 'POST') {
       const body = await req.json();
       if (body.email) {
-        console.log('📧 Adicionando email à fila:', body.email.subject);
+        console.log('📧 Verificando email:', body.email.subject);
         
         try {
+          // 🛡️ VERIFICAÇÃO ANTI-DUPLICAÇÃO: Verificar se email já está na fila ou foi processado
+          const { data: existingQueue, error: queueCheckError } = await supabase
+            .from('email_queue')
+            .select('id, status')
+            .eq('user_id', body.user_id)
+            .eq('email_data->>id', body.email.id)
+            .limit(1);
+          
+          if (queueCheckError) {
+            console.error('❌ Erro ao verificar duplicatas na fila:', queueCheckError);
+            return new Response(JSON.stringify({
+              success: false,
+              error: 'Erro ao verificar duplicatas'
+            }), {
+              status: 500,
+              headers: { 'Content-Type': 'application/json' }
+            });
+          }
+          
+          if (existingQueue && existingQueue.length > 0) {
+            console.log(`⚠️ Email já está na fila (${existingQueue[0].status}), pulando: ${body.email.subject}`);
+            return new Response(JSON.stringify({
+              success: true,
+              message: 'Email já está na fila, pulando duplicata'
+            }), {
+              status: 200,
+              headers: { 'Content-Type': 'application/json' }
+            });
+          }
+          
+          // 🛡️ VERIFICAÇÃO ADICIONAL: Verificar se já foi processado
+          const { data: alreadyProcessed, error: processedError } = await supabase
+            .from('processed_microsoft_emails')
+            .select('id')
+            .eq('microsoft_message_id', body.email.id)
+            .in('status', ['processed', 'replied'])
+            .limit(1);
+          
+          if (processedError) {
+            console.error('❌ Erro ao verificar emails processados:', processedError);
+            return new Response(JSON.stringify({
+              success: false,
+              error: 'Erro ao verificar emails processados'
+            }), {
+              status: 500,
+              headers: { 'Content-Type': 'application/json' }
+            });
+          }
+          
+          if (alreadyProcessed && alreadyProcessed.length > 0) {
+            console.log(`⚠️ Email já foi processado, pulando: ${body.email.subject}`);
+            return new Response(JSON.stringify({
+              success: true,
+              message: 'Email já foi processado, pulando duplicata'
+            }), {
+              status: 200,
+              headers: { 'Content-Type': 'application/json' }
+            });
+          }
+          
+          console.log('📧 Adicionando email à fila:', body.email.subject);
+          
           // 🗃️ SISTEMA DE FILA: Adicionar email à fila ao invés de processar imediatamente
           const { data: queueItem, error: queueError } = await supabase
             .from('email_queue')

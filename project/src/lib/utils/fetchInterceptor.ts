@@ -30,8 +30,10 @@ export const activateFetchInterceptor = (): void => {
         headers.delete('Origin');
         headers.delete('origin');
         
-        // Adicionar headers específicos para Web App flow
-        headers.set('Content-Type', 'application/x-www-form-urlencoded');
+        // Ajuste: só force application/x-www-form-urlencoded para endpoints de token (login.microsoftonline.com)
+        if (url.includes('login.microsoftonline.com')) {
+          headers.set('Content-Type', 'application/x-www-form-urlencoded');
+        }
         
         init.headers = headers;
       }

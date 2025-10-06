@@ -1134,10 +1134,14 @@ const StudentDetails: React.FC = () => {
               responseData = await response.json();
             } catch (parseError) {
               console.error('Erro ao fazer parse da resposta:', parseError);
+              const responseText = await response.text();
+              console.error('Resposta da Edge Function (texto):', responseText);
             }
             
             if (!response.ok) {
               console.error('Erro na Edge Function:', responseData);
+            } else {
+              console.log('✅ Notificação de rejeição enviada com sucesso:', responseData);
             }
           }
         } catch (e) {

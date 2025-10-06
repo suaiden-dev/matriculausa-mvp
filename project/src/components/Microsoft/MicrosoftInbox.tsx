@@ -451,22 +451,20 @@ export default function MicrosoftInbox() {
     }
   }, [activeConnection?.email_address, fetchMailFolders, fetchEmailsFromFolder]);
 
-  // DESABILITADO: Carregamento automático de emails
-  // useEffect(() => {
-  //   if (activeConnection && activeConnection.access_token && !isLoadingData) {
-  //     // Limpar cache e recarregar apenas uma vez
-  //     setFolderCache({});
-  //     setFolderEmails({});
-  //     setEmailCounts({ inbox: 0, sent: 0, drafts: 0, archive: 0, spam: 0, trash: 0 });
+  // Carregamento único quando a conexão é estabelecida (sem loops)
+  useEffect(() => {
+    if (activeConnection && activeConnection.access_token && !isLoadingData) {
+      console.log('📧 MicrosoftInbox: Carregamento único iniciado...');
       
-  //     // Usar setTimeout para evitar loops
-  //     const timeoutId = setTimeout(() => {
-  //       loadAllFolders();
-  //     }, 1000); // 1 segundo é suficiente
+      // Limpar cache e recarregar apenas uma vez
+      setFolderCache({});
+      setFolderEmails({});
+      setEmailCounts({ inbox: 0, sent: 0, drafts: 0, archive: 0, spam: 0, trash: 0 });
       
-  //     return () => clearTimeout(timeoutId);
-  //   }
-  // }, [activeConnection?.email_address, loadAllFolders, isLoadingData]);
+      // Carregar emails uma única vez
+      loadAllFolders();
+    }
+  }, [activeConnection?.email_address]); // Apenas quando a conexão muda, sem loadAllFolders nas dependências
 
 
   // Função para verificar o status da IA para a conta ativa
@@ -633,6 +631,8 @@ export default function MicrosoftInbox() {
       }
     }
   }, [configId, connections]); // Removido setActiveConnection e activeConnection das dependências
+
+  // REMOVIDO: Carregamento forçado (causa loops infinitos e sobrecarga)
 
   // Polling automático para detectar novos emails
   useEffect(() => {
@@ -961,14 +961,17 @@ export default function MicrosoftInbox() {
     setShowComposeModal(true);
   };
 
+  const [composeNotice, setComposeNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [showComposeSuccessModal, setShowComposeSuccessModal] = useState(false);
+
   const handleSendEmail = async () => {
     if (!composeData.to.trim() || !composeData.subject.trim() || !composeData.message.trim()) {
-      alert('Preencha todos os campos obrigatórios.');
+      setComposeNotice({ type: 'error', message: 'Preencha todos os campos obrigatórios.' });
       return;
     }
 
     if (!activeConnection) {
-      alert('Microsoft account not connected. Please connect your Microsoft account first.');
+      setComposeNotice({ type: 'error', message: 'Microsoft account not connected. Please connect your Microsoft account first.' });
       return;
     }
 
@@ -1013,6 +1016,8 @@ export default function MicrosoftInbox() {
       await graphService.sendEmail(emailMessage);
       
       console.log('✅ Email sent successfully from inbox');
+      setComposeNotice(null);
+      setShowComposeSuccessModal(true);
       
       // Reset form and close modal
       setComposeData({
@@ -1029,9 +1034,60 @@ export default function MicrosoftInbox() {
       
     } catch (error) {
       console.error('❌ Error sending email from inbox:', error);
-      alert('Erro ao enviar email: ' + (error instanceof Error ? error.message : 'Erro desconhecido'));
+      setComposeNotice({ type: 'error', message: 'Erro ao enviar email: ' + (error instanceof Error ? error.message : 'Erro desconhecido') });
     }
   };
+
+  // Toast (top-right) for compose actions
+  const ComposeToast = () => (
+    composeNotice ? (
+      <div
+        role="status"
+        aria-live="polite"
+        className={`fixed top-4 right-4 z-50 w-[90%] max-w-sm shadow-lg rounded-md px-4 py-3 ${
+          composeNotice.type === 'success'
+            ? 'bg-green-50 text-green-800 border border-green-200'
+            : 'bg-red-50 text-red-800 border border-red-200'
+        }`}
+      >
+        {composeNotice.message}
+      </div>
+    ) : null
+  );
+
+  // Exibir toast se vier state da navegação (ex.: pós-envio do compose)
+  useEffect(() => {
+    try {
+      const nav = (window as any).history?.state;
+      const st = nav && nav.usr && nav.usr.toast ? nav.usr.toast : null;
+      if (st?.message) {
+        setComposeNotice({ type: st.type || 'success', message: st.message });
+        setTimeout(() => setComposeNotice(null), 4000);
+        // limpar state para não reaparecer em refresh
+        history.replaceState({ ...history.state, usr: {} }, document.title);
+      }
+    } catch {}
+  }, []);
+
+  // Success Modal for inbox compose
+  const ComposeSuccessModal = () => (
+    showComposeSuccessModal ? (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+        <div className="bg-white rounded-md shadow-lg w-[92%] max-w-sm p-4 border border-slate-200">
+          <h2 className="text-base font-semibold text-slate-900">Email sent</h2>
+          <p className="mt-1.5 text-slate-700 text-sm">Your email was sent successfully.</p>
+          <div className="mt-3 flex justify-end">
+            <button
+              onClick={() => setShowComposeSuccessModal(false)}
+              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm"
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      </div>
+    ) : null
+  );
 
 
   const handleReply = () => {

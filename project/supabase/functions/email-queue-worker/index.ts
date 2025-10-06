@@ -119,7 +119,7 @@ class QueueAIService {
       const { data: agentData } = await supabase
         .from('ai_configurations')
         .select('id, ai_name, company_name, personality, final_prompt')
-        .eq('university_id', userId)
+        .eq('user_id', userId)
         .eq('is_active', true)
         .maybeSingle();
         
@@ -712,7 +712,7 @@ Deno.serve(async (req) => {
           const { data: agentData } = await supabase
             .from('ai_configurations')
             .select('id, ai_name, company_name, personality, final_prompt')
-            .eq('university_id', body.userId)
+            .eq('user_id', body.userId)
             .eq('is_active', true)
             .maybeSingle();
             
