@@ -1751,6 +1751,7 @@
       "tabs": {
         "welcome": "Welcome",
         "details": "Details",
+        "chat": "Chat",
         "i20": "I-20 Control Fee",
         "documents": "Documents"
       },
@@ -1774,6 +1775,9 @@
           "description": "After receiving your acceptance letter, you will be able to pay the I-20 Control Fee. This fee is required for the issuance of your I-20 document, essential for your F-1 visa. You have 10 days to pay after it is released.",
           "button": "Pay I-20 Control Fee"
         }
+      },
+      "chat": {
+        "title": "Application Chat"
       },
       "details": {
         "studentInformation": {
