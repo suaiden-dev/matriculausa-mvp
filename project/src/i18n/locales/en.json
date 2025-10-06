@@ -1366,6 +1366,12 @@
     "findScholarships": {
       "title": "Find Scholarships",
       "subtitle": "Discover opportunities tailored to your academic profile",
+      "pagination": {
+        "previous": "Previous",
+        "next": "Next",
+        "showing": "Showing {{start}}-{{end}} of {{total}}",
+        "pageOf": "(Page {{current}} of {{total}})"
+      },
       "searchPlaceholder": "Search scholarships...",
       "allLevels": "All Levels",
       "allFields": "All Fields", 

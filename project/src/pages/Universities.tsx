@@ -63,7 +63,7 @@ const Universities: React.FC = () => {
       const to = from + PAGE_SIZE - 1;
       let query = supabase
         .from('universities')
-        .select('id, name, location, logo_url, image_url, programs, description, website, address, is_featured', { count: 'exact' })
+        .select('id, name, location, logo_url, image_url, programs, description, website, address, is_featured, type', { count: 'exact' })
         .eq('is_approved', true)
         .eq('is_featured', false) // Exclude featured universities from paginated results
         .range(from, to);
@@ -93,7 +93,7 @@ const Universities: React.FC = () => {
     const fetchAllUniversities = async () => {
       const { data, error } = await supabase
         .from('universities')
-        .select('location, address')
+        .select('location, address, type')
         .eq('is_approved', true); // Include all approved universities for states filter
       if (!error && data) {
         setAllUniversities(data);
@@ -224,8 +224,8 @@ const Universities: React.FC = () => {
               title="Filtrar por tipo de universidade"
             >
               <option value="all">{t('universitiesPage.search.allTypes')}</option>
-              <option value="Private">{t('universitiesPage.search.private')}</option>
-              <option value="Public">{t('universitiesPage.search.public')}</option>
+              <option value="Private University">{t('universitiesPage.search.private')}</option>
+              <option value="Public University">{t('universitiesPage.search.public')}</option>
             </select>
 
             {/* Location Filter */}

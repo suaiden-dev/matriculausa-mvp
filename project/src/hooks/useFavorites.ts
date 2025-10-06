@@ -5,12 +5,13 @@ import { useAuth } from './useAuth';
 export const useFavorites = () => {
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
+  const [hasLoaded, setHasLoaded] = useState(false);
   const { user } = useAuth();
 
   // Carregar favoritos do usuário
   const loadFavorites = useCallback(async () => {
-    if (!user) {
-      console.log('❌ [useFavorites] loadFavorites: Usuário não autenticado');
+    if (!user || hasLoaded) {
+      console.log('❌ [useFavorites] loadFavorites: Usuário não autenticado ou já carregado');
       return;
     }
 
@@ -32,12 +33,13 @@ export const useFavorites = () => {
       const favoriteIds = new Set(data?.map(fav => fav.scholarship_id) || []);
       console.log('✅ [useFavorites] loadFavorites: Favoritos processados:', Array.from(favoriteIds));
       setFavorites(favoriteIds);
+      setHasLoaded(true);
     } catch (error) {
       console.error('❌ [useFavorites] loadFavorites: Erro geral:', error);
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, hasLoaded]);
 
   // Adicionar aos favoritos
   const addToFavorites = useCallback(async (scholarshipId: string) => {

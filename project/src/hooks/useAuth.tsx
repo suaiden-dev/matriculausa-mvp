@@ -104,6 +104,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       return;
     }
 
+    // Proteção contra loops infinitos no Safari iOS
+    let isMounted = true;
+
     const buildUser = async (sessionUser: any, currentProfile: UserProfile | null): Promise<User> => {
       // Prioridade: perfil.role -> user_metadata.role -> verificar se é universidade -> verificar se é vendedor -> perfil.is_admin -> fallback por email
       let role = currentProfile?.role as User['role'] | undefined;
@@ -619,17 +622,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
     
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!isMounted) return;
       fetchAndSetUser(session);
       setLoading(false);
     });
     
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_, session) => {
+        if (!isMounted) return; // Proteção contra updates após unmount
         fetchAndSetUser(session);
         setLoading(false);
       }
     );
     return () => {
+      isMounted = false;
       subscription.unsubscribe();
     };
   }, []);

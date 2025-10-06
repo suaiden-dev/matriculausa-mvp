@@ -1362,6 +1362,12 @@
     "findScholarships": {
       "title": "Encontrar Bolsas",
       "subtitle": "Descubra oportunidades adaptadas ao seu perfil acadêmico",
+      "pagination": {
+        "previous": "Anterior",
+        "next": "Próximo",
+        "showing": "Mostrando {{start}}-{{end}} de {{total}}",
+        "pageOf": "(Página {{current}} de {{total}})"
+      },
       "searchPlaceholder": "Buscar bolsas...",
       "allLevels": "Todos os Níveis",
       "allFields": "Todos os Campos", 

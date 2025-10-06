@@ -12,11 +12,12 @@ export const useSystemType = (): {
   const [systemType, setSystemType] = useState<SystemType>('legacy');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [hasChecked, setHasChecked] = useState(false);
   const { user, userProfile } = useAuth();
 
   useEffect(() => {
     const detectSystemType = async () => {
-      if (!user || !userProfile) {
+      if (!user || !userProfile || hasChecked) {
         setLoading(false);
         return;
       }
@@ -94,11 +95,12 @@ export const useSystemType = (): {
         setSystemType('legacy'); // Default to legacy on error
       } finally {
         setLoading(false);
+        setHasChecked(true);
       }
     };
 
     detectSystemType();
-  }, [user, userProfile]);
+  }, [user, userProfile, hasChecked]);
 
   return {
     systemType,
