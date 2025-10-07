@@ -4,6 +4,8 @@ import { useAdminStudentChat, useAdminStudentConversations } from '../../hooks/u
 import ApplicationChat from '../ApplicationChat';
 import ChatInbox from './ChatInbox';
 import { MessageSquare, ArrowLeft, Users } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { supabase } from '../../lib/supabase';
 
 interface AdminStudentChatProps {
   className?: string;
@@ -23,6 +25,8 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
   const [selectedRecipientId, setSelectedRecipientId] = useState<string | null>(defaultRecipientId || null);
   const [selectedRecipientName, setSelectedRecipientName] = useState<string>('');
   const [showMobileInbox, setShowMobileInbox] = useState(true);
+  const [selectedRecipientInfo, setSelectedRecipientInfo] = useState<{ email?: string; phone?: string } | null>(null);
+  const [selectedRecipientProfileId, setSelectedRecipientProfileId] = useState<string | null>(null);
 
   // Hook for the selected conversation
   const chat = useAdminStudentChat(selectedConversationId || undefined, selectedRecipientId || undefined);
@@ -49,6 +53,30 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
     setSelectedRecipientName(recipientName);
     setShowMobileInbox(false); // Hide inbox on mobile when conversation is selected
   };
+
+  // Buscar email/telefone do destinatário para o header (quando admin/affiliate_admin)
+  useEffect(() => {
+    const fetchRecipientInfo = async () => {
+      if (!selectedRecipientId || !(userProfile?.role === 'admin' || userProfile?.role === 'affiliate_admin')) {
+        setSelectedRecipientInfo(null);
+        setSelectedRecipientProfileId(null);
+        return;
+      }
+      try {
+        const { data } = await supabase
+          .from('user_profiles')
+          .select('id, email, phone')
+          .eq('user_id', selectedRecipientId)
+          .single();
+        setSelectedRecipientInfo({ email: data?.email || '', phone: data?.phone || '' });
+        setSelectedRecipientProfileId(data?.id || null);
+      } catch {
+        setSelectedRecipientInfo(null);
+        setSelectedRecipientProfileId(null);
+      }
+    };
+    fetchRecipientInfo();
+  }, [selectedRecipientId, userProfile?.role]);
 
   const handleBackToInbox = () => {
     setShowMobileInbox(true);
@@ -202,20 +230,34 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
         <div className="flex-1 flex flex-col min-w-0">
           {selectedConversationId || selectedRecipientId ? (
             <>
-              {/* Chat header */}
+              {/* Header com informações do estudante e link para detalhes (apenas admin/affiliate_admin) */}
               {selectedRecipientName && (
-                <div className="flex items-center p-4 border-b border-slate-200 bg-slate-50">
-                  <div className="w-10 h-10 bg-slate-200 rounded-full flex items-center justify-center mr-3">
-                    <span className="text-slate-600 font-semibold">
-                      {selectedRecipientName.charAt(0).toUpperCase()}
-                    </span>
+                <div className="flex items-center justify-between p-4 border-b border-slate-200 bg-slate-50 gap-4">
+                  <div className="flex items-center min-w-0">
+                    <div className="w-10 h-10 bg-slate-200 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                      <span className="text-slate-700 font-semibold">
+                        {selectedRecipientName.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="font-medium text-slate-900 truncate">{selectedRecipientName}</h3>
+                      {(userProfile.role === 'affiliate_admin' || userProfile.role === 'admin') && (
+                        <div className="text-xs text-slate-600 flex flex-wrap gap-x-4 gap-y-1">
+                          {selectedRecipientInfo?.email && <span className="truncate">{selectedRecipientInfo.email}</span>}
+                          {selectedRecipientInfo?.phone && <span className="truncate">{selectedRecipientInfo.phone}</span>}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-medium text-slate-900">{selectedRecipientName}</h3>
-                    <p className="text-sm text-slate-500">
-                      {(userProfile.role === 'affiliate_admin' || userProfile.role === 'admin') ? 'Student' : 'Support Team'}
-                    </p>
-                  </div>
+                  {(userProfile.role === 'affiliate_admin' || userProfile.role === 'admin') && selectedRecipientProfileId && (
+                    <Link
+                      to={`/admin/dashboard/students/${selectedRecipientProfileId}`}
+                      className="text-xs bg-[#05294E] text-white hover:bg-[#041f3f] px-3 py-1.5 rounded-md font-medium whitespace-nowrap"
+                      title="Open student details"
+                    >
+                      View student details
+                    </Link>
+                  )}
                 </div>
               )}
               

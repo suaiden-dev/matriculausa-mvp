@@ -19,6 +19,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const hideFooter = hideHeader || location.pathname.startsWith('/checkout/zelle');
   const isDashboard = hideHeader;
   const isAdmin = location.pathname.startsWith('/admin');
+  const isStudentChatPage = location.pathname.startsWith('/student/dashboard/chat');
   
   // Detectar se é uma tela de estudante para ajustar posicionamento
   const isStudentPage = location.pathname.startsWith('/student');
@@ -32,7 +33,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       {!hideHeader && <Header />}
       <main className={`flex-grow overflow-x-hidden ${isDashboard ? '' : 'overflow-y-auto'}`}>
         {children}
-        {!isAdmin && location.pathname !== '/smart-assistant' && (
+        {!isAdmin && location.pathname !== '/smart-assistant' && !isStudentChatPage && (
           <SmartChat isStudentPage={isStudentPage} />
         )}
       </main>

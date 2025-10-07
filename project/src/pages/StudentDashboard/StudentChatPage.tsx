@@ -11,10 +11,10 @@ const StudentChatPage: React.FC = () => {
   
   return (
     <div className="py-6">
-      <div className="mb-6">
+      {/* <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Support Chat</h1>
         <p className="text-gray-600">Get help from our support team</p>
-      </div>
+      </div> */}
       
       <AdminStudentChatPage 
         showInbox={false} // Students don't need to see an inbox, just their conversation
