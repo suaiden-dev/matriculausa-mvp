@@ -217,18 +217,36 @@ export const useAdminStudentChat = (conversationId?: string, recipientId?: strin
       if (conversationId) {
         setCurrentConversationId(conversationId);
         await fetchMessages(conversationId);
+        // Marcar notificações da conversa como lidas
+        await markConversationNotificationsAsRead(conversationId);
       } else if (recipientId || userProfile.role === 'student') {
         // For students, always try to create/find a conversation even without explicit recipientId
         const convId = await ensureConversation();
         if (convId) {
           setCurrentConversationId(convId);
           await fetchMessages(convId);
+          // Marcar notificações da conversa como lidas
+          await markConversationNotificationsAsRead(convId);
         }
       }
     };
 
     initializeChat();
   }, [user, userProfile, conversationId, recipientId, ensureConversation, fetchMessages]);
+
+  // Função para marcar notificações da conversa como lidas
+  const markConversationNotificationsAsRead = async (convId: string) => {
+    if (!user) return;
+
+    try {
+      await supabase
+        .rpc('mark_conversation_notifications_as_read', {
+          conversation_id_param: convId
+        });
+    } catch (e) {
+      console.error('Failed to mark conversation notifications as read:', e);
+    }
+  };
 
   // Set up real-time subscription
   useEffect(() => {

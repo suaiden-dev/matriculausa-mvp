@@ -9,12 +9,14 @@ interface AdminStudentChatProps {
   className?: string;
   showInbox?: boolean;
   defaultRecipientId?: string;
+  defaultConversationId?: string;
 }
 
 const AdminStudentChat: React.FC<AdminStudentChatProps> = ({ 
   className = '', 
   showInbox = true,
-  defaultRecipientId 
+  defaultRecipientId,
+  defaultConversationId
 }) => {
   const { user, userProfile } = useAuth();
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
@@ -27,6 +29,14 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
 
   // Hook for conversations list (for inbox)
   const { conversations, refetchConversations } = useAdminStudentConversations();
+
+  // Set default conversation if provided
+  useEffect(() => {
+    if (defaultConversationId && !selectedConversationId) {
+      setSelectedConversationId(defaultConversationId);
+      setShowMobileInbox(false); // Hide inbox on mobile when conversation is selected
+    }
+  }, [defaultConversationId, selectedConversationId]);
 
   const handleConversationSelect = (conversationId: string, recipientId: string, recipientName: string) => {
     // If conversationId is empty, it means admin is starting a new conversation with a student
@@ -92,6 +102,8 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
           <ApplicationChat
             messages={chat.messages}
             onSend={chat.sendMessage}
+            onEditMessage={chat.editMessage}
+            onDeleteMessage={chat.deleteMessage}
             loading={chat.loading}
             isSending={chat.isSending}
             error={chat.error}
@@ -161,6 +173,8 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
           <ApplicationChat
             messages={chat.messages}
             onSend={chat.sendMessage}
+            onEditMessage={chat.editMessage}
+            onDeleteMessage={chat.deleteMessage}
             loading={chat.loading}
             isSending={chat.isSending}
             error={chat.error}

@@ -1,11 +1,32 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { GraduationCap, DollarSign, MessageSquare } from 'lucide-react';
 import StudentApplicationsView from '../../components/AdminDashboard/StudentApplicationsView';
 import FeeManagement from '../../components/AdminDashboard/FeeManagement';
 import AdminStudentChatPage from './AdminChatPage';
 
 const UsersHub: React.FC = () => {
+  const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<'applications' | 'feeManagement' | 'messages'>('applications');
+  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
+
+  // Read URL parameters on component mount
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    const conversation = searchParams.get('conversation');
+    
+    if (tab === 'messages') {
+      setActiveTab('messages');
+    } else if (tab === 'feeManagement') {
+      setActiveTab('feeManagement');
+    } else {
+      setActiveTab('applications');
+    }
+    
+    if (conversation) {
+      setSelectedConversationId(conversation);
+    }
+  }, [searchParams]);
 
   return (
     <div className="space-y-8">
@@ -58,7 +79,9 @@ const UsersHub: React.FC = () => {
       ) : activeTab === 'feeManagement' ? (
         <FeeManagement />
       ) : (
-        <AdminStudentChatPage />
+        <AdminStudentChatPage 
+          defaultConversationId={selectedConversationId || undefined}
+        />
       )}
     </div>
   );
