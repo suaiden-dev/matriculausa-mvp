@@ -4,30 +4,6 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { Upload, FileText, CheckCircle, AlertCircle, X, Loader2 } from 'lucide-react';
 
-// Função para gerar o final_prompt baseado na transcrição
-const generateFinalPrompt = (webhookResult: any): string => {
-  if (!webhookResult || !webhookResult.description) {
-    return '';
-  }
-  
-  // Extrair informações da transcrição
-  const title = webhookResult.title || '';
-  const courses = webhookResult.courses || [];
-  
-  // Gerar prompt baseado na transcrição
-  const knowledgeBase = courses.map((course: string, index: number) => 
-    `## ${title || `Documento ${index + 1}`}\n\n${course}`
-  ).join('\n\n---\n\n');
-  
-  return `You are a helpful email assistant for university admissions. Use the knowledge base to answer questions about admissions, scholarships, and university processes.
-
-<knowledge-base>
-${knowledgeBase}
-</knowledge-base>
-
-IMPORTANT: Use the information from the knowledge base above to answer student questions. If the information is not in the knowledge base, respond generally and suggest that the student contact the university directly for specific information.`;
-};
-
 export interface EmailKnowledgeDocument {
   id: string;
   document_name: string;
@@ -48,483 +24,465 @@ interface EmailKnowledgeUploadProps {
   onPendingFilesChange?: (files: File[]) => void;
   existingDocuments?: EmailKnowledgeDocument[];
   isCreating?: boolean;
+  systemType?: 'gmail' | 'microsoft' | 'whatsapp'; // Tipo de sistema para diferenciar onde salvar webhook_result
 }
 
 export interface EmailKnowledgeUploadRef {
-  uploadPendingFiles: (universityId: string) => Promise<EmailKnowledgeDocument[]>;
+  uploadPendingFiles: (agentId: string) => Promise<EmailKnowledgeDocument[]>;
 }
 
-const EmailKnowledgeUpload = forwardRef<EmailKnowledgeUploadRef, EmailKnowledgeUploadProps>(({
-  universityId,
-  agentId,
-  onDocumentsChange,
-  onPendingFilesChange,
-  existingDocuments = [],
-  isCreating = false
-}, ref) => {
-  const { user } = useAuth();
-  const [documents, setDocuments] = useState<EmailKnowledgeDocument[]>(existingDocuments);
-  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
-  const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+const EmailKnowledgeUpload = forwardRef<EmailKnowledgeUploadRef, EmailKnowledgeUploadProps>(
+  function EmailKnowledgeUpload({
+    universityId,
+    agentId,
+    onDocumentsChange,
+    onPendingFilesChange,
+    existingDocuments = [],
+    isCreating = false,
+    systemType
+  }, ref) {
+    const { user } = useAuth();
+    const [documents, setDocuments] = useState<EmailKnowledgeDocument[]>(existingDocuments);
+    const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+    const [uploading, setUploading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
-  const uploadPendingFiles = async (universityId: string) => {
-    if (pendingFiles.length === 0) return [];
-    
-    setUploading(true);
-    setError(null);
-    
-    try {
-      const uploadedDocs: EmailKnowledgeDocument[] = [];
+    // ✅ SIMPLIFICADO: Determinar apenas qual tabela de agentes usar
+    // Documentos são armazenados DENTRO do agente (knowledge_documents JSONB)
+    const getAgentTable = () => {
+      if (systemType === 'gmail') return 'ai_email_agents';
+      if (systemType === 'microsoft' || universityId) return 'microsoft_ai_agents';
+      return 'ai_configurations'; // WhatsApp
+    };
+
+    const uploadPendingFiles = async (uploadAgentId: string) => {
+      console.log('🚀 [EmailKnowledgeUpload] uploadPendingFiles CALLED');
+      console.log('🔍 [EmailKnowledgeUpload] uploadAgentId:', uploadAgentId);
+      console.log('🔍 [EmailKnowledgeUpload] universityId (prop):', universityId);
+      console.log('🔍 [EmailKnowledgeUpload] agentId (prop):', agentId);
+      console.log('🔍 [EmailKnowledgeUpload] systemType:', systemType);
+      console.log('🔍 [EmailKnowledgeUpload] Call stack:', new Error().stack);
       
-      for (const file of pendingFiles) {
-        // Uploading file
+      if (pendingFiles.length === 0) return [];
+      
+      setUploading(true);
+      setError(null);
+      
+      const agentTable = getAgentTable();
+      console.log('🔍 [EmailKnowledgeUpload] Using agent table:', agentTable);
+      
+      try {
+        const uploadedDocs: EmailKnowledgeDocument[] = [];
         
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-        const filePath = `${universityId}/${fileName}`;
-        
-        const { error: uploadError } = await supabase.storage
-          .from('email-knowledge-documents')
-          .upload(filePath, file);
-        
-        if (uploadError) {
-          console.error('Erro no upload:', uploadError);
-          throw uploadError;
-        }
-        
-        const { data: { publicUrl } } = supabase.storage
-          .from('email-knowledge-documents')
-          .getPublicUrl(filePath);
-        
-        if (!publicUrl) {
-          throw new Error('Uploaded file is not accessible');
-        }
-        
-        // Insert into database
-        let docData: EmailKnowledgeDocument;
-        let insertError: any;
-        
-        // Determinar se é agente Microsoft ou Gmail
-        const hasValidAgentId = agentId && agentId !== null && agentId.trim() !== '' && agentId !== 'null' && agentId !== 'undefined';
-        const isMicrosoftAgent = hasValidAgentId;
-        
-        if (isCreating) {
-          // Durante a criação, salvar documento na tabela email_knowledge_documents
-          // com agent_id temporário que será atualizado após criação do agente
-          console.log('📝 [EmailKnowledgeUpload] Salvando documento durante criação do agente');
+        for (const file of pendingFiles) {
+          const fileExt = file.name.split('.').pop();
+          const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+          const filePath = `${universityId}/${fileName}`;
           
-          const result = await supabase
-            .from('email_knowledge_documents')
-            .insert({
-              university_id: universityId,
-              agent_id: null, // Será atualizado após criação do agente
-              document_name: file.name,
-              file_url: publicUrl,
-              file_size: file.size,
-              mime_type: file.type,
-              uploaded_by_user_id: user?.id,
-              transcription_status: 'pending'
-            })
-            .select()
-            .single();
-          docData = result.data;
-          insertError = result.error;
-        } else if (isMicrosoftAgent) {
-          // Sistema Microsoft: usar email_knowledge_documents (CORRETO)
-          const result = await supabase
-            .from('email_knowledge_documents')
-            .insert({
-              university_id: universityId,
-              agent_id: agentId, // Microsoft tem agent_id específico
-              document_name: file.name,
-              file_url: publicUrl,
-              file_size: file.size,
-              mime_type: file.type,
-              uploaded_by_user_id: user?.id
-            })
-            .select()
-            .single();
-          docData = result.data;
-          insertError = result.error;
-        } else {
-          // Sistema Gmail: usar ai_agent_knowledge_documents (CORRETO)
-          if (!hasValidAgentId) {
-            throw new Error('ID do agente inválido. Não é possível fazer upload de documentos.');
+          const { error: uploadError } = await supabase.storage
+            .from('email-knowledge-documents')
+            .upload(filePath, file);
+          
+          if (uploadError) {
+            console.error('Erro no upload:', uploadError);
+            throw uploadError;
           }
           
-          const result = await supabase
-            .from('ai_agent_knowledge_documents')
-            .insert({
-              ai_configuration_id: agentId,
-              document_name: file.name,
-              file_url: publicUrl,
-              file_size: file.size,
-              mime_type: file.type,
-              uploaded_by_user_id: user?.id
-            })
-            .select()
-            .single();
-          docData = result.data;
-          insertError = result.error;
-        }
-        
-        if (insertError) {
-          console.error('Erro ao inserir documento:', insertError);
-          throw insertError;
-        }
-        uploadedDocs.push(docData);
-        
-        // Send webhook for transcription directly to n8n
-        try {
-          console.log('🔄 [EmailKnowledgeUpload] Enviando webhook para transcrição:', {
-            document_id: docData.id,
+          const { data: { publicUrl } } = supabase.storage
+            .from('email-knowledge-documents')
+            .getPublicUrl(filePath);
+          
+          if (!publicUrl) {
+            throw new Error('Uploaded file is not accessible');
+          }
+          
+          // ✅ SIMPLIFICADO: Criar objeto de documento para adicionar ao array JSONB
+          const docData: EmailKnowledgeDocument = {
+            id: crypto.randomUUID(),
             document_name: file.name,
             file_url: publicUrl,
+            file_size: file.size,
             mime_type: file.type,
-            agent_id: agentId
-          });
-          
-          const webhookPayload = {
-            user_id: 'system', // System user for email agents
-            agent_id: agentId || 'default', // Use 'default' if agent_id is null
-            document_id: docData.id, // ID do documento salvo no banco
-            file_name: file.name,
-            file_type: file.type,
-            file_url: publicUrl
+            transcription_status: 'pending',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
           };
           
-          const webhookResponse = await fetch('https://nwh.suaiden.com/webhook/docs-matriculausa', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(webhookPayload),
-          });
+          console.log('📄 [EmailKnowledgeUpload] Documento criado:', docData);
           
-          if (!webhookResponse.ok) {
-            console.error('❌ [EmailKnowledgeUpload] Webhook failed:', webhookResponse.status, webhookResponse.statusText);
-          } else {
-            const webhookResult = await webhookResponse.json();
-            console.log('✅ [EmailKnowledgeUpload] Webhook enviado para transcrição:', webhookResult);
-            
-            // Processar resposta do n8n e salvar na tabela correta
-            if (webhookResult) {
-              try {
-                console.log('🔄 [EmailKnowledgeUpload] Processando resposta do n8n:', webhookResult);
-                
-                // Determinar se é agente Microsoft ou Gmail
-                // Para agentes Microsoft, sempre usar email_knowledge_documents
-                // Para agentes Gmail, usar ai_agent_knowledge_documents
-                const isMicrosoftAgent = true; // Sempre Microsoft para este componente
-                
-                if (isMicrosoftAgent) {
-                  // Sistema Microsoft: atualizar ai_configurations
-                  console.log('🔄 [EmailKnowledgeUpload] Atualizando ai_configurations para agente Microsoft');
-                  console.log('📊 [EmailKnowledgeUpload] Webhook_result recebido e processado');
-                  
-                  if (agentId) {
-                    // Se temos agentId, atualizar diretamente
-                    console.log('🔄 [EmailKnowledgeUpload] Salvando diretamente no ai_configurations');
-                    
-                    const finalPrompt = generateFinalPrompt(webhookResult);
-                    
-                    const { error: updateError } = await supabase
-                      .from('ai_configurations')
-                      .update({
-                        webhook_status: 'processed',
-                        webhook_result: webhookResult,
-                        final_prompt: finalPrompt,
-                        is_active: true
-                      })
-                      .eq('id', agentId);
-                    
-                    if (updateError) {
-                      console.error('❌ [EmailKnowledgeUpload] ERRO ao atualizar ai_configurations:', updateError);
-                      console.error('❌ [EmailKnowledgeUpload] ERRO details:', JSON.stringify(updateError, null, 2));
-                    } else {
-                      console.log('✅ [EmailKnowledgeUpload] ai_configurations atualizado com sucesso');
-                      console.log('✅ [EmailKnowledgeUpload] WEBHOOK_RESULT SALVO DIRETAMENTE!');
-                      
-                      // Verificar se foi realmente salvo
-                      const { data: verifyData, error: verifyError } = await supabase
-                        .from('ai_configurations')
-                        .select('webhook_result, final_prompt, webhook_status')
-                        .eq('id', agentId)
-                        .single();
-                      
-                      if (verifyError) {
-                        console.error('❌ [EmailKnowledgeUpload] ERRO ao verificar salvamento:', verifyError);
-                      } else {
-                        console.log('✅ [EmailKnowledgeUpload] VERIFICAÇÃO PÓS-SALVAMENTO:');
-                        console.log('✅ [EmailKnowledgeUpload] - webhook_status:', verifyData.webhook_status);
-                        console.log('✅ [EmailKnowledgeUpload] - webhook_result exists:', !!verifyData.webhook_result);
-                        console.log('✅ [EmailKnowledgeUpload] - webhook_result length:', JSON.stringify(verifyData.webhook_result || {}).length);
-                        console.log('✅ [EmailKnowledgeUpload] - final_prompt exists:', !!verifyData.final_prompt);
-                        console.log('✅ [EmailKnowledgeUpload] - final_prompt length:', verifyData.final_prompt?.length || 0);
-                      }
-                    }
-                  } else {
-                    // Se não temos agentId, salvar transcrição no documento para processar depois
-                    console.log('🔄 [EmailKnowledgeUpload] Salvando transcrição no documento (agentId não disponível)');
-                    console.log('📊 [EmailKnowledgeUpload] Salvando transcrição no documento');
-                    
-                    const { error: updateDocError } = await supabase
-                      .from('email_knowledge_documents')
-                      .update({
-                        transcription: JSON.stringify(webhookResult),
-                        transcription_status: 'completed',
-                        transcription_processed_at: new Date().toISOString()
-                      })
-                      .eq('id', docData.id);
-                    
-                    if (updateDocError) {
-                      console.error('❌ [EmailKnowledgeUpload] ERRO ao salvar transcrição no documento:', updateDocError);
-                      console.error('❌ [EmailKnowledgeUpload] ERRO details:', JSON.stringify(updateDocError, null, 2));
-                    } else {
-                      console.log('✅ [EmailKnowledgeUpload] Transcrição salva no documento para processamento posterior');
-                      console.log('✅ [EmailKnowledgeUpload] TRANSCRIÇÃO SALVA NO EMAIL_KNOWLEDGE_DOCUMENTS!');
-                      
-                      // Verificar se foi realmente salvo
-                      const { error: verifyDocError } = await supabase
-                        .from('email_knowledge_documents')
-                        .select('transcription, transcription_status, transcription_processed_at')
-                        .eq('id', docData.id)
-                        .single();
-                      
-                      if (verifyDocError) {
-                        console.error('❌ [EmailKnowledgeUpload] ERRO ao verificar salvamento no documento:', verifyDocError);
-                      } else {
-                        console.log('✅ [EmailKnowledgeUpload] Transcrição salva e verificada com sucesso');
-                      }
-                    }
-                  }
-                } else {
-                  // Sistema Gmail: atualizar ai_agent_knowledge_documents
-                  console.log('🔄 [EmailKnowledgeUpload] Atualizando ai_agent_knowledge_documents para agente Gmail');
-                  
-                  const { error: updateError } = await supabase
-                    .from('ai_agent_knowledge_documents')
-                    .update({
-                      transcription: webhookResult.description || '',
-                      transcription_status: 'completed',
-                      transcription_processed_at: new Date().toISOString(),
-                      webhook_result: webhookResult
-                    })
-                    .eq('ai_configuration_id', agentId);
-                  
-                  if (updateError) {
-                    console.error('❌ [EmailKnowledgeUpload] Erro ao atualizar ai_agent_knowledge_documents:', updateError);
-                  } else {
-                    console.log('✅ [EmailKnowledgeUpload] ai_agent_knowledge_documents atualizado com sucesso');
-                  }
-                }
-              } catch (error) {
-                console.error('❌ [EmailKnowledgeUpload] Erro ao processar resposta do n8n:', error);
-              }
-            }
+          // ✅ SIMPLIFICADO: Buscar documentos existentes do agente e adicionar o novo
+          console.log('🔍 [EmailKnowledgeUpload] Buscando agente:', uploadAgentId, 'na tabela:', agentTable);
+          
+          const { data: agentData, error: fetchError } = await supabase
+            .from(agentTable)
+            .select('knowledge_documents')
+            .eq('id', uploadAgentId)
+            .maybeSingle();
+          
+          if (fetchError) {
+            console.error('❌ Erro ao buscar agente:', fetchError);
+            throw fetchError;
           }
-        } catch (webhookError) {
-          console.error('❌ [EmailKnowledgeUpload] Erro ao enviar webhook para transcrição:', webhookError);
-          // Não falhar o processo se o webhook falhar
+          
+          if (!agentData) {
+            console.error('❌ Agente não encontrado:', uploadAgentId);
+            throw new Error(`Agente ${uploadAgentId} não encontrado na tabela ${agentTable}`);
+          }
+          
+          const existingDocs = (agentData?.knowledge_documents as EmailKnowledgeDocument[]) || [];
+          const updatedDocs = [...existingDocs, docData];
+          
+          // Atualizar o array de documentos no agente
+          const { error: updateError } = await supabase
+            .from(agentTable)
+            .update({
+              knowledge_documents: updatedDocs
+            })
+            .eq('id', uploadAgentId);
+          
+          if (updateError) {
+            console.error('❌ Erro ao atualizar documentos do agente:', updateError);
+            throw updateError;
+          }
+          
+          uploadedDocs.push(docData);
+          console.log('✅ [EmailKnowledgeUpload] Documento salvo:', file.name);
+          
+          // ✅ SIMPLIFICADO: Não enviar webhook aqui - será enviado uma vez após todos os uploads
         }
+        
+        const newDocuments = [...documents, ...uploadedDocs];
+        setDocuments(newDocuments);
+        onDocumentsChange?.(newDocuments);
+        setPendingFiles([]);
+        onPendingFilesChange?.([]);
+        
+        console.log('✅ Todos os documentos enviados com sucesso');
+        return uploadedDocs;
+      } catch (err: any) {
+        console.error('❌ Upload error:', err);
+        setError(err.message || 'Failed to upload documents');
+        return [];
+      } finally {
+        setUploading(false);
+      }
+    };
+
+    // Função para enviar webhook para CADA documento não processado
+    const sendAgentWebhook = async (agentId: string) => {
+      try {
+        console.log('🔄 [EmailKnowledgeUpload] Processando documentos para transcrição...');
+        
+        const agentTableName = getAgentTable();
+        
+        // Buscar documentos do agente
+        const { data: agentData } = await supabase
+          .from(agentTableName)
+          .select('knowledge_documents, webhook_result')
+          .eq('id', agentId)
+          .maybeSingle();
+        
+        const docs = (agentData?.knowledge_documents as EmailKnowledgeDocument[]) || [];
+        
+        if (docs.length === 0) {
+          console.log('⚠️ [EmailKnowledgeUpload] Sem documentos para processar');
+          return;
+        }
+        
+        // 📝 Filtrar apenas documentos com status 'pending' (não processados)
+        const pendingDocs = docs.filter(doc => doc.transcription_status === 'pending');
+        
+        if (pendingDocs.length === 0) {
+          console.log('✅ [EmailKnowledgeUpload] Todos os documentos já foram processados');
+          return;
+        }
+        
+        console.log(`📄 [EmailKnowledgeUpload] ${pendingDocs.length} documento(s) pendente(s) para processar`);
+        
+        // 🔄 Processar cada documento pendente
+        const allWebhookResults: any[] = [];
+        const updatedDocs = [...docs]; // Cópia para atualizar
+        
+        for (const doc of pendingDocs) {
+          const docIndex = docs.findIndex(d => d.id === doc.id);
+          
+          const webhookPayload = {
+            user_id: 'system',
+            agent_id: agentId,
+            document_id: doc.id,
+            file_name: doc.document_name,
+            file_type: doc.mime_type,
+            file_url: doc.file_url
+          };
+          
+          console.log(`📤 [EmailKnowledgeUpload] Enviando webhook para: ${doc.document_name}`);
+          
+          // Timeout de 30 segundos por documento
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 30000);
+          
+          try {
+            const webhookResponse = await fetch('https://nwh.suaiden.com/webhook/docs-matriculausa', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(webhookPayload),
+              signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+            
+            if (webhookResponse.ok) {
+              const webhookResult = await webhookResponse.json();
+              console.log(`✅ [EmailKnowledgeUpload] Webhook processado para: ${doc.document_name}`);
+              
+              // Atualizar documento específico com o resultado
+              updatedDocs[docIndex] = {
+                ...updatedDocs[docIndex],
+                transcription_status: 'completed' as const,
+                transcription_processed_at: new Date().toISOString(),
+                transcription: webhookResult.description || webhookResult.transcription || ''
+              };
+              
+              allWebhookResults.push(webhookResult);
+            } else {
+              console.warn(`⚠️ [EmailKnowledgeUpload] Webhook falhou para ${doc.document_name}: ${webhookResponse.status}`);
+              updatedDocs[docIndex] = {
+                ...updatedDocs[docIndex],
+                transcription_status: 'error' as const
+              };
+            }
+          } catch (fetchError: any) {
+            clearTimeout(timeoutId);
+            if (fetchError.name === 'AbortError') {
+              console.warn(`⏱️ [EmailKnowledgeUpload] Timeout para: ${doc.document_name}`);
+            } else {
+              console.error(`❌ [EmailKnowledgeUpload] Erro no webhook para ${doc.document_name}:`, fetchError);
+            }
+            // Manter como pending em caso de erro
+          }
+        }
+        
+        // 📦 Combinar todos os resultados em um único webhook_result
+        const existingWebhookResult = agentData?.webhook_result || {};
+        const combinedWebhookResult = {
+          ...existingWebhookResult,
+          documents: [
+            ...(existingWebhookResult.documents || []),
+            ...allWebhookResults
+          ],
+          last_processed: new Date().toISOString(),
+          total_documents: docs.length
+        };
+        
+        // Atualizar agente com documentos atualizados E webhook_result combinado
+        await supabase
+          .from(agentTableName)
+          .update({
+            webhook_status: 'processed',
+            webhook_result: combinedWebhookResult,
+            knowledge_documents: updatedDocs,
+            is_active: true
+          })
+          .eq('id', agentId);
+          
+        console.log(`✅ [EmailKnowledgeUpload] ${allWebhookResults.length} documento(s) processado(s) com sucesso`);
+      } catch (error) {
+        console.error('❌ [EmailKnowledgeUpload] Erro ao enviar webhook:', error);
+      }
+    };
+    
+    // ✅ REMOVIDO: Não precisamos mais dessa função pois documentos são salvos diretamente no agente
+    const updateDocumentsAgentId = async (_agentId: string) => {
+      console.log('ℹ️ [EmailKnowledgeUpload] Função updateDocumentsAgentId não é mais necessária');
+    };
+
+    useImperativeHandle(ref, () => ({
+      uploadPendingFiles: uploadPendingFiles,
+      updateDocumentsAgentId: updateDocumentsAgentId,
+      sendAgentWebhook: sendAgentWebhook
+    }));
+
+    const onDrop = useCallback(async (acceptedFiles: File[]) => {
+      const allowedTypes = ['application/pdf', 'text/plain', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+      const invalidFiles = acceptedFiles.filter(file => !allowedTypes.includes(file.type));
+      
+      if (invalidFiles.length > 0) {
+        setError(`Tipos de arquivo não suportados: ${invalidFiles.map(f => f.name).join(', ')}`);
+        return;
       }
       
-      const newDocuments = [...documents, ...uploadedDocs];
-      setDocuments(newDocuments);
-      onDocumentsChange?.(newDocuments);
-      setPendingFiles([]);
-      onPendingFilesChange?.([]);
+      const maxSize = 10 * 1024 * 1024; // 10MB
+      const oversizedFiles = acceptedFiles.filter(file => file.size > maxSize);
       
-      console.log('✅ Todos os documentos enviados com sucesso');
-      return uploadedDocs;
-    } catch (err: any) {
-      console.error('❌ Upload error:', err);
-      setError(err.message || 'Failed to upload documents');
-      return [];
-    } finally {
-      setUploading(false);
-    }
-  };
+      if (oversizedFiles.length > 0) {
+        setError(`Arquivos muito grandes (máximo 10MB): ${oversizedFiles.map(f => f.name).join(', ')}`);
+        return;
+      }
+      
+      setError(null);
+      setPendingFiles(prev => [...prev, ...acceptedFiles]);
+      onPendingFilesChange?.(acceptedFiles);
+    }, [onPendingFilesChange]);
 
-  useImperativeHandle(ref, () => ({
-    uploadPendingFiles: uploadPendingFiles
-  }));
+    const { getRootProps, getInputProps, isDragActive } = useDropzone({
+      onDrop,
+      accept: {
+        'application/pdf': ['.pdf'],
+        'text/plain': ['.txt'],
+        'application/msword': ['.doc'],
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx']
+      },
+      multiple: true
+    });
 
-  // Função para converter arquivo para base64 (removida - não utilizada)
+    const removePendingFile = (index: number) => {
+      const newPendingFiles = pendingFiles.filter((_, i) => i !== index);
+      setPendingFiles(newPendingFiles);
+      onPendingFilesChange?.(newPendingFiles);
+    };
 
-  const onDrop = useCallback(async (acceptedFiles: File[]) => {
-    // Files dropped
-    
-    // Validate file types
-    const allowedTypes = ['application/pdf', 'text/plain', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
-    const invalidFiles = acceptedFiles.filter(file => !allowedTypes.includes(file.type));
-    
-    if (invalidFiles.length > 0) {
-      setError(`Tipos de arquivo não suportados: ${invalidFiles.map(f => f.name).join(', ')}`);
-      return;
-    }
-    
-    // Validate file sizes (max 10MB)
-    const maxSize = 10 * 1024 * 1024; // 10MB
-    const oversizedFiles = acceptedFiles.filter(file => file.size > maxSize);
-    
-    if (oversizedFiles.length > 0) {
-      setError(`Arquivos muito grandes (máximo 10MB): ${oversizedFiles.map(f => f.name).join(', ')}`);
-      return;
-    }
-    
-    setError(null);
-    setPendingFiles(prev => [...prev, ...acceptedFiles]);
-    onPendingFilesChange?.(acceptedFiles);
-  }, [onPendingFilesChange]);
+    const getStatusIcon = (status: string) => {
+      switch (status) {
+        case 'completed':
+          return <CheckCircle className="w-4 h-4 text-green-500" />;
+        case 'processing':
+          return <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />;
+        case 'error':
+          return <AlertCircle className="w-4 h-4 text-red-500" />;
+        default:
+          return <FileText className="w-4 h-4 text-gray-500" />;
+      }
+    };
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    accept: {
-      'application/pdf': ['.pdf'],
-      'text/plain': ['.txt'],
-      'application/msword': ['.doc'],
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx']
-    },
-    multiple: true
-  });
+    const formatFileSize = (bytes: number) => {
+      if (bytes === 0) return '0 Bytes';
+      const k = 1024;
+      const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    };
 
-  const removePendingFile = (index: number) => {
-    const newPendingFiles = pendingFiles.filter((_, i) => i !== index);
-    setPendingFiles(newPendingFiles);
-    onPendingFilesChange?.(newPendingFiles);
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return <CheckCircle className="w-4 h-4 text-green-500" />;
-      case 'processing':
-        return <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />;
-      case 'error':
-        return <AlertCircle className="w-4 h-4 text-red-500" />;
-      default:
-        return <FileText className="w-4 h-4 text-gray-500" />;
-    }
-  };
-
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-
-  return (
-    <div className="space-y-6">
-      {/* Upload Area */}
-      <div
-        {...getRootProps()}
-        className={`
-          border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors
-          ${isDragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'}
-          ${uploading ? 'pointer-events-none opacity-50' : ''}
-        `}
-      >
-        <input {...getInputProps()} />
-        <Upload className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-        <p className="text-lg font-medium text-gray-700 mb-2">
-          {isDragActive ? 'Solte os arquivos aqui' : 'Arraste arquivos aqui ou clique para selecionar'}
-        </p>
-        <p className="text-sm text-gray-500">
-          Suporta PDF, DOC, DOCX, TXT (máximo 10MB cada)
-        </p>
-      </div>
-
-      {/* Error Message */}
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <div className="flex items-center">
-            <AlertCircle className="w-5 h-5 text-red-500 mr-2" />
-            <span className="text-red-700">{error}</span>
-          </div>
-        </div>
-      )}
-
-      {/* Pending Files */}
-      {pendingFiles.length > 0 && (
-        <div className="space-y-2">
-          <h3 className="text-lg font-medium text-gray-700">Arquivos Pendentes</h3>
-          {pendingFiles.map((file, index) => (
-            <div key={index} className="flex items-center justify-between bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-              <div className="flex items-center">
-                <FileText className="w-4 h-4 text-yellow-600 mr-2" />
-                <span className="text-sm font-medium text-gray-700">{file.name}</span>
-                <span className="text-xs text-gray-500 ml-2">({formatFileSize(file.size)})</span>
-              </div>
-              <button
-                onClick={() => removePendingFile(index)}
-                className="text-red-500 hover:text-red-700"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Existing Documents */}
-      {documents.length > 0 && (
-        <div className="space-y-2">
-          <h3 className="text-lg font-medium text-gray-700">Documentos de Conhecimento</h3>
-          {documents.map((doc) => (
-            <div key={doc.id} className="flex items-center justify-between bg-white border border-gray-200 rounded-lg p-3">
-              <div className="flex items-center">
-                {getStatusIcon(doc.transcription_status)}
-                <span className="text-sm font-medium text-gray-700 ml-2">{doc.document_name}</span>
-                <span className="text-xs text-gray-500 ml-2">({formatFileSize(doc.file_size)})</span>
-                <span className={`text-xs px-2 py-1 rounded-full ml-2 ${
-                  doc.transcription_status === 'completed' ? 'bg-green-100 text-green-800' :
-                  doc.transcription_status === 'processing' ? 'bg-blue-100 text-blue-800' :
-                  doc.transcription_status === 'error' ? 'bg-red-100 text-red-800' :
-                  'bg-gray-100 text-gray-800'
-                }`}>
-                  {doc.transcription_status === 'completed' ? 'Transcrito' :
-                   doc.transcription_status === 'processing' ? 'Processando' :
-                   doc.transcription_status === 'error' ? 'Erro' : 'Pendente'}
-                </span>
-              </div>
-              <div className="text-xs text-gray-500">
-                {new Date(doc.created_at).toLocaleDateString()}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Upload Button */}
-      {pendingFiles.length > 0 && !uploading && (
-        <button
-          onClick={async () => {
-            try {
-              await uploadPendingFiles(universityId);
-            } catch (error) {
-              console.error('❌ Upload error:', error);
-            }
-          }}
-          className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
+    return (
+      <div className="space-y-6">
+        {/* Upload Area */}
+        <div
+          {...getRootProps()}
+          className={`
+            border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors
+            ${isDragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'}
+            ${uploading ? 'pointer-events-none opacity-50' : ''}
+          `}
         >
-          Enviar {pendingFiles.length} arquivo(s)
-        </button>
-      )}
-
-      {/* Uploading State */}
-      {uploading && (
-        <div className="flex items-center justify-center py-4">
-          <Loader2 className="w-6 h-6 text-blue-500 animate-spin mr-2" />
-          <span className="text-blue-600">Enviando arquivos...</span>
+          <input {...getInputProps()} />
+          <Upload className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+          <p className="text-lg font-medium text-gray-700 mb-2">
+            {isDragActive ? 'Solte os arquivos aqui' : 'Arraste arquivos aqui ou clique para selecionar'}
+          </p>
+          <p className="text-sm text-gray-500">
+            Suporta PDF, DOC, DOCX, TXT (máximo 10MB cada)
+          </p>
         </div>
-      )}
-    </div>
-  );
-});
+
+        {/* Error Message */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <div className="flex items-center">
+              <AlertCircle className="w-5 h-5 text-red-500 mr-2" />
+              <span className="text-red-700">{error}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Pending Files */}
+        {pendingFiles.length > 0 && (
+          <div className="space-y-2">
+            <h3 className="text-lg font-medium text-gray-700">Arquivos Pendentes</h3>
+            {pendingFiles.map((file, index) => (
+              <div key={index} className="flex items-center justify-between bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                <div className="flex items-center">
+                  <FileText className="w-4 h-4 text-yellow-600 mr-2" />
+                  <span className="text-sm font-medium text-gray-700">{file.name}</span>
+                  <span className="text-xs text-gray-500 ml-2">({formatFileSize(file.size)})</span>
+                </div>
+                <button
+                  onClick={() => removePendingFile(index)}
+                  className="text-red-500 hover:text-red-700"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Existing Documents */}
+        {documents.length > 0 && (
+          <div className="space-y-2">
+            <h3 className="text-lg font-medium text-gray-700">Documentos de Conhecimento</h3>
+            {documents.map((doc) => (
+              <div key={doc.id} className="flex items-center justify-between bg-white border border-gray-200 rounded-lg p-3">
+                <div className="flex items-center">
+                  {getStatusIcon(doc.transcription_status)}
+                  <span className="text-sm font-medium text-gray-700 ml-2">{doc.document_name}</span>
+                  <span className="text-xs text-gray-500 ml-2">({formatFileSize(doc.file_size)})</span>
+                  <span className={`text-xs px-2 py-1 rounded-full ml-2 ${
+                    doc.transcription_status === 'completed' ? 'bg-green-100 text-green-800' :
+                    doc.transcription_status === 'processing' ? 'bg-blue-100 text-blue-800' :
+                    doc.transcription_status === 'error' ? 'bg-red-100 text-red-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {doc.transcription_status === 'completed' ? 'Transcrito' :
+                     doc.transcription_status === 'processing' ? 'Processando' :
+                     doc.transcription_status === 'error' ? 'Erro' : 'Pendente'}
+                  </span>
+                </div>
+                <div className="text-xs text-gray-500">
+                  {new Date(doc.created_at).toLocaleDateString()}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Upload Button */}
+        {pendingFiles.length > 0 && !uploading && agentId && (
+          <button
+            onClick={async () => {
+              try {
+                console.log('🔘 [EmailKnowledgeUpload] Upload button clicked with agentId:', agentId);
+                await uploadPendingFiles(agentId);
+              } catch (error) {
+                console.error('❌ Upload error:', error);
+              }
+            }}
+            className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Enviar {pendingFiles.length} arquivo(s)
+          </button>
+        )}
+        
+        {/* Warning se não tiver agentId */}
+        {pendingFiles.length > 0 && !uploading && !agentId && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <p className="text-yellow-700 text-sm">
+              ⚠️ Crie o agente primeiro antes de fazer upload de documentos
+            </p>
+          </div>
+        )}
+
+        {/* Uploading State */}
+        {uploading && (
+          <div className="flex items-center justify-center py-4">
+            <Loader2 className="w-6 h-6 text-blue-500 animate-spin mr-2" />
+            <span className="text-blue-600">Enviando arquivos...</span>
+          </div>
+        )}
+      </div>
+    );
+  }
+);
 
 EmailKnowledgeUpload.displayName = 'EmailKnowledgeUpload';
 

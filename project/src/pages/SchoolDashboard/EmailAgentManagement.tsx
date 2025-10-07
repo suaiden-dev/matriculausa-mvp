@@ -154,7 +154,7 @@ const useEmailAgents = (activeEmailConfig?: { id: string; email_address: string 
     try {
       setLoading(true);
       
-      if (activeEmailConfig?.id) {
+      if (activeEmailConfig?.id && activeEmailConfig.email_address?.includes('@gmail.com')) {
         // GMAIL: Buscar agentes da tabela ai_email_agents
         console.log('🔍 [EmailAgentManagement] Carregando agentes Gmail:', activeEmailConfig.email_address);
         
@@ -193,12 +193,13 @@ const useEmailAgents = (activeEmailConfig?: { id: string; email_address: string 
 
         setAgents(agentsWithCount);
         console.log('✅ [EmailAgentManagement] Agentes Gmail carregados:', agentsWithCount.length);
-      } else if (universityId) {
+      } else if (universityId && activeEmailConfig?.id) {
         // MICROSOFT: Buscar agentes da tabela ai_configurations
         console.log('🔍 [EmailAgentManagement] Carregando agentes Microsoft para universidade:', universityId);
+        console.log('🔍 [EmailAgentManagement] activeEmailConfig:', activeEmailConfig);
         
         const { data, error } = await supabase
-          .from('ai_configurations')
+          .from('microsoft_ai_agents')
           .select(`
             id,
             ai_name,
@@ -207,32 +208,29 @@ const useEmailAgents = (activeEmailConfig?: { id: string; email_address: string 
             sector,
             agent_type,
             is_active,
+            knowledge_documents,
+            final_prompt,
             created_at,
             updated_at
           `)
           .eq('university_id', universityId)
-          .eq('agent_type', 'email')
+          .eq('email_configuration_id', activeEmailConfig.id)
           .order('created_at', { ascending: false });
 
         if (error) throw error;
 
-        // Buscar contagem de documentos para cada agente
-        const agentsWithCount = await Promise.all(
-          data?.map(async (agent) => {
-            const { count } = await supabase
-              .from('email_knowledge_documents')
-              .select('*', { count: 'exact', head: true })
-              .eq('agent_id', agent.id);
-            
-            return {
-              ...agent,
-              knowledge_documents_count: count || 0
-            };
-          }) || []
-        );
+        // ✅ SIMPLIFICADO: Contar documentos do array JSONB knowledge_documents
+        const agentsWithCount = data?.map((agent) => {
+          const docs = (agent.knowledge_documents as any[]) || [];
+          return {
+            ...agent,
+            knowledge_documents_count: docs.length
+          };
+        }) || [];
 
         setAgents(agentsWithCount);
         console.log('✅ [EmailAgentManagement] Agentes Microsoft carregados:', agentsWithCount.length);
+        console.log('✅ [EmailAgentManagement] Agentes encontrados:', agentsWithCount);
       }
     } catch (error) {
       console.error('Error fetching agents:', error);
@@ -255,7 +253,12 @@ const useAgentOperations = (activeEmailConfig?: { id: string; email_address: str
 
   // Determinar qual tabela usar
   const getTableName = () => {
-    return activeEmailConfig?.id ? 'ai_email_agents' : 'ai_configurations';
+    // Para Microsoft (quando há universityId), usar microsoft_ai_agents
+    if (universityId) {
+      return 'microsoft_ai_agents';
+    }
+    // Para Gmail, usar ai_email_agents
+    return 'ai_email_agents';
   };
 
   // Criar agente
@@ -296,12 +299,19 @@ const useAgentOperations = (activeEmailConfig?: { id: string; email_address: str
   // Deletar agente
   const deleteAgent = async (agentId: string) => {
     const tableName = getTableName();
+    console.log('🗑️ [deleteAgent] Using table:', tableName, 'for agent:', agentId);
+    
     const { error } = await supabase
       .from(tableName)
       .delete()
       .eq('id', agentId);
 
-    if (error) throw error;
+    if (error) {
+      console.error('❌ [deleteAgent] Error:', error);
+      throw error;
+    }
+    
+    console.log('✅ [deleteAgent] Agent deleted from table:', tableName);
   };
 
   // Verificar agente existente (apenas para Microsoft)
@@ -412,7 +422,7 @@ const useDocumentProcessing = () => {
   return { processPendingDocuments };
 };
 
-export default function EmailAgentManagement({ activeEmailConfig }: EmailAgentManagementProps = {}) {
+export default function EmailAgentManagement({ activeEmailConfig }: EmailAgentManagementProps) {
   const { user } = useAuth();
   const { university } = useUniversity();
   
@@ -423,16 +433,36 @@ export default function EmailAgentManagement({ activeEmailConfig }: EmailAgentMa
   const [customInstructionsExpanded, setCustomInstructionsExpanded] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const uploadRef = useRef<{ uploadPendingFiles: (universityId: string) => Promise<any[]> } | null>(null);
+  const [creationStep, setCreationStep] = useState<1 | 2>(1); // 1: Criar Agente, 2: Base de Conhecimento
+  const [createdAgent, setCreatedAgent] = useState<EmailAgent | null>(null); // Agente criado na etapa 1
+  const uploadRef = useRef<{ 
+    uploadPendingFiles: (agentId: string) => Promise<any[]>;
+    updateDocumentsAgentId: (agentId: string) => Promise<void>;
+    sendAgentWebhook: (agentId: string) => Promise<void>;
+  } | null>(null);
 
   const [formData, setFormData] = useState<FormData>({
     ai_name: '',
-    company_name: university?.name || '',
+    company_name: university?.name || 'University',
     agent_type: '',
     personality: '',
     custom_prompt: ''
   });
   const [formLoading, setFormLoading] = useState(false);
+
+  // Atualizar company_name quando university for carregada
+  useEffect(() => {
+    console.log('🔍 [EmailAgentManagement] University data:', university);
+    if (university?.name) {
+      console.log('✅ [EmailAgentManagement] Setting company_name to:', university.name);
+      setFormData(prev => ({
+        ...prev,
+        company_name: university.name
+      }));
+    } else {
+      console.log('⚠️ [EmailAgentManagement] No university name available');
+    }
+  }, [university?.name]);
 
   // Hooks customizados
   const { agents, loading, fetchAgents } = useEmailAgents(activeEmailConfig, university?.id);
@@ -522,95 +552,74 @@ ${agentType} Department - ${companyName}`;
         return;
       }
 
-      const agentData = activeEmailConfig?.id ? {
+      // Determinar qual tabela usar baseado na lógica correta
+      const tableName = university?.id ? 'microsoft_ai_agents' : 'ai_email_agents';
+      console.log('🔍 [EmailAgentManagement] Creating agent for table:', tableName);
+      
+      const agentData = tableName === 'ai_email_agents' ? {
         // GMAIL: Dados para ai_email_agents
         user_id: user.id,
-        email_configuration_id: activeEmailConfig.id,
+        email_configuration_id: activeEmailConfig?.id,
         ai_name: formData.ai_name,
         agent_type: formData.agent_type,
         personality: formData.personality,
         custom_prompt: formData.custom_prompt,
         is_active: true,
       } : {
-        // MICROSOFT: Dados para ai_configurations
+        // MICROSOFT: Dados para microsoft_ai_agents
         user_id: user.id,
         university_id: university?.id,
+        email_configuration_id: activeEmailConfig?.id,
         ai_name: formData.ai_name,
         company_name: formData.company_name,
-        agent_type: 'email',
+        agent_type: formData.agent_type || 'email',
         personality: formData.personality,
         sector: 'Education',
         custom_prompt: formData.custom_prompt,
-        final_prompt: formData.custom_prompt,
-        is_active: false,
-      };
-
-      const agent = await createAgent(agentData);
-      
-      // 🎯 GERAR PROMPT PERSONALIZADO AUTOMATICAMENTE (como WhatsApp Connect)
-      let finalPrompt = formData.custom_prompt;
-      if (!finalPrompt) {
-        finalPrompt = generateCustomPrompt(
+        final_prompt: formData.custom_prompt || generateCustomPrompt(
           formData.ai_name,
           formData.company_name,
           formData.personality,
           formData.agent_type
-        );
+        ),
+        is_active: false,
+      };
+
+      console.log('🔍 [EmailAgentManagement] Agent data to create:', agentData);
+      const agent = await createAgent(agentData);
+      console.log('✅ [EmailAgentManagement] Agent created:', agent.id);
+      
+      // Salvar agente criado e avançar para etapa 2
+      setCreatedAgent(agent);
+      setCreationStep(2);
+      
+    } catch (error) {
+      console.error('Error creating agent:', error);
+      alert(`Error creating agent: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`);
+    } finally {
+      setFormLoading(false);
+    }
+  };
+  
+  // Nova função para finalizar criação com base de conhecimento
+  const handleFinishAgentCreation = async () => {
+    if (!createdAgent) return;
+    
+    try {
+      setFormLoading(true);
+      
+      console.log('✅ [EmailAgentManagement] Finalizando criação do agente...');
+      
+      // 🚀 Enviar webhook ÚNICO para n8n processar todos os documentos
+      if (uploadRef.current) {
+        console.log('📤 [EmailAgentManagement] Enviando webhook para processar documentos...');
+        await uploadRef.current.sendAgentWebhook(createdAgent.id);
       }
-
-      // Processar documentos pendentes se houver
-      if (pendingFiles.length > 0 && university?.id) {
-        try {
-          const webhookResults = await processPendingDocuments(agent.id, university.id);
-          if (webhookResults.length > 0) {
-            finalPrompt = generateFinalPrompt(webhookResults);
-          }
-
-          // Atualizar com dados específicos para cada tabela
-          if (activeEmailConfig?.id) {
-            // GMAIL: ai_email_agents não tem essas colunas, apenas ativar
-            await updateAgent(agent.id, {
-              is_active: true,
-            });
-          } else {
-            // MICROSOFT: ai_configurations tem todas as colunas
-            await updateAgent(agent.id, {
-              webhook_status: webhookResults.length > 0 ? 'processed' : 'no_documents',
-              webhook_result: webhookResults,
-              final_prompt: finalPrompt,
-              is_active: true,
-            });
-          }
-        } catch (error) {
-          console.error('Error processing documents:', error);
-          // Ativar agente mesmo com erro no processamento
-          if (activeEmailConfig?.id) {
-            // GMAIL: apenas ativar
-            await updateAgent(agent.id, {
-              is_active: true,
-            });
-          } else {
-            // MICROSOFT: ativar com status de erro
-            await updateAgent(agent.id, {
-              webhook_status: 'error_processing_documents',
-              final_prompt: finalPrompt,
-              is_active: true,
-            });
-          }
-        }
-      }
-
-      // Upload pending files if any
-      if (pendingFiles.length > 0 && uploadRef.current) {
-        try {
-          await uploadRef.current.uploadPendingFiles(agent.id);
-        } catch (uploadError) {
-          console.error('Error uploading files:', uploadError);
-        }
-      }
-
+      
       await fetchAgents();
       setShowCreateForm(false);
+      setCreationStep(1);
+      setCreatedAgent(null);
       setFormData({
         ai_name: '',
         company_name: university?.name || '',
@@ -620,9 +629,11 @@ ${agentType} Department - ${companyName}`;
       });
       setPendingFiles([]);
       handleSmoothTransition(false);
+      
+      alert('✅ Agent created successfully with knowledge base!');
     } catch (error) {
-      console.error('Error creating agent:', error);
-      alert(`Error creating agent: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`);
+      console.error('Error finishing agent creation:', error);
+      alert(`Error finishing agent creation: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setFormLoading(false);
     }
@@ -630,21 +641,34 @@ ${agentType} Department - ${companyName}`;
 
   const handleUpdateAgent = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('🔄 [EmailAgentManagement] handleUpdateAgent called');
 
     if (!editingAgent) {
+      console.error('❌ [EmailAgentManagement] No editingAgent');
       alert("No agent selected for editing.");
       return;
     }
 
-    if (!formData.ai_name || !formData.company_name || !formData.agent_type || !formData.personality) {
-      alert("Please fill in all required fields.");
+    // Validação mais específica
+    console.log('🔍 [EmailAgentManagement] Form data for validation:', formData);
+    const missingFields = [];
+    if (!formData.ai_name?.trim()) missingFields.push('AI Name');
+    if (!formData.company_name?.trim()) missingFields.push('Company Name');
+    if (!formData.agent_type?.trim()) missingFields.push('Agent Type');
+    if (!formData.personality?.trim()) missingFields.push('Personality');
+    
+    console.log('🔍 [EmailAgentManagement] Missing fields:', missingFields);
+    
+    if (missingFields.length > 0) {
+      alert(`Please fill in the following required fields: ${missingFields.join(', ')}`);
       return;
     }
 
     try {
       setFormLoading(true);
+      console.log('⏳ [EmailAgentManagement] Starting update...');
       
-      const updateData = activeEmailConfig?.id ? {
+      const updateData = activeEmailConfig?.id && activeEmailConfig.email_address?.includes('@gmail.com') ? {
         // GMAIL: Atualizar apenas colunas da ai_email_agents
         ai_name: formData.ai_name,
         agent_type: formData.agent_type,
@@ -652,18 +676,34 @@ ${agentType} Department - ${companyName}`;
         custom_prompt: formData.custom_prompt,
         updated_at: new Date().toISOString()
       } : {
-        // MICROSOFT: Atualizar colunas da ai_configurations
+        // MICROSOFT: Atualizar colunas da microsoft_ai_agents
         ai_name: formData.ai_name,
         company_name: formData.company_name,
         agent_type: formData.agent_type,
         personality: formData.personality,
-        custom_prompt: formData.custom_prompt,
-        final_prompt: formData.custom_prompt,
+        final_prompt: formData.custom_prompt, // Salvar em final_prompt
         updated_at: new Date().toISOString()
       };
 
+      console.log('📦 [EmailAgentManagement] Update data:', updateData);
+      console.log('🔑 [EmailAgentManagement] Agent ID:', editingAgent.id);
+
       await updateAgent(editingAgent.id, updateData);
 
+      console.log('✅ [EmailAgentManagement] Agent updated successfully');
+      
+      // 🔄 Processar documentos pendentes após update (se houver)
+      if (uploadRef.current?.sendAgentWebhook) {
+        console.log('🔄 [EmailAgentManagement] Processando documentos pendentes...');
+        try {
+          await uploadRef.current.sendAgentWebhook(editingAgent.id);
+          console.log('✅ [EmailAgentManagement] Documentos pendentes processados');
+        } catch (webhookError) {
+          console.error('⚠️ [EmailAgentManagement] Erro ao processar documentos:', webhookError);
+          // Não bloquear o update por erro no webhook
+        }
+      }
+      
       alert('✅ Agent updated successfully!');
       await fetchAgents();
       setEditingAgent(null);
@@ -676,7 +716,7 @@ ${agentType} Department - ${companyName}`;
       });
       handleSmoothTransition(false);
     } catch (error) {
-      console.error('Error updating agent:', error);
+      console.error('❌ [EmailAgentManagement] Error updating agent:', error);
       alert(`Error updating agent: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`);
     } finally {
       setFormLoading(false);
@@ -701,11 +741,17 @@ ${agentType} Department - ${companyName}`;
     }
 
     try {
+      console.log('🗑️ [EmailAgentManagement] Deleting agent:', agentId);
+      console.log('🗑️ [EmailAgentManagement] University ID:', university?.id);
+      console.log('🗑️ [EmailAgentManagement] Active email config:', activeEmailConfig);
+      
       setActionLoading(agentId);
       await deleteAgent(agentId);
+      console.log('✅ [EmailAgentManagement] Agent deleted successfully');
       await fetchAgents();
     } catch (error) {
-      console.error('Error deleting agent:', error);
+      console.error('❌ [EmailAgentManagement] Error deleting agent:', error);
+      alert(`Error deleting agent: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setActionLoading(null);
     }
@@ -729,7 +775,7 @@ ${agentType} Department - ${companyName}`;
             Email AI Agents
             {activeEmailConfig && (
               <span className="text-sm font-normal text-gray-500">
-                (Gmail: {activeEmailConfig.email_address})
+                (Email: {activeEmailConfig.email_address})
               </span>
             )}
             {!activeEmailConfig && university && (
@@ -842,10 +888,15 @@ ${agentType} Department - ${companyName}`;
                           setFormData({
                             ai_name: agent.ai_name,
                             company_name: agent.company_name,
-                            agent_type: agent.agent_type,
+                            agent_type: agent.agent_type || 'email', // Valor padrão se não existir
                             personality: agent.personality,
-                            custom_prompt: (agent as any).custom_prompt || ""
+                            // 🔧 Buscar final_prompt ao invés de custom_prompt
+                            custom_prompt: (agent as any).final_prompt || (agent as any).custom_prompt || ""
                           });
+                          // 📂 Expandir custom instructions se houver prompt
+                          if ((agent as any).final_prompt || (agent as any).custom_prompt) {
+                            setCustomInstructionsExpanded(true);
+                          }
                           handleSmoothTransition(true);
                         }}
                         className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
@@ -1003,48 +1054,72 @@ ${agentType} Department - ${companyName}`;
                 )}
               </div>
 
-              {/* Knowledge Base Documents */}
-              <div className="bg-white p-4 sm:p-4 rounded-lg border border-gray-200">
-                <div className="flex items-center gap-2 mb-3">
-                  <FileText className="w-4 h-4 text-[#05294E]" />
-                  <label className="text-sm font-medium text-gray-700">
-                    Knowledge Base Documents (Optional)
-                  </label>
+              {/* Knowledge Base Documents - Apenas na Etapa 2 ou ao Editar */}
+              {(creationStep === 2 || editingAgent) && (
+                <div className="bg-white p-4 sm:p-4 rounded-lg border border-gray-200">
+                  <div className="flex items-center gap-2 mb-3">
+                    <FileText className="w-4 h-4 text-[#05294E]" />
+                    <label className="text-sm font-medium text-gray-700">
+                      {creationStep === 2 ? 'Add Knowledge Base Documents' : 'Knowledge Base Documents (Optional)'}
+                    </label>
+                  </div>
+                  {creationStep === 2 && (
+                    <div className="mb-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <p className="text-sm text-green-700">
+                        ✅ Agent "{createdAgent?.ai_name}" created successfully! Now add documents to build the knowledge base.
+                      </p>
+                    </div>
+                  )}
+                  <EmailKnowledgeUpload
+                    ref={uploadRef}
+                    universityId={university?.id || ""}
+                    agentId={createdAgent?.id || editingAgent?.id || undefined}
+                    systemType="microsoft"
+                    onDocumentsChange={(documents: any[]) => {
+                      console.log('Documents uploaded:', documents);
+                    }}
+                    onPendingFilesChange={(files: File[]) => {
+                      setPendingFiles(files);
+                    }}
+                    // 📂 Passar documentos existentes do JSONB knowledge_documents
+                    existingDocuments={editingAgent ? ((editingAgent as any).knowledge_documents || []) : []}
+                    isCreating={!editingAgent?.id && creationStep === 2}
+                  />
+                  <p className="text-xs text-gray-500 mt-2">
+                    Upload documents that will be used as knowledge base for your AI agent.
+                  </p>
                 </div>
-                <EmailKnowledgeUpload
-                  ref={uploadRef}
-                  universityId={university?.id || ""}
-                  agentId={editingAgent?.id || undefined}
-                  onDocumentsChange={(documents: any[]) => {
-                    console.log('Documents uploaded:', documents);
-                  }}
-                  onPendingFilesChange={(files: File[]) => {
-                    setPendingFiles(files);
-                  }}
-                  existingDocuments={[]}
-                  isCreating={!editingAgent?.id}
-                />
-                <p className="text-xs text-gray-500 mt-2">
-                  Upload documents that will be used as knowledge base for your AI agent.
-                </p>
-              </div>
+              )}
 
-              {/* Submit Button */}
-              <div className="pt-4">
+              {/* Submit Buttons */}
+              <div className="pt-4 flex gap-3">
+                {creationStep === 2 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCreationStep(1);
+                      setCreatedAgent(null);
+                    }}
+                    className="px-6 py-3 border border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-all"
+                  >
+                    Back
+                  </button>
+                )}
                 <button
-                  type="submit"
+                  type={(creationStep === 1 && !editingAgent) || editingAgent ? "submit" : "button"}
+                  onClick={creationStep === 2 && !editingAgent ? handleFinishAgentCreation : undefined}
                   disabled={formLoading}
-                  className="w-full bg-[#05294E] hover:bg-[#05294E]/90 text-white px-6 py-3 rounded-xl font-medium transition-all duration-200 hover:shadow-md flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 bg-[#05294E] hover:bg-[#05294E]/90 text-white px-6 py-3 rounded-xl font-medium transition-all duration-200 hover:shadow-md flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {formLoading ? (
                     <>
                       <Loader2 className="w-5 h-5 animate-spin" />
-                      {editingAgent ? 'Updating Agent...' : 'Creating Agent...'}
+                      {creationStep === 2 ? 'Processing Documents...' : editingAgent ? 'Updating Agent...' : 'Creating Agent...'}
                     </>
                   ) : (
                     <>
                       <Save className="w-5 h-5" />
-                      {editingAgent ? 'Update Agent' : 'Create Agent'}
+                      {creationStep === 2 ? 'Finish & Activate Agent' : editingAgent ? 'Update Agent' : 'Next: Add Knowledge Base'}
                     </>
                   )}
                 </button>

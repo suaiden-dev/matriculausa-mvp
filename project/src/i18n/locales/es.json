@@ -1750,6 +1750,11 @@
       "passportFormatError": "El formato del documento de pasaporte no fue reconocido. Sube una foto clara y sin daños del pasaporte.",
       "diplomaProcessError": "No se pudo procesar el Diploma de Secundaria. El archivo puede estar corrupto o en un formato no compatible. Intenta subir un nuevo archivo.",
       "fundsValidationError": "No se pudo validar el documento. El archivo puede estar corrupto o en un formato no compatible. Intenta subir un nuevo archivo.",
+      "passportMRZError": "El documento de pasaporte no es legible. Asegúrate de que el pasaporte esté claramente visible y la zona de lectura mecánica (MRZ) en la parte inferior no esté dañada u oscurecida.",
+      "bankStatementNotReadableError": "El estado de cuenta bancario no es legible. Asegúrate de que el documento esté claramente visible y todo el texto sea legible.",
+      "diplomaNotReadableError": "El documento de diploma no es legible. Asegúrate de que el documento esté claramente visible y todo el texto sea legible.",
+      "insufficientFundsError": "Fondos insuficientes detectados. El saldo mínimo requerido es de $22,000 USD.",
+      "diplomaDamagedError": "El diploma parece estar dañado o poco claro. Sube una copia clara y sin daños.",
       "passport": "Pasaporte",
       "passportDescription": "Documento de pasaporte válido",
       "diploma": "Diploma de Secundaria",
@@ -2419,7 +2424,7 @@
     "paymentSelector": {
       "title": "Elige el Método de Pago",
       "subtitle": "Selecciona cómo deseas pagar la tarifa de {{feeType}}",
-      "manualVerification": "Se requiere verificación manual",
+      "manualVerification": "El procesamiento puede tomar hasta 48 horas",
       "important": "Importante:",
       "zelleUploadNote": "Después de realizar el pago vía Zelle, deberás subir una captura de pantalla de la confirmación mostrando el código, fecha, monto y destinatario.",
     "loading": {
@@ -2440,12 +2445,12 @@
         },
         "pix": {
           "title": "PIX",
-          "description": "Pago instantáneo brasileño - Valores en reales vía Stripe"
+          "description": "Sistema de pago instantáneo para usuarios brasileños"
         },
         "zelle": {
           "title": "Zelle",
           "description": "Paga vía transferencia Zelle",
-          "descriptionDetailed": "Paga vía Zelle y sube el comprobante. Se requiere verificación manual."
+          "descriptionDetailed": "Paga vía Zelle y sube el comprobante."
         }
       }
     }
@@ -3028,11 +3033,11 @@
       },
       "pix": {
         "title": "PIX",
-        "description": "Pago instantáneo brasileño - Valores en reales vía Stripe"
+        "description": "Sistema de pago instantáneo para usuarios brasileños"
       },
       "zelle": {
         "title": "Zelle",
-        "description": "Paga vía transferencia Zelle (requiere verificación manual)"
+        "description": "Paga vía transferencia Zelle"
       }
     }
   },
@@ -3069,7 +3074,7 @@
       "zelle": {
         "title": "Zelle",
         "description": "Paga vía transferencia Zelle",
-        "descriptionDetailed": "Paga vía Zelle (requiere verificación manual)"
+        "descriptionDetailed": "Paga vía Zelle"
       }
     },
     "loading": {

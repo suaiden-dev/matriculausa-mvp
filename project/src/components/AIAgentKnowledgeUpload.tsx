@@ -1,6 +1,6 @@
 import React, { useState, useCallback, forwardRef, useImperativeHandle } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Upload, File, X, Trash2, AlertCircle, CheckCircle } from 'lucide-react';
+import { Upload, File, X, Trash2, AlertCircle, CheckCircle, Eye, RefreshCw, Copy, Loader2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 
@@ -23,6 +23,126 @@ interface AIAgentKnowledgeUploadProps {
   foreignTable?: string; // default: 'ai_agent_knowledge_documents'
   foreignKey?: string;   // default: 'ai_configuration_id'
 }
+
+// Componente para mostrar status da transcrição
+const TranscriptionStatusCard = ({ document }: { document: KnowledgeDocument }) => {
+  const [showTranscription, setShowTranscription] = useState(false);
+  const [isReprocessing, setIsReprocessing] = useState(false);
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'completed': return 'text-green-600 bg-green-100';
+      case 'processing': return 'text-blue-600 bg-blue-100';
+      case 'error': return 'text-red-600 bg-red-100';
+      default: return 'text-yellow-600 bg-yellow-100';
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'completed': return <CheckCircle className="h-4 w-4" />;
+      case 'processing': return <Loader2 className="h-4 w-4 animate-spin" />;
+      case 'error': return <AlertCircle className="h-4 w-4" />;
+      default: return <RefreshCw className="h-4 w-4" />;
+    }
+  };
+
+  const handleReprocess = async () => {
+    setIsReprocessing(true);
+    try {
+      // Aqui você pode implementar a lógica para reprocessar o documento
+      console.log('Reprocessing document:', document.id);
+      // Simular delay
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    } catch (error) {
+      console.error('Error reprocessing document:', error);
+    } finally {
+      setIsReprocessing(false);
+    }
+  };
+
+  const handleCopyTranscription = () => {
+    if (document.transcription) {
+      navigator.clipboard.writeText(document.transcription);
+    }
+  };
+
+  return (
+    <div className="p-4 bg-white rounded-lg border border-slate-200">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-3">
+          <div className="bg-slate-100 p-2 rounded-lg">
+            <File className="h-4 w-4 text-slate-600" />
+          </div>
+          <div>
+            <p className="font-medium text-slate-900">{document.document_name}</p>
+            <div className="flex items-center gap-2">
+              <span className={`px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1 ${getStatusColor(document.transcription_status || 'pending')}`}>
+                {getStatusIcon(document.transcription_status || 'pending')}
+                {document.transcription_status || 'pending'}
+              </span>
+              {document.transcription_processed_at && (
+                <span className="text-xs text-slate-500">
+                  {new Date(document.transcription_processed_at).toLocaleString()}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {document.transcription_status === 'completed' && document.transcription && (
+            <button
+              onClick={() => setShowTranscription(!showTranscription)}
+              className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+              title="View transcription"
+            >
+              <Eye className="h-4 w-4" />
+            </button>
+          )}
+          {document.transcription_status === 'error' && (
+            <button
+              onClick={handleReprocess}
+              disabled={isReprocessing}
+              className="p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-50"
+              title="Reprocess document"
+            >
+              {isReprocessing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Transcription Content */}
+      {showTranscription && document.transcription && (
+        <div className="mt-3 p-3 bg-slate-50 rounded-lg">
+          <div className="flex items-center justify-between mb-2">
+            <h5 className="font-medium text-slate-900">Transcription Result</h5>
+            <button
+              onClick={handleCopyTranscription}
+              className="p-1 text-slate-400 hover:text-blue-600 rounded transition-colors"
+              title="Copy transcription"
+            >
+              <Copy className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="text-sm text-slate-700 max-h-40 overflow-y-auto">
+            {document.transcription}
+          </div>
+        </div>
+      )}
+
+      {/* Webhook Result */}
+      {document.webhook_result && (
+        <div className="mt-3 p-3 bg-blue-50 rounded-lg">
+          <h5 className="font-medium text-blue-900 mb-2">Processing Details</h5>
+          <pre className="text-xs text-blue-700 overflow-x-auto">
+            {JSON.stringify(document.webhook_result, null, 2)}
+          </pre>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const AIAgentKnowledgeUpload = forwardRef<{ uploadPendingFiles: (aiConfigId: string) => Promise<KnowledgeDocument[]> }, AIAgentKnowledgeUploadProps>(({ 
   aiConfigurationId,
@@ -655,6 +775,18 @@ const AIAgentKnowledgeUpload = forwardRef<{ uploadPendingFiles: (aiConfigId: str
                   <Trash2 className="h-4 w-4" />
                 </button>
               </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Transcription Status Section */}
+      {documents.length > 0 && (
+        <div className="space-y-3">
+          <h4 className="font-semibold text-slate-900">Transcription Status</h4>
+          <div className="space-y-2">
+            {documents.map((doc) => (
+              <TranscriptionStatusCard key={`transcription-${doc.id}`} document={doc} />
             ))}
           </div>
         </div>

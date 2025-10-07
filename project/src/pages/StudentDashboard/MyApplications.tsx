@@ -1186,7 +1186,7 @@ const getLevelColor = (level: any) => {
                        </div>
                        <div>
                          <div className="font-medium text-gray-900">Zelle</div>
-                         <div className="text-sm text-gray-600">Pay via Zelle transfer (requires manual verification)</div>
+                         <div className="text-sm text-gray-600">Pay via Zelle transfer</div>
                        </div>
                      </div>
                    </label>

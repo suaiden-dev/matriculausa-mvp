@@ -45,28 +45,44 @@ Deno.serve(async (req) => {
     try {
       body = await req.json();
     } catch (e) {
+      console.error('[create-student-notification] Invalid JSON:', e);
       return new Response(JSON.stringify({ error: 'Invalid JSON', details: String(e) }), { status: 400, headers: corsHeaders(origin) });
     }
 
+    console.log('[create-student-notification] Request body:', body);
+
     const { student_id, user_id, title, message } = body || {};
     if (!title || !message) {
+      console.error('[create-student-notification] Missing required fields:', { title, message });
       return new Response(JSON.stringify({ error: 'title and message are required' }), { status: 400, headers: corsHeaders(origin) });
     }
 
     let resolvedStudentId: number | null = null;
     if (typeof student_id === 'number') {
       resolvedStudentId = student_id;
+      console.log('[create-student-notification] Using provided student_id:', student_id);
     } else if (user_id) {
+      console.log('[create-student-notification] Looking up student_id for user_id:', user_id);
       const { data: profile, error: profileError } = await supabase
         .from('user_profiles')
         .select('id')
         .eq('user_id', user_id)
         .single();
-      if (profileError || !profile) {
+      
+      if (profileError) {
+        console.error('[create-student-notification] Error fetching profile:', profileError);
+        return new Response(JSON.stringify({ error: 'Student profile not found for provided user_id', details: profileError.message }), { status: 404, headers: corsHeaders(origin) });
+      }
+      
+      if (!profile) {
+        console.error('[create-student-notification] Profile not found for user_id:', user_id);
         return new Response(JSON.stringify({ error: 'Student profile not found for provided user_id' }), { status: 404, headers: corsHeaders(origin) });
       }
+      
       resolvedStudentId = profile.id as number;
+      console.log('[create-student-notification] Resolved student_id:', resolvedStudentId);
     } else {
+      console.error('[create-student-notification] Neither student_id nor user_id provided');
       return new Response(JSON.stringify({ error: 'student_id or user_id is required' }), { status: 400, headers: corsHeaders(origin) });
     }
 
@@ -78,14 +94,18 @@ Deno.serve(async (req) => {
     };
     if (body.link) insertPayload.link = body.link;
 
+    console.log('[create-student-notification] Inserting notification with payload:', insertPayload);
+
     const { error: insertError } = await supabase
       .from('student_notifications')
       .insert(insertPayload);
 
     if (insertError) {
+      console.error('[create-student-notification] Error inserting notification:', insertError);
       return new Response(JSON.stringify({ error: 'Failed to create notification', details: insertError.message }), { status: 500, headers: corsHeaders(origin) });
     }
 
+    console.log('[create-student-notification] Notification created successfully');
     return new Response(JSON.stringify({ success: true }), { status: 200, headers: corsHeaders(origin) });
   } catch (err: any) {
     return new Response(JSON.stringify({ error: true, message: err?.message || 'Internal error' }), { status: 500, headers: corsHeaders(origin) });
