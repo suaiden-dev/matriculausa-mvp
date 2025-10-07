@@ -1589,6 +1589,7 @@ async function processUserEmails(config) {
           .from('email_queue')
           .insert({
             user_id: config.userId,
+            email_configuration_id: config.id, // Adicionar email_configuration_id
             email_data: email,
             status: 'pending',
             priority: 3, // Prioridade alta para emails reais
@@ -1751,6 +1752,7 @@ Deno.serve(async (req)=>{
             .from('email_queue')
             .insert({
               user_id: body.user_id,
+              email_configuration_id: body.email_configuration_id, // Adicionar email_configuration_id
               email_data: body.email,
               status: 'pending',
               priority: 5, // Prioridade normal

@@ -71,7 +71,7 @@ export default function MicrosoftInbox() {
   // Hook para gerenciar múltiplas conexões Microsoft (usado pelo MicrosoftAccountSelector)
   const { activeConnection, connections, setActiveConnection } = useMicrosoftConnection();
   // Hook para obter o universityId
-  const { } = useUniversity();
+  const { university } = useUniversity();
   
 
   // Estados do AIManager
@@ -80,6 +80,7 @@ export default function MicrosoftInbox() {
   const [recentEmails] = useState<ProcessedEmail[]>([]);
   const [loadingEmails, setLoadingEmails] = useState(false);
   const [showComposeModal, setShowComposeModal] = useState(false);
+  const [composeMode, setComposeMode] = useState<'compose' | 'reply' | 'forward'>('compose');
   const [composeData, setComposeData] = useState({
     to: '',
     cc: '',
@@ -90,7 +91,7 @@ export default function MicrosoftInbox() {
 
   // Estados para responsividade mobile
   const [isMobile, setIsMobile] = useState(false);
-  // const [sidebarOpen, setSidebarOpen] = useState(false); // Removed - Sidebar always visible
+  const [sidebarOpen, setSidebarOpen] = useState(false); // Mobile sidebar toggle
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   
 
@@ -830,11 +831,11 @@ export default function MicrosoftInbox() {
       }
 
 
-      // Verificar se há agente de IA configurado (mais flexível)
+      // 🆕 Verificar se há agente de IA Microsoft configurado
       const { data: aiConfigs, error: aiError } = await supabase
-        .from('ai_configurations')
+        .from('microsoft_ai_agents')
         .select('*')
-        .eq('university_id', user.id)
+        .eq('university_id', university?.id || user.id)
         .eq('is_active', true);
 
       if (aiError) {
@@ -842,9 +843,11 @@ export default function MicrosoftInbox() {
         // Continuar mesmo sem agente - modo demo
       }
 
+      console.log('✅ [testProcessing] Agentes encontrados:', aiConfigs);
+
       // Inicializar chatbot com mensagem de boas-vindas
       const welcomeMessage = aiConfigs && aiConfigs.length > 0 
-        ? 'Hello! I am your email AI. How can I help you today? You can ask me questions about scholarships, enrollment processes, or any other university-related questions.'
+        ? `Hello! I am ${aiConfigs[0].ai_name}, your email AI assistant at ${aiConfigs[0].company_name}. How can I help you today? You can ask me questions about scholarships, enrollment processes, or any other university-related questions.`
         : 'Hello! I am your email AI in demonstration mode. How can I help you today? You can ask me questions about scholarships, enrollment processes, or any other university-related questions.';
 
       setChatMessages([{
@@ -880,30 +883,90 @@ export default function MicrosoftInbox() {
     setIsChatLoading(true);
 
     try {
+      const userId = (await supabase.auth.getUser()).data.user?.id;
+      console.log('📤 [sendChatMessage] Enviando para email-queue-worker:', {
+        message: chatInput.trim(),
+        userId,
+        chatbotMode: true,
+        sessionId
+      });
+
       // Chamar Edge Function para processar com Gemini
       const { data: result, error } = await supabase.functions.invoke('email-queue-worker', {
         body: {
           message: chatInput.trim(),
-          userId: (await supabase.auth.getUser()).data.user?.id,
+          userId: userId,
           chatbotMode: true,
           sessionId: sessionId
         }
       });
 
+      console.log('📥 [sendChatMessage] Resposta recebida:', { result, error });
+
       if (error) {
-        // Verificar se é erro de limite atingido
-        if (error.message?.includes('Daily prompt limit reached') || error.message?.includes('429')) {
+        console.error('❌ [sendChatMessage] Erro da Edge Function:', error);
+        console.log('🔍 [sendChatMessage] Detalhes do erro:', {
+          message: error.message,
+          status: error.status,
+          name: error.name
+        });
+        
+        // Verificar se é erro de limite atingido (429 Too Many Requests)
+        const isLimitError = error.message?.includes('Daily prompt limit reached') || 
+            error.message?.includes('429') || 
+            error.message?.includes('Too Many Requests') ||
+            error.status === 429 ||
+            error.name?.includes('FunctionsHttpError');
+            
+        console.log('🔍 [sendChatMessage] Verificando se é erro de limite:', isLimitError);
+        
+        if (isLimitError) {
+          console.log('🚫 [sendChatMessage] LIMITE ATINGIDO - Bloqueando interface');
+          
+          // Atualizar usageInfo para mostrar limite atingido
+          console.log('🔄 [sendChatMessage] Atualizando usageInfo para limite atingido');
+          setUsageInfo({
+            prompts_used: 5,
+            max_prompts: 5,
+            remaining_prompts: 0
+          });
+          console.log('✅ [sendChatMessage] usageInfo atualizado:', { prompts_used: 5, max_prompts: 5, remaining_prompts: 0 });
+          
           const aiMessage = {
             id: (Date.now() + 1).toString(),
             type: 'ai' as const,
-            message: '🚫 You have reached the limit of 5 messages per session. Please try again in a new session.',
+            message: '🚫 You have reached the limit of 5 messages per day. The limit will reset in 24 hours.',
             timestamp: new Date()
           };
           setChatMessages(prev => [...prev, aiMessage]);
           return;
         }
         
-        // Erro genérico discreto
+        // Fallback: Se for qualquer erro 429, tratar como limite
+        if (error.status === 429 || error.message?.includes('429')) {
+          console.log('🚫 [sendChatMessage] FALLBACK - Detectando erro 429 como limite');
+          setUsageInfo({
+            prompts_used: 5,
+            max_prompts: 5,
+            remaining_prompts: 0
+          });
+          
+          const aiMessage = {
+            id: (Date.now() + 1).toString(),
+            type: 'ai' as const,
+            message: '🚫 You have reached the limit of 5 messages per day. The limit will reset in 24 hours.',
+            timestamp: new Date()
+          };
+          setChatMessages(prev => [...prev, aiMessage]);
+          return;
+        }
+        
+        // Erro genérico discreto com mais detalhes no console
+        console.error('❌ [sendChatMessage] Detalhes do erro:', {
+          message: error.message,
+          details: error
+        });
+        
         const aiMessage = {
           id: (Date.now() + 1).toString(),
           type: 'ai' as const,
@@ -958,11 +1021,19 @@ export default function MicrosoftInbox() {
 
   const handleCompose = () => {
     // Abrir modal de compose completo (como na página principal)
+    setComposeMode('compose');
+    setComposeData({
+      to: '',
+      cc: '',
+      bcc: '',
+      subject: '',
+      message: ''
+    });
     setShowComposeModal(true);
   };
 
-  const [composeNotice, setComposeNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-  const [showComposeSuccessModal, setShowComposeSuccessModal] = useState(false);
+  const [_composeNotice, setComposeNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [_showComposeSuccessModal, setShowComposeSuccessModal] = useState(false);
 
   const handleSendEmail = async () => {
     if (!composeData.to.trim() || !composeData.subject.trim() || !composeData.message.trim()) {
@@ -1038,23 +1109,6 @@ export default function MicrosoftInbox() {
     }
   };
 
-  // Toast (top-right) for compose actions
-  const ComposeToast = () => (
-    composeNotice ? (
-      <div
-        role="status"
-        aria-live="polite"
-        className={`fixed top-4 right-4 z-50 w-[90%] max-w-sm shadow-lg rounded-md px-4 py-3 ${
-          composeNotice.type === 'success'
-            ? 'bg-green-50 text-green-800 border border-green-200'
-            : 'bg-red-50 text-red-800 border border-red-200'
-        }`}
-      >
-        {composeNotice.message}
-      </div>
-    ) : null
-  );
-
   // Exibir toast se vier state da navegação (ex.: pós-envio do compose)
   useEffect(() => {
     try {
@@ -1069,31 +1123,52 @@ export default function MicrosoftInbox() {
     } catch {}
   }, []);
 
-  // Success Modal for inbox compose
-  const ComposeSuccessModal = () => (
-    showComposeSuccessModal ? (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-        <div className="bg-white rounded-md shadow-lg w-[92%] max-w-sm p-4 border border-slate-200">
-          <h2 className="text-base font-semibold text-slate-900">Email sent</h2>
-          <p className="mt-1.5 text-slate-700 text-sm">Your email was sent successfully.</p>
-          <div className="mt-3 flex justify-end">
-            <button
-              onClick={() => setShowComposeSuccessModal(false)}
-              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm"
-            >
-              OK
-            </button>
-          </div>
-        </div>
-      </div>
-    ) : null
-  );
-
 
   const handleReply = () => {
+    if (!selectedEmail) return;
+    
+    const email = selectedEmail as MicrosoftGraphEmail;
+    const fromEmail = email.from?.emailAddress?.address || email.from?.emailAddress?.name || '';
+    const subject = email.subject || '';
+    
+    setComposeMode('reply');
+    setComposeData({
+      to: fromEmail,
+      cc: '',
+      bcc: '',
+      subject: subject.startsWith('Re: ') ? subject : `Re: ${subject}`,
+      message: '' // Campo vazio para o usuário escrever sua resposta
+    });
+    
+    // Fechar email viewer no mobile para não sobrepor o modal
+    if (isMobile) {
+      setSelectedEmail(null);
+    }
+    
+    setShowComposeModal(true);
   };
 
   const handleForward = () => {
+    if (!selectedEmail) return;
+    
+    const email = selectedEmail as MicrosoftGraphEmail;
+    const subject = email.subject || '';
+    
+    setComposeMode('forward');
+    setComposeData({
+      to: '',
+      cc: '',
+      bcc: '',
+      subject: subject.startsWith('Fwd: ') ? subject : `Fwd: ${subject}`,
+      message: `\n\n---------- Forwarded message ---------\nFrom: ${email.from?.emailAddress?.name || email.from?.emailAddress?.address}\nDate: ${formatDate(email.receivedDateTime)}\nSubject: ${subject}\n\n${email.bodyPreview || ''}`
+    });
+    
+    // Fechar email viewer no mobile para não sobrepor o modal
+    if (isMobile) {
+      setSelectedEmail(null);
+    }
+    
+    setShowComposeModal(true);
   };
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1171,10 +1246,7 @@ export default function MicrosoftInbox() {
       {/* Connection Status */}
       <MicrosoftConnectionStatus onReconnect={() => {
         // Recarregar dados após reconexão
-        loadMailFolders();
-        if (activeTab) {
-          loadEmailsForFolder(activeTab);
-        }
+        loadAllFolders();
       }} />
       
       {/* New emails notification */}
@@ -1191,7 +1263,15 @@ export default function MicrosoftInbox() {
       {/* Header - Responsive Outlook Style */}
       <div className="h-16 bg-blue-600 flex items-center justify-between px-4 md:px-6 text-white m-0 p-0 -mt-8">
         <div className="flex items-center gap-2 md:gap-4">
-          {/* Mobile Menu Button Removed - Sidebar Always Visible */}
+          {/* Mobile Menu Button */}
+          {isMobile && (
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="p-2 hover:bg-blue-700 rounded-lg transition-colors"
+            >
+              <MoreVertical className="h-5 w-5" />
+            </button>
+          )}
           
           <div className="flex items-center gap-2">
             <Mail className="h-6 w-6 md:h-8 md:w-8" />
@@ -1344,10 +1424,28 @@ export default function MicrosoftInbox() {
 
       {/* Main Content - Responsive */}
       <div className="flex-1 flex min-h-0">
-        {/* Mobile Sidebar Overlay Removed - Sidebar Always Visible */}
+        {/* Mobile Sidebar Overlay */}
+        {isMobile && sidebarOpen && (
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 z-40"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
 
-        {/* Sidebar - Always visible */}
-        <div className="w-64 bg-white border-r border-gray-200 flex-col transition-all duration-300">
+        {/* Sidebar - Responsive */}
+        <div className={`${isMobile ? (sidebarOpen ? 'fixed left-0 top-0 h-full w-64 z-50' : 'hidden') : 'w-64'} bg-white border-r border-gray-200 flex-col transition-all duration-300`}>
+          {/* Mobile Close Button */}
+          {isMobile && (
+            <div className="flex justify-end p-4 border-b border-gray-200">
+              <button
+                onClick={() => setSidebarOpen(false)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X className="h-5 w-5 text-gray-600" />
+              </button>
+            </div>
+          )}
+          
           {/* New Email Button */}
           <div className="p-4">
             <button
@@ -1466,56 +1564,72 @@ export default function MicrosoftInbox() {
         </div>
 
         {/* Content Area - Responsive */}
-        <div className="flex-1 flex min-h-0">
+        <div className={`flex-1 flex min-h-0 ${isMobile ? 'w-full' : ''}`}>
           {/* Email List - Always visible */}
           <div className="flex-1 border-r border-gray-200 flex flex-col bg-white">
             {/* Mobile Tab Navigation Removed - Using Sidebar Instead */}
 
-            {/* Email List Header - Desktop only */}
-            {!isMobile && (
-              <div className="h-12 bg-white border-b border-gray-200 flex items-center justify-between px-4">
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2">
-                    <span className={sidebarNavItems.find(item => item.id === activeTab)?.color || 'text-gray-600'}>
-                      {getFolderIcon(activeTab, true, loadingFolders[activeTab], !!folderErrors[activeTab])}
-                    </span>
-                    <h2 className="text-sm font-medium text-gray-900">
-                      {sidebarNavItems.find(item => item.id === activeTab)?.label || 'Microsoft Email'}
-                    </h2>
-                  </div>
-                  {status === 'active' && (
-                    <div className="flex items-center gap-2 text-xs text-green-600">
-                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                      <span>AI Ativo</span>
-                    </div>
-                  )}
-                  {loadingFolders[activeTab] && (
-                    <div className="flex items-center gap-2 text-xs text-blue-600">
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                      <span>Loading...</span>
-                    </div>
-                  )}
-                  {folderErrors[activeTab] && (
-                    <div className="flex items-center gap-2 text-xs text-red-600">
-                      <XCircle className="h-3 w-3" />
-                      <span>Erro</span>
-                    </div>
-                  )}
-                </div>
-                
+            {/* Email List Header - Responsive */}
+            <div className="h-12 bg-white border-b border-gray-200 flex items-center justify-between px-4">
+              {isMobile ? (
                 <div className="flex items-center gap-2">
-                  <select
-                    value={filter}
-                    onChange={(e) => setFilter(e.target.value as 'all' | 'unread' | 'starred')}
-                    className="text-xs border border-gray-300 rounded px-2 py-1 focus:ring-1 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="all">All</option>
-                    <option value="unread">Unread</option>
-                    <option value="starred">Starred</option>
-                  </select>
+                  <span className={sidebarNavItems.find(item => item.id === activeTab)?.color || 'text-gray-600'}>
+                    {getFolderIcon(activeTab, true, loadingFolders[activeTab], !!folderErrors[activeTab])}
+                  </span>
+                  <h2 className="text-sm font-medium text-gray-900">
+                    {sidebarNavItems.find(item => item.id === activeTab)?.label || 'Microsoft Email'}
+                  </h2>
+                  {emailCounts[activeTab as keyof typeof emailCounts] > 0 && (
+                    <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+                      {emailCounts[activeTab as keyof typeof emailCounts]}
+                    </span>
+                  )}
                 </div>
-              </div>
-            )}
+              ) : (
+                <>
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <span className={sidebarNavItems.find(item => item.id === activeTab)?.color || 'text-gray-600'}>
+                        {getFolderIcon(activeTab, true, loadingFolders[activeTab], !!folderErrors[activeTab])}
+                      </span>
+                      <h2 className="text-sm font-medium text-gray-900">
+                        {sidebarNavItems.find(item => item.id === activeTab)?.label || 'Microsoft Email'}
+                      </h2>
+                    </div>
+                    {status === 'active' && (
+                      <div className="flex items-center gap-2 text-xs text-green-600">
+                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                        <span>AI Ativo</span>
+                      </div>
+                    )}
+                    {loadingFolders[activeTab] && (
+                      <div className="flex items-center gap-2 text-xs text-blue-600">
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                        <span>Loading...</span>
+                      </div>
+                    )}
+                    {folderErrors[activeTab] && (
+                      <div className="flex items-center gap-2 text-xs text-red-600">
+                        <XCircle className="h-3 w-3" />
+                        <span>Erro</span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={filter}
+                      onChange={(e) => setFilter(e.target.value as 'all' | 'unread' | 'starred')}
+                      className="text-xs border border-gray-300 rounded px-2 py-1 focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="all">All</option>
+                      <option value="unread">Unread</option>
+                      <option value="starred">Starred</option>
+                    </select>
+                  </div>
+                </>
+              )}
+            </div>
 
             {loadingFolders[activeTab] ? (
               <div className="flex-1 flex items-center justify-center">
@@ -1765,10 +1879,12 @@ export default function MicrosoftInbox() {
                    </button>
                    
                    <div className="p-6 overflow-y-auto max-h-[90vh]">
-                     <EmailAgentManagement activeEmailConfig={activeConnection ? {
-                       id: activeConnection.id,
-                       email_address: activeConnection.email_address
-                     } : undefined} />
+                     <EmailAgentManagement 
+                       activeEmailConfig={activeConnection ? {
+                         id: activeConnection.id,
+                         email_address: activeConnection.email_address
+                       } : undefined}
+                     />
                    </div>
                  </div>
                </div>
@@ -1916,7 +2032,11 @@ export default function MicrosoftInbox() {
                          </svg>
                        </button>
                        <div>
-                         <h2 className="text-2xl font-bold text-gray-900">New Message</h2>
+                         <h2 className="text-2xl font-bold text-gray-900">
+                           {composeMode === 'reply' ? 'Reply Message' : 
+                            composeMode === 'forward' ? 'Forward Message' : 
+                            'New Message'}
+                         </h2>
                          <p className="text-sm text-gray-600">From: Microsoft Account ({activeConnection?.email_address || 'user@outlook.com'})</p>
                        </div>
                      </div>
