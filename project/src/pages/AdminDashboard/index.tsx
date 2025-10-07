@@ -22,6 +22,7 @@ import AutoTransferSettings from './AutoTransferSettings';
 import FinancialAnalytics from './FinancialAnalytics';
 import TermsManagement from './TermsManagement';
 import AffiliateManagement from './AffiliateManagement';
+import AdminChatPage from './AdminChatPage';
 import AdminStudentDetails from './AdminStudentDetails';
 import SystemSettings from './SystemSettings';
 import { Dialog } from '@headlessui/react';
@@ -584,6 +585,7 @@ const AdminDashboard: React.FC = () => {
         <Route path="/transfer-settings" element={<AutoTransferSettings />} />
         <Route path="/financial-analytics" element={<FinancialAnalytics />} />
         <Route path="/affiliate-management" element={<AffiliateManagement />} />
+        <Route path="/chat" element={<AdminChatPage />} />
         <Route path="/terms" element={<TermsManagement />} />
       </Routes>
 

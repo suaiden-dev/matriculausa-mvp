@@ -23,6 +23,7 @@ import SelectionProcessFeeError from './SelectionProcessFeeError';
 import ApplicationFeeSuccess from './ApplicationFeeSuccess';
 import ApplicationFeeError from './ApplicationFeeError';
 import ApplicationChatPage from './ApplicationChatPage';
+import StudentChatPage from './StudentChatPage';
 import ApplicationFeePage from './ApplicationFeePage';
 import Layout from '../../components/Layout';
 import MatriculaRewards from './MatriculaRewards';
@@ -397,6 +398,12 @@ const StudentDashboard: React.FC = () => {
             path="application/:applicationId/chat" 
             element={
               <ApplicationChatPage />
+            } 
+          />
+          <Route 
+            path="chat" 
+            element={
+              <StudentChatPage />
             } 
           />
           <Route 
