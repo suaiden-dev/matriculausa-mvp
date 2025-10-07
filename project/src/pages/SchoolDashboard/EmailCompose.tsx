@@ -52,6 +52,8 @@ const EmailCompose = () => {
   const [selectedConfig, setSelectedConfig] = useState(configId || '');
   const [loading, setLoading] = useState(false);
   const [originalEmail, setOriginalEmail] = useState<ReceivedEmail | null>(null);
+  const [notice, setNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   
   const [formData, setFormData] = useState<FormData>({
     to_addresses: [''],
@@ -127,16 +129,7 @@ const EmailCompose = () => {
       console.warn(`⚠️ Found ${corruptedConfigs.length} Microsoft account(s) with corrupted tokens: ${emailList}`);
       
       // Show user notification about corrupted accounts
-      alert(
-        `⚠️ Microsoft Authentication Issue\n\n` +
-        `The following Microsoft account(s) have corrupted authentication tokens:\n` +
-        `${emailList}\n\n` +
-        `To fix this issue:\n` +
-        `1. Go to Email Management\n` +
-        `2. Delete these account(s)\n` +
-        `3. Add them again to refresh authentication\n\n` +
-        `This will resolve any email sending issues.`
-      );
+      setNotice({ type: 'error', message: `Microsoft authentication issue for: ${emailList}. Go to Email Management, remove and reconnect to fix.` });
     }
   };
 
@@ -526,18 +519,18 @@ const EmailCompose = () => {
     e.preventDefault();
     
     if (!selectedConfig) {
-      alert('Select an email configuration');
+      setNotice({ type: 'error', message: 'Select an email configuration' });
       return;
     }
 
     const toEmails = formData.to_addresses.filter(email => email.trim());
     if (toEmails.length === 0) {
-      alert('Add at least one recipient');
+      setNotice({ type: 'error', message: 'Add at least one recipient' });
       return;
     }
 
     if (!validateEmails(toEmails)) {
-      alert('Check the recipient email addresses');
+      setNotice({ type: 'error', message: 'Check the recipient email addresses' });
       return;
     }
 
@@ -545,12 +538,12 @@ const EmailCompose = () => {
     const bccEmails = formData.bcc_addresses.filter(email => email.trim());
 
     if (!validateEmails(ccEmails) || !validateEmails(bccEmails)) {
-      alert('Check the CC/BCC email addresses');
+      setNotice({ type: 'error', message: 'Check the CC/BCC email addresses' });
       return;
     }
 
     if (!formData.text_content.trim() && !formData.html_content.trim()) {
-      alert('Add content to the email');
+      setNotice({ type: 'error', message: 'Add content to the email' });
       return;
     }
 
@@ -581,12 +574,13 @@ const EmailCompose = () => {
       // Save sent email to database
       await saveSentEmail(config, toEmails, ccEmails, bccEmails);
 
-      alert('Email sent successfully!');
-      navigate('/school/dashboard/email/inbox');
+      // Exibir modal de sucesso e deixar o usuário decidir quando fechar
+      setNotice(null);
+      setShowSuccessModal(true);
       
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      alert('Error sending email: ' + errorMessage);
+      setNotice({ type: 'error', message: 'Error sending email: ' + errorMessage });
       console.error('Send email error:', error);
     } finally {
       setLoading(false);
@@ -622,7 +616,19 @@ const EmailCompose = () => {
   const selectedConfigData = configurations.find(c => c.id === selectedConfig);
 
   return (
+    <>
     <div className="min-h-screen bg-slate-50">
+      {/* Inline toast de erro (se necessário) */}
+      {notice && notice.type === 'error' && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed top-4 right-4 z-50 w-[90%] max-w-sm shadow-lg rounded-md px-4 py-3 bg-red-50 text-red-800 border border-red-200"
+        >
+          {notice.message}
+        </div>
+      )}
+
       <div className="max-w-5xl mx-auto p-3 sm:p-6">
         {/* Header */}
         <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4 sm:p-6 mb-4 sm:mb-6">
@@ -997,6 +1003,31 @@ const EmailCompose = () => {
         )}
       </div>
     </div>
+
+    {/* Success Modal */}
+    {showSuccessModal && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+        <div className="bg-white rounded-md shadow-lg w-[92%] max-w-sm p-4 border border-slate-200">
+          <h2 className="text-base font-semibold text-slate-900">Email sent</h2>
+          <p className="mt-1.5 text-slate-700 text-sm">Your email was sent successfully.</p>
+          <div className="mt-3 flex justify-end gap-2">
+            <button
+              onClick={() => setShowSuccessModal(false)}
+              className="px-3 py-1.5 text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-md border border-slate-200 text-sm"
+            >
+              OK
+            </button>
+            <button
+              onClick={() => { setShowSuccessModal(false); navigate('/school/dashboard/email/inbox'); }}
+              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm"
+            >
+              Go to Inbox
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 };
 

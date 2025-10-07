@@ -72,18 +72,35 @@ const EmailInbox = () => {
   });
 
   useEffect(() => {
+    console.log('🚀 Componente montado, carregando configurações...');
     loadConfigurations();
+    
+    // Carregamento automático após 2 segundos para garantir que tudo foi carregado
+    const autoLoadTimeout = setTimeout(() => {
+      console.log('🔄 Auto-load timeout: verificando se precisa carregar emails...');
+      if (selectedConfig && emails.length === 0) {
+        console.log('🔄 Auto-load: carregando emails pois não há emails carregados...');
+        loadEmails();
+      }
+    }, 2000);
+    
+    return () => clearTimeout(autoLoadTimeout);
   }, []);
 
   useEffect(() => {
+    console.log('🔄 useEffect triggered - selectedConfig:', selectedConfig, 'filter:', filter, 'activeTab:', activeTab);
     if (selectedConfig) {
+      console.log('📧 Loading emails for selectedConfig:', selectedConfig);
       loadEmails();
       // Atualizar contadores quando carregar emails (com debounce para evitar spam)
       const timeoutId = setTimeout(() => {
+        console.log('📊 Updating email counts...');
         updateEmailCounts();
       }, 500); // 500ms de debounce
       
       return () => clearTimeout(timeoutId);
+    } else {
+      console.log('⚠️ No selectedConfig, skipping loadEmails');
     }
   }, [selectedConfig, filter, activeTab]);
 
@@ -120,6 +137,51 @@ const EmailInbox = () => {
       loadEmails(true);
     }
   }, [page]);
+
+  // Polling automático para detectar novos emails
+  useEffect(() => {
+    if (!selectedConfig) return;
+
+    console.log('🔄 Iniciando polling automático para detectar novos emails...');
+    
+    const pollingInterval = setInterval(async () => {
+      try {
+        console.log('🔄 Polling: verificando novos emails...');
+        
+        // Verificar se há novos emails comparando com o estado atual
+        const { data: currentEmails, error } = await supabase
+          .from('received_emails')
+          .select('id, received_at')
+          .eq('email_config_id', selectedConfig)
+          .order('received_at', { ascending: false })
+          .limit(1);
+
+        if (error) {
+          console.error('❌ Erro no polling:', error);
+          return;
+        }
+
+        if (currentEmails && currentEmails.length > 0) {
+          const latestEmail = currentEmails[0];
+          const currentLatestEmail = emails.length > 0 ? emails[0] : null;
+          
+          // Se há um email mais recente que o atual, recarregar
+          if (!currentLatestEmail || 
+              new Date(latestEmail.received_at) > new Date(currentLatestEmail.received_at)) {
+            console.log('🔄 Polling: novo email detectado, recarregando...');
+            loadEmails();
+          }
+        }
+      } catch (error) {
+        console.error('❌ Erro no polling automático:', error);
+      }
+    }, 30000); // Verificar a cada 30 segundos
+
+    return () => {
+      console.log('🔄 Parando polling automático...');
+      clearInterval(pollingInterval);
+    };
+  }, [selectedConfig, emails]);
 
   const loadConfigurations = async () => {
     try {
@@ -158,6 +220,19 @@ const EmailInbox = () => {
       if (configId && data?.find(c => c.id === configId)) {
         console.log('🎯 Selecionando configuração via URL:', configId);
         setSelectedConfig(configId);
+      } else if (data && data.length > 0 && !selectedConfig) {
+        // Se não há configId na URL mas há configurações disponíveis, selecionar a primeira
+        console.log('🎯 Selecionando primeira configuração disponível:', data[0].id);
+        console.log('🎯 Configuração selecionada:', data[0]);
+        setSelectedConfig(data[0].id);
+        
+        // Forçar carregamento de emails após um pequeno delay para garantir que o estado foi atualizado
+        setTimeout(() => {
+          console.log('🔄 Forçando carregamento de emails após seleção automática...');
+          loadEmails();
+        }, 100);
+      } else {
+        console.log('⚠️ Nenhuma configuração selecionada - configId:', configId, 'data.length:', data?.length, 'selectedConfig:', selectedConfig);
       }
     } catch (error) {
       console.error('❌ Erro ao carregar configurações:', error);
@@ -177,6 +252,8 @@ const EmailInbox = () => {
 
     try {
       console.log('📧 Carregando emails para configuração:', selectedConfig, 'Folder:', activeTab, 'Page:', page, 'LoadMore:', loadMore);
+      console.log('📧 Configurações disponíveis:', configurations.length);
+      console.log('📧 selectedConfig existe nas configurações?', configurations.find(c => c.id === selectedConfig));
       
       if (loadMore) {
         setLoadingMore(true);
@@ -312,13 +389,21 @@ const EmailInbox = () => {
 
       console.log('✅ Emails carregados:', data?.length || 0, 'for folder:', activeTab, 'HasMore:', hasMore);
       console.log('📧 Primeiros 3 emails:', data?.slice(0, 3));
+      console.log('📧 Estado atual dos emails antes de atualizar:', emails.length);
       
       if (loadMore) {
         // Adicionar novos emails à lista existente
-        setEmails(prevEmails => [...prevEmails, ...data]);
+        console.log('📧 Adicionando emails à lista existente...');
+        setEmails(prevEmails => {
+          const newEmails = [...prevEmails, ...data];
+          console.log('📧 Total de emails após adicionar:', newEmails.length);
+          return newEmails;
+        });
       } else {
         // Substituir lista de emails
+        console.log('📧 Substituindo lista de emails...');
         setEmails(data || []);
+        console.log('📧 Emails definidos:', (data || []).length);
       }
     } catch (error) {
       console.error('❌ Erro ao carregar emails:', error);

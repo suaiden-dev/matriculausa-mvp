@@ -1529,6 +1529,11 @@
       "passportFormatError": "The passport document format is not recognized. Please upload a clear, undamaged passport photo.",
       "diplomaProcessError": "Unable to process High School Diploma. The file may be corrupted or in an unsupported format. Please try uploading a new file.",
       "fundsValidationError": "Unable to validate document. The file may be corrupted or in an unsupported format. Please try uploading a new file.",
+      "passportMRZError": "The passport document is not readable. Please ensure the passport is clearly visible and the machine-readable zone (MRZ) at the bottom is not damaged or obscured.",
+      "bankStatementNotReadableError": "The bank statement is not readable. Please ensure the document is clearly visible and all text is legible.",
+      "diplomaNotReadableError": "The diploma document is not readable. Please ensure the document is clearly visible and all text is legible.",
+      "insufficientFundsError": "Insufficient funds detected. The minimum required balance is $22,000 USD.",
+      "diplomaDamagedError": "The diploma appears to be damaged or unclear. Please upload a clear, undamaged copy.",
       "passport": "Passport",
       "passportDescription": "Valid passport document",
       "diploma": "High School Diploma",
@@ -2763,7 +2768,7 @@
   "paymentChoice": {
     "title": "Choose Payment Method",
     "subtitle": "Select how you would like to pay your {{feeType}} fee",
-    "manualVerification": "Manual verification required",
+    "manualVerification": "Processing may take up to 48 hours",
     "important": "Important",
     "amount": "Amount",
     "zelleUploadNote": "After making the Zelle payment, you'll need to upload a screenshot of the confirmation showing the confirmation code, date, amount, and recipient.",
@@ -2783,11 +2788,11 @@
       },
       "pix": {
         "title": "PIX",
-        "description": "Brazilian instant payment - Values in reais via Stripe"
+        "description": "Instant payment system for Brazilian users"
       },
       "zelle": {
         "title": "Zelle",
-        "description": "Pay via Zelle transfer (requires manual verification)"
+        "description": "Pay via Zelle transfer"
       }
     }
   },
@@ -2824,7 +2829,7 @@
       "zelle": {
         "title": "Zelle",
         "description": "Pay via Zelle transfer",
-        "descriptionDetailed": "Pay via Zelle transfer (requires manual verification)"
+        "descriptionDetailed": "Pay via Zelle transfer"
       }
     },
     "loading": {
@@ -2835,7 +2840,7 @@
   "paymentSelector": {
     "title": "Choose Payment Method",
     "subtitle": "Select how you would like to pay your {{feeType}} fee",
-    "manualVerification": "Manual verification required",
+    "manualVerification": "Processing may take up to 48 hours",
     "important": "Important:",
     "zelleUploadNote": "After making the Zelle payment, you'll need to upload a screenshot of the confirmation showing the confirmation code, date, amount, and recipient.",
     "loading": {
@@ -2856,12 +2861,12 @@
       },
       "pix": {
         "title": "PIX",
-        "description": "Brazilian instant payment - Values in reais via Stripe"
+        "description": "Instant payment system for Brazilian users"
       },
       "zelle": {
         "title": "Zelle",
         "description": "Pay via Zelle transfer",
-        "descriptionDetailed": "Pay via Zelle and upload the receipt. Manual verification required."
+        "descriptionDetailed": "Pay via Zelle and upload the receipt."
       }
     }
   },
