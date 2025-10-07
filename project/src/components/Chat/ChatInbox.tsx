@@ -144,9 +144,21 @@ const ChatInbox: React.FC<ChatInboxProps> = ({
   if (loading) {
     return (
       <div className={`bg-white rounded-lg shadow-sm border border-slate-200 ${className}`}>
-        <div className="p-6 text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
-          <p className="mt-2 text-sm text-slate-500">Loading conversations...</p>
+        <div className="p-4 border-b border-slate-200">
+          <div className="h-6 w-40 bg-slate-100 rounded animate-pulse" />
+          <div className="mt-3 h-9 w-full max-w-sm bg-slate-100 rounded animate-pulse" />
+        </div>
+        <div className="p-2">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="flex items-center p-4 border-b border-slate-100">
+              <div className="w-12 h-12 rounded-full bg-slate-100 animate-pulse mr-3" />
+              <div className="flex-1 min-w-0">
+                <div className="h-4 w-1/2 bg-slate-100 rounded animate-pulse mb-2" />
+                <div className="h-3 w-3/4 bg-slate-100 rounded animate-pulse" />
+              </div>
+              <div className="w-10 h-3 bg-slate-100 rounded animate-pulse ml-2" />
+            </div>
+          ))}
         </div>
       </div>
     );
@@ -169,7 +181,7 @@ const ChatInbox: React.FC<ChatInboxProps> = ({
   }
 
   return (
-    <div className={`bg-white rounded-lg shadow-sm ${className}`}>
+    <div className={`bg-white rounded-lg shadow-sm h-full flex flex-col ${className}`}>
       {/* Header */}
       <div className="p-4 border-b border-slate-200">
         <div className="flex items-center justify-between mb-3">
@@ -216,7 +228,7 @@ const ChatInbox: React.FC<ChatInboxProps> = ({
       </div>
 
       {/* Conversations List */}
-      <div className="max-h-96 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto">
         {filteredConversations.length === 0 ? (
           <div className="p-6 text-center">
             <Users className="w-12 h-12 text-slate-300 mx-auto mb-3" />
@@ -245,6 +257,20 @@ const ChatInbox: React.FC<ChatInboxProps> = ({
           </div>
         )}
       </div>
+
+      {/* Footer CTA - Start new conversation (admin/affiliate_admin) */}
+      {(userProfile?.role === 'affiliate_admin' || userProfile?.role === 'admin') && (
+        <div className="border-t border-slate-200 p-3 mt-auto sticky bottom-0 bg-white">
+          <button
+            onClick={() => setShowStudentSelector(true)}
+            className="w-full bg-[#05294E] hover:bg-[#041f3f] text-white text-sm px-3 py-2 rounded-md flex items-center justify-center gap-2 transition-colors"
+            title="Start new conversation"
+          >
+            <Plus className="w-4 h-4" />
+            Start new conversation
+          </button>
+        </div>
+      )}
 
       {/* Student Selector Modal */}
       <StudentSelector

@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
 import { useAdminStudentChat } from '../../hooks/useAdminStudentChat';
 import ApplicationChat from '../ApplicationChat';
 import ChatInbox from './ChatInbox';
-import { MessageSquare, ArrowLeft, Users } from 'lucide-react';
+import { MessageSquare, ArrowLeft, Users, HelpCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 
@@ -20,6 +21,7 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
   defaultRecipientId,
   defaultConversationId
 }) => {
+  const { t } = useTranslation();
   const { user, userProfile } = useAuth();
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [selectedRecipientId, setSelectedRecipientId] = useState<string | null>(defaultRecipientId || null);
@@ -124,9 +126,9 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
   // Helper function to determine the correct label for the other party
   const getOtherPartyLabel = () => {
     if (userProfile?.role === 'affiliate_admin' || userProfile?.role === 'admin') {
-      return selectedRecipientName || 'Student';
+      return selectedRecipientName || t('studentChat.recipientLabel.student', { defaultValue: 'Student' });
     } else {
-      return 'Support Team';
+      return t('studentChat.recipientLabel.support', { defaultValue: 'Administration' });
     }
   };
 
@@ -160,18 +162,22 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
     // If no inbox should be shown, always show chat
     if (!showInbox) {
       return (
-        <div className={`bg-white rounded-lg shadow-sm border border-slate-200 ${className}`}>
+        <div className={`bg-white rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden border border-gray-100 transform transition-all duration-500 hover:shadow-3xl flex-1 flex flex-col ${className}`}>
           {/* Student header indicating admin/support */}
-          <div className="flex items-center justify-between p-4 border-b border-slate-200 bg-slate-50 gap-4">
+          <div className="flex items-center justify-between p-4 border-b border-gray-100 bg-white gap-4">
             <div className="flex items-center min-w-0">
-              <div className="w-10 h-10 bg-slate-200 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
-                <span className="text-slate-700 font-semibold">A</span>
-              </div>
               <div className="min-w-0">
-                <h3 className="font-medium text-slate-900 truncate">Administration</h3>
-                <p className="text-xs text-slate-600 truncate">Official support</p>
+                  <h3 className="font-medium text-gray-900 truncate">{t('studentChat.header.title', { defaultValue: 'Equipe de suporte' })}</h3>
+                <p className="text-xs text-gray-500 mt-0.5">{t('studentChat.header.responseTime', { defaultValue: 'Response time: 1-2 hours' })}</p>
               </div>
             </div>
+            <button
+              onClick={() => setShowStudentGuidance(true)}
+              className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-gray-200 text-gray-600 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#05294E]/20 transition-all duration-300"
+              title={t('studentChat.header.helpTooltip', { defaultValue: 'How does the chat work?' })}
+            >
+              <HelpCircle className="w-4 h-4" />
+            </button>
           </div>
 
           {showStudentGuidance && (
@@ -181,24 +187,24 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
                 <div className="flex items-start gap-3">
                   <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold">i</div>
                   <div className="text-slate-700">
-                    <p className="text-sm font-semibold mb-1">Converse com a Administração</p>
-                    <p className="text-xs leading-relaxed">Tire dúvidas sobre bolsas, documentos e o andamento da sua inscrição.</p>
+                    <p className="text-sm font-semibold mb-1">{t('studentChat.guide.title', { defaultValue: 'Chat with Administration' })}</p>
+                    <p className="text-xs leading-relaxed">{t('studentChat.guide.subtitle', { defaultValue: 'Ask about scholarships, documents and your application progress.' })}</p>
                     <ul className="mt-2 text-xs text-slate-600 list-disc pl-4 space-y-1">
-                      <li>Envie mensagens e anexos</li>
-                      <li>Receba retorno em horário comercial</li>
-                      <li>Histórico salvo nesta conversa</li>
+                      <li>{t('studentChat.guide.supportsAttachments', { defaultValue: 'Send messages and attachments' })}</li>
+                      <li>{t('studentChat.guide.businessHours', { defaultValue: 'Replies during business hours' })}</li>
+                      <li>{t('studentChat.guide.historySaved', { defaultValue: 'Conversation history is saved' })}</li>
                     </ul>
                     <div className="mt-3 flex items-center gap-2">
                       <button
                         onClick={dismissGuide}
                         className="px-3 py-1.5 rounded-md text-xs bg-[#05294E] text-white hover:bg-[#041f3f]"
-                        title="Começar"
-                      >Começar</button>
+                        title={t('studentChat.guide.ctaStart', { defaultValue: 'Start' })}
+                      >{t('studentChat.guide.ctaStart', { defaultValue: 'Start' })}</button>
                       <button
                         onClick={dismissGuide}
                         className="px-3 py-1.5 rounded-md text-xs bg-slate-100 text-slate-700 hover:bg-slate-200"
-                        title="Agora não"
-                      >Agora não</button>
+                        title={t('studentChat.guide.ctaLater', { defaultValue: 'Not now' })}
+                      >{t('studentChat.guide.ctaLater', { defaultValue: 'Not now' })}</button>
                     </div>
                   </div>
                 </div>
@@ -217,6 +223,10 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
             currentUserId={user.id}
             onMarkAllAsRead={chat.markAllAsRead}
             otherPartyLabel={getOtherPartyLabel()}
+            hideBubbleHeader={true}
+            overrideHeights={true}
+            className="flex-1 min-h-0"
+            inputPlaceholder={t('studentChat.input.placeholder', { defaultValue: 'Type your message...' })}
           />
         </div>
       );
@@ -276,18 +286,22 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
   if (!showInbox) {
     // Only chat, no inbox - always show chat interface
     return (
-      <div className={`bg-white rounded-lg shadow-sm border border-slate-200 ${className}`}>
+      <div className={`bg-white rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden border border-gray-100 transform transition-all duration-500 hover:shadow-3xl flex-1 flex flex-col ${className}`}>
           {/* Student header indicating admin/support */}
-          <div className="flex items-center justify-between p-4 border-b border-slate-200 bg-slate-50 gap-4">
+          <div className="flex items-center justify-between p-4 border-b border-gray-100 bg-white gap-4">
             <div className="flex items-center min-w-0">
-              <div className="w-10 h-10 bg-slate-200 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
-                <span className="text-slate-700 font-semibold">A</span>
-              </div>
               <div className="min-w-0">
-                <h3 className="font-medium text-slate-900 truncate">Administration</h3>
-                <p className="text-xs text-slate-600 truncate">Official support</p>
+                <h3 className="font-medium text-gray-900 truncate">Equipe de suporte</h3>
+                <p className="text-xs text-gray-500 mt-0.5">Tempo de resposta: 1-2 horas úteis</p>
               </div>
             </div>
+            <button
+              onClick={() => setShowStudentGuidance(true)}
+              className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-gray-200 text-gray-600 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#05294E]/20 transition-all duration-300"
+              title="Como funciona o chat?"
+            >
+              <HelpCircle className="w-4 h-4" />
+            </button>
           </div>
 
           {showStudentGuidance && (
@@ -318,6 +332,9 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
             currentUserId={user.id}
             onMarkAllAsRead={chat.markAllAsRead}
             otherPartyLabel={getOtherPartyLabel()}
+            hideBubbleHeader={true}
+            overrideHeights={true}
+            className="flex-1 min-h-0"
           />
       </div>
     );
@@ -380,7 +397,8 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
                   error={chat.error}
                   currentUserId={user.id}
                   onMarkAllAsRead={chat.markAllAsRead}
-                  otherPartyLabel={getOtherPartyLabel()}
+                otherPartyLabel={getOtherPartyLabel()}
+                hideBubbleHeader={true}
                 />
             </>
           ) : (
