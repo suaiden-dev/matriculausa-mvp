@@ -222,6 +222,7 @@ interface PaymentRecord {
   fee_type_global?: string; // Campo usado na tabela zelle_payments
   amount: number;
   status: 'paid' | 'pending' | 'failed';
+  scholarships_ids: string[]; // IDs das bolsas associadas ao pagamento
   payment_date?: string;
   stripe_session_id?: string;
   created_at: string;
@@ -611,6 +612,7 @@ const PaymentManagement = (): React.JSX.Element => {
             fee_type_global: zellePayment.fee_type_global, // Campo necessário para a função approveZellePayment
             amount: parseFloat(zellePayment.amount) || 0,
             status: 'pending',
+            scholarships_ids: zellePayment.scholarships_ids || undefined,
             payment_date: zellePayment.created_at,
             created_at: zellePayment.created_at,
             payment_method: 'zelle',
@@ -748,6 +750,8 @@ const PaymentManagement = (): React.JSX.Element => {
       setZelleActionLoading(false);
     }
   };
+
+  console.log('🔍 Current Zelle payments:', zellePayments);
 
   const approveZellePayment = async (paymentId: string) => {
     try {
@@ -1112,51 +1116,107 @@ const PaymentManagement = (): React.JSX.Element => {
       if (payment.fee_type === 'application_fee' || payment.fee_type === 'scholarship_fee') {
         console.log('🎯 [approveZellePayment] Entrando na condição scholarship_applications');
         console.log('🔍 [approveZellePayment] fee_type:', payment.fee_type);
-        console.log('🔍 [approveZellePayment] Executando UPDATE scholarship_applications WHERE student_id =', payment.student_id);
+        console.log('🔍 [approveZellePayment] scholarships_ids:', payment.scholarships_ids);
         
-        // Marcar no scholarship_applications
-        const { data: updateData, error: appError } = await supabase
-          .from('scholarship_applications')
-          .update({ 
-            [payment.fee_type === 'application_fee' ? 'is_application_fee_paid' : 'is_scholarship_fee_paid']: true,
-            [payment.fee_type === 'application_fee' ? 'application_fee_payment_method' : 'scholarship_fee_payment_method']: 'zelle',
-            updated_at: new Date().toISOString()
-          })
-          .eq('student_id', payment.student_id)
-          .select();
-
-        console.log('🔍 [approveZellePayment] Resultado da atualização scholarship_applications:', { updateData, appError });
-
-        if (appError) {
-          console.error('❌ [approveZellePayment] Erro ao marcar scholarship_applications:', appError);
-        } else {
-          console.log(`✅ [approveZellePayment] ${payment.fee_type === 'application_fee' ? 'is_application_fee_paid' : 'is_scholarship_fee_paid'} marcado como true`);
-          console.log('🔍 [approveZellePayment] Dados atualizados scholarship_applications:', updateData);
+        // CORREÇÃO: Atualizar apenas as aplicações específicas das bolsas pagas
+        if (payment.scholarships_ids && payment.scholarships_ids.length > 0) {
+          console.log('🔍 [approveZellePayment] Executando UPDATE scholarship_applications WHERE student_id =', payment.student_id, 'AND scholarship_id IN', payment.scholarships_ids);
           
-          // Log the payment action
-          try {
-            await supabase.rpc('log_student_action', {
-              p_student_id: payment.student_id,
-              p_action_type: 'fee_payment',
-              p_action_description: `${payment.fee_type === 'application_fee' ? 'Application Fee' : 'Scholarship Fee'} paid via Zelle (approved by admin)`,
-              p_performed_by: user!.id,
-              p_performed_by_type: 'admin',
-              p_metadata: {
-                fee_type: payment.fee_type === 'application_fee' ? 'application' : 'scholarship',
-                payment_method: 'zelle',
-                amount: payment.amount,
-                payment_id: paymentId,
-                zelle_payment_id: paymentId,
-                application_id: updateData[0]?.id,
-                ip: clientIp
+          // Marcar no scholarship_applications apenas para as bolsas específicas
+          const { data: updateData, error: appError } = await supabase
+            .from('scholarship_applications')
+            .update({ 
+              [payment.fee_type === 'application_fee' ? 'is_application_fee_paid' : 'is_scholarship_fee_paid']: true,
+              [payment.fee_type === 'application_fee' ? 'application_fee_payment_method' : 'scholarship_fee_payment_method']: 'zelle',
+              updated_at: new Date().toISOString()
+            })
+            .eq('student_id', payment.student_id)
+            .in('scholarship_id', payment.scholarships_ids) // CORREÇÃO: Filtrar por bolsas específicas (array completo)
+            .select();
+
+          console.log('🔍 [approveZellePayment] Resultado da atualização scholarship_applications:', { updateData, appError });
+
+          if (appError) {
+            console.error('❌ [approveZellePayment] Erro ao marcar scholarship_applications:', appError);
+          } else {
+            console.log(`✅ [approveZellePayment] ${payment.fee_type === 'application_fee' ? 'is_application_fee_paid' : 'is_scholarship_fee_paid'} marcado como true para ${updateData.length} aplicação(ões)`);
+            console.log('🔍 [approveZellePayment] Dados atualizados scholarship_applications:', updateData);
+            
+            // Log the payment action para cada aplicação atualizada
+            for (const app of updateData) {
+              try {
+                await supabase.rpc('log_student_action', {
+                  p_student_id: payment.student_id,
+                  p_action_type: 'fee_payment',
+                  p_action_description: `${payment.fee_type === 'application_fee' ? 'Application Fee' : 'Scholarship Fee'} paid via Zelle (approved by admin)`,
+                  p_performed_by: user!.id,
+                  p_performed_by_type: 'admin',
+                  p_metadata: {
+                    fee_type: payment.fee_type === 'application_fee' ? 'application' : 'scholarship',
+                    payment_method: 'zelle',
+                    amount: payment.amount,
+                    payment_id: paymentId,
+                    zelle_payment_id: paymentId,
+                    application_id: app.id,
+                    scholarship_id: app.scholarship_id,
+                    ip: clientIp
+                  }
+                });
+              } catch (logError) {
+                console.error('Failed to log payment action:', logError);
               }
-            });
-          } catch (logError) {
-            console.error('Failed to log payment action:', logError);
+            }
           }
+        } else {
+          console.warn('⚠️ [approveZellePayment] Nenhum scholarship_id encontrado no pagamento, não é possível atualizar aplicações específicas');
           
-          // Registrar no faturamento apenas para scholarship_fee (application_fee não gera faturamento)
-          if (payment.fee_type === 'scholarship_fee') {
+          // Fallback: Atualizar todas as aplicações do aluno (comportamento antigo para compatibilidade)
+          console.log('🔍 [approveZellePayment] Executando UPDATE scholarship_applications (fallback) WHERE student_id =', payment.student_id);
+          
+          const { data: updateData, error: appError } = await supabase
+            .from('scholarship_applications')
+            .update({ 
+              [payment.fee_type === 'application_fee' ? 'is_application_fee_paid' : 'is_scholarship_fee_paid']: true,
+              [payment.fee_type === 'application_fee' ? 'application_fee_payment_method' : 'scholarship_fee_payment_method']: 'zelle',
+              updated_at: new Date().toISOString()
+            })
+            .eq('student_id', payment.student_id)
+            .select();
+
+          console.log('🔍 [approveZellePayment] Resultado da atualização scholarship_applications (fallback):', { updateData, appError });
+
+          if (appError) {
+            console.error('❌ [approveZellePayment] Erro ao marcar scholarship_applications (fallback):', appError);
+          } else {
+            console.log(`✅ [approveZellePayment] ${payment.fee_type === 'application_fee' ? 'is_application_fee_paid' : 'is_scholarship_fee_paid'} marcado como true (fallback)`);
+            console.log('🔍 [approveZellePayment] Dados atualizados scholarship_applications (fallback):', updateData);
+            
+            // Log the payment action
+            try {
+              await supabase.rpc('log_student_action', {
+                p_student_id: payment.student_id,
+                p_action_type: 'fee_payment',
+                p_action_description: `${payment.fee_type === 'application_fee' ? 'Application Fee' : 'Scholarship Fee'} paid via Zelle (approved by admin) - fallback mode`,
+                p_performed_by: user!.id,
+                p_performed_by_type: 'admin',
+                p_metadata: {
+                  fee_type: payment.fee_type === 'application_fee' ? 'application' : 'scholarship',
+                  payment_method: 'zelle',
+                  amount: payment.amount,
+                  payment_id: paymentId,
+                  zelle_payment_id: paymentId,
+                  mode: 'fallback_all_applications',
+                  ip: clientIp
+                }
+              });
+            } catch (logError) {
+              console.error('Failed to log payment action:', logError);
+            }
+          }
+        }
+          
+        // Registrar no faturamento apenas para scholarship_fee (application_fee não gera faturamento)
+        if (payment.fee_type === 'scholarship_fee') {
             // Buscar valor dinâmico correto baseado no pacote do usuário
             console.log('💰 [approveZellePayment] Buscando valor dinâmico correto para scholarship_fee...');
             let correctAmount = payment.amount; // Valor padrão
@@ -1240,7 +1300,6 @@ const PaymentManagement = (): React.JSX.Element => {
             }
           }
         }
-      }
 
       // ENVIAR WEBHOOK PARA NOTIFICAR O ALUNO SOBRE APROVAÇÃO
       console.log('📤 [approveZellePayment] Enviando notificação de aprovação para o aluno...');
