@@ -136,7 +136,11 @@ interface TermAcceptance {
   term_content?: string;
 }
 
-const TermsManagement: React.FC = () => {
+interface TermsManagementProps {
+  defaultTab?: 'terms' | 'history';
+}
+
+const TermsManagement: React.FC<TermsManagementProps> = ({ defaultTab = 'terms' }) => {
   const [terms, setTerms] = useState<Term[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -145,7 +149,7 @@ const TermsManagement: React.FC = () => {
   const [showRawContent, setShowRawContent] = useState(false);
   
   // Acceptance history states
-  const [activeTab, setActiveTab] = useState<'terms' | 'history'>('terms');
+  const [activeTab, setActiveTab] = useState<'terms' | 'history'>(defaultTab);
   const [acceptanceHistory, setAcceptanceHistory] = useState<TermAcceptance[]>([]);
   const [acceptanceHistoryLoading, setAcceptanceHistoryLoading] = useState(false);
   const [selectedTermForHistory, setSelectedTermForHistory] = useState<Term | null>(null);
@@ -308,6 +312,11 @@ const TermsManagement: React.FC = () => {
     loadEditor().then(() => setEditorReady(true));
   }, []);
 
+  // Update active tab when defaultTab prop changes
+  useEffect(() => {
+    setActiveTab(defaultTab);
+  }, [defaultTab]);
+
   // Load acceptance history when history tab is selected
   useEffect(() => {
     if (activeTab === 'history') {
@@ -469,7 +478,7 @@ const TermsManagement: React.FC = () => {
       <div className="space-y-8 px-4 sm:px-6 lg:px-8">
       
       {/* Abas de navegação */}
-      <div className="flex items-center justify-between mb-6">
+      {/* <div className="flex items-center justify-between mb-6">
         <div className="flex space-x-1 bg-slate-100 p-1 rounded-lg">
           <button
             onClick={() => setActiveTab('terms')}
@@ -497,7 +506,7 @@ const TermsManagement: React.FC = () => {
           </button>
         </div>
         
-      </div>
+      </div> */}
 
       {/* Error Message */}
       {error && (
@@ -720,12 +729,12 @@ const TermsManagement: React.FC = () => {
         <div className="bg-white shadow rounded-lg overflow-hidden">
           <div className="p-6">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-medium text-gray-900">
+              {/* <h3 className="text-lg font-medium text-gray-900">
                 {selectedTermForHistory 
                   ? `Acceptance History - ${selectedTermForHistory.title}`
                   : 'General Terms Acceptance History'
                 }
-              </h3>
+              </h3> */}
               <div className="flex items-center gap-3">
                 {selectedTermForHistory && (
                   <button
