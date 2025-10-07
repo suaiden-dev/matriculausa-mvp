@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
-import { useAdminStudentChat, useAdminStudentConversations } from '../../hooks/useAdminStudentChat';
+import { useAdminStudentChat } from '../../hooks/useAdminStudentChat';
 import ApplicationChat from '../ApplicationChat';
 import ChatInbox from './ChatInbox';
 import { MessageSquare, ArrowLeft, Users } from 'lucide-react';
@@ -31,8 +31,7 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
   // Hook for the selected conversation
   const chat = useAdminStudentChat(selectedConversationId || undefined, selectedRecipientId || undefined);
 
-  // Hook for conversations list (for inbox)
-  const { conversations, refetchConversations } = useAdminStudentConversations();
+  // Removed conversations hook here to avoid duplicate realtime subscriptions; inbox owns the list
 
   // Set default conversation if provided
   useEffect(() => {
@@ -104,13 +103,11 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
       // Wait a bit for messages to load, then mark as read
       const timer = setTimeout(async () => {
         await chat.markAllAsRead();
-        // Force refetch conversations to update unread counts
-        refetchConversations();
       }, 1000);
 
       return () => clearTimeout(timer);
     }
-  }, [selectedConversationId, chat.messages.length, userProfile?.role, chat.markAllAsRead, refetchConversations]);
+  }, [selectedConversationId, chat.messages.length, userProfile?.role, chat.markAllAsRead]);
 
   if (!user || !userProfile) {
     return (
@@ -290,19 +287,17 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
                     : 'Select a conversation or start a new one with support'
                   }
                 </p>
-                {conversations.length === 0 && (
-                  <div className="mt-4 text-center">
-                    <div className="inline-flex items-center px-4 py-2 bg-blue-50 rounded-lg">
-                      <Users className="w-4 h-4 text-blue-600 mr-2" />
-                      <span className="text-sm text-blue-700">
-                        {(userProfile.role === 'affiliate_admin' || userProfile.role === 'admin')
-                          ? 'No student conversations yet'
-                          : 'No conversations yet'
-                        }
-                      </span>
-                    </div>
+                <div className="mt-4 text-center">
+                  <div className="inline-flex items-center px-4 py-2 bg-blue-50 rounded-lg">
+                    <Users className="w-4 h-4 text-blue-600 mr-2" />
+                    <span className="text-sm text-blue-700">
+                      {(userProfile.role === 'affiliate_admin' || userProfile.role === 'admin')
+                        ? 'No student conversations yet'
+                        : 'No conversations yet'
+                      }
+                    </span>
                   </div>
-                )}
+                </div>
               </div>
             </div>
           )}
