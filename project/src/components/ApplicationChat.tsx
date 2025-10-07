@@ -10,6 +10,8 @@ export interface ChatMessage {
   isOwn: boolean;
   status?: 'pending' | 'sent' | 'error';
   readAt?: string | null;
+  editedAt?: string | null;
+  isDeleted?: boolean;
   attachments?: { 
     file_url: string; 
     file_name?: string; 
@@ -21,12 +23,15 @@ export interface ChatMessage {
 interface ApplicationChatProps {
   messages: ChatMessage[];
   onSend: (text: string, file?: File) => void;
+  onEditMessage?: (messageId: string, newText: string) => void;
+  onDeleteMessage?: (messageId: string) => void;
   loading?: boolean;
   isSending?: boolean;
   error?: string | null;
   currentUserId: string;
   messageContainerClassName?: string;
   onMarkAllAsRead?: () => void;
+  otherPartyLabel?: string; // Label for the other party (e.g., "University Staff", "Student", "Admin")
 }
 
 interface I20ControlFeeCardProps {
@@ -120,6 +125,8 @@ const ApplicationChat: React.FC<ApplicationChatProps & {
 }> = ({
   messages,
   onSend,
+  onEditMessage,
+  onDeleteMessage,
   loading = false,
   isSending = false,
   error = null,
@@ -127,10 +134,14 @@ const ApplicationChat: React.FC<ApplicationChatProps & {
   i20ControlFee,
   messageContainerClassName,
   onMarkAllAsRead: _onMarkAllAsRead,
+  otherPartyLabel = 'University Staff', // Default para manter compatibilidade
 }) => {
   const [text, setText] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState('');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -139,11 +150,63 @@ const ApplicationChat: React.FC<ApplicationChatProps & {
   useEffect(() => {
     const container = messagesContainerRef.current;
     if (!container) return;
-    const isNearBottom = container.scrollHeight - container.scrollTop <= container.clientHeight + 50;
+    const isNearBottom = container.scrollHeight - container.scrollTop <= container.clientHeight + 100;
     if (isNearBottom) {
       container.scrollTop = container.scrollHeight;
     }
   }, [messages.length]);
+
+  // Auto-scroll to bottom when entering conversation or messages change
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+    
+    // Scroll to bottom with multiple attempts to ensure it works
+    const scrollToBottom = () => {
+      if (container) {
+        container.scrollTop = container.scrollHeight;
+      }
+    };
+    
+    // Immediate scroll
+    scrollToBottom();
+    
+    // Multiple delayed scrolls to handle different rendering scenarios
+    const timeout1 = setTimeout(scrollToBottom, 50);
+    const timeout2 = setTimeout(scrollToBottom, 150);
+    const timeout3 = setTimeout(scrollToBottom, 300);
+    
+    return () => {
+      clearTimeout(timeout1);
+      clearTimeout(timeout2);
+      clearTimeout(timeout3);
+    };
+  }, [messages.length]); // Trigger whenever messages change
+
+  // Force scroll to bottom when component mounts (chat opens)
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+    
+    // Force scroll to bottom when chat opens
+    const forceScrollToBottom = () => {
+      if (container) {
+        container.scrollTop = container.scrollHeight;
+      }
+    };
+    
+    // Multiple attempts to ensure scroll works
+    forceScrollToBottom();
+    const timeout1 = setTimeout(forceScrollToBottom, 100);
+    const timeout2 = setTimeout(forceScrollToBottom, 300);
+    const timeout3 = setTimeout(forceScrollToBottom, 500);
+    
+    return () => {
+      clearTimeout(timeout1);
+      clearTimeout(timeout2);
+      clearTimeout(timeout3);
+    };
+  }, []); // Run only on mount
 
   // Focus no input quando o chat é aberto
   useEffect(() => {
@@ -171,6 +234,39 @@ const ApplicationChat: React.FC<ApplicationChatProps & {
     if (!fileName) return false;
     const extension = fileName.split('.').pop()?.toLowerCase();
     return ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension || '');
+  };
+
+  const handleEditMessage = (messageId: string, currentText: string) => {
+    setEditingMessageId(messageId);
+    setEditingText(currentText);
+  };
+
+  const handleSaveEdit = (messageId: string) => {
+    if (onEditMessage && editingText.trim()) {
+      onEditMessage(messageId, editingText.trim());
+    }
+    setEditingMessageId(null);
+    setEditingText('');
+  };
+
+  const handleCancelEdit = () => {
+    setEditingMessageId(null);
+    setEditingText('');
+  };
+
+  const handleDeleteMessage = (messageId: string) => {
+    setShowDeleteConfirm(messageId);
+  };
+
+  const confirmDeleteMessage = (messageId: string) => {
+    if (onDeleteMessage) {
+      onDeleteMessage(messageId);
+    }
+    setShowDeleteConfirm(null);
+  };
+
+  const cancelDeleteMessage = () => {
+    setShowDeleteConfirm(null);
   };
 
   // Count unread messages (removed unused variable)
@@ -214,7 +310,7 @@ const ApplicationChat: React.FC<ApplicationChatProps & {
           {messages.map((msg, index) => (
             <div
               key={msg.id}
-              className={`max-w-[85%] transform transition-all duration-500 ease-out ${
+              className={`max-w-[85%] transform transition-all duration-500 ease-out group ${
                 msg.isOwn 
                   ? 'self-end ml-auto animate-slide-in-right' 
                   : 'self-start animate-slide-in-left'
@@ -223,7 +319,7 @@ const ApplicationChat: React.FC<ApplicationChatProps & {
                 animationDelay: `${index * 0.1}s`
               }}
             >
-              <div className={`p-3 rounded-2xl shadow-lg border ${
+              <div className={`p-3 rounded-2xl shadow-lg border relative ${
                 msg.isOwn 
                   ? 'bg-[#05294E] text-white shadow-[#05294E]/20' 
                   : 'bg-white text-gray-800 border-gray-200 shadow-gray-100'
@@ -237,15 +333,23 @@ const ApplicationChat: React.FC<ApplicationChatProps & {
                     {msg.isOwn ? 'Y' : 'U'}
                   </div>
                   <span className="font-semibold text-xs truncate flex-1">
-                    {msg.isOwn ? 'You' : 'University Staff'}
+                    {msg.isOwn ? 'You' : otherPartyLabel}
                   </span>
-                  <span className="text-xs opacity-70 flex-shrink-0">
-                    {new Date(msg.sentAt).toLocaleTimeString('en-US', { 
-                      hour: '2-digit', 
-                      minute: '2-digit' 
-                    })}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    {msg.editedAt && (
+                      <span className="text-xs opacity-60 italic">
+                        (edited)
+                      </span>
+                    )}
+                    <span className="text-xs opacity-70 flex-shrink-0">
+                      {new Date(msg.sentAt).toLocaleTimeString('en-US', { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                      })}
+                    </span>
+                  </div>
                 </div>
+
                 
                 {msg.attachments && msg.attachments.length > 0 && (
                   <div className="mb-2">
@@ -257,17 +361,6 @@ const ApplicationChat: React.FC<ApplicationChatProps & {
                                         !att.file_url || 
                                         att.file_url === '';
                       
-                      // Debug log
-                      console.log('🔍 [Attachment Debug]', {
-                        messageId: msg.id,
-                        messageStatus: msg.status,
-                        fileUrl: att.file_url,
-                        fileName: att.file_name,
-                        isUploading,
-                        isBlob: att.file_url.startsWith('blob:'),
-                        hasTemp: att.file_url.includes('temp_'),
-                        isEmpty: !att.file_url || att.file_url === ''
-                      });
                       
                       return (
                         <div key={att.file_url + i}>
@@ -309,10 +402,55 @@ const ApplicationChat: React.FC<ApplicationChatProps & {
                   </div>
                 )}
                 
-                <div className="text-sm leading-relaxed break-words whitespace-pre-line">
-                  {msg.message}
-                </div>
+                {/* Message content - with edit functionality */}
+                {editingMessageId === msg.id ? (
+                  <div className="space-y-2">
+                    <textarea
+                      value={editingText}
+                      onChange={(e) => setEditingText(e.target.value)}
+                      className={`w-full p-2 rounded border resize-none text-sm ${
+                        msg.isOwn 
+                          ? 'bg-white/10 border-white/20 text-white placeholder-white/60' 
+                          : 'bg-gray-50 border-gray-200 text-gray-800'
+                      }`}
+                      rows={3}
+                      placeholder="Edit your message..."
+                      autoFocus
+                    />
+                    <div className="flex gap-2 justify-end">
+                      <button
+                        onClick={() => handleSaveEdit(msg.id)}
+                        className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
+                          msg.isOwn 
+                            ? 'bg-white/20 hover:bg-white/30 text-white' 
+                            : 'bg-[#05294E] hover:bg-[#05294E]/90 text-white'
+                        }`}
+                      >
+                        Save
+                      </button>
+                      <button
+                        onClick={handleCancelEdit}
+                        className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
+                          msg.isOwn 
+                            ? 'bg-white/10 hover:bg-white/20 text-white/70' 
+                            : 'bg-gray-200 hover:bg-gray-300 text-gray-600'
+                        }`}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-sm leading-relaxed break-words whitespace-pre-line">
+                    {msg.isDeleted ? (
+                      <span className="italic opacity-60">{msg.message}</span>
+                    ) : (
+                      msg.message
+                    )}
+                  </div>
+                )}
                 
+
                 {/* Status indicators */}
                 {msg.isOwn && (
                   <div className="flex items-center justify-end gap-1 mt-2">
@@ -323,6 +461,42 @@ const ApplicationChat: React.FC<ApplicationChatProps & {
                   </div>
                 )}
               </div>
+              
+              {/* Message Actions (Edit/Delete) - floating buttons below message */}
+              {msg.isOwn && !msg.isDeleted && (onEditMessage || onDeleteMessage) && (
+                <div className="flex gap-1 mt-2 justify-end opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                  {onEditMessage && (
+                    <button
+                      onClick={() => handleEditMessage(msg.id, msg.message)}
+                      className={`p-1.5 rounded-md transition-colors ${
+                        msg.isOwn 
+                          ? 'hover:bg-gray-100 text-gray-500 hover:text-gray-700' 
+                          : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
+                      }`}
+                      title="Edit message"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </button>
+                  )}
+                  {onDeleteMessage && (
+                    <button
+                      onClick={() => handleDeleteMessage(msg.id)}
+                      className={`p-1.5 rounded-md transition-colors ${
+                        msg.isOwn 
+                          ? 'hover:bg-red-50 text-gray-500 hover:text-red-600' 
+                          : 'hover:bg-red-50 text-gray-500 hover:text-red-600'
+                      }`}
+                      title="Delete message"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           ))}
           
@@ -379,7 +553,7 @@ const ApplicationChat: React.FC<ApplicationChatProps & {
               disabled={loading || isSending || (!text.trim() && !file)}
               className="px-6 py-3 bg-[#05294E] text-white border-none rounded-xl cursor-pointer font-semibold text-sm shadow-lg transition-all duration-300 hover:bg-[#041f3f] hover:shadow-xl hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-lg flex items-center justify-center gap-2"
             >
-              <span>Send</span>
+              <span className="hidden sm:block">Send</span>
               <svg width="18" height="18" className="group-hover:translate-x-1 transition-transform duration-300" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M22 2L11 13M22 2L15 22L11 13M22 2L2 9L11 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
@@ -453,6 +627,32 @@ const ApplicationChat: React.FC<ApplicationChatProps & {
           }
         `
       }} />
+
+      {/* Delete confirmation modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Delete Message</h3>
+            <p className="text-gray-600 mb-4">
+              Are you sure you want to delete this message? This action cannot be undone.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={cancelDeleteMessage}
+                className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => confirmDeleteMessage(showDeleteConfirm)}
+                className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-md transition-colors"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };

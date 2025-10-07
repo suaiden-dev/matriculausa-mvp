@@ -19,9 +19,21 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const hideFooter = hideHeader || location.pathname.startsWith('/checkout/zelle');
   const isDashboard = hideHeader;
   const isAdmin = location.pathname.startsWith('/admin');
+  const isStudentChatPage = location.pathname.startsWith('/student/dashboard/chat');
   
-  // Detectar se é uma tela de estudante para ajustar posicionamento
-  const isStudentPage = location.pathname.startsWith('/student');
+  // Esconder SmartChat apenas na página do inbox
+  const hideSmartChat = location.pathname.includes('/microsoft-inbox') || 
+                       location.pathname.includes('/microsoft') ||
+                       location.pathname.includes('/email/inbox') ||
+                       location.pathname.includes('/inbox') ||
+                       location.pathname === '/smart-assistant';
+  
+  // Debug log
+  console.log('🔍 Layout Debug:', {
+    pathname: location.pathname,
+    hideSmartChat,
+    shouldShow: !isAdmin && !hideSmartChat
+  });
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
@@ -32,8 +44,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       {!hideHeader && <Header />}
       <main className={`flex-grow overflow-x-hidden ${isDashboard ? '' : 'overflow-y-auto'}`}>
         {children}
-        {!isAdmin && location.pathname !== '/smart-assistant' && (
-          <SmartChat isStudentPage={isStudentPage} />
+        {!isAdmin && !hideSmartChat && !isStudentChatPage && (
+          <SmartChat isStudentPage={location.pathname.startsWith('/student')} />
         )}
       </main>
       {!hideFooter && <Footer />}

@@ -1625,6 +1625,11 @@
       "passportFormatError": "O formato do documento de passaporte não foi reconhecido. Faça upload de uma foto clara e sem danos do passaporte.",
       "diplomaProcessError": "Não foi possível processar o Diploma do Ensino Médio. O arquivo pode estar corrompido ou em formato não suportado. Tente fazer upload de um novo arquivo.",
       "fundsValidationError": "Não foi possível validar o documento. O arquivo pode estar corrompido ou em formato não suportado. Tente fazer upload de um novo arquivo.",
+      "passportMRZError": "O documento de passaporte não é legível. Certifique-se de que o passaporte está claramente visível e a zona de leitura mecânica (MRZ) na parte inferior não está danificada ou obscurecida.",
+      "bankStatementNotReadableError": "O extrato bancário não é legível. Certifique-se de que o documento está claramente visível e todo o texto está legível.",
+      "diplomaNotReadableError": "O documento de diploma não é legível. Certifique-se de que o documento está claramente visível e todo o texto está legível.",
+      "insufficientFundsError": "Fundos insuficientes detectados. O saldo mínimo necessário é de $22.000 USD.",
+      "diplomaDamagedError": "O diploma parece estar danificado ou pouco claro. Faça upload de uma cópia clara e sem danos.",
       "passport": "Passaporte",
       "passportDescription": "Documento de passaporte válido",
       "diploma": "Diploma do Ensino Médio",
@@ -2301,7 +2306,7 @@
     "paymentSelector": {
       "title": "Escolha o Método de Pagamento",
       "subtitle": "Selecione como você deseja pagar a taxa de {{feeType}}",
-      "manualVerification": "Verificação manual necessária",
+      "manualVerification": "Processamento pode levar até 48 horas",
       "important": "Importante:",
       "zelleUploadNote": "Após realizar o pagamento via Zelle, será necessário enviar um print da confirmação mostrando o código, data, valor e destinatário.",
     "loading": {
@@ -2322,7 +2327,7 @@
         },
         "pix": {
           "title": "PIX",
-          "description": "Pagamento instantâneo brasileiro - Valores em reais via Stripe"
+          "description": "Sistema de pagamento instantâneo brasileiro"
         },
         "zelle": {
           "title": "Zelle",
@@ -2890,7 +2895,7 @@
   "paymentChoice": {
     "title": "Escolha o Método de Pagamento",
     "subtitle": "Selecione como você deseja pagar a taxa de {{feeType}}",
-    "manualVerification": "Verificação manual necessária",
+    "manualVerification": "Processamento pode levar até 48 horas",
     "important": "Importante",
     "amount": "Valor",
     "zelleUploadNote": "Após realizar o pagamento via Zelle, será necessário enviar um print da confirmação mostrando o código, data, valor e destinatário.",
@@ -2910,11 +2915,11 @@
       },
       "pix": {
         "title": "PIX",
-        "description": "Pagamento instantâneo brasileiro - Valores em reais via Stripe"
+        "description": "Sistema de pagamento instantâneo brasileiro"
       },
       "zelle": {
         "title": "Zelle",
-        "description": "Pague via transferência Zelle (requer verificação manual)"
+        "description": "Pague via transferência Zelle"
       }
     }
   },
@@ -2951,7 +2956,7 @@
       "zelle": {
         "title": "Zelle",
         "description": "Pague via transferência Zelle",
-        "descriptionDetailed": "Pague via Zelle (requer verificação manual)"
+        "descriptionDetailed": "Pague via Zelle"
       }
     },
     "loading": {

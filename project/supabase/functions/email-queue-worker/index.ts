@@ -111,39 +111,95 @@ class QueueAIService {
     this.apiKey = apiKey;
   }
 
-  async processEmail(email: any, userId: string): Promise<any> {
+  async processEmail(email: any, userId: string, emailConfigurationId?: string): Promise<any> {
     try {
       console.log(`🤖 [WORKER] Processando email: ${email.subject}`);
       
-      // Buscar informações completas do agente
-      const { data: agentData } = await supabase
-        .from('ai_configurations')
-        .select('id, ai_name, company_name, personality, final_prompt')
-        .eq('university_id', userId)
-        .eq('is_active', true)
-        .maybeSingle();
+      // 🆕 BUSCAR AGENTE DA TABELA microsoft_ai_agents
+      let agentData = null;
+      
+      if (emailConfigurationId) {
+        console.log(`🔗 [WORKER] Buscando agente Microsoft para email_configuration_id: ${emailConfigurationId}`);
+        const { data: microsoftAgent } = await supabase
+          .from('microsoft_ai_agents')
+          .select('id, ai_name, company_name, personality, final_prompt, webhook_result, knowledge_documents, is_active')
+          .eq('email_configuration_id', emailConfigurationId)
+          .eq('is_active', true)
+          .maybeSingle();
+          
+        if (microsoftAgent) {
+          agentData = microsoftAgent;
+          console.log(`✅ [WORKER] Agente Microsoft encontrado: ${agentData.ai_name}`);
+        }
+      }
+      
+      // Fallback: buscar por user_id
+      if (!agentData) {
+        console.log(`🔄 [WORKER] Fallback: buscando agente Microsoft por user_id: ${userId}`);
+        const { data: fallbackAgent } = await supabase
+          .from('microsoft_ai_agents')
+          .select('id, ai_name, company_name, personality, final_prompt, webhook_result, knowledge_documents, is_active')
+          .eq('user_id', userId)
+          .eq('is_active', true)
+          .maybeSingle();
+          
+        agentData = fallbackAgent;
+      }
         
-      // 🔍 BUSCAR BASE DE CONHECIMENTO ESPECÍFICA DO AGENTE
+      // 🔍 BUSCAR BASE DE CONHECIMENTO - PRIORIDADE: knowledge_documents > webhook_result
       let knowledgeBase = '';
       try {
-        // Primeiro, buscar documentos específicos do agente
-        const { data: agentDocs, error: agentDocsError } = await supabase
-          .from('ai_agent_knowledge_documents')
-          .select('transcription, document_name')
-          .eq('ai_configuration_id', agentData?.id || '')
-          .eq('transcription_status', 'completed')
-          .not('transcription', 'is', null);
+        // PRIORIDADE 1: Buscar transcrições dos documentos individuais
+        if (agentData?.knowledge_documents && Array.isArray(agentData.knowledge_documents)) {
+          const docs = agentData.knowledge_documents;
+          const completedDocs = docs.filter(doc => doc.transcription_status === 'completed' && doc.transcription);
+          
+          if (completedDocs.length > 0) {
+            knowledgeBase = completedDocs
+              .map(doc => `## ${doc.document_name}\n\n${doc.transcription}`)
+              .join('\n\n---\n\n');
+            
+            console.log(`📚 [WORKER] Base de conhecimento carregada de ${completedDocs.length} documento(s)`);
+          }
+        }
         
-        if (!agentDocsError && agentDocs && agentDocs.length > 0) {
-          knowledgeBase = agentDocs
-            .map(doc => `## ${doc.document_name}\n\n${doc.transcription}`)
-            .join('\n\n---\n\n');
-          console.log(`📚 [WORKER] Documentos específicos do agente encontrados: ${agentDocs.length} documentos`);
-        } else {
-          console.log(`📚 [WORKER] Nenhum documento específico do agente encontrado`);
+        // PRIORIDADE 2: Fallback para webhook_result (formato antigo ou agregado)
+        if (!knowledgeBase && agentData?.webhook_result) {
+          const webhookResult = agentData.webhook_result;
+          
+          // Novo formato: array de documentos
+          if (webhookResult.documents && Array.isArray(webhookResult.documents)) {
+            knowledgeBase = webhookResult.documents
+              .map((doc: any, index: number) => {
+                const title = doc.name || doc.title || `Documento ${index + 1}`;
+                const content = doc.description || doc.transcription || '';
+                return `## ${title}\n\n${content}`;
+              })
+              .join('\n\n---\n\n');
+            
+            console.log(`📚 [WORKER] Base de conhecimento carregada de webhook_result.documents`);
+          }
+          // Formato antigo: campos diretos
+          else {
+            if (webhookResult.description) {
+              knowledgeBase += `## Conhecimento da Base\n\n${webhookResult.description}\n\n`;
+            }
+            
+            if (webhookResult.courses && Array.isArray(webhookResult.courses)) {
+              knowledgeBase += `## Informações Detalhadas\n\n${webhookResult.courses.join('\n')}\n\n`;
+            }
+            
+            if (knowledgeBase) {
+              console.log(`📚 [WORKER] Base de conhecimento carregada de webhook_result (formato legado)`);
+            }
+          }
+        }
+        
+        if (!knowledgeBase) {
+          console.log(`📚 [WORKER] Nenhuma base de conhecimento encontrada para este agente`);
         }
       } catch (error) {
-        console.error('❌ [WORKER] Erro ao buscar base de conhecimento do agente:', error);
+        console.error('❌ [WORKER] Erro ao buscar base de conhecimento:', error);
       }
         
       // Criar prompt personalizado automaticamente
@@ -448,7 +504,11 @@ async function processEmailQueue(): Promise<void> {
           .eq('id', queueItem.id);
         
         // Processar email com timeout
-        const emailPromise = aiService.processEmail(queueItem.email_data, queueItem.user_id);
+        const emailPromise = aiService.processEmail(
+          queueItem.email_data, 
+          queueItem.user_id, 
+          queueItem.email_configuration_id
+        );
         const timeoutPromise = new Promise((_, reject) => 
           setTimeout(() => reject(new Error('Timeout')), QUEUE_CONFIG.timeoutPerEmail)
         );
@@ -632,7 +692,13 @@ Deno.serve(async (req) => {
       message: 'Worker já está em execução' 
     }), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+        'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
+        'Access-Control-Max-Age': '86400'
+      }
     });
   }
   
@@ -659,10 +725,11 @@ Deno.serve(async (req) => {
         console.log('💬 [WORKER] Modo chatbot ativado');
         
         try {
-          // Verificar limite de uso
+          // ✅ Sistema de limites de uso para chatbot de teste (5 prompts por sessão)
           const sessionId = body.sessionId || `session_${body.userId}_${Date.now()}`;
-          console.log(`🔍 [WORKER] Verificando limite para universidade ${body.userId}, sessão ${sessionId}`);
+          console.log(`ℹ️ [WORKER] Sessão: ${sessionId}`);
           
+          // Verificar limite de uso
           const { data: usageCheck, error: usageError } = await supabase
             .rpc('check_ai_usage_limit', {
               p_university_id: body.userId,
@@ -676,22 +743,23 @@ Deno.serve(async (req) => {
               success: false 
             }), { 
               status: 500,
-              headers: { 'Content-Type': 'application/json' }
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
             });
           }
           
-          console.log('📊 [WORKER] Status do uso:', usageCheck);
+          console.log('📊 [WORKER] Status de uso:', usageCheck);
           
+          // Verificar se atingiu o limite
           if (!usageCheck.can_use) {
             console.log('🚫 [WORKER] Limite de prompts atingido');
             return new Response(JSON.stringify({ 
               error: 'Daily prompt limit reached',
-              message: `You have reached the limit of ${usageCheck.max_prompts} prompts per session. Please try again tomorrow.`,
+              message: `You have reached the limit of ${usageCheck.max_prompts} prompts per session. The limit will reset in 24 hours.`,
               success: false,
               usage: usageCheck
             }), { 
               status: 429,
-              headers: { 'Content-Type': 'application/json' }
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
             });
           }
           
@@ -708,35 +776,68 @@ Deno.serve(async (req) => {
             console.log('✅ [WORKER] Uso incrementado:', usageUpdate);
           }
           
-          // Buscar prompt da universidade
+          // 🆕 Buscar agente Microsoft por user_id
           const { data: agentData } = await supabase
-            .from('ai_configurations')
-            .select('id, ai_name, company_name, personality, final_prompt')
-            .eq('university_id', body.userId)
+            .from('microsoft_ai_agents')
+            .select('id, ai_name, company_name, personality, final_prompt, webhook_result, knowledge_documents')
+            .eq('user_id', body.userId)
             .eq('is_active', true)
             .maybeSingle();
             
-          // 🔍 BUSCAR BASE DE CONHECIMENTO ESPECÍFICA DO AGENTE
+          // 🔍 BUSCAR BASE DE CONHECIMENTO - PRIORIDADE: knowledge_documents > webhook_result
           let knowledgeBase = '';
           try {
-            // Primeiro, buscar documentos específicos do agente
-            const { data: agentDocs, error: agentDocsError } = await supabase
-              .from('ai_agent_knowledge_documents')
-              .select('transcription, document_name')
-              .eq('ai_configuration_id', agentData?.id || '')
-              .eq('transcription_status', 'completed')
-              .not('transcription', 'is', null);
+            // PRIORIDADE 1: Buscar transcrições dos documentos individuais
+            if (agentData?.knowledge_documents && Array.isArray(agentData.knowledge_documents)) {
+              const docs = agentData.knowledge_documents;
+              const completedDocs = docs.filter(doc => doc.transcription_status === 'completed' && doc.transcription);
+              
+              if (completedDocs.length > 0) {
+                knowledgeBase = completedDocs
+                  .map(doc => `## ${doc.document_name}\n\n${doc.transcription}`)
+                  .join('\n\n---\n\n');
+                
+                console.log(`📚 [WORKER] Base de conhecimento carregada de ${completedDocs.length} documento(s)`);
+              }
+            }
             
-            if (!agentDocsError && agentDocs && agentDocs.length > 0) {
-              knowledgeBase = agentDocs
-                .map(doc => `## ${doc.document_name}\n\n${doc.transcription}`)
-                .join('\n\n---\n\n');
-              console.log(`📚 [WORKER] Documentos específicos do agente encontrados: ${agentDocs.length} documentos`);
-            } else {
-              console.log(`📚 [WORKER] Nenhum documento específico do agente encontrado`);
+            // PRIORIDADE 2: Fallback para webhook_result (formato antigo ou agregado)
+            if (!knowledgeBase && agentData?.webhook_result) {
+              const webhookResult = agentData.webhook_result;
+              
+              // Novo formato: array de documentos
+              if (webhookResult.documents && Array.isArray(webhookResult.documents)) {
+                knowledgeBase = webhookResult.documents
+                  .map((doc: any, index: number) => {
+                    const title = doc.name || doc.title || `Documento ${index + 1}`;
+                    const content = doc.description || doc.transcription || '';
+                    return `## ${title}\n\n${content}`;
+                  })
+                  .join('\n\n---\n\n');
+                
+                console.log(`📚 [WORKER] Base de conhecimento carregada de webhook_result.documents`);
+              }
+              // Formato antigo: campos diretos
+              else {
+                if (webhookResult.description) {
+                  knowledgeBase += `## Conhecimento da Base\n\n${webhookResult.description}\n\n`;
+                }
+                
+                if (webhookResult.courses && Array.isArray(webhookResult.courses)) {
+                  knowledgeBase += `## Informações Detalhadas\n\n${webhookResult.courses.join('\n')}\n\n`;
+                }
+                
+                if (knowledgeBase) {
+                  console.log(`📚 [WORKER] Base de conhecimento carregada de webhook_result (formato legado)`);
+                }
+              }
+            }
+            
+            if (!knowledgeBase) {
+              console.log(`📚 [WORKER] Nenhuma base de conhecimento encontrada para este agente`);
             }
           } catch (error) {
-            console.error('❌ [WORKER] Erro ao buscar base de conhecimento do agente:', error);
+            console.error('❌ [WORKER] Erro ao buscar base de conhecimento:', error);
           }
             
           // Criar prompt personalizado automaticamente
@@ -823,7 +924,7 @@ Responda de forma natural e conversacional, como um assistente universitário.`;
             success: true,
             response: geminiResponse || 'Sorry, I could not process your message.',
             analysis: { chatbotMode: true },
-            usage: usageUpdate
+            usage: usageUpdate || usageCheck // Incluir informações de uso atualizadas
           }), {
             status: 200,
             headers: { 
@@ -872,7 +973,10 @@ Responda de forma natural e conversacional, como um assistente universitário.`;
       message: 'Worker executado com sucesso'
     }), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 
+        'Content-Type': 'application/json',
+        ...corsHeaders
+      }
     });
     
   } catch (error) {
@@ -882,7 +986,10 @@ Responda de forma natural e conversacional, como um assistente universitário.`;
       error: error.message
     }), {
       status: 500,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 
+        'Content-Type': 'application/json',
+        ...corsHeaders
+      }
     });
   } finally {
     // 🔒 LIBERAR LOCK SEMPRE (mesmo em caso de erro)

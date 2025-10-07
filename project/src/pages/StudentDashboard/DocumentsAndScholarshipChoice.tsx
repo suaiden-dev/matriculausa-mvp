@@ -697,6 +697,44 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
       return t('studentDashboard.documentsAndScholarshipChoice.passportFormatError');
     }
     
+    // Detectar mensagens específicas sobre MRZ do passaporte
+    if (errorMessage.includes('passport document is not readable') || 
+        errorMessage.includes('machine-readable zone') ||
+        errorMessage.includes('MRZ') ||
+        errorMessage.includes('not damaged or obscured') ||
+        errorMessage.includes('passaporte não é legível') ||
+        errorMessage.includes('zona de leitura mecânica') ||
+        errorMessage.includes('pasaporte no es legible') ||
+        errorMessage.includes('zona de lectura mecánica')) {
+      return t('studentDashboard.documentsAndScholarshipChoice.passportMRZError');
+    }
+    
+    // Detectar mensagens específicas sobre extrato bancário
+    if (errorMessage.includes('bank statement is not readable') ||
+        errorMessage.includes('extrato bancário não é legível') ||
+        errorMessage.includes('estado de cuenta no es legible') ||
+        errorMessage.includes('insufficient funds') ||
+        errorMessage.includes('fundos insuficientes') ||
+        errorMessage.includes('fondos insuficientes') ||
+        errorMessage.includes('balance too low') ||
+        errorMessage.includes('saldo muito baixo') ||
+        errorMessage.includes('saldo muy bajo')) {
+      return t('studentDashboard.documentsAndScholarshipChoice.bankStatementNotReadableError');
+    }
+    
+    // Detectar mensagens específicas sobre diploma
+    if (errorMessage.includes('diploma is not readable') ||
+        errorMessage.includes('diploma não é legível') ||
+        errorMessage.includes('diploma no es legible') ||
+        errorMessage.includes('diploma appears damaged') ||
+        errorMessage.includes('diploma parece danificado') ||
+        errorMessage.includes('diploma parece dañado') ||
+        errorMessage.includes('graduation certificate unclear') ||
+        errorMessage.includes('certificado de graduação pouco claro') ||
+        errorMessage.includes('certificado de graduación poco claro')) {
+      return t('studentDashboard.documentsAndScholarshipChoice.diplomaNotReadableError');
+    }
+    
     if (errorMessage.includes('Unable to process High School Diploma') || 
         errorMessage.includes('Unable to process') ||
         errorMessage.includes('Unable to process High School') ||
