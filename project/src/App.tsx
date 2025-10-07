@@ -25,13 +25,9 @@ import SellerRegistration from './pages/SellerRegistration';
 import SellerStudentRegistration from './pages/SellerStudentRegistration';
 import SuccessPage from './pages/SuccessPage';
 import ScholarshipFeeSuccess from './pages/StudentDashboard/ScholarshipFeeSuccess';
-import ApplicationFeeSuccess from './pages/StudentDashboard/ApplicationFeeSuccess';
 import ApplicationFeeCancel from './pages/ApplicationFeeCancel';
 import PaymentErrorPage from './pages/PaymentErrorPage';
-import ApplicationFeeError from './pages/StudentDashboard/ApplicationFeeError';
 import MatriculaRewardsLanding from './pages/MatriculaRewardsLanding';
-import I20ControlFeeSuccess from './pages/StudentDashboard/I20ControlFeeSuccess';
-import I20ControlFeeError from './pages/StudentDashboard/I20ControlFeeError';
 import SupportCenter from './pages/SupportCenter';
 import FAQ from './pages/FAQ';
 import ContactUs from './pages/ContactUs';
@@ -49,7 +45,7 @@ import { ZelleWaitingPage } from './components/ZelleWaitingPage';
 import CheckoutSuccess from './pages/CheckoutSuccess';
 import ZellePaymentSuccess from './pages/ZellePaymentSuccess';
 import SmartAssistantLayout from './components/SmartAssistantLayout';
-import MicrosoftIntegrationPage from './pages/MicrosoftIntegration';
+
 import EB3JobsLanding from './pages/EB3JobsLanding';
 
 // Componente interno que usa o hook dentro do contexto do Router
@@ -133,11 +129,6 @@ const AppContent = () => {
           <Route path="/microsoft-email" element={<MicrosoftCallback />} />
           <Route path="/eb3-jobs" element={<EB3JobsLanding />} />
           
-          
-          {/* Microsoft Email Integration */}
-          <Route path="/microsoft-email" element={<MicrosoftIntegrationPage />} />
-          
-          {/* Zelle Checkout Routes */}
           <Route path="/checkout/zelle/waiting" element={<ZelleWaitingPage />} />
           <Route path="/checkout/zelle" element={<ZelleCheckoutPage />} />
           <Route path="/checkout/success" element={<CheckoutSuccess />} />

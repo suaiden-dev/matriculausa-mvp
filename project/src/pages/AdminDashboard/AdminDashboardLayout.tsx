@@ -24,6 +24,7 @@ import {
   FileCheck
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import AdminStudentChatNotifications from '../../components/AdminStudentChatNotifications';
 
 interface AdminDashboardLayoutProps {
   user: any;
@@ -105,7 +106,6 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
     { id: 'payments', label: 'Payment Management', icon: CreditCard, path: '/admin/dashboard/payments', badge: null },
     { id: 'financial-analytics', label: 'Financial Analytics', icon: BarChart3, path: '/admin/dashboard/financial-analytics', badge: null },
     { id: 'affiliate-management', label: 'Affiliate Management', icon: Users, path: '/admin/dashboard/affiliate-management', badge: null },
-
     { id: 'application-monitoring', label: 'Application Monitoring', icon: Activity, path: '/admin/dashboard/application-monitoring', badge: null },
     { id: 'matricula-rewards', label: 'Matricula Rewards', icon: Award, path: '/admin/dashboard/matricula-rewards', badge: null },
     { id: 'terms', label: 'Terms Management', icon: FileCheck, path: '/admin/dashboard/terms', badge: null },
@@ -260,6 +260,16 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
                   />
                 </div>
               </div>
+
+              {/* Notifications */}
+              <AdminStudentChatNotifications 
+                onNotificationClick={(notification) => {
+                  // Navegar para a aba de mensagens quando clicar em uma notificação
+                  if (notification.conversation_id) {
+                    navigate(`/admin/dashboard/users?tab=messages&conversation=${notification.conversation_id}`);
+                  }
+                }}
+              />
 
               {/* User Menu */}
               <div className="relative">
