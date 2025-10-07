@@ -92,6 +92,13 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
   useEffect(() => {
     requestNotificationPermission();
   }, []);
+
+  // Redirecionar acessos diretos ao chat quando não liberado (fixar ordem dos hooks no topo)
+  useEffect(() => {
+    if (!loading && location.pathname.includes('/student/dashboard/chat') && selectionFeePaid === false) {
+      navigate('/student/dashboard/applications', { replace: true });
+    }
+  }, [loading, location.pathname, selectionFeePaid, navigate]);
   
   // Solicitar permissão para notificações nativas na primeira renderização
   useEffect(() => {
@@ -199,12 +206,6 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
     { id: 'profile', label: t('studentDashboard.sidebar.profile'), icon: User, path: '/student/dashboard/profile' }
   ];
 
-  // Redirecionar acessos diretos ao chat quando não liberado
-  useEffect(() => {
-    if (!loading && location.pathname.includes('/student/dashboard/chat') && selectionFeePaid === false) {
-      navigate('/student/dashboard/applications', { replace: true });
-    }
-  }, [loading, location.pathname, selectionFeePaid, navigate]);
 
   return (
     <div className="h-screen flex flex-col lg:flex-row w-full overflow-hidden">

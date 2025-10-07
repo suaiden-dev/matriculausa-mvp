@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Routes, Route, useNavigate } from 'react-router-dom';
+import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { Scholarship } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
@@ -60,6 +60,7 @@ interface Application {
 }
 
 const StudentDashboard: React.FC = () => {
+  const location = useLocation();
   const [scholarships, setScholarships] = useState<Scholarship[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
   const [profile, setProfile] = useState<StudentProfile | null>(null);
@@ -286,12 +287,14 @@ const StudentDashboard: React.FC = () => {
     availableScholarships: scholarships.length
   };
 
+  const isChatRoute = location.pathname.startsWith('/student/dashboard/chat');
+
   return (
       <StudentDashboardLayout user={user} profile={profile} loading={dashboardLoading}>
         {/* Área de proteção para o botão */}
         <div className="floating-cart-area" />
         {/* Botão do Carrinho */}
-        {(
+        {!isChatRoute && (
           <div
             style={{
               position: 'fixed',

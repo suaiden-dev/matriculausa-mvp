@@ -19,6 +19,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const hideFooter = hideHeader || location.pathname.startsWith('/checkout/zelle');
   const isDashboard = hideHeader;
   const isAdmin = location.pathname.startsWith('/admin');
+  const isStudentChatPage = location.pathname.startsWith('/student/dashboard/chat');
   
   // Esconder SmartChat apenas na página do inbox
   const hideSmartChat = location.pathname.includes('/microsoft-inbox') || 
@@ -43,7 +44,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       {!hideHeader && <Header />}
       <main className={`flex-grow overflow-x-hidden ${isDashboard ? '' : 'overflow-y-auto'}`}>
         {children}
-        {!isAdmin && !hideSmartChat && (
+        {!isAdmin && !hideSmartChat && !isStudentChatPage && (
           <SmartChat isStudentPage={location.pathname.startsWith('/student')} />
         )}
       </main>
