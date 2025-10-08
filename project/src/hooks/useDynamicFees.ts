@@ -39,12 +39,8 @@ export const useDynamicFees = (): DynamicFeeValues => {
       }
 
       // Para sistema simplificado, usar valores fixos
-      console.log('🔍 [useDynamicFees] systemType:', systemType);
-      console.log('🔍 [useDynamicFees] simplifiedFeesLoading:', simplifiedFeesLoading);
-      console.log('🔍 [useDynamicFees] fee350:', fee350, 'fee550:', fee550, 'fee900:', fee900);
       
       if (systemType === 'simplified' && !simplifiedFeesLoading) {
-        console.log('✅ [useDynamicFees] Usando valores do sistema simplificado:', { fee350, fee550, fee900 });
         return {
           selectionProcessFee: `$${fee350.toFixed(2)}`,
           scholarshipFee: `$${fee550.toFixed(2)}`,

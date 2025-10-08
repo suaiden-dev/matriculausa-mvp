@@ -1121,17 +1121,17 @@ const AdminStudentDetails: React.FC = () => {
         
         if (!targetApplicationId) {
           // Fallback: buscar aplicação aprovada ou mais recente
-          const { data: applications, error: fetchError } = await supabase
-            .from('scholarship_applications')
-            .select('id, status')
-            .eq('student_id', student.student_id)
-            .order('created_at', { ascending: false });
+        const { data: applications, error: fetchError } = await supabase
+          .from('scholarship_applications')
+          .select('id, status')
+          .eq('student_id', student.student_id)
+          .order('created_at', { ascending: false });
 
-          if (fetchError) throw fetchError;
+        if (fetchError) throw fetchError;
 
-          const targetApplication = applications?.find(app => app.status === 'approved') || applications?.[0];
-          if (!targetApplication) {
-            throw new Error('No application found for this student');
+        const targetApplication = applications?.find(app => app.status === 'approved') || applications?.[0];
+        if (!targetApplication) {
+          throw new Error('No application found for this student');
           }
           targetApplicationId = targetApplication.id;
         }
