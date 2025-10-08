@@ -7,6 +7,7 @@ import { useStudentLogs } from '../../hooks/useStudentLogs';
 import DocumentsView from '../../components/EnhancedStudentTracking/DocumentsView';
 import AdminScholarshipSelection from '../../components/AdminDashboard/AdminScholarshipSelection';
 import StudentLogsView from '../../components/AdminDashboard/StudentLogsView';
+import DocumentViewerModal from '../../components/DocumentViewerModal';
 import { generateTermAcceptancePDF, StudentTermAcceptanceData } from '../../utils/pdfGenerator';
 // Função simples de toast
 const showToast = (message: string, type: 'success' | 'error' = 'success') => {
@@ -124,6 +125,27 @@ const AdminStudentDetails: React.FC = () => {
   const [loadingDocuments, setLoadingDocuments] = useState(false);
   const [uploadingDocumentRequest, setUploadingDocumentRequest] = useState<{[key: string]: boolean}>({});
   const [approvingDocumentRequest, setApprovingDocumentRequest] = useState<{[key: string]: boolean}>({});
+  const [rejectingDocumentRequest, setRejectingDocumentRequest] = useState<{[key: string]: boolean}>({});
+  // Estado para modal de visualização de documentos
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  
+  // Debug: Log do estado previewUrl
+  React.useEffect(() => {
+    console.log('🔍 [ADMIN] previewUrl state changed:', previewUrl);
+    if (previewUrl) {
+      console.log('🔍 [ADMIN] Modal should be visible now');
+      // Verificar se o modal está sendo renderizado
+      setTimeout(() => {
+        const modal = document.querySelector('.document-viewer-overlay');
+        console.log('🔍 [ADMIN] Modal element found:', modal);
+        if (modal) {
+          console.log('🔍 [ADMIN] Modal is visible:', (modal as HTMLElement).style.display !== 'none');
+        } else {
+          console.log('❌ [ADMIN] Modal element NOT found in DOM');
+        }
+      }, 100);
+    }
+  }, [previewUrl]);
   // Campo de notas do admin - agora como lista
   const [adminNotes, setAdminNotes] = useState<Array<{
     id: string;
@@ -1772,19 +1794,53 @@ const AdminStudentDetails: React.FC = () => {
   };
 
   const handleViewDocument = (doc: any) => {
+    console.log('🔍 [ADMIN] Opening document:', doc);
+    console.log('🔍 [ADMIN] file_url:', doc.file_url);
+    console.log('🔍 [ADMIN] Current previewUrl:', previewUrl);
+    
     if (doc.file_url) {
-      window.open(doc.file_url, '_blank');
+      // Sempre atualizar para forçar re-render
+      setPreviewUrl(doc.file_url);
+      console.log('🔍 [ADMIN] Set previewUrl to:', doc.file_url);
+      
+      // Verificar se o modal está sendo renderizado
+      setTimeout(() => {
+        const modal = document.querySelector('.document-viewer-overlay');
+        console.log('🔍 [ADMIN] Modal element found after setState:', modal);
+        if (modal) {
+          console.log('🔍 [ADMIN] Modal is visible:', (modal as HTMLElement).style.display !== 'none');
+          console.log('🔍 [ADMIN] Modal z-index:', (modal as HTMLElement).style.zIndex);
+        } else {
+          console.log('❌ [ADMIN] Modal element NOT found after setState');
+        }
+      }, 200);
+    } else {
+      console.log('❌ [ADMIN] No file_url found in document');
     }
   };
 
-  const handleDownloadDocument = (doc: any) => {
-    if (doc.file_url) {
+  const handleDownloadDocument = async (doc: any) => {
+    if (!doc.file_url) return;
+    
+    try {
+      // Fazer download direto sem abrir nova aba
+      const response = await fetch(doc.file_url);
+      if (!response.ok) {
+        throw new Error('Failed to download document: ' + response.statusText);
+      }
+      
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.href = doc.file_url;
+      link.href = url;
       link.download = doc.filename || 'document';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      console.error('Erro no download:', err);
+      showToast(`Failed to download document: ${err.message}`, 'error');
     }
   };
 
@@ -1906,6 +1962,63 @@ const AdminStudentDetails: React.FC = () => {
       showToast(`Error approving document: ${error.message}`, 'error');
     } finally {
       setApprovingDocumentRequest(prev => ({ ...prev, [key]: false }));
+    }
+  };
+
+  const handleRejectDocumentRequest = async (uploadId: string, reason: string) => {
+    if (!isPlatformAdmin) return;
+    
+    const key = `reject-${uploadId}`;
+    setRejectingDocumentRequest(prev => ({ ...prev, [key]: true }));
+    
+    try {
+      console.log('🔍 [REJECT] Rejecting document upload:', uploadId);
+      console.log('🔍 [REJECT] Reason:', reason);
+      console.log('🔍 [REJECT] Current user ID:', user?.id);
+      console.log('🔍 [REJECT] Is platform admin:', isPlatformAdmin);
+      
+      const { data, error } = await supabase
+        .from('document_request_uploads')
+        .update({
+          status: 'rejected',
+          reviewed_by: user?.id,
+          reviewed_at: new Date().toISOString(),
+          rejection_reason: reason
+        })
+        .eq('id', uploadId)
+        .select();
+      
+      if (error) throw error;
+      
+      console.log('✅ [REJECT] Document rejected successfully:', data);
+      
+      // Recarregar document requests para mostrar a mudança
+      await fetchDocumentRequests();
+      
+      // Log the action
+      try {
+        await logAction(
+          'document_rejection',
+          `Document request upload rejected by admin: ${reason}`,
+          user?.id || '',
+          'admin',
+          {
+            upload_id: uploadId,
+            document_type: 'document_request_upload',
+            rejected_by: user?.email || 'Admin',
+            rejection_reason: reason
+          }
+        );
+      } catch (logError) {
+        console.error('Failed to log action:', logError);
+      }
+      
+      showToast('Document rejected successfully!', 'success');
+    } catch (error: any) {
+      console.error('❌ [REJECT] Error rejecting document:', error);
+      showToast(`Error rejecting document: ${error.message}`, 'error');
+    } finally {
+      setRejectingDocumentRequest(prev => ({ ...prev, [key]: false }));
     }
   };
 
@@ -4125,10 +4238,12 @@ const AdminStudentDetails: React.FC = () => {
               onDownloadDocument={handleDownloadDocument}
               onUploadDocument={handleUploadDocumentRequest}
               onApproveDocument={handleApproveDocumentRequest}
+              onRejectDocument={handleRejectDocumentRequest}
               onEditTemplate={handleEditTemplate}
               isAdmin={isPlatformAdmin}
               uploadingStates={uploadingDocumentRequest}
               approvingStates={approvingDocumentRequest}
+              rejectingStates={rejectingDocumentRequest}
             />
           )}
         </div>
@@ -4346,6 +4461,22 @@ const AdminStudentDetails: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+      
+      {/* Modal de visualização de documentos */}
+      {previewUrl && (
+        <>
+          {console.log('🔍 [ADMIN] Rendering modal with URL:', previewUrl)}
+          {console.log('🔍 [ADMIN] previewUrl is truthy:', !!previewUrl)}
+          {console.log('🔍 [ADMIN] About to render DocumentViewerModal')}
+          <DocumentViewerModal 
+            documentUrl={previewUrl} 
+            onClose={() => {
+              console.log('🔍 [ADMIN] Closing modal');
+              setPreviewUrl(null);
+            }} 
+          />
+        </>
       )}
     </div>
   );

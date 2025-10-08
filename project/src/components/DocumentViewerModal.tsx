@@ -9,6 +9,11 @@ interface DocumentViewerModalProps {
 }
 
 const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({ documentUrl, onClose, fileName }) => {
+  console.log('🔍 [MODAL] DocumentViewerModal rendered with URL:', documentUrl);
+  console.log('🔍 [MODAL] documentUrl prop:', documentUrl);
+  console.log('🔍 [MODAL] onClose prop:', onClose);
+  console.log('🔍 [MODAL] fileName prop:', fileName);
+  
   const [loading, setLoading] = React.useState(true);
   const [actualUrl, setActualUrl] = React.useState<string>(documentUrl);
   const [error, setError] = React.useState<string | null>(null);
@@ -375,6 +380,7 @@ const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({ documentUrl, 
   );
 
   // Usar Portal para renderizar o modal diretamente no body
+  console.log('🔍 [MODAL] Creating portal with content');
   return createPortal(modalContent, document.body);
 };
 
