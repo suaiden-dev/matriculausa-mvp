@@ -1554,6 +1554,8 @@
       "manualReviewTitle": "Documents Under Review",
       "manualReviewDescription": "Our artificial intelligence was unable to identify all the necessary information in the submitted documents. Don't worry! Your documentation has been sent to our support team to perform a detailed analysis.",
       "manualReviewTimeframe": "The analysis will be completed within 48 hours and you will receive the results via email.",
+      "aiProcessingFailed": "Our AI was unable to process the documents automatically.",
+      "teamAnalysisMessage": "Don't worry! We've sent them to our team for detailed analysis.",
       "needHelp": "Need Help?",
       "smartAssistantHelp": "Smart Assistant:",
       "smartAssistantDescription": "Use the floating button on the corner of the screen to ask questions in real-time.",

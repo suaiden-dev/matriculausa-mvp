@@ -1775,6 +1775,8 @@
       "manualReviewTitle": "Documentos en Análisis",
       "manualReviewDescription": "Nuestra inteligencia artificial no pudo identificar toda la información necesaria en los documentos enviados. ¡No te preocupes! Tu documentación ha sido enviada a nuestro equipo de soporte para realizar un análisis detallado.",
       "manualReviewTimeframe": "El análisis se completará en un máximo de 48 horas y recibirás el resultado por correo electrónico.",
+      "aiProcessingFailed": "Nuestra IA no pudo procesar los documentos automáticamente.",
+      "teamAnalysisMessage": "¡No te preocupes! Los hemos enviado a nuestro equipo para un análisis detallado.",
       "needHelp": "¿Necesitas Ayuda?",
       "smartAssistantHelp": "Asistente Inteligente:",
       "smartAssistantDescription": "Usa el botón flotante en la esquina de la pantalla para hacer preguntas en tiempo real.",

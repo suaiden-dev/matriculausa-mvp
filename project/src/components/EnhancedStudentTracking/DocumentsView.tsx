@@ -12,10 +12,12 @@ interface DocumentsViewProps {
   onApproveDocument?: (uploadId: string) => void;
   onRejectDocument?: (uploadId: string, reason: string) => void;
   onEditTemplate?: (requestId: string, currentTemplate: string | null) => void;
+  onDeleteDocumentRequest?: (requestId: string) => void;
   isAdmin?: boolean;
   uploadingStates?: {[key: string]: boolean};
   approvingStates?: {[key: string]: boolean};
   rejectingStates?: {[key: string]: boolean};
+  deletingStates?: {[key: string]: boolean};
 }
 
 const DocumentsView: React.FC<DocumentsViewProps> = ({
@@ -29,10 +31,12 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
   onApproveDocument,
   onRejectDocument,
   onEditTemplate,
+  onDeleteDocumentRequest,
   isAdmin = false,
   uploadingStates = {},
   approvingStates = {},
-  rejectingStates = {}
+  rejectingStates = {},
+  deletingStates = {}
 }) => {
   const [realScholarshipApplication, setRealScholarshipApplication] = useState<any>(null);
   const [loadingApplication, setLoadingApplication] = useState(false);
@@ -45,6 +49,10 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [pendingRejectUploadId, setPendingRejectUploadId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState('');
+
+  // Estados para modal de confirmação de exclusão
+  const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
+  const [pendingDeleteRequestId, setPendingDeleteRequestId] = useState<string | null>(null);
 
   // Função para abrir modal de rejeição
   const handleRejectClick = (uploadId: string) => {
@@ -68,6 +76,25 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
     setShowRejectModal(false);
     setPendingRejectUploadId(null);
     setRejectReason('');
+  };
+
+  // Funções para modal de confirmação de exclusão
+  const handleDeleteClick = (requestId: string) => {
+    setPendingDeleteRequestId(requestId);
+    setShowDeleteConfirmModal(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (pendingDeleteRequestId && onDeleteDocumentRequest) {
+      onDeleteDocumentRequest(pendingDeleteRequestId);
+    }
+    setShowDeleteConfirmModal(false);
+    setPendingDeleteRequestId(null);
+  };
+
+  const handleCancelDelete = () => {
+    setShowDeleteConfirmModal(false);
+    setPendingDeleteRequestId(null);
   };
 
   // Utilitário para logar ação de acceptance letter (admin)
@@ -482,14 +509,43 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                 
                 return Array.from(requestsMap.values());
               })().map((request) => (
-                <div key={request.id} className="bg-white p-4 sm:p-6 rounded-xl border border-slate-200">
+                <div key={request.id} className="bg-white p-4 sm:p-6 rounded-xl border border-slate-200 relative">
+                  {/* Admin Action Buttons - Top Right Corner */}
+                  {isAdmin && (
+                    <div className="absolute top-4 right-4 flex items-center gap-2">
+                      {onEditTemplate && (
+                        <button
+                          onClick={() => onEditTemplate(request.id, request.attachment_url)}
+                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          title="Edit Template"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </button>
+                      )}
+                      {onDeleteDocumentRequest && (
+                        <button
+                          onClick={() => handleDeleteClick(request.id)}
+                          disabled={deletingStates[`delete-${request.id}`]}
+                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          title="Delete Request"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+                  )}
+
                   <div className="flex flex-col sm:flex-row items-start gap-4">
                     <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
                       <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                       </svg>
                     </div>
-                    <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-0 pr-16">
                       <div className="flex flex-wrap gap-2 mb-1">
                         <h4 className="text-lg font-semibold text-slate-900 break-words">
                           {request.title || 'Document Request'}
@@ -515,7 +571,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                       )}
                       
                       {request.attachment_url ? (
-                        <div className="mt-3 flex flex-wrap gap-2">
+                        <div className="mt-3">
                           <button
                             onClick={() => onViewDocument({ file_url: request.attachment_url, type: 'template' })}
                             className="bg-[#05294E] hover:bg-[#041f38] text-white px-4 py-2 rounded-xl font-medium transition-colors shadow-sm flex items-center justify-center space-x-2 w-full sm:w-auto"
@@ -526,17 +582,6 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                             </svg>
                             <span>View Template</span>
                           </button>
-                          {isAdmin && onEditTemplate && (
-                            <button
-                              onClick={() => onEditTemplate(request.id, request.attachment_url)}
-                              className="bg-blue-50 hover:bg-blue-100 text-blue-700 px-4 py-2 rounded-xl font-medium transition-colors shadow-sm flex items-center justify-center space-x-2 w-full sm:w-auto"
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                              </svg>
-                              <span>Edit Template</span>
-                            </button>
-                          )}
                         </div>
                       ) : isAdmin && onEditTemplate && (
                         <div className="mt-3">
@@ -1085,109 +1130,6 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
         </div>
       </div>
       
-      {/* Transfer Form Section - Only for transfer students */}
-      {currentApplication?.student_process_type === 'transfer' && (
-        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-3xl shadow-sm relative overflow-hidden">
-          <div className="bg-gradient-to-r from-[#05294E] to-[#041f38] px-6 py-5 rounded-t-3xl">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-              <div className="flex items-start sm:items-center space-x-4 min-w-0">
-                <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg flex-shrink-0">
-                  <svg className="w-6 h-6 text-[#05294E]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                </div>
-                <div className="min-w-0">
-                  <h3 className="text-xl font-bold text-white break-words">Transfer Form</h3>
-                  <p className="text-blue-100 text-sm break-words">Transfer form for current F-1 students</p>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <div className="p-6">
-            {(() => {
-              if (currentApplication?.transfer_form_url) {
-                // Formulário já enviado
-                return (
-                  <div className="bg-white rounded-3xl p-6">
-                    <div className="flex items-start space-x-4">
-                      <div className="flex-shrink-0">
-                        <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                          <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                          </svg>
-                        </div>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex flex-wrap gap-2 mb-1">
-                          <p className="font-medium text-slate-900 break-words">
-                            {currentApplication.transfer_form_url.split('/').pop() || 'Transfer Form'}
-                          </p>
-                          <span className="px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 whitespace-nowrap">
-                            {currentApplication.transfer_form_status === 'approved' ? 'Approved' : 'Sent'}
-                          </span>
-                        </div>
-                        <p className="text-sm text-slate-500 break-words">
-                          Sent on {formatDate(currentApplication.transfer_form_sent_at)}
-                        </p>
-                        <p className="text-xs text-slate-400 mt-1 break-words">
-                          Transfer form for F-1 students
-                        </p>
-                        
-                        <div className="flex flex-col sm:flex-row gap-2 mt-3">
-                          <button
-                            onClick={() => onViewDocument({
-                              file_url: currentApplication.transfer_form_url,
-                              filename: (currentApplication.transfer_form_url.split('/').pop() || 'Transfer Form')
-                            })}
-                            className="bg-[#05294E] hover:bg-[#041f38] text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors w-full sm:w-auto text-center"
-                          >
-                            View
-                          </button>
-                          
-                          <button
-                            onClick={() => onDownloadDocument({
-                              file_url: currentApplication.transfer_form_url,
-                              filename: (currentApplication.transfer_form_url.split('/').pop() || 'Transfer Form')
-                            })}
-                            className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-xl text-sm font-medium transition-colors w-full sm:w-auto text-center"
-                          >
-                            Download
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              } else {
-                // Formulário não enviado
-                return (
-                  <div className="bg-white rounded-3xl p-8">
-                    <div className="text-center">
-                      <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                      </div>
-                      <h4 className="text-lg font-semibold text-slate-700 mb-2">No Transfer Form Yet</h4>
-                      <p className="text-slate-500 max-w-md mx-auto">
-                        The transfer form will appear here once the university processes your application and sends it to you.
-                      </p>
-                      <div className="mt-4 flex items-center justify-center space-x-2 text-sm text-slate-400">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <span>Please wait for the university to send your transfer form</span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              }
-            })()}
-          </div>
-        </div>
-      )}
-      
       {/* Modal de rejeição de documento */}
       {showRejectModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
@@ -1213,6 +1155,51 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                 className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white rounded-xl transition-colors disabled:cursor-not-allowed"
               >
                 Reject Document
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de confirmação de exclusão */}
+      {showDeleteConfirmModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 border border-slate-200">
+            <div className="flex items-center mb-4">
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mr-4">
+                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-[#05294E]">Delete Document Request</h3>
+                <p className="text-sm text-slate-600 mt-1">This action cannot be undone</p>
+              </div>
+            </div>
+
+            <p className="text-sm text-slate-700 mb-6">
+              Are you sure you want to delete this document request? This will permanently remove the request and all associated uploads from the system.
+            </p>
+
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={handleCancelDelete}
+                className="px-4 py-2 border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                disabled={deletingStates[`delete-${pendingDeleteRequestId}`]}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white rounded-xl transition-colors disabled:cursor-not-allowed flex items-center space-x-2"
+              >
+                {deletingStates[`delete-${pendingDeleteRequestId}`] && (
+                  <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                )}
+                <span>{deletingStates[`delete-${pendingDeleteRequestId}`] ? 'Deleting...' : 'Delete'}</span>
               </button>
             </div>
           </div>

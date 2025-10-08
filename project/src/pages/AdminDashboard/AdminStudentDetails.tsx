@@ -126,6 +126,10 @@ const AdminStudentDetails: React.FC = () => {
   const [uploadingDocumentRequest, setUploadingDocumentRequest] = useState<{[key: string]: boolean}>({});
   const [approvingDocumentRequest, setApprovingDocumentRequest] = useState<{[key: string]: boolean}>({});
   const [rejectingDocumentRequest, setRejectingDocumentRequest] = useState<{[key: string]: boolean}>({});
+  const [deletingDocumentRequest, setDeletingDocumentRequest] = useState<{[key: string]: boolean}>({});
+  const [isEditingProcessType, setIsEditingProcessType] = useState(false);
+  const [editingProcessType, setEditingProcessType] = useState('');
+  const [savingProcessType, setSavingProcessType] = useState(false);
   // Estado para modal de visualização de documentos
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   
@@ -295,6 +299,109 @@ const AdminStudentDetails: React.FC = () => {
     } finally {
       setLoadingTermAcceptances(false);
     }
+  };
+
+  const handleDeleteDocumentRequest = async (requestId: string) => {
+    if (!student) return;
+    
+    try {
+      setDeletingDocumentRequest(prev => ({ ...prev, [`delete-${requestId}`]: true }));
+      
+      // Primeiro, deletar todos os uploads relacionados ao request
+      const { error: deleteUploadsError } = await supabase
+        .from('document_request_uploads')
+        .delete()
+        .eq('document_request_id', requestId);
+
+      if (deleteUploadsError) throw deleteUploadsError;
+
+      // Depois, deletar o document request
+      const { error: deleteRequestError } = await supabase
+        .from('document_requests')
+        .delete()
+        .eq('id', requestId);
+
+      if (deleteRequestError) throw deleteRequestError;
+
+      // Log da ação de exclusão
+      await logAction(
+        'document_request_deleted',
+        `Document request deleted by admin`,
+        user?.id || '',
+        'admin',
+        {
+          request_id: requestId,
+          deleted_by: user?.email || 'Admin'
+        }
+      );
+
+      showToast('Document request deleted successfully!', 'success');
+
+      // Recarregar document requests
+      await fetchDocumentRequests();
+      
+    } catch (error: any) {
+      console.error('Error deleting document request:', error);
+      showToast(`Failed to delete document request: ${error.message}`, 'error');
+    } finally {
+      setDeletingDocumentRequest(prev => ({ ...prev, [`delete-${requestId}`]: false }));
+    }
+  };
+
+  const handleEditProcessType = () => {
+    setIsEditingProcessType(true);
+    setEditingProcessType(student?.student_process_type || '');
+  };
+
+  const handleSaveProcessType = async () => {
+    if (!student || !editingProcessType) return;
+
+    try {
+      setSavingProcessType(true);
+
+      // Atualizar todas as aplicações do estudante
+      const { error } = await supabase
+        .from('scholarship_applications')
+        .update({ student_process_type: editingProcessType })
+        .eq('student_id', student.student_id);
+
+      if (error) {
+        console.error('Erro ao atualizar student_process_type:', error);
+        showToast('Erro ao atualizar tipo de processo', 'error');
+        return;
+      }
+
+      // Atualizar o estado local
+      setStudent(prev => prev ? { ...prev, student_process_type: editingProcessType } : null);
+      
+      setIsEditingProcessType(false);
+      showToast('Tipo de processo atualizado com sucesso');
+
+      // Log da ação
+      await logAction(
+        'student_process_type_updated',
+        `Student process type updated by admin`,
+        user?.id || '',
+        'admin',
+        {
+          student_id: student.student_id,
+          old_process_type: student.student_process_type,
+          new_process_type: editingProcessType,
+          updated_by: user?.email || 'Admin'
+        }
+      );
+
+    } catch (error) {
+      console.error('Erro ao salvar student_process_type:', error);
+      showToast('Erro ao salvar tipo de processo', 'error');
+    } finally {
+      setSavingProcessType(false);
+    }
+  };
+
+  const handleCancelProcessType = () => {
+    setIsEditingProcessType(false);
+    setEditingProcessType('');
   };
 
   const fetchReferralInfo = async (referralCode: string) => {
@@ -562,10 +669,17 @@ const AdminStudentDetails: React.FC = () => {
 
         const s = data as any;
         let lockedApplication = null;
+        let activeApplication = null;
         if (s.scholarship_applications && s.scholarship_applications.length > 0) {
           // Priorizar aplicação enrolled, depois approved
           lockedApplication = s.scholarship_applications.find((app: any) => app.status === 'enrolled') ||
                              s.scholarship_applications.find((app: any) => app.status === 'approved');
+          
+          // Se não há aplicação locked, buscar a aplicação mais recente para o student_process_type
+          if (!lockedApplication) {
+            activeApplication = s.scholarship_applications
+              .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+          }
         }
 
         const formatted: StudentRecord = {
@@ -599,7 +713,7 @@ const AdminStudentDetails: React.FC = () => {
           application_fee_payment_method: lockedApplication?.application_fee_payment_method || null,
           scholarship_fee_payment_method: lockedApplication?.scholarship_fee_payment_method || null,
           acceptance_letter_status: lockedApplication?.acceptance_letter_status || null,
-          student_process_type: lockedApplication?.student_process_type || null,
+          student_process_type: lockedApplication?.student_process_type || activeApplication?.student_process_type || null,
           payment_status: lockedApplication?.payment_status || null,
           scholarship_title: lockedApplication?.scholarships?.title || null,
           university_name: lockedApplication?.scholarships?.universities?.name || null,
@@ -1635,6 +1749,19 @@ const AdminStudentDetails: React.FC = () => {
 
       if (updateError) throw updateError;
 
+      // Log da ação de edição de template
+      await logAction(
+        'document_request_template_edited',
+        `Document request template updated by admin`,
+        user?.id || '',
+        'admin',
+        {
+          request_id: editingTemplateRequestId,
+          template_url: publicUrl,
+          edited_by: user?.email || 'Admin'
+        }
+      );
+
       // Fechar modal e limpar estados
       setShowEditTemplateModal(false);
       setEditingTemplateRequestId(null);
@@ -2218,6 +2345,11 @@ const AdminStudentDetails: React.FC = () => {
         if (s) {
           // Processar dados do estudante
           const lockedApplication = s.scholarship_applications?.find((app: any) => app.status === 'locked');
+          let activeApplication = null;
+          if (!lockedApplication && s.scholarship_applications && s.scholarship_applications.length > 0) {
+            activeApplication = s.scholarship_applications
+              .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+          }
           setStudent({
             student_id: s.id,
             user_id: s.user_id,
@@ -2248,7 +2380,7 @@ const AdminStudentDetails: React.FC = () => {
             application_fee_payment_method: lockedApplication?.application_fee_payment_method || null,
             scholarship_fee_payment_method: lockedApplication?.scholarship_fee_payment_method || null,
             acceptance_letter_status: lockedApplication?.acceptance_letter_status || null,
-            student_process_type: lockedApplication?.student_process_type || null,
+            student_process_type: lockedApplication?.student_process_type || activeApplication?.student_process_type || null,
             payment_status: lockedApplication?.payment_status || null,
             scholarship_title: Array.isArray(lockedApplication?.scholarships) ? null : (lockedApplication?.scholarships as any)?.title || null,
             university_name: Array.isArray(lockedApplication?.scholarships) ? null : (lockedApplication?.scholarships as any)?.universities?.name || null,
@@ -2514,6 +2646,60 @@ const AdminStudentDetails: React.FC = () => {
                     ) : (
                       <dd className="text-base text-slate-900 mt-1">{student.english_proficiency || 'Not provided'}</dd>
                     )}
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-slate-600">Student Process Type</dt>
+                    <dd className="text-base text-slate-900 mt-1 capitalize">
+                      {isEditingProcessType ? (
+                        <div className="flex items-center gap-2">
+                          <select
+                            value={editingProcessType}
+                            onChange={(e) => setEditingProcessType(e.target.value)}
+                            className="px-3 py-1 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            disabled={savingProcessType}
+                          >
+                            <option value="initial">Initial</option>
+                            <option value="transfer">Transfer</option>
+                            <option value="change_of_status">Change of Status</option>
+                            <option value="enrolled">Enrolled</option>
+                          </select>
+                          <button
+                            onClick={handleSaveProcessType}
+                            disabled={savingProcessType}
+                            className="p-1 text-green-600 hover:bg-green-50 rounded transition-colors disabled:opacity-50"
+                            title="Save"
+                          >
+                            {savingProcessType ? (
+                              <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                              </svg>
+                            ) : (
+                              <Save className="w-4 h-4" />
+                            )}
+                          </button>
+                          <button
+                            onClick={handleCancelProcessType}
+                            disabled={savingProcessType}
+                            className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
+                            title="Cancel"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <span>{student.student_process_type || 'Not defined'}</span>
+                          <button
+                            onClick={handleEditProcessType}
+                            className="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                            title="Edit Process Type"
+                          >
+                            <Edit3 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )}
+                    </dd>
                   </div>
                 </div>
               </div>
@@ -4240,10 +4426,12 @@ const AdminStudentDetails: React.FC = () => {
               onApproveDocument={handleApproveDocumentRequest}
               onRejectDocument={handleRejectDocumentRequest}
               onEditTemplate={handleEditTemplate}
+              onDeleteDocumentRequest={handleDeleteDocumentRequest}
               isAdmin={isPlatformAdmin}
               uploadingStates={uploadingDocumentRequest}
               approvingStates={approvingDocumentRequest}
               rejectingStates={rejectingDocumentRequest}
+              deletingStates={deletingDocumentRequest}
             />
           )}
         </div>
