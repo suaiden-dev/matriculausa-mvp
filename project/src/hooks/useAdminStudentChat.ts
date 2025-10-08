@@ -124,7 +124,7 @@ export const useAdminStudentChat = (conversationId?: string, recipientId?: strin
         .from('admin_student_conversations')
         .select('*');
 
-      if (userProfile.role === 'affiliate_admin') {
+      if (userProfile.role === 'affiliate_admin' || userProfile.role === 'admin') {
         query = query.eq('admin_id', user.id).eq('student_id', targetRecipientId);
       } else {
         query = query.eq('student_id', user.id).eq('admin_id', targetRecipientId);
@@ -141,7 +141,7 @@ export const useAdminStudentChat = (conversationId?: string, recipientId?: strin
       }
 
       // Create new conversation
-      const conversationData = userProfile.role === 'affiliate_admin' 
+      const conversationData = (userProfile.role === 'affiliate_admin' || userProfile.role === 'admin') 
         ? { admin_id: user.id, student_id: targetRecipientId }
         : { admin_id: targetRecipientId, student_id: user.id };
 

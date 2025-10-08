@@ -1584,7 +1584,7 @@ const StudentDetails: React.FC = () => {
                   title: 'New document request',
                   message: `A new document request was created: ${newDocumentRequest.title}.`,
                   type: 'document_request_created',
-                  link: '/student/documents',
+                  link: `/student/dashboard/application/${applicationId}/chat?tab=documents`,
                 }),
               });
             }

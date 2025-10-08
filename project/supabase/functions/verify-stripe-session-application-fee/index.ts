@@ -50,7 +50,7 @@ Deno.serve(async (req)=>{
       const userId = session.client_reference_id;
       const paymentMethod = session.payment_method_types?.[0];
       const applicationId = session.metadata?.application_id;
-      console.log(`Processing successful payment. UserID: ${userId}, ApplicationID: ${applicationId}`);
+      console.log(`Processing successful payment. UserID: ${userId}, ApplicationID: ${applicationId}, PaymentMethod: ${paymentMethod}`);
       if (!userId) return corsResponse({
         error: 'User ID (client_reference_id) missing in session.'
       }, 400);
@@ -80,7 +80,7 @@ Deno.serve(async (req)=>{
         payment_status: 'paid',
         paid_at: new Date().toISOString(),
         is_application_fee_paid: true,
-        application_fee_payment_method: 'stripe'
+        application_fee_payment_method: paymentMethod || 'stripe'
       };
       // Preservar o status atual se já estiver 'approved' (universidade já aprovou)
       console.log(`[verify-stripe-session-application-fee] Current application status: '${application.status}' for user ${userId}, application ${applicationId}.`);
@@ -96,10 +96,25 @@ Deno.serve(async (req)=>{
         console.log('Adding student_process_type from session metadata:', session.metadata.student_process_type);
       }
       // Atualiza a aplicação
+      console.log(`Updating application ${applicationId} with data:`, updateData);
       const { error: updateError } = await supabase.from('scholarship_applications').update(updateData).eq('id', applicationId).eq('student_id', userProfile.id);
       if (updateError) {
         console.error('Failed to update application status:', updateError);
+        console.error('Update data that failed:', updateData);
         throw new Error(`Failed to update application status: ${updateError.message}`);
+      }
+      
+      // Verificar se a atualização foi bem-sucedida
+      const { data: updatedApplication, error: verifyError } = await supabase
+        .from('scholarship_applications')
+        .select('id, application_fee_payment_method, is_application_fee_paid, payment_status')
+        .eq('id', applicationId)
+        .single();
+      
+      if (verifyError) {
+        console.error('Failed to verify update:', verifyError);
+      } else {
+        console.log('Application updated successfully:', updatedApplication);
       }
       if (updateData.status) {
         console.log(`Application status updated to '${updateData.status}' with payment info`);

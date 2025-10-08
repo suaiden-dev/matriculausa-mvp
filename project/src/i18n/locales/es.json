@@ -1771,7 +1771,16 @@
       "documentsApprovedDescription": "¡Excelente! Tus documentos han sido aprobados y estás listo para proceder con el pago de la tasa de aplicación.",
       "proceedToPayment": "Proceder al Pago",
       "analyzingOverlayTitle": "Analizando tus documentos...",
-      "analyzingOverlayDescription": "Esto puede tomar hasta 40 segundos. Por favor, no cierres esta ventana."
+      "analyzingOverlayDescription": "Esto puede tomar hasta 40 segundos. Por favor, no cierres esta ventana.",
+      "manualReviewTitle": "Documentos en Análisis",
+      "manualReviewDescription": "Nuestra inteligencia artificial no pudo identificar toda la información necesaria en los documentos enviados. ¡No te preocupes! Tu documentación ha sido enviada a nuestro equipo de soporte para realizar un análisis detallado.",
+      "manualReviewTimeframe": "El análisis se completará en un máximo de 48 horas y recibirás el resultado por correo electrónico.",
+      "needHelp": "¿Necesitas Ayuda?",
+      "smartAssistantHelp": "Asistente Inteligente:",
+      "smartAssistantDescription": "Usa el botón flotante en la esquina de la pantalla para hacer preguntas en tiempo real.",
+      "supportChatHelp": "Chat de Soporte:",
+      "supportChatDescription": "Accede al chat del equipo justo debajo de la sección 'Mis Aplicaciones' en el panel.",
+      "backToOverview": "Entendido, Volver al Panel"
     },
     "manualReview": {
       "title": "Revisión Manual de Documentos",

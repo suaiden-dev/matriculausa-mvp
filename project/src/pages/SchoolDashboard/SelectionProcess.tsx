@@ -443,7 +443,7 @@ const SelectionProcess: React.FC = () => {
               title: 'Changes requested',
               message: `Changes were requested for your document: ${docLabel}. Reason: ${reason || 'Please review the instructions'}.`,
               type: 'document_changes_requested',
-              link: '/student/documents',
+              link: `/student/dashboard/application/${selectedStudent.id}/chat?tab=documents`,
             };
             const resp = await fetch(`${FUNCTIONS_URL}/create-student-notification`, {
               method: 'POST',

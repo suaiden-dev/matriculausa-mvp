@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../lib/supabase';
-import ImagePreviewModal from './ImagePreviewModal';
 import DocumentViewerModal from './DocumentViewerModal';
 import { useUniversity } from '../context/UniversityContext';
 import { useAuth } from '../hooks/useAuth';
@@ -41,7 +40,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
   console.log('🔍 [DocumentRequestsCard] studentType received:', studentType);
   const [requests, setRequests] = useState<DocumentRequest[]>([]);
   const [uploads, setUploads] = useState<{ [requestId: string]: DocumentRequestUpload[] }>({});
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
   const [showNewModal, setShowNewModal] = useState(false);
   const [newRequest, setNewRequest] = useState({ title: '', description: '', due_date: '', attachment: null as File | null });
   const [error, setError] = useState<string | null>(null);
@@ -73,7 +72,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
   // 1. Adicionar estado para logo da universidade
   const [universityLogoUrl, setUniversityLogoUrl] = useState<string | null>(null);
   const [universityId, setUniversityId] = useState<string | undefined>(undefined); // novo estado global
-  const { user, supabaseUser } = useAuth();
+  const { user } = useAuth();
   // Modal para justificar rejeição de um upload específico
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [pendingRejectUploadId, setPendingRejectUploadId] = useState<string | null>(null);
@@ -293,7 +292,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
         title: newRequest.title,
         description: newRequest.description,
         due_date: newRequest.due_date || null,
-        attachment_url,
+        attachment_url: attachment_url || null,
         scholarship_application_id: applicationId,
         created_by: currentUserId,
         university_id: universityId,
@@ -729,7 +728,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
       
       // Chamar callback de logging se fornecido
       if (onDocumentUploaded) {
-        onDocumentUploaded(requestId, file.name, isResubmission);
+        onDocumentUploaded(requestId, file.name, isResubmission || false);
       }
       
       fetchRequests();
@@ -919,6 +918,26 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
                     <div className="min-w-0 flex-1">
                       <h3 className="font-semibold text-slate-900 text-sm sm:text-base truncate">{req.title}</h3>
                       <p className="text-xs sm:text-sm text-slate-500 line-clamp-2">{req.description}</p>
+                      {req.attachment_url && (
+                        <div className="mt-2">
+                          <button
+                            onClick={() => {
+                              const signedUrl = attachmentSignedUrls[req.id];
+                              const fileUrl = signedUrl || req.attachment_url;
+                              if (fileUrl) {
+                                setPreviewUrl(fileUrl);
+                              }
+                            }}
+                            className="text-blue-600 hover:text-blue-800 text-xs sm:text-sm font-medium hover:underline flex items-center gap-1"
+                          >
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                            View Template
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                   <button className="px-2 py-1 sm:px-3 sm:py-1.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg text-xs sm:text-sm font-medium hover:bg-blue-100 transition-colors flex-shrink-0 ml-2">
@@ -1441,6 +1460,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
                       title: newRequest.title,
                       description: newRequest.description,
                       due_date: newRequest.due_date || null,
+                      attachment_url: attachment_url || null,
                       university_id: universityId, // agora garantido pelo estado global
                       is_global: false,
                       status: 'open',

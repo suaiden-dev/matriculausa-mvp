@@ -3,7 +3,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { useAdminStudentChat } from '../../hooks/useAdminStudentChat';
 import ApplicationChat from '../ApplicationChat';
 import ChatInbox from './ChatInbox';
-import { ArrowLeft, MessageSquare, Users } from 'lucide-react';
+import { ArrowLeft, MessageSquare, Users, ExternalLink, HelpCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 
@@ -27,6 +27,7 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
   const [showMobileInbox, setShowMobileInbox] = useState(true);
   const [selectedRecipientInfo, setSelectedRecipientInfo] = useState<{ email?: string; phone?: string } | null>(null);
   const [selectedRecipientProfileId, setSelectedRecipientProfileId] = useState<string | null>(null);
+  const [showGuide, setShowGuide] = useState(false);
 
   // Initialize chat with selected conversation or recipient
   const chat = useAdminStudentChat(selectedConversationId, selectedRecipientId);
@@ -83,7 +84,7 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
 
   if (isMobile) {
     return (
-      <div className={`bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden ${className}`}>
+      <div className={`bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden ${className}`} style={{ height: '100dvh', display: 'flex', flexDirection: 'column' }}>
         {showMobileInbox ? (
           <ChatInbox
             onConversationSelect={handleConversationSelect}
@@ -93,7 +94,7 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
         ) : (
           <div className="h-full flex flex-col">
             {/* Mobile header */}
-            <div className="bg-gradient-to-r from-[#05294E] to-[#0a4a7a] px-4 py-3 flex items-center">
+            <div className="bg-gradient-to-r from-[#05294E] to-[#0a4a7a] px-4 py-3 flex items-center justify-between">
               <button
                 onClick={handleBackToInbox}
                 className="text-white hover:text-slate-200 mr-3"
@@ -113,10 +114,17 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
                   </p>
                 </div>
               </div>
+              <button
+                onClick={() => setShowGuide(true)}
+                className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-white/30 text-white hover:bg-white/10"
+                title="How it works"
+              >
+                <HelpCircle className="w-4 h-4" />
+              </button>
             </div>
 
             {/* Chat area */}
-            <div className="flex-1">
+            <div className="flex-1 min-h-0">
               <ApplicationChat
                 messages={chat.messages}
                 onSend={handleSendMessage}
@@ -127,6 +135,7 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
                 error={chat.error}
                 currentUserId={user.id}
                 onMarkAllAsRead={chat.markAllAsRead}
+                overrideHeights={true}
               />
             </div>
           </div>
@@ -137,8 +146,8 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
 
   // Desktop layout (side by side)
   return (
-    <div className={`bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden ${className}`}>
-      <div className="grid grid-cols-1 lg:grid-cols-3 h-full min-h-[600px]">
+    <div className={`bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden ${className}`} style={{ height: '100dvh', display: 'flex', flexDirection: 'column' }}>
+      <div className="grid grid-cols-1 lg:grid-cols-3 h-full">
         {/* Inbox sidebar */}
         {showInbox && (
           <div className="lg:col-span-1 border-r border-slate-200">
@@ -175,15 +184,25 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
                       )}
                     </div>
                   </div>
-                  {(userProfile.role === 'affiliate_admin' || userProfile.role === 'admin') && selectedRecipientProfileId && (
-                    <Link
-                      to={`/admin/dashboard/students/${selectedRecipientProfileId}`}
-                      className="text-xs bg-white text-[#05294E] hover:bg-slate-100 px-3 py-1.5 rounded-md font-medium whitespace-nowrap"
-                      title="Open student details"
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setShowGuide(true)}
+                      className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-white/30 text-white hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/40"
+                      title="How it works"
                     >
-                      View student details
-                    </Link>
-                  )}
+                      <HelpCircle className="w-4 h-4" />
+                    </button>
+                    {(userProfile.role === 'affiliate_admin' || userProfile.role === 'admin') && selectedRecipientProfileId && (
+                      <Link
+                        to={`/admin/dashboard/students/${selectedRecipientProfileId}`}
+                        className="inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[11px] sm:text-xs text-white border border-white/30 bg-white/10 hover:bg-white/20 backdrop-blur-[2px] shadow-sm transition-colors whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-white/40"
+                        title="Open student details"
+                      >
+                        <ExternalLink className="w-4 h-4 opacity-90" />
+                        Student details
+                      </Link>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -199,6 +218,7 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
                   error={chat.error}
                   currentUserId={user.id}
                   onMarkAllAsRead={chat.markAllAsRead}
+                  overrideHeights={true}
                 />
               </div>
             </>
@@ -224,6 +244,22 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
           )}
         </div>
       </div>
+      {showGuide && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-end md:items-center justify-center p-4" role="dialog" aria-label="Chat guide">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md md:max-w-lg p-5">
+            <h3 className="text-slate-900 font-semibold mb-2">About this chat</h3>
+            <p className="text-sm text-slate-700">This channel connects you and the student. Use it to guide, request documents and follow the application progress.</p>
+            <ul className="mt-3 text-sm text-slate-700 list-disc pl-5 space-y-1">
+              <li>Files and images are supported</li>
+              <li>Replies mainly during business hours</li>
+              <li>Conversation history is stored</li>
+            </ul>
+            <div className="mt-4 flex justify-end gap-2">
+              <button onClick={() => setShowGuide(false)} className="px-3 py-1.5 rounded-md bg-[#05294E] text-white hover:bg-[#041f3f] text-sm">Got it</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

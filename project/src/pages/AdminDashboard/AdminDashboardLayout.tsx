@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import AdminStudentChatNotifications from '../../components/AdminStudentChatNotifications';
+import { useUnreadMessagesCount } from '../../hooks/useUnreadMessagesCount';
 
 interface AdminDashboardLayoutProps {
   user: any;
@@ -42,11 +43,11 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
   const { logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const { unreadCount } = useUnreadMessagesCount();
   
   const getActiveTab = () => {
     const path = location.pathname;
     if (path.includes('/admin/dashboard/students')) return 'users';
-    if (path.includes('/application-monitoring')) return 'application-monitoring';
     if (path.includes('/universities')) return 'universities';
     if (path.includes('/users')) return 'users';
     if (path.includes('/scholarships')) return 'scholarships';
@@ -55,7 +56,6 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
     if (path.includes('/affiliate-management')) return 'affiliate-management';
     if (path.includes('/matricula-rewards')) return 'matricula-rewards';
     if (path.includes('/financial-analytics')) return 'financial-analytics';
-    if (path.includes('/terms')) return 'terms';
     if (path.includes('/settings')) return 'settings';
     return 'overview';
   };
@@ -100,15 +100,13 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
 
   const sidebarItems = [
     { id: 'overview', label: 'Overview', icon: BarChart3, path: '/admin/dashboard', badge: null },
-    { id: 'universities', label: 'Universities', icon: Building, path: '/admin/dashboard/universities', badge: null },
     { id: 'users', label: 'Users', icon: Users, path: '/admin/dashboard/users', badge: null },
     { id: 'scholarships', label: 'Scholarships', icon: Award, path: '/admin/dashboard/scholarships', badge: null },
+    { id: 'universities', label: 'Universities', icon: Building, path: '/admin/dashboard/universities', badge: null },
     { id: 'payments', label: 'Payment Management', icon: CreditCard, path: '/admin/dashboard/payments', badge: null },
     { id: 'financial-analytics', label: 'Financial Analytics', icon: BarChart3, path: '/admin/dashboard/financial-analytics', badge: null },
     { id: 'affiliate-management', label: 'Affiliate Management', icon: Users, path: '/admin/dashboard/affiliate-management', badge: null },
-    { id: 'application-monitoring', label: 'Application Monitoring', icon: Activity, path: '/admin/dashboard/application-monitoring', badge: null },
     { id: 'matricula-rewards', label: 'Matricula Rewards', icon: Award, path: '/admin/dashboard/matricula-rewards', badge: null },
-    { id: 'terms', label: 'Terms Management', icon: FileCheck, path: '/admin/dashboard/terms', badge: null },
     { id: 'settings', label: 'Content Management', icon: Settings, path: '/admin/dashboard/settings', badge: null }
   ];
 
@@ -174,7 +172,12 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
                   }`}
                 >
                   <div className="flex items-center space-x-3">
-                    <Icon className={`h-5 w-5 ${isActive ? 'text-white' : 'text-slate-500'}`} />
+                    <div className="relative">
+                      <Icon className={`h-5 w-5 ${isActive ? 'text-white' : 'text-slate-500'}`} />
+                      {item.id === 'users' && unreadCount > 0 && (
+                        <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
+                      )}
+                    </div>
                     <span className="text-sm">{item.label}</span>
                   </div>
                   {item.badge && (
@@ -228,22 +231,26 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
               
               <div className="hidden md:block">
                 <h1 className="text-2xl font-bold text-slate-900">
-                  {activeTab === 'overview'}
-                  {activeTab === 'universities'}
-                  {activeTab === 'users'}
-                  {activeTab === 'scholarships'}
-                  {activeTab === 'financial-analytics'}
-                  {activeTab === 'terms'}
-                  {activeTab === 'settings'}
+                  {activeTab === 'overview' && 'Dashboard Overview'}
+                  {activeTab === 'universities' && 'Universities'}
+                  {activeTab === 'users' && 'Users'}
+                  {activeTab === 'scholarships' && 'Scholarships'}
+                  {activeTab === 'payments' && 'Payment Management'}
+                  {activeTab === 'financial-analytics' && 'Financial Analytics'}
+                  {activeTab === 'affiliate-management' && 'Affiliate Management'}
+                  {activeTab === 'matricula-rewards' && 'Matricula Rewards'}
+                  {activeTab === 'settings' && 'Content Management'}
                 </h1>
                 <p className="text-slate-600">
-                  {activeTab === 'overview'}
-                  {activeTab === 'universities'}
-                  {activeTab === 'users'}
-                  {activeTab === 'scholarships'}
-                  {activeTab === 'financial-analytics'}
-                  {activeTab === 'terms'}
-                  {activeTab === 'settings'}
+                  {activeTab === 'overview' && 'System overview and key metrics'}
+                  {activeTab === 'universities' && 'Manage university partnerships'}
+                  {activeTab === 'users' && 'Manage student and user accounts'}
+                  {activeTab === 'scholarships' && 'Manage scholarship programs'}
+                  {activeTab === 'payments' && 'Payment processing and management'}
+                  {activeTab === 'financial-analytics' && 'Financial reports and analytics'}
+                  {activeTab === 'affiliate-management' && 'Affiliate partner management'}
+                  {activeTab === 'matricula-rewards' && 'Reward system management'}
+                  {activeTab === 'settings' && 'Content and system settings'}
                 </p>
               </div>
             </div>

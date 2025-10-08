@@ -32,6 +32,10 @@ interface ApplicationChatProps {
   messageContainerClassName?: string;
   onMarkAllAsRead?: () => void;
   otherPartyLabel?: string; // Label for the other party (e.g., "University Staff", "Student", "Admin")
+  hideBubbleHeader?: boolean; // Hide avatar/name/time header on each bubble (used for admin)
+  overrideHeights?: boolean; // If true, do not apply default min/max heights to message container
+  className?: string; // Wrapper className for the entire chat component
+  inputPlaceholder?: string; // i18n placeholder for the input
 }
 
 interface I20ControlFeeCardProps {
@@ -135,6 +139,10 @@ const ApplicationChat: React.FC<ApplicationChatProps & {
   messageContainerClassName,
   onMarkAllAsRead: _onMarkAllAsRead,
   otherPartyLabel = 'University Staff', // Default para manter compatibilidade
+  hideBubbleHeader = false,
+  overrideHeights = false,
+  className = '',
+  inputPlaceholder = 'Type your message...'
 }) => {
   const [text, setText] = useState('');
   const [file, setFile] = useState<File | null>(null);
@@ -272,7 +280,7 @@ const ApplicationChat: React.FC<ApplicationChatProps & {
   // Count unread messages (removed unused variable)
 
   return (
-    <>
+    <div className={`flex flex-col ${className}`}>
       {i20ControlFee && (
         <I20ControlFeeCard
           hasPaid={i20ControlFee.hasPaid}
@@ -288,8 +296,8 @@ const ApplicationChat: React.FC<ApplicationChatProps & {
       <div 
         ref={messagesContainerRef}
         className={`flex-1 overflow-y-auto p-4 bg-gradient-to-br from-gray-50 to-white flex flex-col gap-3 ${messageContainerClassName || ''}`}
-        style={{ 
-          minHeight: '400px', 
+        style={overrideHeights ? { scrollbarWidth: 'thin', scrollbarColor: '#e5e7eb transparent' } : { 
+          minHeight: '400px',
           maxHeight: '75vh',
           scrollbarWidth: 'thin',
           scrollbarColor: '#e5e7eb transparent'
@@ -324,31 +332,33 @@ const ApplicationChat: React.FC<ApplicationChatProps & {
                   ? 'bg-[#05294E] text-white shadow-[#05294E]/20' 
                   : 'bg-white text-gray-800 border-gray-200 shadow-gray-100'
               } transition-all duration-300 hover:shadow-xl`}>
-                <div className="flex items-center gap-2 mb-2">
-                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
-                    msg.isOwn 
-                      ? 'bg-white/20 text-white' 
-                      : 'bg-[#05294E] text-white'
-                  }`}>
-                    {msg.isOwn ? 'Y' : 'U'}
-                  </div>
-                  <span className="font-semibold text-xs truncate flex-1">
-                    {msg.isOwn ? 'You' : otherPartyLabel}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    {msg.editedAt && (
-                      <span className="text-xs opacity-60 italic">
-                        (edited)
-                      </span>
-                    )}
-                    <span className="text-xs opacity-70 flex-shrink-0">
-                      {new Date(msg.sentAt).toLocaleTimeString('en-US', { 
-                        hour: '2-digit', 
-                        minute: '2-digit' 
-                      })}
+                {!hideBubbleHeader && (
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
+                      msg.isOwn 
+                        ? 'bg-white/20 text-white' 
+                        : 'bg-[#05294E] text-white'
+                    }`}>
+                      {msg.isOwn ? 'Y' : 'U'}
+                    </div>
+                    <span className="font-semibold text-xs truncate flex-1">
+                      {msg.isOwn ? 'You' : otherPartyLabel}
                     </span>
+                    <div className="flex items-center gap-2">
+                      {msg.editedAt && (
+                        <span className="text-xs opacity-60 italic">
+                          (edited)
+                        </span>
+                      )}
+                      <span className="text-xs opacity-70 flex-shrink-0">
+                        {new Date(msg.sentAt).toLocaleTimeString('en-US', { 
+                          hour: '2-digit', 
+                          minute: '2-digit' 
+                        })}
+                      </span>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 
                 {msg.attachments && msg.attachments.length > 0 && (
@@ -527,7 +537,7 @@ const ApplicationChat: React.FC<ApplicationChatProps & {
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Type your message..."
+                placeholder={inputPlaceholder}
                 disabled={loading || isSending}
                 maxLength={1000}
                 className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-gray-50 text-gray-800 text-sm focus:outline-none focus:border-[#05294E] focus:bg-white transition-all duration-300 disabled:opacity-50 group-hover:border-gray-300 group-hover:bg-white"
@@ -570,7 +580,7 @@ const ApplicationChat: React.FC<ApplicationChatProps & {
       {selectedImage && (
         <ImagePreviewModal imageUrl={selectedImage} onClose={() => setSelectedImage(null)} />
       )}
-
+      
       {/* Estilos CSS para animações */}
       <style dangerouslySetInnerHTML={{
         __html: `
@@ -653,7 +663,7 @@ const ApplicationChat: React.FC<ApplicationChatProps & {
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 };
 

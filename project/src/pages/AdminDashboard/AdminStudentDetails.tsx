@@ -1591,7 +1591,7 @@ const AdminStudentDetails: React.FC = () => {
       }
 
       // Upload do anexo (opcional)
-      let attachment_url = '';
+      let attachment_url: string | null = null;
       if (newDocumentRequest.attachment) {
         const sanitized = sanitizeFileName(newDocumentRequest.attachment.name);
         const storagePath = `individual/${Date.now()}_${sanitized}`;
@@ -1695,7 +1695,7 @@ const AdminStudentDetails: React.FC = () => {
               title: 'New document request',
               message: `A new document request was created: ${newDocumentRequest.title}.`,
               type: 'document_request_created',
-              link: '/student/documents'
+              link: `/student/dashboard/application/${targetApp.id}/chat?tab=documents`
             })
           });
         }
