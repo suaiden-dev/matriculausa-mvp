@@ -10,6 +10,7 @@ interface DocumentsViewProps {
   onDownloadDocument: (doc: any) => void;
   onUploadDocument?: (requestId: string, file: File) => void;
   onApproveDocument?: (uploadId: string) => void;
+  onEditTemplate?: (requestId: string, currentTemplate: string | null) => void;
   isAdmin?: boolean;
   uploadingStates?: {[key: string]: boolean};
   approvingStates?: {[key: string]: boolean};
@@ -24,6 +25,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
   onDownloadDocument,
   onUploadDocument,
   onApproveDocument,
+  onEditTemplate,
   isAdmin = false,
   uploadingStates = {},
   approvingStates = {}
@@ -484,8 +486,8 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                         </p>
                       )}
                       
-                      {request.attachment_url && (
-                        <div className="mt-3">
+                      {request.attachment_url ? (
+                        <div className="mt-3 flex flex-wrap gap-2">
                           <button
                             onClick={() => onViewDocument({ file_url: request.attachment_url, type: 'template' })}
                             className="bg-[#05294E] hover:bg-[#041f38] text-white px-4 py-2 rounded-xl font-medium transition-colors shadow-sm flex items-center justify-center space-x-2 w-full sm:w-auto"
@@ -495,6 +497,29 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                               <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                             </svg>
                             <span>View Template</span>
+                          </button>
+                          {isAdmin && onEditTemplate && (
+                            <button
+                              onClick={() => onEditTemplate(request.id, request.attachment_url)}
+                              className="bg-blue-50 hover:bg-blue-100 text-blue-700 px-4 py-2 rounded-xl font-medium transition-colors shadow-sm flex items-center justify-center space-x-2 w-full sm:w-auto"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                              <span>Edit Template</span>
+                            </button>
+                          )}
+                        </div>
+                      ) : isAdmin && onEditTemplate && (
+                        <div className="mt-3">
+                          <button
+                            onClick={() => onEditTemplate(request.id, null)}
+                            className="bg-blue-50 hover:bg-blue-100 text-blue-700 px-4 py-2 rounded-xl font-medium transition-colors shadow-sm flex items-center justify-center space-x-2 w-full sm:w-auto"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                            </svg>
+                            <span>Add Template</span>
                           </button>
                         </div>
                       )}
