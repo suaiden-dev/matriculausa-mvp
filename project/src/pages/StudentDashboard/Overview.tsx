@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
+import { useDynamicFees } from '../../hooks/useDynamicFees';
 import { StripeCheckout } from '../../components/StripeCheckout';
 import { useAuth } from '../../hooks/useAuth';
 import { useReferralCode } from '../../hooks/useReferralCode';
@@ -46,6 +47,7 @@ const Overview: React.FC<OverviewProps> = ({
   const { user, userProfile } = useAuth();
   const { activeDiscount } = useReferralCode();
   const { getFeeAmount, userFeeOverrides } = useFeeConfig(user?.id);
+  const { selectionProcessFee, scholarshipFee, i20ControlFee, selectionProcessFeeAmount, scholarshipFeeAmount, i20ControlFeeAmount } = useDynamicFees();
   const [visibleApplications, setVisibleApplications] = useState(5); // Mostrar 5 inicialmente
   const [feesLoading, setFeesLoading] = useState(true);
   
@@ -123,10 +125,10 @@ const Overview: React.FC<OverviewProps> = ({
   const hasApplicationFeePaid = recentApplications.some(app => app.is_application_fee_paid);
   const hasScholarshipFeePaid = recentApplications.some(app => app.is_scholarship_fee_paid);
 
-  // Base fee amounts with user overrides
-  const selectionBase = Number(getFeeAmount('selection_process')) || 0;
-  const scholarshipBase = Number(getFeeAmount('scholarship_fee')) || 0;
-  const i20Base = Number(getFeeAmount('i20_control_fee')) || 0;
+  // Base fee amounts with user overrides - usar valores do useDynamicFees
+  const selectionBase = selectionProcessFeeAmount;
+  const scholarshipBase = scholarshipFeeAmount;
+  const i20Base = i20ControlFeeAmount;
 
   // Dependents impact: $150 por dependente somente no Selection Process
   // APENAS se não há override personalizado (override já inclui dependentes se necessário)

@@ -139,8 +139,8 @@ const Universities: React.FC = () => {
     );
   }
   
-  // Check if user needs to pay selection process fee (only for students)
-  if (user && user.role === 'student' && (!isAuthenticated || (isAuthenticated && userProfile && !userProfile.has_paid_selection_process_fee))) {
+  // Check if user needs to pay selection process fee (only for authenticated students)
+  if (isAuthenticated && user && user.role === 'student' && userProfile && !userProfile.has_paid_selection_process_fee) {
     return <PaymentRequiredBlocker pageType="universities" />;
   }
 

@@ -50,6 +50,8 @@ import EB3JobsLanding from './pages/EB3JobsLanding';
 
 // Componente interno que usa o hook dentro do contexto do Router
 const AppContent = () => {
+  console.log('[App] 🔍 AppContent renderizado - Timestamp:', new Date().toISOString());
+  
   // Hook global para capturar códigos de referência em qualquer página
   useReferralCodeCapture();
 
@@ -85,6 +87,7 @@ const AppContent = () => {
           <Route path="/about" element={<About />} />
           <Route path="/login" element={<Auth mode="login" />} />
           <Route path="/register" element={<Auth mode="register" />} />
+          <Route path="/auth" element={<Auth mode="register" />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/admin/register" element={<AdminRegistration />} />
           <Route path="/seller/register" element={<SellerRegistration />} />

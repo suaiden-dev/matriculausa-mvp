@@ -14,6 +14,7 @@ import { supabase } from '../../lib/supabase';
 import { getDocumentStatusDisplay } from '../../utils/documentStatusMapper';
 import DocumentViewerModal from '../../components/DocumentViewerModal';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
+import { useDynamicFeeCalculation, useDynamicFeeCalculationForUser } from '../../hooks/useDynamicFeeCalculation';
 
 interface StudentInfo {
   student_id: string;
@@ -118,9 +119,82 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
   // Hook para configurações dinâmicas de taxas (usando student_id para ver overrides do estudante)
   const { getFeeAmount, formatFeeAmount, hasOverride } = useFeeConfig(studentInfo?.student_id);
   
+  // Hook para valores dinâmicos baseados no sistema do usuário específico
+  const { selectionProcessFee, scholarshipFee, i20ControlFee, isSimplified } = useDynamicFeeCalculationForUser(studentInfo?.student_id || '');
+  
+  // Estados para detecção do sistema do estudante
+  const [studentSystemType, setStudentSystemType] = useState<'legacy' | 'simplified'>('legacy');
+  const [systemLoading, setSystemLoading] = useState(true);
+  
   // Estados para taxas dinâmicas do estudante
   const [studentPackageFees, setStudentPackageFees] = useState<any>(null);
   const [dependents, setDependents] = useState<number>(0);
+
+  // Detectar sistema do estudante
+  useEffect(() => {
+    const detectStudentSystem = async () => {
+      if (!studentInfo?.student_id) {
+        setStudentSystemType('legacy');
+        setSystemLoading(false);
+        return;
+      }
+
+      try {
+        setSystemLoading(true);
+        console.log('🔍 [StudentDetails] Detecting system for student:', studentInfo.student_id);
+        
+        const { data, error } = await supabase
+          .rpc('get_user_system_type', { user_id_param: studentInfo.student_id });
+
+        if (error) {
+          console.error('Error detecting student system type:', error);
+          setStudentSystemType('legacy');
+        } else {
+          console.log('🔍 [StudentDetails] Student system type detected:', data);
+          setStudentSystemType(data as 'legacy' | 'simplified');
+        }
+      } catch (err) {
+        console.error('Error detecting student system type:', err);
+        setStudentSystemType('legacy');
+      } finally {
+        setSystemLoading(false);
+      }
+    };
+
+    detectStudentSystem();
+  }, [studentInfo?.student_id]);
+
+  // Função para obter valores corretos baseados no sistema do estudante
+  const getStudentFees = () => {
+    if (systemLoading) {
+      return {
+        selectionProcessFee: 400,
+        scholarshipFee: 900,
+        i20ControlFee: 900,
+        isSimplified: false
+      };
+    }
+
+    if (studentSystemType === 'simplified') {
+      console.log('🔍 [StudentDetails] Using simplified values for student');
+      return {
+        selectionProcessFee: 350,
+        scholarshipFee: 550,
+        i20ControlFee: 900,
+        isSimplified: true
+      };
+    }
+
+    console.log('🔍 [StudentDetails] Using legacy values for student');
+    return {
+      selectionProcessFee: Number(getFeeAmount('selection_process')) || 400,
+      scholarshipFee: Number(getFeeAmount('scholarship_fee')) || 900,
+      i20ControlFee: Number(getFeeAmount('i20_control_fee')) || 900,
+      isSimplified: false
+    };
+  };
+
+  const studentFees = getStudentFees();
   
   // Estados para edição de Scholarship Range
   const [isEditingPackage, setIsEditingPackage] = useState(false);
@@ -1746,20 +1820,24 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                              {studentInfo?.has_paid_selection_process_fee ? 'Paid' : 'Pending'}
                            </span>
                            <span className="text-xs text-slate-500">
-                             {(() => {
-                               // Se há override, usar valor direto (NÃO incluir dependentes)
-                               // Se não há override, somar dependentes ao valor padrão
-                               const hasCustomOverride = hasOverride('selection_process');
-                               if (hasCustomOverride) {
-                                 // Com override: usar valor exato do override
-                                 return formatFeeAmount(getFeeAmount('selection_process'));
-                               } else {
-                                 // Sem override: valor padrão + dependentes
-                                 const baseFee = Number(getFeeAmount('selection_process'));
-                                 const total = baseFee + (dependents * 150);
-                                 return formatFeeAmount(total);
-                               }
-                             })()}
+                            {(() => {
+                              // Para sistema simplificado, usar valores fixos
+                              if (studentFees.isSimplified) {
+                                return `$${studentFees.selectionProcessFee.toFixed(2)}`;
+                              }
+                              
+                              // Para sistema legacy, usar lógica de overrides
+                              const hasCustomOverride = hasOverride('selection_process');
+                              if (hasCustomOverride) {
+                                // Com override: usar valor exato do override
+                                return formatFeeAmount(getFeeAmount('selection_process'));
+                              } else {
+                                // Sem override: valor padrão + dependentes
+                                const baseFee = Number(getFeeAmount('selection_process'));
+                                const total = baseFee + (dependents * 150);
+                                return formatFeeAmount(total);
+                              }
+                            })()}
                            </span>
                          </div>
                        </div>
@@ -1803,7 +1881,12 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                          </span>
                          <span className="text-xs text-slate-500">
                            {(() => {
-                             // Priorizar override do usuário se existir
+                             // Para sistema simplificado, usar valores fixos
+                             if (studentFees.isSimplified) {
+                               return `$${studentFees.scholarshipFee.toFixed(2)}`;
+                             }
+                             
+                             // Para sistema legacy, usar lógica de overrides
                              if (hasOverride('scholarship_fee')) {
                                return formatFeeAmount(getFeeAmount('scholarship_fee'));
                              }
@@ -1832,6 +1915,12 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                            </span>
                            <span className="text-xs text-slate-500">
                              {(() => {
+                               // Para sistema simplificado, usar valores fixos
+                               if (studentFees.isSimplified) {
+                                 return `$${studentFees.i20ControlFee.toFixed(2)}`;
+                               }
+                               
+                               // Para sistema legacy, usar lógica de overrides
                                // I-20 Control Fee sempre usa override se disponível, senão valor padrão
                                // I-20 nunca soma dependentes
                                return formatFeeAmount(getFeeAmount('i20_control_fee'));

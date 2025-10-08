@@ -159,6 +159,7 @@ export interface UserProfile {
   scholarship_package_id?: string | null; // Package ID for seller students
   seller_referral_code?: string | null; // Referral code from seller
   affiliate_code?: string | null; // Friend referral code
+  system_type?: 'legacy' | 'simplified'; // System type inherited from seller
 
 }
 

@@ -1,19 +1,35 @@
 import { useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
 
 export const useReferralCodeCapture = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  
+  console.log('[useReferralCodeCapture] 🚀 Hook inicializado');
 
   useEffect(() => {
+    console.log('[useReferralCodeCapture] 🔍 Hook executado - pathname:', location.pathname, 'search:', location.search);
+    console.log('[useReferralCodeCapture] 🔍 URL completa:', window.location.href);
+    console.log('[useReferralCodeCapture] 🔍 Timestamp:', new Date().toISOString());
+    
+    // NÃO executar na página de SellerStudentRegistration para evitar conflitos
+    if (location.pathname === '/student/register') {
+      console.log('[useReferralCodeCapture] ⚠️ Página SellerStudentRegistration detectada, não executando hook');
+      return;
+    }
+
     // Captura código de referência da URL em qualquer página
     const params = new URLSearchParams(location.search);
     const refCode = params.get('ref');
     const sellerRegCode = params.get('code'); // Código de registro de seller
+
+    console.log('[useReferralCodeCapture] 🔍 Parâmetros da URL:', { refCode, sellerRegCode, search: location.search });
     
     if (refCode) {
-      console.log('[useReferralCodeCapture] Código de referência detectado na URL:', refCode);
+      console.log('[useReferralCodeCapture] ✅ Código de referência detectado na URL:', refCode);
       
+      // LÓGICA SIMPLES: Igual ao Matricula Rewards
       // Detecta automaticamente o tipo de código baseado no formato
       const isSellerCode = refCode.startsWith('SELLER_') || refCode.length > 8;
       const isMatriculaRewardsCode = refCode.startsWith('MATR') || (refCode.length <= 8 && /^[A-Z0-9]+$/.test(refCode));
@@ -24,23 +40,16 @@ export const useReferralCodeCapture = () => {
         isMatriculaRewardsCode,
         length: refCode.length
       });
-
-      // Se for seller code e estiver na página de auth, redirecionar para página específica
-      if (isSellerCode && (location.pathname === '/auth' || location.pathname === '/register')) {
-        console.log('[useReferralCodeCapture] 🔄 Redirecionando para página de registro específica do seller');
-        navigate(`/student/register?ref=${refCode}`, { replace: true });
-        return;
-      }
       
-              if (isSellerCode) {
-          // Código de seller - salva separadamente
-          const existingSellerCode = localStorage.getItem('pending_seller_referral_code');
-          if (!existingSellerCode || existingSellerCode !== refCode) {
-            localStorage.setItem('pending_seller_referral_code', refCode);
-            // IMPORTANTE: Limpar o código de Matricula Rewards se existir
-            localStorage.removeItem('pending_affiliate_code');
-            console.log('[useReferralCodeCapture] ✅ Código de seller capturado e salvo:', refCode);
-          }
+      if (isSellerCode) {
+        // Código de seller - salva separadamente
+        const existingSellerCode = localStorage.getItem('pending_seller_referral_code');
+        if (!existingSellerCode || existingSellerCode !== refCode) {
+          localStorage.setItem('pending_seller_referral_code', refCode);
+          // IMPORTANTE: Limpar o código de Matricula Rewards se existir
+          localStorage.removeItem('pending_affiliate_code');
+          console.log('[useReferralCodeCapture] ✅ Código de seller capturado e salvo:', refCode);
+        }
       } else if (isMatriculaRewardsCode) {
         // Código de Matricula Rewards - salva no campo original
         const existingCode = localStorage.getItem('pending_affiliate_code');
@@ -72,7 +81,14 @@ export const useReferralCodeCapture = () => {
         console.log('[useReferralCodeCapture] ✅ Código de registro de seller capturado e salvo:', sellerRegCode);
       }
     }
-  }, [location.search]);
+    
+    // Log quando não há códigos de referência
+    if (!refCode && !sellerRegCode) {
+      console.log('[useReferralCodeCapture] ℹ️ Nenhum código de referência encontrado na URL');
+    } else {
+      console.log('[useReferralCodeCapture] ✅ Códigos encontrados - refCode:', refCode, 'sellerRegCode:', sellerRegCode);
+    }
+  }, [location.search, location.pathname]);
 
   return null;
 };
