@@ -320,8 +320,20 @@ const AdminStudentDetails: React.FC = () => {
 
       if (deleteRequestError) throw deleteRequestError;
 
+      // Log da ação de exclusão
+      await logAction(
+        'document_request_deleted',
+        `Document request deleted by admin`,
+        user?.id || '',
+        'admin',
+        {
+          request_id: requestId,
+          deleted_by: user?.email || 'Admin'
+        }
+      );
+
       showToast('Document request deleted successfully!', 'success');
-      
+
       // Recarregar document requests
       await fetchDocumentRequests();
       
@@ -1670,6 +1682,19 @@ const AdminStudentDetails: React.FC = () => {
         .eq('id', editingTemplateRequestId);
 
       if (updateError) throw updateError;
+
+      // Log da ação de edição de template
+      await logAction(
+        'document_request_template_edited',
+        `Document request template updated by admin`,
+        user?.id || '',
+        'admin',
+        {
+          request_id: editingTemplateRequestId,
+          template_url: publicUrl,
+          edited_by: user?.email || 'Admin'
+        }
+      );
 
       // Fechar modal e limpar estados
       setShowEditTemplateModal(false);
