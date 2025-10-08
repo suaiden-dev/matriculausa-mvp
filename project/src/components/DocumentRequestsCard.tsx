@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../lib/supabase';
 import DocumentViewerModal from './DocumentViewerModal';
@@ -22,6 +22,7 @@ interface DocumentRequestUpload {
   uploaded_at: string;
   status: string;
   review_notes?: string;
+  rejection_reason?: string;
 }
 
 interface DocumentRequestsCardProps {
@@ -37,7 +38,6 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
   const { t } = useTranslation();
   
   // Debug: verificar se studentType está chegando corretamente
-  console.log('🔍 [DocumentRequestsCard] studentType received:', studentType);
   const [requests, setRequests] = useState<DocumentRequest[]>([]);
   const [uploads, setUploads] = useState<{ [requestId: string]: DocumentRequestUpload[] }>({});
   const [, setLoading] = useState(true);
@@ -81,8 +81,6 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
   useEffect(() => {
     // Buscar dados da carta de aceite da aplicação
     const fetchAcceptanceLetter = async () => {
-      console.log('=== DEBUG fetchAcceptanceLetter ===');
-      console.log('applicationId:', applicationId);
       
       const { data, error } = await supabase
         .from('scholarship_applications')
@@ -90,15 +88,15 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
         .eq('id', applicationId)
         .maybeSingle();
       
-      console.log('Resultado da busca:', { data, error });
+      // console.log('Resultado da busca:', { data, error });
       
       if (!error && data) {
-        console.log('Acceptance letter encontrada:', data);
+        // console.log('Acceptance letter encontrada:', data);
         setAcceptanceLetter(data);
       } else if (error) {
         console.error('Erro ao buscar acceptance letter:', error);
       } else {
-        console.log('Nenhuma acceptance letter encontrada para applicationId:', applicationId);
+        // console.log('Nenhuma acceptance letter encontrada para applicationId:', applicationId);
       }
     };
     
@@ -108,8 +106,6 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
   useEffect(() => {
     // Buscar dados do transfer form da aplicação
     const fetchTransferForm = async () => {
-      console.log('=== DEBUG fetchTransferForm ===');
-      console.log('applicationId:', applicationId);
       
       const { data, error } = await supabase
         .from('scholarship_applications')
@@ -117,15 +113,15 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
         .eq('id', applicationId)
         .maybeSingle();
       
-      console.log('Resultado da busca transfer form:', { data, error });
+      // console.log('Resultado da busca transfer form:', { data, error });
       
       if (!error && data) {
-        console.log('Transfer form encontrado:', data);
+        // console.log('Transfer form encontrado:', data);
         setTransferForm(data);
       } else if (error) {
         console.error('Erro ao buscar transfer form:', error);
       } else {
-        console.log('Nenhum transfer form encontrado para applicationId:', applicationId);
+        // console.log('Nenhum transfer form encontrado para applicationId:', applicationId);
       }
     };
     
@@ -156,7 +152,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
   }, [isSchool, currentUserId, studentType, studentUserId, applicationId, uploads]);
 
   // 2. Buscar logo da universidade junto com o universityId
-  const fetchRequests = async () => {
+  const fetchRequests = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -271,7 +267,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
       setRequests([]);
       setLoading(false);
     }
-  };
+  }, [applicationId, isSchool, studentType]);
 
   const handleNewRequest = async () => {
     setCreating(true);
@@ -449,7 +445,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
       try {
         if (isResubmission) {
           // Notificação específica para reenvio de documento rejeitado
-          console.log('[REENVIO] Enviando notificação de reenvio de documento rejeitado');
+          // console.log('[REENVIO] Enviando notificação de reenvio de documento rejeitado');
           
           // Buscar dados da aplicação e universidade para notificação
           const { data: requestData, error: requestError } = await supabase
@@ -482,7 +478,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
 
           // Verificar se é um documento global (sem scholarship_application_id)
           if (!requestData.scholarship_application_id) {
-            console.log('[REENVIO] Documento global - usando dados da universidade diretamente');
+            // console.log('[REENVIO] Documento global - usando dados da universidade diretamente');
             
             // Buscar dados da universidade diretamente do document_request
             const { data: globalRequestData, error: globalError } = await supabase
@@ -519,7 +515,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
                   notification_target: 'university'
                 };
 
-                console.log('[REENVIO] Payload para n8n (global):', payload);
+                // console.log('[REENVIO] Payload para n8n (global):', payload);
                 const n8nRes = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
                   method: 'POST',
                   headers: {
@@ -529,7 +525,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
                   body: JSON.stringify(payload),
                 });
                 const n8nText = await n8nRes.text();
-                console.log('[REENVIO] Resposta do n8n (global):', n8nRes.status, n8nText);
+                // console.log('[REENVIO] Resposta do n8n (global):', n8nRes.status, n8nText);
               }
             }
           } else {
@@ -579,7 +575,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
                   notification_target: 'university'
                 };
 
-                console.log('[REENVIO] Payload para n8n:', payload);
+                // console.log('[REENVIO] Payload para n8n:', payload);
                 const n8nRes = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
                   method: 'POST',
                   headers: {
@@ -589,13 +585,13 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
                   body: JSON.stringify(payload),
                 });
                 const n8nText = await n8nRes.text();
-                console.log('[REENVIO] Resposta do n8n:', n8nRes.status, n8nText);
+                // console.log('[REENVIO] Resposta do n8n:', n8nRes.status, n8nText);
               }
             }
           }
         } else {
           // Notificação padrão para novo upload - DIRETO VIA WEBHOOK
-          console.log('[NOVO UPLOAD] Enviando notificação de novo documento via webhook direto');
+          // console.log('[NOVO UPLOAD] Enviando notificação de novo documento via webhook direto');
           
           // Buscar dados básicos do document_request
           const { data: requestData, error: requestError } = await supabase
@@ -634,7 +630,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
 
           // Verificar se é um documento global (sem scholarship_application_id)
           if (!requestData.scholarship_application_id) {
-            console.log('[NOVO UPLOAD] Documento global - usando dados da universidade diretamente');
+            // console.log('[NOVO UPLOAD] Documento global - usando dados da universidade diretamente');
             
             if (requestData?.universities) {
               const university = requestData.universities;
@@ -652,7 +648,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
                   notification_target: 'university'
                 };
 
-                console.log('[NOVO UPLOAD] Payload para n8n (global):', payload);
+                // console.log('[NOVO UPLOAD] Payload para n8n (global):', payload);
                 const n8nRes = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
                   method: 'POST',
                   headers: {
@@ -662,7 +658,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
                   body: JSON.stringify(payload),
                 });
                 const n8nText = await n8nRes.text();
-                console.log('[NOVO UPLOAD] Resposta do n8n (global):', n8nRes.status, n8nText);
+                // console.log('[NOVO UPLOAD] Resposta do n8n (global):', n8nRes.status, n8nText);
               }
             }
           } else {
@@ -705,7 +701,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
                   notification_target: 'university'
                 };
 
-                console.log('[NOVO UPLOAD] Payload para n8n:', payload);
+                // console.log('[NOVO UPLOAD] Payload para n8n:', payload);
                 const n8nRes = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
                   method: 'POST',
                   headers: {
@@ -715,7 +711,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
                   body: JSON.stringify(payload),
                 });
                 const n8nText = await n8nRes.text();
-                console.log('[NOVO UPLOAD] Resposta do n8n:', n8nRes.status, n8nText);
+                // console.log('[NOVO UPLOAD] Resposta do n8n:', n8nRes.status, n8nText);
               }
             }
           }
@@ -1015,6 +1011,14 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
                               </button>
                             </div>
                           </div>
+                          
+                          {/* Show rejection reason if document is rejected */}
+                          {normalizedStatus === 'rejected' && upload.rejection_reason && (
+                            <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                              <p className="text-xs font-medium text-red-600 mb-1">Rejection reason:</p>
+                              <p className="text-sm text-red-700 leading-relaxed">{upload.rejection_reason}</p>
+                            </div>
+                          )}
                         </div>
                       );
                     })
@@ -1100,8 +1104,8 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
                         onClick={async () => {
                           try {
                             setDownloadingAcceptanceLetter(true);
-                            console.log('=== DEBUG Download Acceptance Letter ===');
-                            console.log('File URL:', acceptanceLetter.acceptance_letter_url);
+                            // console.log('=== DEBUG Download Acceptance Letter ===');
+                            // console.log('File URL:', acceptanceLetter.acceptance_letter_url);
                             
                             // Gerar signed URL diretamente
                             const filePath = getRelativePath(acceptanceLetter.acceptance_letter_url);
@@ -1115,7 +1119,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
                               return;
                             }
                             
-                            console.log('Signed URL gerada:', data.signedUrl);
+                            // console.log('Signed URL gerada:', data.signedUrl);
                             
                             // Fazer download
                             const response = await fetch(data.signedUrl);
@@ -1133,7 +1137,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
                             document.body.removeChild(link);
                             URL.revokeObjectURL(url);
                             
-                            console.log('Download concluído com sucesso');
+                            // console.log('Download concluído com sucesso');
                           } catch (error) {
                             console.error('Erro no download:', error);
                             alert(t('studentDashboard.documentRequests.forms.errorDownloadingDocument'));
@@ -1157,8 +1161,8 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
                         onClick={async () => {
                           try {
                             setViewingAcceptanceLetter(true);
-                            console.log('=== DEBUG View Acceptance Letter ===');
-                            console.log('File URL:', acceptanceLetter.acceptance_letter_url);
+                            // console.log('=== DEBUG View Acceptance Letter ===');
+                            // console.log('File URL:', acceptanceLetter.acceptance_letter_url);
                             
                             // Gerar signed URL diretamente
                             const filePath = getRelativePath(acceptanceLetter.acceptance_letter_url);
@@ -1172,7 +1176,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
                               return;
                             }
                             
-                            console.log('Signed URL gerada para visualização:', data.signedUrl);
+                            // console.log('Signed URL gerada para visualização:', data.signedUrl);
                             
                             // Abrir no modal ao invés de nova aba
                             setAcceptanceLetterPreviewUrl(data.signedUrl);
