@@ -250,7 +250,7 @@ const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({ documentUrl, 
       return (
         <div className="flex items-center justify-center min-h-[400px] min-w-[400px]">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          <div className="ml-3 text-gray-600">Carregando documento...</div>
+          <div className="ml-3 text-gray-600">Loading document...</div>
         </div>
       );
     }
@@ -258,7 +258,7 @@ const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({ documentUrl, 
     if (error) {
       return (
         <div className="flex items-center justify-center min-h-[400px] min-w-[400px] flex-col">
-          <div className="text-red-500 text-lg mb-4">⚠️ Erro ao carregar documento</div>
+          <div className="text-red-500 text-lg mb-4">⚠️ Error loading document</div>
           <div className="text-gray-600 text-center mb-4">{error}</div>
           <button
             onClick={onClose}
@@ -306,17 +306,17 @@ const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({ documentUrl, 
     // Para tipos desconhecidos, oferece apenas download
     return (
       <div className="flex items-center justify-center min-h-[400px] min-w-[400px] flex-col">
-        <div className="text-gray-700 text-lg mb-4">📄 Documento disponível</div>
+        <div className="text-gray-700 text-lg mb-4">📄 Document available</div>
         <div className="text-gray-600 text-center mb-4">
-          Este tipo de documento não pode ser visualizado no navegador.
+          This document type cannot be viewed in the browser.
           <br />
-          Clique em "Download" para baixar e abrir em um aplicativo apropriado.
+          Click "Download" to download and open in an appropriate application.
         </div>
         <button
           onClick={handleDownload}
           className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
         >
-          Download Documento
+          Download Document
         </button>
       </div>
     );
@@ -343,7 +343,7 @@ const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({ documentUrl, 
         {/* Header com título e botões */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50">
           <h3 className="text-lg font-semibold text-gray-800 truncate">
-            {fileName || 'Documento'}
+            {fileName || 'Document'}
           </h3>
           <div className="flex gap-2">
             {!error && !loading && (

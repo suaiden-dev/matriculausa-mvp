@@ -1184,7 +1184,7 @@ const SelectionProcess: React.FC = () => {
 
         if (userData?.email) {
           const webhookPayload = {
-            tipo_notf: "Documento rejeitado",
+            tipo_notf: "Changes Requested",
             email_aluno: userData.email,
             nome_aluno: selectedStudent?.user_profiles.full_name,
             email_universidade: user?.email,
@@ -1224,7 +1224,7 @@ const SelectionProcess: React.FC = () => {
                 reason: reason 
               }),
               type: 'document_rejected',
-              link: '/student/dashboard',
+              link: '/student/dashboard/applications',
             };
             const response = await fetch(`${FUNCTIONS_URL}/create-student-notification`, {
               method: 'POST',

@@ -944,7 +944,7 @@ const StudentDetails: React.FC = () => {
         if (userData?.email) {
           const documentLabel = DOCUMENTS_INFO.find(doc => doc.key === type)?.label || type;
           const webhookPayload = {
-            tipo_notf: "Documento rejeitado",
+            tipo_notf: "Changes Requested",
             email_aluno: userData.email,
             nome_aluno: application.user_profiles.full_name || 'Student',
             email_universidade: user?.email,
@@ -984,7 +984,7 @@ const StudentDetails: React.FC = () => {
                   title: 'Document rejected',
                   message: `Your ${documentLabel} document was rejected. Reason: ${reason}`,
                   type: 'document_rejected',
-                  link: '/student/dashboard',
+                  link: '/student/dashboard/applications',
                 }),
               });
             }
@@ -1082,7 +1082,7 @@ const StudentDetails: React.FC = () => {
 
         if (userData?.email) {
           const webhookPayload = {
-            tipo_notf: "Documento rejeitado",
+            tipo_notf: "Changes Requested",
             email_aluno: userData.email,
             nome_aluno: application?.user_profiles.full_name,
             email_universidade: user?.email,
@@ -1117,7 +1117,7 @@ const StudentDetails: React.FC = () => {
               title: 'Document rejected',
               message: `Your document ${uploadData.file_url?.split('/').pop()} was rejected. Reason: ${reason}`,
               type: 'document_rejected',
-              link: '/student/dashboard',
+              link: '/student/dashboard/applications',
             };
             
             const response = await fetch(`${FUNCTIONS_URL}/create-student-notification`, {
@@ -1930,7 +1930,10 @@ const StudentDetails: React.FC = () => {
                                 {/* Botões posicionados abaixo das informações */}
                                 <div className="flex items-center space-x-2 mt-3">
                                   {/* Botões de ação para documentos Under Review */}
-                                  {d?.file_url && status !== 'approved' && application.status !== 'enrolled' && application.acceptance_letter_status !== 'approved' && (
+                                  {d?.file_url && status !== 'approved' && (
+                                    status !== 'rejected' || 
+                                    (status === 'rejected' && d.uploaded_at && d.rejected_at && new Date(d.uploaded_at) > new Date(d.rejected_at))
+                                  ) && application.status !== 'enrolled' && application.acceptance_letter_status !== 'approved' && (
                                     <div className="flex items-center space-x-2 mr-3">
                                       <button
                                         onClick={() => d && approveDoc(d.type)}
