@@ -126,6 +126,7 @@ const AdminStudentDetails: React.FC = () => {
   const [uploadingDocumentRequest, setUploadingDocumentRequest] = useState<{[key: string]: boolean}>({});
   const [approvingDocumentRequest, setApprovingDocumentRequest] = useState<{[key: string]: boolean}>({});
   const [rejectingDocumentRequest, setRejectingDocumentRequest] = useState<{[key: string]: boolean}>({});
+  const [deletingDocumentRequest, setDeletingDocumentRequest] = useState<{[key: string]: boolean}>({});
   // Estado para modal de visualização de documentos
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   
@@ -294,6 +295,41 @@ const AdminStudentDetails: React.FC = () => {
       console.error('Error loading term acceptances:', error);
     } finally {
       setLoadingTermAcceptances(false);
+    }
+  };
+
+  const handleDeleteDocumentRequest = async (requestId: string) => {
+    if (!student) return;
+    
+    try {
+      setDeletingDocumentRequest(prev => ({ ...prev, [`delete-${requestId}`]: true }));
+      
+      // Primeiro, deletar todos os uploads relacionados ao request
+      const { error: deleteUploadsError } = await supabase
+        .from('document_request_uploads')
+        .delete()
+        .eq('document_request_id', requestId);
+
+      if (deleteUploadsError) throw deleteUploadsError;
+
+      // Depois, deletar o document request
+      const { error: deleteRequestError } = await supabase
+        .from('document_requests')
+        .delete()
+        .eq('id', requestId);
+
+      if (deleteRequestError) throw deleteRequestError;
+
+      showToast('Document request deleted successfully!', 'success');
+      
+      // Recarregar document requests
+      await fetchDocumentRequests();
+      
+    } catch (error: any) {
+      console.error('Error deleting document request:', error);
+      showToast(`Failed to delete document request: ${error.message}`, 'error');
+    } finally {
+      setDeletingDocumentRequest(prev => ({ ...prev, [`delete-${requestId}`]: false }));
     }
   };
 
@@ -4240,10 +4276,12 @@ const AdminStudentDetails: React.FC = () => {
               onApproveDocument={handleApproveDocumentRequest}
               onRejectDocument={handleRejectDocumentRequest}
               onEditTemplate={handleEditTemplate}
+              onDeleteDocumentRequest={handleDeleteDocumentRequest}
               isAdmin={isPlatformAdmin}
               uploadingStates={uploadingDocumentRequest}
               approvingStates={approvingDocumentRequest}
               rejectingStates={rejectingDocumentRequest}
+              deletingStates={deletingDocumentRequest}
             />
           )}
         </div>
