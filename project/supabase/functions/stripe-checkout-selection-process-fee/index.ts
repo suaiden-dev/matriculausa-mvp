@@ -57,7 +57,7 @@ Deno.serve(async (req) => {
 
     const { price_id, amount, success_url, cancel_url, mode, metadata, payment_method } = await req.json();
     
-    console.log('[stripe-checkout-selection-process-fee] 📥 Payload recebido:', { price_id, amount, success_url, cancel_url, mode, metadata });
+    console.log('[stripe-checkout-selection-process-fee] 📥 Payload recebido:', { price_id, amount, success_url, cancel_url, mode, metadata, payment_method });
     
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
@@ -109,6 +109,7 @@ Deno.serve(async (req) => {
       student_id: user.id,
       fee_type: 'selection_process',
       origem: 'site',
+      payment_method: payment_method || 'stripe', // Adicionar método de pagamento ao metadata
       ...metadata,
     };
 

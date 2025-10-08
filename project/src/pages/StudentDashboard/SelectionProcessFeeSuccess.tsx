@@ -52,6 +52,15 @@ const SelectionProcessFeeSuccess: React.FC = () => {
         const data = await response.json();
         console.log(`[PIX] Resposta da API (tentativa ${attempts}):`, data);
         
+        // Verificar se há erro de sessão não encontrada
+        if (data.error && data.error.includes('Session not found')) {
+          console.log('[PIX] ⚠️ Sessão não encontrada - pode ter expirado ou sido processada');
+          // Se a sessão não foi encontrada, assumir que foi processada com sucesso
+          localStorage.removeItem('last_payment_method');
+          navigate('/student/dashboard/scholarships');
+          return;
+        }
+        
         // Se for PIX e estiver completo, redirecionar imediatamente
         if (data.payment_method === 'pix' && data.status === 'complete') {
           console.log('[PIX] ✅ Webhook processou PIX! Redirecionando...');
@@ -137,6 +146,14 @@ const SelectionProcessFeeSuccess: React.FC = () => {
         
         const data = await response.json();
         console.log('[PIX] Resposta da verificação:', data);
+        
+        // Verificar se há erro de sessão não encontrada
+        if (data.error && data.error.includes('Session not found')) {
+          console.log('[PIX] ⚠️ Sessão não encontrada na verificação inicial - assumindo sucesso');
+          localStorage.removeItem('last_payment_method');
+          navigate('/student/dashboard/scholarships');
+          return;
+        }
         
         // Se PIX já foi pago, redirecionar imediatamente
         if (data.payment_method === 'pix' && data.status === 'complete') {

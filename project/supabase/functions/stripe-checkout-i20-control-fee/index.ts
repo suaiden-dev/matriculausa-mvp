@@ -107,8 +107,9 @@ Deno.serve(async (req) => {
     const sessionMetadata = {
       student_id: user.id,
       fee_type: 'i20_control_fee',
+      payment_method: payment_method || 'stripe', // Adicionar método de pagamento
       ...metadata,
-      ...(payment_method === 'pix' ? { payment_method: 'pix', exchange_rate: exchangeRate.toString() } : {})
+      ...(payment_method === 'pix' ? { exchange_rate: exchangeRate.toString() } : {})
     };
 
     // Adicionar informações do pacote como strings no metadata

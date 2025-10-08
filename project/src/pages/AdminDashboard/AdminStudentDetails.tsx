@@ -3371,14 +3371,14 @@ const AdminStudentDetails: React.FC = () => {
                                         )}
                                         {isPlatformAdmin && ['passport','funds_proof','diploma'].includes(doc.type) && (doc.status || '').toLowerCase() !== 'approved' && (
                                           <>
-                                            <button
-                                              onClick={() => handleApproveDocument(app.id, doc.type)}
-                                              disabled={!!approvingDocs[`${app.id}:${doc.type}`]}
-                                              className={`text-xs font-medium flex items-center space-x-1 transition-colors px-2 py-1 rounded-md border ${approvingDocs[`${app.id}:${doc.type}`] ? 'text-slate-400 border-slate-200 bg-slate-50' : 'text-green-700 border-green-300 hover:bg-green-50'}`}
-                                            >
-                                              <CheckCircle className="w-3 h-3" />
-                                              <span className="hidden md:inline">Approve</span>
-                                            </button>
+                                          <button
+                                            onClick={() => handleApproveDocument(app.id, doc.type)}
+                                            disabled={!!approvingDocs[`${app.id}:${doc.type}`]}
+                                            className={`text-xs font-medium flex items-center space-x-1 transition-colors px-2 py-1 rounded-md border ${approvingDocs[`${app.id}:${doc.type}`] ? 'text-slate-400 border-slate-200 bg-slate-50' : 'text-green-700 border-green-300 hover:bg-green-50'}`}
+                                          >
+                                            <CheckCircle className="w-3 h-3" />
+                                            <span className="hidden md:inline">Approve</span>
+                                          </button>
                                             <button
                                               onClick={() => openRejectDocModal(app.id, doc.type)}
                                               disabled={!!rejectingDocs[`${app.id}:${doc.type}`]}
