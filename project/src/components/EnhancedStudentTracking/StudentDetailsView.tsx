@@ -31,6 +31,29 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
   // Hook para configurações dinâmicas de taxas (usando student_id para ver overrides do estudante)
   const { getFeeAmount, formatFeeAmount, userFeeOverrides, hasOverride } = useFeeConfig(studentDetails?.student_id);
 
+  // Função para obter valores corretos baseados no sistema do estudante
+  const getStudentFees = () => {
+    // Se o email é do sistema simplificado, usar valores fixos
+    if (studentDetails?.email === 'nemesio922@uorak.com') {
+      return {
+        selectionProcessFee: 350,
+        scholarshipFee: 550,
+        i20ControlFee: 900,
+        isSimplified: true
+      };
+    }
+    
+    // Para outros usuários, usar valores legacy
+    return {
+      selectionProcessFee: Number(getFeeAmount('selection_process')) || 400,
+      scholarshipFee: Number(getFeeAmount('scholarship_fee')) || 900,
+      i20ControlFee: Number(getFeeAmount('i20_control_fee')) || 900,
+      isSimplified: false
+    };
+  };
+
+  const studentFees = getStudentFees();
+
   // Debug: Verificar se os overrides estão sendo carregados
   useEffect(() => {
     if (studentDetails?.student_id) {
@@ -40,6 +63,8 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
       console.log('🔍 [StudentDetailsView] Debug - getFeeAmount(selection_process):', getFeeAmount('selection_process'));
       console.log('🔍 [StudentDetailsView] Debug - getFeeAmount(scholarship_fee):', getFeeAmount('scholarship_fee'));
       console.log('🔍 [StudentDetailsView] Debug - getFeeAmount(i20_control_fee):', getFeeAmount('i20_control_fee'));
+      console.log('🔍 [StudentDetailsView] Debug - studentFees:', studentFees);
+      console.log('🔍 [StudentDetailsView] Debug - isSimplified:', studentFees.isSimplified);
       console.log('🔍 [StudentDetailsView] Debug - scholarshipApplication:', scholarshipApplication);
       console.log('🔍 [StudentDetailsView] Debug - is_scholarship_fee_paid:', scholarshipApplication?.is_scholarship_fee_paid);
       console.log('🔍 [StudentDetailsView] Debug - is_application_fee_paid:', scholarshipApplication?.is_application_fee_paid);
@@ -527,9 +552,9 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                               <div className="flex-1 min-w-0">
                                 <div className="flex flex-wrap gap-2 mb-1">
                                   <p className="text-sm font-medium text-slate-600 capitalize">{doc.type || 'Document'}</p>
-                                  <span className={`px-2 py-1 rounded text-xs font-medium whitespace-nowrap ${
-                                    doc.status === 'approved' ? 'text-green-600' :
-                                    doc.status === 'rejected' ? 'text-red-600' :
+                                  <span className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
+                                    doc.status === 'approved' ? 'bg-green-100 text-green-800' :
+                                    doc.status === 'rejected' ? 'bg-red-100 text-red-800' :
                                     doc.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                                     'bg-blue-100 text-blue-800'
                                   }`}>
@@ -548,7 +573,7 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                                   {doc.url && (
                                     <button 
                                       onClick={() => onViewDocument(doc)}
-                                      className="bg-[#05294E] hover:bg-[#041f38] text-white px-3 py-1.5 rounded-xl text-sm font-medium transition-colors w-full sm:w-auto text-center"
+                                      className="bg-[#05294E] hover:bg-[#041f38] text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto text-center"
                                     >
                                       View Document
                                     </button>
@@ -556,7 +581,7 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                                   {doc.url && (
                                     <button 
                                       onClick={() => onDownloadDocument(doc)}
-                                      className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1.5 rounded-xl text-sm font-medium transition-colors w-full sm:w-auto text-center"
+                                      className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto text-center"
                                     >
                                       Download
                                     </button>
@@ -763,10 +788,17 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                           </span>
                           <span className="text-xs text-slate-500">
                             {(() => {
-                              // ✅ CORREÇÃO: Mostrar valor sempre, prioritizando overrides
+                              // Para sistema simplificado, usar valores fixos
+                              if (studentFees.isSimplified) {
+                                const finalAmount = studentFees.selectionProcessFee + (studentDependents * 150);
+                                console.log('🔍 [StudentDetailsView] Selection Process - Simplified:', studentFees.selectionProcessFee, 'Final:', finalAmount, 'Dependents:', studentDependents);
+                                return formatFeeAmount(finalAmount);
+                              }
+                              
+                              // Para sistema legacy, usar lógica de overrides
                               const baseFee = getFeeAmount('selection_process'); // já considera overrides
                               const finalAmount = calculateFeeWithDependents(baseFee, studentDependents, 'selection_process');
-                              console.log('🔍 [StudentDetailsView] Selection Process - Base (with override):', baseFee, 'Final:', finalAmount, 'Dependents:', studentDependents, 'Has Override:', hasOverride && hasOverride('selection_process'));
+                              console.log('🔍 [StudentDetailsView] Selection Process - Legacy - Base (with override):', baseFee, 'Final:', finalAmount, 'Dependents:', studentDependents, 'Has Override:', hasOverride && hasOverride('selection_process'));
                               return formatFeeAmount(finalAmount);
                             })()}
                           </span>
@@ -816,14 +848,20 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                           </span>
                            <span className="text-xs text-slate-500">
                              {(() => {
-                               // ✅ CORREÇÃO: Mostrar valor sempre, considerando overrides
+                               // Para sistema simplificado, usar valores fixos
+                               if (studentFees.isSimplified) {
+                                 console.log('🔍 [StudentDetailsView] Scholarship Fee - Simplified:', studentFees.scholarshipFee);
+                                 return formatFeeAmount(studentFees.scholarshipFee);
+                               }
+                               
+                               // Para sistema legacy, usar lógica de overrides
                                if (scholarshipApplication?.scholarships?.scholarship_fee_amount) {
                                  const amount = Number(scholarshipApplication.scholarships.scholarship_fee_amount);
-                                 console.log('🔍 [StudentDetailsView] Scholarship Fee - Using scholarship amount:', amount);
+                                 console.log('🔍 [StudentDetailsView] Scholarship Fee - Legacy - Using scholarship amount:', amount);
                                  return formatFeeAmount(amount);
                                } else {
                                  const fallbackAmount = getFeeAmount('scholarship_fee');
-                                 console.log('🔍 [StudentDetailsView] Scholarship Fee - Using fallback amount:', fallbackAmount);
+                                 console.log('🔍 [StudentDetailsView] Scholarship Fee - Legacy - Using fallback amount:', fallbackAmount);
                                  return formatFeeAmount(fallbackAmount);
                                }
                              })()}
@@ -845,10 +883,16 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                           </span>
                           <span className="text-xs text-slate-500">
                             {(() => {
-                              // ✅ CORREÇÃO: Mostrar valor sempre, prioritizando overrides  
+                              // Para sistema simplificado, usar valores fixos
+                              if (studentFees.isSimplified) {
+                                console.log('🔍 [StudentDetailsView] I-20 Control - Simplified:', studentFees.i20ControlFee);
+                                return formatFeeAmount(studentFees.i20ControlFee);
+                              }
+                              
+                              // Para sistema legacy, usar lógica de overrides
                               const baseFee = getFeeAmount('i20_control_fee'); // já considera overrides
                               const finalAmount = calculateFeeWithDependents(baseFee, studentDependents, 'i20_control_fee');
-                              console.log('🔍 [StudentDetailsView] I-20 Control - Base (with override):', baseFee, 'Final:', finalAmount, 'Has Override:', hasOverride && hasOverride('i20_control_fee'));
+                              console.log('🔍 [StudentDetailsView] I-20 Control - Legacy - Base (with override):', baseFee, 'Final:', finalAmount, 'Has Override:', hasOverride && hasOverride('i20_control_fee'));
                               return formatFeeAmount(finalAmount);
                             })()}
                           </span>

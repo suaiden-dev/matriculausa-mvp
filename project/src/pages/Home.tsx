@@ -13,6 +13,9 @@ import SEOHead from '../components/SEO/SEOHead';
 import { motion } from 'framer-motion';
 
 const Home: React.FC = () => {
+  console.log('[Home] 🔍 Home renderizado - Timestamp:', new Date().toISOString());
+  console.log('[Home] 🔍 URL:', window.location.href);
+  
   const { t } = useTranslationWithFees();
   const { selectionProcessFee, scholarshipFee, i20ControlFee, hasSellerPackage, packageName } = useDynamicFees();
   const navigate = useNavigate();

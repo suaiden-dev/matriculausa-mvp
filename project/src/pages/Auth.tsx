@@ -87,17 +87,21 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
 
       // Load seller referral code
       const pendingSellerCode = localStorage.getItem('pending_seller_referral_code');
+      console.log('[AUTH] Verificando pending_seller_referral_code:', pendingSellerCode);
       if (pendingSellerCode) {
         console.log('[AUTH] Código de Seller encontrado:', pendingSellerCode);
         setFormData(prev => ({ ...prev, sellerReferralCode: pendingSellerCode }));
         setIsSellerReferralCodeLocked(true);
-        validateSellerReferralCode(pendingSellerCode);
         // Configure the new UI for seller referral code
         setShowReferralCodeSection(true);
         setSelectedReferralType('seller');
         // IMPORTANTE: Limpar o campo de Matricula Rewards se este for um código de Seller
         setFormData(prev => ({ ...prev, affiliateCode: '' }));
         setIsReferralCodeLocked(false);
+        // Validar código de forma assíncrona para evitar travamentos
+        setTimeout(() => {
+          validateSellerReferralCode(pendingSellerCode);
+        }, 100);
       }
       
       console.log('[AUTH] Estado final dos campos:', {

@@ -143,7 +143,44 @@ const SellerRegistration: React.FC<SellerRegistrationProps> = () => {
       
       console.log('✅ [SELLER_REG] Usuário criado com sucesso:', authData.user.id);
 
-      // 2. Enviar notificação para o admin do afiliado
+      // 2. Criar registro na tabela seller_registrations para aprovação
+      try {
+        console.log('📝 [SELLER_REG] Criando registro para aprovação...');
+        
+        const { data: codeData, error: codeError } = await supabase
+          .from('seller_registration_codes')
+          .select('admin_id')
+          .eq('code', formData.registration_code)
+          .single();
+
+        if (codeError || !codeData?.admin_id) {
+          throw new Error('Affiliate admin not found for this code.');
+        }
+
+        const { error: registrationError } = await supabase
+          .from('seller_registrations')
+          .insert({
+            user_id: authData.user.id,
+            admin_id: null, // Deve ser NULL para passar na política RLS
+            registration_code: formData.registration_code,
+            email: formData.email.trim().toLowerCase(),
+            full_name: formData.full_name,
+            phone: formData.phone,
+            status: 'pending'
+          });
+
+        if (registrationError) {
+          console.error('❌ [SELLER_REG] Erro ao criar registro:', registrationError);
+          throw registrationError;
+        }
+
+        console.log('✅ [SELLER_REG] Registro criado com sucesso para aprovação');
+      } catch (registrationError) {
+        console.error('❌ [SELLER_REG] Erro ao criar registro para aprovação:', registrationError);
+        // Não interrompe o fluxo se falhar
+      }
+
+      // 3. Enviar notificação para o admin do afiliado
       try {
         console.log('📧 [SELLER_REG] Buscando admin do afiliado para notificação...');
         

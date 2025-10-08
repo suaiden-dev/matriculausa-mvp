@@ -50,6 +50,9 @@ export interface UserProfile {
 
   // Dependentes (campo adicionado no schema user_profiles)
   dependents?: number;
+  
+  // System type inherited from seller
+  system_type?: 'legacy' | 'simplified';
 
   // ... outras colunas se existirem
 }
@@ -90,6 +93,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
+    console.log('[useAuth] 🔍 useEffect executado - Timestamp:', new Date().toISOString());
+    console.log('[useAuth] 🔍 Pathname:', window.location.pathname);
     setLoading(true);
 
     // Detectar fluxo de recuperação de senha
@@ -97,6 +102,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       window.location.pathname.startsWith('/forgot-password') &&
       (window.location.hash.includes('access_token') || window.location.hash.includes('refresh_token'));
     if (isPasswordResetFlow) {
+      console.log('[useAuth] 🔍 Password reset flow detectado');
       setUser(null);
       setSupabaseUser(null);
       setUserProfile(null);

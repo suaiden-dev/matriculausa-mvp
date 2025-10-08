@@ -5,6 +5,7 @@ import { useAuth } from '../hooks/useAuth';
 
 interface SellerRegistration {
   id: string;
+  user_id?: string; // ✅ Adicionar user_id para o sistema simplified
   email: string;
   full_name: string;
   phone: string | null;
@@ -42,14 +43,13 @@ const SellerRegistrationsManager: React.FC<SellerRegistrationsManagerProps> = ({
     setLoading(true);
     try {
       
-      // Load registrations that used codes created by this admin
+      // Load registrations from the new seller_registrations table
       // First get the codes created by this admin
       const { data: adminCodes, error: codesError } = await supabase
         .from('seller_registration_codes')
         .select('code')
         .eq('admin_id', user.id)
         .eq('is_active', true);
-
 
       if (codesError) {
         console.error('Error loading admin codes:', codesError);
@@ -65,28 +65,150 @@ const SellerRegistrationsManager: React.FC<SellerRegistrationsManagerProps> = ({
 
       const codes = adminCodes.map(c => c.code);
       
-      // Get all users who have used these codes (including those who were rejected)
-      const { data: users, error: usersError } = await supabase
-        .from('user_profiles')
+      // ABORDAGEM SIMPLIFICADA: Sempre tentar seller_registrations primeiro
+      console.log('🔍 [SELLER_REG_MANAGER] Attempting to load registrations with codes:', codes);
+      console.log('🔍 [SELLER_REG_MANAGER] User ID:', user?.id);
+      
+      // 1. Sempre tentar carregar da tabela seller_registrations primeiro
+      const { data: registrationsData, error: registrationsError } = await supabase
+        .from('seller_registrations')
         .select(`
+          id,
           user_id,
-          full_name,
+          registration_code,
           email,
+          full_name,
           phone,
+          status,
           created_at,
-          role,
-          seller_referral_code
+          approved_at,
+          approved_by
         `)
-        .in('seller_referral_code', codes)
-        .eq('role', 'student')
+        .in('registration_code', codes)
         .order('created_at', { ascending: false });
-
-
-      if (usersError) {
-        console.error('Error loading users:', usersError);
-        setError('Error loading users');
-        return;
+        
+      console.log('🔍 [SELLER_REG_MANAGER] Query result:', { data: registrationsData, error: registrationsError });
+      console.log('🔍 [SELLER_REG_MANAGER] Raw registrationsData:', registrationsData);
+      if (registrationsData && registrationsData.length > 0) {
+        console.log('🔍 [SELLER_REG_MANAGER] First registration raw data:', registrationsData[0]);
       }
+
+      if (registrationsError) {
+        console.error('❌ [SELLER_REG_MANAGER] Error loading registrations:', registrationsError);
+        console.error('❌ [SELLER_REG_MANAGER] Error details:', {
+          message: registrationsError.message,
+          details: registrationsError.details,
+          hint: registrationsError.hint,
+          code: registrationsError.code
+        });
+        console.error('❌ [SELLER_REG_MANAGER] Full error object:', JSON.stringify(registrationsError, null, 2));
+        console.error('❌ [SELLER_REG_MANAGER] Codes being queried:', codes);
+        console.error('❌ [SELLER_REG_MANAGER] User ID:', user?.id);
+        // Não falhar, continuar com abordagem legacy
+        // setError(`Error loading registrations: ${registrationsError.message}`);
+      } else {
+        console.log('✅ [SELLER_REG_MANAGER] Registrations loaded successfully:', registrationsData?.length || 0, 'records');
+      }
+
+      // 2. Se não há registros na nova tabela, usar abordagem legacy (sistema do Matheus)
+      if (!registrationsData || registrationsData.length === 0) {
+        console.log('🔍 [SELLER_REG_MANAGER] No registrations in seller_registrations table, using legacy approach');
+        console.log('🔍 [SELLER_REG_MANAGER] registrationsData:', registrationsData);
+        console.log('🔍 [SELLER_REG_MANAGER] registrationsError:', registrationsError);
+        
+        // Se há erro na consulta, tentar novamente com uma consulta mais simples
+        if (registrationsError) {
+          console.log('🔍 [SELLER_REG_MANAGER] Retrying with simpler query...');
+          try {
+            const retryResult = await supabase
+              .from('seller_registrations')
+              .select('*')
+              .in('registration_code', codes);
+              
+            if (retryResult.data && retryResult.data.length > 0) {
+              console.log('✅ [SELLER_REG_MANAGER] Retry successful, using simplified approach');
+              registrationsData = retryResult.data;
+              registrationsError = null;
+            }
+          } catch (retryError) {
+            console.error('❌ [SELLER_REG_MANAGER] Retry failed:', retryError);
+          }
+        }
+        
+        // Se ainda não há dados após o retry, usar abordagem legacy
+        if (!registrationsData || registrationsData.length === 0) {
+          console.log('🔍 [SELLER_REG_MANAGER] Still no data, proceeding with legacy approach');
+          
+          // Carregar usuários que usaram os códigos (abordagem legacy)
+        const { data: users, error: usersError } = await supabase
+          .from('user_profiles')
+          .select(`
+            user_id,
+            full_name,
+            email,
+            phone,
+            created_at,
+            role,
+            seller_referral_code
+          `)
+          .in('seller_referral_code', codes)
+          .eq('role', 'student')
+          .order('created_at', { ascending: false });
+
+        if (usersError) {
+          console.error('Error loading users:', usersError);
+          setError('Error loading users');
+          return;
+        }
+
+        // Transformar usuários em formato de registro (legacy)
+        const legacyRegistrations: SellerRegistration[] = (users || []).map(user => ({
+          id: user.user_id,
+          email: user.email,
+          full_name: user.full_name,
+          phone: user.phone,
+          status: 'pending' as const,
+          created_at: user.created_at,
+          registration_code: user.seller_referral_code || 'Unknown',
+        }));
+
+          setRegistrations(legacyRegistrations);
+          setHasLoaded(true);
+          return;
+        }
+      }
+
+      // 3. Se há registros na nova tabela, usar sistema simplified
+      console.log('✅ [SELLER_REG_MANAGER] Using simplified system with seller_registrations table');
+      console.log('✅ [SELLER_REG_MANAGER] Found registrations:', registrationsData?.length || 0);
+      console.log('🔍 [SELLER_REG_MANAGER] registrationsData exists?', !!registrationsData);
+      console.log('🔍 [SELLER_REG_MANAGER] registrationsData length:', registrationsData?.length);
+      
+      // Transformar registros da nova tabela
+      console.log('🔍 [SELLER_REG_MANAGER] Transforming registrations...');
+      const transformedRegistrations: SellerRegistration[] = registrationsData.map(reg => {
+        console.log('🔍 [SELLER_REG_MANAGER] Transforming registration:', reg);
+        console.log('🔍 [SELLER_REG_MANAGER] reg.user_id:', reg.user_id);
+        console.log('🔍 [SELLER_REG_MANAGER] reg.id:', reg.id);
+        
+        return {
+          id: reg.id,
+          user_id: reg.user_id, // ✅ Adicionar user_id para o sistema simplified
+          email: reg.email,
+          full_name: reg.full_name,
+          phone: reg.phone,
+          status: reg.status as 'pending' | 'approved' | 'rejected',
+          created_at: reg.created_at,
+          registration_code: reg.registration_code,
+          approved_at: reg.approved_at,
+          approved_by: reg.approved_by,
+        };
+      });
+      
+      console.log('🔍 [SELLER_REG_MANAGER] Transformed registrations:', transformedRegistrations);
+
+      setRegistrations(transformedRegistrations);
+      setHasLoaded(true);
 
       // Get approved sellers for this admin
       // First get the affiliate_admin record for this user
@@ -235,13 +357,23 @@ const SellerRegistrationsManager: React.FC<SellerRegistrationsManagerProps> = ({
       setHasLoaded(true);
     } catch (err) {
       console.error('Error loading registrations:', err);
-      setError('Error loading registrations');
+      // setError('Error loading registrations');
     } finally {
       setLoading(false);
     }
   };
 
   const approveRegistration = async (userId: string) => {
+    console.log('🔍 [SellerApproval] approveRegistration called with userId:', userId);
+    console.log('🔍 [SellerApproval] userId type:', typeof userId);
+    console.log('🔍 [SellerApproval] userId is undefined?', userId === undefined);
+    
+    if (!userId || userId === 'undefined') {
+      console.error('❌ [SellerApproval] Invalid userId:', userId);
+      setError('Invalid user ID');
+      return;
+    }
+    
     try {
       // 0. First try to sync any missing emails from auth.users
       try {
@@ -752,7 +884,12 @@ const SellerRegistrationsManager: React.FC<SellerRegistrationsManagerProps> = ({
                   {registration.status === 'pending' && (
                     <>
                       <button
-                        onClick={() => approveRegistration(registration.id)}
+                        onClick={() => {
+                          console.log('🔍 [SellerApproval] Button clicked for registration:', registration);
+                          console.log('🔍 [SellerApproval] registration.user_id:', registration.user_id);
+                          console.log('🔍 [SellerApproval] registration.id:', registration.id);
+                          approveRegistration(registration.user_id || registration.id);
+                        }}
                         className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
                         title="Approve"
                       >
@@ -760,7 +897,12 @@ const SellerRegistrationsManager: React.FC<SellerRegistrationsManagerProps> = ({
                       </button>
                       
                       <button
-                        onClick={() => rejectRegistration(registration.id)}
+                        onClick={() => {
+                          console.log('🔍 [SellerRejection] Button clicked for registration:', registration);
+                          console.log('🔍 [SellerRejection] registration.user_id:', registration.user_id);
+                          console.log('🔍 [SellerRejection] registration.id:', registration.id);
+                          rejectRegistration(registration.user_id || registration.id);
+                        }}
                         className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
                         title="Reject"
                       >

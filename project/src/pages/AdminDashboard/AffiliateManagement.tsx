@@ -21,6 +21,8 @@ import {
 import { useAffiliateData } from '../../hooks/useAffiliateData';
 import { supabase } from '../../lib/supabase';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
+import { useDynamicFeeCalculation } from '../../hooks/useDynamicFeeCalculation';
+import { useUserSpecificFees } from '../../hooks/useUserSpecificFees';
 
 interface FilterState {
   search: string;
@@ -55,6 +57,7 @@ const AffiliateManagement: React.FC = () => {
 
   // ===== Overrides e Dependentes (igual EnhancedStudentTrackingRefactored) =====
   const { feeConfig } = useFeeConfig();
+  const { selectionProcessFee, scholarshipFee, i20ControlFee, isSimplified } = useDynamicFeeCalculation();
   const [overridesMap, setOverridesMap] = useState<Record<string, any>>({}); // por user_id
   const [dependentsMap, setDependentsMap] = useState<Record<string, number>>({}); // por profile_id
 
@@ -130,28 +133,53 @@ const AffiliateManagement: React.FC = () => {
     loadDependents();
   }, [allStudents]);
 
+  // Função para calcular taxas de um usuário específico
+  const calculateUserFees = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .rpc('get_user_system_type', { user_id_param: userId });
+      
+      if (error) {
+        console.error('Error detecting user system type:', error);
+        return { selectionProcessFee: 400, scholarshipFee: 900, i20ControlFee: 900 };
+      }
+      
+      if (data === 'simplified') {
+        return { selectionProcessFee: 350, scholarshipFee: 550, i20ControlFee: 900 };
+      } else {
+        return { selectionProcessFee: 400, scholarshipFee: 900, i20ControlFee: 900 };
+      }
+    } catch (err) {
+      console.error('Error calculating user fees:', err);
+      return { selectionProcessFee: 400, scholarshipFee: 900, i20ControlFee: 900 };
+    }
+  };
+
   // Students com valores ajustados
   const adjustedStudents = useMemo(() => {
     const result = (allStudents || []).map((s: any) => {
       const o = overridesMap[s.user_id] || {};
       const dependents = Number(dependentsMap[s.profile_id]) || 0;
       let total = 0;
+      
+      // Para cada estudante, usar valores padrão baseados no sistema
+      // TODO: Implementar detecção individual do sistema de cada usuário
       if (s.has_paid_selection_process_fee) {
         const sel = o.selection_process_fee != null
           ? Number(o.selection_process_fee)
-          : Number(feeConfig?.selection_process_fee) + (dependents * 150);
+          : 400 + (dependents * 150); // Usar valor padrão por enquanto
         total += sel || 0;
       }
       if (s.is_scholarship_fee_paid) {
         const schol = o.scholarship_fee != null
           ? Number(o.scholarship_fee)
-          : Number(feeConfig?.scholarship_fee_default);
+          : 900; // Usar valor padrão por enquanto
         total += schol || 0;
       }
       if (s.has_paid_i20_control_fee) {
         const i20 = o.i20_control_fee != null
           ? Number(o.i20_control_fee)
-          : Number(feeConfig?.i20_control_fee);
+          : 900; // Usar valor padrão por enquanto
         total += i20 || 0;
       }
       return { ...s, total_paid_adjusted: total };

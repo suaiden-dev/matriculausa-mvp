@@ -4,7 +4,7 @@ import { Search, Users, UserPlus, UserCheck, RefreshCw } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import SellerRegistrationLinkGenerator from '../../components/SellerRegistrationLinkGenerator';
-import SellerRegistrationsManager from '../../components/SellerRegistrationsManager';
+import SellerRegistrationsManagerSimple from '../../components/SellerRegistrationsManagerSimple';
 
 interface Seller {
   id: string;
@@ -926,7 +926,7 @@ const SellerManagement: React.FC = () => {
           )}
 
           {activeTab === 'pending' && (
-            <SellerRegistrationsManager onRefresh={() => loadSellers(true)} />
+            <SellerRegistrationsManagerSimple onRefresh={() => loadSellers(true)} />
           )}
         </div>
       </div>

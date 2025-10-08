@@ -17,8 +17,16 @@ export const useSystemType = (): {
 
   useEffect(() => {
     const detectSystemType = async () => {
-      if (!user || !userProfile || hasChecked) {
+      // Se não há usuário, usar legacy por padrão
+      if (!user || !userProfile) {
+        console.log('🔍 [useSystemType] Usuário não logado, usando sistema legacy por padrão');
+        setSystemType('legacy');
         setLoading(false);
+        return;
+      }
+
+      // Se já verificou, não executar novamente
+      if (hasChecked) {
         return;
       }
 
@@ -30,6 +38,7 @@ export const useSystemType = (): {
         if (user.email === 'contato@brantimmigration.com') {
           setSystemType('legacy');
           setLoading(false);
+          setHasChecked(true);
           return;
         }
 
@@ -37,57 +46,40 @@ export const useSystemType = (): {
         if (user.email === 'merari380@uorak.com') {
           setSystemType('legacy');
           setLoading(false);
+          setHasChecked(true);
           return;
         }
 
-        // Para affiliate admins, buscar no banco
-        if (userProfile.role === 'affiliate_admin') {
-          const { data, error: fetchError } = await supabase
-            .from('affiliate_admins')
-            .select('system_type')
-            .eq('user_id', user.id)
-            .single();
-
-          if (fetchError) {
-            console.warn('Error fetching system type:', fetchError);
-            setSystemType('legacy'); // Default to legacy
-          } else {
-            setSystemType((data?.system_type as SystemType) || 'legacy');
-          }
-        } 
-        // Para sellers, buscar o system_type do admin deles
-        else if (userProfile.role === 'seller') {
-          // Usar RPC function para buscar system type
-          const { data: rpcData, error: rpcError } = await supabase
-            .rpc('get_affiliate_admin_system_type', { seller_user_id: user.id });
-
-          if (rpcError) {
-            console.warn('RPC failed, trying direct query:', rpcError);
+        // Para todos os usuários, usar a coluna system_type da tabela user_profiles
+        console.log('🔍 [useSystemType] userProfile.system_type:', userProfile.system_type);
+        
+        if (userProfile.system_type) {
+          console.log('✅ [useSystemType] Usando system_type do userProfile:', userProfile.system_type);
+          setSystemType(userProfile.system_type as SystemType);
+        } else {
+          // Para usuários sem system_type definido, detectar baseado no seller_referral_code
+          if (userProfile.seller_referral_code) {
+            console.log('🔍 [useSystemType] Detectando sistema baseado no seller_referral_code:', userProfile.seller_referral_code);
             
-            // Fallback para query direta
-            const { data, error: fetchError } = await supabase
-              .from('sellers')
-              .select(`
-                affiliate_admin_id,
-                affiliate_admins!inner(system_type)
-              `)
-              .eq('user_id', user.id)
-              .single();
-
-            if (fetchError) {
-              console.warn('Error fetching seller admin system type:', fetchError);
-              setSystemType('legacy'); // Default to legacy
-            } else {
-              const detectedType = (data?.affiliate_admins?.system_type as SystemType) || 'legacy';
-              setSystemType(detectedType);
+            try {
+              const { data, error } = await supabase
+                .rpc('get_seller_admin_system_type_by_code', { seller_code: userProfile.seller_referral_code });
+              
+              if (error) {
+                console.error('Erro ao detectar sistema do seller:', error);
+                setSystemType('legacy');
+              } else {
+                console.log('✅ [useSystemType] Sistema detectado baseado no seller:', data);
+                setSystemType(data as SystemType);
+              }
+            } catch (err) {
+              console.error('Erro ao detectar sistema do seller:', err);
+              setSystemType('legacy');
             }
           } else {
-            const detectedType = (rpcData as SystemType) || 'legacy';
-            setSystemType(detectedType);
+            // Para usuários sem system_type definido, usar legacy
+            setSystemType('legacy');
           }
-        } else {
-          // Para outros usuários, default to legacy
-          setSystemType('legacy');
         }
       } catch (err) {
         console.error('Error detecting system type:', err);
