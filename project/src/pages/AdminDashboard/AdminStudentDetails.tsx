@@ -610,10 +610,17 @@ const AdminStudentDetails: React.FC = () => {
 
         const s = data as any;
         let lockedApplication = null;
+        let activeApplication = null;
         if (s.scholarship_applications && s.scholarship_applications.length > 0) {
           // Priorizar aplicação enrolled, depois approved
           lockedApplication = s.scholarship_applications.find((app: any) => app.status === 'enrolled') ||
                              s.scholarship_applications.find((app: any) => app.status === 'approved');
+          
+          // Se não há aplicação locked, buscar a aplicação mais recente para o student_process_type
+          if (!lockedApplication) {
+            activeApplication = s.scholarship_applications
+              .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+          }
         }
 
         const formatted: StudentRecord = {
@@ -647,7 +654,7 @@ const AdminStudentDetails: React.FC = () => {
           application_fee_payment_method: lockedApplication?.application_fee_payment_method || null,
           scholarship_fee_payment_method: lockedApplication?.scholarship_fee_payment_method || null,
           acceptance_letter_status: lockedApplication?.acceptance_letter_status || null,
-          student_process_type: lockedApplication?.student_process_type || null,
+          student_process_type: lockedApplication?.student_process_type || activeApplication?.student_process_type || null,
           payment_status: lockedApplication?.payment_status || null,
           scholarship_title: lockedApplication?.scholarships?.title || null,
           university_name: lockedApplication?.scholarships?.universities?.name || null,
@@ -2309,7 +2316,7 @@ const AdminStudentDetails: React.FC = () => {
             application_fee_payment_method: lockedApplication?.application_fee_payment_method || null,
             scholarship_fee_payment_method: lockedApplication?.scholarship_fee_payment_method || null,
             acceptance_letter_status: lockedApplication?.acceptance_letter_status || null,
-            student_process_type: lockedApplication?.student_process_type || null,
+            student_process_type: lockedApplication?.student_process_type || activeApplication?.student_process_type || null,
             payment_status: lockedApplication?.payment_status || null,
             scholarship_title: Array.isArray(lockedApplication?.scholarships) ? null : (lockedApplication?.scholarships as any)?.title || null,
             university_name: Array.isArray(lockedApplication?.scholarships) ? null : (lockedApplication?.scholarships as any)?.universities?.name || null,
@@ -2575,6 +2582,12 @@ const AdminStudentDetails: React.FC = () => {
                     ) : (
                       <dd className="text-base text-slate-900 mt-1">{student.english_proficiency || 'Not provided'}</dd>
                     )}
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-slate-600">Student Process Type</dt>
+                    <dd className="text-base text-slate-900 mt-1 capitalize">
+                      {student.student_process_type || 'Not defined'}
+                    </dd>
                   </div>
                 </div>
               </div>
