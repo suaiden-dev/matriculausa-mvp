@@ -201,18 +201,13 @@ export const useAffiliateData = () => {
                   if (profile.has_paid_i20_control_fee) {
                     studentRevenue += 900; // Valor padrão da taxa de I20 (será calculado dinamicamente)
                   }
-                  // CORREÇÃO: Usar apenas uma taxa de scholarship por estudante, não por aplicação
-                  // Verificar se QUALQUER aplicação de bolsa está paga, mas contar apenas uma vez
-                  const hasAnyScholarshipFeePaid = profile.scholarship_applications?.some((app: any) => app.is_scholarship_fee_paid) || false;
-                  if (hasAnyScholarshipFeePaid) {
-                    studentRevenue += 900; // Valor padrão da taxa de scholarship (apenas uma vez por estudante)
+                  if (profile.scholarship_applications?.some((app: any) => app.is_scholarship_fee_paid)) {
+                    studentRevenue += 900; // Valor padrão da taxa de scholarship (será calculado dinamicamente)
                   }
 
                   totalRevenue += studentRevenue;
 
                   const scholarshipApp = profile.scholarship_applications?.[0];
-                  // CORREÇÃO: Definir is_scholarship_fee_paid baseado em qualquer aplicação, não apenas a primeira
-                  const hasAnyScholarshipFeePaid = profile.scholarship_applications?.some((app: any) => app.is_scholarship_fee_paid) || false;
                   
                   return {
                     id: profile.id,
@@ -229,7 +224,7 @@ export const useAffiliateData = () => {
                     status: 'active',
                     has_paid_selection_process_fee: profile.has_paid_selection_process_fee,
                     has_paid_i20_control_fee: profile.has_paid_i20_control_fee,
-                    is_scholarship_fee_paid: hasAnyScholarshipFeePaid,
+                    is_scholarship_fee_paid: scholarshipApp?.is_scholarship_fee_paid || false,
                     scholarship_title: scholarshipApp?.scholarships?.title,
                     university_name: scholarshipApp?.scholarships?.universities?.name
                   };
