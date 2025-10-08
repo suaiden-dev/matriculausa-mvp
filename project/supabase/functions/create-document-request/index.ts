@@ -25,13 +25,14 @@ Deno.serve(async (req) => {
     const body = await req.json();
     console.log('[Edge] Body recebido:', JSON.stringify(body));
 
-    const { title, description, due_date, scholarship_application_id, created_by, university_id, status, applicable_student_types, is_global } = body;
+    const { title, description, due_date, attachment_url, scholarship_application_id, created_by, university_id, status, applicable_student_types, is_global } = body;
     
     console.log('[Edge] Dados extraídos do body:');
     console.log('[Edge] - scholarship_application_id:', scholarship_application_id);
     console.log('[Edge] - university_id:', university_id);
     console.log('[Edge] - is_global:', is_global);
     console.log('[Edge] - title:', title);
+    console.log('[Edge] - attachment_url:', attachment_url);
 
     if (!title || !created_by || !university_id) {
       console.log('[Edge] Campos obrigatórios ausentes:', { title, created_by, university_id });
@@ -75,6 +76,7 @@ Deno.serve(async (req) => {
       title,
       description,
       due_date,
+      attachment_url: attachment_url || null,
       scholarship_application_id: scholarship_application_id || null,
       created_by,
       university_id,
