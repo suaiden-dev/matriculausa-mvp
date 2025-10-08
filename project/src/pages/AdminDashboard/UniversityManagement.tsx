@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Building, 
   CheckCircle, 
@@ -38,9 +39,9 @@ const UniversityManagement: React.FC<UniversityManagementProps> = ({
   onApprove,
   onReject
 }) => {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [selectedUniversity, setSelectedUniversity] = useState<any>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const UNIVERSITIES_PER_PAGE = 12;
@@ -199,7 +200,8 @@ const UniversityManagement: React.FC<UniversityManagementProps> = ({
                   {currentUniversities.map((university) => (
                     <div 
                       key={university.id} 
-                      className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-2xl p-6 border border-slate-200 hover:shadow-lg transition-all duration-300 group"
+                      className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-2xl p-6 border border-slate-200 hover:shadow-lg transition-all duration-300 group cursor-pointer"
+                      onClick={() => navigate(`universities/${university.id}`)}
                     >
                       {/* Header */}
                       <div className="flex items-start justify-between mb-4">
@@ -260,7 +262,10 @@ const UniversityManagement: React.FC<UniversityManagementProps> = ({
                       <div className="flex items-center justify-between pt-4 border-t border-slate-200">
                         {!university.is_approved ? (
                           <button 
-                            onClick={() => onApprove(university.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onApprove(university.id);
+                            }}
                             className="flex items-center px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors font-medium text-sm"
                           >
                             <CheckCircle className="h-4 w-4 mr-2" />
@@ -275,7 +280,10 @@ const UniversityManagement: React.FC<UniversityManagementProps> = ({
                         
                         <div className="flex items-center space-x-2">
                           <button 
-                            onClick={() => setSelectedUniversity(university)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`universities/${university.id}`);
+                            }}
                             className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded-lg transition-colors"
                             title="View Details"
                           >
@@ -283,7 +291,10 @@ const UniversityManagement: React.FC<UniversityManagementProps> = ({
                           </button>
                           {!university.is_approved && (
                             <button 
-                              onClick={() => onReject(university.id)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onReject(university.id);
+                              }}
                               className="p-2 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                               title="Reject"
                             >
@@ -311,7 +322,8 @@ const UniversityManagement: React.FC<UniversityManagementProps> = ({
                   {currentUniversities.map((university) => (
                     <div 
                       key={university.id}
-                      className="grid grid-cols-1 md:grid-cols-12 gap-4 p-4 bg-white border border-slate-200 rounded-xl hover:shadow-md transition-all duration-200 group"
+                      className="grid grid-cols-1 md:grid-cols-12 gap-4 p-4 bg-white border border-slate-200 rounded-xl hover:shadow-md transition-all duration-200 group cursor-pointer"
+                      onClick={() => navigate(`${university.id}`)}
                     >
                       {/* Nome da universidade */}
                       <div className="md:col-span-4 flex items-center space-x-3">
@@ -366,7 +378,10 @@ const UniversityManagement: React.FC<UniversityManagementProps> = ({
                         {!university.is_approved ? (
                           <>
                             <button 
-                              onClick={() => onApprove(university.id)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onApprove(university.id);
+                              }}
                               className="flex items-center px-3 py-1.5 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm font-medium"
                               title="Approve university"
                             >
@@ -374,7 +389,10 @@ const UniversityManagement: React.FC<UniversityManagementProps> = ({
                               <span className="hidden sm:inline">Approve</span>
                             </button>
                             <button 
-                              onClick={() => onReject(university.id)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onReject(university.id);
+                              }}
                               className="p-1.5 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                               title="Reject university"
                             >
@@ -389,7 +407,10 @@ const UniversityManagement: React.FC<UniversityManagementProps> = ({
                         )}
                         
                         <button 
-                          onClick={() => setSelectedUniversity(university)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`${university.id}`);
+                          }}
                           className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
                           title="View details"
                         >
@@ -444,151 +465,6 @@ const UniversityManagement: React.FC<UniversityManagementProps> = ({
           )}
         </div>
       </div>
-
-      {/* University Detail Modal */}
-      {selectedUniversity && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-slate-200">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xl font-bold text-slate-900">University Details</h3>
-                <button
-                  onClick={() => setSelectedUniversity(null)}
-                  className="text-slate-400 hover:text-slate-600 p-2 rounded-lg hover:bg-slate-100"
-                  title="Close modal"
-                >
-                  <XCircle className="h-5 w-5" />
-                </button>
-              </div>
-            </div>
-            
-            <div className="p-6 space-y-6">
-              <div>
-                <h4 className="font-semibold text-slate-900 mb-3">Basic Information</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm font-medium text-slate-500">Name</label>
-                    <p className="text-slate-900">{selectedUniversity.name}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-slate-500">Location</label>
-                    <p className="text-slate-900">{selectedUniversity.location || 'Not provided'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-slate-500">Website</label>
-                    <p className="text-slate-900">{selectedUniversity.website || 'Not provided'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-slate-500">Status</label>
-                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                      selectedUniversity.is_approved 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-orange-100 text-orange-800'
-                    }`}>
-                      {selectedUniversity.is_approved ? 'Approved' : 'Pending'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Contact Information */}
-              <div>
-                <h4 className="font-semibold text-slate-900 mb-3">Contact Information</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm font-medium text-slate-500">Phone</label>
-                    <p className="text-slate-900">{selectedUniversity.contact?.phone || 'Not provided'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-slate-500">Email</label>
-                    <p className="text-slate-900">{selectedUniversity.contact?.email || 'Not provided'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-slate-500">Admissions Email</label>
-                    <p className="text-slate-900">{selectedUniversity.contact?.admissionsEmail || 'Not provided'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-slate-500">Fax</label>
-                    <p className="text-slate-900">{selectedUniversity.contact?.fax || 'Not provided'}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Responsible Person Information */}
-              <div>
-                <h4 className="font-semibold text-slate-900 mb-3">Account Information</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm font-medium text-slate-500">Responsible Person</label>
-                    <p className="text-slate-900">{selectedUniversity.responsible_name || selectedUniversity.user_profile?.full_name || 'Not provided'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-slate-500">Account Email</label>
-                    <p className="text-slate-900">{selectedUniversity.user_email || 'Not provided'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-slate-500">Account Phone</label>
-                    <p className="text-slate-900">{selectedUniversity.user_profile?.phone || 'Not provided'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-slate-500">Account Status</label>
-                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                      selectedUniversity.user_profile?.status === 'active'
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-gray-100 text-gray-800'
-                    }`}>
-                      {selectedUniversity.user_profile?.status || 'Unknown'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {selectedUniversity.description && (
-                <div>
-                  <h4 className="font-semibold text-slate-900 mb-3">Description</h4>
-                  <p className="text-slate-700">{selectedUniversity.description}</p>
-                </div>
-              )}
-
-              {selectedUniversity.programs && selectedUniversity.programs.length > 0 && (
-                <div>
-                  <h4 className="font-semibold text-slate-900 mb-3">Programs</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedUniversity.programs.map((program: string, index: number) => (
-                      <span key={index} className="bg-slate-100 text-slate-700 px-3 py-1 rounded-lg text-sm">
-                        {program}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {!selectedUniversity.is_approved && (
-                <div className="flex space-x-3 pt-4 border-t border-slate-200">
-                  <button
-                    onClick={() => {
-                      onApprove(selectedUniversity.id);
-                      setSelectedUniversity(null);
-                    }}
-                    className="flex-1 bg-green-600 text-white py-3 px-4 rounded-xl hover:bg-green-700 transition-colors font-medium"
-                  >
-                    Approve University
-                  </button>
-                  <button
-                    onClick={() => {
-                      onReject(selectedUniversity.id);
-                      setSelectedUniversity(null);
-                    }}
-                    className="flex-1 bg-red-600 text-white py-3 px-4 rounded-xl hover:bg-red-700 transition-colors font-medium"
-                  >
-                    Reject University
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
