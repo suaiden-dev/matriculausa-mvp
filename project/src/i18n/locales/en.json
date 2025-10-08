@@ -1550,7 +1550,16 @@
       "documentsApprovedDescription": "Excellent! Your documents have been approved and you're ready to proceed with the application fee payment.",
       "proceedToPayment": "Proceed to Payment",
       "analyzingOverlayTitle": "Analyzing your documents...",
-      "analyzingOverlayDescription": "This may take up to 40 seconds. Please do not close this window."
+      "analyzingOverlayDescription": "This may take up to 40 seconds. Please do not close this window.",
+      "manualReviewTitle": "Documents Under Review",
+      "manualReviewDescription": "Our artificial intelligence was unable to identify all the necessary information in the submitted documents. Don't worry! Your documentation has been sent to our support team to perform a detailed analysis.",
+      "manualReviewTimeframe": "The analysis will be completed within 48 hours and you will receive the results via email.",
+      "needHelp": "Need Help?",
+      "smartAssistantHelp": "Smart Assistant:",
+      "smartAssistantDescription": "Use the floating button on the corner of the screen to ask questions in real-time.",
+      "supportChatHelp": "Support Chat:",
+      "supportChatDescription": "Access the team chat right below the 'My Applications' section in the dashboard.",
+      "backToOverview": "Got it, Back to Dashboard"
     },
     "manualReview": {
       "title": "Manual Document Review",

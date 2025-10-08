@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
 import { useAuth } from '../../hooks/useAuth';
@@ -37,6 +37,7 @@ const DashboardCard: React.FC<{ children: React.ReactNode; className?: string }>
 const ApplicationChatPage: React.FC = () => {
   const { t } = useTranslation();
   const { applicationId } = useParams<{ applicationId: string }>();
+  const [searchParams] = useSearchParams();
   const { user, userProfile, refetchUserProfile } = useAuth();
   const { formatFeeAmount, getFeeAmount } = useFeeConfig(user?.id);
   const { logAction } = useStudentLogs(userProfile?.id || '');
@@ -68,6 +69,14 @@ const ApplicationChatPage: React.FC = () => {
         });
     }
   }, [applicationId]);
+
+  // useEffect para detectar parâmetro de URL e definir aba ativa
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam && ['welcome', 'details', 'i20', 'documents', 'chat'].includes(tabParam)) {
+      setActiveTab(tabParam as typeof activeTab);
+    }
+  }, [searchParams]);
 
   // Polling para atualizar o perfil do usuário a cada 2 minutos (modo conservador)
   useEffect(() => {
