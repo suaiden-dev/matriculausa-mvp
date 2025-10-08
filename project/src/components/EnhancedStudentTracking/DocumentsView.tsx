@@ -881,7 +881,8 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                               .update({
                                 acceptance_letter_url: publicUrl,
                                 acceptance_letter_status: 'sent',
-                                acceptance_letter_sent_at: new Date().toISOString()
+                                acceptance_letter_sent_at: new Date().toISOString(),
+                                status: 'enrolled' // Marcar como enrolled quando carta de aceite é enviada
                               })
                               .eq('id', currentApplication.id);
                             if (updateError) throw updateError;
@@ -890,7 +891,8 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                               ...prev,
                               acceptance_letter_url: publicUrl,
                               acceptance_letter_status: 'sent',
-                              acceptance_letter_sent_at: new Date().toISOString()
+                              acceptance_letter_sent_at: new Date().toISOString(),
+                              status: 'enrolled' // Atualizar status local também
                             }) : prev);
 
                             // Log: acceptance letter substituída/enviada novamente
@@ -999,13 +1001,36 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                             if (!applicationId && realScholarshipApplication?.id) applicationId = realScholarshipApplication.id;
 
                             if (!applicationId) {
-                              // Buscar a aplicação mais recente do perfil
-                              const { data: apps } = await supabase
-                                .from('scholarship_applications')
-                                .select('id')
-                                .order('created_at', { ascending: false })
-                                .limit(1);
-                              applicationId = apps?.[0]?.id;
+                              // Buscar a aplicação que tem as taxas pagas (application fee)
+                              // Primeiro, obter o profile_id do studentId
+                              let profileId: string | null = null;
+                              if (studentId) {
+                                const { data: upByUser } = await supabase
+                                  .from('user_profiles')
+                                  .select('id')
+                                  .eq('user_id', studentId)
+                                  .maybeSingle();
+                                if (upByUser?.id) profileId = upByUser.id;
+                                if (!profileId) {
+                                  const { data: upById } = await supabase
+                                    .from('user_profiles')
+                                    .select('id')
+                                    .eq('id', studentId)
+                                    .maybeSingle();
+                                  if (upById?.id) profileId = upById.id;
+                                }
+                              }
+                              
+                              if (profileId) {
+                                const { data: apps } = await supabase
+                                  .from('scholarship_applications')
+                                  .select('id')
+                                  .eq('student_id', profileId)
+                                  .eq('is_application_fee_paid', true)
+                                  .order('created_at', { ascending: false })
+                                  .limit(1);
+                                applicationId = apps?.[0]?.id;
+                              }
                             }
 
                             if (!applicationId) throw new Error('No application found for this student');
@@ -1015,7 +1040,8 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                               .update({
                                 acceptance_letter_url: publicUrl,
                                 acceptance_letter_status: 'sent',
-                                acceptance_letter_sent_at: new Date().toISOString()
+                                acceptance_letter_sent_at: new Date().toISOString(),
+                                status: 'enrolled' // Marcar como enrolled quando carta de aceite é enviada
                               })
                               .eq('id', applicationId);
                             if (updateError) throw updateError;
@@ -1032,7 +1058,8 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                               ...prev,
                               acceptance_letter_url: publicUrl,
                               acceptance_letter_status: 'sent',
-                              acceptance_letter_sent_at: new Date().toISOString()
+                              acceptance_letter_sent_at: new Date().toISOString(),
+                              status: 'enrolled' // Atualizar status local também
                             }) : prev);
 
                             try {
@@ -1077,12 +1104,36 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                             let applicationId = currentApplication?.id;
                             if (!applicationId && realScholarshipApplication?.id) applicationId = realScholarshipApplication.id;
                             if (!applicationId) {
-                              const { data: apps } = await supabase
-                                .from('scholarship_applications')
-                                .select('id')
-                                .order('created_at', { ascending: false })
-                                .limit(1);
-                              applicationId = apps?.[0]?.id;
+                              // Buscar a aplicação que tem as taxas pagas (application fee)
+                              // Primeiro, obter o profile_id do studentId
+                              let profileId: string | null = null;
+                              if (studentId) {
+                                const { data: upByUser } = await supabase
+                                  .from('user_profiles')
+                                  .select('id')
+                                  .eq('user_id', studentId)
+                                  .maybeSingle();
+                                if (upByUser?.id) profileId = upByUser.id;
+                                if (!profileId) {
+                                  const { data: upById } = await supabase
+                                    .from('user_profiles')
+                                    .select('id')
+                                    .eq('id', studentId)
+                                    .maybeSingle();
+                                  if (upById?.id) profileId = upById.id;
+                                }
+                              }
+                              
+                              if (profileId) {
+                                const { data: apps } = await supabase
+                                  .from('scholarship_applications')
+                                  .select('id')
+                                  .eq('student_id', profileId)
+                                  .eq('is_application_fee_paid', true)
+                                  .order('created_at', { ascending: false })
+                                  .limit(1);
+                                applicationId = apps?.[0]?.id;
+                              }
                             }
                             if (!applicationId) throw new Error('No application found for this student');
 
@@ -1090,7 +1141,8 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                               .from('scholarship_applications')
                               .update({
                                 acceptance_letter_status: 'sent',
-                                acceptance_letter_sent_at: new Date().toISOString()
+                                acceptance_letter_sent_at: new Date().toISOString(),
+                                status: 'enrolled' // Marcar como enrolled quando carta de aceite é enviada
                               })
                               .eq('id', applicationId);
                             if (updateError) throw updateError;
@@ -1105,7 +1157,8 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                             setRealScholarshipApplication((prev: any) => prev ? ({
                               ...prev,
                               acceptance_letter_status: 'sent',
-                              acceptance_letter_sent_at: new Date().toISOString()
+                              acceptance_letter_sent_at: new Date().toISOString(),
+                              status: 'enrolled' // Atualizar status local também
                             }) : prev);
                             setMarkSentSuccess('Acceptance letter marked as sent.');
                           } catch (err) {
