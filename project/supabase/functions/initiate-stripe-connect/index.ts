@@ -1,38 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-
-// Configuração inline do Stripe para evitar problemas de import
-interface StripeConfig {
-  apiBaseUrl: string
-  connectApiBaseUrl: string
-  connectClientId: string
-  defaultRedirectUri?: string
-  secretKey: string
-  publishableKey?: string
-  webhookSecret?: string
-}
-
-function getStripeConfig(): StripeConfig {
-  const config: StripeConfig = {
-    apiBaseUrl: Deno.env.get('STRIPE_API_BASE_URL') || 'https://api.stripe.com',
-    connectApiBaseUrl: Deno.env.get('STRIPE_CONNECT_API_BASE_URL') || 'https://connect.stripe.com',
-    connectClientId: Deno.env.get('STRIPE_CONNECT_CLIENT_ID') || '',
-    defaultRedirectUri: Deno.env.get('STRIPE_CONNECT_DEFAULT_REDIRECT_URI'),
-    secretKey: Deno.env.get('STRIPE_SECRET_KEY') || '',
-    publishableKey: Deno.env.get('STRIPE_PUBLISHABLE_KEY'),
-    webhookSecret: Deno.env.get('STRIPE_WEBHOOK_SECRET')
-  }
-
-  if (!config.secretKey) {
-    throw new Error('STRIPE_SECRET_KEY is required')
-  }
-
-  if (!config.connectClientId) {
-    throw new Error('STRIPE_CONNECT_CLIENT_ID is required for Stripe Connect functionality')
-  }
-
-  return config
-}
+import { getStripeConfig } from '../stripe-config.ts'
 
 function buildStripeUrls(config: StripeConfig) {
   return {
@@ -67,8 +35,9 @@ serve(async (req) => {
   try {
     console.log('Starting initiate-stripe-connect function')
     
-    // Get configuration
-    const stripeConfig = getStripeConfig()
+    // Get configuration baseada no ambiente detectado
+    const stripeConfig = getStripeConfig(req)
+    console.log(`🔧 Using Stripe in ${stripeConfig.environment.environment} mode`)
     console.log('Stripe config loaded:', { 
       hasConnectClientId: !!stripeConfig.connectClientId,
       hasSecretKey: !!stripeConfig.secretKey,

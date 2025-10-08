@@ -1,16 +1,9 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import Stripe from 'npm:stripe@17.7.0';
 import { createClient } from 'npm:@supabase/supabase-js@2.49.1';
+import { getStripeConfig } from '../stripe-config.ts';
 
 const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
-const stripeSecret = Deno.env.get('STRIPE_SECRET_KEY')!;
-const stripe = new Stripe(stripeSecret, {
-  apiVersion: '2024-04-10',
-  appInfo: {
-    name: 'Bolt Integration',
-    version: '1.0.0',
-  },
-});
 
 // Helper function to create responses with CORS headers
 function corsResponse(body: string | object | null, status = 200) {
@@ -36,6 +29,20 @@ Deno.serve(async (req) => {
   try {
     if (req.method === 'OPTIONS') return corsResponse(null, 204);
     if (req.method !== 'POST') return corsResponse({ error: 'Method Not Allowed' }, 405);
+
+    // Obter configuração do Stripe baseada no ambiente detectado
+    const config = getStripeConfig(req);
+    
+    // Criar instância do Stripe com a chave correta para o ambiente
+    const stripe = new Stripe(config.secretKey, {
+      apiVersion: '2024-04-10',
+      appInfo: {
+        name: 'MatriculaUSA Integration',
+        version: '1.0.0',
+      },
+    });
+
+    console.log(`🔧 Using Stripe in ${config.environment.environment} mode`);
 
     const { sessionId } = await req.json();
     if (!sessionId) return corsResponse({ error: 'Session ID is required' }, 400);
