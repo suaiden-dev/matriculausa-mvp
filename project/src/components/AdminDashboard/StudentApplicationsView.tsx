@@ -318,8 +318,9 @@ const StudentApplicationsView: React.FC = () => {
         let lockedApplication = null;
         
         if (student.scholarship_applications && student.scholarship_applications.length > 0) {
-          // Priorizar aplicação enrolled, depois approved (mesma lógica do AdminStudentDetails)
-          lockedApplication = student.scholarship_applications.find((app: any) => app.status === 'enrolled') ||
+          // Priorizar aplicação que teve Application Fee pago, depois enrolled, depois approved
+          lockedApplication = student.scholarship_applications.find((app: any) => app.is_application_fee_paid) ||
+                             student.scholarship_applications.find((app: any) => app.status === 'enrolled') ||
                              student.scholarship_applications.find((app: any) => app.status === 'approved');
           
           // Se há uma aplicação locked, mostrar informações dela no campo scholarship

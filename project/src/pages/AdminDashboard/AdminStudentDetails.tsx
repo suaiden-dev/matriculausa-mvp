@@ -169,6 +169,10 @@ const AdminStudentDetails: React.FC = () => {
   const [editingPaymentMethod, setEditingPaymentMethod] = useState<string | null>(null);
   const [newPaymentMethod, setNewPaymentMethod] = useState<'stripe' | 'zelle' | 'manual'>('manual');
   const [savingPaymentMethod, setSavingPaymentMethod] = useState(false);
+  
+  // Estados para seleção de aplicação quando há múltiplas aprovadas
+  const [selectedApplicationId, setSelectedApplicationId] = useState<string | null>(null);
+  const [editingApplicationId, setEditingApplicationId] = useState<string | null>(null);
   // Modal de confirmação de pagamento
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [pendingPayment, setPendingPayment] = useState<{
@@ -656,6 +660,7 @@ const AdminStudentDetails: React.FC = () => {
               scholarships (
                 title,
                 university_id,
+                application_fee_amount,
                 universities (
                   name
                 )
@@ -708,15 +713,41 @@ const AdminStudentDetails: React.FC = () => {
           scholarship_id: lockedApplication?.scholarship_id || null,
           application_status: lockedApplication?.status || null,
           applied_at: lockedApplication?.applied_at || null,
-          is_application_fee_paid: lockedApplication?.is_application_fee_paid || false,
+          is_application_fee_paid: (() => {
+            // Verificar se alguma aplicação tem Application Fee pago
+            return s.scholarship_applications?.some((app: any) => app.is_application_fee_paid) || false;
+          })(),
           is_scholarship_fee_paid: lockedApplication?.is_scholarship_fee_paid || false,
           application_fee_payment_method: lockedApplication?.application_fee_payment_method || null,
           scholarship_fee_payment_method: lockedApplication?.scholarship_fee_payment_method || null,
           acceptance_letter_status: lockedApplication?.acceptance_letter_status || null,
           student_process_type: lockedApplication?.student_process_type || activeApplication?.student_process_type || null,
           payment_status: lockedApplication?.payment_status || null,
-          scholarship_title: lockedApplication?.scholarships?.title || null,
-          university_name: lockedApplication?.scholarships?.universities?.name || null,
+          scholarship_title: (() => {
+            // Buscar aplicação que teve Application Fee pago
+            const paidApplication = s.scholarship_applications?.find((app: any) => app.is_application_fee_paid);
+            if (paidApplication?.scholarships) {
+              const scholarship = Array.isArray(paidApplication.scholarships) 
+                ? paidApplication.scholarships[0] 
+                : paidApplication.scholarships;
+              return scholarship?.title || null;
+            }
+            return null;
+          })(),
+          university_name: (() => {
+            // Buscar aplicação que teve Application Fee pago
+            const paidApplication = s.scholarship_applications?.find((app: any) => app.is_application_fee_paid);
+            if (paidApplication?.scholarships) {
+              const scholarship = Array.isArray(paidApplication.scholarships) 
+                ? paidApplication.scholarships[0] 
+                : paidApplication.scholarships;
+              const university = Array.isArray(scholarship?.universities) 
+                ? scholarship.universities[0] 
+                : scholarship?.universities;
+              return university?.name || null;
+            }
+            return null;
+          })(),
           reviewed_at: lockedApplication?.reviewed_at || null,
           reviewed_by: lockedApplication?.reviewed_by || null,
           is_locked: !!lockedApplication,
@@ -1085,24 +1116,30 @@ const AdminStudentDetails: React.FC = () => {
           ? 'application_fee_payment_method' 
           : 'scholarship_fee_payment_method';
         
-        // Buscar aplicação aprovada ou mais recente
-        const { data: applications, error: fetchError } = await supabase
-          .from('scholarship_applications')
-          .select('id, status')
-          .eq('student_id', student.student_id)
-          .order('created_at', { ascending: false });
+        // Usar a aplicação específica que foi selecionada para edição
+        let targetApplicationId = editingApplicationId;
+        
+        if (!targetApplicationId) {
+          // Fallback: buscar aplicação aprovada ou mais recente
+          const { data: applications, error: fetchError } = await supabase
+            .from('scholarship_applications')
+            .select('id, status')
+            .eq('student_id', student.student_id)
+            .order('created_at', { ascending: false });
 
-        if (fetchError) throw fetchError;
+          if (fetchError) throw fetchError;
 
-        const targetApplication = applications?.find(app => app.status === 'approved') || applications?.[0];
-        if (!targetApplication) {
-          throw new Error('No application found for this student');
+          const targetApplication = applications?.find(app => app.status === 'approved') || applications?.[0];
+          if (!targetApplication) {
+            throw new Error('No application found for this student');
+          }
+          targetApplicationId = targetApplication.id;
         }
 
         const { error } = await supabase
           .from('scholarship_applications')
           .update({ [fieldName]: newPaymentMethod })
-          .eq('id', targetApplication.id);
+          .eq('id', targetApplicationId);
 
         if (error) throw error;
 
@@ -1117,7 +1154,7 @@ const AdminStudentDetails: React.FC = () => {
               fee_type: feeType,
               old_method: 'unknown',
               new_method: newPaymentMethod,
-              application_id: targetApplication.id,
+              application_id: targetApplicationId,
               student_name: student.student_name
             }
           );
@@ -1127,6 +1164,7 @@ const AdminStudentDetails: React.FC = () => {
       }
 
       setEditingPaymentMethod(null);
+      setEditingApplicationId(null);
       showToast(`Payment method updated to ${newPaymentMethod}`, 'success');
       
       // Recarregar dados do estudante
@@ -1244,13 +1282,76 @@ const AdminStudentDetails: React.FC = () => {
     setShowPaymentModal(true);
   };
 
+  const startEditingPaymentMethod = (feeType: 'application' | 'scholarship') => {
+    const approvedApps = student?.all_applications?.filter((app: any) => app.status === 'approved') || [];
+    
+    if (approvedApps.length === 1) {
+      // Usar a única aplicação aprovada
+      const app = approvedApps[0];
+      setEditingPaymentMethod(feeType);
+      setEditingApplicationId(app.id);
+      const currentMethod = feeType === 'application' 
+        ? app.application_fee_payment_method 
+        : app.scholarship_fee_payment_method;
+      setNewPaymentMethod((currentMethod as 'stripe' | 'zelle' | 'manual') || 'manual');
+    } else {
+      // Para múltiplas aplicações, por enquanto usar a primeira aprovada
+      // TODO: Implementar seleção para edição também se necessário
+      const app = approvedApps[0];
+      if (app) {
+        setEditingPaymentMethod(feeType);
+        setEditingApplicationId(app.id);
+        const currentMethod = feeType === 'application' 
+          ? app.application_fee_payment_method 
+          : app.scholarship_fee_payment_method;
+        setNewPaymentMethod((currentMethod as 'stripe' | 'zelle' | 'manual') || 'manual');
+      }
+    }
+  };
+
   const confirmPayment = async () => {
     if (!pendingPayment) return;
 
-    const { feeType, applicationId } = pendingPayment;
+    let { feeType, applicationId } = pendingPayment;
+    
+    console.log('🔍 DEBUG confirmPayment START:', {
+      feeType,
+      originalApplicationId: applicationId,
+      selectedApplicationId,
+      pendingPayment
+    });
+    
+    // Para Application Fee, sempre verificar se há seleção manual
+    if (feeType === 'application') {
+      const approvedApps = student?.all_applications?.filter((app: any) => app.status === 'approved') || [];
+      console.log('🔍 DEBUG approvedApps:', approvedApps.map(app => ({ id: app.id, title: app.scholarships?.title })));
+      
+      if (approvedApps.length > 1) {
+        // Com múltiplas aplicações, SEMPRE usar a selecionada
+        if (selectedApplicationId) {
+          applicationId = selectedApplicationId;
+          console.log('🔍 DEBUG Using selectedApplicationId:', selectedApplicationId);
+        } else {
+          console.error('❌ Multiple applications but no selection made!');
+          return; // Não prosseguir sem seleção
+        }
+      } else if (approvedApps.length === 1 && !applicationId) {
+        // Com uma aplicação, usar ela se não foi especificada
+        applicationId = approvedApps[0].id;
+        console.log('🔍 DEBUG Using single approved app:', approvedApps[0].id);
+      }
+    }
+    
+    console.log('🔍 DEBUG confirmPayment FINAL:', {
+      feeType,
+      finalApplicationId: applicationId,
+      selectedPaymentMethod
+    });
+    
     await markFeeAsPaid(feeType, applicationId, selectedPaymentMethod);
     setShowPaymentModal(false);
     setPendingPayment(null);
+    setSelectedApplicationId(null); // Reset selection
   };
 
   const markFeeAsPaid = async (
@@ -1302,6 +1403,12 @@ const AdminStudentDetails: React.FC = () => {
         // Marcar application fee como pago na scholarship_applications
         let targetApplicationId = applicationId;
         
+        console.log('🔍 DEBUG Application Fee Payment:', {
+          receivedApplicationId: applicationId,
+          targetApplicationId: targetApplicationId,
+          studentId: student.student_id
+        });
+        
         // Se não foi fornecido applicationId, buscar a aplicação aprovada ou mais recente
         if (!targetApplicationId) {
           const { data: applications, error: fetchError } = await supabase
@@ -1332,8 +1439,52 @@ const AdminStudentDetails: React.FC = () => {
 
         if (error) throw error;
 
-        // Atualizar estado local
-        setStudent(prev => prev ? { ...prev, is_application_fee_paid: true } : prev);
+        // Buscar dados da aplicação que foi marcada como paga para atualizar o committed scholarship
+        const { data: updatedApplication, error: fetchAppError } = await supabase
+          .from('scholarship_applications')
+          .select(`
+            id,
+            scholarships!inner (
+              title,
+              universities!inner (
+                name
+              )
+            )
+          `)
+          .eq('id', targetApplicationId)
+          .single();
+
+        if (fetchAppError) {
+          console.error('Error fetching application details:', fetchAppError);
+        }
+
+        // Atualizar estado local com a bolsa comprometida
+        setStudent(prev => {
+          if (!prev) return prev;
+          
+          const updatedStudent = { ...prev, is_application_fee_paid: true };
+          
+          // Se conseguimos buscar os dados da aplicação, atualizar scholarship_title e university_name
+          if (updatedApplication?.scholarships) {
+            const scholarship = Array.isArray(updatedApplication.scholarships) 
+              ? updatedApplication.scholarships[0] 
+              : updatedApplication.scholarships;
+            
+            if (scholarship) {
+              updatedStudent.scholarship_title = scholarship.title;
+              const university = Array.isArray(scholarship.universities) 
+                ? scholarship.universities[0] 
+                : scholarship.universities;
+              updatedStudent.university_name = university?.name;
+              console.log('🔍 DEBUG Updated committed scholarship:', {
+                scholarship_title: scholarship.title,
+                university_name: university?.name
+              });
+            }
+          }
+          
+          return updatedStudent;
+        });
 
         // Log the action
         try {
@@ -2332,6 +2483,7 @@ const AdminStudentDetails: React.FC = () => {
               scholarships (
                 title,
                 university_id,
+                application_fee_amount,
                 universities (
                   name
                 )
@@ -2375,15 +2527,41 @@ const AdminStudentDetails: React.FC = () => {
             scholarship_id: lockedApplication?.scholarship_id || null,
             application_status: lockedApplication?.status || null,
             applied_at: lockedApplication?.applied_at || null,
-            is_application_fee_paid: lockedApplication?.is_application_fee_paid || false,
+            is_application_fee_paid: (() => {
+              // Verificar se alguma aplicação tem Application Fee pago
+              return s.scholarship_applications?.some((app: any) => app.is_application_fee_paid) || false;
+            })(),
             is_scholarship_fee_paid: lockedApplication?.is_scholarship_fee_paid || false,
             application_fee_payment_method: lockedApplication?.application_fee_payment_method || null,
             scholarship_fee_payment_method: lockedApplication?.scholarship_fee_payment_method || null,
             acceptance_letter_status: lockedApplication?.acceptance_letter_status || null,
             student_process_type: lockedApplication?.student_process_type || activeApplication?.student_process_type || null,
             payment_status: lockedApplication?.payment_status || null,
-            scholarship_title: Array.isArray(lockedApplication?.scholarships) ? null : (lockedApplication?.scholarships as any)?.title || null,
-            university_name: Array.isArray(lockedApplication?.scholarships) ? null : (lockedApplication?.scholarships as any)?.universities?.name || null,
+            scholarship_title: (() => {
+              // Buscar aplicação que teve Application Fee pago
+              const paidApplication = s.scholarship_applications?.find((app: any) => app.is_application_fee_paid);
+              if (paidApplication?.scholarships) {
+                const scholarship = Array.isArray(paidApplication.scholarships) 
+                  ? paidApplication.scholarships[0] 
+                  : paidApplication.scholarships;
+                return scholarship?.title || null;
+              }
+              return null;
+            })(),
+            university_name: (() => {
+              // Buscar aplicação que teve Application Fee pago
+              const paidApplication = s.scholarship_applications?.find((app: any) => app.is_application_fee_paid);
+              if (paidApplication?.scholarships) {
+                const scholarship = Array.isArray(paidApplication.scholarships) 
+                  ? paidApplication.scholarships[0] 
+                  : paidApplication.scholarships;
+                const university = Array.isArray(scholarship?.universities) 
+                  ? scholarship.universities[0] 
+                  : scholarship?.universities;
+                return university?.name || null;
+              }
+              return null;
+            })(),
             reviewed_at: lockedApplication?.reviewed_at || null,
             reviewed_by: lockedApplication?.reviewed_by || null,
             is_locked: !!lockedApplication,
@@ -2980,7 +3158,7 @@ const AdminStudentDetails: React.FC = () => {
             </div>
           </div>
 
-          {student.scholarship_title ? (
+          {student.scholarship_title && student.is_application_fee_paid ? (
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
               <div className="bg-gradient-to-r rounded-t-2xl from-slate-700 to-slate-800 px-6 py-4">
                 <h2 className="text-xl font-semibold text-white flex items-center">
@@ -3593,7 +3771,23 @@ const AdminStudentDetails: React.FC = () => {
                   <div className="flex-1">
                     <dt className="text-sm font-medium text-slate-600">Application Fee</dt>
                     <dd className="text-sm text-slate-500 mt-1">Paid after scholarship approval</dd>
-                    <dd className="text-sm font-semibold text-slate-700 mt-1">$400.00</dd>
+                    {student.is_application_fee_paid ? (
+                      <dd className="text-sm font-semibold text-slate-700 mt-1">
+                        {(() => {
+                          // Buscar a aplicação que teve Application Fee pago para mostrar o valor correto
+                          const paidApplication = student.all_applications?.find((app: any) => app.is_application_fee_paid);
+                          if (paidApplication?.scholarships) {
+                            const scholarship = Array.isArray(paidApplication.scholarships) 
+                              ? paidApplication.scholarships[0] 
+                              : paidApplication.scholarships;
+                            return scholarship?.application_fee_amount ? `$${scholarship.application_fee_amount.toFixed(2)}` : 'Fee paid';
+                          }
+                          return 'Fee paid';
+                        })()}
+                      </dd>
+                    ) : (
+                      <dd className="text-sm text-slate-500 mt-1">Amount varies by scholarship</dd>
+                    )}
                   </div>
                   <div className="flex flex-col gap-3">
                     {student.is_application_fee_paid ? (
@@ -3636,11 +3830,7 @@ const AdminStudentDetails: React.FC = () => {
                               </div>
                             ) : (
                               <button
-                                onClick={() => {
-                                  setEditingPaymentMethod('application');
-                                  const approvedApp = student.all_applications?.find((app: any) => app.status === 'approved');
-                                  setNewPaymentMethod((approvedApp?.application_fee_payment_method as 'stripe' | 'zelle' | 'manual') || 'manual');
-                                }}
+                                onClick={() => startEditingPaymentMethod('application')}
                                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg flex items-center space-x-2 w-fit"
                               >
                                 <Edit3 className="w-4 h-4" />
@@ -3741,11 +3931,7 @@ const AdminStudentDetails: React.FC = () => {
                               </div>
                             ) : (
                               <button
-                                onClick={() => {
-                                  setEditingPaymentMethod('scholarship');
-                                  const approvedApp = student.all_applications?.find((app: any) => app.status === 'approved');
-                                  setNewPaymentMethod((approvedApp?.scholarship_fee_payment_method as 'stripe' | 'zelle' | 'manual') || 'manual');
-                                }}
+                                onClick={() => startEditingPaymentMethod('scholarship')}
                                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg flex items-center space-x-2 w-fit"
                               >
                                 <Edit3 className="w-4 h-4" />
@@ -4610,6 +4796,43 @@ const AdminStudentDetails: React.FC = () => {
             <p className="text-sm text-slate-600 mb-6">
               Are you sure you want to mark the <strong>{pendingPayment.feeName}</strong> as paid?
             </p>
+
+            {/* Seleção de aplicação para Application Fee quando há múltiplas aprovadas */}
+            {pendingPayment.feeType === 'application' && (() => {
+              const approvedApps = student?.all_applications?.filter((app: any) => app.status === 'approved') || [];
+              return approvedApps.length > 1 && (
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Select Application
+                  </label>
+                  <div className="space-y-2 max-h-40 overflow-y-auto">
+                    {approvedApps.map((app: any) => (
+                      <label key={app.id} className="flex items-center space-x-3 p-2 border border-slate-200 rounded-lg hover:bg-slate-50 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="selectedApplication"
+                          value={app.id}
+                          checked={selectedApplicationId === app.id}
+                          onChange={(e) => setSelectedApplicationId(e.target.value)}
+                          className="text-blue-600 focus:ring-blue-500"
+                        />
+                        <div className="flex-1">
+                          <div className="text-sm font-medium text-slate-900">
+                            {app.scholarships?.title || 'Scholarship'}
+                          </div>
+                          <div className="text-xs text-slate-500">
+                            {app.scholarships?.universities?.name || 'University'} • Applied: {new Date(app.applied_at).toLocaleDateString()}
+                          </div>
+                          {app.is_application_fee_paid && (
+                            <div className="text-xs text-green-600 mt-1">✓ Already Paid ({app.application_fee_payment_method})</div>
+                          )}
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
             
             <div className="mb-6">
               <label className="block text-sm font-medium text-slate-700 mb-2">
@@ -4631,6 +4854,7 @@ const AdminStudentDetails: React.FC = () => {
                 onClick={() => {
                   setShowPaymentModal(false);
                   setPendingPayment(null);
+                  setSelectedApplicationId(null);
                 }}
                 className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
               >
@@ -4638,7 +4862,12 @@ const AdminStudentDetails: React.FC = () => {
               </button>
               <button
                 onClick={confirmPayment}
-                disabled={markingAsPaid[`${student?.student_id}:${pendingPayment.feeType}`]}
+                disabled={
+                  markingAsPaid[`${student?.student_id}:${pendingPayment.feeType}`] ||
+                  (pendingPayment.feeType === 'application' && 
+                   (student?.all_applications?.filter((app: any) => app.status === 'approved') || []).length > 1 && 
+                   !selectedApplicationId)
+                }
                 className="flex-1 px-4 py-2 bg-[#05294E] text-white rounded-lg hover:bg-[#041f38] disabled:opacity-50 transition-colors flex items-center justify-center space-x-2"
               >
                 <CheckCircle className="w-4 h-4" />
@@ -4650,6 +4879,7 @@ const AdminStudentDetails: React.FC = () => {
           </div>
         </div>
       )}
+
       
       {/* Modal de visualização de documentos */}
       {previewUrl && (
