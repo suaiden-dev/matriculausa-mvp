@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import AdminStudentChatNotifications from '../../components/AdminStudentChatNotifications';
+import { useUnreadMessagesCount } from '../../hooks/useUnreadMessagesCount';
 
 interface AdminDashboardLayoutProps {
   user: any;
@@ -42,6 +43,7 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
   const { logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const { unreadCount } = useUnreadMessagesCount();
   
   const getActiveTab = () => {
     const path = location.pathname;
@@ -170,7 +172,12 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
                   }`}
                 >
                   <div className="flex items-center space-x-3">
-                    <Icon className={`h-5 w-5 ${isActive ? 'text-white' : 'text-slate-500'}`} />
+                    <div className="relative">
+                      <Icon className={`h-5 w-5 ${isActive ? 'text-white' : 'text-slate-500'}`} />
+                      {item.id === 'users' && unreadCount > 0 && (
+                        <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
+                      )}
+                    </div>
                     <span className="text-sm">{item.label}</span>
                   </div>
                   {item.badge && (

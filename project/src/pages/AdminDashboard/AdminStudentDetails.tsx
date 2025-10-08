@@ -1591,7 +1591,7 @@ const AdminStudentDetails: React.FC = () => {
       }
 
       // Upload do anexo (opcional)
-      let attachment_url = '';
+      let attachment_url: string | null = null;
       if (newDocumentRequest.attachment) {
         const sanitized = sanitizeFileName(newDocumentRequest.attachment.name);
         const storagePath = `individual/${Date.now()}_${sanitized}`;
