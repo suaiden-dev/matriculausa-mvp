@@ -552,9 +552,9 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                               <div className="flex-1 min-w-0">
                                 <div className="flex flex-wrap gap-2 mb-1">
                                   <p className="text-sm font-medium text-slate-600 capitalize">{doc.type || 'Document'}</p>
-                                  <span className={`px-2 py-1 rounded text-xs font-medium whitespace-nowrap ${
-                                    doc.status === 'approved' ? 'text-green-600' :
-                                    doc.status === 'rejected' ? 'text-red-600' :
+                                  <span className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
+                                    doc.status === 'approved' ? 'bg-green-100 text-green-800' :
+                                    doc.status === 'rejected' ? 'bg-red-100 text-red-800' :
                                     doc.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                                     'bg-blue-100 text-blue-800'
                                   }`}>
@@ -573,7 +573,7 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                                   {doc.url && (
                                     <button 
                                       onClick={() => onViewDocument(doc)}
-                                      className="bg-[#05294E] hover:bg-[#041f38] text-white px-3 py-1.5 rounded-xl text-sm font-medium transition-colors w-full sm:w-auto text-center"
+                                      className="bg-[#05294E] hover:bg-[#041f38] text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto text-center"
                                     >
                                       View Document
                                     </button>
@@ -581,7 +581,7 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                                   {doc.url && (
                                     <button 
                                       onClick={() => onDownloadDocument(doc)}
-                                      className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1.5 rounded-xl text-sm font-medium transition-colors w-full sm:w-auto text-center"
+                                      className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto text-center"
                                     >
                                       Download
                                     </button>
