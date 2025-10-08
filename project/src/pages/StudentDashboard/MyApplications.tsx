@@ -22,6 +22,7 @@ import { StripeCheckout } from '../../components/StripeCheckout';
 import { useCartStore } from '../../stores/applicationStore';
 import { ScholarshipConfirmationModal } from '../../components/ScholarshipConfirmationModal';
 import { formatCentsToDollars } from '../../utils/currency';
+import TruncatedText from '../../components/TruncatedText';
 // import StudentDashboardLayout from "./StudentDashboardLayout";
 // import CustomLoading from '../../components/CustomLoading';
 
@@ -57,7 +58,7 @@ const MyApplications: React.FC = () => {
   const [selectedFiles, setSelectedFiles] = useState<Record<string, File | null>>({});
   const [uploading, setUploading] = useState<Record<string, boolean>>({});
   // Document Requests uploads grouped by applicationId
-  const [requestUploadsByApp, setRequestUploadsByApp] = useState<Record<string, { title: string; status: string; review_notes?: string }[]>>({});
+  const [requestUploadsByApp, setRequestUploadsByApp] = useState<Record<string, { title: string; status: string; review_notes?: string; rejection_reason?: string }[]>>({});
   // const [pendingUploads] = useState<Record<string, Record<string, File | null>>>({});
   // const [uploadingAppId, setUploadingAppId] = useState<string | null>(null);
   // const navigate = useNavigate();
@@ -191,7 +192,7 @@ const MyApplications: React.FC = () => {
               if (requestIds.length) {
                 const { data: uploads } = await supabase
                   .from('document_request_uploads')
-                  .select('document_request_id,status,review_notes,uploaded_at,uploaded_by')
+                  .select('document_request_id,status,review_notes,rejection_reason,uploaded_at,uploaded_by')
                   .in('document_request_id', requestIds)
                   .eq('uploaded_by', user.id);
                 // Mapear requestId -> {title, appIds[]}
@@ -204,13 +205,13 @@ const MyApplications: React.FC = () => {
                     reqMeta[r.id] = { title: r.title, appIds: targetApps };
                   }
                 });
-                const grouped: Record<string, { title: string; status: string; review_notes?: string }[]> = {};
+                const grouped: Record<string, { title: string; status: string; review_notes?: string; rejection_reason?: string }[]> = {};
                 (uploads || []).forEach((u: any) => {
                   const meta = reqMeta[u.document_request_id];
                   if (!meta) return;
                   meta.appIds.forEach(appId => {
                     if (!grouped[appId]) grouped[appId] = [];
-                    grouped[appId].push({ title: meta.title, status: (u.status || '').toLowerCase(), review_notes: u.review_notes || undefined });
+                    grouped[appId].push({ title: meta.title, status: (u.status || '').toLowerCase(), review_notes: u.review_notes || undefined, rejection_reason: u.rejection_reason || undefined });
                   });
                 });
                 if (isMounted) setRequestUploadsByApp(grouped);
@@ -586,13 +587,18 @@ const MyApplications: React.FC = () => {
   // Normaliza o array de documentos da aplicação para lidar com ambos os formatos:
   // - string[] (legado)
   // - { type, url, status, review_notes }[] (atual)
-  const parseApplicationDocuments = (documents: any): { type: string; status?: string; review_notes?: string }[] => {
+  const parseApplicationDocuments = (documents: any): { type: string; status?: string; review_notes?: string; rejection_reason?: string }[] => {
     if (!Array.isArray(documents)) return [];
     if (documents.length === 0) return [];
     if (typeof documents[0] === 'string') {
       return (documents as string[]).map((t) => ({ type: t }));
     }
-    return (documents as any[]).map((d) => ({ type: d.type, status: d.status, review_notes: d.review_notes }));
+    return (documents as any[]).map((d) => ({ 
+      type: d.type, 
+      status: d.status, 
+      review_notes: d.review_notes,
+      rejection_reason: d.rejection_reason
+    }));
   };
 
   // const getStatusMessage = (status: string) => {
@@ -1737,7 +1743,8 @@ const getLevelColor = (level: any) => {
                                 return {
                                   ...docTemplate,
                                   status: docData?.status || 'pending',
-                                  review_notes: docData?.review_notes
+                                  review_notes: docData?.review_notes,
+                                  rejection_reason: docData?.rejection_reason
                                 };
                               });
 
@@ -1805,9 +1812,17 @@ const getLevelColor = (level: any) => {
                                                  </div>
                                                  
                                                  {/* Document Info */}
-                                                 <div className="flex-1 min-w-0">
+                                                 <div className="flex-1 min-w-0 overflow-hidden">
                                                    <div className="flex items-center justify-between mb-1">
-                                                     <h5 className="font-semibold text-slate-900 text-sm truncate">{doc.label}</h5>
+                                                     <h5 className="font-semibold text-slate-900 text-sm">
+                                                       <TruncatedText
+                                                         text={doc.label}
+                                                         maxLength={30}
+                                                         className="font-semibold text-slate-900 text-sm"
+                                                         showTooltip={true}
+                                                         tooltipPosition="top"
+                                                       />
+                                                     </h5>
                                                      <span className={`px-2 py-1 rounded-full text-xs font-bold border ${
                                                        isApproved 
                                                          ? 'bg-green-50 text-green-700 border-green-200' 
@@ -1821,11 +1836,18 @@ const getLevelColor = (level: any) => {
                                                      </span>
                                                    </div>
                                                    
-                                                   {/* Review Notes */}
-                                                   {doc.review_notes && isRejected && (
-                                                     <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-lg">
+                                                   {/* Review Notes / Rejection Reason */}
+                                                   {isRejected && (doc.rejection_reason || doc.review_notes) && (
+                                                     <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-lg">
                                                        <p className="text-xs text-red-700">
-                                                         <strong>{t('studentDashboard.myApplications.documents.review')}</strong> {doc.review_notes}
+                                                         <strong className="block mb-1">{t('studentDashboard.myApplications.documents.review')}</strong>
+                                                         <TruncatedText
+                                                           text={doc.rejection_reason || doc.review_notes || ''}
+                                                           maxLength={120}
+                                                           className="text-xs text-red-700 leading-relaxed"
+                                                           showTooltip={true}
+                                                           tooltipPosition="top"
+                                                         />
                                                        </p>
                                                      </div>
                                                    )}
@@ -1833,25 +1855,29 @@ const getLevelColor = (level: any) => {
                                                    {/* Upload Action for Rejected Docs */}
                                                    {isRejected && (
                                                      <div className="mt-3 space-y-2">
-                                                       <label className="cursor-pointer bg-gradient-to-r from-blue-50 to-blue-100 text-blue-700 border-2 border-blue-200 hover:from-blue-100 hover:to-blue-200 px-3 py-2 rounded-lg font-semibold transition-all duration-200 w-full block text-center text-xs hover:shadow-md">
-                                                         <span>{t('studentDashboard.myApplications.documents.sendNew')} {doc.label}</span>
-                                                         <input
-                                                           type="file"
-                                                           className="sr-only"
-                                                           accept="application/pdf,image/*"
-                                                           onChange={(e) => handleSelectDocFile(application.id, doc.type, e.target.files ? e.target.files[0] : null)}
-                                                         />
-                                                       </label>
-                                                       {selectedFiles[docKey(application.id, doc.type)] && (
-                                                         <div className="text-xs text-slate-700 bg-slate-50 border border-slate-200 rounded-lg p-2">
-                                                           <span className="font-medium">{t('studentDashboard.myApplications.paymentStatus.selected')}</span> {selectedFiles[docKey(application.id, doc.type)]?.name}
-                                                         </div>
-                                                       )}
-                                                       <button
-                                                         className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white px-3 py-2 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:from-blue-700 hover:to-blue-800 shadow-lg hover:shadow-xl transform hover:scale-105 text-xs"
-                                                         disabled={!selectedFiles[docKey(application.id, doc.type)] || uploading[docKey(application.id, doc.type)]}
-                                                         onClick={() => handleUploadDoc(application.id, doc.type)}
-                                                       >
+                                                       <div className="flex flex-col sm:flex-row gap-2">
+                                                         <label className="cursor-pointer bg-gradient-to-r from-blue-50 to-blue-100 text-blue-700 border-2 border-blue-200 hover:from-blue-100 hover:to-blue-200 px-3 py-2 rounded-lg font-semibold transition-all duration-200 flex-1 block text-center text-xs hover:shadow-md">
+                                                           <span>
+                                                             <TruncatedText
+                                                               text={`${t('studentDashboard.myApplications.documents.sendNew')} ${doc.label}`}
+                                                               maxLength={40}
+                                                               className="text-xs font-semibold"
+                                                               showTooltip={true}
+                                                               tooltipPosition="top"
+                                                             />
+                                                           </span>
+                                                           <input
+                                                             type="file"
+                                                             className="sr-only"
+                                                             accept="application/pdf,image/*"
+                                                             onChange={(e) => handleSelectDocFile(application.id, doc.type, e.target.files ? e.target.files[0] : null)}
+                                                           />
+                                                         </label>
+                                                         <button
+                                                           className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 text-white px-3 py-2 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:from-blue-700 hover:to-blue-800 text-xs"
+                                                           disabled={!selectedFiles[docKey(application.id, doc.type)] || uploading[docKey(application.id, doc.type)]}
+                                                           onClick={() => handleUploadDoc(application.id, doc.type)}
+                                                         >
                                                          {uploading[docKey(application.id, doc.type)] ? (
                                                            <div className="flex items-center justify-center">
                                                              <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-2"></div>
@@ -1859,6 +1885,22 @@ const getLevelColor = (level: any) => {
                                                            </div>
                                                          ) : t('studentDashboard.myApplications.paymentStatus.uploadDocument')}
                                                        </button>
+                                                       </div>
+                                                       {selectedFiles[docKey(application.id, doc.type)] && (
+                                                         <div className="text-xs text-slate-700 bg-slate-50 border border-slate-200 rounded-lg p-2">
+                                                           <span className="font-medium">{t('studentDashboard.myApplications.paymentStatus.selected')}: </span>
+                                                           <TruncatedText
+                                                             text={selectedFiles[docKey(application.id, doc.type)]?.name || ''}
+                                                             maxLength={50}
+                                                             className="text-xs text-slate-600 inline"
+                                                             showTooltip={true}
+                                                             tooltipPosition="top"
+                                                             breakWords={true}
+                                                             isFilename={true}
+                                                             documentType={doc.type}
+                                                           />
+                                                         </div>
+                                                       )}
                                                      </div>
                                                    )}
                                                  </div>
@@ -1901,7 +1943,15 @@ const getLevelColor = (level: any) => {
                                                            <Clock className="h-3 w-3 text-amber-600" />
                                                          )}
                                                        </div>
-                                                       <span className="font-medium text-slate-900 text-xs">{req.title}</span>
+                                                       <span className="font-medium text-slate-900 text-xs">
+                                                         <TruncatedText
+                                                           text={req.title}
+                                                           maxLength={35}
+                                                           className="font-medium text-slate-900 text-xs"
+                                                           showTooltip={true}
+                                                           tooltipPosition="top"
+                                                         />
+                                                       </span>
                                                      </div>
                                                      <span className={`px-2 py-1 rounded-full text-xs font-bold ${
                                                        isApproved 
@@ -1913,9 +1963,16 @@ const getLevelColor = (level: any) => {
                                                        {isApproved ? t('studentDashboard.myApplications.documents.status.approved') : isRejected ? t('studentDashboard.myApplications.documents.status.changesNeeded') : t('studentDashboard.myApplications.documents.status.underReview')}
                                                      </span>
                                                    </div>
-                                                   {req.review_notes && isRejected && (
-                                                     <div className="mt-2 text-xs text-red-700 bg-red-50 border border-red-200 rounded p-2">
-                                                       <strong>{t('studentDashboard.myApplications.documents.review')}</strong> {req.review_notes}
+                                                   {isRejected && (req.rejection_reason || req.review_notes) && (
+                                                     <div className="mt-2 p-3 text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg">
+                                                       <strong className="block mb-1">{t('studentDashboard.myApplications.documents.review')}</strong>
+                                                       <TruncatedText
+                                                         text={req.rejection_reason || req.review_notes || ''}
+                                                         maxLength={120}
+                                                         className="text-xs text-red-700 leading-relaxed"
+                                                         showTooltip={true}
+                                                         tooltipPosition="top"
+                                                       />
                                                      </div>
                                                    )}
                                                  </div>

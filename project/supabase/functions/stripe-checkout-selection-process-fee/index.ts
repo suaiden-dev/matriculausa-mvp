@@ -1,19 +1,12 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import Stripe from 'npm:stripe@17.7.0';
 import { createClient } from 'npm:@supabase/supabase-js@2.49.1';
+import { getStripeConfig } from '../stripe-config.ts';
 
 // O Stripe fará a conversão de moeda automaticamente
 // quando payment_method_types incluir 'pix' e a moeda for USD
 
 const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
-const stripeSecret = Deno.env.get('STRIPE_SECRET_KEY')!;
-const stripe = new Stripe(stripeSecret, {
-  apiVersion: '2025-07-30.preview', // Versão preview para FX Quotes API
-  appInfo: {
-    name: 'Bolt Integration',
-    version: '1.0.0',
-  },
-});
 
 function corsResponse(body: string | object | null, status = 200) {
   const headers = {
@@ -41,11 +34,19 @@ Deno.serve(async (req) => {
       return corsResponse(null, 204);
     }
 
-    // Verificar se as variáveis de ambiente estão configuradas
-    if (!Deno.env.get('STRIPE_SECRET_KEY')) {
-      console.error('[stripe-checkout-selection-process-fee] ❌ STRIPE_SECRET_KEY não configurada');
-      return corsResponse({ error: 'Stripe configuration error' }, 500);
-    }
+    // Obter configuração do Stripe baseada no ambiente detectado
+    const config = getStripeConfig(req);
+    
+    // Criar instância do Stripe com a chave correta para o ambiente
+    const stripe = new Stripe(config.secretKey, {
+      apiVersion: '2025-07-30.preview', // Versão preview para FX Quotes API
+      appInfo: {
+        name: 'MatriculaUSA Integration',
+        version: '1.0.0',
+      },
+    });
+
+    console.log(`🔧 Using Stripe in ${config.environment.environment} mode`);
 
     if (!Deno.env.get('SUPABASE_URL') || !Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')) {
       console.error('[stripe-checkout-selection-process-fee] ❌ Variáveis do Supabase não configuradas');

@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import DocumentViewerModal from './DocumentViewerModal';
 import { useUniversity } from '../context/UniversityContext';
 import { useAuth } from '../hooks/useAuth';
+import TruncatedText from './TruncatedText';
 
 interface DocumentRequest {
   id: string;
@@ -1009,6 +1010,27 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
                               >
                                 Download
                               </button>
+                              
+                              {/* Botões de aprovação e rejeição para administradores */}
+                              {isSchool && (normalizedStatus === 'pending' || normalizedStatus === 'under_review') && (
+                                <>
+                                  <button
+                                    className="text-green-600 hover:text-green-800 text-xs sm:text-sm font-medium hover:underline"
+                                    onClick={() => handleApproveUpload(upload.id)}
+                                  >
+                                    Approve
+                                  </button>
+                                  <button
+                                    className="text-red-600 hover:text-red-800 text-xs sm:text-sm font-medium hover:underline"
+                                    onClick={() => {
+                                      setPendingRejectUploadId(upload.id);
+                                      setShowRejectModal(true);
+                                    }}
+                                  >
+                                    Reject
+                                  </button>
+                                </>
+                              )}
                             </div>
                           </div>
                           
@@ -1041,7 +1063,17 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
                         />
                       </label>
                       {selectedFiles[req.id] && (
-                        <span className="text-xs sm:text-sm text-slate-600 truncate">{selectedFiles[req.id]?.name}</span>
+                        <div className="text-xs sm:text-sm text-slate-600">
+                          <TruncatedText
+                            text={selectedFiles[req.id]?.name || ''}
+                            maxLength={40}
+                            className="text-xs sm:text-sm text-slate-600"
+                            showTooltip={true}
+                            tooltipPosition="top"
+                            breakWords={true}
+                            isFilename={true}
+                          />
+                        </div>
                       )}
                       <button
                         className={`bg-blue-600 text-white px-3 py-2 rounded-lg text-xs sm:text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition flex-shrink-0`}
@@ -1239,7 +1271,18 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
                 />
               </label>
               {selectedFiles['transfer_form'] && (
-                <span className="text-sm text-gray-700 truncate max-w-xs w-full sm:w-auto">{selectedFiles['transfer_form']?.name}</span>
+                <div className="text-sm text-gray-700 max-w-xs w-full sm:w-auto">
+                  <TruncatedText
+                    text={selectedFiles['transfer_form']?.name || ''}
+                    maxLength={40}
+                    className="text-sm text-gray-700"
+                    showTooltip={true}
+                    tooltipPosition="top"
+                    breakWords={true}
+                    isFilename={true}
+                    documentType="transfer_form"
+                  />
+                </div>
               )}
               <button
                 className={`bg-[#22C55E] text-white px-4 py-2 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all w-full sm:w-auto`}
@@ -1342,7 +1385,17 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
                     />
                   </label>
                   {newRequest.attachment && (
-                    <span className="text-xs text-slate-700 truncate max-w-[180px]">{newRequest.attachment.name}</span>
+                    <div className="text-xs text-slate-700 max-w-[180px]">
+                      <TruncatedText
+                        text={newRequest.attachment.name}
+                        maxLength={30}
+                        className="text-xs text-slate-700"
+                        showTooltip={true}
+                        tooltipPosition="top"
+                        breakWords={true}
+                        isFilename={true}
+                      />
+                    </div>
                   )}
                 </div>
               </div>
@@ -1422,7 +1475,17 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
                     />
                   </label>
                   {newRequest.attachment && (
-                    <span className="text-xs text-slate-700 truncate max-w-[180px]">{newRequest.attachment.name}</span>
+                    <div className="text-xs text-slate-700 max-w-[180px]">
+                      <TruncatedText
+                        text={newRequest.attachment.name}
+                        maxLength={30}
+                        className="text-xs text-slate-700"
+                        showTooltip={true}
+                        tooltipPosition="top"
+                        breakWords={true}
+                        isFilename={true}
+                      />
+                    </div>
                   )}
                 </div>
               </div>
