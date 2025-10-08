@@ -77,8 +77,13 @@ const StudentApplicationsView: React.FC = () => {
   const { user } = useAuth();
   const isPlatformAdmin = user?.role === 'admin';
 
-  // Aprovação de documentos pelo admin
+  // Aprovação e rejeição de documentos pelo admin
   const approveableTypes = new Set(['passport', 'funds_proof', 'diploma']);
+  const [rejectingDocs, setRejectingDocs] = useState<{[key: string]: boolean}>({});
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectData, setRejectData] = useState<{applicationId: string, docType: string} | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
+
   const handleApproveDocument = async (applicationId: string, docType: string) => {
     if (!isPlatformAdmin) return;
     if (!approveableTypes.has(docType)) return;
@@ -125,6 +130,96 @@ const StudentApplicationsView: React.FC = () => {
       });
     } finally {
       setApprovingDocs(prev => ({ ...prev, [loadingKey]: false }));
+    }
+  };
+
+  const handleRejectDocument = async (applicationId: string, docType: string, reason: string) => {
+    if (!isPlatformAdmin) return;
+    if (!approveableTypes.has(docType)) return;
+
+    const loadingKey = `${applicationId}:${docType}`;
+    setRejectingDocs(prev => ({ ...prev, [loadingKey]: true }));
+    
+    try {
+      const targetApp = selectedStudent?.all_applications?.find((a: any) => a.id === applicationId);
+      if (!targetApp) {
+        console.error('Aplicação não encontrada para rejeição de documento', { applicationId, docType });
+        return;
+      }
+
+      const currentDocs: any[] = Array.isArray(targetApp.documents) ? targetApp.documents : [];
+      const newDocuments = currentDocs.map((d: any) => {
+        if (d?.type === docType) {
+          return {
+            ...d,
+            status: 'rejected',
+            rejected_at: new Date().toISOString(),
+            rejection_reason: reason,
+            rejected_by: user?.id
+          };
+        }
+        return d;
+      });
+
+      const { data: updated, error } = await supabase
+        .from('scholarship_applications')
+        .update({ documents: newDocuments, updated_at: new Date().toISOString() })
+        .eq('id', applicationId)
+        .select('id, documents')
+        .single();
+
+      if (error) {
+        console.error('Erro ao rejeitar documento:', error);
+        return;
+      }
+
+      setSelectedStudent(prev => {
+        if (!prev) return prev;
+        const updatedApps = (prev.all_applications || []).map((a: any) =>
+          a.id === applicationId ? { ...a, documents: updated?.documents || newDocuments } : a
+        );
+        return { ...prev, all_applications: updatedApps } as any;
+      });
+
+      // Log da ação
+      try {
+        await supabase.rpc('log_student_action', {
+          p_student_id: selectedStudent?.id,
+          p_action_type: 'document_rejection',
+          p_action_description: `Document ${docType} rejected by platform admin: ${reason}`,
+          p_performed_by: user?.id || '',
+          p_performed_by_type: 'admin',
+          p_metadata: {
+            document_type: docType,
+            application_id: applicationId,
+            rejection_reason: reason,
+            rejected_by: user?.email || 'Platform Admin'
+          }
+        });
+      } catch (logError) {
+        console.error('Failed to log document rejection:', logError);
+      }
+
+      // Fechar modal e limpar dados
+      setShowRejectModal(false);
+      setRejectData(null);
+      setRejectReason('');
+      
+    } catch (error: any) {
+      console.error('Erro ao rejeitar documento:', error);
+    } finally {
+      setRejectingDocs(prev => ({ ...prev, [loadingKey]: false }));
+    }
+  };
+
+  const openRejectModal = (applicationId: string, docType: string) => {
+    setRejectData({ applicationId, docType });
+    setShowRejectModal(true);
+  };
+
+  const confirmReject = () => {
+    if (rejectData && rejectReason.trim()) {
+      handleRejectDocument(rejectData.applicationId, rejectData.docType, rejectReason.trim());
     }
   };
 
@@ -1677,14 +1772,24 @@ const StudentApplicationsView: React.FC = () => {
                                                     <span className="hidden md:inline">Download</span>
                                                   </button>
                                                   {isPlatformAdmin && approveableTypes.has(doc.type) && (doc.status || '').toLowerCase() !== 'approved' && (
-                                                    <button
-                                                      onClick={() => handleApproveDocument(app.id, doc.type)}
-                                                      disabled={!!approvingDocs[`${app.id}:${doc.type}`]}
-                                                      className={`text-xs font-medium flex items-center space-x-1 transition-colors px-2 py-1 rounded-md border ${approvingDocs[`${app.id}:${doc.type}`] ? 'text-slate-400 border-slate-200 bg-slate-50' : 'text-green-700 border-green-300 hover:bg-green-50'}`}
-                                                    >
-                                                      <CheckCircle className="w-3 h-3" />
-                                                      <span className="hidden md:inline">Approve</span>
-                                                    </button>
+                                                    <>
+                                                      <button
+                                                        onClick={() => handleApproveDocument(app.id, doc.type)}
+                                                        disabled={!!approvingDocs[`${app.id}:${doc.type}`]}
+                                                        className={`text-xs font-medium flex items-center space-x-1 transition-colors px-2 py-1 rounded-md border ${approvingDocs[`${app.id}:${doc.type}`] ? 'text-slate-400 border-slate-200 bg-slate-50' : 'text-green-700 border-green-300 hover:bg-green-50'}`}
+                                                      >
+                                                        <CheckCircle className="w-3 h-3" />
+                                                        <span className="hidden md:inline">Approve</span>
+                                                      </button>
+                                                      <button
+                                                        onClick={() => openRejectModal(app.id, doc.type)}
+                                                        disabled={!!rejectingDocs[`${app.id}:${doc.type}`]}
+                                                        className={`text-xs font-medium flex items-center space-x-1 transition-colors px-2 py-1 rounded-md border ${rejectingDocs[`${app.id}:${doc.type}`] ? 'text-slate-400 border-slate-200 bg-slate-50' : 'text-red-700 border-red-300 hover:bg-red-50'}`}
+                                                      >
+                                                        <XCircle className="w-3 h-3" />
+                                                        <span className="hidden md:inline">Reject</span>
+                                                      </button>
+                                                    </>
                                                   )}
                                                 </div>
                                               </div>
@@ -1703,6 +1808,16 @@ const StudentApplicationsView: React.FC = () => {
                                                   <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded-md">
                                                     Approved {new Date(doc.approved_at).toLocaleDateString()}
                                                   </span>
+                                                )}
+                                                {doc.rejected_at && (
+                                                  <span className="text-xs text-red-600 bg-red-50 px-2 py-1 rounded-md">
+                                                    Rejected {new Date(doc.rejected_at).toLocaleDateString()}
+                                                  </span>
+                                                )}
+                                                {doc.rejection_reason && (
+                                                  <div className="text-xs text-red-600 bg-red-50 px-2 py-1 rounded-md mt-1">
+                                                    <span className="font-medium">Reason:</span> {doc.rejection_reason}
+                                                  </div>
                                                 )}
                                               </div>
                                             </div>
@@ -1798,6 +1913,65 @@ const StudentApplicationsView: React.FC = () => {
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Rejeição de Documento */}
+      {showRejectModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Rejeitar Documento</h3>
+              <button
+                onClick={() => {
+                  setShowRejectModal(false);
+                  setRejectData(null);
+                  setRejectReason('');
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <XCircle className="w-6 h-6" />
+              </button>
+            </div>
+            
+            <div className="mb-4">
+              <p className="text-sm text-gray-600 mb-2">
+                Documento: <span className="font-medium">{rejectData?.docType}</span>
+              </p>
+              <label htmlFor="rejectReason" className="block text-sm font-medium text-gray-700 mb-2">
+                Motivo da rejeição *
+              </label>
+              <textarea
+                id="rejectReason"
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                placeholder="Digite o motivo da rejeição do documento..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                rows={4}
+                required
+              />
+            </div>
+            
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setShowRejectModal(false);
+                  setRejectData(null);
+                  setRejectReason('');
+                }}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmReject}
+                disabled={!rejectReason.trim() || (rejectData && rejectingDocs[`${rejectData.applicationId}:${rejectData.docType}`])}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {rejectData && rejectingDocs[`${rejectData.applicationId}:${rejectData.docType}`] ? 'Rejeitando...' : 'Rejeitar Documento'}
+              </button>
             </div>
           </div>
         </div>

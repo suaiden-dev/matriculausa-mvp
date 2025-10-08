@@ -5,6 +5,7 @@ import { StudentInfo } from './types';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
 import { supabase } from '../../lib/supabase';
 import I20DeadlineTimer from './I20DeadlineTimer';
+import TruncatedText from '../TruncatedText';
 
 export interface StudentDetailsViewProps {
   studentDetails: StudentInfo;
@@ -566,6 +567,20 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                                   <p className="text-xs text-slate-400 mt-1">
                                     Uploaded: {formatDate(doc.uploaded_at)}
                                   </p>
+                                )}
+                                
+                                {/* Exibir motivo da rejeição se o documento foi rejeitado */}
+                                {doc.status === 'rejected' && doc.rejection_reason && (
+                                  <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                                    <p className="text-xs font-medium text-red-600 mb-1">Rejection reason:</p>
+                                    <TruncatedText
+                                      text={doc.rejection_reason}
+                                      maxLength={120}
+                                      className="text-sm text-red-700 leading-relaxed"
+                                      showTooltip={true}
+                                      tooltipPosition="top"
+                                    />
+                                  </div>
                                 )}
                                 
                                 {/* Botões de visualização e download */}

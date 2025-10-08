@@ -12,12 +12,19 @@ export const config = {
            window.location.hostname.includes('matriculausa.com');
   },
 
+  isStaging: () => {
+    return window.location.hostname === 'staging-matriculausa.netlify.app' ||
+           window.location.hostname.includes('staging-matriculausa.netlify.app');
+  },
+
   // URLs dinâmicas baseadas no ambiente
   getFrontendUrl: () => {
     if (config.isDevelopment()) {
       return window.location.origin; // Usar URL atual em desenvolvimento
     } else if (config.isProduction()) {
       return 'https://matriculausa.com';
+    } else if (config.isStaging()) {
+      return 'https://staging-matriculausa.netlify.app';
     }
     // Fallback para outros ambientes
     return window.location.origin;
@@ -39,6 +46,7 @@ export const config = {
       hostname: window.location.hostname,
       isDevelopment: config.isDevelopment(),
       isProduction: config.isProduction(),
+      isStaging: config.isStaging(),
       frontendUrl: config.getFrontendUrl(),
       supabaseUrl: config.getSupabaseUrl(),
       oauthRedirectUrl: config.getOAuthRedirectUrl()
