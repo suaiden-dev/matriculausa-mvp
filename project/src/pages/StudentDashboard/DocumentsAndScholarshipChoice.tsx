@@ -1078,10 +1078,10 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
                 {/* Main message - split into two parts */}
                 <div className="space-y-3 mb-4">
                   <p className="text-blue-700 text-sm leading-relaxed">
-                    Nossa IA não conseguiu processar os documentos automaticamente.
+                    {t('studentDashboard.documentsAndScholarshipChoice.aiProcessingFailed')}
                   </p>
                   <p className="text-blue-700 text-sm leading-relaxed">
-                    Não se preocupe! Enviamos para nossa equipe realizar uma análise detalhada.
+                    {t('studentDashboard.documentsAndScholarshipChoice.teamAnalysisMessage')}
                   </p>
                 </div>
                 
@@ -1126,7 +1126,7 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
 
               {/* Action Button */}
               <button
-                onClick={() => navigate('/student/dashboard')}
+                onClick={() => navigate('/student/dashboard/applications')}
                 className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-bold text-sm hover:bg-blue-700 transition-colors flex items-center justify-center"
               >
                 {t('studentDashboard.documentsAndScholarshipChoice.backToOverview')}
