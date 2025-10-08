@@ -56,10 +56,12 @@ const StudentSelector: React.FC<StudentSelectorProps> = ({
     }
   }, [isOpen, user]);
 
-  const filteredStudents = students.filter(student => 
-    student.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    student.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const safeTerm = (searchTerm || '').toLowerCase();
+  const filteredStudents = students.filter((student) => {
+    const name = (student.full_name || '').toLowerCase();
+    const email = (student.email || '').toLowerCase();
+    return name.includes(safeTerm) || email.includes(safeTerm);
+  });
 
   const handleStudentSelect = (student: Student) => {
     onStudentSelect(student.user_id, student.full_name);
@@ -130,7 +132,7 @@ const StudentSelector: React.FC<StudentSelectorProps> = ({
             <div>
               {filteredStudents.map((student) => (
                 <div
-                  key={student.user_id}
+                  key={student.user_id || student.email}
                   className="flex items-center p-4 hover:bg-slate-50 cursor-pointer border-b border-slate-100 last:border-b-0 transition-colors"
                   onClick={() => handleStudentSelect(student)}
                 >
@@ -140,12 +142,12 @@ const StudentSelector: React.FC<StudentSelectorProps> = ({
                       {student.avatar_url ? (
                         <img
                           src={student.avatar_url}
-                          alt={student.full_name}
+                          alt={student.full_name || student.email || 'Student'}
                           className="w-10 h-10 rounded-full object-cover"
                         />
                       ) : (
                         <span className="text-slate-600 font-semibold">
-                          {student.full_name.charAt(0).toUpperCase()}
+                          {(student.full_name?.charAt(0) || student.email?.charAt(0) || '?').toUpperCase()}
                         </span>
                       )}
                     </div>

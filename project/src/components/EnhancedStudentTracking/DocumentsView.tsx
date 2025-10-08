@@ -10,9 +10,12 @@ interface DocumentsViewProps {
   onDownloadDocument: (doc: any) => void;
   onUploadDocument?: (requestId: string, file: File) => void;
   onApproveDocument?: (uploadId: string) => void;
+  onRejectDocument?: (uploadId: string, reason: string) => void;
+  onEditTemplate?: (requestId: string, currentTemplate: string | null) => void;
   isAdmin?: boolean;
   uploadingStates?: {[key: string]: boolean};
   approvingStates?: {[key: string]: boolean};
+  rejectingStates?: {[key: string]: boolean};
 }
 
 const DocumentsView: React.FC<DocumentsViewProps> = ({
@@ -24,9 +27,12 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
   onDownloadDocument,
   onUploadDocument,
   onApproveDocument,
+  onRejectDocument,
+  onEditTemplate,
   isAdmin = false,
   uploadingStates = {},
-  approvingStates = {}
+  approvingStates = {},
+  rejectingStates = {}
 }) => {
   const [realScholarshipApplication, setRealScholarshipApplication] = useState<any>(null);
   const [loadingApplication, setLoadingApplication] = useState(false);
@@ -34,6 +40,35 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
   const [acceptanceLetterFile, setAcceptanceLetterFile] = useState<File | null>(null);
   const [uploadingAcceptanceLetter, setUploadingAcceptanceLetter] = useState(false);
   const [markSentSuccess, setMarkSentSuccess] = useState<string | null>(null);
+  
+  // Estados para modal de rejeição
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [pendingRejectUploadId, setPendingRejectUploadId] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
+
+  // Função para abrir modal de rejeição
+  const handleRejectClick = (uploadId: string) => {
+    setPendingRejectUploadId(uploadId);
+    setRejectReason('');
+    setShowRejectModal(true);
+  };
+
+  // Função para confirmar rejeição
+  const handleConfirmReject = () => {
+    if (pendingRejectUploadId && onRejectDocument && rejectReason.trim()) {
+      onRejectDocument(pendingRejectUploadId, rejectReason.trim());
+      setShowRejectModal(false);
+      setPendingRejectUploadId(null);
+      setRejectReason('');
+    }
+  };
+
+  // Função para cancelar rejeição
+  const handleCancelReject = () => {
+    setShowRejectModal(false);
+    setPendingRejectUploadId(null);
+    setRejectReason('');
+  };
 
   // Utilitário para logar ação de acceptance letter (admin)
   const logAcceptanceAction = async (
@@ -95,7 +130,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
     if (!applicationId) return;
     
     try {
-      console.log('🔍 [DOCUMENTS VIEW] Fetching document requests for application:', applicationId);
+      // Fetching document requests for application
       
       let allRequests: any[] = [];
       
@@ -118,7 +153,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
       
       // Buscar requests globais se tivermos university_id
       if (universityId) {
-        console.log('🔍 [DOCUMENTS VIEW] Fetching global requests for university:', universityId);
+        // Fetching global requests for university
         const { data: globalRequests, error: globalError } = await supabase
           .from('document_requests')
           .select(`
@@ -137,15 +172,15 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
           console.error('❌ [DOCUMENTS VIEW] Error fetching global requests:', globalError);
           throw globalError;
         }
-        console.log('🔍 [DOCUMENTS VIEW] Global requests found:', globalRequests);
+        // Global requests found
         allRequests = [...allRequests, ...(globalRequests || [])];
       } else {
-        console.log('⚠️ [DOCUMENTS VIEW] No university_id provided, skipping global requests');
+        // No university_id provided, skipping global requests
       }
       
       // Remover busca de TODOS os requests globais - apenas mostrar os específicos do aluno
 
-      console.log('🔍 [DOCUMENTS VIEW] Found document requests:', allRequests);
+      // Found document requests
       setInternalDocumentRequests(allRequests);
     } catch (error) {
       console.error('❌ [DOCUMENTS VIEW] Error fetching document requests:', error);
@@ -163,7 +198,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
 
       // Se não temos studentId, não podemos buscar aplicação específica
       if (!studentId) {
-        console.log('⚠️ [DOCUMENTS VIEW] No studentId provided, cannot fetch specific application');
+        // No studentId provided, cannot fetch specific application
         setRealScholarshipApplication(null);
         return;
       }
@@ -172,7 +207,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
       if (!scholarshipApplication?.acceptance_letter_url) {
         setLoadingApplication(true);
         try {
-          console.log('🔍 [DOCUMENTS VIEW] Searching for application for specific student:', studentId);
+          // Searching for application for specific student
           
           // Verificar se studentId é user_id ou profile_id
           let profileData: any = null;
@@ -208,7 +243,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
             return;
           }
           
-          console.log('🔍 [DOCUMENTS VIEW] Found profile_id for student:', profileData.id);
+          // Found profile_id for student
           
           let applications: any[] = [];
           let error: any = null;
@@ -310,20 +345,15 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
 
           if (!error && applications && applications.length > 0) {
             const app = applications[0];
-            console.log('🔍 [DOCUMENTS VIEW] Found application for student:', app);
-            console.log('🔍 [DOCUMENTS VIEW] Acceptance letter URL:', app.acceptance_letter_url);
-            console.log('🔍 [DOCUMENTS VIEW] Acceptance letter status:', app.acceptance_letter_status);
+            // Found application for student
             setRealScholarshipApplication(app);
             
             // Sempre buscar document requests para garantir que temos global requests
             const universityId = app.scholarships?.universities?.id;
-            console.log('🔍 [DOCUMENTS VIEW] University ID from app:', universityId);
-            console.log('🔍 [DOCUMENTS VIEW] App scholarships:', app.scholarships);
+            // University ID from app
             await fetchDocumentRequests(app.id, universityId);
           } else {
-            console.log('❌ [DOCUMENTS VIEW] No application found for student:', studentId, 'profile_id:', profileData?.id);
-            console.log('❌ [DOCUMENTS VIEW] Applications found:', applications);
-            console.log('❌ [DOCUMENTS VIEW] Error:', error);
+            // No application found for student
             setRealScholarshipApplication(null);
           }
         } catch (err) {
@@ -341,22 +371,24 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
   // Usar a aplicação real se disponível, senão usar a passada como prop
   const currentApplication = realScholarshipApplication || scholarshipApplication;
   
-  // Debug: Log para verificar se há acceptance letter
-  console.log('🔍 [DOCUMENTS VIEW] Current application:', currentApplication);
-  console.log('🔍 [DOCUMENTS VIEW] Acceptance letter URL:', currentApplication?.acceptance_letter_url);
-  console.log('🔍 [DOCUMENTS VIEW] Acceptance letter status:', currentApplication?.acceptance_letter_status);
+  // Debug: Log para verificar se há acceptance letter (removido para performance)
   
-  // ✅ GAMBIARRA: Função para extrair nome do arquivo e construir URL completa
+  // ✅ CORREÇÃO: Função para extrair nome do arquivo e construir URL completa
   const getDocumentInfo = (upload: any) => {
     // Extrair nome do arquivo do file_url
     let filename = 'Document';
+    let fullUrl = upload.file_url;
+    
     if (upload.file_url) {
       const urlParts = upload.file_url.split('/');
       filename = urlParts[urlParts.length - 1] || 'Document';
+      
+      // Se é apenas um path (não começa com http), converter para URL completa
+      if (!upload.file_url.startsWith('http')) {
+        const baseUrl = 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/document-attachments/';
+        fullUrl = `${baseUrl}${upload.file_url}`;
+      }
     }
-    
-    // O file_url já é uma URL completa, não precisamos concatenar com baseUrl
-    const fullUrl = upload.file_url;
     
     return {
       filename,
@@ -424,9 +456,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
             
             const allRequests = Array.from(requestsMap.values());
             
-            console.log('🔍 [DOCUMENTS VIEW] Prop requests:', propRequests);
-            console.log('🔍 [DOCUMENTS VIEW] Internal requests:', internalRequests);
-            console.log('🔍 [DOCUMENTS VIEW] Combined requests:', allRequests);
+            // Combined requests
             
             return allRequests;
           })().length > 0 ? (
@@ -484,8 +514,8 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                         </p>
                       )}
                       
-                      {request.attachment_url && (
-                        <div className="mt-3">
+                      {request.attachment_url ? (
+                        <div className="mt-3 flex flex-wrap gap-2">
                           <button
                             onClick={() => onViewDocument({ file_url: request.attachment_url, type: 'template' })}
                             className="bg-[#05294E] hover:bg-[#041f38] text-white px-4 py-2 rounded-xl font-medium transition-colors shadow-sm flex items-center justify-center space-x-2 w-full sm:w-auto"
@@ -495,6 +525,29 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                               <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                             </svg>
                             <span>View Template</span>
+                          </button>
+                          {isAdmin && onEditTemplate && (
+                            <button
+                              onClick={() => onEditTemplate(request.id, request.attachment_url)}
+                              className="bg-blue-50 hover:bg-blue-100 text-blue-700 px-4 py-2 rounded-xl font-medium transition-colors shadow-sm flex items-center justify-center space-x-2 w-full sm:w-auto"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                              <span>Edit Template</span>
+                            </button>
+                          )}
+                        </div>
+                      ) : isAdmin && onEditTemplate && (
+                        <div className="mt-3">
+                          <button
+                            onClick={() => onEditTemplate(request.id, null)}
+                            className="bg-blue-50 hover:bg-blue-100 text-blue-700 px-4 py-2 rounded-xl font-medium transition-colors shadow-sm flex items-center justify-center space-x-2 w-full sm:w-auto"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                            </svg>
+                            <span>Add Template</span>
                           </button>
                         </div>
                       )}
@@ -515,7 +568,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                         request.document_request_uploads.map((upload: any) => {
                           const { filename, fullUrl } = getDocumentInfo(upload);
                           return (
-                            <div key={upload.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 last:mb-0">
+                            <div key={upload.id} className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-4 last:mb-0">
                               <div className="flex items-start sm:items-center space-x-4 min-w-0">
                                 <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
                                   <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -533,10 +586,10 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                                 </div>
                               </div>
                               
-                              <div className="flex flex-wrap gap-2 sm:flex-nowrap sm:space-x-3 sm:self-auto self-start mt-3 sm:mt-0">
-                                <span className={`px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap ${
-                                  upload.status === 'approved' ? 'bg-green-100 text-green-800' :
-                                  upload.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                              <div className="flex flex-wrap gap-2 sm:flex-nowrap sm:space-x-3 sm:self-auto self-start mt-3 sm:mt-0 items-center">
+                                <span className={`px-3 py-1 rounded text-sm font-medium whitespace-nowrap ${
+                                  upload.status === 'approved' ? 'text-green-600' :
+                                  upload.status === 'rejected' ? 'text-red-600' :
                                   upload.status === 'under_review' ? 'bg-yellow-100 text-yellow-800' :
                                   'bg-slate-100 text-slate-800'
                                 }`}>
@@ -552,7 +605,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                                     file_url: fullUrl,
                                     filename
                                   })}
-                                  className="bg-[#05294E] hover:bg-[#041f38] text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap flex-1 sm:flex-none text-center"
+                                  className="bg-[#05294E] hover:bg-[#041f38] text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors whitespace-nowrap text-center"
                                 >
                                   View
                                 </button>
@@ -563,20 +616,42 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                                     file_url: fullUrl,
                                     filename
                                   })}
-                                  className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap flex-1 sm:flex-none text-center"
+                                  className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-xl text-sm font-medium transition-colors whitespace-nowrap text-center"
                                 >
                                   Download
                                 </button>
                                 
-                                {/* Admin Approve Button - Only show for admin and if document is not already approved */}
-                                {isAdmin && onApproveDocument && upload.status !== 'approved' && (
-                                  <button
-                                    onClick={() => onApproveDocument(upload.id)}
-                                    disabled={approvingStates[`approve-${upload.id}`]}
-                                    className="bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap flex-1 sm:flex-none text-center disabled:cursor-not-allowed"
-                                  >
-                                    {approvingStates[`approve-${upload.id}`] ? 'Approving...' : 'Approve'}
-                                  </button>
+                                {/* Admin Action Buttons - Only show for admin and if document is under review */}
+                                {isAdmin && upload.status === 'under_review' && (
+                                  <div className="flex gap-2">
+                                    {onApproveDocument && (
+                                      <button
+                                        onClick={() => onApproveDocument(upload.id)}
+                                        disabled={approvingStates[`approve-${upload.id}`]}
+                                        className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors whitespace-nowrap text-center disabled:cursor-not-allowed"
+                                      >
+                                        {approvingStates[`approve-${upload.id}`] ? 'Approving...' : 'Approve'}
+                                      </button>
+                                    )}
+                                    
+                                    {onRejectDocument && (
+                                      <button
+                                        onClick={() => handleRejectClick(upload.id)}
+                                        disabled={rejectingStates[`reject-${upload.id}`]}
+                                        className="bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors whitespace-nowrap text-center disabled:cursor-not-allowed"
+                                      >
+                                        {rejectingStates[`reject-${upload.id}`] ? 'Rejecting...' : 'Reject'}
+                                      </button>
+                                    )}
+                                  </div>
+                                )}
+                                
+                                {/* Show rejection reason if document is rejected */}
+                                {upload.status === 'rejected' && upload.rejection_reason && (
+                                  <div className="w-full mt-3 p-3 bg-slate-50 border border-slate-200 rounded-lg">
+                                    <p className="text-xs font-medium text-slate-600 mb-1">Rejection reason:</p>
+                                    <p className="text-sm text-slate-700 leading-relaxed">{upload.rejection_reason}</p>
+                                  </div>
                                 )}
                               </div>
                             </div>
@@ -606,7 +681,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                             <p className="text-sm text-slate-600 mb-2">
                               Upload a document on behalf of the student for this request.
                             </p>
-                            <label className="inline-flex items-center px-4 py-2 bg-[#05294E] hover:bg-[#041f38] text-white text-sm font-medium rounded-lg cursor-pointer transition-colors">
+                            <label className="inline-flex items-center px-4 py-2 bg-[#05294E] hover:bg-[#041f38] text-white text-sm font-medium rounded-xl cursor-pointer transition-colors">
                               <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                               </svg>
@@ -709,7 +784,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                         file_url: getAcceptanceLetterUrl(currentApplication),
                         filename: (getAcceptanceLetterUrl(currentApplication)?.split('/').pop() || 'Acceptance Letter')
                       })}
-                      className="bg-[#05294E] hover:bg-[#041f38] text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto text-center"
+                      className="bg-[#05294E] hover:bg-[#041f38] text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors w-full sm:w-auto text-center"
                     >
                       View
                     </button>
@@ -719,12 +794,12 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                         file_url: getAcceptanceLetterUrl(currentApplication),
                         filename: (getAcceptanceLetterUrl(currentApplication)?.split('/').pop() || 'Acceptance Letter')
                       })}
-                      className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto text-center"
+                      className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-xl text-sm font-medium transition-colors w-full sm:w-auto text-center"
                     >
                       Download
                     </button>
                     {isAdmin && (
-                      <label className="inline-flex items-center px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium rounded-lg cursor-pointer transition-colors w-full sm:w-auto text-center">
+                      <label className="inline-flex items-center px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium rounded-xl cursor-pointer transition-colors w-full sm:w-auto text-center">
                         <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                         </svg>
@@ -811,7 +886,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                           }
                         }}
                         disabled={uploadingAcceptanceLetter}
-                        className="bg-[#05294E] hover:bg-[#041f38] text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
+                        className="bg-[#05294E] hover:bg-[#041f38] text-white px-4 py-2 rounded-xl text-sm font-medium disabled:opacity-50"
                       >
                         {uploadingAcceptanceLetter ? 'Saving...' : 'Confirm Replace'}
                       </button>
@@ -841,7 +916,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                 {isAdmin && (
                   <div className="mt-6">
                     <div className="flex items-center justify-center gap-3">
-                      <label className="flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-100 transition font-medium text-slate-700">
+                      <label className="flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-100 transition font-medium text-slate-700">
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                         </svg>
@@ -946,7 +1021,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                           }
                         }}
                         disabled={!acceptanceLetterFile || uploadingAcceptanceLetter}
-                        className="bg-[#05294E] hover:bg-[#041f38] text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
+                        className="bg-[#05294E] hover:bg-[#041f38] text-white px-4 py-2 rounded-xl text-sm font-medium disabled:opacity-50"
                       >
                         {uploadingAcceptanceLetter ? 'Uploading...' : 'Send Acceptance Letter'}
                       </button>
@@ -992,7 +1067,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                             console.error('Error marking acceptance letter as sent:', err);
                           }
                         }}
-                        className="bg-amber-100 hover:bg-amber-200 text-amber-800 px-4 py-2 rounded-lg text-sm font-medium"
+                        className="bg-amber-100 hover:bg-amber-200 text-amber-800 px-4 py-2 rounded-xl text-sm font-medium"
                       >
                         Mark as Sent (no file)
                       </button>
@@ -1065,7 +1140,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                               file_url: currentApplication.transfer_form_url,
                               filename: (currentApplication.transfer_form_url.split('/').pop() || 'Transfer Form')
                             })}
-                            className="bg-[#05294E] hover:bg-[#041f38] text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto text-center"
+                            className="bg-[#05294E] hover:bg-[#041f38] text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors w-full sm:w-auto text-center"
                           >
                             View
                           </button>
@@ -1075,7 +1150,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                               file_url: currentApplication.transfer_form_url,
                               filename: (currentApplication.transfer_form_url.split('/').pop() || 'Transfer Form')
                             })}
-                            className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto text-center"
+                            className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-xl text-sm font-medium transition-colors w-full sm:w-auto text-center"
                           >
                             Download
                           </button>
@@ -1109,6 +1184,37 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                 );
               }
             })()}
+          </div>
+        </div>
+      )}
+      
+      {/* Modal de rejeição de documento */}
+      {showRejectModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 border border-slate-200">
+            <h3 className="text-lg font-bold text-[#05294E] mb-3">Reject Document</h3>
+            <p className="text-sm text-slate-600 mb-4">Please provide a reason for rejecting this document. The student will be able to submit a new document after rejection.</p>
+            <textarea
+              className="w-full border border-slate-300 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400 min-h-[120px]"
+              placeholder="Enter reason for rejection..."
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+            />
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                onClick={handleCancelReject}
+                className="px-4 py-2 border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmReject}
+                disabled={!rejectReason.trim()}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white rounded-xl transition-colors disabled:cursor-not-allowed"
+              >
+                Reject Document
+              </button>
+            </div>
           </div>
         </div>
       )}

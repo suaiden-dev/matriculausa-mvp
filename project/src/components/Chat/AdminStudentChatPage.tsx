@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
-import { useAdminStudentChat, useAdminStudentConversations } from '../../hooks/useAdminStudentChat';
+import { useAdminStudentChat } from '../../hooks/useAdminStudentChat';
 import ApplicationChat from '../ApplicationChat';
 import ChatInbox from './ChatInbox';
-import { MessageSquare, ArrowLeft, Users } from 'lucide-react';
+import { MessageSquare, ArrowLeft, Users, HelpCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 
@@ -20,19 +21,22 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
   defaultRecipientId,
   defaultConversationId
 }) => {
+  const { t } = useTranslation();
   const { user, userProfile } = useAuth();
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [selectedRecipientId, setSelectedRecipientId] = useState<string | null>(defaultRecipientId || null);
   const [selectedRecipientName, setSelectedRecipientName] = useState<string>('');
   const [showMobileInbox, setShowMobileInbox] = useState(true);
   const [selectedRecipientInfo, setSelectedRecipientInfo] = useState<{ email?: string; phone?: string } | null>(null);
+  const [showStudentGuidance, setShowStudentGuidance] = useState(false);
   const [selectedRecipientProfileId, setSelectedRecipientProfileId] = useState<string | null>(null);
+  const [guideEnter, setGuideEnter] = useState(false);
+  const [guideExit, setGuideExit] = useState(false);
 
   // Hook for the selected conversation
   const chat = useAdminStudentChat(selectedConversationId || undefined, selectedRecipientId || undefined);
 
-  // Hook for conversations list (for inbox)
-  const { conversations, refetchConversations } = useAdminStudentConversations();
+  // Removed conversations hook here to avoid duplicate realtime subscriptions; inbox owns the list
 
   // Set default conversation if provided
   useEffect(() => {
@@ -78,6 +82,40 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
     fetchRecipientInfo();
   }, [selectedRecipientId, userProfile?.role]);
 
+  // Mostrar uma mensagem de orientação apenas na primeira vez que o aluno abre o chat
+  useEffect(() => {
+    if (!userProfile) return;
+    // Exibir apenas para estudantes
+    if (userProfile.role === 'student') {
+      const storageKey = 'student_chat_seen_info';
+      const seen = localStorage.getItem(storageKey);
+      if (!seen) {
+        setShowStudentGuidance(true);
+        localStorage.setItem(storageKey, 'true');
+      }
+    }
+  }, [userProfile]);
+
+  // Controla animação de entrada ao montar a dica
+  useEffect(() => {
+    if (showStudentGuidance) {
+      const t = setTimeout(() => setGuideEnter(true), 10);
+      return () => {
+        clearTimeout(t);
+        setGuideEnter(false);
+      };
+    }
+  }, [showStudentGuidance]);
+
+  const dismissGuide = () => {
+    setGuideExit(true);
+    setTimeout(() => {
+      setShowStudentGuidance(false);
+      setGuideExit(false);
+      setGuideEnter(false);
+    }, 250);
+  };
+
   const handleBackToInbox = () => {
     setShowMobileInbox(true);
     setSelectedConversationId(null);
@@ -88,9 +126,9 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
   // Helper function to determine the correct label for the other party
   const getOtherPartyLabel = () => {
     if (userProfile?.role === 'affiliate_admin' || userProfile?.role === 'admin') {
-      return selectedRecipientName || 'Student';
+      return selectedRecipientName || t('studentChat.recipientLabel.student', { defaultValue: 'Student' });
     } else {
-      return 'Support Team';
+      return t('studentChat.recipientLabel.support', { defaultValue: 'Administration' });
     }
   };
 
@@ -104,13 +142,11 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
       // Wait a bit for messages to load, then mark as read
       const timer = setTimeout(async () => {
         await chat.markAllAsRead();
-        // Force refetch conversations to update unread counts
-        refetchConversations();
       }, 1000);
 
       return () => clearTimeout(timer);
     }
-  }, [selectedConversationId, chat.messages.length, userProfile?.role, chat.markAllAsRead, refetchConversations]);
+  }, [selectedConversationId, chat.messages.length, userProfile?.role, chat.markAllAsRead]);
 
   if (!user || !userProfile) {
     return (
@@ -126,7 +162,56 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
     // If no inbox should be shown, always show chat
     if (!showInbox) {
       return (
-        <div className={`bg-white rounded-lg shadow-sm border border-slate-200 ${className}`}>
+        <div className={`bg-white rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden border border-gray-100 transform transition-all duration-500 hover:shadow-3xl flex-1 flex flex-col ${className}`}>
+          {/* Student header indicating admin/support */}
+          <div className="flex items-center justify-between p-4 border-b border-gray-100 bg-white gap-4">
+            <div className="flex items-center min-w-0">
+              <div className="min-w-0">
+                  <h3 className="font-medium text-gray-900 truncate">{t('studentChat.header.title', { defaultValue: 'Equipe de suporte' })}</h3>
+                <p className="text-xs text-gray-500 mt-0.5">{t('studentChat.header.responseTime', { defaultValue: 'Response time: 1-2 hours' })}</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowStudentGuidance(true)}
+              className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-gray-200 text-gray-600 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#05294E]/20 transition-all duration-300"
+              title={t('studentChat.header.helpTooltip', { defaultValue: 'How does the chat work?' })}
+            >
+              <HelpCircle className="w-4 h-4" />
+            </button>
+          </div>
+
+          {showStudentGuidance && (
+            <div className="md:hidden fixed inset-x-3 bottom-24 z-40" role="dialog" aria-label="Dica do chat">
+              <div className={`bg-white border border-slate-200 rounded-2xl shadow-2xl p-4 transition-all duration-300 ${guideEnter && !guideExit ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-2 scale-95'}`}
+              >
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold">i</div>
+                  <div className="text-slate-700">
+                    <p className="text-sm font-semibold mb-1">{t('studentChat.guide.title', { defaultValue: 'Chat with Administration' })}</p>
+                    <p className="text-xs leading-relaxed">{t('studentChat.guide.subtitle', { defaultValue: 'Ask about scholarships, documents and your application progress.' })}</p>
+                    <ul className="mt-2 text-xs text-slate-600 list-disc pl-4 space-y-1">
+                      <li>{t('studentChat.guide.supportsAttachments', { defaultValue: 'Send messages and attachments' })}</li>
+                      <li>{t('studentChat.guide.businessHours', { defaultValue: 'Replies during business hours' })}</li>
+                      <li>{t('studentChat.guide.historySaved', { defaultValue: 'Conversation history is saved' })}</li>
+                    </ul>
+                    <div className="mt-3 flex items-center gap-2">
+                      <button
+                        onClick={dismissGuide}
+                        className="px-3 py-1.5 rounded-md text-xs bg-[#05294E] text-white hover:bg-[#041f3f]"
+                        title={t('studentChat.guide.ctaStart', { defaultValue: 'Start' })}
+                      >{t('studentChat.guide.ctaStart', { defaultValue: 'Start' })}</button>
+                      <button
+                        onClick={dismissGuide}
+                        className="px-3 py-1.5 rounded-md text-xs bg-slate-100 text-slate-700 hover:bg-slate-200"
+                        title={t('studentChat.guide.ctaLater', { defaultValue: 'Not now' })}
+                      >{t('studentChat.guide.ctaLater', { defaultValue: 'Not now' })}</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           <ApplicationChat
             messages={chat.messages}
             onSend={chat.sendMessage}
@@ -138,6 +223,10 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
             currentUserId={user.id}
             onMarkAllAsRead={chat.markAllAsRead}
             otherPartyLabel={getOtherPartyLabel()}
+            hideBubbleHeader={true}
+            overrideHeights={true}
+            className="flex-1 min-h-0"
+            inputPlaceholder={t('studentChat.input.placeholder', { defaultValue: 'Type your message...' })}
           />
         </div>
       );
@@ -197,7 +286,41 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
   if (!showInbox) {
     // Only chat, no inbox - always show chat interface
     return (
-      <div className={`bg-white rounded-lg shadow-sm border border-slate-200 ${className}`}>
+      <div className={`bg-white rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden border border-gray-100 transform transition-all duration-500 hover:shadow-3xl flex-1 flex flex-col ${className}`}>
+          {/* Student header indicating admin/support */}
+          <div className="flex items-center justify-between p-4 border-b border-gray-100 bg-white gap-4">
+            <div className="flex items-center min-w-0">
+              <div className="min-w-0">
+                <h3 className="font-medium text-gray-900 truncate">Equipe de suporte</h3>
+                <p className="text-xs text-gray-500 mt-0.5">Tempo de resposta: 1-2 horas úteis</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowStudentGuidance(true)}
+              className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-gray-200 text-gray-600 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#05294E]/20 transition-all duration-300"
+              title="Como funciona o chat?"
+            >
+              <HelpCircle className="w-4 h-4" />
+            </button>
+          </div>
+
+          {showStudentGuidance && (
+            <div className="px-4 py-3 bg-blue-50 text-blue-900 text-xs border-b border-blue-100">
+              <div className="flex items-start justify-between gap-3">
+                <p className="leading-relaxed">
+                  Este chat conecta você diretamente com a Administração. Use-o para dúvidas sobre bolsas, documentos e andamento da sua inscrição. Evite compartilhar dados sensíveis (senhas ou números de cartão).
+                </p>
+                <button
+                  className="text-blue-700 hover:text-blue-900 whitespace-nowrap"
+                  onClick={() => setShowStudentGuidance(false)}
+                  title="Fechar"
+                >
+                  Entendi
+                </button>
+              </div>
+            </div>
+          )}
+
           <ApplicationChat
             messages={chat.messages}
             onSend={chat.sendMessage}
@@ -209,6 +332,9 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
             currentUserId={user.id}
             onMarkAllAsRead={chat.markAllAsRead}
             otherPartyLabel={getOtherPartyLabel()}
+            hideBubbleHeader={true}
+            overrideHeights={true}
+            className="flex-1 min-h-0"
           />
       </div>
     );
@@ -271,7 +397,8 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
                   error={chat.error}
                   currentUserId={user.id}
                   onMarkAllAsRead={chat.markAllAsRead}
-                  otherPartyLabel={getOtherPartyLabel()}
+                otherPartyLabel={getOtherPartyLabel()}
+                hideBubbleHeader={true}
                 />
             </>
           ) : (
@@ -290,19 +417,17 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
                     : 'Select a conversation or start a new one with support'
                   }
                 </p>
-                {conversations.length === 0 && (
-                  <div className="mt-4 text-center">
-                    <div className="inline-flex items-center px-4 py-2 bg-blue-50 rounded-lg">
-                      <Users className="w-4 h-4 text-blue-600 mr-2" />
-                      <span className="text-sm text-blue-700">
-                        {(userProfile.role === 'affiliate_admin' || userProfile.role === 'admin')
-                          ? 'No student conversations yet'
-                          : 'No conversations yet'
-                        }
-                      </span>
-                    </div>
+                <div className="mt-4 text-center">
+                  <div className="inline-flex items-center px-4 py-2 bg-blue-50 rounded-lg">
+                    <Users className="w-4 h-4 text-blue-600 mr-2" />
+                    <span className="text-sm text-blue-700">
+                      {(userProfile.role === 'affiliate_admin' || userProfile.role === 'admin')
+                        ? 'No student conversations yet'
+                        : 'No conversations yet'
+                      }
+                    </span>
                   </div>
-                )}
+                </div>
               </div>
             </div>
           )}

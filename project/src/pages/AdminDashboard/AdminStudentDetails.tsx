@@ -7,6 +7,7 @@ import { useStudentLogs } from '../../hooks/useStudentLogs';
 import DocumentsView from '../../components/EnhancedStudentTracking/DocumentsView';
 import AdminScholarshipSelection from '../../components/AdminDashboard/AdminScholarshipSelection';
 import StudentLogsView from '../../components/AdminDashboard/StudentLogsView';
+import DocumentViewerModal from '../../components/DocumentViewerModal';
 import { generateTermAcceptancePDF, StudentTermAcceptanceData } from '../../utils/pdfGenerator';
 // Função simples de toast
 const showToast = (message: string, type: 'success' | 'error' = 'success') => {
@@ -124,6 +125,27 @@ const AdminStudentDetails: React.FC = () => {
   const [loadingDocuments, setLoadingDocuments] = useState(false);
   const [uploadingDocumentRequest, setUploadingDocumentRequest] = useState<{[key: string]: boolean}>({});
   const [approvingDocumentRequest, setApprovingDocumentRequest] = useState<{[key: string]: boolean}>({});
+  const [rejectingDocumentRequest, setRejectingDocumentRequest] = useState<{[key: string]: boolean}>({});
+  // Estado para modal de visualização de documentos
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  
+  // Debug: Log do estado previewUrl
+  React.useEffect(() => {
+    console.log('🔍 [ADMIN] previewUrl state changed:', previewUrl);
+    if (previewUrl) {
+      console.log('🔍 [ADMIN] Modal should be visible now');
+      // Verificar se o modal está sendo renderizado
+      setTimeout(() => {
+        const modal = document.querySelector('.document-viewer-overlay');
+        console.log('🔍 [ADMIN] Modal element found:', modal);
+        if (modal) {
+          console.log('🔍 [ADMIN] Modal is visible:', (modal as HTMLElement).style.display !== 'none');
+        } else {
+          console.log('❌ [ADMIN] Modal element NOT found in DOM');
+        }
+      }, 100);
+    }
+  }, [previewUrl]);
   // Campo de notas do admin - agora como lista
   const [adminNotes, setAdminNotes] = useState<Array<{
     id: string;
@@ -160,6 +182,13 @@ const AdminStudentDetails: React.FC = () => {
     due_date: '',
     attachment: null
   });
+  
+  // Estados para edição de template
+  const [showEditTemplateModal, setShowEditTemplateModal] = useState(false);
+  const [editingTemplateRequestId, setEditingTemplateRequestId] = useState<string | null>(null);
+  const [editingTemplateFile, setEditingTemplateFile] = useState<File | null>(null);
+  const [currentTemplateUrl, setCurrentTemplateUrl] = useState<string | null>(null);
+  const [uploadingTemplate, setUploadingTemplate] = useState(false);
   // Upload de Acceptance Letter (Admin) - Removido pois agora está no DocumentsView
   const [isProgressExpanded, setIsProgressExpanded] = useState(false);
   const [i20Deadline, setI20Deadline] = useState<Date | null>(null);
@@ -1570,6 +1599,60 @@ const AdminStudentDetails: React.FC = () => {
       .replace(/^_|_$/g, '');
   };
 
+  // Função para editar template de um document request
+  const handleEditTemplate = async (requestId: string, currentTemplate: string | null) => {
+    setEditingTemplateRequestId(requestId);
+    setCurrentTemplateUrl(currentTemplate);
+    setShowEditTemplateModal(true);
+  };
+
+  // Função para salvar template editado
+  const handleSaveTemplate = async () => {
+    if (!editingTemplateRequestId || !editingTemplateFile) return;
+    
+    try {
+      setUploadingTemplate(true);
+      
+      // Upload do template para o storage
+      const sanitized = editingTemplateFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const storagePath = `templates/${Date.now()}_${sanitized}`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('document-attachments')
+        .upload(storagePath, editingTemplateFile);
+      
+      if (uploadError) throw uploadError;
+      
+      // Obter URL pública
+      const { data: { publicUrl } } = supabase.storage
+        .from('document-attachments')
+        .getPublicUrl(uploadData?.path || storagePath);
+
+      // Atualizar document request com novo template
+      const { error: updateError } = await supabase
+        .from('document_requests')
+        .update({ attachment_url: publicUrl })
+        .eq('id', editingTemplateRequestId);
+
+      if (updateError) throw updateError;
+
+      // Fechar modal e limpar estados
+      setShowEditTemplateModal(false);
+      setEditingTemplateRequestId(null);
+      setEditingTemplateFile(null);
+      setCurrentTemplateUrl(null);
+
+      // Recarregar document requests
+      await fetchDocumentRequests();
+
+      showToast('Template updated successfully!', 'success');
+    } catch (error: any) {
+      console.error('Error updating template:', error);
+      showToast(`Error updating template: ${error.message}`, 'error');
+    } finally {
+      setUploadingTemplate(false);
+    }
+  };
+
   // Criar Document Request (Admin)
   const handleCreateDocumentRequest = async () => {
     if (!student) return;
@@ -1591,7 +1674,7 @@ const AdminStudentDetails: React.FC = () => {
       }
 
       // Upload do anexo (opcional)
-      let attachment_url = '';
+      let attachment_url: string | null = null;
       if (newDocumentRequest.attachment) {
         const sanitized = sanitizeFileName(newDocumentRequest.attachment.name);
         const storagePath = `individual/${Date.now()}_${sanitized}`;
@@ -1695,7 +1778,7 @@ const AdminStudentDetails: React.FC = () => {
               title: 'New document request',
               message: `A new document request was created: ${newDocumentRequest.title}.`,
               type: 'document_request_created',
-              link: '/student/documents'
+              link: `/student/dashboard/application/${targetApp.id}/chat?tab=documents`
             })
           });
         }
@@ -1711,19 +1794,53 @@ const AdminStudentDetails: React.FC = () => {
   };
 
   const handleViewDocument = (doc: any) => {
+    console.log('🔍 [ADMIN] Opening document:', doc);
+    console.log('🔍 [ADMIN] file_url:', doc.file_url);
+    console.log('🔍 [ADMIN] Current previewUrl:', previewUrl);
+    
     if (doc.file_url) {
-      window.open(doc.file_url, '_blank');
+      // Sempre atualizar para forçar re-render
+      setPreviewUrl(doc.file_url);
+      console.log('🔍 [ADMIN] Set previewUrl to:', doc.file_url);
+      
+      // Verificar se o modal está sendo renderizado
+      setTimeout(() => {
+        const modal = document.querySelector('.document-viewer-overlay');
+        console.log('🔍 [ADMIN] Modal element found after setState:', modal);
+        if (modal) {
+          console.log('🔍 [ADMIN] Modal is visible:', (modal as HTMLElement).style.display !== 'none');
+          console.log('🔍 [ADMIN] Modal z-index:', (modal as HTMLElement).style.zIndex);
+        } else {
+          console.log('❌ [ADMIN] Modal element NOT found after setState');
+        }
+      }, 200);
+    } else {
+      console.log('❌ [ADMIN] No file_url found in document');
     }
   };
 
-  const handleDownloadDocument = (doc: any) => {
-    if (doc.file_url) {
+  const handleDownloadDocument = async (doc: any) => {
+    if (!doc.file_url) return;
+    
+    try {
+      // Fazer download direto sem abrir nova aba
+      const response = await fetch(doc.file_url);
+      if (!response.ok) {
+        throw new Error('Failed to download document: ' + response.statusText);
+      }
+      
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.href = doc.file_url;
+      link.href = url;
       link.download = doc.filename || 'document';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      console.error('Erro no download:', err);
+      showToast(`Failed to download document: ${err.message}`, 'error');
     }
   };
 
@@ -1845,6 +1962,63 @@ const AdminStudentDetails: React.FC = () => {
       showToast(`Error approving document: ${error.message}`, 'error');
     } finally {
       setApprovingDocumentRequest(prev => ({ ...prev, [key]: false }));
+    }
+  };
+
+  const handleRejectDocumentRequest = async (uploadId: string, reason: string) => {
+    if (!isPlatformAdmin) return;
+    
+    const key = `reject-${uploadId}`;
+    setRejectingDocumentRequest(prev => ({ ...prev, [key]: true }));
+    
+    try {
+      console.log('🔍 [REJECT] Rejecting document upload:', uploadId);
+      console.log('🔍 [REJECT] Reason:', reason);
+      console.log('🔍 [REJECT] Current user ID:', user?.id);
+      console.log('🔍 [REJECT] Is platform admin:', isPlatformAdmin);
+      
+      const { data, error } = await supabase
+        .from('document_request_uploads')
+        .update({
+          status: 'rejected',
+          reviewed_by: user?.id,
+          reviewed_at: new Date().toISOString(),
+          rejection_reason: reason
+        })
+        .eq('id', uploadId)
+        .select();
+      
+      if (error) throw error;
+      
+      console.log('✅ [REJECT] Document rejected successfully:', data);
+      
+      // Recarregar document requests para mostrar a mudança
+      await fetchDocumentRequests();
+      
+      // Log the action
+      try {
+        await logAction(
+          'document_rejection',
+          `Document request upload rejected by admin: ${reason}`,
+          user?.id || '',
+          'admin',
+          {
+            upload_id: uploadId,
+            document_type: 'document_request_upload',
+            rejected_by: user?.email || 'Admin',
+            rejection_reason: reason
+          }
+        );
+      } catch (logError) {
+        console.error('Failed to log action:', logError);
+      }
+      
+      showToast('Document rejected successfully!', 'success');
+    } catch (error: any) {
+      console.error('❌ [REJECT] Error rejecting document:', error);
+      showToast(`Error rejecting document: ${error.message}`, 'error');
+    } finally {
+      setRejectingDocumentRequest(prev => ({ ...prev, [key]: false }));
     }
   };
 
@@ -4064,9 +4238,12 @@ const AdminStudentDetails: React.FC = () => {
               onDownloadDocument={handleDownloadDocument}
               onUploadDocument={handleUploadDocumentRequest}
               onApproveDocument={handleApproveDocumentRequest}
+              onRejectDocument={handleRejectDocumentRequest}
+              onEditTemplate={handleEditTemplate}
               isAdmin={isPlatformAdmin}
               uploadingStates={uploadingDocumentRequest}
               approvingStates={approvingDocumentRequest}
+              rejectingStates={rejectingDocumentRequest}
             />
           )}
         </div>
@@ -4129,6 +4306,106 @@ const AdminStudentDetails: React.FC = () => {
         </div>
       )}
 
+      {/* Edit Template Modal */}
+      {showEditTemplateModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md mx-4">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-semibold text-slate-900">
+                {currentTemplateUrl ? 'Edit Template' : 'Add Template'}
+              </h3>
+              <button
+                onClick={() => {
+                  setShowEditTemplateModal(false);
+                  setEditingTemplateRequestId(null);
+                  setEditingTemplateFile(null);
+                  setCurrentTemplateUrl(null);
+                }}
+                className="text-slate-400 hover:text-slate-500"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {currentTemplateUrl && (
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                  <p className="text-sm text-blue-700 mb-2 font-medium">Current Template:</p>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-blue-600 truncate">
+                      {currentTemplateUrl.split('/').pop()}
+                    </span>
+                    <button
+                      onClick={() => handleViewDocument({ file_url: currentTemplateUrl, type: 'template' })}
+                      className="text-blue-700 hover:text-blue-800"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  {currentTemplateUrl ? 'Replace Template File' : 'Template File'}
+                </label>
+                <div className="flex items-center gap-3">
+                  <label className="flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-100 transition font-medium text-slate-700">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    </svg>
+                    <span>{editingTemplateFile ? 'Change file' : 'Select file'}</span>
+                    <input
+                      type="file"
+                      className="sr-only"
+                      accept=".pdf,.doc,.docx"
+                      onChange={(e) => setEditingTemplateFile(e.target.files ? e.target.files[0] : null)}
+                      disabled={uploadingTemplate}
+                    />
+                  </label>
+                  {editingTemplateFile && (
+                    <span className="text-xs text-slate-700 truncate max-w-[180px]">
+                      {editingTemplateFile.name}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setShowEditTemplateModal(false);
+                  setEditingTemplateRequestId(null);
+                  setEditingTemplateFile(null);
+                  setCurrentTemplateUrl(null);
+                }}
+                className="px-4 py-2 text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveTemplate}
+                disabled={!editingTemplateFile || uploadingTemplate}
+                className="px-4 py-2 bg-[#05294E] text-white rounded-lg hover:bg-[#041f38] disabled:opacity-50 transition-colors flex items-center gap-2"
+              >
+                {uploadingTemplate ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                    <span>Saving...</span>
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    <span>Save Template</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Payment Confirmation Modal */}
       {showPaymentModal && pendingPayment && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -4184,6 +4461,22 @@ const AdminStudentDetails: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+      
+      {/* Modal de visualização de documentos */}
+      {previewUrl && (
+        <>
+          {console.log('🔍 [ADMIN] Rendering modal with URL:', previewUrl)}
+          {console.log('🔍 [ADMIN] previewUrl is truthy:', !!previewUrl)}
+          {console.log('🔍 [ADMIN] About to render DocumentViewerModal')}
+          <DocumentViewerModal 
+            documentUrl={previewUrl} 
+            onClose={() => {
+              console.log('🔍 [ADMIN] Closing modal');
+              setPreviewUrl(null);
+            }} 
+          />
+        </>
       )}
     </div>
   );

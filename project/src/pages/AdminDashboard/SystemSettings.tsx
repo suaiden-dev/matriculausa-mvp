@@ -2,11 +2,14 @@ import React, { useState } from 'react';
 import { 
   Star,
   Building,
-  Users
+  Users,
+  FileCheck,
+  History
 } from 'lucide-react';
 import FeaturedScholarshipsManagement from './FeaturedScholarshipsManagement';
 import FeaturedUniversitiesManagement from './FeaturedUniversitiesManagement';
 import UserManagement from './UserManagement';
+import TermsManagement from './TermsManagement';
 
 interface UserManagementPropsShape {
   users: any[];
@@ -46,6 +49,18 @@ const SystemSettings: React.FC<SystemSettingsProps> = ({ userManagementProps }) 
       label: 'User Management',
       icon: Users,
       color: 'bg-blue-100 text-blue-600'
+    },
+    {
+      id: 'terms-management',
+      label: 'Terms Management',
+      icon: FileCheck,
+      color: 'bg-purple-100 text-purple-600'
+    },
+    {
+      id: 'acceptance-history',
+      label: 'Acceptance History',
+      icon: History,
+      color: 'bg-orange-100 text-orange-600'
     }
   ];
 
@@ -67,6 +82,10 @@ const SystemSettings: React.FC<SystemSettingsProps> = ({ userManagementProps }) 
         ) : (
           <div className="text-sm text-slate-600">User management data not available.</div>
         );
+      case 'terms-management':
+        return <TermsManagement defaultTab="terms" />;
+      case 'acceptance-history':
+        return <TermsManagement defaultTab="history" />;
       default:
         return <FeaturedScholarshipsManagement />;
     }

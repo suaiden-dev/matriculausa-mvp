@@ -413,7 +413,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
                 </button>
                 {/* User Dropdown */}
                 {userMenuOpen && (
-                  <div className="absolute right-0 top-full mt-2 w-56 sm:w-64 max-w-[90vw] bg-white rounded-xl shadow-xl border border-slate-200 py-2 z-50 overflow-x-auto">
+                  <div className="absolute right-0 top-full mt-2 w-56 sm:w-64 max-w-[90vw] bg-white rounded-xl shadow-xl border border-slate-200 py-2 z-50 overflow-visible">
                     <div className="px-3 sm:px-4 py-3 border-b border-slate-100">
                       <p className="font-semibold text-slate-900 text-sm sm:text-base truncate">{profile?.name || user?.name}</p>
                       <p className="text-xs sm:text-sm text-slate-500 truncate max-w-[180px]" style={{ direction: 'ltr', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }} title={user?.email}>{user?.email}</p>
@@ -428,6 +428,10 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
                         <User className="h-3 w-3 sm:h-4 sm:w-4 mr-2 sm:mr-3" />
                         Profile Settings
                       </Link>
+                      {/* Language selector inside user menu */}
+                      <div className="px-3 sm:px-4 py-2 flex justify-center md:justify-start">
+                        <LanguageSelector variant="dashboard" showLabel={true} />
+                      </div>
                     </div>
                     
                     <div className="border-t border-slate-100 pt-2">

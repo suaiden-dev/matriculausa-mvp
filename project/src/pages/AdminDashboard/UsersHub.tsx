@@ -4,11 +4,13 @@ import { GraduationCap, DollarSign, MessageSquare } from 'lucide-react';
 import StudentApplicationsView from '../../components/AdminDashboard/StudentApplicationsView';
 import FeeManagement from '../../components/AdminDashboard/FeeManagement';
 import AdminStudentChatPage from './AdminChatPage';
+import { useUnreadMessagesCount } from '../../hooks/useUnreadMessagesCount';
 
 const UsersHub: React.FC = () => {
   const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<'applications' | 'feeManagement' | 'messages'>('applications');
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
+  const { unreadCount } = useUnreadMessagesCount();
 
   // Read URL parameters on component mount
   useEffect(() => {
@@ -67,7 +69,12 @@ const UsersHub: React.FC = () => {
             }`}
           >
             <div className="flex items-center space-x-2">
-              <MessageSquare className="h-5 w-5" />
+              <div className="relative">
+                <MessageSquare className="h-5 w-5" />
+                {unreadCount > 0 && (
+                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
+                )}
+              </div>
               <span>Student Messages</span>
             </div>
           </button>

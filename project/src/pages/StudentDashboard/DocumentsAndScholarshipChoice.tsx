@@ -12,7 +12,10 @@ import {
   DollarSign,
   Clock,
   Shield,
-  ChevronRight
+  ChevronRight,
+  ChevronDown,
+  MessageCircle,
+  Bot
 } from 'lucide-react';
 import './DocumentsAndScholarshipChoice.css';
 
@@ -35,6 +38,8 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
   const [analyzing, setAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [showManualReviewMessage, setShowManualReviewMessage] = useState(false);
+  const [showHelpSection, setShowHelpSection] = useState(false);
 
   
   const navigate = useNavigate();
@@ -293,35 +298,16 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
             console.error('Failed to log document rejection:', logError);
           }
 
-          // NÃO chamar saveDocumentsForManualReview aqui
-          // As aplicações só serão criadas quando o usuário completar o manual review
+          // Processar aplicações sem notificar universidade
+          await processApplicationsAndClearCart(docUrls, false);
           
-          // Salvar dados no localStorage para manual review
-          const errorData = {
-            passport: getFormattedErrorMessage(passportErr || 'Invalid document.', 'passport'),
-            funds_proof: getFormattedErrorMessage(fundsErr || 'Invalid document.', 'fundsProof'),
-            diploma: getFormattedErrorMessage(degreeErr || 'Invalid document.', 'diploma'),
-          };
-          
-          console.log('Saving to localStorage for manual review:');
-          console.log('Errors:', errorData);
-          console.log('Documents:', uploadedDocs);
-          
-          localStorage.setItem('documentAnalysisErrors', JSON.stringify(errorData));
-          localStorage.setItem('documentUploadedDocs', JSON.stringify(uploadedDocs));
+          // Limpar dados de manual review do localStorage
+          clearManualReviewData();
           
           setAnalyzing(false);
           setError(null);
-          setFieldErrors(errorData);
-          
-          // Limpar apenas arquivos inválidos
-          setFiles(prev => {
-            const updated = { ...prev };
-            if (!passportOk) updated['passport'] = null;
-            if (!fundsOk) updated['funds_proof'] = null;
-            if (!degreeOk) updated['diploma'] = null;
-            return updated;
-          });
+          setFieldErrors({});
+          setShowManualReviewMessage(true);
         }
       } else {
         // Resposta inesperada ou erro no n8n - tratar como erro e ir para manual review
@@ -337,43 +323,22 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
           })
           .eq('user_id', user.id);
 
-        // Salvar dados no localStorage para manual review
-        const errorData = {
-          passport: getFormattedErrorMessage('Document analysis failed. Please review manually.', 'passport'),
-          funds_proof: getFormattedErrorMessage('Document analysis failed. Please review manually.', 'fundsProof'),
-          diploma: getFormattedErrorMessage('Document analysis failed. Please review manually.', 'diploma'),
-        };
+        // Processar aplicações sem notificar universidade
+        await processApplicationsAndClearCart(docUrls, false);
         
-        localStorage.setItem('documentAnalysisErrors', JSON.stringify(errorData));
-        localStorage.setItem('documentUploadedDocs', JSON.stringify(uploadedDocs));
+        // Limpar dados de manual review do localStorage
+        clearManualReviewData();
         
         setAnalyzing(false);
-        setError('Document analysis failed. Please continue to manual review.');
-        setFieldErrors(errorData);
-        
-        // Limpar todos os arquivos para permitir nova seleção
-        setFiles({ passport: null, diploma: null, funds_proof: null });
+        setError(null);
+        setFieldErrors({});
+        setShowManualReviewMessage(true);
       }
     } catch (e: any) {
       console.error('Upload error:', e);
       setUploading(false);
       setAnalyzing(false);
-      
-      // Em caso de erro, definir erros genéricos para forçar manual review
-      const genericErrors = {
-        passport: getFormattedErrorMessage('Upload failed. Please review manually.', 'passport'),
-        funds_proof: getFormattedErrorMessage('Upload failed. Please review manually.', 'fundsProof'),
-        diploma: getFormattedErrorMessage('Upload failed. Please review manually.', 'diploma'),
-      };
-      
-      setFieldErrors(genericErrors);
-      setError(e.message || 'Upload failed. Please continue to manual review.');
-      
-      // Salvar dados de erro no localStorage para manual review
-      if (user) {
-        localStorage.setItem('documentAnalysisErrors', JSON.stringify(genericErrors));
-        localStorage.setItem('documentUploadedDocs', JSON.stringify([]));
-      }
+      setError(e.message || 'Upload failed.');
     }
   };
 
@@ -1041,16 +1006,6 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
 
             {/* Upload Button */}
             <div className="text-center flex flex-col sm:flex-row justify-center items-center space-y-3 sm:space-y-0 sm:space-x-4">
-              {(Object.values(fieldErrors).some(Boolean) || error) && (
-                <button
-                  onClick={() => navigate('/student/dashboard/manual-review')}
-                  disabled={analyzing}
-                  className="bg-amber-600 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl sm:rounded-2xl font-bold text-sm sm:text-base hover:bg-amber-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg w-full sm:w-auto"
-                >
-                  {t('studentDashboard.documentsAndScholarshipChoice.continueToManualReview')}
-                </button>
-              )}
-              
               <button
                 onClick={handleUpload}
                 disabled={uploading || !allFilesSelected || analyzing}
@@ -1074,11 +1029,11 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
                 )}
               </button>
               
-              {/* {error && (
-                <div className="mt-4 text-sm text-yellow-600 bg-yellow-50 p-3 rounded-lg">
+              {error && (
+                <div className="mt-4 text-sm text-red-600 bg-red-50 p-3 rounded-lg border border-red-200">
                   {error}
                 </div>
-              )} */}
+              )}
             </div>
           </div>
         )}
@@ -1104,6 +1059,80 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
                 <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 ml-2" />
               </span>
             </button>
+          </div>
+        )}
+
+        {/* Manual Review Message Modal - Simplified */}
+        {showManualReviewMessage && (
+          <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-3">
+            <div className="bg-white rounded-2xl shadow-2xl p-5 max-w-sm w-full mx-2 border border-slate-100">
+              {/* Header */}
+              <div className="text-center mb-4">
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-3">
+                  <Clock className="w-8 h-8 text-blue-600" />
+                </div>
+                <h2 className="text-xl font-bold text-blue-800 mb-3">
+                  {t('studentDashboard.documentsAndScholarshipChoice.manualReviewTitle')}
+                </h2>
+                
+                {/* Main message - split into two parts */}
+                <div className="space-y-3 mb-4">
+                  <p className="text-blue-700 text-sm leading-relaxed">
+                    Nossa IA não conseguiu processar os documentos automaticamente.
+                  </p>
+                  <p className="text-blue-700 text-sm leading-relaxed">
+                    Não se preocupe! Enviamos para nossa equipe realizar uma análise detalhada.
+                  </p>
+                </div>
+                
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p className="text-blue-800 text-sm font-bold">
+                    {t('studentDashboard.documentsAndScholarshipChoice.manualReviewTimeframe')}
+                  </p>
+                </div>
+              </div>
+
+              {/* Help Section - Collapsible */}
+              <div className="mb-4">
+                <button
+                  onClick={() => setShowHelpSection(!showHelpSection)}
+                  className="w-full flex items-center justify-between p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors"
+                >
+                  <span className="text-sm font-medium text-slate-700">
+                    {t('studentDashboard.documentsAndScholarshipChoice.needHelp')}
+                  </span>
+                  <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform ${showHelpSection ? 'rotate-180' : ''}`} />
+                </button>
+                
+                {showHelpSection && (
+                  <div className="mt-2 space-y-2 text-xs text-slate-600">
+                    <div className="flex items-center p-2 bg-white rounded border">
+                      <Bot className="w-4 h-4 text-blue-600 mr-2 flex-shrink-0" />
+                      <span>
+                        <span className="font-medium">{t('studentDashboard.documentsAndScholarshipChoice.smartAssistantHelp')}</span>{' '}
+                        {t('studentDashboard.documentsAndScholarshipChoice.smartAssistantDescription')}
+                      </span>
+                    </div>
+                    <div className="flex items-center p-2 bg-white rounded border">
+                      <MessageCircle className="w-4 h-4 text-green-600 mr-2 flex-shrink-0" />
+                      <span>
+                        <span className="font-medium">{t('studentDashboard.documentsAndScholarshipChoice.supportChatHelp')}</span>{' '}
+                        {t('studentDashboard.documentsAndScholarshipChoice.supportChatDescription')}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Action Button */}
+              <button
+                onClick={() => navigate('/student/dashboard')}
+                className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-bold text-sm hover:bg-blue-700 transition-colors flex items-center justify-center"
+              >
+                {t('studentDashboard.documentsAndScholarshipChoice.backToOverview')}
+                <ChevronRight className="w-4 h-4 ml-2" />
+              </button>
+            </div>
           </div>
         )}
 
