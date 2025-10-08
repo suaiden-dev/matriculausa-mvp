@@ -160,6 +160,13 @@ const AdminStudentDetails: React.FC = () => {
     due_date: '',
     attachment: null
   });
+  
+  // Estados para edição de template
+  const [showEditTemplateModal, setShowEditTemplateModal] = useState(false);
+  const [editingTemplateRequestId, setEditingTemplateRequestId] = useState<string | null>(null);
+  const [editingTemplateFile, setEditingTemplateFile] = useState<File | null>(null);
+  const [currentTemplateUrl, setCurrentTemplateUrl] = useState<string | null>(null);
+  const [uploadingTemplate, setUploadingTemplate] = useState(false);
   // Upload de Acceptance Letter (Admin) - Removido pois agora está no DocumentsView
   const [isProgressExpanded, setIsProgressExpanded] = useState(false);
   const [i20Deadline, setI20Deadline] = useState<Date | null>(null);
@@ -1568,6 +1575,60 @@ const AdminStudentDetails: React.FC = () => {
       .replace(/[^a-zA-Z0-9.-]/g, '_')
       .replace(/_+/g, '_')
       .replace(/^_|_$/g, '');
+  };
+
+  // Função para editar template de um document request
+  const handleEditTemplate = async (requestId: string, currentTemplate: string | null) => {
+    setEditingTemplateRequestId(requestId);
+    setCurrentTemplateUrl(currentTemplate);
+    setShowEditTemplateModal(true);
+  };
+
+  // Função para salvar template editado
+  const handleSaveTemplate = async () => {
+    if (!editingTemplateRequestId || !editingTemplateFile) return;
+    
+    try {
+      setUploadingTemplate(true);
+      
+      // Upload do template para o storage
+      const sanitized = editingTemplateFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const storagePath = `templates/${Date.now()}_${sanitized}`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('document-attachments')
+        .upload(storagePath, editingTemplateFile);
+      
+      if (uploadError) throw uploadError;
+      
+      // Obter URL pública
+      const { data: { publicUrl } } = supabase.storage
+        .from('document-attachments')
+        .getPublicUrl(uploadData?.path || storagePath);
+
+      // Atualizar document request com novo template
+      const { error: updateError } = await supabase
+        .from('document_requests')
+        .update({ attachment_url: publicUrl })
+        .eq('id', editingTemplateRequestId);
+
+      if (updateError) throw updateError;
+
+      // Fechar modal e limpar estados
+      setShowEditTemplateModal(false);
+      setEditingTemplateRequestId(null);
+      setEditingTemplateFile(null);
+      setCurrentTemplateUrl(null);
+
+      // Recarregar document requests
+      await fetchDocumentRequests();
+
+      showToast('Template updated successfully!', 'success');
+    } catch (error: any) {
+      console.error('Error updating template:', error);
+      showToast(`Error updating template: ${error.message}`, 'error');
+    } finally {
+      setUploadingTemplate(false);
+    }
   };
 
   // Criar Document Request (Admin)
@@ -4064,6 +4125,7 @@ const AdminStudentDetails: React.FC = () => {
               onDownloadDocument={handleDownloadDocument}
               onUploadDocument={handleUploadDocumentRequest}
               onApproveDocument={handleApproveDocumentRequest}
+              onEditTemplate={handleEditTemplate}
               isAdmin={isPlatformAdmin}
               uploadingStates={uploadingDocumentRequest}
               approvingStates={approvingDocumentRequest}
@@ -4123,6 +4185,106 @@ const AdminStudentDetails: React.FC = () => {
                 <span>
                   {savingNotes ? 'Deleting...' : 'Delete Note'}
                 </span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Template Modal */}
+      {showEditTemplateModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md mx-4">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-semibold text-slate-900">
+                {currentTemplateUrl ? 'Edit Template' : 'Add Template'}
+              </h3>
+              <button
+                onClick={() => {
+                  setShowEditTemplateModal(false);
+                  setEditingTemplateRequestId(null);
+                  setEditingTemplateFile(null);
+                  setCurrentTemplateUrl(null);
+                }}
+                className="text-slate-400 hover:text-slate-500"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {currentTemplateUrl && (
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                  <p className="text-sm text-blue-700 mb-2 font-medium">Current Template:</p>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-blue-600 truncate">
+                      {currentTemplateUrl.split('/').pop()}
+                    </span>
+                    <button
+                      onClick={() => handleViewDocument({ file_url: currentTemplateUrl, type: 'template' })}
+                      className="text-blue-700 hover:text-blue-800"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  {currentTemplateUrl ? 'Replace Template File' : 'Template File'}
+                </label>
+                <div className="flex items-center gap-3">
+                  <label className="flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-100 transition font-medium text-slate-700">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    </svg>
+                    <span>{editingTemplateFile ? 'Change file' : 'Select file'}</span>
+                    <input
+                      type="file"
+                      className="sr-only"
+                      accept=".pdf,.doc,.docx"
+                      onChange={(e) => setEditingTemplateFile(e.target.files ? e.target.files[0] : null)}
+                      disabled={uploadingTemplate}
+                    />
+                  </label>
+                  {editingTemplateFile && (
+                    <span className="text-xs text-slate-700 truncate max-w-[180px]">
+                      {editingTemplateFile.name}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setShowEditTemplateModal(false);
+                  setEditingTemplateRequestId(null);
+                  setEditingTemplateFile(null);
+                  setCurrentTemplateUrl(null);
+                }}
+                className="px-4 py-2 text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveTemplate}
+                disabled={!editingTemplateFile || uploadingTemplate}
+                className="px-4 py-2 bg-[#05294E] text-white rounded-lg hover:bg-[#041f38] disabled:opacity-50 transition-colors flex items-center gap-2"
+              >
+                {uploadingTemplate ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                    <span>Saving...</span>
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    <span>Save Template</span>
+                  </>
+                )}
               </button>
             </div>
           </div>
