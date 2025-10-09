@@ -2001,15 +2001,9 @@ async function handleCheckoutSessionCompleted(session) {
         console.error('Error updating selection process fee status:', error);
       } else {
         console.log('Selection process fee payment processed successfully for user:', userId);
-        // Send term acceptance notification with PDF after successful payment
-        try {
-          console.log('[NOTIFICAÇÃO] Enviando notificação de aceitação de termos com PDF após pagamento bem-sucedido...');
-          await sendTermAcceptanceNotificationAfterPayment(userId, 'selection_process');
-          console.log('[NOTIFICAÇÃO] Notificação enviada com sucesso');
-        } catch (notificationError) {
-          console.error('[NOTIFICAÇÃO] Erro ao enviar notificação:', notificationError);
-        // Don't fail the payment processing if notification fails
-        }
+        // Term acceptance notification removed to avoid duplication
+        // Will be sent via verify-stripe-session-selection-process-fee
+        console.log('[NOTIFICAÇÃO] Term acceptance notification removed from webhook to avoid duplication');
       }
       // --- NOTIFICAÇÕES REMOVIDAS PARA EVITAR DUPLICAÇÃO ---
       // As notificações para n8n foram movidas para verify-stripe-session-selection-process-fee
