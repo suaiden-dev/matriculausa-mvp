@@ -10,7 +10,6 @@ import {
   X,
   LogOut,
   ChevronDown,
-  Shield,
   Star,
   Gift,
   Bell,
@@ -20,6 +19,8 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
 import { useSmartPollingNotifications } from '../../hooks/useSmartPollingNotifications';
+import { useStudentChatUnreadCount } from '../../hooks/useStudentChatUnreadCount';
+import { useUnreadMessages } from '../../contexts/UnreadMessagesContext';
 import NotificationsModal from '../../components/NotificationsModal';
 import LanguageSelector from '../../components/LanguageSelector';
 // import { StripeCheckout } from '../../components/StripeCheckout';
@@ -87,6 +88,14 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
       console.log('🔔 Nova notificação recebida via polling:', notification);
     }
   });
+
+  // Hook para mensagens não lidas do chat admin-estudante
+  const { unreadCount: serverChatUnreadCount, markStudentMessagesAsRead } = useStudentChatUnreadCount();
+  const { unreadCount: contextChatUnreadCount, resetUnreadCount } = useUnreadMessages();
+  
+  // Use context count if it's been updated, otherwise use server count
+  const displayChatUnreadCount = contextChatUnreadCount > 0 ? contextChatUnreadCount : serverChatUnreadCount;
+  
 
   // Solicitar permissão para notificações nativas na primeira renderização
   useEffect(() => {
@@ -201,7 +210,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
     { id: 'scholarships', label: t('studentDashboard.sidebar.browseScholarships'), icon: Award, path: '/student/dashboard/scholarships' },
     { id: 'cart', label: t('studentDashboard.sidebar.selectedScholarships'), icon: GraduationCap, path: '/student/dashboard/cart' },
     { id: 'applications', label: t('studentDashboard.sidebar.myApplications'), icon: FileText, path: '/student/dashboard/applications' },
-    ...(canAccessChat ? [{ id: 'chat', label: 'Support Chat', icon: MessageSquare, path: '/student/dashboard/chat' }] : []),
+    ...(canAccessChat ? [{ id: 'chat', label: t('studentDashboard.sidebar.supportChat'), icon: MessageSquare, path: '/student/dashboard/chat' }] : []),
     { id: 'rewards', label: t('studentDashboard.sidebar.matriculaRewards'), icon: Gift, path: '/student/dashboard/rewards' },
     { id: 'profile', label: t('studentDashboard.sidebar.profile'), icon: User, path: '/student/dashboard/profile' }
   ];
@@ -282,10 +291,25 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
                     }`}
                     onClick={() => {
                       if (window.innerWidth < 1024) setSidebarOpen(false);
+                      
+                      // Resetar contador de mensagens não lidas quando clicar no Support Chat
+                      if (item.id === 'chat') {
+                        markStudentMessagesAsRead();
+                        resetUnreadCount();
+                      }
                     }}
                   >
                     <div className="flex items-center space-x-2 sm:space-x-3">
-                      <Icon className={`h-4 w-4 sm:h-5 sm:w-5 ${isActive ? 'text-white' : 'text-slate-500'}`} />
+                      <div className="relative">
+                        <Icon className={`h-4 w-4 sm:h-5 sm:w-5 ${isActive ? 'text-white' : 'text-slate-500'}`} />
+                        {item.id === 'chat' && displayChatUnreadCount > 0 && (
+                          <div className={`absolute -top-1 -right-1 w-3 h-3 rounded-full animate-pulse ${
+                            isActive 
+                              ? 'bg-white border-2 border-blue-500' 
+                              : 'bg-blue-500'
+                          }`}></div>
+                        )}
+                      </div>
                       <span className="text-xs sm:text-sm">{item.label}</span>
                     </div>
                   </Link>

@@ -1187,7 +1187,62 @@
         }
       },
       "chat": {
-        "title": "Chat de la Aplicación"
+        "title": "Chat de la Aplicación",
+        "subtitle": "Comunícate directamente con la universidad",
+        "placeholder": "Escribe tu mensaje...",
+        "sendButton": "Enviar",
+        "attachFile": "Adjuntar archivo",
+        "fileUploaded": "Archivo adjunto: {{fileName}}",
+        "messageSent": "Mensaje enviado exitosamente",
+        "messageError": "Error al enviar mensaje. Inténtalo de nuevo.",
+        "noMessages": "Aún no hay mensajes. ¡Inicia una conversación!",
+        "loading": "Cargando mensajes...",
+        "sending": "Enviando...",
+        "online": "En línea",
+        "lastSeen": "Visto por última vez {{time}}",
+        "typing": "Escribiendo...",
+        "messageStatus": {
+          "sent": "Enviado",
+          "delivered": "Entregado",
+          "read": "Leído"
+        },
+        "actions": {
+          "markAsRead": "Marcar como leído",
+          "deleteMessage": "Eliminar mensaje",
+          "downloadAttachment": "Descargar adjunto"
+        },
+        "edit": {
+          "placeholder": "Edita tu mensaje...",
+          "save": "Guardar",
+          "cancel": "Cancelar"
+        },
+        "attachment": {
+          "label": "Adjunto",
+          "remove": "Eliminar"
+        }
+      },
+      "studentChat": {
+        "header": {
+          "title": "Equipo de Soporte",
+          "responseTime": "Tiempo de respuesta: 1-2 horas hábiles",
+          "helpTooltip": "¿Cómo funciona el chat?"
+        },
+        "guide": {
+          "title": "Chat con la Administración",
+          "subtitle": "Este chat te conecta directamente con la Administración. Úsalo para preguntas sobre becas, documentos y el progreso de tu aplicación. Evita compartir datos sensibles (contraseñas o números de tarjeta).",
+          "supportsAttachments": "Envía mensajes y archivos adjuntos",
+          "businessHours": "Respuestas durante horario comercial",
+          "historySaved": "El historial de conversación se guarda",
+          "ctaStart": "Entendido",
+          "ctaLater": "Ahora no"
+        },
+        "input": {
+          "placeholder": "Escribe tu mensaje..."
+        },
+        "recipientLabel": {
+          "student": "Estudiante",
+          "support": "Administración"
+        }
       },
       "details": {
         "studentInformation": {
@@ -1437,7 +1492,8 @@
       "selectedScholarships": "Becas Seleccionadas",
       "myApplications": "Mis Solicitudes",
       "matriculaRewards": "Recompensas Matrícula",
-      "profile": "Perfil"
+      "profile": "Perfil",
+      "supportChat": "Chat de Soporte"
     },
     "profileStatus": {
       "title": "Estado del Perfil",
@@ -2093,7 +2149,26 @@
       },
       "documents": {
         "title": "Gestión de Documentos",
-        "subtitle": "Solicitar y gestionar documentos del estudiante"
+        "subtitle": "Solicitar y gestionar documentos del estudiante",
+        "congratulations": {
+          "title": "🎉 ¡Felicitaciones! ¡Todos los documentos han sido aprobados!",
+          "subtitle": "Su documentación ha sido aceptada por la universidad. Ahora puede proceder al siguiente paso."
+        },
+        "acceptanceLetter": {
+          "title": "📋 Esperando Carta de Aceptación",
+          "description": "Con todos los documentos aprobados, la universidad está preparando su carta de aceptación oficial. Será notificado tan pronto como esté disponible.",
+          "status": "⏳ Esperando que la universidad envíe la carta de aceptación oficial",
+          "received": "✅ ¡Carta de Aceptación Recibida!",
+          "readyForDownload": "Su carta de aceptación oficial está lista para descargar",
+          "downloadButton": "📄 Descargar Carta de Aceptación",
+          "viewButton": "👁️ Ver"
+        },
+        "documentStatus": {
+          "title": "Estado de los Documentos",
+          "description": "Continúe enviando los documentos solicitados por la universidad. La carta de aceptación estará disponible solo después de que todos los documentos sean aprobados.",
+          "progress": "Progreso:",
+          "approved": "documentos aprobados"
+        }
       },
       "documentTypes": {
         "passport": {

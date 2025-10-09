@@ -3109,7 +3109,7 @@ const AdminStudentDetails: React.FC = () => {
                       student.total_applications > 0 ? 'bg-orange-500' : 'bg-gray-500'
                     }`}></div>
                     <span className="text-sm font-medium">
-                      {student.is_locked ? 'Committed to Scholarship' :
+                      {student.is_locked ? 'Scholarship Selected' :
                           student.application_status === 'approved' ? 'Approved - Pending Payment' :
                           student.application_status === 'under_review' ? 'Under Review' :
                         student.total_applications > 0 ? 'Applications Submitted' : 'No Applications Yet'}
@@ -3331,7 +3331,7 @@ const AdminStudentDetails: React.FC = () => {
               <div className="bg-gradient-to-r rounded-t-2xl from-slate-700 to-slate-800 px-6 py-4">
                 <h2 className="text-xl font-semibold text-white flex items-center">
                   <Award className="w-6 h-6 mr-3" />
-                  Committed Scholarship
+                  Selected Scholarship
                 </h2>
               </div>
               <div className="p-6 space-y-3">

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './useAuth';
+import { channelManager } from '../lib/supabaseChannelManager';
 
 export interface AdminStudentChatNotification {
   id: string;
@@ -69,6 +70,13 @@ export const useAdminStudentChatNotifications = () => {
   const markConversationAsRead = useCallback(async (conversationId: string) => {
     if (!user) return;
 
+    // Atualizar estado local imediatamente
+    const conversationNotifications = notifications.filter(notif => notif.conversation_id === conversationId);
+    setNotifications(prev => 
+      prev.filter(notif => notif.conversation_id !== conversationId)
+    );
+    setUnreadCount(prev => Math.max(0, prev - conversationNotifications.length));
+
     try {
       const { error } = await supabase
         .rpc('mark_conversation_notifications_as_read', {
@@ -76,21 +84,21 @@ export const useAdminStudentChatNotifications = () => {
         });
 
       if (error) throw error;
-
-      // Atualizar estado local
-      setNotifications(prev => 
-        prev.filter(notif => notif.conversation_id !== conversationId)
-      );
-      setUnreadCount(prev => 
-        prev - notifications.filter(notif => notif.conversation_id === conversationId).length
-      );
     } catch (e: any) {
       console.error('Failed to mark conversation notifications as read:', e);
+      // Reverter mudanças locais em caso de erro
+      setNotifications(prev => [...prev, ...conversationNotifications]);
+      setUnreadCount(prev => prev + conversationNotifications.length);
     }
   }, [user, notifications]);
 
   const markAllAsRead = useCallback(async () => {
     if (!user) return;
+
+    // Atualizar estado local imediatamente
+    const currentNotifications = [...notifications];
+    setNotifications([]);
+    setUnreadCount(0);
 
     try {
       // Marcar todas as notificações como lidas
@@ -104,13 +112,13 @@ export const useAdminStudentChatNotifications = () => {
         .eq('is_read', false);
 
       if (error) throw error;
-
-      setNotifications([]);
-      setUnreadCount(0);
     } catch (e: any) {
       console.error('Failed to mark all notifications as read:', e);
+      // Reverter mudanças locais em caso de erro
+      setNotifications(currentNotifications);
+      setUnreadCount(currentNotifications.length);
     }
-  }, [user]);
+  }, [user, notifications]);
 
   // Buscar notificações quando o usuário muda
   useEffect(() => {
@@ -123,8 +131,9 @@ export const useAdminStudentChatNotifications = () => {
   useEffect(() => {
     if (!user) return;
 
-    const channel = supabase
-      .channel('admin-student-chat-notifications')
+    const channelName = `admin-student-chat-notifications-${user.id}`;
+
+    const channel = channelManager.subscribe(channelName)
       .on(
         'postgres_changes',
         { 
@@ -133,7 +142,7 @@ export const useAdminStudentChatNotifications = () => {
           table: 'admin_student_chat_notifications',
           filter: `recipient_id=eq.${user.id}`
         },
-        (payload) => {
+        (payload: any) => {
           // Buscar a notificação completa
           supabase
             .rpc('get_unread_admin_student_chat_notifications', {
@@ -146,13 +155,17 @@ export const useAdminStudentChatNotifications = () => {
               }
             });
         }
-      )
-      .subscribe();
+      );
 
     return () => {
-      supabase.removeChannel(channel);
+      channelManager.unsubscribe(channelName);
     };
   }, [user]);
+
+  // Função para atualizar contador localmente (sem requisição ao banco)
+  const updateUnreadCountLocally = useCallback((newCount: number) => {
+    setUnreadCount(Math.max(0, newCount));
+  }, []);
 
   return {
     notifications,
@@ -163,5 +176,6 @@ export const useAdminStudentChatNotifications = () => {
     markAsRead,
     markConversationAsRead,
     markAllAsRead,
+    updateUnreadCountLocally,
   };
 };
