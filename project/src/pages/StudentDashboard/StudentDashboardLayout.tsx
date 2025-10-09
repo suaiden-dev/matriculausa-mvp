@@ -429,7 +429,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
                         Profile Settings
                       </Link>
                       {/* Language selector inside user menu */}
-                      <div className="px-3 sm:px-4 py-2 flex justify-center md:justify-start">
+                      <div className="px-3 sm:px-4 py-2 flex justify-center md:justify-start sm:hidden">
                         <LanguageSelector variant="dashboard" showLabel={true} />
                       </div>
                     </div>

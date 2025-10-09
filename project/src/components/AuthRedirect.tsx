@@ -42,7 +42,11 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   }, []);
 
   useEffect(() => {
+    console.log('[AuthRedirect] 🔍 useEffect executado - loading:', loading, 'user:', !!user, 'pathname:', location.pathname);
+    console.log('[AuthRedirect] 🔍 Timestamp:', new Date().toISOString());
+    
     if (loading || !user) {
+      console.log('[AuthRedirect] ⚠️ Loading ou sem usuário, não executando redirecionamento');
       return;
     }
 
@@ -71,6 +75,12 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
       // Whitelist: permitir acesso explícito à página interna de cadastro de estudante
       const isWhitelistedInternalRegister = location.pathname === '/student/register';
       
+      // NÃO redirecionar se há código de referência na URL (usuário veio de link de referência)
+      const hasReferralCode = window.location.search.includes('ref=');
+      if (hasReferralCode) {
+        console.log('[AuthRedirect] ⚠️ Código de referência detectado, não redirecionando');
+        return;
+      }
       
       // REDIRECIONAMENTO APÓS LOGIN - verificar se usuário está na página de login/auth
       if (currentPath === '/login' || currentPath === '/auth' || currentPath === '/register') {

@@ -39,13 +39,7 @@ interface StudentWithFees extends Student {
   };
 }
 
-// Valores padrão das taxas
-const DEFAULT_FEES = {
-  selection_process: 400,
-  application: 400,
-  scholarship: 900,
-  i20_control: 900
-};
+import { useDynamicFeeCalculation } from '../../hooks/useDynamicFeeCalculation';
 
 const FeeManagement: React.FC = () => {
   const [students, setStudents] = useState<StudentWithFees[]>([]);
@@ -58,6 +52,9 @@ const FeeManagement: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(20);
+  
+  // Usar valores dinâmicos baseados no sistema do usuário
+  const { selectionProcessFee, scholarshipFee, i20ControlFee, isSimplified } = useDynamicFeeCalculation();
 
   useEffect(() => {
     fetchStudents();
@@ -96,10 +93,10 @@ const FeeManagement: React.FC = () => {
           ...student,
           feeOverrides: override || undefined,
           calculatedFees: {
-            selection_process: override?.selection_process_fee || (DEFAULT_FEES.selection_process + dependentsExtra),
-            application: DEFAULT_FEES.application,
-            scholarship: override?.scholarship_fee || DEFAULT_FEES.scholarship,
-            i20_control: override?.i20_control_fee || DEFAULT_FEES.i20_control
+            selection_process: override?.selection_process_fee || (selectionProcessFee + dependentsExtra),
+            application: 0, // Application fee é variável por universidade
+            scholarship: override?.scholarship_fee || scholarshipFee,
+            i20_control: override?.i20_control_fee || i20ControlFee
           }
         };
       });
@@ -215,10 +212,10 @@ const FeeManagement: React.FC = () => {
             ...student,
             feeOverrides: editingFees,
             calculatedFees: {
-              selection_process: editingFees.selection_process_fee || DEFAULT_FEES.selection_process,
-              application: DEFAULT_FEES.application,
-              scholarship: editingFees.scholarship_fee || DEFAULT_FEES.scholarship,
-              i20_control: editingFees.i20_control_fee || DEFAULT_FEES.i20_control
+              selection_process: editingFees.selection_process_fee || selectionProcessFee,
+              application: 0, // Application fee é variável por universidade
+              scholarship: editingFees.scholarship_fee || scholarshipFee,
+              i20_control: editingFees.i20_control_fee || i20ControlFee
             }
           };
         }
@@ -256,10 +253,10 @@ const FeeManagement: React.FC = () => {
             ...student,
             feeOverrides: undefined,
             calculatedFees: {
-              selection_process: DEFAULT_FEES.selection_process + dependentsExtra,
-              application: DEFAULT_FEES.application,
-              scholarship: DEFAULT_FEES.scholarship,
-              i20_control: DEFAULT_FEES.i20_control
+              selection_process: selectionProcessFee + dependentsExtra,
+              application: 0, // Application fee é variável por universidade
+              scholarship: scholarshipFee,
+              i20_control: i20ControlFee
             }
           };
         }

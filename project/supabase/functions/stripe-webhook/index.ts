@@ -1,12 +1,11 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import Stripe from 'npm:stripe@17.7.0';
 import { createClient } from 'npm:@supabase/supabase-js@2.49.1';
+import { getStripeConfig } from '../stripe-config.ts';
 // Import jsPDF for Deno environment
 // @ts-ignore
 import jsPDF from "https://esm.sh/jspdf@2.5.1?target=deno";
-// Validação das variáveis de ambiente obrigatórias
-const stripeSecret = Deno.env.get('STRIPE_SECRET_KEY');
-const stripeWebhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET');
+
 // Configurações do MailerSend (REMOVIDAS - usando apenas webhook n8n)
 // const mailerSendApiKey = Deno.env.get('MAILERSEND_API_KEY');
 // const mailerSendUrl = 'https://api.mailersend.com/v1/email';
@@ -16,19 +15,14 @@ const stripeWebhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET');
 // const companyWebsite = Deno.env.get('COMPANY_WEBSITE') || 'https://matriculausa.com';
 // const companyLogo = Deno.env.get('COMPANY_LOGO') || 'https://matriculausa.com/logo.png';
 const supportEmail = Deno.env.get('SUPPORT_EMAIL') || 'support@matriculausa.com';
-if (!stripeSecret || !stripeWebhookSecret || !supportEmail) {
-  throw new Error('Missing required environment variables: STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, or SUPPORT_EMAIL');
+if (!supportEmail) {
+  throw new Error('Missing required environment variable: SUPPORT_EMAIL');
 }
 // Configurações adicionais para templates de email
 const companyName = Deno.env.get('COMPANY_NAME') || 'Matrícula USA';
 const companyWebsite = Deno.env.get('COMPANY_WEBSITE') || 'https://matriculausa.com/';
 const companyLogo = Deno.env.get('COMPANY_LOGO') || 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/university-profile-pictures/fb5651f1-66ed-4a9f-ba61-96c50d348442/logo%20matriculaUSA.jpg';
-const stripe = new Stripe(stripeSecret, {
-  appInfo: {
-    name: 'Bolt Integration',
-    version: '1.0.0'
-  }
-});
+
 const supabase = createClient(Deno.env.get('SUPABASE_URL'), Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'));
 // Function to send term acceptance notification with PDF after successful payment
 async function sendTermAcceptanceNotificationAfterPayment(userId, feeType) {
@@ -375,11 +369,26 @@ async function verifyStripeSignature(body, signature, secret) {
 // Função principal do webhook
 Deno.serve(async (req)=>{
   try {
+    // Obter configuração do Stripe baseada no ambiente detectado
+    const config = getStripeConfig(req);
+    
+    // Criar instância do Stripe com a chave correta para o ambiente
+    const stripe = new Stripe(config.secretKey, {
+      appInfo: {
+        name: 'MatriculaUSA Integration',
+        version: '1.0.0'
+      }
+    });
+
+    console.log(`🔧 Using Stripe in ${config.environment.environment} mode`);
+
     const sig = req.headers.get('stripe-signature');
     const body = await req.text();
-    // Verificação manual da assinatura
-    const isValid = await verifyStripeSignature(body, sig, stripeWebhookSecret);
+    
+    // Verificação manual da assinatura usando o webhook secret correto para o ambiente
+    const isValid = await verifyStripeSignature(body, sig, config.webhookSecret!);
     if (!isValid) {
+      console.error(`❌ Webhook signature verification failed for ${config.environment.environment} environment`);
       return new Response(JSON.stringify({
         error: 'Webhook signature verification failed.'
       }), {
@@ -565,7 +574,7 @@ async function handleCheckoutSessionCompleted(session) {
     const applicationFeeAmount = metadata.application_fee_amount || '350.00';
     const universityId = metadata.university_id;
     const feeType = metadata.fee_type || 'application_fee';
-    const paymentMethod = session.payment_method_types?.[0]; // Detectar PIX vs Stripe
+    const paymentMethod = metadata?.payment_method || 'stripe'; // Usar método do metadata
     
     console.log(`[stripe-webhook] Processing application_fee for user: ${userId}, application: ${applicationId}, payment method: ${paymentMethod}`);
     
@@ -584,7 +593,7 @@ async function handleCheckoutSessionCompleted(session) {
         is_application_fee_paid: true,
         payment_status: 'paid',
         paid_at: new Date().toISOString(),
-          application_fee_payment_method: 'stripe',
+          application_fee_payment_method: metadata?.payment_method || 'stripe',
           updated_at: new Date().toISOString()
       };
         
@@ -1382,7 +1391,7 @@ async function handleCheckoutSessionCompleted(session) {
           const scholarshipIdsArray = scholarshipsIds.split(',').map(id => id.trim());
           const { error: appError } = await supabase.from('scholarship_applications').update({
             is_scholarship_fee_paid: true,
-            scholarship_fee_payment_method: 'stripe',
+            scholarship_fee_payment_method: metadata?.payment_method || 'stripe',
             payment_status: 'paid',
             paid_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
@@ -1716,7 +1725,7 @@ async function handleCheckoutSessionCompleted(session) {
         }
         
         // Atualizar também o perfil do usuário para manter consistência
-        const i20PaymentMethod = (session?.payment_method_types?.[0] as string) || 'stripe';
+        const i20PaymentMethod = metadata?.payment_method || 'stripe';
         const { error: profileUpdateError } = await supabase.from('user_profiles').update({
           has_paid_i20_control_fee: true,
           i20_control_fee_due_date: new Date().toISOString(),
@@ -1982,7 +1991,7 @@ async function handleCheckoutSessionCompleted(session) {
     const userId = metadata?.user_id || metadata?.student_id;
     console.log('[NOTIFICAÇÃO] Processando selection_process para userId:', userId);
     if (userId) {
-      const selectionPaymentMethod = (session?.payment_method_types?.[0] as string) || 'stripe';
+      const selectionPaymentMethod = metadata?.payment_method || 'stripe';
       const { error } = await supabase.from('user_profiles').update({
         has_paid_selection_process_fee: true,
         selection_process_fee_payment_method: selectionPaymentMethod,
@@ -2323,7 +2332,7 @@ async function handleCheckoutSessionCompleted(session) {
           p_performed_by_type: 'system',
           p_metadata: {
             session_id: sessionId,
-            payment_method: session.payment_method_types?.[0],
+            payment_method: metadata?.payment_method || 'stripe',
             fee_type: metadata.fee_type
           }
         });

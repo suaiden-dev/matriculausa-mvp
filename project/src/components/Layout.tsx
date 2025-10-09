@@ -10,6 +10,9 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation();
+  
+  console.log('[Layout] 🔍 Layout renderizado - pathname:', location.pathname, 'Timestamp:', new Date().toISOString());
+  
   const hideHeader = location.pathname.startsWith('/school') ||
                      location.pathname.startsWith('/admin') ||
                      (location.pathname.startsWith('/student') && location.pathname !== '/student/register') ||

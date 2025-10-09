@@ -196,13 +196,13 @@ export const useAffiliateData = () => {
                   // Calcular receita do estudante (usando lógica similar ao EnhancedStudentTracking)
                   let studentRevenue = 0;
                   if (profile.has_paid_selection_process_fee) {
-                    studentRevenue += 500; // Valor padrão da taxa de seleção
+                    studentRevenue += 400; // Valor padrão da taxa de seleção (será calculado dinamicamente)
                   }
                   if (profile.has_paid_i20_control_fee) {
-                    studentRevenue += 400; // Valor padrão da taxa de I20
+                    studentRevenue += 900; // Valor padrão da taxa de I20 (será calculado dinamicamente)
                   }
                   if (profile.scholarship_applications?.some((app: any) => app.is_scholarship_fee_paid)) {
-                    studentRevenue += 999; // Valor padrão da taxa de scholarship
+                    studentRevenue += 900; // Valor padrão da taxa de scholarship (será calculado dinamicamente)
                   }
 
                   totalRevenue += studentRevenue;

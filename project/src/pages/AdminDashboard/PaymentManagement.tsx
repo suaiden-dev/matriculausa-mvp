@@ -1723,6 +1723,44 @@ const PaymentManagement = (): React.JSX.Element => {
         // Não falhar o processo se o webhook falhar
       }
 
+      // ENVIAR NOTIFICAÇÃO IN-APP PARA O ALUNO (SINO)
+      console.log('📤 [rejectZellePayment] Enviando notificação in-app para o aluno...');
+      
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const accessToken = session?.access_token;
+        
+        if (accessToken) {
+          const notificationPayload = {
+            user_id: payment.student_user_id,
+            title: 'Payment Rejected',
+            message: `Your ${payment.fee_type.replace('_', ' ')} payment of $${payment.amount} has been rejected. Reason: ${reason || zelleRejectReason}`,
+            type: 'payment_rejected',
+            link: '/student/dashboard',
+          };
+          
+          const response = await fetch(`${import.meta.env.VITE_SUPABASE_FUNCTIONS_URL}/create-student-notification`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${accessToken}`,
+            },
+            body: JSON.stringify(notificationPayload),
+          });
+          
+          if (response.ok) {
+            console.log('✅ [rejectZellePayment] Notificação in-app enviada com sucesso!');
+          } else {
+            console.warn('⚠️ [rejectZellePayment] Erro ao enviar notificação in-app:', response.status);
+          }
+        } else {
+          console.error('❌ [rejectZellePayment] Access token não encontrado para notificação in-app');
+        }
+      } catch (notificationError) {
+        console.error('❌ [rejectZellePayment] Erro ao enviar notificação in-app:', notificationError);
+        // Não falhar o processo se a notificação in-app falhar
+      }
+
       // Recarregar pagamentos Zelle
       await loadZellePayments();
       setShowZelleReviewModal(false);
@@ -1907,30 +1945,9 @@ const PaymentManagement = (): React.JSX.Element => {
       console.log('💳 Stripe users found:', stripeUsers?.length || 0);
 
       
-      // Buscar dados dos pacotes separadamente (aplicações, pagamentos Zelle e usuários Stripe)
-      const allPackageIds = [
-        ...(applications?.map(app => app.user_profiles?.scholarship_package_id).filter(Boolean) || []),
-        ...(zellePayments?.map(payment => payment.user_profiles?.scholarship_package_id).filter(Boolean) || []),
-        ...(stripeUsers?.map(user => user.scholarship_package_id).filter(Boolean) || [])
-      ];
-      const uniquePackageIds = [...new Set(allPackageIds)];
-      
+      // NOTA: Pacotes não são mais usados para calcular taxas - apenas para filtrar bolsas por range de valores
+      // A lógica de carregamento de pacotes foi removida pois as taxas agora usam apenas valores padrão + overrides
       let packageDataMap: { [key: string]: any } = {};
-      if (uniquePackageIds.length > 0) {
-        const { data: packages, error: packagesError } = await supabase
-          .from('scholarship_packages')
-          .select('id, name, selection_process_fee, i20_control_fee, scholarship_fee')
-          .in('id', uniquePackageIds);
-        
-        if (packagesError) {
-          console.error('Error loading packages:', packagesError);
-        } else {
-          packageDataMap = packages?.reduce((acc: { [key: string]: any }, pkg: any) => {
-            acc[pkg.id] = pkg;
-            return acc;
-          }, {}) || {};
-        }
-      }
 
       // Buscar overrides de taxas para todos os usuários
       const allUserIds = [
@@ -2019,12 +2036,21 @@ const PaymentManagement = (): React.JSX.Element => {
         const student = app.user_profiles;
         const scholarship = app.scholarships;
         const university = scholarship?.universities;
-        const packageData = packageDataMap[student?.scholarship_package_id];
+        // packageData não é mais usado para calcular taxas
 
         // console.log('👤 Student:', student);
         // console.log('🎓 Scholarship:', scholarship);
         // console.log('🏫 University:', university);
-        // console.log('📦 Package:', packageData);
+
+        // Verificar se o usuário já foi processado via Stripe (para evitar duplicação)
+        const hasStripePayment = stripeUsers?.some(stripeUser => 
+          stripeUser.user_id === student?.user_id
+        );
+
+        if (hasStripePayment) {
+          console.log('⚠️ Skipping application for', student?.full_name || 'Unknown', '- user already processed via Stripe');
+          return;
+        }
 
         if (!student || !scholarship || !university) {
           console.log('⚠️ Skipping application due to missing data:', {
@@ -2060,41 +2086,32 @@ const PaymentManagement = (): React.JSX.Element => {
           console.log(`🔍 DEBUG: User ${student?.user_id} (${studentName}) has overrides:`, userOverrides);
         }
         
-        // Selection Process Fee - prioridade: override > pacote > padrão
+        // Selection Process Fee - prioridade: override > padrão (pacotes não afetam mais as taxas)
         let selectionProcessFee: number;
         if (userOverrides.selection_process_fee !== undefined) {
           // Se há override, usar exatamente o valor do override (já inclui dependentes se necessário)
           selectionProcessFee = Math.round(userOverrides.selection_process_fee * 100);
           console.log(`🔍 DEBUG: Using override for Selection Process Fee: $${userOverrides.selection_process_fee} (${selectionProcessFee} cents)`);
-        } else if (packageData?.selection_process_fee) {
-          selectionProcessFee = Math.round((packageData.selection_process_fee + dependentCost) * 100);
-          console.log(`🔍 DEBUG: Using package for Selection Process Fee: $${packageData.selection_process_fee} + $${dependentCost/100} = $${(selectionProcessFee/100).toFixed(2)}`);
         } else {
           selectionProcessFee = Math.round((getFeeAmount('selection_process') + dependentCost) * 100);
           console.log(`🔍 DEBUG: Using default for Selection Process Fee: $${getFeeAmount('selection_process')} + $${dependentCost/100} = $${(selectionProcessFee/100).toFixed(2)}`);
         }
         
-        // I-20 Control Fee - prioridade: override > pacote > padrão (sem dependentes)
+        // I-20 Control Fee - prioridade: override > padrão (pacotes não afetam mais as taxas)
         let i20ControlFee: number;
         if (userOverrides.i20_control_fee !== undefined) {
           i20ControlFee = Math.round(userOverrides.i20_control_fee * 100);
           console.log(`🔍 DEBUG: Using override for I-20 Control Fee: $${userOverrides.i20_control_fee} (${i20ControlFee} cents)`);
-        } else if (packageData?.i20_control_fee) {
-          i20ControlFee = Math.round(packageData.i20_control_fee * 100);
-          console.log(`🔍 DEBUG: Using package for I-20 Control Fee: $${packageData.i20_control_fee} (${i20ControlFee} cents)`);
         } else {
           i20ControlFee = Math.round(getFeeAmount('i20_control_fee') * 100);
           console.log(`🔍 DEBUG: Using default for I-20 Control Fee: $${getFeeAmount('i20_control_fee')} (${i20ControlFee} cents)`);
         }
         
-        // Scholarship Fee - prioridade: override > pacote > padrão (sem dependentes)
+        // Scholarship Fee - prioridade: override > padrão (pacotes não afetam mais as taxas)
         let scholarshipFee: number;
         if (userOverrides.scholarship_fee !== undefined) {
           scholarshipFee = Math.round(userOverrides.scholarship_fee * 100);
           console.log(`🔍 DEBUG: Using override for Scholarship Fee: $${userOverrides.scholarship_fee} (${scholarshipFee} cents)`);
-        } else if (packageData?.scholarship_fee) {
-          scholarshipFee = Math.round(packageData.scholarship_fee * 100);
-          console.log(`🔍 DEBUG: Using package for Scholarship Fee: $${packageData.scholarship_fee} (${scholarshipFee} cents)`);
         } else {
           scholarshipFee = Math.round(getFeeAmount('scholarship_fee') * 100);
           console.log(`🔍 DEBUG: Using default for Scholarship Fee: $${getFeeAmount('scholarship_fee')} (${scholarshipFee} cents)`);
@@ -2108,7 +2125,7 @@ const PaymentManagement = (): React.JSX.Element => {
             selectionProcessFee: selectionProcessFee / 100,
             i20ControlFee: i20ControlFee / 100,
             scholarshipFee: scholarshipFee / 100,
-            packageData: packageData
+            // packageData removido - não mais usado para taxas
           });
         }
         // Application Fee dinâmico baseado na bolsa específica
@@ -2406,7 +2423,7 @@ const PaymentManagement = (): React.JSX.Element => {
       // Processar usuários Stripe (apenas para usuários sem aplicação e sem Zelle)
       console.log('🔄 Processing Stripe users:', stripeUsers?.length || 0);
       stripeUsers?.forEach((stripeUser: any) => {
-        const packageData = packageDataMap[stripeUser.scholarship_package_id];
+        // packageData não é mais usado para calcular taxas
 
         if (!stripeUser) {
           console.log('⚠️ Skipping Stripe user due to missing data');
@@ -2448,18 +2465,13 @@ const PaymentManagement = (): React.JSX.Element => {
         
 
         
-        // Selection Process Fee - prioridade: override > pacote > padrão
+        // Selection Process Fee - prioridade: override > padrão (pacotes não afetam mais as taxas)
         let selectionProcessFee: number;
         if (userOverrides.selection_process_fee !== undefined) {
           // Se há override, usar exatamente o valor do override (já inclui dependentes se necessário)
           selectionProcessFee = Math.round(userOverrides.selection_process_fee * 100);
           if (studentName.includes('Sara Bianey') || studentName.includes('Alondra')) {
             console.log(`  - [PM] Using override: ${userOverrides.selection_process_fee} -> ${selectionProcessFee} cents`);
-          }
-        } else if (packageData?.selection_process_fee) {
-          selectionProcessFee = Math.round((packageData.selection_process_fee + dependentCost) * 100);
-          if (studentName.includes('Sara Bianey') || studentName.includes('Alondra')) {
-            console.log(`  - [PM] Using package: ${packageData.selection_process_fee} + ${dependentCost} = ${packageData.selection_process_fee + dependentCost} -> ${selectionProcessFee} cents`);
           }
         } else {
           selectionProcessFee = Math.round((getFeeAmount('selection_process') + dependentCost) * 100);
@@ -2468,22 +2480,18 @@ const PaymentManagement = (): React.JSX.Element => {
           }
         }
         
-        // I-20 Control Fee - prioridade: override > pacote > padrão (sem dependentes)
+        // I-20 Control Fee - prioridade: override > padrão (pacotes não afetam mais as taxas)
         let i20ControlFee: number;
         if (userOverrides.i20_control_fee !== undefined) {
           i20ControlFee = Math.round(userOverrides.i20_control_fee * 100);
-        } else if (packageData?.i20_control_fee) {
-          i20ControlFee = Math.round(packageData.i20_control_fee * 100);
         } else {
           i20ControlFee = Math.round(getFeeAmount('i20_control_fee') * 100);
         }
         
-        // Scholarship Fee - prioridade: override > pacote > padrão (sem dependentes)
+        // Scholarship Fee - prioridade: override > padrão (pacotes não afetam mais as taxas)
         let scholarshipFee: number;
         if (userOverrides.scholarship_fee !== undefined) {
           scholarshipFee = Math.round(userOverrides.scholarship_fee * 100);
-        } else if (packageData?.scholarship_fee) {
-          scholarshipFee = Math.round(packageData.scholarship_fee * 100);
         } else {
           scholarshipFee = Math.round(getFeeAmount('scholarship_fee') * 100);
         }

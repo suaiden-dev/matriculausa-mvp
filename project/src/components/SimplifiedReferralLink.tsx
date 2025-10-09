@@ -50,7 +50,7 @@ export const SimplifiedReferralLink: React.FC<SimplifiedReferralLinkProps> = ({
   ];
 
   const generateReferralLink = (fee: number) => {
-    return `${baseUrl}/auth?ref=${sellerCode}&fee=${fee}`;
+    return `${baseUrl}?ref=${sellerCode}&fee=${fee}`;
   };
 
   const copyToClipboard = async (text: string) => {

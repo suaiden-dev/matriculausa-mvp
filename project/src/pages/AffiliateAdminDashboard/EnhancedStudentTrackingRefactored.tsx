@@ -16,6 +16,7 @@ import {
 } from '../../components/EnhancedStudentTracking';
 import { supabase } from '../../lib/supabase';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
+import { useDynamicFeeCalculation, useDynamicFeeCalculationForUser } from '../../hooks/useDynamicFeeCalculation';
 
 function EnhancedStudentTracking(props) {
   const { userId } = props || {};
@@ -57,6 +58,26 @@ function EnhancedStudentTracking(props) {
   const [overridesMap, setOverridesMap] = useState({});
   // Map de dependentes por profile_id
   const [dependentsMap, setDependentsMap] = useState({});
+  // Função para calcular taxas de um estudante específico
+  const getStudentFees = (student: any) => {
+    // Se o email é do sistema simplificado, usar valores fixos
+    if (student.email === 'nemesio922@uorak.com') {
+      return {
+        selectionProcessFee: 350,
+        scholarshipFee: 550,
+        i20ControlFee: 900,
+        isSimplified: true
+      };
+    }
+    
+    // Para outros usuários, usar valores legacy
+    return {
+      selectionProcessFee: Number(feeConfig.selection_process_fee) || 400,
+      scholarshipFee: Number(feeConfig.scholarship_fee_default) || 900,
+      i20ControlFee: Number(feeConfig.i20_control_fee) || 900,
+      isSimplified: false
+    };
+  };
 
   // Buscar overrides para os estudantes (baseado nos students originais, não filtrados)
   useEffect(() => {
@@ -183,9 +204,12 @@ function EnhancedStudentTracking(props) {
       if (s.has_paid_selection_process_fee) {
         // ✅ CORREÇÃO: Se houver override para selection, usar exatamente o override;
         // caso contrário, usar valor padrão + dependentes
+        const studentFees = getStudentFees(s);
+        const baseSelectionFee = studentFees.selectionProcessFee;
+        console.log(`🔍 Using fees for ${s.email}:`, studentFees);
         const sel = o.selection_process_fee != null
           ? Number(o.selection_process_fee) // ✅ Usar diretamente o override
-          : Number(feeConfig.selection_process_fee) + (dependents * 150); // ✅ Valor padrão + dependentes
+          : baseSelectionFee + (dependents * 150); // ✅ Valor baseado no sistema + dependentes
         total += sel || 0;
         console.log(`🔍 Selection Process Fee for ${s.email}:`, {
           hasOverride: o.selection_process_fee != null,
@@ -197,9 +221,11 @@ function EnhancedStudentTracking(props) {
       }
       // Application fee NÃO entra no somatório de receita deste dashboard
       if (s.is_scholarship_fee_paid) {
+        const studentFees = getStudentFees(s);
+        const baseScholarshipFee = studentFees.scholarshipFee;
         const schol = o.scholarship_fee != null 
           ? Number(o.scholarship_fee) 
-          : Number(feeConfig.scholarship_fee_default);
+          : baseScholarshipFee;
         total += schol || 0;
         console.log(`🔍 Scholarship Fee for ${s.email}:`, {
           hasOverride: o.scholarship_fee != null,
@@ -209,9 +235,11 @@ function EnhancedStudentTracking(props) {
         });
       }
       if (s.has_paid_i20_control_fee) {
+        const studentFees = getStudentFees(s);
+        const baseI20Fee = studentFees.i20ControlFee;
         const i20 = o.i20_control_fee != null 
           ? Number(o.i20_control_fee) 
-          : Number(feeConfig.i20_control_fee);
+          : baseI20Fee;
         total += i20 || 0;
         console.log(`🔍 I20 Control Fee for ${s.email}:`, {
           hasOverride: o.i20_control_fee != null,

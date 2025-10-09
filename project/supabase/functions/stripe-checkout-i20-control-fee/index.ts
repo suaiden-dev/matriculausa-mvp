@@ -1,15 +1,9 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import Stripe from 'npm:stripe@17.7.0';
 import { createClient } from 'npm:@supabase/supabase-js@2.49.1';
+import { getStripeConfig } from '../stripe-config.ts';
 
 const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
-const stripeSecret = Deno.env.get('STRIPE_SECRET_KEY')!;
-const stripe = new Stripe(stripeSecret, {
-  appInfo: {
-    name: 'Bolt Integration',
-    version: '1.0.0',
-  },
-});
 
 
 function corsResponse(body: string | object | null, status = 200) {
@@ -35,6 +29,19 @@ Deno.serve(async (req) => {
     if (req.method === 'OPTIONS') {
       return corsResponse(null, 204);
     }
+
+    // Obter configuração do Stripe baseada no ambiente detectado
+    const config = getStripeConfig(req);
+    
+    // Criar instância do Stripe com a chave correta para o ambiente
+    const stripe = new Stripe(config.secretKey, {
+      appInfo: {
+        name: 'MatriculaUSA Integration',
+        version: '1.0.0',
+      },
+    });
+
+    console.log(`🔧 Using Stripe in ${config.environment.environment} mode`);
 
     const { success_url, cancel_url, price_id: incomingPriceId, amount, metadata, payment_method } = await req.json();
     const price_id = incomingPriceId;
@@ -100,8 +107,9 @@ Deno.serve(async (req) => {
     const sessionMetadata = {
       student_id: user.id,
       fee_type: 'i20_control_fee',
+      payment_method: payment_method || 'stripe', // Adicionar método de pagamento
       ...metadata,
-      ...(payment_method === 'pix' ? { payment_method: 'pix', exchange_rate: exchangeRate.toString() } : {})
+      ...(payment_method === 'pix' ? { exchange_rate: exchangeRate.toString() } : {})
     };
 
     // Adicionar informações do pacote como strings no metadata

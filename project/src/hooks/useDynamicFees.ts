@@ -1,6 +1,8 @@
 import { useMemo } from 'react';
 import { useAuth } from './useAuth';
 import { useFeeConfig } from './useFeeConfig';
+import { useSystemType } from './useSystemType';
+import { useSimplifiedFees } from './useSimplifiedFees';
 
 export interface DynamicFeeValues {
   selectionProcessFee: string;
@@ -17,6 +19,8 @@ export interface DynamicFeeValues {
 export const useDynamicFees = (): DynamicFeeValues => {
   const { userProfile } = useAuth();
   const { getFeeAmount, hasOverride, loading: feeLoading } = useFeeConfig(userProfile?.user_id);
+  const { systemType } = useSystemType();
+  const { fee350, fee550, fee900, loading: simplifiedFeesLoading } = useSimplifiedFees();
   // Pacotes dinâmicos descontinuados com nova estrutura de preços
 
   return useMemo(() => {
@@ -30,6 +34,20 @@ export const useDynamicFees = (): DynamicFeeValues => {
           selectionProcessFeeAmount: 400,
           scholarshipFeeAmount: 900,
           i20ControlFeeAmount: 900,
+          hasSellerPackage: false
+        };
+      }
+
+      // Para sistema simplificado, usar valores fixos
+      
+      if (systemType === 'simplified' && !simplifiedFeesLoading) {
+        return {
+          selectionProcessFee: `$${fee350.toFixed(2)}`,
+          scholarshipFee: `$${fee550.toFixed(2)}`,
+          i20ControlFee: `$${fee900.toFixed(2)}`,
+          selectionProcessFeeAmount: fee350,
+          scholarshipFeeAmount: fee550,
+          i20ControlFeeAmount: fee900,
           hasSellerPackage: false
         };
       }

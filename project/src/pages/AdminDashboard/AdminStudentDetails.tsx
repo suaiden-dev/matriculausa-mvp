@@ -109,7 +109,11 @@ const AdminStudentDetails: React.FC = () => {
   const [expandedApps, setExpandedApps] = useState<{[key: string]: boolean}>({});
   const [dependents, setDependents] = useState<number>(0);
   const [approvingDocs, setApprovingDocs] = useState<{[key: string]: boolean}>({});
+  const [rejectingDocs, setRejectingDocs] = useState<{[key: string]: boolean}>({});
   const [uploadingDocs, setUploadingDocs] = useState<{[key: string]: boolean}>({});
+  const [showRejectDocModal, setShowRejectDocModal] = useState(false);
+  const [rejectDocData, setRejectDocData] = useState<{applicationId: string, docType: string} | null>(null);
+  const [rejectDocReason, setRejectDocReason] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
   const [editingFees, setEditingFees] = useState<{[key: string]: number} | null>(null);
@@ -126,6 +130,10 @@ const AdminStudentDetails: React.FC = () => {
   const [uploadingDocumentRequest, setUploadingDocumentRequest] = useState<{[key: string]: boolean}>({});
   const [approvingDocumentRequest, setApprovingDocumentRequest] = useState<{[key: string]: boolean}>({});
   const [rejectingDocumentRequest, setRejectingDocumentRequest] = useState<{[key: string]: boolean}>({});
+  const [deletingDocumentRequest, setDeletingDocumentRequest] = useState<{[key: string]: boolean}>({});
+  const [isEditingProcessType, setIsEditingProcessType] = useState(false);
+  const [editingProcessType, setEditingProcessType] = useState('');
+  const [savingProcessType, setSavingProcessType] = useState(false);
   // Estado para modal de visualização de documentos
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   
@@ -165,6 +173,10 @@ const AdminStudentDetails: React.FC = () => {
   const [editingPaymentMethod, setEditingPaymentMethod] = useState<string | null>(null);
   const [newPaymentMethod, setNewPaymentMethod] = useState<'stripe' | 'zelle' | 'manual'>('manual');
   const [savingPaymentMethod, setSavingPaymentMethod] = useState(false);
+  
+  // Estados para seleção de aplicação quando há múltiplas aprovadas
+  const [selectedApplicationId, setSelectedApplicationId] = useState<string | null>(null);
+  const [editingApplicationId, setEditingApplicationId] = useState<string | null>(null);
   // Modal de confirmação de pagamento
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [pendingPayment, setPendingPayment] = useState<{
@@ -295,6 +307,109 @@ const AdminStudentDetails: React.FC = () => {
     } finally {
       setLoadingTermAcceptances(false);
     }
+  };
+
+  const handleDeleteDocumentRequest = async (requestId: string) => {
+    if (!student) return;
+    
+    try {
+      setDeletingDocumentRequest(prev => ({ ...prev, [`delete-${requestId}`]: true }));
+      
+      // Primeiro, deletar todos os uploads relacionados ao request
+      const { error: deleteUploadsError } = await supabase
+        .from('document_request_uploads')
+        .delete()
+        .eq('document_request_id', requestId);
+
+      if (deleteUploadsError) throw deleteUploadsError;
+
+      // Depois, deletar o document request
+      const { error: deleteRequestError } = await supabase
+        .from('document_requests')
+        .delete()
+        .eq('id', requestId);
+
+      if (deleteRequestError) throw deleteRequestError;
+
+      // Log da ação de exclusão
+      await logAction(
+        'document_request_deleted',
+        `Document request deleted by admin`,
+        user?.id || '',
+        'admin',
+        {
+          request_id: requestId,
+          deleted_by: user?.email || 'Admin'
+        }
+      );
+
+      showToast('Document request deleted successfully!', 'success');
+
+      // Recarregar document requests
+      await fetchDocumentRequests();
+      
+    } catch (error: any) {
+      console.error('Error deleting document request:', error);
+      showToast(`Failed to delete document request: ${error.message}`, 'error');
+    } finally {
+      setDeletingDocumentRequest(prev => ({ ...prev, [`delete-${requestId}`]: false }));
+    }
+  };
+
+  const handleEditProcessType = () => {
+    setIsEditingProcessType(true);
+    setEditingProcessType(student?.student_process_type || '');
+  };
+
+  const handleSaveProcessType = async () => {
+    if (!student || !editingProcessType) return;
+
+    try {
+      setSavingProcessType(true);
+
+      // Atualizar todas as aplicações do estudante
+      const { error } = await supabase
+        .from('scholarship_applications')
+        .update({ student_process_type: editingProcessType })
+        .eq('student_id', student.student_id);
+
+      if (error) {
+        console.error('Erro ao atualizar student_process_type:', error);
+        showToast('Erro ao atualizar tipo de processo', 'error');
+        return;
+      }
+
+      // Atualizar o estado local
+      setStudent(prev => prev ? { ...prev, student_process_type: editingProcessType } : null);
+      
+      setIsEditingProcessType(false);
+      showToast('Tipo de processo atualizado com sucesso');
+
+      // Log da ação
+      await logAction(
+        'student_process_type_updated',
+        `Student process type updated by admin`,
+        user?.id || '',
+        'admin',
+        {
+          student_id: student.student_id,
+          old_process_type: student.student_process_type,
+          new_process_type: editingProcessType,
+          updated_by: user?.email || 'Admin'
+        }
+      );
+
+    } catch (error) {
+      console.error('Erro ao salvar student_process_type:', error);
+      showToast('Erro ao salvar tipo de processo', 'error');
+    } finally {
+      setSavingProcessType(false);
+    }
+  };
+
+  const handleCancelProcessType = () => {
+    setIsEditingProcessType(false);
+    setEditingProcessType('');
   };
 
   const fetchReferralInfo = async (referralCode: string) => {
@@ -549,6 +664,7 @@ const AdminStudentDetails: React.FC = () => {
               scholarships (
                 title,
                 university_id,
+                application_fee_amount,
                 universities (
                   name
                 )
@@ -562,10 +678,17 @@ const AdminStudentDetails: React.FC = () => {
 
         const s = data as any;
         let lockedApplication = null;
+        let activeApplication = null;
         if (s.scholarship_applications && s.scholarship_applications.length > 0) {
           // Priorizar aplicação enrolled, depois approved
           lockedApplication = s.scholarship_applications.find((app: any) => app.status === 'enrolled') ||
                              s.scholarship_applications.find((app: any) => app.status === 'approved');
+          
+          // Se não há aplicação locked, buscar a aplicação mais recente para o student_process_type
+          if (!lockedApplication) {
+            activeApplication = s.scholarship_applications
+              .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+          }
         }
 
         const formatted: StudentRecord = {
@@ -594,15 +717,41 @@ const AdminStudentDetails: React.FC = () => {
           scholarship_id: lockedApplication?.scholarship_id || null,
           application_status: lockedApplication?.status || null,
           applied_at: lockedApplication?.applied_at || null,
-          is_application_fee_paid: lockedApplication?.is_application_fee_paid || false,
+          is_application_fee_paid: (() => {
+            // Verificar se alguma aplicação tem Application Fee pago
+            return s.scholarship_applications?.some((app: any) => app.is_application_fee_paid) || false;
+          })(),
           is_scholarship_fee_paid: lockedApplication?.is_scholarship_fee_paid || false,
           application_fee_payment_method: lockedApplication?.application_fee_payment_method || null,
           scholarship_fee_payment_method: lockedApplication?.scholarship_fee_payment_method || null,
           acceptance_letter_status: lockedApplication?.acceptance_letter_status || null,
-          student_process_type: lockedApplication?.student_process_type || null,
+          student_process_type: lockedApplication?.student_process_type || activeApplication?.student_process_type || null,
           payment_status: lockedApplication?.payment_status || null,
-          scholarship_title: lockedApplication?.scholarships?.title || null,
-          university_name: lockedApplication?.scholarships?.universities?.name || null,
+          scholarship_title: (() => {
+            // Buscar aplicação que teve Application Fee pago
+            const paidApplication = s.scholarship_applications?.find((app: any) => app.is_application_fee_paid);
+            if (paidApplication?.scholarships) {
+              const scholarship = Array.isArray(paidApplication.scholarships) 
+                ? paidApplication.scholarships[0] 
+                : paidApplication.scholarships;
+              return scholarship?.title || null;
+            }
+            return null;
+          })(),
+          university_name: (() => {
+            // Buscar aplicação que teve Application Fee pago
+            const paidApplication = s.scholarship_applications?.find((app: any) => app.is_application_fee_paid);
+            if (paidApplication?.scholarships) {
+              const scholarship = Array.isArray(paidApplication.scholarships) 
+                ? paidApplication.scholarships[0] 
+                : paidApplication.scholarships;
+              const university = Array.isArray(scholarship?.universities) 
+                ? scholarship.universities[0] 
+                : scholarship?.universities;
+              return university?.name || null;
+            }
+            return null;
+          })(),
           reviewed_at: lockedApplication?.reviewed_at || null,
           reviewed_by: lockedApplication?.reviewed_by || null,
           is_locked: !!lockedApplication,
@@ -767,6 +916,170 @@ const AdminStudentDetails: React.FC = () => {
       }
     } finally {
       setApprovingDocs(p => ({ ...p, [k]: false }));
+    }
+  };
+
+  const handleRejectDocument = async (applicationId: string, docType: string, reason: string) => {
+    if (!isPlatformAdmin || !student) return;
+    if (!approveableTypes.has(docType)) return;
+    
+    const k = `${applicationId}:${docType}`;
+    setRejectingDocs(p => ({ ...p, [k]: true }));
+    
+    try {
+      const targetApp = student.all_applications?.find((a: any) => a.id === applicationId);
+      if (!targetApp) return;
+      
+      const currentDocs: any[] = Array.isArray(targetApp.documents) ? targetApp.documents : [];
+      const newDocuments = currentDocs.map((d: any) => 
+        d?.type === docType ? { 
+          ...d, 
+          status: 'rejected', 
+          rejected_at: new Date().toISOString(),
+          rejection_reason: reason,
+          rejected_by: user?.id
+        } : d
+      );
+      
+      const { data: updated, error } = await supabase
+        .from('scholarship_applications')
+        .update({ documents: newDocuments, updated_at: new Date().toISOString() })
+        .eq('id', applicationId)
+        .select('id, documents')
+        .single();
+      
+      if (error) {
+        console.error('Erro ao rejeitar documento:', error);
+        return;
+      }
+      
+      setStudent(prev => {
+        if (!prev) return prev;
+        const updatedApps = (prev.all_applications || []).map((a: any) =>
+          a.id === applicationId ? { ...a, documents: updated?.documents || newDocuments } : a
+        );
+        return { ...prev, all_applications: updatedApps } as any;
+      });
+      
+      // Log da ação
+      try {
+        await supabase.rpc('log_student_action', {
+          p_student_id: student?.student_id,
+          p_action_type: 'document_rejection',
+          p_action_description: `Document ${docType} rejected by platform admin: ${reason}`,
+          p_performed_by: user?.id || '',
+          p_performed_by_type: 'admin',
+          p_metadata: {
+            document_type: docType,
+            application_id: applicationId,
+            rejection_reason: reason,
+            rejected_by: user?.email || 'Platform Admin'
+          }
+        });
+      } catch (logError) {
+        console.error('Failed to log document rejection:', logError);
+      }
+
+      // ENVIAR NOTIFICAÇÕES PARA O ALUNO
+      console.log('📤 [handleRejectDocument] Enviando notificações de rejeição para o aluno...');
+      
+      try {
+        // Buscar nome do admin
+        const { data: adminProfile } = await supabase
+          .from('user_profiles')
+          .select('full_name')
+          .eq('user_id', user?.id)
+          .single();
+
+        const adminName = adminProfile?.full_name || 'Platform Admin';
+
+      // 1. ENVIAR EMAIL VIA WEBHOOK (payload idêntico ao da universidade)
+      const rejectionPayload = {
+        tipo_notf: "Changes Requested",
+        email_aluno: student.student_email,
+        nome_aluno: student.student_name,
+        email_universidade: user?.email,
+        o_que_enviar: `Your document <strong>${docType}</strong> for the request <strong>${docType}</strong> has been rejected. Reason: <strong>${reason}</strong>. Please review and upload a corrected version.`
+      };
+
+        console.log('📤 [handleRejectDocument] Payload de rejeição:', rejectionPayload);
+
+        const webhookResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(rejectionPayload),
+        });
+
+        if (webhookResponse.ok) {
+          console.log('✅ [handleRejectDocument] Email de rejeição enviado com sucesso!');
+        } else {
+          console.warn('⚠️ [handleRejectDocument] Erro ao enviar email de rejeição:', webhookResponse.status);
+        }
+      } catch (webhookError) {
+        console.error('❌ [handleRejectDocument] Erro ao enviar webhook de rejeição:', webhookError);
+        // Não falhar o processo se o webhook falhar
+      }
+
+      // 2. ENVIAR NOTIFICAÇÃO IN-APP PARA O ALUNO (SINO)
+      console.log('📤 [handleRejectDocument] Enviando notificação in-app para o aluno...');
+      
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const accessToken = session?.access_token;
+        
+        if (accessToken) {
+          const notificationPayload = {
+            user_id: student.user_id,
+            title: 'Document Rejected',
+            message: `Your ${docType} document has been rejected by platform admin. Reason: ${reason}`,
+            type: 'document_rejected',
+            link: '/student/dashboard/applications',
+          };
+          
+          const response = await fetch(`${import.meta.env.VITE_SUPABASE_FUNCTIONS_URL}/create-student-notification`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${accessToken}`,
+            },
+            body: JSON.stringify(notificationPayload),
+          });
+          
+          if (response.ok) {
+            console.log('✅ [handleRejectDocument] Notificação in-app enviada com sucesso!');
+          } else {
+            console.warn('⚠️ [handleRejectDocument] Erro ao enviar notificação in-app:', response.status);
+          }
+        } else {
+          console.error('❌ [handleRejectDocument] Access token não encontrado para notificação in-app');
+        }
+      } catch (notificationError) {
+        console.error('❌ [handleRejectDocument] Erro ao enviar notificação in-app:', notificationError);
+        // Não falhar o processo se a notificação in-app falhar
+      }
+      
+      // Fechar modal e limpar dados
+      setShowRejectDocModal(false);
+      setRejectDocData(null);
+      setRejectDocReason('');
+      
+    } catch (error: any) {
+      console.error('Erro ao rejeitar documento:', error);
+    } finally {
+      setRejectingDocs(p => ({ ...p, [k]: false }));
+    }
+  };
+
+  const openRejectDocModal = (applicationId: string, docType: string) => {
+    setRejectDocData({ applicationId, docType });
+    setShowRejectDocModal(true);
+  };
+
+  const confirmRejectDoc = () => {
+    if (rejectDocData && rejectDocReason.trim()) {
+      handleRejectDocument(rejectDocData.applicationId, rejectDocData.docType, rejectDocReason.trim());
     }
   };
 
@@ -971,7 +1284,11 @@ const AdminStudentDetails: React.FC = () => {
           ? 'application_fee_payment_method' 
           : 'scholarship_fee_payment_method';
         
-        // Buscar aplicação aprovada ou mais recente
+        // Usar a aplicação específica que foi selecionada para edição
+        let targetApplicationId = editingApplicationId;
+        
+        if (!targetApplicationId) {
+          // Fallback: buscar aplicação aprovada ou mais recente
         const { data: applications, error: fetchError } = await supabase
           .from('scholarship_applications')
           .select('id, status')
@@ -983,12 +1300,14 @@ const AdminStudentDetails: React.FC = () => {
         const targetApplication = applications?.find(app => app.status === 'approved') || applications?.[0];
         if (!targetApplication) {
           throw new Error('No application found for this student');
+          }
+          targetApplicationId = targetApplication.id;
         }
 
         const { error } = await supabase
           .from('scholarship_applications')
           .update({ [fieldName]: newPaymentMethod })
-          .eq('id', targetApplication.id);
+          .eq('id', targetApplicationId);
 
         if (error) throw error;
 
@@ -1003,7 +1322,7 @@ const AdminStudentDetails: React.FC = () => {
               fee_type: feeType,
               old_method: 'unknown',
               new_method: newPaymentMethod,
-              application_id: targetApplication.id,
+              application_id: targetApplicationId,
               student_name: student.student_name
             }
           );
@@ -1013,6 +1332,7 @@ const AdminStudentDetails: React.FC = () => {
       }
 
       setEditingPaymentMethod(null);
+      setEditingApplicationId(null);
       showToast(`Payment method updated to ${newPaymentMethod}`, 'success');
       
       // Recarregar dados do estudante
@@ -1130,13 +1450,76 @@ const AdminStudentDetails: React.FC = () => {
     setShowPaymentModal(true);
   };
 
+  const startEditingPaymentMethod = (feeType: 'application' | 'scholarship') => {
+    const approvedApps = student?.all_applications?.filter((app: any) => app.status === 'approved') || [];
+    
+    if (approvedApps.length === 1) {
+      // Usar a única aplicação aprovada
+      const app = approvedApps[0];
+      setEditingPaymentMethod(feeType);
+      setEditingApplicationId(app.id);
+      const currentMethod = feeType === 'application' 
+        ? app.application_fee_payment_method 
+        : app.scholarship_fee_payment_method;
+      setNewPaymentMethod((currentMethod as 'stripe' | 'zelle' | 'manual') || 'manual');
+    } else {
+      // Para múltiplas aplicações, por enquanto usar a primeira aprovada
+      // TODO: Implementar seleção para edição também se necessário
+      const app = approvedApps[0];
+      if (app) {
+        setEditingPaymentMethod(feeType);
+        setEditingApplicationId(app.id);
+        const currentMethod = feeType === 'application' 
+          ? app.application_fee_payment_method 
+          : app.scholarship_fee_payment_method;
+        setNewPaymentMethod((currentMethod as 'stripe' | 'zelle' | 'manual') || 'manual');
+      }
+    }
+  };
+
   const confirmPayment = async () => {
     if (!pendingPayment) return;
 
-    const { feeType, applicationId } = pendingPayment;
+    let { feeType, applicationId } = pendingPayment;
+    
+    console.log('🔍 DEBUG confirmPayment START:', {
+      feeType,
+      originalApplicationId: applicationId,
+      selectedApplicationId,
+      pendingPayment
+    });
+    
+    // Para Application Fee, sempre verificar se há seleção manual
+    if (feeType === 'application') {
+      const approvedApps = student?.all_applications?.filter((app: any) => app.status === 'approved') || [];
+      console.log('🔍 DEBUG approvedApps:', approvedApps.map(app => ({ id: app.id, title: app.scholarships?.title })));
+      
+      if (approvedApps.length > 1) {
+        // Com múltiplas aplicações, SEMPRE usar a selecionada
+        if (selectedApplicationId) {
+          applicationId = selectedApplicationId;
+          console.log('🔍 DEBUG Using selectedApplicationId:', selectedApplicationId);
+        } else {
+          console.error('❌ Multiple applications but no selection made!');
+          return; // Não prosseguir sem seleção
+        }
+      } else if (approvedApps.length === 1 && !applicationId) {
+        // Com uma aplicação, usar ela se não foi especificada
+        applicationId = approvedApps[0].id;
+        console.log('🔍 DEBUG Using single approved app:', approvedApps[0].id);
+      }
+    }
+    
+    console.log('🔍 DEBUG confirmPayment FINAL:', {
+      feeType,
+      finalApplicationId: applicationId,
+      selectedPaymentMethod
+    });
+    
     await markFeeAsPaid(feeType, applicationId, selectedPaymentMethod);
     setShowPaymentModal(false);
     setPendingPayment(null);
+    setSelectedApplicationId(null); // Reset selection
   };
 
   const markFeeAsPaid = async (
@@ -1188,6 +1571,12 @@ const AdminStudentDetails: React.FC = () => {
         // Marcar application fee como pago na scholarship_applications
         let targetApplicationId = applicationId;
         
+        console.log('🔍 DEBUG Application Fee Payment:', {
+          receivedApplicationId: applicationId,
+          targetApplicationId: targetApplicationId,
+          studentId: student.student_id
+        });
+        
         // Se não foi fornecido applicationId, buscar a aplicação aprovada ou mais recente
         if (!targetApplicationId) {
           const { data: applications, error: fetchError } = await supabase
@@ -1218,8 +1607,52 @@ const AdminStudentDetails: React.FC = () => {
 
         if (error) throw error;
 
-        // Atualizar estado local
-        setStudent(prev => prev ? { ...prev, is_application_fee_paid: true } : prev);
+        // Buscar dados da aplicação que foi marcada como paga para atualizar o committed scholarship
+        const { data: updatedApplication, error: fetchAppError } = await supabase
+          .from('scholarship_applications')
+          .select(`
+            id,
+            scholarships!inner (
+              title,
+              universities!inner (
+                name
+              )
+            )
+          `)
+          .eq('id', targetApplicationId)
+          .single();
+
+        if (fetchAppError) {
+          console.error('Error fetching application details:', fetchAppError);
+        }
+
+        // Atualizar estado local com a bolsa comprometida
+        setStudent(prev => {
+          if (!prev) return prev;
+          
+          const updatedStudent = { ...prev, is_application_fee_paid: true };
+          
+          // Se conseguimos buscar os dados da aplicação, atualizar scholarship_title e university_name
+          if (updatedApplication?.scholarships) {
+            const scholarship = Array.isArray(updatedApplication.scholarships) 
+              ? updatedApplication.scholarships[0] 
+              : updatedApplication.scholarships;
+            
+            if (scholarship) {
+              updatedStudent.scholarship_title = scholarship.title;
+              const university = Array.isArray(scholarship.universities) 
+                ? scholarship.universities[0] 
+                : scholarship.universities;
+              updatedStudent.university_name = university?.name;
+              console.log('🔍 DEBUG Updated committed scholarship:', {
+                scholarship_title: scholarship.title,
+                university_name: university?.name
+              });
+            }
+          }
+          
+          return updatedStudent;
+        });
 
         // Log the action
         try {
@@ -1634,6 +2067,19 @@ const AdminStudentDetails: React.FC = () => {
         .eq('id', editingTemplateRequestId);
 
       if (updateError) throw updateError;
+
+      // Log da ação de edição de template
+      await logAction(
+        'document_request_template_edited',
+        `Document request template updated by admin`,
+        user?.id || '',
+        'admin',
+        {
+          request_id: editingTemplateRequestId,
+          template_url: publicUrl,
+          edited_by: user?.email || 'Admin'
+        }
+      );
 
       // Fechar modal e limpar estados
       setShowEditTemplateModal(false);
@@ -2205,6 +2651,7 @@ const AdminStudentDetails: React.FC = () => {
               scholarships (
                 title,
                 university_id,
+                application_fee_amount,
                 universities (
                   name
                 )
@@ -2218,6 +2665,11 @@ const AdminStudentDetails: React.FC = () => {
         if (s) {
           // Processar dados do estudante
           const lockedApplication = s.scholarship_applications?.find((app: any) => app.status === 'locked');
+          let activeApplication = null;
+          if (!lockedApplication && s.scholarship_applications && s.scholarship_applications.length > 0) {
+            activeApplication = s.scholarship_applications
+              .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+          }
           setStudent({
             student_id: s.id,
             user_id: s.user_id,
@@ -2243,15 +2695,41 @@ const AdminStudentDetails: React.FC = () => {
             scholarship_id: lockedApplication?.scholarship_id || null,
             application_status: lockedApplication?.status || null,
             applied_at: lockedApplication?.applied_at || null,
-            is_application_fee_paid: lockedApplication?.is_application_fee_paid || false,
+            is_application_fee_paid: (() => {
+              // Verificar se alguma aplicação tem Application Fee pago
+              return s.scholarship_applications?.some((app: any) => app.is_application_fee_paid) || false;
+            })(),
             is_scholarship_fee_paid: lockedApplication?.is_scholarship_fee_paid || false,
             application_fee_payment_method: lockedApplication?.application_fee_payment_method || null,
             scholarship_fee_payment_method: lockedApplication?.scholarship_fee_payment_method || null,
             acceptance_letter_status: lockedApplication?.acceptance_letter_status || null,
-            student_process_type: lockedApplication?.student_process_type || null,
+            student_process_type: lockedApplication?.student_process_type || activeApplication?.student_process_type || null,
             payment_status: lockedApplication?.payment_status || null,
-            scholarship_title: Array.isArray(lockedApplication?.scholarships) ? null : (lockedApplication?.scholarships as any)?.title || null,
-            university_name: Array.isArray(lockedApplication?.scholarships) ? null : (lockedApplication?.scholarships as any)?.universities?.name || null,
+            scholarship_title: (() => {
+              // Buscar aplicação que teve Application Fee pago
+              const paidApplication = s.scholarship_applications?.find((app: any) => app.is_application_fee_paid);
+              if (paidApplication?.scholarships) {
+                const scholarship = Array.isArray(paidApplication.scholarships) 
+                  ? paidApplication.scholarships[0] 
+                  : paidApplication.scholarships;
+                return scholarship?.title || null;
+              }
+              return null;
+            })(),
+            university_name: (() => {
+              // Buscar aplicação que teve Application Fee pago
+              const paidApplication = s.scholarship_applications?.find((app: any) => app.is_application_fee_paid);
+              if (paidApplication?.scholarships) {
+                const scholarship = Array.isArray(paidApplication.scholarships) 
+                  ? paidApplication.scholarships[0] 
+                  : paidApplication.scholarships;
+                const university = Array.isArray(scholarship?.universities) 
+                  ? scholarship.universities[0] 
+                  : scholarship?.universities;
+                return university?.name || null;
+              }
+              return null;
+            })(),
             reviewed_at: lockedApplication?.reviewed_at || null,
             reviewed_by: lockedApplication?.reviewed_by || null,
             is_locked: !!lockedApplication,
@@ -2514,6 +2992,60 @@ const AdminStudentDetails: React.FC = () => {
                     ) : (
                       <dd className="text-base text-slate-900 mt-1">{student.english_proficiency || 'Not provided'}</dd>
                     )}
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-slate-600">Student Process Type</dt>
+                    <dd className="text-base text-slate-900 mt-1 capitalize">
+                      {isEditingProcessType ? (
+                        <div className="flex items-center gap-2">
+                          <select
+                            value={editingProcessType}
+                            onChange={(e) => setEditingProcessType(e.target.value)}
+                            className="px-3 py-1 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            disabled={savingProcessType}
+                          >
+                            <option value="initial">Initial</option>
+                            <option value="transfer">Transfer</option>
+                            <option value="change_of_status">Change of Status</option>
+                            <option value="enrolled">Enrolled</option>
+                          </select>
+                          <button
+                            onClick={handleSaveProcessType}
+                            disabled={savingProcessType}
+                            className="p-1 text-green-600 hover:bg-green-50 rounded transition-colors disabled:opacity-50"
+                            title="Save"
+                          >
+                            {savingProcessType ? (
+                              <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                              </svg>
+                            ) : (
+                              <Save className="w-4 h-4" />
+                            )}
+                          </button>
+                          <button
+                            onClick={handleCancelProcessType}
+                            disabled={savingProcessType}
+                            className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
+                            title="Cancel"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <span>{student.student_process_type || 'Not defined'}</span>
+                          <button
+                            onClick={handleEditProcessType}
+                            className="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                            title="Edit Process Type"
+                          >
+                            <Edit3 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )}
+                    </dd>
                   </div>
                 </div>
               </div>
@@ -2794,7 +3326,7 @@ const AdminStudentDetails: React.FC = () => {
             </div>
           </div>
 
-          {student.scholarship_title ? (
+          {student.scholarship_title && student.is_application_fee_paid ? (
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
               <div className="bg-gradient-to-r rounded-t-2xl from-slate-700 to-slate-800 px-6 py-4">
                 <h2 className="text-xl font-semibold text-white flex items-center">
@@ -2892,11 +3424,10 @@ const AdminStudentDetails: React.FC = () => {
                                       </div>
                                       <div className="flex items-center flex-wrap gap-1 ml-0 md:ml-3 flex-shrink-0 justify-start md:justify-end w-full md:w-auto">
                                         <button
-                                          onClick={() => {
-                                            const baseUrl = 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/student-documents/';
-                                            const fullUrl = doc.url.startsWith('http') ? doc.url : `${baseUrl}${doc.url}`;
-                                            window.open(fullUrl, '_blank');
-                                          }}
+                                          onClick={() => handleViewDocument({
+                                            file_url: doc.url,
+                                            filename: doc.url.split('/').pop() || `${doc.type}.pdf`
+                                          })}
                                           className="text-xs text-[#05294E] hover:text-[#05294E]/80 font-medium flex items-center space-x-1 transition-colors px-2 py-1 border border-[#05294E] rounded-md hover:bg-[#05294E]/5"
                                         >
                                           <Eye className="w-3 h-3" />
@@ -2918,6 +3449,10 @@ const AdminStudentDetails: React.FC = () => {
                                           </label>
                                         )}
                                         {isPlatformAdmin && ['passport','funds_proof','diploma'].includes(doc.type) && (doc.status || '').toLowerCase() !== 'approved' && (
+                                          (doc.status || '').toLowerCase() !== 'rejected' || 
+                                          (doc.status || '').toLowerCase() === 'rejected' && doc.uploaded_at && doc.rejected_at && new Date(doc.uploaded_at) > new Date(doc.rejected_at)
+                                        ) && (
+                                          <>
                                           <button
                                             onClick={() => handleApproveDocument(app.id, doc.type)}
                                             disabled={!!approvingDocs[`${app.id}:${doc.type}`]}
@@ -2926,6 +3461,15 @@ const AdminStudentDetails: React.FC = () => {
                                             <CheckCircle className="w-3 h-3" />
                                             <span className="hidden md:inline">Approve</span>
                                           </button>
+                                            <button
+                                              onClick={() => openRejectDocModal(app.id, doc.type)}
+                                              disabled={!!rejectingDocs[`${app.id}:${doc.type}`]}
+                                              className={`text-xs font-medium flex items-center space-x-1 transition-colors px-2 py-1 rounded-md border ${rejectingDocs[`${app.id}:${doc.type}`] ? 'text-slate-400 border-slate-200 bg-slate-50' : 'text-red-700 border-red-300 hover:bg-red-50'}`}
+                                            >
+                                              <XCircle className="w-3 h-3" />
+                                              <span className="hidden md:inline">Reject</span>
+                                            </button>
+                                          </>
                                         )}
                                       </div>
                                     </div>
@@ -2943,6 +3487,14 @@ const AdminStudentDetails: React.FC = () => {
                                       )}
                                       {doc.approved_at && (
                                         <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded-md">Approved {new Date(doc.approved_at).toLocaleDateString()}</span>
+                                      )}
+                                      {doc.rejected_at && (
+                                        <span className="text-xs text-red-600 bg-red-50 px-2 py-1 rounded-md">Rejected {new Date(doc.rejected_at).toLocaleDateString()}</span>
+                                      )}
+                                      {doc.rejection_reason && (
+                                        <span className="text-xs text-red-600 bg-red-50 px-2 py-1 rounded-md">
+                                          <span className="font-medium">Reason:</span> {doc.rejection_reason}
+                                        </span>
                                       )}
                                       {doc.changes_requested_at && (
                                         <span className="text-xs text-red-600 bg-red-50 px-2 py-1 rounded-md">Changes Requested {new Date(doc.changes_requested_at).toLocaleDateString()}</span>
@@ -3407,7 +3959,23 @@ const AdminStudentDetails: React.FC = () => {
                   <div className="flex-1">
                     <dt className="text-sm font-medium text-slate-600">Application Fee</dt>
                     <dd className="text-sm text-slate-500 mt-1">Paid after scholarship approval</dd>
-                    <dd className="text-sm font-semibold text-slate-700 mt-1">$400.00</dd>
+                    {student.is_application_fee_paid ? (
+                      <dd className="text-sm font-semibold text-slate-700 mt-1">
+                        {(() => {
+                          // Buscar a aplicação que teve Application Fee pago para mostrar o valor correto
+                          const paidApplication = student.all_applications?.find((app: any) => app.is_application_fee_paid);
+                          if (paidApplication?.scholarships) {
+                            const scholarship = Array.isArray(paidApplication.scholarships) 
+                              ? paidApplication.scholarships[0] 
+                              : paidApplication.scholarships;
+                            return scholarship?.application_fee_amount ? `$${scholarship.application_fee_amount.toFixed(2)}` : 'Fee paid';
+                          }
+                          return 'Fee paid';
+                        })()}
+                      </dd>
+                    ) : (
+                      <dd className="text-sm text-slate-500 mt-1">Amount varies by scholarship</dd>
+                    )}
                   </div>
                   <div className="flex flex-col gap-3">
                     {student.is_application_fee_paid ? (
@@ -3450,11 +4018,7 @@ const AdminStudentDetails: React.FC = () => {
                               </div>
                             ) : (
                               <button
-                                onClick={() => {
-                                  setEditingPaymentMethod('application');
-                                  const approvedApp = student.all_applications?.find((app: any) => app.status === 'approved');
-                                  setNewPaymentMethod((approvedApp?.application_fee_payment_method as 'stripe' | 'zelle' | 'manual') || 'manual');
-                                }}
+                                onClick={() => startEditingPaymentMethod('application')}
                                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg flex items-center space-x-2 w-fit"
                               >
                                 <Edit3 className="w-4 h-4" />
@@ -3555,11 +4119,7 @@ const AdminStudentDetails: React.FC = () => {
                               </div>
                             ) : (
                               <button
-                                onClick={() => {
-                                  setEditingPaymentMethod('scholarship');
-                                  const approvedApp = student.all_applications?.find((app: any) => app.status === 'approved');
-                                  setNewPaymentMethod((approvedApp?.scholarship_fee_payment_method as 'stripe' | 'zelle' | 'manual') || 'manual');
-                                }}
+                                onClick={() => startEditingPaymentMethod('scholarship')}
                                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg flex items-center space-x-2 w-fit"
                               >
                                 <Edit3 className="w-4 h-4" />
@@ -4240,10 +4800,12 @@ const AdminStudentDetails: React.FC = () => {
               onApproveDocument={handleApproveDocumentRequest}
               onRejectDocument={handleRejectDocumentRequest}
               onEditTemplate={handleEditTemplate}
+              onDeleteDocumentRequest={handleDeleteDocumentRequest}
               isAdmin={isPlatformAdmin}
               uploadingStates={uploadingDocumentRequest}
               approvingStates={approvingDocumentRequest}
               rejectingStates={rejectingDocumentRequest}
+              deletingStates={deletingDocumentRequest}
             />
           )}
         </div>
@@ -4300,6 +4862,65 @@ const AdminStudentDetails: React.FC = () => {
                 <span>
                   {savingNotes ? 'Deleting...' : 'Delete Note'}
                 </span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reject Document Modal */}
+      {showRejectDocModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Reject Document</h3>
+              <button
+                onClick={() => {
+                  setShowRejectDocModal(false);
+                  setRejectDocData(null);
+                  setRejectDocReason('');
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <XCircle className="w-6 h-6" />
+              </button>
+            </div>
+            
+            <div className="mb-4">
+              <p className="text-sm text-gray-600 mb-2">
+                Document: <span className="font-medium">{rejectDocData?.docType}</span>
+              </p>
+              <label htmlFor="rejectDocReason" className="block text-sm font-medium text-gray-700 mb-2">
+                Rejection Reason *
+              </label>
+              <textarea
+                id="rejectDocReason"
+                value={rejectDocReason}
+                onChange={(e) => setRejectDocReason(e.target.value)}
+                placeholder="Enter the reason for rejecting this document..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                rows={4}
+                required
+              />
+            </div>
+            
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setShowRejectDocModal(false);
+                  setRejectDocData(null);
+                  setRejectDocReason('');
+                }}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => confirmRejectDoc()}
+                disabled={!rejectDocReason.trim() || (rejectDocData ? !!rejectingDocs[`${rejectDocData.applicationId}:${rejectDocData.docType}`] : false)}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {rejectDocData && rejectingDocs[`${rejectDocData.applicationId}:${rejectDocData.docType}`] ? 'Rejecting...' : 'Reject Document'}
               </button>
             </div>
           </div>
@@ -4422,6 +5043,43 @@ const AdminStudentDetails: React.FC = () => {
             <p className="text-sm text-slate-600 mb-6">
               Are you sure you want to mark the <strong>{pendingPayment.feeName}</strong> as paid?
             </p>
+
+            {/* Seleção de aplicação para Application Fee quando há múltiplas aprovadas */}
+            {pendingPayment.feeType === 'application' && (() => {
+              const approvedApps = student?.all_applications?.filter((app: any) => app.status === 'approved') || [];
+              return approvedApps.length > 1 && (
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Select Application
+                  </label>
+                  <div className="space-y-2 max-h-40 overflow-y-auto">
+                    {approvedApps.map((app: any) => (
+                      <label key={app.id} className="flex items-center space-x-3 p-2 border border-slate-200 rounded-lg hover:bg-slate-50 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="selectedApplication"
+                          value={app.id}
+                          checked={selectedApplicationId === app.id}
+                          onChange={(e) => setSelectedApplicationId(e.target.value)}
+                          className="text-blue-600 focus:ring-blue-500"
+                        />
+                        <div className="flex-1">
+                          <div className="text-sm font-medium text-slate-900">
+                            {app.scholarships?.title || 'Scholarship'}
+                          </div>
+                          <div className="text-xs text-slate-500">
+                            {app.scholarships?.universities?.name || 'University'} • Applied: {new Date(app.applied_at).toLocaleDateString()}
+                          </div>
+                          {app.is_application_fee_paid && (
+                            <div className="text-xs text-green-600 mt-1">✓ Already Paid ({app.application_fee_payment_method})</div>
+                          )}
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
             
             <div className="mb-6">
               <label className="block text-sm font-medium text-slate-700 mb-2">
@@ -4443,6 +5101,7 @@ const AdminStudentDetails: React.FC = () => {
                 onClick={() => {
                   setShowPaymentModal(false);
                   setPendingPayment(null);
+                  setSelectedApplicationId(null);
                 }}
                 className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
               >
@@ -4450,7 +5109,12 @@ const AdminStudentDetails: React.FC = () => {
               </button>
               <button
                 onClick={confirmPayment}
-                disabled={markingAsPaid[`${student?.student_id}:${pendingPayment.feeType}`]}
+                disabled={
+                  markingAsPaid[`${student?.student_id}:${pendingPayment.feeType}`] ||
+                  (pendingPayment.feeType === 'application' && 
+                   (student?.all_applications?.filter((app: any) => app.status === 'approved') || []).length > 1 && 
+                   !selectedApplicationId)
+                }
                 className="flex-1 px-4 py-2 bg-[#05294E] text-white rounded-lg hover:bg-[#041f38] disabled:opacity-50 transition-colors flex items-center justify-center space-x-2"
               >
                 <CheckCircle className="w-4 h-4" />
@@ -4462,6 +5126,7 @@ const AdminStudentDetails: React.FC = () => {
           </div>
         </div>
       )}
+
       
       {/* Modal de visualização de documentos */}
       {previewUrl && (

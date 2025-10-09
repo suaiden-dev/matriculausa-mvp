@@ -6,6 +6,7 @@ import { useAuth } from '../../hooks/useAuth';
 import AdminDashboardLayout from './AdminDashboardLayout';
 import Overview from './Overview';
 import UniversityManagement from './UniversityManagement';
+import UniversityDetails from './UniversityDetails';
 import UsersHub from './UsersHub';
 import ScholarshipManagement from './ScholarshipManagement';
 import PaymentManagement from './PaymentManagement';
@@ -539,6 +540,10 @@ const AdminDashboard: React.FC = () => {
               onReject={handleRejectUniversity}
             />
           } 
+        />
+        <Route 
+          path="universities/:universityId" 
+          element={<UniversityDetails />} 
         />
         <Route 
           path="users" 

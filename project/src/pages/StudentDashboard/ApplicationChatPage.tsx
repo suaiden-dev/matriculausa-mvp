@@ -13,6 +13,7 @@ import { useApplicationChat } from '../../hooks/useApplicationChat';
 import { STRIPE_PRODUCTS } from '../../stripe-config';
 import { FileText, UserCircle, GraduationCap, CheckCircle, Building, Award, Home, Info, FileCheck, FolderOpen } from 'lucide-react';
 import { I20ControlFeeModal } from '../../components/I20ControlFeeModal';
+import TruncatedText from '../../components/TruncatedText';
 // Remover os imports das imagens
 // import WelcomeImg from '../../assets/page 7.png';
 // import SupportImg from '../../assets/page 8.png';
@@ -730,6 +731,21 @@ const ApplicationChatPage: React.FC = () => {
                                 {t('studentDashboard.applicationChatPage.details.studentDocuments.uploaded')} {new Date(docData.uploaded_at).toLocaleDateString()}
                               </div>
                               )}
+                              
+                              {/* Exibir motivo da rejeição se o documento foi rejeitado */}
+                              {status === 'rejected' && docData?.rejection_reason && (
+                                <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                                  <p className="text-xs font-medium text-red-600 mb-1">Rejection reason:</p>
+                                  <TruncatedText
+                                    text={docData.rejection_reason}
+                                    maxLength={120}
+                                    className="text-sm text-red-700 leading-relaxed"
+                                    showTooltip={true}
+                                    tooltipPosition="top"
+                                  />
+                                </div>
+                              )}
+                              
                               <div className="flex gap-2">
                                 {docData ? (
                                   <>
