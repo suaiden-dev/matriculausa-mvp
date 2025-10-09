@@ -9,10 +9,23 @@ import PhoneInput from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
 import '../styles/phone-input.css';
 
+// Lista de estados dos EUA
+const US_STATES = [
+  'Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California', 'Colorado', 'Connecticut', 'Delaware',
+  'Florida', 'Georgia', 'Hawaii', 'Idaho', 'Illinois', 'Indiana', 'Iowa', 'Kansas', 'Kentucky',
+  'Louisiana', 'Maine', 'Maryland', 'Massachusetts', 'Michigan', 'Minnesota', 'Mississippi',
+  'Missouri', 'Montana', 'Nebraska', 'Nevada', 'New Hampshire', 'New Jersey', 'New Mexico',
+  'New York', 'North Carolina', 'North Dakota', 'Ohio', 'Oklahoma', 'Oregon', 'Pennsylvania',
+  'Rhode Island', 'South Carolina', 'South Dakota', 'Tennessee', 'Texas', 'Utah', 'Vermont',
+  'Virginia', 'Washington', 'West Virginia', 'Wisconsin', 'Wyoming'
+];
+
 const SchoolProfileSetup: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [currentStep, setCurrentStep] = useState(1);
+  const [cities, setCities] = useState<string[]>([]);
+  const [loadingCities, setLoadingCities] = useState(false);
   const { user } = useAuth();
 
   const navigate = useNavigate();
@@ -46,6 +59,69 @@ const SchoolProfileSetup: React.FC = () => {
   });
 
   const [newProgram, setNewProgram] = useState('');
+
+  // Função para buscar cidades baseadas no estado
+  const fetchCitiesByState = async (state: string) => {
+    if (!state) {
+      setCities([]);
+      return;
+    }
+
+    setLoadingCities(true);
+    try {
+      // Usando uma API gratuita para buscar cidades dos EUA
+      const response = await fetch(`https://api.zippopotam.us/us/${getStateAbbreviation(state)}`);
+      if (response.ok) {
+        const data = await response.json();
+        const uniqueCities = [...new Set(data.places?.map((place: any) => place['place name']) || [])].sort() as string[];
+        setCities(uniqueCities);
+      } else {
+        // Fallback: usar uma lista básica de cidades principais por estado
+        setCities(getFallbackCities(state));
+      }
+    } catch (error) {
+      console.error('Error fetching cities:', error);
+      // Fallback em caso de erro
+      setCities(getFallbackCities(state));
+    } finally {
+      setLoadingCities(false);
+    }
+  };
+
+  // Função para obter abreviação do estado
+  const getStateAbbreviation = (stateName: string): string => {
+    const stateAbbreviations: Record<string, string> = {
+      'Alabama': 'AL', 'Alaska': 'AK', 'Arizona': 'AZ', 'Arkansas': 'AR', 'California': 'CA',
+      'Colorado': 'CO', 'Connecticut': 'CT', 'Delaware': 'DE', 'Florida': 'FL', 'Georgia': 'GA',
+      'Hawaii': 'HI', 'Idaho': 'ID', 'Illinois': 'IL', 'Indiana': 'IN', 'Iowa': 'IA',
+      'Kansas': 'KS', 'Kentucky': 'KY', 'Louisiana': 'LA', 'Maine': 'ME', 'Maryland': 'MD',
+      'Massachusetts': 'MA', 'Michigan': 'MI', 'Minnesota': 'MN', 'Mississippi': 'MS',
+      'Missouri': 'MO', 'Montana': 'MT', 'Nebraska': 'NE', 'Nevada': 'NV', 'New Hampshire': 'NH',
+      'New Jersey': 'NJ', 'New Mexico': 'NM', 'New York': 'NY', 'North Carolina': 'NC',
+      'North Dakota': 'ND', 'Ohio': 'OH', 'Oklahoma': 'OK', 'Oregon': 'OR', 'Pennsylvania': 'PA',
+      'Rhode Island': 'RI', 'South Carolina': 'SC', 'South Dakota': 'SD', 'Tennessee': 'TN',
+      'Texas': 'TX', 'Utah': 'UT', 'Vermont': 'VT', 'Virginia': 'VA', 'Washington': 'WA',
+      'West Virginia': 'WV', 'Wisconsin': 'WI', 'Wyoming': 'WY'
+    };
+    return stateAbbreviations[stateName] || '';
+  };
+
+  // Função fallback com cidades principais por estado
+  const getFallbackCities = (stateName: string): string[] => {
+    const fallbackCities: Record<string, string[]> = {
+      'California': ['Los Angeles', 'San Francisco', 'San Diego', 'San Jose', 'Fresno', 'Sacramento', 'Long Beach', 'Oakland', 'Bakersfield', 'Anaheim'],
+      'Texas': ['Houston', 'San Antonio', 'Dallas', 'Austin', 'Fort Worth', 'El Paso', 'Arlington', 'Corpus Christi', 'Plano', 'Lubbock'],
+      'Florida': ['Jacksonville', 'Miami', 'Tampa', 'Orlando', 'St. Petersburg', 'Hialeah', 'Tallahassee', 'Fort Lauderdale', 'Port St. Lucie', 'Cape Coral'],
+      'New York': ['New York City', 'Buffalo', 'Rochester', 'Yonkers', 'Syracuse', 'Albany', 'New Rochelle', 'Mount Vernon', 'Schenectady', 'Utica'],
+      'Pennsylvania': ['Philadelphia', 'Pittsburgh', 'Allentown', 'Erie', 'Reading', 'Scranton', 'Bethlehem', 'Lancaster', 'Harrisburg', 'Altoona'],
+      'Illinois': ['Chicago', 'Aurora', 'Rockford', 'Joliet', 'Naperville', 'Springfield', 'Peoria', 'Elgin', 'Waukegan', 'Cicero'],
+      'Ohio': ['Columbus', 'Cleveland', 'Cincinnati', 'Toledo', 'Akron', 'Dayton', 'Parma', 'Canton', 'Youngstown', 'Lorain'],
+      'Georgia': ['Atlanta', 'Augusta', 'Columbus', 'Savannah', 'Athens', 'Sandy Springs', 'Roswell', 'Macon', 'Albany', 'Johns Creek'],
+      'North Carolina': ['Charlotte', 'Raleigh', 'Greensboro', 'Durham', 'Winston-Salem', 'Fayetteville', 'Cary', 'Wilmington', 'High Point', 'Concord'],
+      'Michigan': ['Detroit', 'Grand Rapids', 'Warren', 'Sterling Heights', 'Lansing', 'Ann Arbor', 'Flint', 'Dearborn', 'Livonia', 'Westland']
+    };
+    return fallbackCities[stateName] || ['Please select a state first'];
+  };
 
   useEffect(() => {
     // Check if user has already completed profile setup
@@ -87,6 +163,15 @@ const SchoolProfileSetup: React.FC = () => {
             [child]: value
           }
         };
+        
+        // Se o estado foi alterado, buscar cidades e limpar cidade selecionada
+        if (parent === 'address' && child === 'state') {
+          const address = newData.address as typeof formData.address;
+          // Limpar cidade quando estado muda
+          address.city = '';
+          // Buscar cidades do novo estado
+          fetchCitiesByState(value);
+        }
         
         // Auto-populate location when city or state changes
         if (parent === 'address' && (child === 'city' || child === 'state')) {
@@ -384,31 +469,49 @@ const SchoolProfileSetup: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">City *</label>
-                  <input
-                    type="text"
-                    value={formData.address.city}
-                    onChange={(e) => handleInputChange('address.city', e.target.value)}
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] ${
-                      errors['address.city'] ? 'border-red-300' : 'border-gray-300'
-                    }`}
-                    placeholder="Boston"
-                  />
-                  {errors['address.city'] && <p className="text-red-600 text-xs mt-1">{errors['address.city']}</p>}
-                </div>
-
-                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">State *</label>
-                  <input
-                    type="text"
+                  <select
                     value={formData.address.state}
                     onChange={(e) => handleInputChange('address.state', e.target.value)}
                     className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] ${
                       errors['address.state'] ? 'border-red-300' : 'border-gray-300'
                     }`}
-                    placeholder="Massachusetts"
-                  />
+                  >
+                    <option value="">Select a state</option>
+                    {US_STATES.map((state) => (
+                      <option key={state} value={state}>
+                        {state}
+                      </option>
+                    ))}
+                  </select>
                   {errors['address.state'] && <p className="text-red-600 text-xs mt-1">{errors['address.state']}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">City *</label>
+                  <select
+                    value={formData.address.city}
+                    onChange={(e) => handleInputChange('address.city', e.target.value)}
+                    disabled={!formData.address.state || loadingCities}
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] ${
+                      errors['address.city'] ? 'border-red-300' : 'border-gray-300'
+                    } ${!formData.address.state || loadingCities ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                  >
+                    <option value="">
+                      {!formData.address.state 
+                        ? 'Select a state first' 
+                        : loadingCities 
+                        ? 'Loading cities...' 
+                        : 'Select a city'
+                      }
+                    </option>
+                    {cities.map((city) => (
+                      <option key={city} value={city}>
+                        {city}
+                      </option>
+                    ))}
+                  </select>
+                  {errors['address.city'] && <p className="text-red-600 text-xs mt-1">{errors['address.city']}</p>}
                 </div>
 
                 <div className="md:col-span-2">
