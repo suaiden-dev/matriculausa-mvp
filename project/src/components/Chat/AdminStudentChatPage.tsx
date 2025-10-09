@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
-import { useAdminStudentChat } from '../../hooks/useAdminStudentChat';
+import { useAdminStudentChat, useAdminStudentConversations } from '../../hooks/useAdminStudentChat';
 import ApplicationChat from '../ApplicationChat';
 import ChatInbox from './ChatInbox';
 import { MessageSquare, ArrowLeft, Users, HelpCircle } from 'lucide-react';
@@ -34,7 +34,8 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
   const [guideExit, setGuideExit] = useState(false);
 
   // Hook for the selected conversation
-  const chat = useAdminStudentChat(selectedConversationId || undefined, selectedRecipientId || undefined);
+  const { updateConversationUnreadCount } = useAdminStudentConversations();
+  const chat = useAdminStudentChat(selectedConversationId || undefined, selectedRecipientId || undefined, updateConversationUnreadCount);
 
   // Removed conversations hook here to avoid duplicate realtime subscriptions; inbox owns the list
 
@@ -397,8 +398,10 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
                   error={chat.error}
                   currentUserId={user.id}
                   onMarkAllAsRead={chat.markAllAsRead}
-                otherPartyLabel={getOtherPartyLabel()}
-                hideBubbleHeader={true}
+                  otherPartyLabel={getOtherPartyLabel()}
+                  hideBubbleHeader={true}
+                  overrideHeights={true}
+                  className="h-full"
                 />
             </>
           ) : (

@@ -460,7 +460,7 @@ const ApplicationChatPage: React.FC = () => {
                 {t('studentDashboard.applicationChatPage.chat.title') || 'Application Chat'}
               </h2>
             </div>
-            <div className="p-0">
+            <div className="p-0 h-96">
               <ApplicationChat
                 messages={chat.messages}
                 onSend={chat.sendMessage as any}
@@ -469,6 +469,7 @@ const ApplicationChatPage: React.FC = () => {
                 error={chat.error}
                 currentUserId={user?.id || ''}
                 messageContainerClassName="gap-6 py-4"
+                className="h-full"
               />
             </div>
           </div>

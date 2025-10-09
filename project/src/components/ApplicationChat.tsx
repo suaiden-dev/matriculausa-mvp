@@ -280,7 +280,7 @@ const ApplicationChat: React.FC<ApplicationChatProps & {
   // Count unread messages (removed unused variable)
 
   return (
-    <div className={`flex flex-col ${className}`}>
+    <div className={`flex flex-col h-full ${className}`}>
       {i20ControlFee && (
         <I20ControlFeeCard
           hasPaid={i20ControlFee.hasPaid}
@@ -296,7 +296,11 @@ const ApplicationChat: React.FC<ApplicationChatProps & {
       <div 
         ref={messagesContainerRef}
         className={`flex-1 overflow-y-auto p-4 bg-gradient-to-br from-gray-50 to-white flex flex-col gap-3 ${messageContainerClassName || ''}`}
-        style={overrideHeights ? { scrollbarWidth: 'thin', scrollbarColor: '#e5e7eb transparent' } : { 
+        style={overrideHeights ? { 
+          scrollbarWidth: 'thin', 
+          scrollbarColor: '#e5e7eb transparent',
+          minHeight: 0 // Permite que o flex-1 funcione corretamente
+        } : { 
           minHeight: '400px',
           maxHeight: '75vh',
           scrollbarWidth: 'thin',
@@ -514,8 +518,8 @@ const ApplicationChat: React.FC<ApplicationChatProps & {
           <div ref={messagesEndRef} />
       </div>
 
-      {/* Área de Input */}
-      <div className="bg-white border-t border-gray-100 p-4">
+      {/* Área de Input - Fixa no fundo */}
+      <div className="bg-white border-t border-gray-100 p-4 flex-shrink-0">
           {file && (
             <div className="mb-3 px-3 py-2 text-xs text-gray-600 bg-gray-100 rounded-lg flex items-center gap-2">
               <span>Attachment: {file.name}</span>
