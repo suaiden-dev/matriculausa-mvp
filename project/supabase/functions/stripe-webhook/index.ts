@@ -574,7 +574,7 @@ async function handleCheckoutSessionCompleted(session) {
     const applicationFeeAmount = metadata.application_fee_amount || '350.00';
     const universityId = metadata.university_id;
     const feeType = metadata.fee_type || 'application_fee';
-    const paymentMethod = session.payment_method_types?.[0]; // Detectar PIX vs Stripe
+    const paymentMethod = metadata?.payment_method || 'stripe'; // Usar método do metadata
     
     console.log(`[stripe-webhook] Processing application_fee for user: ${userId}, application: ${applicationId}, payment method: ${paymentMethod}`);
     
@@ -593,7 +593,7 @@ async function handleCheckoutSessionCompleted(session) {
         is_application_fee_paid: true,
         payment_status: 'paid',
         paid_at: new Date().toISOString(),
-          application_fee_payment_method: 'stripe',
+          application_fee_payment_method: metadata?.payment_method || 'stripe',
           updated_at: new Date().toISOString()
       };
         
@@ -1391,7 +1391,7 @@ async function handleCheckoutSessionCompleted(session) {
           const scholarshipIdsArray = scholarshipsIds.split(',').map(id => id.trim());
           const { error: appError } = await supabase.from('scholarship_applications').update({
             is_scholarship_fee_paid: true,
-            scholarship_fee_payment_method: 'stripe',
+            scholarship_fee_payment_method: metadata?.payment_method || 'stripe',
             payment_status: 'paid',
             paid_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
@@ -1725,7 +1725,7 @@ async function handleCheckoutSessionCompleted(session) {
         }
         
         // Atualizar também o perfil do usuário para manter consistência
-        const i20PaymentMethod = (session?.payment_method_types?.[0] as string) || 'stripe';
+        const i20PaymentMethod = metadata?.payment_method || 'stripe';
         const { error: profileUpdateError } = await supabase.from('user_profiles').update({
           has_paid_i20_control_fee: true,
           i20_control_fee_due_date: new Date().toISOString(),
@@ -1991,7 +1991,7 @@ async function handleCheckoutSessionCompleted(session) {
     const userId = metadata?.user_id || metadata?.student_id;
     console.log('[NOTIFICAÇÃO] Processando selection_process para userId:', userId);
     if (userId) {
-      const selectionPaymentMethod = (session?.payment_method_types?.[0] as string) || 'stripe';
+      const selectionPaymentMethod = metadata?.payment_method || 'stripe';
       const { error } = await supabase.from('user_profiles').update({
         has_paid_selection_process_fee: true,
         selection_process_fee_payment_method: selectionPaymentMethod,
@@ -2332,7 +2332,7 @@ async function handleCheckoutSessionCompleted(session) {
           p_performed_by_type: 'system',
           p_metadata: {
             session_id: sessionId,
-            payment_method: session.payment_method_types?.[0],
+            payment_method: metadata?.payment_method || 'stripe',
             fee_type: metadata.fee_type
           }
         });

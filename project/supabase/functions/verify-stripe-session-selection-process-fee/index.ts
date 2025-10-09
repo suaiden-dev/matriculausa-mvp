@@ -1,18 +1,12 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import Stripe from 'npm:stripe@17.7.0';
 import { createClient } from 'npm:@supabase/supabase-js@2.49.1';
+import { getStripeConfig } from './stripe-config.ts';
 // Import jsPDF for Deno environment
 // @ts-ignore
 import jsPDF from "https://esm.sh/jspdf@2.5.1?target=deno";
+
 const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
-const stripeSecret = Deno.env.get('STRIPE_SECRET_KEY');
-const stripe = new Stripe(stripeSecret, {
-  apiVersion: '2024-04-10',
-  appInfo: {
-    name: 'Bolt Integration',
-    version: '1.0.0'
-  }
-});
 // Function to send term acceptance notification with PDF after successful payment
 async function sendTermAcceptanceNotificationAfterPayment(userId, feeType) {
   try {
@@ -252,6 +246,21 @@ Deno.serve(async (req)=>{
     if (req.method !== 'POST') return corsResponse({
       error: 'Method Not Allowed'
     }, 405);
+
+    // Obter configuração do Stripe baseada no ambiente detectado
+    const config = getStripeConfig(req);
+    
+    // Criar instância do Stripe com a chave correta para o ambiente
+    const stripe = new Stripe(config.secretKey, {
+      apiVersion: '2025-07-30.preview', // Versão preview para FX Quotes API
+      appInfo: {
+        name: 'MatriculaUSA Integration',
+        version: '1.0.0',
+      },
+    });
+
+    console.log(`🔧 Using Stripe in ${config.environment.environment} mode`);
+
     const { sessionId } = await req.json();
     if (!sessionId) return corsResponse({
       error: 'Session ID is required'
@@ -263,10 +272,23 @@ Deno.serve(async (req)=>{
       console.log(`Session status: ${session.status}, Payment status: ${session.payment_status}`);
     } catch (stripeError) {
       console.error(`Stripe error retrieving session ${sessionId}:`, stripeError.message);
+      
+      // Verificar se é erro de sessão não encontrada
+      if (stripeError.message.includes('No such checkout.session')) {
+        console.error(`Session ${sessionId} not found - may have expired or been processed already`);
+        return corsResponse({
+          error: 'Session not found. It may have expired or been processed already.',
+          details: stripeError.message,
+          sessionId: sessionId
+        }, 404);
+      }
+      
+      // Outros erros do Stripe
       return corsResponse({
-        error: 'Session not found or invalid.',
-        details: stripeError.message
-      }, 404);
+        error: 'Stripe API error.',
+        details: stripeError.message,
+        sessionId: sessionId
+      }, 500);
     }
     if (session.payment_status === 'paid' && session.status === 'complete') {
       const userId = session.client_reference_id;

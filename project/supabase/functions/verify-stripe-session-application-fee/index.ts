@@ -1,15 +1,9 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import Stripe from 'npm:stripe@17.7.0';
 import { createClient } from 'npm:@supabase/supabase-js@2.49.1';
+import { getStripeConfig } from '../stripe-config.ts';
+
 const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
-const stripeSecret = Deno.env.get('STRIPE_SECRET_KEY');
-const stripe = new Stripe(stripeSecret, {
-  apiVersion: '2024-04-10',
-  appInfo: {
-    name: 'Bolt Integration',
-    version: '1.0.0'
-  }
-});
 function corsResponse(body, status = 200) {
   const headers = {
     'Access-Control-Allow-Origin': '*',
@@ -38,6 +32,17 @@ Deno.serve(async (req)=>{
     if (req.method !== 'POST') return corsResponse({
       error: 'Method Not Allowed'
     }, 405);
+    
+    // Obter configuração do Stripe baseada no ambiente detectado
+    const config = getStripeConfig(req);
+    const stripe = new Stripe(config.secretKey, {
+      apiVersion: '2024-04-10',
+      appInfo: {
+        name: 'MatriculaUSA Integration',
+        version: '1.0.0'
+      }
+    });
+    
     const { sessionId } = await req.json();
     if (!sessionId) return corsResponse({
       error: 'Session ID is required'
@@ -48,7 +53,7 @@ Deno.serve(async (req)=>{
     console.log('Session metadata:', session.metadata);
     if (session.payment_status === 'paid' && session.status === 'complete') {
       const userId = session.client_reference_id;
-      const paymentMethod = session.payment_method_types?.[0];
+      const paymentMethod = session.metadata?.payment_method || 'stripe';
       const applicationId = session.metadata?.application_id;
       console.log(`Processing successful payment. UserID: ${userId}, ApplicationID: ${applicationId}, PaymentMethod: ${paymentMethod}`);
       if (!userId) return corsResponse({

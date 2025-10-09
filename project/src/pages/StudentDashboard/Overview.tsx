@@ -126,22 +126,10 @@ const Overview: React.FC<OverviewProps> = ({
   const hasScholarshipFeePaid = recentApplications.some(app => app.is_scholarship_fee_paid);
 
   // Base fee amounts with user overrides - usar valores do useDynamicFees
-  const selectionBase = selectionProcessFeeAmount;
+  // useDynamicFees já inclui dependentes, então não precisamos somar novamente
+  const selectionWithDependents = selectionProcessFeeAmount;
   const scholarshipBase = scholarshipFeeAmount;
-  const i20Base = i20ControlFeeAmount;
-
-  // Dependents impact: $150 por dependente somente no Selection Process
-  // APENAS se não há override personalizado (override já inclui dependentes se necessário)
-  const dependents = (userProfile?.dependents as number) || 0;
-  const hasSelectionOverride = userFeeOverrides?.selection_process_fee !== undefined;
-  const hasI20Override = userFeeOverrides?.i20_control_fee !== undefined;
-  
-  const selectionExtra = hasSelectionOverride ? 0 : (dependents * 150); // Só soma dependentes se não tem override
-  const i20Extra = hasI20Override ? 0 : 0; // I-20 nunca tem dependentes
-
-  // Display amounts
-  const selectionWithDependents = selectionBase + selectionExtra;
-  const i20WithDependents = i20Base + i20Extra;
+  const i20WithDependents = i20ControlFeeAmount;
 
   // Valores das taxas para o ProgressBar (Application fee é variável)
   const dynamicFeeValues = [
