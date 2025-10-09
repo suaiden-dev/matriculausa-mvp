@@ -1312,7 +1312,8 @@
       "selectedScholarships": "Bolsas Selecionadas",
       "myApplications": "Minhas Candidaturas",
       "matriculaRewards": "Recompensas Matrícula",
-      "profile": "Perfil"
+      "profile": "Perfil",
+      "supportChat": "Chat de Suporte"
     },
     "profileStatus": {
       "title": "Status do Perfil",
@@ -1889,7 +1890,62 @@
         }
       },
       "chat": {
-        "title": "Chat da Aplicação"
+        "title": "Chat da Aplicação",
+        "subtitle": "Comunique-se diretamente com a universidade",
+        "placeholder": "Digite sua mensagem...",
+        "sendButton": "Enviar",
+        "attachFile": "Anexar arquivo",
+        "fileUploaded": "Arquivo anexado: {{fileName}}",
+        "messageSent": "Mensagem enviada com sucesso",
+        "messageError": "Erro ao enviar mensagem. Tente novamente.",
+        "noMessages": "Nenhuma mensagem ainda. Inicie uma conversa!",
+        "loading": "Carregando mensagens...",
+        "sending": "Enviando...",
+        "online": "Online",
+        "lastSeen": "Visto por último {{time}}",
+        "typing": "Digitando...",
+        "messageStatus": {
+          "sent": "Enviado",
+          "delivered": "Entregue",
+          "read": "Lido"
+        },
+        "actions": {
+          "markAsRead": "Marcar como lido",
+          "deleteMessage": "Excluir mensagem",
+          "downloadAttachment": "Baixar anexo"
+        },
+        "edit": {
+          "placeholder": "Edite sua mensagem...",
+          "save": "Salvar",
+          "cancel": "Cancelar"
+        },
+        "attachment": {
+          "label": "Anexo",
+          "remove": "Remover"
+        }
+      },
+      "studentChat": {
+        "header": {
+          "title": "Equipe de suporte",
+          "responseTime": "Tempo de resposta: 1-2 horas úteis",
+          "helpTooltip": "Como funciona o chat?"
+        },
+        "guide": {
+          "title": "Chat com a Administração",
+          "subtitle": "Este chat conecta você diretamente com a Administração. Use-o para dúvidas sobre bolsas, documentos e andamento da sua inscrição. Evite compartilhar dados sensíveis (senhas ou números de cartão).",
+          "supportsAttachments": "Envie mensagens e anexos",
+          "businessHours": "Respostas durante horário comercial",
+          "historySaved": "Histórico da conversa é salvo",
+          "ctaStart": "Entendi",
+          "ctaLater": "Agora não"
+        },
+        "input": {
+          "placeholder": "Digite sua mensagem..."
+        },
+        "recipientLabel": {
+          "student": "Estudante",
+          "support": "Administração"
+        }
       },
       "details": {
         "studentInformation": {

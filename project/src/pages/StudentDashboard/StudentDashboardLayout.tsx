@@ -210,7 +210,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
     { id: 'scholarships', label: t('studentDashboard.sidebar.browseScholarships'), icon: Award, path: '/student/dashboard/scholarships' },
     { id: 'cart', label: t('studentDashboard.sidebar.selectedScholarships'), icon: GraduationCap, path: '/student/dashboard/cart' },
     { id: 'applications', label: t('studentDashboard.sidebar.myApplications'), icon: FileText, path: '/student/dashboard/applications' },
-    ...(canAccessChat ? [{ id: 'chat', label: 'Support Chat', icon: MessageSquare, path: '/student/dashboard/chat' }] : []),
+    ...(canAccessChat ? [{ id: 'chat', label: t('studentDashboard.sidebar.supportChat'), icon: MessageSquare, path: '/student/dashboard/chat' }] : []),
     { id: 'rewards', label: t('studentDashboard.sidebar.matriculaRewards'), icon: Gift, path: '/student/dashboard/rewards' },
     { id: 'profile', label: t('studentDashboard.sidebar.profile'), icon: User, path: '/student/dashboard/profile' }
   ];

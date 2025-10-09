@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import ImagePreviewModal from './ImagePreviewModal';
 
 export interface ChatMessage {
