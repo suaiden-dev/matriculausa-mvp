@@ -280,7 +280,7 @@ const ApplicationChat: React.FC<ApplicationChatProps & {
   // Count unread messages (removed unused variable)
 
   return (
-    <div className={`flex flex-col h-full ${className}`}>
+    <div className={`flex flex-col h-full ${className}`} style={{ minHeight: 0 }}>
       {i20ControlFee && (
         <I20ControlFeeCard
           hasPaid={i20ControlFee.hasPaid}
@@ -299,7 +299,8 @@ const ApplicationChat: React.FC<ApplicationChatProps & {
         style={overrideHeights ? { 
           scrollbarWidth: 'thin', 
           scrollbarColor: '#e5e7eb transparent',
-          minHeight: 0 // Permite que o flex-1 funcione corretamente
+          minHeight: 0, // Permite que o flex-1 funcione corretamente
+          flex: '1 1 0%' // Força flex-1 a funcionar corretamente
         } : { 
           minHeight: '400px',
           maxHeight: '75vh',

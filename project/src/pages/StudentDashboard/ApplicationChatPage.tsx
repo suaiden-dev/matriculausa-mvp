@@ -5,6 +5,8 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
 import { useStudentLogs } from '../../hooks/useStudentLogs';
+import { useUnreadMessages } from '../../contexts/UnreadMessagesContext';
+import { useStudentChatUnreadCount } from '../../hooks/useStudentChatUnreadCount';
 import DocumentRequestsCard from '../../components/DocumentRequestsCard';
 import { supabase } from '../../lib/supabase';
 import DocumentViewerModal from '../../components/DocumentViewerModal';
@@ -42,6 +44,8 @@ const ApplicationChatPage: React.FC = () => {
   const { user, userProfile, refetchUserProfile } = useAuth();
   const { formatFeeAmount, getFeeAmount } = useFeeConfig(user?.id);
   const { logAction } = useStudentLogs(userProfile?.id || '');
+  const { resetUnreadCount } = useUnreadMessages();
+  const { markStudentMessagesAsRead } = useStudentChatUnreadCount();
 
   // Todos os hooks devem vir ANTES de qualquer return condicional
   const [i20Loading, setI20Loading] = useState(false);
@@ -78,6 +82,14 @@ const ApplicationChatPage: React.FC = () => {
       setActiveTab(tabParam as typeof activeTab);
     }
   }, [searchParams]);
+
+  // Resetar contador de mensagens não lidas quando acessar o chat
+  useEffect(() => {
+    if (activeTab === 'chat') {
+      markStudentMessagesAsRead();
+      resetUnreadCount();
+    }
+  }, [activeTab, resetUnreadCount, markStudentMessagesAsRead]);
 
   // Polling para atualizar o perfil do usuário a cada 2 minutos (modo conservador)
   useEffect(() => {
