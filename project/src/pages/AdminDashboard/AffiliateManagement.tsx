@@ -21,8 +21,8 @@ import {
 import { useAffiliateData } from '../../hooks/useAffiliateData';
 import { supabase } from '../../lib/supabase';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
-import { useDynamicFeeCalculation } from '../../hooks/useDynamicFeeCalculation';
-import { useUserSpecificFees } from '../../hooks/useUserSpecificFees';
+// import removido: useDynamicFeeCalculation não é usado aqui
+// import removido: useUserSpecificFees não é usado aqui
 
 interface FilterState {
   search: string;
@@ -57,7 +57,6 @@ const AffiliateManagement: React.FC = () => {
 
   // ===== Overrides e Dependentes (igual EnhancedStudentTrackingRefactored) =====
   const { feeConfig } = useFeeConfig();
-  const { selectionProcessFee, scholarshipFee, i20ControlFee, isSimplified } = useDynamicFeeCalculation();
   const [overridesMap, setOverridesMap] = useState<Record<string, any>>({}); // por user_id
   const [dependentsMap, setDependentsMap] = useState<Record<string, number>>({}); // por profile_id
 
@@ -133,27 +132,7 @@ const AffiliateManagement: React.FC = () => {
     loadDependents();
   }, [allStudents]);
 
-  // Função para calcular taxas de um usuário específico
-  const calculateUserFees = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .rpc('get_user_system_type', { user_id_param: userId });
-      
-      if (error) {
-        console.error('Error detecting user system type:', error);
-        return { selectionProcessFee: 400, scholarshipFee: 900, i20ControlFee: 900 };
-      }
-      
-      if (data === 'simplified') {
-        return { selectionProcessFee: 350, scholarshipFee: 550, i20ControlFee: 900 };
-      } else {
-        return { selectionProcessFee: 400, scholarshipFee: 900, i20ControlFee: 900 };
-      }
-    } catch (err) {
-      console.error('Error calculating user fees:', err);
-      return { selectionProcessFee: 400, scholarshipFee: 900, i20ControlFee: 900 };
-    }
-  };
+  // Removido: calculateUserFees não é usado neste componente
 
   // Students com valores ajustados
   const adjustedStudents = useMemo(() => {
@@ -738,7 +717,7 @@ const AffiliateManagement: React.FC = () => {
 
                 {/* Expanded Content */}
                 <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                  isExpanded ? 'max-h-screen opacity-100' : 'max-h-0 opacity-0'
+                  isExpanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'
                 }`}>
                   <div className="border-t border-slate-200 bg-slate-50">
                     <div className="p-6">
@@ -820,7 +799,7 @@ const AffiliateManagement: React.FC = () => {
                                     {/* Lista de Estudantes Expandida */}
                                     <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
                                       isSellerExpanded && sellerStudents.length > 0 
-                                        ? 'max-h-96 opacity-100 mt-4' 
+                                        ? 'max-h-[1200px] opacity-100 mt-4' 
                                         : 'max-h-0 opacity-0 mt-0'
                                     }`}>
                                       <div className="pt-4 border-t border-slate-200">
