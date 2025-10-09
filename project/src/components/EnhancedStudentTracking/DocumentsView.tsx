@@ -667,7 +667,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                                 </button>
                                 
                                 {/* Admin Action Buttons - Only show for admin and if document is under review or pending */}
-                                {isAdmin && (upload.status === 'under_review' || upload.status === 'pending') && (
+                                {isAdmin && (upload.status === 'under_review' || upload.status === 'pending') && upload.status !== 'rejected' && (
                                   <div className="flex gap-2">
                                     {onApproveDocument && (
                                       <button

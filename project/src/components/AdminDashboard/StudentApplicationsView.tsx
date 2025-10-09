@@ -25,6 +25,7 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs from 'dayjs';
+import DocumentViewerModal from '../DocumentViewerModal';
 
 interface StudentRecord {
   // Dados do estudante (sempre presentes)
@@ -83,6 +84,15 @@ const StudentApplicationsView: React.FC = () => {
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [rejectData, setRejectData] = useState<{applicationId: string, docType: string} | null>(null);
   const [rejectReason, setRejectReason] = useState('');
+  
+  // Estado para modal de visualização de documentos
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  const handleViewDocument = (doc: { file_url: string; filename?: string }) => {
+    if (doc.file_url) {
+      setPreviewUrl(doc.file_url);
+    }
+  };
 
   const handleApproveDocument = async (applicationId: string, docType: string) => {
     if (!isPlatformAdmin) return;
@@ -1743,11 +1753,10 @@ const StudentApplicationsView: React.FC = () => {
                                                 
                                                 <div className="flex items-center flex-wrap gap-1 ml-0 md:ml-3 flex-shrink-0 justify-start md:justify-end w-full md:w-auto">
                                                   <button
-                                                    onClick={() => {
-                                                      const baseUrl = 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/student-documents/';
-                                                      const fullUrl = doc.url.startsWith('http') ? doc.url : `${baseUrl}${doc.url}`;
-                                                      window.open(fullUrl, '_blank');
-                                                    }}
+                                                    onClick={() => handleViewDocument({
+                                                      file_url: doc.url,
+                                                      filename: doc.url.split('/').pop() || `${doc.type}.pdf`
+                                                    })}
                                                     className="text-xs text-[#05294E] hover:text-[#05294E]/80 font-medium flex items-center space-x-1 transition-colors px-2 py-1 border border-[#05294E] rounded-md hover:bg-[#05294E]/5"
                                                   >
                                                     <Eye className="w-3 h-3" />
@@ -1772,6 +1781,9 @@ const StudentApplicationsView: React.FC = () => {
                                                     <span className="hidden md:inline">Download</span>
                                                   </button>
                                                   {isPlatformAdmin && approveableTypes.has(doc.type) && (doc.status || '').toLowerCase() !== 'approved' && (
+                                                    (doc.status || '').toLowerCase() !== 'rejected' || 
+                                                    (doc.status || '').toLowerCase() === 'rejected' && doc.uploaded_at && doc.rejected_at && new Date(doc.uploaded_at) > new Date(doc.rejected_at)
+                                                  ) && (
                                                     <>
                                                       <button
                                                         onClick={() => handleApproveDocument(app.id, doc.type)}
@@ -1815,9 +1827,9 @@ const StudentApplicationsView: React.FC = () => {
                                                   </span>
                                                 )}
                                                 {doc.rejection_reason && (
-                                                  <div className="text-xs text-red-600 bg-red-50 px-2 py-1 rounded-md mt-1">
+                                                  <span className="text-xs text-red-600 bg-red-50 px-2 py-1 rounded-md">
                                                     <span className="font-medium">Reason:</span> {doc.rejection_reason}
-                                                  </div>
+                                                  </span>
                                                 )}
                                               </div>
                                             </div>
@@ -1923,7 +1935,7 @@ const StudentApplicationsView: React.FC = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Rejeitar Documento</h3>
+              <h3 className="text-lg font-semibold text-gray-900">Reject Document</h3>
               <button
                 onClick={() => {
                   setShowRejectModal(false);
@@ -1938,16 +1950,16 @@ const StudentApplicationsView: React.FC = () => {
             
             <div className="mb-4">
               <p className="text-sm text-gray-600 mb-2">
-                Documento: <span className="font-medium">{rejectData?.docType}</span>
+                Document: <span className="font-medium">{rejectData?.docType}</span>
               </p>
               <label htmlFor="rejectReason" className="block text-sm font-medium text-gray-700 mb-2">
-                Motivo da rejeição *
+                Rejection reason *
               </label>
               <textarea
                 id="rejectReason"
                 value={rejectReason}
                 onChange={(e) => setRejectReason(e.target.value)}
-                placeholder="Digite o motivo da rejeição do documento..."
+                placeholder="Enter the reason for rejecting this document..."
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
                 rows={4}
                 required
@@ -1970,11 +1982,19 @@ const StudentApplicationsView: React.FC = () => {
                 disabled={!rejectReason.trim() || (rejectData && rejectingDocs[`${rejectData.applicationId}:${rejectData.docType}`])}
                 className="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {rejectData && rejectingDocs[`${rejectData.applicationId}:${rejectData.docType}`] ? 'Rejeitando...' : 'Rejeitar Documento'}
+                {rejectData && rejectingDocs[`${rejectData.applicationId}:${rejectData.docType}`] ? 'Rejecting...' : 'Reject Document'}
               </button>
             </div>
           </div>
         </div>
+      )}
+      
+      {/* Modal de visualização de documentos */}
+      {previewUrl && (
+        <DocumentViewerModal
+          url={previewUrl}
+          onClose={() => setPreviewUrl(null)}
+        />
       )}
     </div>
   );

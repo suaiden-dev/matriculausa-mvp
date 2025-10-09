@@ -1012,7 +1012,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
                               </button>
                               
                               {/* Botões de aprovação e rejeição para administradores */}
-                              {isSchool && (normalizedStatus === 'pending' || normalizedStatus === 'under_review') && (
+                              {isSchool && (normalizedStatus === 'pending' || normalizedStatus === 'under_review') && normalizedStatus !== 'rejected' && (
                                 <>
                                   <button
                                     className="text-green-600 hover:text-green-800 text-xs sm:text-sm font-medium hover:underline"

@@ -979,6 +979,86 @@ const AdminStudentDetails: React.FC = () => {
       } catch (logError) {
         console.error('Failed to log document rejection:', logError);
       }
+
+      // ENVIAR NOTIFICAÇÕES PARA O ALUNO
+      console.log('📤 [handleRejectDocument] Enviando notificações de rejeição para o aluno...');
+      
+      try {
+        // Buscar nome do admin
+        const { data: adminProfile } = await supabase
+          .from('user_profiles')
+          .select('full_name')
+          .eq('user_id', user?.id)
+          .single();
+
+        const adminName = adminProfile?.full_name || 'Platform Admin';
+
+      // 1. ENVIAR EMAIL VIA WEBHOOK (payload idêntico ao da universidade)
+      const rejectionPayload = {
+        tipo_notf: "Changes Requested",
+        email_aluno: student.student_email,
+        nome_aluno: student.student_name,
+        email_universidade: user?.email,
+        o_que_enviar: `Your document <strong>${docType}</strong> for the request <strong>${docType}</strong> has been rejected. Reason: <strong>${reason}</strong>. Please review and upload a corrected version.`
+      };
+
+        console.log('📤 [handleRejectDocument] Payload de rejeição:', rejectionPayload);
+
+        const webhookResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(rejectionPayload),
+        });
+
+        if (webhookResponse.ok) {
+          console.log('✅ [handleRejectDocument] Email de rejeição enviado com sucesso!');
+        } else {
+          console.warn('⚠️ [handleRejectDocument] Erro ao enviar email de rejeição:', webhookResponse.status);
+        }
+      } catch (webhookError) {
+        console.error('❌ [handleRejectDocument] Erro ao enviar webhook de rejeição:', webhookError);
+        // Não falhar o processo se o webhook falhar
+      }
+
+      // 2. ENVIAR NOTIFICAÇÃO IN-APP PARA O ALUNO (SINO)
+      console.log('📤 [handleRejectDocument] Enviando notificação in-app para o aluno...');
+      
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const accessToken = session?.access_token;
+        
+        if (accessToken) {
+          const notificationPayload = {
+            user_id: student.user_id,
+            title: 'Document Rejected',
+            message: `Your ${docType} document has been rejected by platform admin. Reason: ${reason}`,
+            type: 'document_rejected',
+            link: '/student/dashboard/applications',
+          };
+          
+          const response = await fetch(`${import.meta.env.VITE_SUPABASE_FUNCTIONS_URL}/create-student-notification`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${accessToken}`,
+            },
+            body: JSON.stringify(notificationPayload),
+          });
+          
+          if (response.ok) {
+            console.log('✅ [handleRejectDocument] Notificação in-app enviada com sucesso!');
+          } else {
+            console.warn('⚠️ [handleRejectDocument] Erro ao enviar notificação in-app:', response.status);
+          }
+        } else {
+          console.error('❌ [handleRejectDocument] Access token não encontrado para notificação in-app');
+        }
+      } catch (notificationError) {
+        console.error('❌ [handleRejectDocument] Erro ao enviar notificação in-app:', notificationError);
+        // Não falhar o processo se a notificação in-app falhar
+      }
       
       // Fechar modal e limpar dados
       setShowRejectDocModal(false);
@@ -3344,11 +3424,10 @@ const AdminStudentDetails: React.FC = () => {
                                       </div>
                                       <div className="flex items-center flex-wrap gap-1 ml-0 md:ml-3 flex-shrink-0 justify-start md:justify-end w-full md:w-auto">
                                         <button
-                                          onClick={() => {
-                                            const baseUrl = 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/student-documents/';
-                                            const fullUrl = doc.url.startsWith('http') ? doc.url : `${baseUrl}${doc.url}`;
-                                            window.open(fullUrl, '_blank');
-                                          }}
+                                          onClick={() => handleViewDocument({
+                                            file_url: doc.url,
+                                            filename: doc.url.split('/').pop() || `${doc.type}.pdf`
+                                          })}
                                           className="text-xs text-[#05294E] hover:text-[#05294E]/80 font-medium flex items-center space-x-1 transition-colors px-2 py-1 border border-[#05294E] rounded-md hover:bg-[#05294E]/5"
                                         >
                                           <Eye className="w-3 h-3" />
@@ -3370,6 +3449,9 @@ const AdminStudentDetails: React.FC = () => {
                                           </label>
                                         )}
                                         {isPlatformAdmin && ['passport','funds_proof','diploma'].includes(doc.type) && (doc.status || '').toLowerCase() !== 'approved' && (
+                                          (doc.status || '').toLowerCase() !== 'rejected' || 
+                                          (doc.status || '').toLowerCase() === 'rejected' && doc.uploaded_at && doc.rejected_at && new Date(doc.uploaded_at) > new Date(doc.rejected_at)
+                                        ) && (
                                           <>
                                           <button
                                             onClick={() => handleApproveDocument(app.id, doc.type)}
@@ -3410,9 +3492,9 @@ const AdminStudentDetails: React.FC = () => {
                                         <span className="text-xs text-red-600 bg-red-50 px-2 py-1 rounded-md">Rejected {new Date(doc.rejected_at).toLocaleDateString()}</span>
                                       )}
                                       {doc.rejection_reason && (
-                                        <div className="text-xs text-red-600 bg-red-50 px-2 py-1 rounded-md mt-1">
+                                        <span className="text-xs text-red-600 bg-red-50 px-2 py-1 rounded-md">
                                           <span className="font-medium">Reason:</span> {doc.rejection_reason}
-                                        </div>
+                                        </span>
                                       )}
                                       {doc.changes_requested_at && (
                                         <span className="text-xs text-red-600 bg-red-50 px-2 py-1 rounded-md">Changes Requested {new Date(doc.changes_requested_at).toLocaleDateString()}</span>
