@@ -1723,6 +1723,44 @@ const PaymentManagement = (): React.JSX.Element => {
         // Não falhar o processo se o webhook falhar
       }
 
+      // ENVIAR NOTIFICAÇÃO IN-APP PARA O ALUNO (SINO)
+      console.log('📤 [rejectZellePayment] Enviando notificação in-app para o aluno...');
+      
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const accessToken = session?.access_token;
+        
+        if (accessToken) {
+          const notificationPayload = {
+            user_id: payment.student_user_id,
+            title: 'Payment Rejected',
+            message: `Your ${payment.fee_type.replace('_', ' ')} payment of $${payment.amount} has been rejected. Reason: ${reason || zelleRejectReason}`,
+            type: 'payment_rejected',
+            link: '/student/dashboard',
+          };
+          
+          const response = await fetch(`${import.meta.env.VITE_SUPABASE_FUNCTIONS_URL}/create-student-notification`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${accessToken}`,
+            },
+            body: JSON.stringify(notificationPayload),
+          });
+          
+          if (response.ok) {
+            console.log('✅ [rejectZellePayment] Notificação in-app enviada com sucesso!');
+          } else {
+            console.warn('⚠️ [rejectZellePayment] Erro ao enviar notificação in-app:', response.status);
+          }
+        } else {
+          console.error('❌ [rejectZellePayment] Access token não encontrado para notificação in-app');
+        }
+      } catch (notificationError) {
+        console.error('❌ [rejectZellePayment] Erro ao enviar notificação in-app:', notificationError);
+        // Não falhar o processo se a notificação in-app falhar
+      }
+
       // Recarregar pagamentos Zelle
       await loadZellePayments();
       setShowZelleReviewModal(false);
