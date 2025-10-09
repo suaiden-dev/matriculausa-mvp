@@ -1932,7 +1932,26 @@
       },
       "documents": {
         "title": "Document Management",
-        "subtitle": "Request and manage student documents"
+        "subtitle": "Request and manage student documents",
+        "congratulations": {
+          "title": "🎉 Congratulations! All documents have been approved!",
+          "subtitle": "Your documentation has been accepted by the university. You can now proceed to the next step."
+        },
+        "acceptanceLetter": {
+          "title": "📋 Waiting for Acceptance Letter",
+          "description": "With all documents approved, the university is preparing your official acceptance letter. You will be notified as soon as it becomes available.",
+          "status": "⏳ Waiting for the university to send the official acceptance letter",
+          "received": "✅ Acceptance Letter Received!",
+          "readyForDownload": "Your official acceptance letter is ready for download",
+          "downloadButton": "📄 Download Acceptance Letter",
+          "viewButton": "👁️ View"
+        },
+        "documentStatus": {
+          "title": "Document Status",
+          "description": "Continue submitting the documents requested by the university. The acceptance letter will be available only after all documents are approved.",
+          "progress": "Progress:",
+          "approved": "documents approved"
+        }
       },
       "documentTypes": {
         "passport": {

@@ -2149,7 +2149,26 @@
       },
       "documents": {
         "title": "Gestión de Documentos",
-        "subtitle": "Solicitar y gestionar documentos del estudiante"
+        "subtitle": "Solicitar y gestionar documentos del estudiante",
+        "congratulations": {
+          "title": "🎉 ¡Felicitaciones! ¡Todos los documentos han sido aprobados!",
+          "subtitle": "Su documentación ha sido aceptada por la universidad. Ahora puede proceder al siguiente paso."
+        },
+        "acceptanceLetter": {
+          "title": "📋 Esperando Carta de Aceptación",
+          "description": "Con todos los documentos aprobados, la universidad está preparando su carta de aceptación oficial. Será notificado tan pronto como esté disponible.",
+          "status": "⏳ Esperando que la universidad envíe la carta de aceptación oficial",
+          "received": "✅ ¡Carta de Aceptación Recibida!",
+          "readyForDownload": "Su carta de aceptación oficial está lista para descargar",
+          "downloadButton": "📄 Descargar Carta de Aceptación",
+          "viewButton": "👁️ Ver"
+        },
+        "documentStatus": {
+          "title": "Estado de los Documentos",
+          "description": "Continúe enviando los documentos solicitados por la universidad. La carta de aceptación estará disponible solo después de que todos los documentos sean aprobados.",
+          "progress": "Progreso:",
+          "approved": "documentos aprobados"
+        }
       },
       "documentTypes": {
         "passport": {

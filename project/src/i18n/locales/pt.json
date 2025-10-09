@@ -2028,7 +2028,26 @@
       },
       "documents": {
         "title": "Gerenciamento de Documentos",
-        "subtitle": "Solicitar e gerenciar documentos do estudante"
+        "subtitle": "Solicitar e gerenciar documentos do estudante",
+        "congratulations": {
+          "title": "🎉 Parabéns! Todos os documentos foram aprovados!",
+          "subtitle": "Sua documentação foi aceita pela universidade. Agora você pode prosseguir para a próxima etapa."
+        },
+        "acceptanceLetter": {
+          "title": "📋 Aguardando Carta de Aceitação",
+          "description": "Com todos os documentos aprovados, a universidade está preparando sua carta de aceitação oficial. Você será notificado assim que estiver disponível.",
+          "status": "⏳ Aguardando a universidade enviar a carta de aceite oficial",
+          "received": "✅ Carta de Aceite Recebida!",
+          "readyForDownload": "Sua carta de aceite oficial está pronta para download",
+          "downloadButton": "📄 Baixar Carta de Aceite",
+          "viewButton": "👁️ Visualizar"
+        },
+        "documentStatus": {
+          "title": "Status dos Documentos",
+          "description": "Continue enviando os documentos solicitados pela universidade. A carta de aceite será disponibilizada apenas após todos os documentos serem aprovados.",
+          "progress": "Progresso:",
+          "approved": "documentos aprovados"
+        }
       },
       "documentTypes": {
         "passport": {

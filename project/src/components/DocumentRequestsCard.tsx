@@ -33,9 +33,18 @@ interface DocumentRequestsCardProps {
   studentType: 'initial' | 'transfer' | 'change_of_status';
   studentUserId?: string; // Novo: id do usuário do aluno
   onDocumentUploaded?: (requestId: string, fileName: string, isResubmission: boolean) => void; // Callback para logging
+  showAcceptanceLetter?: boolean; // Controla se deve mostrar a seção de acceptance letter
 }
 
-const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ applicationId, isSchool, currentUserId, studentType, studentUserId, onDocumentUploaded }) => {
+const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ 
+  applicationId, 
+  isSchool, 
+  currentUserId, 
+  studentType, 
+  studentUserId, 
+  onDocumentUploaded,
+  showAcceptanceLetter = true  // Por padrão mostra a acceptance letter
+}) => {
   const { t } = useTranslation();
   
   // Debug: verificar se studentType está chegando corretamente
@@ -1092,7 +1101,8 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
       </div>
 
       {/* Acceptance Letter block - Design otimizado para mobile */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mt-4 sm:mt-8 relative">
+      {showAcceptanceLetter && (
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mt-4 sm:mt-8 relative">
         {/* Header escuro azul */}
         <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-3 py-3 sm:px-6 sm:py-5">
           <div className="flex items-center gap-2 sm:gap-4">
@@ -1241,6 +1251,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
           )}
         </div>
       </div>
+      )}
 
       {/* Transfer Form block: só para transfer, no final da página */}
       {studentType === 'transfer' && (
