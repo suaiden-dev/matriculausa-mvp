@@ -92,6 +92,7 @@ Deno.serve(async (req) => {
     const sessionMetadata = {
       student_id: user.id,
       fee_type: 'scholarship_fee',
+      payment_method: payment_method || 'stripe', // Adicionar método de pagamento
       ...metadata,
       ...(normalizedScholarshipsIds ? { scholarships_ids: normalizedScholarshipsIds } : {}),
     };

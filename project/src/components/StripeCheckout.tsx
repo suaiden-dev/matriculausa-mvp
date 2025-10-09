@@ -187,7 +187,7 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
     if (method === 'stripe') {
       // Para Stripe, continuar com o fluxo normal
       console.log('🔍 [StripeCheckout] 🚀 Iniciando checkout Stripe...');
-      handleCheckout();
+      handleCheckout('stripe');
         } else if (method === 'pix') {
           // Para PIX, usar mesma edge function mas com parâmetro PIX
           console.log('🔍 [StripeCheckout] 🇧🇷 PIX selecionado, iniciando checkout PIX...');

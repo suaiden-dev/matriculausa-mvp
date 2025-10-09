@@ -73,6 +73,12 @@ const UniversityDetails: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [showNewRequestModal, setShowNewRequestModal] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [showEditRequestModal, setShowEditRequestModal] = useState(false);
+  const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
+  const [editingRequest, setEditingRequest] = useState<DocumentRequest | null>(null);
+  const [deletingRequest, setDeletingRequest] = useState<DocumentRequest | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   // Estado para edição da universidade
   const [editForm, setEditForm] = useState({
@@ -85,6 +91,14 @@ const UniversityDetails: React.FC = () => {
 
   // Estado para novo document request
   const [newRequest, setNewRequest] = useState({
+    title: '',
+    description: '',
+    attachment: null as File | null,
+    applicable_student_types: ['all']
+  });
+
+  // Estado para edição de document request
+  const [editRequest, setEditRequest] = useState({
     title: '',
     description: '',
     attachment: null as File | null,
@@ -286,6 +300,117 @@ const UniversityDetails: React.FC = () => {
     } finally {
       setCreating(false);
     }
+  };
+
+  const handleEditRequest = async () => {
+    if (!editingRequest?.id || !editRequest.title) {
+      setError('Title is required');
+      return;
+    }
+    
+    setEditing(true);
+    setError(null);
+    
+    try {
+      let attachment_url: string | undefined = editingRequest.attachment_url;
+      
+      if (editRequest.attachment) {
+        const { data, error } = await supabase.storage
+          .from('document-attachments')
+          .upload(`global/${Date.now()}_${editRequest.attachment.name}`, editRequest.attachment);
+        
+        if (error) {
+          setError('Failed to upload attachment: ' + error.message);
+          setEditing(false);
+          return;
+        }
+        attachment_url = data?.path;
+      }
+
+      // Atualizar diretamente via Supabase client
+      const { error: updateError } = await supabase
+        .from('document_requests')
+        .update({
+          title: editRequest.title,
+          description: editRequest.description,
+          attachment_url,
+          applicable_student_types: editRequest.applicable_student_types
+        })
+        .eq('id', editingRequest.id);
+
+      if (updateError) {
+        setError('Failed to update request: ' + updateError.message);
+        setEditing(false);
+        return;
+      }
+
+      setShowEditRequestModal(false);
+      setEditingRequest(null);
+      setEditRequest({ title: '', description: '', attachment: null, applicable_student_types: ['all'] });
+      fetchDocumentRequests(); // Recarregar lista
+
+    } catch (e: any) {
+      setError('Unexpected error: ' + (e.message || e));
+    } finally {
+      setEditing(false);
+    }
+  };
+
+  const handleDeleteRequest = async () => {
+    if (!deletingRequest?.id) return;
+    
+    setDeleting(true);
+    setError(null);
+    
+    try {
+      // Primeiro, deletar todos os uploads relacionados ao request
+      const { error: deleteUploadsError } = await supabase
+        .from('document_request_uploads')
+        .delete()
+        .eq('document_request_id', deletingRequest.id);
+
+      if (deleteUploadsError) {
+        console.error('Error deleting uploads:', deleteUploadsError);
+        // Continuar mesmo se houver erro nos uploads
+      }
+
+      // Depois, deletar o document request
+      const { error: deleteRequestError } = await supabase
+        .from('document_requests')
+        .delete()
+        .eq('id', deletingRequest.id);
+
+      if (deleteRequestError) {
+        setError('Failed to delete request: ' + deleteRequestError.message);
+        setDeleting(false);
+        return;
+      }
+
+      setShowDeleteConfirmModal(false);
+      setDeletingRequest(null);
+      fetchDocumentRequests(); // Recarregar lista
+
+    } catch (e: any) {
+      setError('Unexpected error: ' + (e.message || e));
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const openEditModal = (request: DocumentRequest) => {
+    setEditingRequest(request);
+    setEditRequest({
+      title: request.title || '',
+      description: request.description || '',
+      attachment: null,
+      applicable_student_types: request.applicable_student_types || ['all']
+    });
+    setShowEditRequestModal(true);
+  };
+
+  const openDeleteModal = (request: DocumentRequest) => {
+    setDeletingRequest(request);
+    setShowDeleteConfirmModal(true);
   };
 
   if (loading && !university) {
@@ -663,8 +788,26 @@ const UniversityDetails: React.FC = () => {
                 ) : (
                   <div className="space-y-4">
                     {documentRequests.map((request) => (
-                      <div key={request.id} className="border border-gray-200 rounded-xl p-6 hover:shadow-sm transition-shadow">
-                        <div className="flex items-start justify-between mb-3">
+                      <div key={request.id} className="border border-gray-200 rounded-xl p-6 hover:shadow-sm transition-shadow relative">
+                        {/* Admin Action Buttons - Top Right Corner */}
+                        <div className="absolute top-4 right-4 flex items-center gap-2">
+                          <button
+                            onClick={() => openEditModal(request)}
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Edit Request"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => openDeleteModal(request)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Delete Request"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+
+                        <div className="flex items-start justify-between mb-3 pr-20">
                           <h4 className="text-lg font-medium text-gray-900">{request.title}</h4>
                           <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
                             request.status === 'open' 
@@ -677,6 +820,34 @@ const UniversityDetails: React.FC = () => {
                         
                         {request.description && (
                           <p className="text-gray-600 mb-4 leading-relaxed">{request.description}</p>
+                        )}
+
+                        {/* Template Section */}
+                        {request.attachment_url ? (
+                          <div className="mb-4">
+                            <button
+                              onClick={() => {
+                                const url = request.attachment_url?.startsWith('http') 
+                                  ? request.attachment_url 
+                                  : `https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/document-attachments/${request.attachment_url}`;
+                                window.open(url, '_blank');
+                              }}
+                              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors shadow-sm flex items-center justify-center space-x-2"
+                            >
+                              <FileText className="h-4 w-4" />
+                              <span>View Template</span>
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="mb-4">
+                            <button
+                              onClick={() => openEditModal(request)}
+                              className="bg-blue-50 hover:bg-blue-100 text-blue-700 px-4 py-2 rounded-lg font-medium transition-colors shadow-sm flex items-center justify-center space-x-2"
+                            >
+                              <Plus className="h-4 w-4" />
+                              <span>Add Template</span>
+                            </button>
+                          </div>
                         )}
                         
                         <div className="flex items-center justify-between text-sm text-gray-500">
@@ -838,6 +1009,187 @@ const UniversityDetails: React.FC = () => {
                 disabled={creating}
               >
                 Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Request Modal */}
+      {showEditRequestModal && editingRequest && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-lg border border-slate-200 max-h-[90vh] overflow-auto">
+            <h3 className="font-bold text-lg mb-6 text-slate-900">Edit Global Document Request</h3>
+            
+            {error && (
+              <div className="text-red-500 mb-4 text-center font-semibold">{error}</div>
+            )}
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">
+                  Title <span className="text-red-500">*</span>
+                </label>
+                <input
+                  className="border border-slate-300 rounded-lg px-4 py-2 w-full focus:ring-2 focus:ring-blue-200 focus:border-blue-400 transition text-base"
+                  placeholder="Enter document title"
+                  value={editRequest.title}
+                  onChange={e => setEditRequest(r => ({ ...r, title: e.target.value }))}
+                  disabled={editing}
+                  required
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Description</label>
+                <textarea
+                  className="border border-slate-300 rounded-lg px-4 py-2 w-full focus:ring-2 focus:ring-blue-200 focus:border-blue-400 transition text-base min-h-[60px] resize-vertical"
+                  placeholder="Describe the document or instructions (optional)"
+                  value={editRequest.description}
+                  onChange={e => setEditRequest(r => ({ ...r, description: e.target.value }))}
+                  disabled={editing}
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Template Attachment</label>
+                <div className="flex items-center gap-3">
+                  <label className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg cursor-pointer hover:bg-blue-100 transition font-medium text-blue-700">
+                    <FileText className="h-5 w-5" />
+                    <span>{editRequest.attachment ? 'Change file' : 'Select file'}</span>
+                    <input
+                      type="file"
+                      className="sr-only"
+                      onChange={e => setEditRequest(r => ({ ...r, attachment: e.target.files ? e.target.files[0] : null }))}
+                      disabled={editing}
+                    />
+                  </label>
+                  {editRequest.attachment && (
+                    <span className="text-xs text-slate-700 truncate max-w-[180px]">
+                      {editRequest.attachment?.name}
+                    </span>
+                  )}
+                </div>
+                {editingRequest.attachment_url && !editRequest.attachment && (
+                  <p className="text-xs text-slate-500 mt-1">
+                    Current template: {editingRequest.attachment_url.split('/').pop()}
+                  </p>
+                )}
+              </div>
+              
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">
+                  Applicable Student Types <span className="text-red-500">*</span>
+                </label>
+                <div className="flex flex-col gap-2">
+                  {STUDENT_TYPE_OPTIONS.map(opt => (
+                    <label key={opt.value} className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={
+                          opt.value === 'all'
+                            ? editRequest.applicable_student_types.length === STUDENT_TYPE_OPTIONS.length - 1
+                            : editRequest.applicable_student_types.includes(opt.value)
+                        }
+                        onChange={e => {
+                          if (opt.value === 'all') {
+                            if (e.target.checked) {
+                              setEditRequest(r => ({ 
+                                ...r, 
+                                applicable_student_types: STUDENT_TYPE_OPTIONS.filter(o => o.value !== 'all').map(o => o.value) 
+                              }));
+                            } else {
+                              setEditRequest(r => ({ ...r, applicable_student_types: [] }));
+                            }
+                          } else {
+                            setEditRequest(r => {
+                              let updated = r.applicable_student_types.includes(opt.value)
+                                ? r.applicable_student_types.filter(v => v !== opt.value)
+                                : [...r.applicable_student_types, opt.value];
+                              return { ...r, applicable_student_types: updated };
+                            });
+                          }
+                        }}
+                        disabled={editing}
+                        className="accent-blue-600"
+                      />
+                      <span>{opt.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex gap-3 mt-6 justify-center">
+              <button 
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold shadow transition disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2" 
+                onClick={handleEditRequest} 
+                disabled={editing || !editRequest.title}
+              >
+                {editing ? (
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                ) : null}
+                <span>{editing ? 'Updating...' : 'Update'}</span>
+              </button>
+              <button 
+                className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2 rounded-lg font-semibold transition" 
+                onClick={() => {
+                  setShowEditRequestModal(false);
+                  setEditingRequest(null);
+                  setEditRequest({ title: '', description: '', attachment: null, applicable_student_types: ['all'] });
+                }} 
+                disabled={editing}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirmModal && deletingRequest && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 border border-slate-200">
+            <div className="flex items-center mb-4">
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mr-4">
+                <X className="w-6 h-6 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">Delete Document Request</h3>
+                <p className="text-sm text-slate-600 mt-1">This action cannot be undone</p>
+              </div>
+            </div>
+
+            <p className="text-sm text-slate-700 mb-6">
+              Are you sure you want to delete the document request "{deletingRequest.title}"? This will permanently remove the request and all associated uploads from the system.
+            </p>
+
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setShowDeleteConfirmModal(false);
+                  setDeletingRequest(null);
+                }}
+                className="px-4 py-2 border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteRequest}
+                disabled={deleting}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white rounded-xl transition-colors disabled:cursor-not-allowed flex items-center space-x-2"
+              >
+                {deleting && (
+                  <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                )}
+                <span>{deleting ? 'Deleting...' : 'Delete'}</span>
               </button>
             </div>
           </div>

@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import { AuthProvider } from './hooks/useAuth';
+import { UnreadMessagesProvider } from './contexts/UnreadMessagesContext';
 import Layout from './components/Layout';
 import AuthRedirect from './components/AuthRedirect';
 import Home from './pages/Home';
@@ -152,9 +153,11 @@ const App: React.FC = () => {
     <HelmetProvider>
       <Router>
         <AuthProvider>
-          <AuthRedirect>
-            <AppContent />
-          </AuthRedirect>
+          <UnreadMessagesProvider>
+            <AuthRedirect>
+              <AppContent />
+            </AuthRedirect>
+          </UnreadMessagesProvider>
         </AuthProvider>
       </Router>
     </HelmetProvider>

@@ -2,15 +2,9 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import Stripe from 'npm:stripe@17.7.0';
 import { createClient } from 'npm:@supabase/supabase-js@2.49.1';
+import { getStripeConfig } from '../stripe-config.ts';
+
 const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
-const stripeSecret = Deno.env.get('STRIPE_SECRET_KEY');
-const stripe = new Stripe(stripeSecret, {
-  apiVersion: '2024-04-10',
-  appInfo: {
-    name: 'Bolt Integration',
-    version: '1.0.0'
-  }
-});
 function corsResponse(body, status = 200) {
   const headers = {
     'Access-Control-Allow-Origin': '*',
@@ -37,6 +31,17 @@ Deno.serve(async (req)=>{
     if (req.method !== 'POST') return corsResponse({
       error: 'Method Not Allowed'
     }, 405);
+    
+    // Obter configuração do Stripe baseada no ambiente detectado
+    const config = getStripeConfig(req);
+    const stripe = new Stripe(config.secretKey, {
+      apiVersion: '2024-04-10',
+      appInfo: {
+        name: 'MatriculaUSA Integration',
+        version: '1.0.0'
+      }
+    });
+    
     const { sessionId } = await req.json();
     if (!sessionId) return corsResponse({
       error: 'Session ID is required'
@@ -45,13 +50,14 @@ Deno.serve(async (req)=>{
     if (session.payment_status === 'paid' && session.status === 'complete') {
       const userId = session.client_reference_id;
       const paymentIntentId = session.payment_intent;
+      const paymentMethod = session.metadata?.payment_method || 'stripe';
       if (!userId) return corsResponse({
         error: 'User ID (client_reference_id) missing in session.'
       }, 400);
       // Atualiza user_profiles para marcar o pagamento do I-20 Control Fee
       const { error: profileError } = await supabase.from('user_profiles').update({
         has_paid_i20_control_fee: true,
-        i20_control_fee_payment_method: 'stripe',
+        i20_control_fee_payment_method: paymentMethod,
         i20_control_fee_due_date: new Date().toISOString(),
         i20_control_fee_payment_intent_id: paymentIntentId
       }).eq('user_id', userId);
@@ -69,7 +75,7 @@ Deno.serve(async (req)=>{
             p_performed_by_type: 'student',
             p_metadata: {
               fee_type: 'i20_control',
-              payment_method: 'stripe',
+              payment_method: paymentMethod,
               amount: session.amount_total / 100,
               session_id: sessionId,
               payment_intent_id: paymentIntentId
@@ -119,7 +125,7 @@ Deno.serve(async (req)=>{
           payment_id: sessionId,
           fee_type: 'i20_control_fee',
           amount: session.amount_total / 100,
-          payment_method: "stripe"
+          payment_method: paymentMethod
         };
         console.log('[NOTIFICAÇÃO ALUNO] Enviando notificação para aluno:', alunoNotificationPayload);
         const alunoNotificationResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
@@ -200,7 +206,7 @@ Deno.serve(async (req)=>{
               seller_id: sellerData.user_id,
               referral_code: sellerData.referral_code,
               commission_rate: sellerData.commission_rate,
-              payment_method: "stripe",
+              payment_method: paymentMethod,
               notification_type: "admin"
             };
             console.log('📧 [verify-stripe-session-i20-control-fee] ✅ ENVIANDO NOTIFICAÇÃO PARA ADMIN:', adminNotificationPayload);
@@ -235,7 +241,7 @@ Deno.serve(async (req)=>{
               seller_id: sellerData.user_id,
               referral_code: sellerData.referral_code,
               commission_rate: sellerData.commission_rate,
-              payment_method: "stripe",
+              payment_method: paymentMethod,
               notification_type: "seller"
             };
             console.log('📧 [verify-stripe-session-i20-control-fee] ✅ ENVIANDO NOTIFICAÇÃO PARA SELLER:', sellerNotificationPayload);
@@ -274,7 +280,7 @@ Deno.serve(async (req)=>{
                 seller_id: sellerData.user_id,
                 referral_code: sellerData.referral_code,
                 commission_rate: sellerData.commission_rate,
-                payment_method: "stripe",
+                payment_method: paymentMethod,
                 notification_type: "affiliate_admin"
               };
               console.log('📧 [verify-stripe-session-i20-control-fee] ✅ ENVIANDO NOTIFICAÇÃO PARA AFFILIATE ADMIN:', affiliateNotificationPayload);

@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useAdminStudentConversations } from '../../hooks/useAdminStudentChat';
-import { Users, MessageSquare, Clock, ChevronLeft, Plus } from 'lucide-react';
+import { useAdminStudentChatNotifications } from '../../hooks/useAdminStudentChatNotifications';
+import { useUnreadMessages } from '../../contexts/UnreadMessagesContext';
+import { Users, MessageSquare, Plus } from 'lucide-react';
 import StudentSelector from './StudentSelector';
 
 interface ChatInboxProps {
@@ -46,7 +48,7 @@ const ConversationItem: React.FC<ConversationItemProps> = ({ conversation, isSel
 
   return (
     <div
-      className={`flex items-center p-4 cursor-pointer border-b border-slate-100 hover:bg-slate-50 transition-colors ${
+      className={`flex items-center p-4 cursor-pointer border-b border-slate-100 hover:bg-slate-50 transition-all duration-200 ease-in-out ${
         isSelected ? 'bg-blue-50 border-blue-200' : ''
       }`}
       onClick={onClick}
@@ -84,7 +86,7 @@ const ConversationItem: React.FC<ConversationItemProps> = ({ conversation, isSel
             {conversation.last_message || 'No messages yet'}
           </p>
           {hasUnread && (
-            <span className="ml-2 bg-blue-500 text-white text-xs rounded-full px-2 py-1 min-w-[1.25rem] text-center">
+            <span className="ml-2 bg-blue-500 text-white text-xs rounded-full px-2 py-1 min-w-[1.25rem] text-center animate-pulse">
               {conversation.unread_count > 99 ? '99+' : conversation.unread_count}
             </span>
           )}
@@ -100,7 +102,9 @@ const ChatInbox: React.FC<ChatInboxProps> = ({
   selectedConversationId 
 }) => {
   const { userProfile } = useAuth();
-  const { conversations, loading, error, refetchConversations } = useAdminStudentConversations();
+  const { conversations, loading, error, isInitialLoad, refetchConversations, updateConversationUnreadCount } = useAdminStudentConversations();
+  const { markConversationAsRead } = useAdminStudentChatNotifications();
+  const { resetUnreadCount } = useUnreadMessages();
   const [searchTerm, setSearchTerm] = useState('');
   const [showStudentSelector, setShowStudentSelector] = useState(false);
 
@@ -116,7 +120,7 @@ const ChatInbox: React.FC<ChatInboxProps> = ({
   // Auto-refresh conversations every 30 seconds
   useEffect(() => {
     const interval = setInterval(() => {
-      refetchConversations();
+      refetchConversations(false); // Don't show loading for auto-refresh
     }, 30000);
 
     return () => clearInterval(interval);
@@ -131,6 +135,17 @@ const ChatInbox: React.FC<ChatInboxProps> = ({
       ? conversation.student_id 
       : conversation.admin_id;
 
+    // Update unread count locally to 0 when conversation is selected
+    if (conversation.unread_count > 0) {
+      updateConversationUnreadCount(conversation.id, 0);
+    }
+
+    // Mark conversation notifications as read
+    markConversationAsRead(conversation.id);
+
+    // Reset global unread count immediately (this will make the blue dots disappear immediately)
+    resetUnreadCount();
+
     onConversationSelect?.(conversation.id, recipientId, recipientName);
   };
 
@@ -141,7 +156,7 @@ const ChatInbox: React.FC<ChatInboxProps> = ({
     setShowStudentSelector(false);
   };
 
-  if (loading) {
+  if (loading && isInitialLoad) {
     return (
       <div className={`bg-white rounded-lg shadow-sm border border-slate-200 ${className}`}>
         <div className="p-4 border-b border-slate-200">
@@ -170,7 +185,7 @@ const ChatInbox: React.FC<ChatInboxProps> = ({
         <div className="p-6 text-center">
           <p className="text-sm text-red-600">{error}</p>
           <button
-            onClick={refetchConversations}
+            onClick={() => refetchConversations(true)}
             className="mt-2 text-sm text-blue-600 hover:text-blue-700"
           >
             Try again
@@ -201,7 +216,7 @@ const ChatInbox: React.FC<ChatInboxProps> = ({
               </button>
             )}
             <button
-              onClick={refetchConversations}
+              onClick={() => refetchConversations(false)}
               className="text-slate-500 hover:text-slate-700 p-1 rounded"
               title="Refresh conversations"
             >

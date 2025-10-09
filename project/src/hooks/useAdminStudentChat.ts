@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './useAuth';
+import { channelManager } from '../lib/supabaseChannelManager';
+import { useAdminStudentChatNotifications } from './useAdminStudentChatNotifications';
+import { useUnreadMessages } from '../contexts/UnreadMessagesContext';
 import { ChatMessage } from '../components/ApplicationChat';
 
 // Interface for the raw data from the DB
@@ -36,8 +39,10 @@ interface Conversation {
   last_message?: string;
 }
 
-export const useAdminStudentChat = (conversationId?: string, recipientId?: string) => {
+export const useAdminStudentChat = (conversationId?: string, recipientId?: string, updateConversationUnreadCount?: (conversationId: string, newUnreadCount: number) => void) => {
   const { user, userProfile } = useAuth();
+  const { markConversationAsRead } = useAdminStudentChatNotifications();
+  const { resetUnreadCount } = useUnreadMessages();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
@@ -252,18 +257,9 @@ export const useAdminStudentChat = (conversationId?: string, recipientId?: strin
   useEffect(() => {
     if (!user || !currentConversationId) return;
 
-    // Clean up previous channel
-    if (messagesChannelRef.current) {
-      try {
-        supabase.removeChannel(messagesChannelRef.current);
-      } catch (e) {
-        console.warn('Error removing previous channel:', e);
-      }
-      messagesChannelRef.current = null;
-    }
+    const channelName = `admin-student-messages-${currentConversationId}`;
 
-    const channel = supabase
-      .channel(`admin-student-messages-${currentConversationId}-${Date.now()}`)
+    const channel = channelManager.subscribe(channelName)
       .on(
         'postgres_changes',
         { 
@@ -272,7 +268,7 @@ export const useAdminStudentChat = (conversationId?: string, recipientId?: strin
           table: 'admin_student_messages', 
           filter: `conversation_id=eq.${currentConversationId}` 
         },
-        async (payload) => {
+        async (payload: any) => {
           // Fetch the complete message with attachments
           const { data: fullMessage } = await supabase
             .from('admin_student_messages')
@@ -317,7 +313,7 @@ export const useAdminStudentChat = (conversationId?: string, recipientId?: strin
           table: 'admin_student_messages', 
           filter: `conversation_id=eq.${currentConversationId}` 
         },
-        async (payload) => {
+        async (payload: any) => {
           // Handle message updates (edit/delete)
           const { data: updatedMessage } = await supabase
             .from('admin_student_messages')
@@ -354,25 +350,13 @@ export const useAdminStudentChat = (conversationId?: string, recipientId?: strin
             );
           }
         }
-      )
-      .subscribe();
+      );
 
     messagesChannelRef.current = channel;
 
     return () => {
-      if (messagesChannelRef.current) {
-        try {
-          // Add a small delay to prevent rapid connection/disconnection cycles
-          setTimeout(() => {
-            if (messagesChannelRef.current) {
-              supabase.removeChannel(messagesChannelRef.current);
-              messagesChannelRef.current = null;
-            }
-          }, 100);
-        } catch (e) {
-          console.warn('Error removing channel on cleanup:', e);
-        }
-      }
+      channelManager.unsubscribe(channelName);
+      messagesChannelRef.current = null;
     };
   }, [currentConversationId, user, formatMessage]);
 
@@ -535,12 +519,39 @@ export const useAdminStudentChat = (conversationId?: string, recipientId?: strin
     if (!user || !currentConversationId) return;
 
     try {
-      await supabase
+      const { error } = await supabase
         .from('admin_student_messages')
         .update({ read_at: new Date().toISOString() })
         .eq('conversation_id', currentConversationId)
         .eq('recipient_id', user.id)
         .is('read_at', null);
+
+      if (error) {
+        console.error('Failed to mark all messages as read:', error);
+        return;
+      }
+
+      // Update local state to reflect read status immediately
+      setMessages(prevMessages => 
+        prevMessages.map(msg => 
+          msg.recipientId === user.id && !msg.readAt
+            ? { ...msg, readAt: new Date().toISOString() }
+            : msg
+        )
+      );
+
+      // Update the conversation unread count to 0
+      if (currentConversationId && updateConversationUnreadCount) {
+        updateConversationUnreadCount(currentConversationId, 0);
+      }
+
+      // Mark conversation notifications as read
+      if (currentConversationId) {
+        markConversationAsRead(currentConversationId);
+      }
+
+      // Reset global unread count immediately (this will make the blue dots disappear immediately)
+      resetUnreadCount();
     } catch (e) {
       console.error('Failed to mark all messages as read:', e);
     }
@@ -631,12 +642,15 @@ export const useAdminStudentConversations = () => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const conversationsChannelRef = useRef<any>(null);
 
-  const fetchConversations = useCallback(async () => {
+  const fetchConversations = useCallback(async (showLoading = true) => {
     if (!user || !userProfile) return;
 
-    setLoading(true);
+    if (showLoading) {
+      setLoading(true);
+    }
     setError(null);
     try {
       let query = supabase
@@ -699,73 +713,79 @@ export const useAdminStudentConversations = () => {
       });
 
       setConversations(enrichedConversations);
+      setIsInitialLoad(false);
     } catch (e: any) {
       console.error('Failed to fetch conversations:', e);
       setError('Failed to fetch conversations. Please try again.');
     } finally {
-      setLoading(false);
+      if (showLoading) {
+        setLoading(false);
+      }
     }
   }, [user, userProfile]);
 
   useEffect(() => {
     if (user && userProfile) {
-      fetchConversations();
+      fetchConversations(true); // Show loading on initial load
 
-      // Clean up previous channel
-      if (conversationsChannelRef.current) {
-        try {
-          supabase.removeChannel(conversationsChannelRef.current);
-        } catch (e) {
-          console.warn('Error removing previous conversations channel:', e);
-        }
-        conversationsChannelRef.current = null;
-      }
+      const channelName = `admin-student-conversations-updates-${user.id}`;
 
       // Set up real-time subscription for conversation updates
-      const channel = supabase
-        .channel(`admin-student-conversations-updates-${user.id}-${Date.now()}`)
+      const channel = channelManager.subscribe(channelName)
         .on(
           'postgres_changes',
           { event: '*', schema: 'public', table: 'admin_student_conversations' },
           () => {
-            fetchConversations();
+            console.log('Conversation updated, refetching...');
+            fetchConversations(false); // Don't show loading for real-time updates
           }
         )
         .on(
           'postgres_changes',
           { event: 'INSERT', schema: 'public', table: 'admin_student_messages' },
-          () => {
-            fetchConversations();
+          (payload: any) => {
+            console.log('New message inserted, refetching conversations...', payload);
+            fetchConversations(false); // Don't show loading for real-time updates
           }
         )
         .on(
           'postgres_changes',
           { event: 'UPDATE', schema: 'public', table: 'admin_student_messages' },
-          () => {
-            fetchConversations();
+          (payload: any) => {
+            console.log('Message updated (likely marked as read), refetching conversations...', payload);
+            // Add a small delay to ensure the database has been updated
+            setTimeout(() => {
+              fetchConversations(false); // Don't show loading for real-time updates
+            }, 100);
           }
-        )
-        .subscribe();
+        );
 
       conversationsChannelRef.current = channel;
 
       return () => {
-        if (conversationsChannelRef.current) {
-          try {
-            supabase.removeChannel(conversationsChannelRef.current);
-          } catch (e) {
-            console.warn('Error removing conversations channel on cleanup:', e);
-          }
-          conversationsChannelRef.current = null;
-        }
+        channelManager.unsubscribe(channelName);
+        conversationsChannelRef.current = null;
       };
     }
   }, [user, userProfile, fetchConversations]);
+
+  // Function to update unread count for a specific conversation
+  const updateConversationUnreadCount = useCallback((conversationId: string, newUnreadCount: number) => {
+    setConversations(prevConversations => 
+      prevConversations.map(conv => 
+        conv.id === conversationId 
+          ? { ...conv, unread_count: newUnreadCount }
+          : conv
+      )
+    );
+  }, []);
 
   return { 
     conversations, 
     loading, 
     error, 
-    refetchConversations: fetchConversations 
+    isInitialLoad,
+    refetchConversations: fetchConversations,
+    updateConversationUnreadCount
   };
 };

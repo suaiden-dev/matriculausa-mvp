@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from './useAuth';
 import { channelManager } from '../lib/supabaseChannelManager';
 
-export const useUnreadMessagesCount = () => {
+export const useStudentChatUnreadCount = () => {
   const { user } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -13,16 +13,19 @@ export const useUnreadMessagesCount = () => {
 
     setLoading(true);
     try {
+      // Buscar mensagens não lidas diretamente da tabela admin_student_messages
       const { data, error } = await supabase
-        .rpc('get_unread_admin_student_chat_notifications', {
-          user_id_param: user.id
-        });
+        .from('admin_student_messages')
+        .select('id, read_at, recipient_id')
+        .eq('recipient_id', user.id)
+        .is('read_at', null);
 
       if (error) throw error;
 
-      setUnreadCount(data?.length || 0);
+      const count = data?.length || 0;
+      setUnreadCount(count);
     } catch (e: any) {
-      console.error('Failed to fetch unread count:', e);
+      console.error('Failed to fetch student chat unread count:', e);
       setUnreadCount(0);
     } finally {
       setLoading(false);
@@ -40,7 +43,7 @@ export const useUnreadMessagesCount = () => {
   useEffect(() => {
     if (!user) return;
 
-    const channelName = `unread-messages-count-${user.id}`;
+    const channelName = `student-chat-unread-count-${user.id}`;
 
     const channel = channelManager.subscribe(channelName)
       .on(
@@ -48,7 +51,7 @@ export const useUnreadMessagesCount = () => {
         { 
           event: 'INSERT', 
           schema: 'public', 
-          table: 'admin_student_chat_notifications',
+          table: 'admin_student_messages',
           filter: `recipient_id=eq.${user.id}`
         },
         () => {
@@ -60,19 +63,7 @@ export const useUnreadMessagesCount = () => {
         { 
           event: 'UPDATE', 
           schema: 'public', 
-          table: 'admin_student_chat_notifications',
-          filter: `recipient_id=eq.${user.id}`
-        },
-        () => {
-          fetchUnreadCount();
-        }
-      )
-      .on(
-        'postgres_changes',
-        { 
-          event: 'DELETE', 
-          schema: 'public', 
-          table: 'admin_student_chat_notifications',
+          table: 'admin_student_messages',
           filter: `recipient_id=eq.${user.id}`
         },
         () => {
@@ -85,9 +76,31 @@ export const useUnreadMessagesCount = () => {
     };
   }, [user]);
 
+  const markStudentMessagesAsRead = async () => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('admin_student_messages')
+        .update({ read_at: new Date().toISOString() })
+        .eq('recipient_id', user.id)
+        .is('read_at', null);
+
+      if (error) {
+        console.error('Failed to mark messages as read:', error);
+        return;
+      }
+
+      setUnreadCount(0);
+    } catch (e: any) {
+      console.error('Failed to mark messages as read:', e);
+    }
+  };
+
   return {
     unreadCount,
     loading,
-    refetch: fetchUnreadCount
+    refetch: fetchUnreadCount,
+    markStudentMessagesAsRead
   };
 };

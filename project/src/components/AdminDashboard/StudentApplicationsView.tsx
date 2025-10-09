@@ -423,8 +423,9 @@ const StudentApplicationsView: React.FC = () => {
         let lockedApplication = null;
         
         if (student.scholarship_applications && student.scholarship_applications.length > 0) {
-          // Priorizar aplicação enrolled, depois approved (mesma lógica do AdminStudentDetails)
-          lockedApplication = student.scholarship_applications.find((app: any) => app.status === 'enrolled') ||
+          // Priorizar aplicação que teve Application Fee pago, depois enrolled, depois approved
+          lockedApplication = student.scholarship_applications.find((app: any) => app.is_application_fee_paid) ||
+                             student.scholarship_applications.find((app: any) => app.status === 'enrolled') ||
                              student.scholarship_applications.find((app: any) => app.status === 'approved');
           
           // Se há uma aplicação locked, mostrar informações dela no campo scholarship
@@ -805,7 +806,7 @@ const StudentApplicationsView: React.FC = () => {
               <option value="no_applications">No Applications</option>
               <option value="single_application">Single Application</option>
               <option value="multiple_applications">Multiple Applications</option>
-              <option value="locked">Committed to Scholarship</option>
+              <option value="locked">Scholarship Selected</option>
               <option value="pending">Pending</option>
               <option value="under_review">Under Review</option>
               <option value="approved">Approved</option>
@@ -1063,7 +1064,7 @@ const StudentApplicationsView: React.FC = () => {
                           {student.is_locked && (
                             <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
                               <Lock className="h-3 w-3 mr-1" />
-                              Committed
+                              Selected
                             </span>
                           )}
                           {!student.is_locked && student.total_applications > 1 && (
@@ -1274,7 +1275,7 @@ const StudentApplicationsView: React.FC = () => {
                                     selectedStudent.status === 'under_review' ? 'text-yellow-700' :
                                     selectedStudent.total_applications > 0 ? 'text-orange-700' : 'text-gray-700'
                                   }`}>
-                                    {selectedStudent.is_locked ? 'Committed to Scholarship' :
+                                    {selectedStudent.is_locked ? 'Scholarship Selected' :
                                      selectedStudent.status === 'approved' ? 'Approved - Pending Payment' :
                                      selectedStudent.status === 'under_review' ? 'Under Review' :
                                      selectedStudent.total_applications > 0 ? 'Applications Submitted' : 'No Applications Yet'}
@@ -1294,7 +1295,7 @@ const StudentApplicationsView: React.FC = () => {
                       <div className="bg-gradient-to-r rounded-t-2xl from-slate-700 to-slate-800 px-6 py-4">
                         <h2 className="text-xl font-semibold text-white flex items-center">
                           <Award className="w-6 h-6 mr-3" />
-                          Committed Scholarship
+                          Selected Scholarship
                         </h2>
                       </div>
                       <div className="p-6">
