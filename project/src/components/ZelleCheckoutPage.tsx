@@ -45,7 +45,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user, userProfile } = useAuth();
-  const { getFeeAmount, userFeeOverrides } = useFeeConfig(user?.id);
+  const { getFeeAmount, userFeeOverrides, loading: feeLoading } = useFeeConfig(user?.id);
   const { selectionProcessFee, scholarshipFee, i20ControlFee, hasSellerPackage, packageName } = useDynamicFees();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -100,21 +100,14 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
   console.log('🔍 [ZelleCheckoutPage] activeDiscount:', activeDiscount);
   console.log('🔍 [ZelleCheckoutPage] searchParams:', Object.fromEntries(searchParams.entries()));
 
-  // Informações das taxas - usar valores dinâmicos se disponível
+  // Informações das taxas - usar valores dinâmicos que já consideram system_type
   const feeInfo: FeeInfo[] = [
     {
       type: 'selection_process',
       amount: (() => {
-        const base = hasSellerPackage ? parseFloat(selectionProcessFee.replace('$', '')) : (() => {
-          const hasOverride = userFeeOverrides?.selection_process_fee !== undefined;
-          if (hasOverride) {
-            // Se há override, usar apenas o valor do override (já inclui dependentes se necessário)
-            return getFeeAmount('selection_process');
-          } else {
-            // Se não há override, aplicar lógica de dependentes aos valores padrão
-            return getFeeAmount('selection_process') + ((Number(userProfile?.dependents) || 0) * 150);
-          }
-        })();
+        // ✅ CORREÇÃO: Usar sempre useDynamicFees que já considera system_type e dependentes
+        if (!selectionProcessFee) return 0; // Aguardar carregamento
+        const base = parseFloat(selectionProcessFee.replace('$', ''));
         const discount = (activeDiscount && feeType === 'selection_process') ? (activeDiscount.discount_amount || 0) : 0;
         return Math.max(0, base - discount);
       })(),
@@ -129,13 +122,15 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
     },
     {
       type: 'scholarship_fee',
-      amount: hasSellerPackage ? parseFloat(scholarshipFee.replace('$', '')) : getFeeAmount('scholarship_fee'),
+      // ✅ CORREÇÃO: Usar sempre useDynamicFees que já considera system_type
+      amount: scholarshipFee ? parseFloat(scholarshipFee.replace('$', '')) : 0, // Aguardar carregamento
       description: `Scholarship Fee - Confirm your scholarship application${hasSellerPackage ? ` (${packageName})` : ''}`,
       icon: <CreditCard className="w-6 h-6" />
     },
     {
       type: 'i20_control',
-      amount: hasSellerPackage ? parseFloat(i20ControlFee.replace('$', '')) : getFeeAmount('i20_control_fee'),
+      // ✅ CORREÇÃO: Usar sempre useDynamicFees que já considera system_type
+      amount: i20ControlFee ? parseFloat(i20ControlFee.replace('$', '')) : 0, // Aguardar carregamento
       description: `I-20 Control Fee - Document processing and validation${hasSellerPackage ? ` (${packageName})` : ''}`,
       icon: <CreditCard className="w-6 h-6" />
     }
@@ -146,14 +141,51 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
   console.log('🔍 [ZelleCheckoutPage] currentFee:', currentFee);
   // Controlar skeleton até que o cálculo dinâmico estabilize
   useEffect(() => {
+    console.log('🔍 [ZelleCheckoutPage] useEffect de feesLoading disparado.');
+    console.log('  user:', user);
+    console.log('  userProfile?.system_type:', userProfile?.system_type);
+    console.log('  feeLoading:', feeLoading);
+    console.log('  selectionProcessFee:', selectionProcessFee);
+    console.log('  scholarshipFee:', scholarshipFee);
+    console.log('  i20ControlFee:', i20ControlFee);
+
     const debounce = setTimeout(() => {
-      const known = Number(currentFee?.amount || 0) > 0;
-      if (user !== undefined && known) {
+      // Verificar se as taxas estão carregadas baseado no system_type
+      const isFeesLoaded = (() => {
+        // Verificar se as taxas estão definidas e não vazias
+        const feesDefined = selectionProcessFee && selectionProcessFee.trim() !== '' && 
+                           scholarshipFee && scholarshipFee.trim() !== '' && 
+                           i20ControlFee && i20ControlFee.trim() !== '';
+        
+        // Verificar se não está carregando baseado no system_type
+        const notLoading = userProfile?.system_type === 'simplified' 
+          ? true // useDynamicFees já gerencia o loading interno
+          : !feeLoading;
+        
+        const loaded = notLoading && feesDefined;
+        
+        console.log('  [isFeesLoaded] ->', loaded, { 
+          systemType: userProfile?.system_type,
+          feeLoading,
+          feesDefined,
+          notLoading,
+          selectionProcessFee: selectionProcessFee, 
+          scholarshipFee: scholarshipFee, 
+          i20ControlFee: i20ControlFee 
+        });
+        
+        return loaded;
+      })();
+      
+      if (user !== undefined && isFeesLoaded) {
+        console.log('✅ [ZelleCheckoutPage] setFeesLoading(false) chamado!');
         setFeesLoading(false);
+      } else {
+        console.log('❌ [ZelleCheckoutPage] setFeesLoading(false) NÃO chamado. Condições:', { userDefined: user !== undefined, isFeesLoaded });
       }
     }, 250);
     return () => clearTimeout(debounce);
-  }, [user, currentFee?.amount, selectionProcessFee, scholarshipFee, i20ControlFee, userFeeOverrides, activeDiscount]);
+  }, [user, userProfile?.system_type, feeLoading, selectionProcessFee, scholarshipFee, i20ControlFee]);
   console.log('🔍 [ZelleCheckoutPage] feeType recebido:', feeType);
   console.log('🔍 [ZelleCheckoutPage] normalizedFeeType usado:', normalizedFeeType);
   console.log('🔍 [ZelleCheckoutPage] feeInfo tipos disponíveis:', feeInfo.map(fee => fee.type));

@@ -2010,7 +2010,67 @@ const PaymentManagement = (): React.JSX.Element => {
         
         console.log('🔍 DEBUG: Final overrides map:', overridesMap);
       }
+
+      // Buscar valores reais de pagamento da tabela affiliate_referrals
+      console.log('🔍 [DEBUG] Buscando affiliate_referrals para user IDs:', uniqueUserIds.slice(0, 5), '... (total:', uniqueUserIds.length, ')');
+      
+      // Debug específico para jolie8862@uorak.com
+      const jolieUserId = '935e0eec-82c6-4a70-b013-e85dde6e63f7';
+      console.log('🔍 [DEBUG] jolie8862@uorak.com user_id está em uniqueUserIds?', uniqueUserIds.includes(jolieUserId));
+      
+      console.log('🔍 [DEBUG] Executando query affiliate_referrals com uniqueUserIds:', uniqueUserIds.length, 'IDs');
+      console.log('🔍 [DEBUG] Primeiros 10 IDs:', uniqueUserIds.slice(0, 10));
+      
+      // Processar em lotes de 50 para evitar limite do Supabase
+      const batchSize = 50;
+      let allAffiliateReferrals: any[] = [];
+      
+      for (let i = 0; i < uniqueUserIds.length; i += batchSize) {
+        const batch = uniqueUserIds.slice(i, i + batchSize);
+        console.log(`🔍 [DEBUG] Processando lote ${Math.floor(i/batchSize) + 1}: IDs ${i + 1}-${Math.min(i + batchSize, uniqueUserIds.length)}`);
+        console.log(`🔍 [DEBUG] Batch IDs:`, batch.slice(0, 5), '... (total:', batch.length, ')');
+        
+        const { data: batchData, error: batchError } = await supabase
+          .from('affiliate_referrals')
+          .select('referred_id, payment_amount')
+          .in('referred_id', batch);
+
+        if (batchError) {
+          console.warn(`⚠️ Erro ao buscar lote ${Math.floor(i/batchSize) + 1}:`, batchError);
+        } else {
+          console.log(`🔍 [DEBUG] Lote ${Math.floor(i/batchSize) + 1} retornou:`, batchData?.length || 0, 'registros');
+          console.log(`🔍 [DEBUG] Lote ${Math.floor(i/batchSize) + 1} dados:`, batchData);
+          if (batchData) {
+            allAffiliateReferrals = allAffiliateReferrals.concat(batchData);
+            console.log(`🔍 [DEBUG] Total acumulado após lote ${Math.floor(i/batchSize) + 1}:`, allAffiliateReferrals.length, 'registros');
+          }
+        }
+      }
+
+      console.log('🔍 [DEBUG] Total affiliate_referrals encontrados:', allAffiliateReferrals.length, 'registros');
+      console.log('🔍 [DEBUG] affiliate_referrals dados:', allAffiliateReferrals);
+      
+      // Debug específico para jolie8862@uorak.com
+      const jolieRecord = allAffiliateReferrals.find(ar => ar.referred_id === jolieUserId);
+      console.log('🔍 [DEBUG] jolie8862@uorak.com record encontrado:', jolieRecord);
+      
+      // Debug: verificar se jolieUserId está na lista
+      console.log('🔍 [DEBUG] jolieUserId está em uniqueUserIds?', uniqueUserIds.includes(jolieUserId));
+      console.log('🔍 [DEBUG] jolieUserId:', jolieUserId);
+
+      // Criar mapa de valores reais por user_id
+      const realPaymentAmounts = new Map<string, number>();
+      allAffiliateReferrals?.forEach(ar => {
+        realPaymentAmounts.set(ar.referred_id, ar.payment_amount);
+      });
+
+      console.log('🔍 [loadPaymentData] Valores reais encontrados:', realPaymentAmounts);
       console.log('🚨 DEBUG: First application user_profiles:', applications?.[0]?.user_profiles);
+      
+      // Debug específico para jolie8862@uorak.com
+      const jolieRealAmount = realPaymentAmounts.get(jolieUserId);
+      console.log('🔍 [DEBUG] jolie8862@uorak.com - realPaymentAmounts:', jolieRealAmount);
+      console.log('🔍 [DEBUG] jolie8862@uorak.com - uniqueUserIds includes:', uniqueUserIds.includes(jolieUserId));
       console.log('🚨 DEBUG: First application scholarship_packages:', applications?.[0]?.user_profiles?.scholarship_packages);
       
       // Debug específico para verificar se os dados dinâmicos estão sendo carregados
@@ -2059,6 +2119,16 @@ const PaymentManagement = (): React.JSX.Element => {
         const university = scholarship?.universities;
         const packageData = packageDataMap[student?.scholarship_package_id];
 
+        // Debug específico para jolie8862@uorak.com
+        if (student?.user_id === '935e0eec-82c6-4a70-b013-e85dde6e63f7') {
+          console.log('🔍 [DEBUG] jolie8862@uorak.com encontrado na seção de aplicações!', {
+            student: !!student,
+            scholarship: !!scholarship,
+            university: !!university,
+            app: app
+          });
+        }
+
         // console.log('👤 Student:', student);
         // console.log('🎓 Scholarship:', scholarship);
         // console.log('🏫 University:', university);
@@ -2098,9 +2168,15 @@ const PaymentManagement = (): React.JSX.Element => {
           console.log(`🔍 DEBUG: User ${student?.user_id} (${studentName}) has overrides:`, userOverrides);
         }
         
-        // Selection Process Fee - prioridade: override > pacote > padrão
+        // Selection Process Fee - prioridade: valor real > override > pacote > padrão
         let selectionProcessFee: number;
-        if (userOverrides.selection_process_fee !== undefined) {
+        const realAmount = realPaymentAmounts.get(student?.user_id);
+        
+        if (realAmount !== undefined) {
+          // Usar valor real pago (já em dólares, converter para centavos)
+          selectionProcessFee = Math.round(realAmount * 100);
+          console.log(`🔍 DEBUG: Using REAL payment amount for Selection Process Fee: $${realAmount} (${selectionProcessFee} cents)`);
+        } else if (userOverrides.selection_process_fee !== undefined) {
           // Se há override, usar exatamente o valor do override (já inclui dependentes se necessário)
           selectionProcessFee = Math.round(userOverrides.selection_process_fee * 100);
           console.log(`🔍 DEBUG: Using override for Selection Process Fee: $${userOverrides.selection_process_fee} (${selectionProcessFee} cents)`);
@@ -2112,9 +2188,15 @@ const PaymentManagement = (): React.JSX.Element => {
           console.log(`🔍 DEBUG: Using default for Selection Process Fee: $${getFeeAmount('selection_process')} + $${dependentCost/100} = $${(selectionProcessFee/100).toFixed(2)}`);
         }
         
-        // I-20 Control Fee - prioridade: override > pacote > padrão (sem dependentes)
+        // I-20 Control Fee - prioridade: valor real > override > pacote > padrão (sem dependentes)
         let i20ControlFee: number;
-        if (userOverrides.i20_control_fee !== undefined) {
+        const realI20Amount = realPaymentAmounts.get(student?.user_id);
+        
+        if (realI20Amount !== undefined) {
+          // Usar valor real pago (já em dólares, converter para centavos)
+          i20ControlFee = Math.round(realI20Amount * 100);
+          console.log(`🔍 DEBUG: Using REAL payment amount for I-20 Control Fee: $${realI20Amount} (${i20ControlFee} cents)`);
+        } else if (userOverrides.i20_control_fee !== undefined) {
           i20ControlFee = Math.round(userOverrides.i20_control_fee * 100);
           console.log(`🔍 DEBUG: Using override for I-20 Control Fee: $${userOverrides.i20_control_fee} (${i20ControlFee} cents)`);
         } else if (packageData?.i20_control_fee) {
@@ -2486,9 +2568,15 @@ const PaymentManagement = (): React.JSX.Element => {
         
 
         
-        // Selection Process Fee - prioridade: override > pacote > padrão
+        // Selection Process Fee - prioridade: valor real > override > pacote > padrão
         let selectionProcessFee: number;
-        if (userOverrides.selection_process_fee !== undefined) {
+        const realAmount = realPaymentAmounts.get(stripeUser?.user_id);
+        
+        if (realAmount !== undefined) {
+          // Usar valor real pago (já em dólares, converter para centavos)
+          selectionProcessFee = Math.round(realAmount * 100);
+          console.log(`🔍 DEBUG: Using REAL payment amount for Stripe Selection Process Fee: $${realAmount} (${selectionProcessFee} cents)`);
+        } else if (userOverrides.selection_process_fee !== undefined) {
           // Se há override, usar exatamente o valor do override (já inclui dependentes se necessário)
           selectionProcessFee = Math.round(userOverrides.selection_process_fee * 100);
           if (studentName.includes('Sara Bianey') || studentName.includes('Alondra')) {
@@ -2506,9 +2594,15 @@ const PaymentManagement = (): React.JSX.Element => {
           }
         }
         
-        // I-20 Control Fee - prioridade: override > pacote > padrão (sem dependentes)
+        // I-20 Control Fee - prioridade: valor real > override > pacote > padrão (sem dependentes)
         let i20ControlFee: number;
-        if (userOverrides.i20_control_fee !== undefined) {
+        const realI20Amount = realPaymentAmounts.get(stripeUser?.user_id);
+        
+        if (realI20Amount !== undefined) {
+          // Usar valor real pago (já em dólares, converter para centavos)
+          i20ControlFee = Math.round(realI20Amount * 100);
+          console.log(`🔍 DEBUG: Using REAL payment amount for Stripe I-20 Control Fee: $${realI20Amount} (${i20ControlFee} cents)`);
+        } else if (userOverrides.i20_control_fee !== undefined) {
           i20ControlFee = Math.round(userOverrides.i20_control_fee * 100);
         } else if (packageData?.i20_control_fee) {
           i20ControlFee = Math.round(packageData.i20_control_fee * 100);
@@ -2531,6 +2625,13 @@ const PaymentManagement = (): React.JSX.Element => {
         console.log(`📋 [PM] Processing Stripe user: ${studentName} with fees: SPF=${stripeUser.has_paid_selection_process_fee}, APP=${stripeUser.is_application_fee_paid}, SCH=${stripeUser.is_scholarship_fee_paid}, I20=${stripeUser.has_paid_i20_control_fee}`);
 
         console.log('💳 Processing Stripe user for:', studentName);
+        
+        // Debug específico para jolie8862@uorak.com
+        if (stripeUser?.user_id === '935e0eec-82c6-4a70-b013-e85dde6e63f7') {
+          console.log('🔍 [DEBUG] Processing jolie8862@uorak.com - stripeUser:', stripeUser);
+          const realAmount = realPaymentAmounts.get(stripeUser.user_id);
+          console.log('🔍 [DEBUG] jolie8862@uorak.com - realAmount from map:', realAmount);
+        }
 
         // Selection Process Fee - criar apenas se foi paga
         if (stripeUser.has_paid_selection_process_fee) {

@@ -2001,6 +2001,29 @@ async function handleCheckoutSessionCompleted(session) {
         console.error('Error updating selection process fee status:', error);
       } else {
         console.log('Selection process fee payment processed successfully for user:', userId);
+        
+        // Registrar pagamento para faturamento de sellers/affiliates
+        try {
+          const paymentAmount = session.amount_total / 100; // Valor real pago
+          console.log('[stripe-webhook] Registrando faturamento para userId:', userId, 'amount:', paymentAmount);
+          
+          const { error: billingError } = await supabase.rpc('register_payment_billing', {
+            user_id_param: userId,
+            fee_type_param: 'selection_process',
+            amount_param: paymentAmount,
+            payment_method_param: selectionPaymentMethod,
+            payment_session_id_param: session.id
+          });
+          
+          if (billingError) {
+            console.error('[stripe-webhook] Erro ao registrar faturamento:', billingError);
+          } else {
+            console.log('[stripe-webhook] Faturamento registrado com sucesso:', paymentAmount);
+          }
+        } catch (billingError) {
+          console.error('[stripe-webhook] Erro ao processar faturamento:', billingError);
+        }
+        
         // Send term acceptance notification with PDF after successful payment
         try {
           console.log('[NOTIFICAÇÃO] Enviando notificação de aceitação de termos com PDF após pagamento bem-sucedido...');

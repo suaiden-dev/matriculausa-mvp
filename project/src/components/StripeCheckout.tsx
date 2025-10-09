@@ -45,7 +45,6 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
 }) => {
   const [showPreCheckoutModal, setShowPreCheckoutModal] = useState(false);
   const [showScholarshipFeeModal, setShowScholarshipFeeModal] = useState(false);
-  const [pixRedirectData, setPixRedirectData] = useState<{sessionId: string, successUrl: string} | null>(null);
 
   const [showI20ControlFeeModal] = useState(false);
 
@@ -69,7 +68,7 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
 
   const { t } = useTranslation();
   const { isAuthenticated, user, userProfile } = useAuth();
-  const { getFeeAmount, userFeeOverrides } = useFeeConfig(user?.id);
+  const { getFeeAmount } = useFeeConfig(user?.id);
   const { selectionProcessFee, scholarshipFee, i20ControlFee, hasSellerPackage } = useDynamicFees();
   const { isBlocked, pendingPayment, loading: paymentBlockedLoading } = usePaymentBlocked();
 
@@ -202,31 +201,30 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
       // Redirecionar para a página de checkout do Zelle com valores dinâmicos
       const getDynamicAmount = () => {
         if (feeType === 'selection_process') {
-          // Usar valores do useDynamicFees que já incluem dependentes
-          return hasSellerPackage ? selectionProcessFee.replace('$', '') : (() => {
-            const hasOverride = userFeeOverrides?.selection_process_fee !== undefined;
-            if (hasOverride) {
-              // Se há override, usar apenas o valor do override (já inclui dependentes se necessário)
-              return getFeeAmount('selection_process').toString();
-            } else {
-              // Se não há override, aplicar lógica de dependentes aos valores padrão
-              const dependents = Number(userProfile?.dependents) || 0;
-              const dependentCost = dependents * 150; // $150 por dependente apenas no Selection Process
-              return (getFeeAmount('selection_process') + dependentCost).toString();
-            }
-          })();
+          // ✅ CORREÇÃO: Usar sempre os valores do useDynamicFees que já consideram o system_type
+          if (!selectionProcessFee) {
+            throw new Error('Selection Process Fee ainda está carregando. Aguarde um momento e tente novamente.');
+          }
+          return selectionProcessFee.replace('$', '');
         } else if (feeType === 'application_fee') {
           return getFeeAmount('application_fee').toString(); // Application Fee sempre usa valor da universidade
         } else if (feeType === 'scholarship_fee') {
-          return hasSellerPackage ? scholarshipFee.replace('$', '') : getFeeAmount('scholarship_fee').toString();
+          // ✅ CORREÇÃO: Usar sempre os valores do useDynamicFees que já consideram o system_type
+          if (!scholarshipFee) {
+            throw new Error('Scholarship Fee ainda está carregando. Aguarde um momento e tente novamente.');
+          }
+          return scholarshipFee.replace('$', '');
         } else if (feeType === 'enrollment_fee' || feeType === 'i20_control_fee') {
-          // Usar valores do useDynamicFees que já incluem dependentes
-          return hasSellerPackage ? i20ControlFee.replace('$', '') : (() => {
-            // Novo modelo: I-20 não recebe adicionais por dependentes
-            return (getFeeAmount('i20_control_fee')).toString();
-          })();
+          // ✅ CORREÇÃO: Usar sempre os valores do useDynamicFees que já consideram o system_type
+          if (!i20ControlFee) {
+            throw new Error('I-20 Control Fee ainda está carregando. Aguarde um momento e tente novamente.');
+          }
+          return i20ControlFee.replace('$', '');
         }
-        return getFeeAmount('selection_process').toString();
+        if (!selectionProcessFee) {
+          throw new Error('Selection Process Fee ainda está carregando. Aguarde um momento e tente novamente.');
+        }
+        return selectionProcessFee.replace('$', '');
       };
 
       const params = new URLSearchParams({
@@ -295,27 +293,41 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
       } else {
         // Calcular valor baseado no feeType
         if (feeType === 'selection_process') {
-          // Usar valores do useDynamicFees que já incluem dependentes
-          finalAmount = hasSellerPackage ? parseFloat(selectionProcessFee.replace('$', '')) : (() => {
-            const hasOverride = userFeeOverrides?.selection_process_fee !== undefined;
-            if (hasOverride) {
-              // Se há override, usar apenas o valor do override (já inclui dependentes se necessário)
-              return getFeeAmount('selection_process');
-            } else {
-              // Se não há override, aplicar lógica de dependentes aos valores padrão
-              const dependents = Number(userProfile?.dependents) || 0;
-              const dependentCost = dependents * 150; // $150 por dependente apenas no Selection Process
-              return getFeeAmount('selection_process') + dependentCost;
-            }
-          })();
+          // ✅ CORREÇÃO: Usar sempre os valores do useDynamicFees que já consideram o system_type
+          if (!selectionProcessFee) {
+            throw new Error('Selection Process Fee ainda está carregando. Aguarde um momento e tente novamente.');
+          }
+          finalAmount = parseFloat(selectionProcessFee.replace('$', ''));
+          console.log('🔍 [StripeCheckout] Selection Process Fee calculado:', {
+            selectionProcessFee,
+            finalAmount,
+            hasSellerPackage,
+            systemType: userProfile?.system_type
+          });
         } else if (feeType === 'i20_control_fee') {
-          // Usar valores do useDynamicFees que já incluem dependentes
-          finalAmount = hasSellerPackage ? parseFloat(i20ControlFee.replace('$', '')) : (() => {
-            // Novo modelo: I-20 não recebe adicionais por dependentes
-            return getFeeAmount('i20_control_fee');
-          })();
+          // ✅ CORREÇÃO: Usar sempre os valores do useDynamicFees que já consideram o system_type
+          if (!i20ControlFee) {
+            throw new Error('I-20 Control Fee ainda está carregando. Aguarde um momento e tente novamente.');
+          }
+          finalAmount = parseFloat(i20ControlFee.replace('$', ''));
+          console.log('🔍 [StripeCheckout] I-20 Control Fee calculado:', {
+            i20ControlFee,
+            finalAmount,
+            hasSellerPackage,
+            systemType: userProfile?.system_type
+          });
         } else if (feeType === 'scholarship_fee') {
-          finalAmount = hasSellerPackage ? parseFloat(scholarshipFee.replace('$', '')) : getFeeAmount('scholarship_fee');
+          // ✅ CORREÇÃO: Usar sempre os valores do useDynamicFees que já consideram o system_type
+          if (!scholarshipFee) {
+            throw new Error('Scholarship Fee ainda está carregando. Aguarde um momento e tente novamente.');
+          }
+          finalAmount = parseFloat(scholarshipFee.replace('$', ''));
+          console.log('🔍 [StripeCheckout] Scholarship Fee calculado:', {
+            scholarshipFee,
+            finalAmount,
+            hasSellerPackage,
+            systemType: userProfile?.system_type
+          });
         } else {
           finalAmount = getFeeAmount('application_fee');
         }
@@ -359,10 +371,6 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
         // Para PIX, incluir script de redirecionamento
         if (paymentMethod === 'pix') {
           console.log('[PIX] Incluindo script de redirecionamento...');
-          setPixRedirectData({
-            sessionId: data.session_id || '',
-            successUrl: successUrl || window.location.origin + '/student/dashboard/selection-process-fee-success'
-          });
           
           // Injetar script diretamente na página do Stripe
           const script = document.createElement('script');
@@ -467,18 +475,7 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
           feeType={feeType === 'i20_control_fee' ? 'application_fee' : feeType}
           productName={product.name}
           productPrice={(feeType === 'selection_process'
-            ? (() => {
-                const hasOverride = userFeeOverrides?.selection_process_fee !== undefined;
-                if (hasOverride) {
-                  // Se há override, usar apenas o valor do override (já inclui dependentes se necessário)
-                  return getFeeAmount('selection_process');
-                } else {
-                  // Se não há override, aplicar lógica de dependentes aos valores padrão
-                  const dependents = Number(userProfile?.dependents) || 0;
-                  const dependentCost = dependents * 150; // $150 por dependente no Selection Process
-                  return getFeeAmount('selection_process') + dependentCost;
-                }
-              })()
+            ? (selectionProcessFee ? parseFloat(selectionProcessFee.replace('$', '')) : 0)
             : getFeeAmount('application_fee'))}
         />
       )}
@@ -596,22 +593,11 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
                   onMethodSelect={handlePaymentMethodSelect}
                   feeType={feeType}
                   amount={(window as any).__checkout_final_amount || (feeType === 'selection_process'
-                    ? (() => {
-                        const hasOverride = userFeeOverrides?.selection_process_fee !== undefined;
-                        if (hasOverride) {
-                          // Se há override, usar apenas o valor do override (já inclui dependentes se necessário)
-                          return getFeeAmount('selection_process');
-                        } else {
-                          // Se não há override, aplicar lógica de dependentes aos valores padrão
-                          const dependents = Number(userProfile?.dependents) || 0;
-                          const dependentCost = dependents * 150; // $150 por dependente no Selection Process
-                          return getFeeAmount('selection_process') + dependentCost;
-                        }
-                      })()
+                    ? (selectionProcessFee ? parseFloat(selectionProcessFee.replace('$', '')) : 0)
                     : feeType === 'scholarship_fee'
-                    ? getFeeAmount('scholarship_fee')
+                    ? (scholarshipFee ? parseFloat(scholarshipFee.replace('$', '')) : 0)
                     : feeType === 'i20_control_fee'
-                    ? getFeeAmount('i20_control_fee') // I-20 não tem dependentes
+                    ? (i20ControlFee ? parseFloat(i20ControlFee.replace('$', '')) : 0)
                     : getFeeAmount('application_fee'))}
                 />
               </div>

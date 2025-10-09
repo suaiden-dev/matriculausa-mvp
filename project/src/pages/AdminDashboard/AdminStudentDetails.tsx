@@ -1312,10 +1312,24 @@ const AdminStudentDetails: React.FC = () => {
     
     // Calcular valores atuais considerando dependentes e overrides
     const dependentsExtra = dependents * 150; // $150 por dependente apenas no Selection Process
-    const baseSelectionProcess = 400; // Valor base
+    const baseSelectionProcess = Number(getFeeAmount('selection_process')); // Valor base dinâmico
     const currentSelectionProcess = hasOverride('selection_process') 
       ? getFeeAmount('selection_process') 
       : baseSelectionProcess + dependentsExtra;
+    
+    // Debug para jolie8862@uorak.com
+    if (student.user_id === '935e0eec-82c6-4a70-b013-e85dde6e63f7') {
+      console.log('🔍 [AdminStudentDetails] jolie8862@uorak.com - Fee calculation:', {
+        baseSelectionProcess,
+        dependentsExtra,
+        currentSelectionProcess,
+        hasOverride: hasOverride('selection_process'),
+        getFeeAmount: getFeeAmount('selection_process'),
+        applicationFee: getFeeAmount('application_fee'),
+        scholarshipFee: getFeeAmount('scholarship_fee'),
+        i20ControlFee: getFeeAmount('i20_control_fee')
+      });
+    }
     
     setEditingFees({
       selection_process: currentSelectionProcess,
@@ -3691,9 +3705,21 @@ const AdminStudentDetails: React.FC = () => {
                       <dd className="text-sm font-semibold text-slate-700 mt-1 flex items-center">
                         {(() => {
                       const hasCustomOverride = hasOverride('selection_process');
-                      if (hasCustomOverride) return formatFeeAmount(getFeeAmount('selection_process'));
                       const base = Number(getFeeAmount('selection_process'));
-                      return formatFeeAmount(base + dependents * 150);
+                      const finalAmount = hasCustomOverride ? getFeeAmount('selection_process') : base + dependents * 150;
+                      const formatted = formatFeeAmount(finalAmount);
+                      
+                      if (student?.user_id === '935e0eec-82c6-4a70-b013-e85dde6e63f7') {
+                        console.log('🔍 [AdminStudentDetails] jolie8862@uorak.com - Selection Process Fee display:', { 
+                          hasCustomOverride, 
+                          base, 
+                          dependents, 
+                          finalAmount, 
+                          formatted 
+                        });
+                      }
+                      
+                      return formatted;
                         })()}
                         {hasOverride('selection_process') && (
                           <span className="ml-2 text-xs text-blue-500">(custom)</span>
@@ -3781,7 +3807,16 @@ const AdminStudentDetails: React.FC = () => {
                   <div className="flex-1">
                     <dt className="text-sm font-medium text-slate-600">Application Fee</dt>
                     <dd className="text-sm text-slate-500 mt-1">Paid after scholarship approval</dd>
-                    <dd className="text-sm font-semibold text-slate-700 mt-1">$400.00</dd>
+                    <dd className="text-sm font-semibold text-slate-700 mt-1">
+                      {(() => {
+                        const fee = getFeeAmount('application_fee');
+                        const formatted = formatFeeAmount(fee);
+                        if (student?.user_id === '935e0eec-82c6-4a70-b013-e85dde6e63f7') {
+                          console.log('🔍 [AdminStudentDetails] jolie8862@uorak.com - Application Fee display:', { fee, formatted });
+                        }
+                        return formatted;
+                      })()}
+                    </dd>
                   </div>
                   <div className="flex flex-col gap-3">
                     {student.is_application_fee_paid ? (

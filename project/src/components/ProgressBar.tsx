@@ -2,6 +2,7 @@ import React from 'react';
 import { CheckCircle, DollarSign, Award, FileText, ArrowRight, Lock, Clock } from 'lucide-react';
 import { useFeeConfig } from '../hooks/useFeeConfig';
 import { useAuth } from '../hooks/useAuth';
+import { useDynamicFees } from '../hooks/useDynamicFees';
 
 interface Step {
   label: string;
@@ -32,16 +33,28 @@ const getStepIcon = (idx: number, completed: boolean, current: boolean) => {
   return <Lock className="h-7 w-7 text-slate-400" />;
 };
 
+// Componente de skeleton para valores de taxa
+const FeeSkeleton = () => (
+  <div className="animate-pulse">
+    <div className="h-4 bg-gray-300 rounded w-16"></div>
+  </div>
+);
+
 export const ProgressBar: React.FC<ProgressBarProps> = ({ steps, feeValues: customFeeValues }) => {
   const { user } = useAuth();
   const { getFeeAmount } = useFeeConfig(user?.id);
+  const { selectionProcessFee, scholarshipFee, i20ControlFee } = useDynamicFees();
   const currentIdx = steps.findIndex(step => step.current);
-  // Valores padrão das taxas (usados quando não há valores customizados)
+  
+  // Verificar se as taxas estão carregando
+  const isFeesLoading = !selectionProcessFee || !scholarshipFee || !i20ControlFee;
+  
+  // Valores padrão das taxas usando useDynamicFees (usados quando não há valores customizados)
   const defaultFeeValues = [
-    `$${getFeeAmount('selection_process')}`, // Selection Process Fee
-    `$${getFeeAmount('application_fee')}`, // Application Fee
-    `$${getFeeAmount('scholarship_fee')}`, // Scholarship Fee
-    `$${getFeeAmount('i20_control_fee')}`, // I-20 Control Fee
+    selectionProcessFee || `$${getFeeAmount('selection_process')}`, // Selection Process Fee
+    'As per university', // Application Fee (sempre variável)
+    scholarshipFee || `$${getFeeAmount('scholarship_fee')}`, // Scholarship Fee
+    i20ControlFee || `$${getFeeAmount('i20_control_fee')}`, // I-20 Control Fee
   ];
   
   // Usar valores customizados se fornecidos, senão usar os padrão
@@ -94,7 +107,9 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({ steps, feeValues: cust
               </div>
               <div className="flex flex-col flex-1">
                 <div className="text-sm font-bold text-[#05294E]">{step.label}</div>
-                <div className="text-xs font-bold text-blue-700">{displayFeeValues[idx]}</div>
+                <div className="text-xs font-bold text-blue-700">
+                  {isFeesLoading && idx !== 1 ? <FeeSkeleton /> : displayFeeValues[idx]}
+                </div>
                 <div className="text-xs text-slate-700 leading-tight">{step.description}</div>
               </div>
             </div>
@@ -109,7 +124,9 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({ steps, feeValues: cust
               <div className="text-xs md:text-sm font-bold mb-0.5 text-white whitespace-nowrap drop-shadow-sm tracking-wide">
                 {step.label}
               </div>
-              <div className="text-[11px] md:text-sm font-bold text-yellow-300 mb-0.5">{displayFeeValues[idx]}</div>
+              <div className="text-[11px] md:text-sm font-bold text-yellow-300 mb-0.5">
+                {isFeesLoading && idx !== 1 ? <FeeSkeleton /> : displayFeeValues[idx]}
+              </div>
               <div className="text-[10px] md:text-xs text-blue-100 max-w-[90px] md:max-w-[120px] leading-tight mb-1 font-medium">
                 {step.description}
               </div>

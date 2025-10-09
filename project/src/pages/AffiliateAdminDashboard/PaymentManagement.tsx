@@ -149,7 +149,9 @@ const PaymentManagement: React.FC = () => {
         // Selection Process
         let selPaid = 0;
         if (p?.has_paid_selection_process_fee) {
-          const baseSel = ov.selection_process_fee != null ? Number(ov.selection_process_fee) : 400;
+          // Usar valor baseado no system_type do aluno (350 para simplified, 400 para legacy)
+          const baseSelDefault = p?.system_type === 'simplified' ? 350 : 400;
+          const baseSel = ov.selection_process_fee != null ? Number(ov.selection_process_fee) : baseSelDefault;
           selPaid = ov.selection_process_fee != null ? baseSel : baseSel + (deps * 150);
         }
 
@@ -177,7 +179,9 @@ const PaymentManagement: React.FC = () => {
         let selManual = 0;
         const isSelManual = !!p?.has_paid_selection_process_fee && p?.selection_process_fee_payment_method === 'manual';
         if (isSelManual) {
-          const baseSel = ov.selection_process_fee != null ? Number(ov.selection_process_fee) : 400;
+          // Usar valor baseado no system_type do aluno (350 para simplified, 400 para legacy)
+          const baseSelDefault = p?.system_type === 'simplified' ? 350 : 400;
+          const baseSel = ov.selection_process_fee != null ? Number(ov.selection_process_fee) : baseSelDefault;
           selManual = ov.selection_process_fee != null ? baseSel : baseSel + (deps * 150);
         }
 
