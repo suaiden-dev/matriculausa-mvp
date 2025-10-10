@@ -991,14 +991,14 @@ const ApplicationChatPage: React.FC = () => {
                    <div className="flex items-center gap-3 mb-4 pb-3 border-b border-slate-200">
                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
                        <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                         <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m2 4H7a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2z" />
-                       </svg>
-                     </div>
-                     <div>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m2 4H7a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2z" />
+                            </svg>
+                          </div>
+                          <div>
                        <h3 className="text-lg font-bold text-slate-900">{t('studentDashboard.applicationChatPage.documents.acceptanceLetter.title')}</h3>
                        <p className="text-sm text-slate-600">{t('studentDashboard.applicationChatPage.documents.acceptanceLetter.description')}</p>
-                     </div>
-                   </div>
+                          </div>
+                        </div>
 
                    {/* Status de recebimento */}
                    <div className="px-4 py-3 bg-green-50 border border-green-200 rounded-lg mb-4">
@@ -1007,102 +1007,102 @@ const ApplicationChatPage: React.FC = () => {
                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                        </svg>
                        <p className="text-green-800 font-semibold text-sm">
-                         {t('studentDashboard.applicationChatPage.documents.acceptanceLetter.received')}
-                       </p>
+                                  {t('studentDashboard.applicationChatPage.documents.acceptanceLetter.received')}
+                                </p>
                      </div>
                      <p className="text-green-700 text-sm mt-1 ml-7">
-                       {t('studentDashboard.applicationChatPage.documents.acceptanceLetter.readyForDownload')}
-                     </p>
-                   </div>
+                                  {t('studentDashboard.applicationChatPage.documents.acceptanceLetter.readyForDownload')}
+                                </p>
+                              </div>
                    
                    {/* Botões de ação */}
                    <div className="flex flex-col sm:flex-row gap-3">
-                     <button
+                                <button
                        className="flex-1 bg-blue-600 text-white px-4 py-3 rounded-lg font-semibold shadow hover:bg-blue-700 transition flex items-center justify-center gap-2"
-                       onClick={async () => {
-                         try {
-                           // Função utilitária para extrair caminho relativo
-                           const getRelativePath = (fullUrl: string) => {
-                             const baseUrl = 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/document-attachments/';
-                             if (fullUrl.startsWith(baseUrl)) {
-                               return fullUrl.replace(baseUrl, '');
-                             }
-                             return fullUrl;
-                           };
+                                  onClick={async () => {
+                                    try {
+                                      // Função utilitária para extrair caminho relativo
+                                      const getRelativePath = (fullUrl: string) => {
+                                        const baseUrl = 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/document-attachments/';
+                                        if (fullUrl.startsWith(baseUrl)) {
+                                          return fullUrl.replace(baseUrl, '');
+                                        }
+                                        return fullUrl;
+                                      };
 
-                           const filePath = getRelativePath(applicationDetails.acceptance_letter_url);
-                           const { data, error } = await supabase.storage
-                             .from('document-attachments')
-                             .createSignedUrl(filePath, 60 * 60);
-                           
-                           if (error) {
-                             console.error('Erro ao gerar signed URL:', error);
-                             alert('Erro ao baixar documento');
-                             return;
-                           }
-                           
-                           // Fazer download
-                           const response = await fetch(data.signedUrl);
-                           if (!response.ok) throw new Error('Failed to download document');
-                           
-                           const blob = await response.blob();
-                           const url = URL.createObjectURL(blob);
-                           const link = document.createElement('a');
-                           link.href = url;
-                           link.download = 'acceptance_letter.pdf';
-                           document.body.appendChild(link);
-                           link.click();
-                           document.body.removeChild(link);
-                           URL.revokeObjectURL(url);
-                         } catch (error) {
-                           console.error('Erro no download:', error);
-                           alert('Erro ao baixar documento');
-                         }
-                       }}
-                     >
+                                      const filePath = getRelativePath(applicationDetails.acceptance_letter_url);
+                                      const { data, error } = await supabase.storage
+                                        .from('document-attachments')
+                                        .createSignedUrl(filePath, 60 * 60);
+                                      
+                                      if (error) {
+                                        console.error('Erro ao gerar signed URL:', error);
+                                        alert('Erro ao baixar documento');
+                                        return;
+                                      }
+                                      
+                                      // Fazer download
+                                      const response = await fetch(data.signedUrl);
+                                      if (!response.ok) throw new Error('Failed to download document');
+                                      
+                                      const blob = await response.blob();
+                                      const url = URL.createObjectURL(blob);
+                                      const link = document.createElement('a');
+                                      link.href = url;
+                                      link.download = 'acceptance_letter.pdf';
+                                      document.body.appendChild(link);
+                                      link.click();
+                                      document.body.removeChild(link);
+                                      URL.revokeObjectURL(url);
+                                    } catch (error) {
+                                      console.error('Erro no download:', error);
+                                      alert('Erro ao baixar documento');
+                                    }
+                                  }}
+                                >
                        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                        </svg>
-                       {t('studentDashboard.applicationChatPage.documents.acceptanceLetter.downloadButton')}
-                     </button>
-                     <button
+                                  {t('studentDashboard.applicationChatPage.documents.acceptanceLetter.downloadButton')}
+                                </button>
+                                <button
                        className="flex-1 bg-white text-blue-600 border border-blue-600 px-4 py-3 rounded-lg font-semibold shadow hover:bg-blue-50 transition flex items-center justify-center gap-2"
-                       onClick={async () => {
-                         try {
-                           const getRelativePath = (fullUrl: string) => {
-                             const baseUrl = 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/document-attachments/';
-                             if (fullUrl.startsWith(baseUrl)) {
-                               return fullUrl.replace(baseUrl, '');
-                             }
-                             return fullUrl;
-                           };
+                                  onClick={async () => {
+                                    try {
+                                      const getRelativePath = (fullUrl: string) => {
+                                        const baseUrl = 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/document-attachments/';
+                                        if (fullUrl.startsWith(baseUrl)) {
+                                          return fullUrl.replace(baseUrl, '');
+                                        }
+                                        return fullUrl;
+                                      };
 
-                           const filePath = getRelativePath(applicationDetails.acceptance_letter_url);
-                           const { data, error } = await supabase.storage
-                             .from('document-attachments')
-                             .createSignedUrl(filePath, 60 * 60);
-                           
-                           if (error) {
-                             console.error('Erro ao gerar signed URL:', error);
-                             alert('Erro ao visualizar documento');
-                             return;
-                           }
-                           
-                           setPreviewUrl(data.signedUrl);
-                         } catch (error) {
-                           console.error('Erro ao visualizar:', error);
-                           alert('Erro ao visualizar documento');
-                         }
-                       }}
-                     >
+                                      const filePath = getRelativePath(applicationDetails.acceptance_letter_url);
+                                      const { data, error } = await supabase.storage
+                                        .from('document-attachments')
+                                        .createSignedUrl(filePath, 60 * 60);
+                                      
+                                      if (error) {
+                                        console.error('Erro ao gerar signed URL:', error);
+                                        alert('Erro ao visualizar documento');
+                                        return;
+                                      }
+                                      
+                                      setPreviewUrl(data.signedUrl);
+                                    } catch (error) {
+                                      console.error('Erro ao visualizar:', error);
+                                      alert('Erro ao visualizar documento');
+                                    }
+                                  }}
+                                >
                        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                          <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                          <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                        </svg>
-                       {t('studentDashboard.applicationChatPage.documents.acceptanceLetter.viewButton')}
-                     </button>
-                   </div>
-                 </div>
+                                  {t('studentDashboard.applicationChatPage.documents.acceptanceLetter.viewButton')}
+                                </button>
+                              </div>
+                            </div>
                )}
               
             </div>
