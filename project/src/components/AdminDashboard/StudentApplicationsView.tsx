@@ -21,6 +21,7 @@ import {
 import { supabase } from '../../lib/supabase';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
 import { useAuth } from '../../hooks/useAuth';
+import { useStudentUnreadMessages } from '../../hooks/useStudentUnreadMessages';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
@@ -77,6 +78,9 @@ const StudentApplicationsView: React.FC = () => {
   // Auth e role do usuário atual
   const { user } = useAuth();
   const isPlatformAdmin = user?.role === 'admin';
+  
+  // Hook para mensagens não lidas por estudante
+  const { getUnreadCount } = useStudentUnreadMessages();
 
   // Aprovação e rejeição de documentos pelo admin
   const approveableTypes = new Set(['passport', 'funds_proof', 'diploma']);
@@ -1051,10 +1055,18 @@ const StudentApplicationsView: React.FC = () => {
                 >
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      <div className="flex-shrink-0 h-10 w-10">
+                      <div className="flex-shrink-0 h-10 w-10 relative">
                         <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
                           <User className="h-5 w-5 text-gray-600" />
                         </div>
+                        {/* Indicador de mensagens não lidas */}
+                        {getUnreadCount(student.user_id) > 0 && (
+                          <div className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
+                            <span className="text-xs font-bold text-white">
+                              {getUnreadCount(student.user_id) > 9 ? '9+' : getUnreadCount(student.user_id)}
+                            </span>
+                          </div>
+                        )}
                       </div>
                       <div className="ml-4">
                         <div className="flex items-center">

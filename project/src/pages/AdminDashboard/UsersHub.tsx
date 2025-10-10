@@ -3,19 +3,21 @@ import { useSearchParams } from 'react-router-dom';
 import { GraduationCap, DollarSign, MessageSquare } from 'lucide-react';
 import StudentApplicationsView from '../../components/AdminDashboard/StudentApplicationsView';
 import FeeManagement from '../../components/AdminDashboard/FeeManagement';
-import AdminStudentChatPage from './AdminChatPage';
+import AdminChatPage from './AdminChatPage';
 import { useUnreadMessagesCount } from '../../hooks/useUnreadMessagesCount';
 
 const UsersHub: React.FC = () => {
   const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<'applications' | 'feeManagement' | 'messages'>('applications');
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
+  const [selectedRecipientId, setSelectedRecipientId] = useState<string | null>(null);
   const { unreadCount } = useUnreadMessagesCount();
 
   // Read URL parameters on component mount
   useEffect(() => {
     const tab = searchParams.get('tab');
     const conversation = searchParams.get('conversation');
+    const recipientId = searchParams.get('recipient_id');
     
     if (tab === 'messages') {
       setActiveTab('messages');
@@ -27,6 +29,10 @@ const UsersHub: React.FC = () => {
     
     if (conversation) {
       setSelectedConversationId(conversation);
+    }
+    
+    if (recipientId) {
+      setSelectedRecipientId(recipientId);
     }
   }, [searchParams]);
 
@@ -86,8 +92,9 @@ const UsersHub: React.FC = () => {
       ) : activeTab === 'feeManagement' ? (
         <FeeManagement />
       ) : (
-        <AdminStudentChatPage 
+        <AdminChatPage 
           defaultConversationId={selectedConversationId || undefined}
+          defaultRecipientId={selectedRecipientId || undefined}
         />
       )}
     </div>

@@ -41,7 +41,8 @@ import {
   Download,
   Calendar,
   Globe,
-  Users
+  Users,
+  MessageCircle
 } from 'lucide-react';
 
 interface StudentRecord {
@@ -1015,13 +1016,7 @@ const AdminStudentDetails: React.FC = () => {
       
       try {
         // Buscar nome do admin
-        const { data: adminProfile } = await supabase
-          .from('user_profiles')
-          .select('full_name')
-          .eq('user_id', user?.id)
-          .single();
 
-        const adminName = adminProfile?.full_name || 'Platform Admin';
 
       // 1. ENVIAR EMAIL VIA WEBHOOK (payload idêntico ao da universidade)
       const rejectionPayload = {
@@ -2787,6 +2782,15 @@ const AdminStudentDetails: React.FC = () => {
     return transferApps.find((app: any) => app.is_application_fee_paid) || transferApps[0];
   };
 
+  // Função para redirecionar para o inbox do chat
+  const handleOpenChat = () => {
+    if (student?.user_id) {
+      // Redirecionar para a página UsersHub na aba messages com o student_id como recipient_id
+      // Isso permitirá que o sistema crie uma nova conversa ou encontre uma existente
+      navigate(`/admin/dashboard/users?tab=messages&recipient_id=${student.user_id}`);
+    }
+  };
+
   const handleApproveTransferFormUpload = async (uploadId: string) => {
     try {
       const { error } = await supabase
@@ -2875,12 +2879,25 @@ const AdminStudentDetails: React.FC = () => {
           <h1 className="text-2xl font-bold text-slate-900">Student Details</h1>
           <p className="text-slate-600">Detailed view for {student.student_name}</p>
         </div>
-        <button
-          onClick={() => navigate(-1)}
-          className="px-3 py-2 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50"
-        >
-          Back
-        </button>
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={handleOpenChat}
+            className="group relative px-6 py-3 bg-white border border-slate-200 text-slate-700 rounded-xl flex items-center space-x-3 transition-all duration-200 hover:border-slate-300 hover:shadow-md hover:shadow-slate-100 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-200 focus:ring-offset-2"
+            title="Send message to student"
+          >
+            <div className="relative">
+              <MessageCircle className="w-5 h-5 transition-transform duration-200 group-hover:scale-110" />
+              <div className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
+            </div>
+            <span className="font-medium text-sm relative z-10">Send Message</span>
+          </button>
+          <button
+            onClick={() => navigate(-1)}
+            className="px-4 py-3 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-slate-200 focus:ring-offset-2"
+          >
+            <span className="font-medium text-sm">Back</span>
+          </button>
+        </div>
       </div>
 
       {/* Tabs Navigation */}
