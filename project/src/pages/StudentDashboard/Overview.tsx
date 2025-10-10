@@ -141,22 +141,25 @@ const Overview: React.FC<OverviewProps> = ({
                        scholarshipFeeAmount === undefined || 
                        i20ControlFeeAmount === undefined;
 
-  // Dependents impact: $150 por dependente somente no Selection Process
-  // APENAS se não há override personalizado (override já inclui dependentes se necessário)
-  const dependents = (userProfile?.dependents as number) || 0;
-  const hasSelectionOverride = userFeeOverrides?.selection_process_fee !== undefined;
+  // ✅ CORREÇÃO: selectionBase já vem com dependentes calculados do useDynamicFees
+  // Não recalcular dependentes aqui para evitar duplicação
   const hasI20Override = userFeeOverrides?.i20_control_fee !== undefined;
   
-  const selectionExtra = hasSelectionOverride ? 0 : (dependents * 150); // Só soma dependentes se não tem override
-  const i20Extra = hasI20Override ? 0 : 0; // I-20 nunca tem dependentes
+  // I-20 nunca tem dependentes, então não precisa de cálculo extra
+  const i20Extra = hasI20Override ? 0 : 0;
 
-  // Display amounts
-  const selectionWithDependents = selectionBase + selectionExtra;
+  // Display amounts - usar valores já calculados do useDynamicFees
+  const selectionWithDependents = selectionBase; // Já inclui dependentes
   const i20WithDependents = i20Base + i20Extra;
 
   // Valores das taxas para o ProgressBar (Application fee é variável)
+  // ✅ CORREÇÃO: Aplicar desconto na barra de progresso se houver activeDiscount
+  const selectionFeeWithDiscount = activeDiscount?.has_discount 
+    ? Math.max(selectionWithDependents - (activeDiscount.discount_amount || 0), 0)
+    : selectionWithDependents;
+
   const dynamicFeeValues = [
-    isFeesLoading ? <FeeSkeleton /> : `$${selectionWithDependents}`, // Selection Process Fee (inclui dependentes)
+    isFeesLoading ? <FeeSkeleton /> : `$${selectionFeeWithDiscount}`, // Selection Process Fee (com desconto se aplicável)
     'As per university', // Application Fee (variável - não mostra valor específico)
     isFeesLoading ? <FeeSkeleton /> : `$${scholarshipBase}`, // Scholarship Fee (sem dependentes)
     isFeesLoading ? <FeeSkeleton /> : `$${i20WithDependents}`, // I-20 Control Fee (inclui dependentes)

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Copy, Check, Plus, Trash2, ExternalLink } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
+import { useAffiliateAdminId } from '../hooks/useAffiliateAdminId';
 
 interface SellerRegistrationCode {
   id: string;
@@ -13,6 +14,7 @@ interface SellerRegistrationCode {
 
 const SellerRegistrationLinkGenerator: React.FC = () => {
   const { user } = useAuth();
+  const { affiliateAdminId, loading: affiliateAdminLoading, error: affiliateAdminError } = useAffiliateAdminId();
   const [codes, setCodes] = useState<SellerRegistrationCode[]>([]);
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -22,15 +24,23 @@ const SellerRegistrationLinkGenerator: React.FC = () => {
 
   // Carregar códigos existentes apenas uma vez
   useEffect(() => {
-    console.log('🔄 SellerRegistrationLinkGenerator useEffect triggered', { user: user?.id, hasLoaded });
-    if (user && !hasLoaded) {
-      console.log('🔄 Loading codes for user:', user.id);
+    console.log('🔄 SellerRegistrationLinkGenerator useEffect triggered', { 
+      user: user?.id, 
+      affiliateAdminId, 
+      hasLoaded,
+      affiliateAdminLoading 
+    });
+    if (user && affiliateAdminId && !hasLoaded && !affiliateAdminLoading) {
+      console.log('🔄 Loading codes for affiliate admin:', affiliateAdminId);
       loadCodes();
     }
-  }, [user?.id, hasLoaded]); // Depender apenas do ID do usuário e da flag de carregamento
+  }, [user?.id, affiliateAdminId, hasLoaded, affiliateAdminLoading]); // Depender do affiliateAdminId
 
   const loadCodes = async () => {
-    if (!user) return;
+    if (!affiliateAdminId) {
+      console.log('⚠️ No affiliate admin ID available');
+      return;
+    }
 
     // Se já temos códigos carregados, não recarregar
     if (codes.length > 0 && hasLoaded) {
@@ -43,7 +53,7 @@ const SellerRegistrationLinkGenerator: React.FC = () => {
       const { data, error } = await supabase
         .from('seller_registration_codes')
         .select('*')
-        .eq('admin_id', user.id)
+        .eq('admin_id', affiliateAdminId)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -74,13 +84,16 @@ const SellerRegistrationLinkGenerator: React.FC = () => {
   };
 
   const generateNewCode = async () => {
-    if (!user) return;
+    if (!affiliateAdminId) {
+      console.log('⚠️ No affiliate admin ID available for code generation');
+      return;
+    }
 
     setGenerating(true);
     try {
       // Usar a nova função que verifica se já existe código ativo
       const { data, error } = await supabase.rpc('create_seller_registration_code', {
-        admin_id_param: user.id
+        admin_id_param: affiliateAdminId
       });
 
       if (error) {
@@ -169,10 +182,25 @@ const SellerRegistrationLinkGenerator: React.FC = () => {
     return `${baseUrl}/seller/register?code=${code}`;
   };
 
-  if (loading) {
+  // Mostrar loading se ainda estiver carregando o affiliate admin ID
+  if (affiliateAdminLoading || loading) {
     return (
       <div className="flex justify-center items-center py-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  // Mostrar erro se não conseguir encontrar o affiliate admin ID
+  if (affiliateAdminError || !affiliateAdminId) {
+    return (
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="text-center py-8">
+          <p className="text-red-600 mb-2">Erro ao carregar dados do administrador</p>
+          <p className="text-sm text-gray-500">
+            {affiliateAdminError || 'Usuário não é um administrador de afiliados'}
+          </p>
+        </div>
       </div>
     );
   }

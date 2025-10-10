@@ -93,7 +93,7 @@ export const useFeeConfig = (userId?: string) => {
       let error: any = null;
 
       try {
-        const rpc = await supabase.rpc('get_user_fee_overrides', { user_id_param: userId });
+        const rpc = await supabase.rpc('get_user_fee_overrides', { target_user_id: userId });
         if (!rpc.error) {
           data = rpc.data || null;
         } else {

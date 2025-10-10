@@ -14,6 +14,7 @@ import { supabase } from '../../lib/supabase';
 import { getDocumentStatusDisplay } from '../../utils/documentStatusMapper';
 import DocumentViewerModal from '../../components/DocumentViewerModal';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
+import { useStudentDetails } from '../../components/EnhancedStudentTracking/hooks/useStudentDetails';
 
 interface StudentInfo {
   student_id: string;
@@ -50,43 +51,7 @@ interface StudentInfo {
 }
 
 
-interface ScholarshipApplication {
-  id: string;
-  status: string;
-  student_process_type: string;
-  applied_at: string;
-  reviewed_at: string;
-  notes: string;
-  documents: any[];
-  acceptance_letter_status: string;
-  acceptance_letter_url: string;
-  is_application_fee_paid: boolean;
-  is_scholarship_fee_paid: boolean;
-  paid_at: string;
-  payment_status: string;
-  has_paid_selection_process_fee?: boolean;
-  has_paid_i20_control_fee?: boolean;
-}
-
-interface DocumentRequest {
-  id: string;
-  title: string;
-  description: string;
-  due_date: string;
-  status: string;
-  created_at: string;
-  attachment_url: string;
-    is_global: boolean;
-    university_id: string;
-    scholarship_application_id: string;
-  uploads?: Array<{
-    id: string;
-    file_url: string;
-    uploaded_at: string;
-    status: string;
-    document_request_id: string;
-  }>;
-}
+// ✅ Interfaces removidas - agora usa os tipos do hook useStudentDetails
 
 interface StudentDetailsProps {
   studentId: string;
@@ -98,15 +63,16 @@ interface StudentDetailsProps {
 const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, onRefresh, onBack }) => {
   const navigate = useNavigate();
   
-  const [studentInfo, setStudentInfo] = useState<StudentInfo | null>(null);
-  const [scholarshipApplication, setScholarshipApplication] = useState<ScholarshipApplication | null>(null);
+  // ✅ Usar o hook centralizado para buscar dados do estudante
+  const {
+    studentDocuments: hookStudentDocuments,
+    documentRequests: hookDocumentRequests,
+    scholarshipApplication: hookScholarshipApplication,
+    loadStudentDetails: hookLoadStudentDetails
+  } = useStudentDetails();
   
-  // Debug: log quando scholarshipApplication muda
-  useEffect(() => {
-    console.log('🔍 [STUDENT_DETAILS] scholarshipApplication state changed:', scholarshipApplication);
-  }, [scholarshipApplication]);
-  const [documentRequests, setDocumentRequests] = useState<DocumentRequest[]>([]);
-  const [studentDocuments, setStudentDocuments] = useState<any[]>([]);
+  // Estados locais do Seller (não duplicados do hook)
+  const [studentInfo, setStudentInfo] = useState<StudentInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'details' | 'documents'>('details');
@@ -114,6 +80,11 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
   const [documentsLoaded, setDocumentsLoaded] = useState(false);
   const [realScholarshipApplication, setRealScholarshipApplication] = useState<any>(null);
   const [loadingApplication, setLoadingApplication] = useState(false);
+  
+  // Usar dados do hook
+  const scholarshipApplication = hookScholarshipApplication;
+  const studentDocuments = hookStudentDocuments;
+  const documentRequests = hookDocumentRequests;
   
   // Hook para configurações dinâmicas de taxas (usando student_id para ver overrides do estudante)
   const { getFeeAmount, formatFeeAmount, hasOverride, userSystemType } = useFeeConfig(studentInfo?.student_id);
@@ -298,37 +269,33 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
       setLoading(true);
       setError(null);
 
-             // Carregar informações do estudante
-       console.log('🔍 [STUDENT_DETAILS] Chamando RPC get_student_detailed_info para studentId:', studentId);
-       console.log('🔍 [STUDENT_DETAILS] studentId tipo:', typeof studentId);
-       console.log('🔍 [STUDENT_DETAILS] studentId valor:', studentId);
-       
-       const { data: studentData, error: studentError } = await supabase.rpc(
-         'get_student_detailed_info',
-         { target_student_id: studentId }
-       );
-       
-       console.log('🔍 [STUDENT_DETAILS] RPC executada. Resultado:', { studentData, studentError });
-       if (studentError) {
-         console.error('❌ [STUDENT_DETAILS] Erro na RPC:', studentError);
-         throw new Error(`Failed to load student info: ${studentError.message}`);
-       }
+      // ✅ Chamar o hook para buscar dados do estudante (documentos, document requests, aplicação)
+      console.log('🔍 [STUDENT_DETAILS] Chamando hookLoadStudentDetails...');
+      await hookLoadStudentDetails(studentId, profileId);
+      console.log('✅ [STUDENT_DETAILS] hookLoadStudentDetails concluída');
 
-       console.log('🔍 [STUDENT_DETAILS] Dados retornados da RPC:', studentData);
+      // ✅ Buscar informações adicionais específicas do Seller (taxas, RPC, etc)
+      console.log('🔍 [STUDENT_DETAILS] Chamando RPC get_student_detailed_info para studentId:', studentId);
+       
+      const { data: studentData, error: studentError } = await supabase.rpc(
+        'get_student_detailed_info',
+        { target_student_id: studentId }
+      );
+       
+      if (studentError) {
+        console.error('❌ [STUDENT_DETAILS] Erro na RPC:', studentError);
+        throw new Error(`Failed to load student info: ${studentError.message}`);
+      }
 
-       if (studentData && studentData.length > 0) {
-         // Converter bigint para number para compatibilidade com TypeScript
-         const studentInfoData = {
-           ...studentData[0],
-           total_fees_paid: Number(studentData[0].total_fees_paid || 0),
-           fees_count: Number(studentData[0].fees_count || 0)
-         };
-         console.log('🔍 [STUDENT_DETAILS] Dados processados do estudante:', studentInfoData);
-         console.log('🔍 [STUDENT_DETAILS] application_status:', studentInfoData.application_status);
-         console.log('🔍 [STUDENT_DETAILS] student_process_type:', studentInfoData.student_process_type);
-        console.log('🔍 [STUDENT_DETAILS] Chamando setStudentInfo com:', studentInfoData);
+      if (studentData && studentData.length > 0) {
+        // Converter bigint para number para compatibilidade com TypeScript
+        const studentInfoData = {
+          ...studentData[0],
+          total_fees_paid: Number(studentData[0].total_fees_paid || 0),
+          fees_count: Number(studentData[0].fees_count || 0)
+        };
+        console.log('✅ [STUDENT_DETAILS] Dados processados do estudante:', studentInfoData);
         setStudentInfo(studentInfoData);
-        console.log('🔍 [STUDENT_DETAILS] setStudentInfo chamado com sucesso');
         
         // Buscar taxas do pacote do estudante
         if (studentInfoData.student_id) {
@@ -340,15 +307,12 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
         if (profileId) {
           loadScholarshipRange(profileId);
         }
-         // Dados do estudante carregados com sucesso
-       } else {
-         console.warn('⚠️ [STUDENT_DETAILS] Nenhum dado retornado da RPC');
-         console.warn('⚠️ [STUDENT_DETAILS] studentData:', studentData);
-         console.warn('⚠️ [STUDENT_DETAILS] studentData.length:', studentData?.length);
-         setStudentInfo(null);
+      } else {
+        console.warn('⚠️ [STUDENT_DETAILS] Nenhum dado retornado da RPC');
+        setStudentInfo(null);
        }
 
-      // Carregar histórico de taxas
+      // ✅ Carregar histórico de taxas (específico do Seller)
       const { error: feesError } = await supabase.rpc(
         'get_student_fee_history',
         { target_student_id: studentId }
@@ -358,141 +322,20 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
         console.warn('⚠️ [STUDENT_DETAILS] Could not load fee history:', feesError);
       }
 
-      // Verificando aplicação de bolsa
-      const { data: applicationsList } = await supabase.rpc(
-        'get_student_detailed_info',
-        { target_student_id: studentId }
-      );
-
-      console.log('🔍 [STUDENT_DETAILS] Aplicações encontradas:', applicationsList);
-      console.log('🔍 [STUDENT_DETAILS] applicationsList type:', typeof applicationsList);
-      console.log('🔍 [STUDENT_DETAILS] applicationsList length:', applicationsList?.length);
-      console.log('🔍 [STUDENT_DETAILS] applicationsList is array:', Array.isArray(applicationsList));
-
-      if (applicationsList && applicationsList.length > 0) {
-        console.log('🔍 [STUDENT_DETAILS] Entrando no if - applicationsList tem dados');
-        const studentProfile = applicationsList[0];
-        console.log("studentProfile", studentProfile);
-        console.log('🔍 [STUDENT_DETAILS] studentProfile keys:', Object.keys(studentProfile));
-        
-        // ✅ Usar o user_id do perfil como student_id na tabela scholarship_applications
-        console.log('🔍 [STUDENT_DETAILS] studentProfile.profile_id:', (studentProfile as any).profile_id);
-        console.log('🔍 [STUDENT_DETAILS] studentProfile.user_id:', (studentProfile as any).user_id);
-        console.log('🔍 [STUDENT_DETAILS] studentProfile.student_id:', (studentProfile as any).student_id);
-        
-        // Usar o mesmo student_id que funciona na query de documentos
-        // O student_id correto é o que está sendo usado em loadStudentDocuments: 162c9674-a2ce-4936-be23-d89039a0cb3f
-        const studentIdForQuery = '162c9674-a2ce-4936-be23-d89039a0cb3f';
-        console.log('🔍 [STUDENT_DETAILS] studentIdForQuery (hardcoded correto):', studentIdForQuery);
-        console.log('🔍 [STUDENT_DETAILS] studentProfile.student_id (user_id):', (studentProfile as any).student_id);
-        console.log('🔍 [STUDENT_DETAILS] studentProfile.profile_id:', (studentProfile as any).profile_id);
-        
-        // Primeiro, tentar uma query simples para ver se funciona
-        console.log('🔍 [STUDENT_DETAILS] Tentando query simples...');
-        console.log('🔍 [STUDENT_DETAILS] studentIdForQuery para query simples:', studentIdForQuery);
-        console.log('🔍 [STUDENT_DETAILS] Tipo do studentIdForQuery:', typeof studentIdForQuery);
-        
-        const { data: simpleData, error: simpleError } = await supabase
-          .from('scholarship_applications')
-          .select('id, student_id, status')
-          .eq('student_id', studentIdForQuery)
-          .limit(1);
-        
-        console.log('🔍 [STUDENT_DETAILS] Query simples resultado:', { simpleData, simpleError });
-        console.log('🔍 [STUDENT_DETAILS] simpleData length:', simpleData?.length);
-        
-        // Vamos também tentar buscar todas as aplicações para ver quais student_ids existem
-        console.log('🔍 [STUDENT_DETAILS] Buscando todas as aplicações para debug...');
-        const { data: allApps, error: allAppsError } = await supabase
-          .from('scholarship_applications')
-          .select('id, student_id, status')
-          .limit(10);
-        console.log('🔍 [STUDENT_DETAILS] Todas as aplicações (primeiras 10):', { allApps, allAppsError });
-        
-        // Se a query simples funcionar, tentar a query completa
-        let appData = null;
-        let applicationError = null;
-        
-        if (!simpleError && simpleData && simpleData.length > 0) {
-          console.log('🔍 [STUDENT_DETAILS] Query simples funcionou, tentando query completa...');
-          const { data: fullData, error: fullError } = await supabase
-            .from('scholarship_applications')
-            .select(`
-              *,
-              scholarships (
-                id,
-                title,
-                application_fee_amount,
-                scholarship_fee_amount,
-                universities (
-                  id,
-                  name
-                )
-              )
-            `)
-            .eq('student_id', studentIdForQuery)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .single();
-          
-          appData = fullData;
-          applicationError = fullError;
-          console.log('🔍 [STUDENT_DETAILS] Query completa resultado:', { appData, applicationError });
-        } else {
-          appData = simpleData?.[0] || null;
-          applicationError = simpleError;
-        }
-        console.log("appData", appData);
-        
-        if (!applicationError && appData) {
-          console.log('🔍 [STUDENT_DETAILS] Definindo scholarshipApplication:', appData);
-          setScholarshipApplication(appData);
-          
-          // Atualizar studentInfo com os detalhes da bolsa e student_process_type
-          if (appData.scholarships) {
-            console.log('🔍 [STUDENT_DETAILS] Atualizando studentInfo com dados da scholarship:', appData.scholarships);
-            setStudentInfo(prev => prev ? {
-              ...prev,
-              scholarship: {
-                application_fee_amount: appData.scholarships.application_fee_amount,
-                scholarship_fee_amount: appData.scholarships.scholarship_fee_amount
-              },
-              student_process_type: appData.student_process_type || prev.student_process_type
-            } : null);
-          } else {
-            console.log('🔍 [STUDENT_DETAILS] Nenhum dado de scholarship encontrado em appData');
-          }
-          
-          // Atualizar student_process_type se estiver em appData
-          if (appData.student_process_type) {
-            console.log('🔍 [STUDENT_DETAILS] Atualizando student_process_type:', appData.student_process_type);
-            setStudentInfo(prev => prev ? {
-              ...prev,
-              student_process_type: appData.student_process_type
-            } : null);
-          }
-
-          // Carregar document requests após definir scholarshipApplication
-          console.log('🔍 [STUDENT_DETAILS] Chamando loadDocumentRequests após definir scholarshipApplication...');
-          await loadDocumentRequests();
-          console.log('🔍 [STUDENT_DETAILS] loadDocumentRequests concluída');
-        }
-      } else {
-        console.log('🔍 [STUDENT_DETAILS] NÃO entrando no if - applicationsList vazio ou null');
-        console.log('🔍 [STUDENT_DETAILS] applicationsList:', applicationsList);
+      // ✅ Atualizar studentInfo com dados da aplicação do hook
+      if (hookScholarshipApplication) {
+        setStudentInfo(prev => prev ? {
+          ...prev,
+          scholarship: {
+            application_fee_amount: (hookScholarshipApplication as any).scholarships?.application_fee_amount,
+            scholarship_fee_amount: (hookScholarshipApplication as any).scholarships?.scholarship_fee_amount
+          },
+          student_process_type: (hookScholarshipApplication as any).student_process_type || prev.student_process_type
+        } : null);
       }
 
-      // Carregar documentos do estudante (independente de ter aplicação)
-      console.log('🔍 [STUDENT_DETAILS] Chamando loadStudentDocuments...');
-      await loadStudentDocuments(profileId);
-      console.log('🔍 [STUDENT_DETAILS] loadStudentDocuments concluída');
-
-      // Carregar document requests novamente (caso não tenha sido carregado antes)
-      if (!scholarshipApplication?.id) {
-        console.log('🔍 [STUDENT_DETAILS] Chamando loadDocumentRequests novamente (sem scholarshipApplication)...');
-        await loadDocumentRequests();
-        console.log('🔍 [STUDENT_DETAILS] loadDocumentRequests concluída (segunda chamada)');
-      }
+      // ✅ Marcar documentos como carregados
+      setDocumentsLoaded(true);
 
        console.log('🚀 [STUDENT_DETAILS] loadStudentDetails concluída com sucesso');
 
@@ -670,8 +513,12 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
     }
   }, [studentId]); // Remover loadStudentDetails das dependências
 
+  // ✅ REMOVIDO: loadDocumentRequests - agora usa o hook useStudentDetails
+  // ✅ REMOVIDO: loadStudentDocuments - agora usa o hook useStudentDetails
+
+  /* CÓDIGO ANTIGO REMOVIDO - Agora usa useStudentDetails hook
   const loadDocumentRequests = useCallback(async () => {
-    console.log('🔍 [STUDENT_DETAILS] loadDocumentRequests iniciada');
+    console.log('🚀 [STUDENT_DETAILS] ===== loadDocumentRequests INICIADA =====');
     console.log('🔍 [STUDENT_DETAILS] studentInfo?.student_id:', studentInfo?.student_id);
     console.log('🔍 [STUDENT_DETAILS] scholarshipApplication:', scholarshipApplication);
     console.log('🔍 [STUDENT_DETAILS] scholarshipApplication?.id:', scholarshipApplication?.id);
@@ -682,29 +529,82 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
     }
 
     try {
-      // Buscar requests específicos para este estudante (individual) - só se tiver scholarshipApplication
-      let specificRequests = [];
-      if (scholarshipApplication?.id) {
-        const { data: specificData, error: specificError } = await supabase
-          .from('document_requests')
-          .select('*')
-          .eq('scholarship_application_id', scholarshipApplication.id)
-          .not('is_global', 'is', true);
+      // Se não temos scholarshipApplication, buscar diretamente
+      let appToUse = scholarshipApplication;
+      
+      if (!appToUse?.id) {
+        console.log('🔍 [STUDENT_DETAILS] Buscando aplicação diretamente...');
+        const { data: appData } = await supabase
+          .from('scholarship_applications')
+          .select(`
+            id,
+            scholarships (
+              university_id,
+              universities (
+                id
+              )
+            )
+          `)
+          .eq('student_id', studentInfo.student_id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
         
-        if (specificError) {
-          console.log('❌ [DOCUMENT REQUEST] Error fetching specific requests:', specificError);
-        } else {
-          console.log('✅ [DOCUMENT REQUEST] Specific requests found:', specificData);
-          specificRequests = specificData || [];
+        if (appData) {
+          console.log('✅ [STUDENT_DETAILS] Aplicação encontrada:', appData);
+          appToUse = appData as any; // Cast temporário para evitar erro de TypeScript
         }
+      }
+      
+      if (!appToUse?.id) {
+        console.log('⚠️ [STUDENT_DETAILS] Nenhuma aplicação encontrada, retornando');
+        return;
+      }
+      
+      // Buscar requests específicos para este estudante (individual)
+      let specificRequests = [];
+      const { data: specificData, error: specificError } = await supabase
+        .from('document_requests')
+        .select('*')
+        .eq('scholarship_application_id', appToUse.id)
+        .eq('is_global', false);
+      
+      if (specificError) {
+        console.log('❌ [DOCUMENT REQUEST] Error fetching specific requests:', specificError);
       } else {
-        console.log('⚠️ [STUDENT_DETAILS] No scholarshipApplication.id, skipping specific requests');
+        console.log('✅ [DOCUMENT REQUEST] Specific requests found:', specificData);
+        specificRequests = specificData || [];
       }
 
       // Buscar global requests se tiver university_id
       let globalRequests = [];
-      if (scholarshipApplication?.scholarships?.universities?.id) {
-        const universityId = scholarshipApplication.scholarships.universities.id;
+      
+      // Debug: verificar estrutura do appToUse
+      console.log('🔍 [STUDENT_DETAILS] appToUse structure:', {
+        hasScholarships: !!appToUse?.scholarships,
+        hasUniversities: !!appToUse?.scholarships?.universities,
+        universityId: appToUse?.scholarships?.universities?.id,
+        appToUse: appToUse
+      });
+      
+      let universityId = appToUse?.scholarships?.universities?.id || appToUse?.scholarships?.university_id;
+      
+      // Se não encontrou, tentar buscar diretamente
+      if (!universityId && appToUse?.id) {
+        console.log('🔍 [STUDENT_DETAILS] University ID not found in structure, trying direct query...');
+        const { data: appData } = await supabase
+          .from('scholarship_applications')
+          .select('scholarships(university_id)')
+          .eq('id', appToUse.id)
+          .single();
+        
+        universityId = Array.isArray(appData?.scholarships) 
+          ? (appData.scholarships[0] as any)?.university_id 
+          : (appData?.scholarships as any)?.university_id;
+        console.log('🔍 [STUDENT_DETAILS] University ID from direct query:', universityId);
+      }
+      
+      if (universityId) {
         console.log('🔍 [STUDENT_DETAILS] Buscando global requests para university_id:', universityId);
         
         const { data: globalData, error: globalError } = await supabase
@@ -728,36 +628,24 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
       console.log('🔍 [STUDENT_DETAILS] All requests combined:', allRequests);
 
       // Buscar uploads do estudante para estes requests
-      const requestIds = allRequests.map(r => r.id);
-      const { data: uploadsForStudent, error: uploadsError } = await supabase
+      let uploadsForStudent: any[] = [];
+      if (allRequests.length > 0) {
+        const requestIds = allRequests.map(r => r.id);
+        const { data: uploads, error: uploadsError } = await supabase
           .from('document_request_uploads')
-          .select(`
-            *,
-          document_requests (
-              id,
-              title,
-              description,
-              created_at,
-              is_global,
-              university_id,
-              scholarship_application_id,
-              attachment_url,
-              due_date
-            )
-          `)
-        .eq('uploaded_by', studentInfo.student_id)
-        .in('document_request_id', requestIds);
-      
-      if (uploadsError) {
-        console.log('❌ [DOCUMENT REQUEST] Error fetching uploads:', uploadsError);
-      } else {
-        console.log('✅ [DOCUMENT REQUEST] Uploads found:', uploadsForStudent);
+          .select('*')
+          .eq('uploaded_by', studentInfo.student_id)
+          .in('document_request_id', requestIds);
+        
+        if (uploadsError) {
+          console.log('❌ [DOCUMENT REQUEST] Error fetching uploads:', uploadsError);
+        } else {
+          console.log('✅ [DOCUMENT REQUEST] Uploads found:', uploads);
+          uploadsForStudent = uploads || [];
+        }
       }
-      
-      // Organizar os uploads por request
-      let uploads = uploadsForStudent || [];
 
-      console.log('📋 [DOCUMENT REQUEST] Final uploads count:', uploads.length);
+      console.log('📋 [DOCUMENT REQUEST] Final uploads count:', uploadsForStudent.length);
 
       // Estruturar os documentos
         const documentRequestsMap = new Map();
@@ -779,7 +667,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
         }
         
         // Por fim, distribuir os uploads pelos requests correspondentes
-        uploads.forEach(upload => {
+        uploadsForStudent.forEach(upload => {
           const requestId = upload.document_request_id;
           if (requestId && documentRequestsMap.has(requestId)) {
             // Formatar o upload para exibição
@@ -808,12 +696,17 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
           }
         });
         
-        const finalDocumentRequests = Array.from(documentRequestsMap.values());
-        console.log('🎯 [DOCUMENT REQUEST] Final document requests:', finalDocumentRequests);
-      
+      const finalDocumentRequests = Array.from(documentRequestsMap.values());
+      console.log('🎯 [DOCUMENT REQUEST] Final document requests:', finalDocumentRequests);
+      console.log('🎯 [DOCUMENT REQUEST] Document requests count:', finalDocumentRequests.length);
+      console.log('🎯 [DOCUMENT REQUEST] Current documentRequests state:', documentRequests);
+    
       // Só atualizar se os dados realmente mudaram
-        if (JSON.stringify(finalDocumentRequests) !== JSON.stringify(documentRequests)) {
-          setDocumentRequests(finalDocumentRequests);
+      if (JSON.stringify(finalDocumentRequests) !== JSON.stringify(documentRequests)) {
+        console.log('🎯 [DOCUMENT REQUEST] Updating documentRequests state...');
+        setDocumentRequests(finalDocumentRequests);
+      } else {
+        console.log('🎯 [DOCUMENT REQUEST] No changes detected, keeping current state');
       }
       
     } catch (error) {
@@ -824,27 +717,42 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
     }
   }, [scholarshipApplication?.id, scholarshipApplication?.scholarships?.universities?.id, studentInfo?.student_id, documentRequests, currentApplication]);
 
-  const loadStudentDocuments = async (targetStudentId?: string) => {
+  const loadStudentDocuments = async (targetProfileId?: string) => {
     console.log('🚀 [STUDENT_DETAILS] loadStudentDocuments INICIADA');
-    const studentIdToUse = targetStudentId || studentId;
+    const profileIdToUse = targetProfileId || profileId;
     
     try {
       console.log('🚀 [STUDENT_DETAILS] loadStudentDocuments iniciada');
-      console.log('=== [STUDENT_DETAILS] studentId recebido:', targetStudentId);
-      console.log('=== [STUDENT_DETAILS] studentId do estado:', studentId);
-      console.log('=== [STUDENT_DETAILS] studentIdToUse final:', studentIdToUse);
-      console.log('=== [STUDENT_DETAILS] Buscando documentos para estudante:', studentIdToUse);
+      console.log('=== [STUDENT_DETAILS] profileId recebido:', targetProfileId);
+      console.log('=== [STUDENT_DETAILS] profileId do estado:', profileId);
+      console.log('=== [STUDENT_DETAILS] profileIdToUse final:', profileIdToUse);
+      
+      // Primeiro, buscar o user_id do perfil
+      console.log('🔍 [STUDENT_DETAILS] Buscando user_id do perfil...');
+      const { data: profileData, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('user_id')
+        .eq('id', profileIdToUse)
+        .single();
+      
+      if (profileError || !profileData?.user_id) {
+        console.error('❌ [STUDENT_DETAILS] Erro ao buscar user_id do perfil:', profileError);
+        setStudentDocuments([]);
+        setDocumentsLoaded(true);
+        return;
+      }
+      
+      const userId = profileData.user_id;
+      console.log('✅ [STUDENT_DETAILS] user_id encontrado:', userId);
       
       // Buscar documentos da tabela scholarship_applications onde estão os documentos
       console.log('🔍 [STUDENT_DETAILS] Executando query Supabase...');
-      console.log('🔍 [STUDENT_DETAILS] Query: SELECT * FROM scholarship_applications WHERE student_id =', studentIdToUse);
-      console.log('🔍 [STUDENT_DETAILS] studentIdToUse tipo:', typeof studentIdToUse);
-      console.log('🔍 [STUDENT_DETAILS] studentIdToUse valor:', studentIdToUse);
+      console.log('🔍 [STUDENT_DETAILS] Query: SELECT * FROM scholarship_applications WHERE student_id =', userId);
       
       const { data: applicationsData, error: applicationsError } = await supabase
         .from('scholarship_applications')
         .select('id, documents, created_at')
-        .eq('student_id', studentIdToUse)
+        .eq('student_id', userId)
         .order('created_at', { ascending: false });
       
       console.log('🔍 [STUDENT_DETAILS] Query executada. Resultado:', { applicationsData, applicationsError });
@@ -929,15 +837,9 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
     console.log('🚀 [STUDENT_DETAILS] loadStudentDocuments concluída');
     console.log('🔍 [STUDENT_DETAILS] Estado final - documentsLoaded:', documentsLoaded);
   };
+  FIM DO CÓDIGO ANTIGO REMOVIDO */
 
-  // Recarregar documentos quando o studentInfo mudar
-  useEffect(() => {
-    if (studentInfo?.student_id) {
-      loadDocumentRequests();
-    }
-  }, [studentInfo?.student_id]); 
-
-  // Remover este useEffect duplicado - os documentos já são carregados em loadStudentDetails
+  // ✅ REMOVIDO: useEffect que chamava loadDocumentRequests - não é mais necessário
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -1527,7 +1429,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                     <div className="space-y-2">
                       {DOCUMENTS_INFO.map((doc, index) => {
                         const d = latestDocByType(doc.key);
-                        const status = d?.status || 'not_submitted';
+                        const status = d?.status || 'pending';
                       
                       return (
                         <div key={doc.key}>
@@ -2185,7 +2087,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                   </div>
                   
                   <div className="p-4 sm:p-6">
-                    {scholarshipApplication?.transfer_form_url ? (
+                    {(scholarshipApplication as any)?.transfer_form_url ? (
                       <div className="bg-white rounded-3xl p-4 sm:p-6">
                         <div className="flex flex-col sm:flex-row gap-4">
                           <div className="flex items-start space-x-4 min-w-0">
@@ -2196,10 +2098,10 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="font-medium text-slate-900 break-words">
-                                {scholarshipApplication.transfer_form_url.split('/').pop() || 'Transfer Form'}
+                                {(scholarshipApplication as any).transfer_form_url.split('/').pop() || 'Transfer Form'}
                               </p>
                               <p className="text-sm text-slate-500">
-                                {scholarshipApplication.transfer_form_sent_at ? `Sent on ${formatDate(scholarshipApplication.transfer_form_sent_at)}` : 'Available'}
+                                {(scholarshipApplication as any).transfer_form_sent_at ? `Sent on ${formatDate((scholarshipApplication as any).transfer_form_sent_at)}` : 'Available'}
                               </p>
                               <p className="text-xs text-slate-400 mt-1">
                                 Transfer student documentation
@@ -2220,7 +2122,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                             <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                               <button 
                                 onClick={() => handleViewDocument({
-                                  file_url: scholarshipApplication.transfer_form_url,
+                                  file_url: (scholarshipApplication as any).transfer_form_url,
                                   filename: 'Transfer Form'
                                 })}
                                 className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto text-center"
@@ -2230,7 +2132,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                               
                               <button 
                                 onClick={() => handleDownloadDocument({
-                                  file_url: scholarshipApplication.transfer_form_url,
+                                  file_url: (scholarshipApplication as any).transfer_form_url,
                                   filename: 'Transfer Form'
                                 })}
                                 className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto text-center"

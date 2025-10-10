@@ -1962,7 +1962,7 @@ const PaymentManagement = (): React.JSX.Element => {
         console.log('🔍 DEBUG: Loading overrides for user IDs:', uniqueUserIds);
         const overrideEntries = await Promise.allSettled(
           uniqueUserIds.map(async (userId) => {
-            const { data, error } = await supabase.rpc('get_user_fee_overrides', { user_id_param: userId });
+            const { data, error } = await supabase.rpc('get_user_fee_overrides', { target_user_id: userId });
             if (error) {
               console.log(`❌ DEBUG: Error loading override for user ${userId}:`, error);
             } else if (data) {

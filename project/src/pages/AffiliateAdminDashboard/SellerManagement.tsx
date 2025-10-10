@@ -697,7 +697,6 @@ const SellerManagement: React.FC = () => {
                   </button>
                 </div>
 
-                             {/* Search - Simplified */}
                <div className="mb-6">
                  <div className="relative max-w-md">
                    <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
@@ -891,7 +890,6 @@ const SellerManagement: React.FC = () => {
                    </div>
                  )}
 
-                 {/* Pagination - Simplified */}
                  {totalPages > 1 && (
                    <div className="px-6 py-3 border-t border-gray-200">
                      <div className="flex items-center justify-center space-x-2">
@@ -931,7 +929,6 @@ const SellerManagement: React.FC = () => {
         </div>
       </div>
 
-             {/* Confirmation Modal - Simplified */}
        {showConfirmModal && sellerToDeactivate && (
          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
            <div className="bg-white p-4 rounded-lg shadow-xl max-w-sm w-full">
@@ -957,7 +954,6 @@ const SellerManagement: React.FC = () => {
          </div>
        )}
 
-             {/* Removal Confirmation Modal - Simplified */}
        {showRemoveModal && sellerToRemove && (
          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
            <div className="bg-white p-4 rounded-lg shadow-xl max-w-sm w-full">
@@ -1075,7 +1071,6 @@ const SellerManagement: React.FC = () => {
          </div>
        )}
 
-             {/* Success/Error Messages - Simplified */}
       {successMessage && (
         <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-green-500 text-white px-3 py-2 rounded text-sm shadow-lg z-50">
           {successMessage}

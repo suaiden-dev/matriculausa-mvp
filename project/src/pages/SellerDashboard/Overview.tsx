@@ -117,7 +117,7 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
           const results = await Promise.allSettled(idsToLoadOverrides.map(async (id: string) => {
             try {
               // Tentar primeiro via RPC function (security definer)
-              const rpcResult = await supabase.rpc('get_user_fee_overrides', { user_id_param: id });
+              const rpcResult = await supabase.rpc('get_user_fee_overrides', { target_user_id: id });
               if (!rpcResult.error && rpcResult.data) {
                 return { id, overrides: rpcResult.data };
               } else {
