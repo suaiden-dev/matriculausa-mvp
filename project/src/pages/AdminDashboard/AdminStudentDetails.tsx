@@ -893,7 +893,7 @@ const AdminStudentDetails: React.FC = () => {
   };
 
 
-  const steps = [
+  const allSteps = [
     { key: 'selection_fee', label: 'Selection Fee', icon: CreditCard },
     { key: 'apply', label: 'Application', icon: FileText },
     { key: 'review', label: 'Review', icon: Eye },
@@ -904,6 +904,15 @@ const AdminStudentDetails: React.FC = () => {
     { key: 'i20_fee', label: 'I-20 Fee', icon: CreditCard },
     { key: 'enrollment', label: 'Enrollment', icon: Award }
   ];
+
+  // Filtrar steps baseado no student_process_type
+  const steps = allSteps.filter(step => {
+    if (step.key === 'transfer_form') {
+      // Só mostrar transfer_form se o student_process_type for 'transfer'
+      return student?.student_process_type === 'transfer';
+    }
+    return true;
+  });
 
   const approveableTypes = new Set(['passport', 'funds_proof', 'diploma']);
   const handleApproveDocument = async (applicationId: string, docType: string) => {
@@ -5018,10 +5027,10 @@ const AdminStudentDetails: React.FC = () => {
               studentDocuments={[]}
               documentRequests={documentRequests}
               scholarshipApplication={(() => {
-                // Priorizar aplicação com acceptance letter
+                // Priorizar aplicação com application fee pago (aplicação ativa)
                 const apps = student?.all_applications || [];
-                const appWithLetter = apps.find(app => app.acceptance_letter_url);
-                return appWithLetter || apps[0];
+                const paidApp = apps.find(app => app.is_application_fee_paid);
+                return paidApp || apps[0];
               })()}
               studentId={student?.user_id}
               onViewDocument={handleViewDocument}

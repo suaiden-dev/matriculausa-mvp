@@ -49,6 +49,8 @@ interface StudentRecord {
   is_scholarship_fee_paid: boolean;
   acceptance_letter_status: string | null;
   payment_status: string | null;
+  student_process_type: string | null;
+  transfer_form_status: string | null;
   scholarship_title: string | null;
   university_name: string | null;
   reviewed_at: string | null;
@@ -397,6 +399,8 @@ const StudentApplicationsView: React.FC = () => {
             payment_status,
             reviewed_at,
             reviewed_by,
+            student_process_type,
+            transfer_form_status,
             documents,
             scholarships (
               title,
@@ -462,6 +466,8 @@ const StudentApplicationsView: React.FC = () => {
           is_scholarship_fee_paid: lockedApplication?.is_scholarship_fee_paid || false,
           acceptance_letter_status: lockedApplication?.acceptance_letter_status || null,
           payment_status: lockedApplication?.payment_status || null,
+          student_process_type: lockedApplication?.student_process_type || null,
+          transfer_form_status: lockedApplication?.transfer_form_status || null,
           scholarship_title: scholarshipInfo ? scholarshipInfo.title : null,
           university_name: scholarshipInfo ? scholarshipInfo.university : null,
           reviewed_at: lockedApplication?.reviewed_at || null,
@@ -499,6 +505,14 @@ const StudentApplicationsView: React.FC = () => {
       case 'acceptance_letter':
         if (student.acceptance_letter_status === 'approved' || student.acceptance_letter_status === 'sent') return 'completed';
         return 'pending';
+      case 'transfer_form':
+        // Só aparece para alunos com process_type = 'transfer'
+        if (student.student_process_type !== 'transfer') return 'skipped';
+        // Verificar se existe um documento de transfer form aprovado
+        if (student.transfer_form_status === 'approved' || student.transfer_form_status === 'sent') {
+          return 'completed';
+        }
+        return 'pending';
       case 'i20_fee':
         return student.has_paid_i20_control_fee ? 'completed' : 'pending';
       case 'enrollment':
@@ -514,6 +528,7 @@ const StudentApplicationsView: React.FC = () => {
       case 'in_progress': return 'text-blue-600 bg-blue-100';
       case 'rejected': return 'text-red-600 bg-red-100';
       case 'pending': return 'text-gray-600 bg-gray-100';
+      case 'skipped': return 'text-gray-400 bg-gray-50';
       default: return 'text-gray-600 bg-gray-100';
     }
   };
@@ -524,6 +539,7 @@ const StudentApplicationsView: React.FC = () => {
       case 'in_progress': return Clock;
       case 'rejected': return XCircle;
       case 'pending': return AlertCircle;
+      case 'skipped': return AlertCircle;
       default: return AlertCircle;
     }
   };
@@ -723,16 +739,26 @@ const StudentApplicationsView: React.FC = () => {
   const currentStudents = filteredStudents.slice(startIndex, startIndex + itemsPerPage);
 
   const ApplicationFlowSteps = ({ student }: { student: StudentRecord }) => {
-    const steps = [
+    const allSteps = [
       { key: 'selection_fee', label: 'Selection Fee', icon: CreditCard },
       { key: 'apply', label: 'Application', icon: FileText },
       { key: 'review', label: 'Review', icon: Eye },
       { key: 'application_fee', label: 'App Fee', icon: DollarSign },
       { key: 'scholarship_fee', label: 'Scholarship Fee', icon: Award },
       { key: 'acceptance_letter', label: 'Acceptance', icon: BookOpen },
+      { key: 'transfer_form', label: 'Transfer Form', icon: FileText },
       { key: 'i20_fee', label: 'I-20 Fee', icon: CreditCard },
       { key: 'enrollment', label: 'Enrollment', icon: GraduationCap }
     ];
+
+    // Filtrar steps baseado no student_process_type
+    const steps = allSteps.filter(step => {
+      if (step.key === 'transfer_form') {
+        // Só mostrar transfer_form se o student_process_type for 'transfer'
+        return student?.student_process_type === 'transfer';
+      }
+      return true;
+    });
 
     return (
       <div className="flex items-center space-x-2 overflow-x-auto">
