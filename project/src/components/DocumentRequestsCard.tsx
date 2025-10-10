@@ -2,8 +2,6 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../lib/supabase';
 import DocumentViewerModal from './DocumentViewerModal';
-import { useUniversity } from '../context/UniversityContext';
-import { useAuth } from '../hooks/useAuth';
 import TruncatedText from './TruncatedText';
 
 interface DocumentRequest {
@@ -66,10 +64,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
   const [creating, setCreating] = useState(false);
   // Novo: Estado para acceptance letter
   const [acceptanceLetter, setAcceptanceLetter] = useState<any>(null);
-  const [acceptanceModalOpen, setAcceptanceModalOpen] = useState(false);
   const [acceptanceLetterSignedUrls, setAcceptanceLetterSignedUrls] = useState<{ [key: string]: string | null }>({});
-  const [loadingAcceptanceUrls, setLoadingAcceptanceUrls] = useState<{ [key: string]: boolean }>({});
-  const [acceptanceLoading, setAcceptanceLoading] = useState(false);
   // Estados para loading dos botões de ação
   const [downloadingAcceptanceLetter, setDownloadingAcceptanceLetter] = useState(false);
   const [viewingAcceptanceLetter, setViewingAcceptanceLetter] = useState(false);
@@ -77,12 +72,11 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
   const [acceptanceLetterPreviewUrl, setAcceptanceLetterPreviewUrl] = useState<string | null>(null);
   // Estado para transfer form
   const [transferForm, setTransferForm] = useState<any>(null);
-  const universityContext = isSchool ? useUniversity() : null;
-  const refreshData = universityContext ? universityContext.refreshData : undefined;
+  const [transferFormUploads, setTransferFormUploads] = useState<any[]>([]);
+  const [selectedTransferFormFile, setSelectedTransferFormFile] = useState<File | null>(null);
+  const [uploadingTransferForm, setUploadingTransferForm] = useState(false);
   // 1. Adicionar estado para logo da universidade
-  const [universityLogoUrl, setUniversityLogoUrl] = useState<string | null>(null);
   const [universityId, setUniversityId] = useState<string | undefined>(undefined); // novo estado global
-  const { user } = useAuth();
   // Modal para justificar rejeição de um upload específico
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [pendingRejectUploadId, setPendingRejectUploadId] = useState<string | null>(null);
@@ -116,26 +110,41 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
   useEffect(() => {
     // Buscar dados do transfer form da aplicação
     const fetchTransferForm = async () => {
-      
       const { data, error } = await supabase
         .from('scholarship_applications')
         .select('id, transfer_form_url, transfer_form_status, transfer_form_sent_at')
         .eq('id', applicationId)
         .maybeSingle();
       
-      // console.log('Resultado da busca transfer form:', { data, error });
-      
       if (!error && data) {
-        // console.log('Transfer form encontrado:', data);
         setTransferForm(data);
       } else if (error) {
         console.error('Erro ao buscar transfer form:', error);
-      } else {
-        // console.log('Nenhum transfer form encontrado para applicationId:', applicationId);
       }
     };
     
+    if (studentType === 'transfer') {
     fetchTransferForm();
+    }
+  }, [applicationId, studentType]);
+
+  useEffect(() => {
+    // Buscar uploads do transfer form
+    const fetchTransferFormUploads = async () => {
+      const { data, error } = await supabase
+        .from('transfer_form_uploads')
+        .select('*')
+        .eq('application_id', applicationId)
+        .order('uploaded_at', { ascending: false });
+      
+      if (!error && data) {
+        setTransferFormUploads(data);
+      } else if (error) {
+        console.error('Erro ao buscar transfer form uploads:', error);
+      }
+    };
+    
+    fetchTransferFormUploads();
   }, [applicationId]);
 
   useEffect(() => {
@@ -174,18 +183,13 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
         .maybeSingle();
       if (appError || !appData) throw new Error('Failed to fetch application data');
       let universityId: any = undefined;
-      let logoUrl: string | null = null;
       if (Array.isArray(appData.scholarships) && appData.scholarships.length > 0) {
         universityId = appData.scholarships[0]?.university_id;
-        logoUrl = appData.scholarships[0]?.universities?.logo_url || null;
       } else if (appData.scholarships && typeof appData.scholarships === 'object') {
         universityId = appData.scholarships.university_id;
-        logoUrl = appData.scholarships.universities?.logo_url || null;
       }
       setUniversityId(universityId); // garantir que o estado global é atualizado
-      setUniversityLogoUrl(logoUrl);
       // console.log('[DEBUG] appData:', appData);
-      const studentId = appData.student_id;
       // console.log('[DocumentRequestsCard] universityId:', universityId);
       // Buscar requests normais
       const { data: normalRequests, error: normalError } = await supabase
@@ -344,76 +348,6 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
     }
   };
 
-  // Nova função para upload da acceptance letter pela escola
-  const handleAcceptanceLetterUpload = async (file: File) => {
-    if (!applicationId || !file) {
-      // console.error('[LOG] applicationId ou file ausente', { applicationId, file });
-      return;
-    }
-    
-    setAcceptanceLoading(true);
-    try {
-      // console.log('[LOG] Iniciando upload da acceptance letter', { applicationId, file });
-      // Upload do arquivo
-      const { data, error } = await supabase.storage.from('document-attachments').upload(`acceptance_letters/${Date.now()}_${file.name}`, file);
-      // console.log('[LOG] Resultado do upload:', { data, error });
-      if (error) {
-        // console.error('[LOG] Erro no upload do arquivo:', error, error?.message, error?.details, error?.hint);
-        throw error;
-      }
-      // Logar dados do update
-      const updateObj = {
-        acceptance_letter_url: data.path,
-        acceptance_letter_status: 'approved',
-        acceptance_letter_sent_at: new Date().toISOString(),
-        status: 'enrolled'
-      };
-      // console.log('[LOG] applicationId para update:', applicationId);
-      // console.log('[LOG] Objeto enviado no update:', updateObj);
-      // Atualizar a aplicação com a URL da carta e mudar status para enrolled
-      const { error: updateError, data: updateData } = await supabase
-        .from('scholarship_applications')
-        .update(updateObj)
-        .eq('id', applicationId);
-      // console.log('[LOG] Resultado do update:', { updateError, updateData });
-      if (updateError) {
-        // console.error('[LOG] Erro no update:', updateError, updateError?.message, updateError?.details, updateError?.hint);
-        throw updateError;
-      }
-      // Atualizar o campo i20_control_fee_due_date em user_profiles
-      const { data: appData, error: appFetchError } = await supabase
-        .from('scholarship_applications')
-        .select('student_id')
-        .eq('id', applicationId)
-        .maybeSingle();
-      if (!appFetchError && appData && appData.student_id) {
-        const { error: profileUpdateError } = await supabase
-          .from('user_profiles')
-          .update({ i20_control_fee_due_date: new Date().toISOString() })
-          .eq('id', appData.student_id);
-        if (profileUpdateError) {
-          // console.error('[LOG] Erro ao atualizar i20_control_fee_due_date:', profileUpdateError);
-        }
-      }
-      // Atualizar o estado local
-      setAcceptanceLetter((prev: any) => prev ? {
-        ...prev,
-        acceptance_letter_url: data.path,
-        acceptance_letter_status: 'approved',
-        acceptance_letter_sent_at: new Date().toISOString(),
-        status: 'enrolled'
-      } : null);
-      // Recarregar os dados locais
-      fetchRequests();
-      // Recarregar dados globais do contexto (apenas para escola)
-      if (isSchool && refreshData) await refreshData();
-    } catch (error: any) {
-      // console.error('[LOG] Error uploading acceptance letter:', error, error?.message, error?.details, error?.hint);
-      setError(t('studentDashboard.documentRequests.messages.failedToUploadAcceptanceLetter') + ' ' + error.message);
-    } finally {
-      setAcceptanceLoading(false);
-    }
-  };
 
   const handleFileSelect = (requestId: string, file: File | null) => {
     setSelectedFiles((prev: typeof selectedFiles) => ({ ...prev, [requestId]: file }));
@@ -444,7 +378,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
       const hasRejectedUpload = existingUploads?.some(upload => upload.status === 'rejected');
       const isResubmission = hasRejectedUpload;
       
-      const insertResult = await supabase.from('document_request_uploads').insert({
+      await supabase.from('document_request_uploads').insert({
         document_request_id: requestId,
         uploaded_by: currentUserId,
         file_url,
@@ -526,7 +460,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                 };
 
                 // console.log('[REENVIO] Payload para n8n (global):', payload);
-                const n8nRes = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+                await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
                   method: 'POST',
                   headers: {
                     'Content-Type': 'application/json',
@@ -534,7 +468,6 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                   },
                   body: JSON.stringify(payload),
                 });
-                const n8nText = await n8nRes.text();
                 // console.log('[REENVIO] Resposta do n8n (global):', n8nRes.status, n8nText);
               }
             }
@@ -586,7 +519,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                 };
 
                 // console.log('[REENVIO] Payload para n8n:', payload);
-                const n8nRes = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+                await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
                   method: 'POST',
                   headers: {
                     'Content-Type': 'application/json',
@@ -594,7 +527,6 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                   },
                   body: JSON.stringify(payload),
                 });
-                const n8nText = await n8nRes.text();
                 // console.log('[REENVIO] Resposta do n8n:', n8nRes.status, n8nText);
               }
             }
@@ -659,7 +591,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                 };
 
                 // console.log('[NOVO UPLOAD] Payload para n8n (global):', payload);
-                const n8nRes = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+                await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
                   method: 'POST',
                   headers: {
                     'Content-Type': 'application/json',
@@ -667,7 +599,6 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                   },
                   body: JSON.stringify(payload),
                 });
-                const n8nText = await n8nRes.text();
                 // console.log('[NOVO UPLOAD] Resposta do n8n (global):', n8nRes.status, n8nText);
               }
             }
@@ -712,7 +643,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                 };
 
                 // console.log('[NOVO UPLOAD] Payload para n8n:', payload);
-                const n8nRes = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+                await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
                   method: 'POST',
                   headers: {
                     'Content-Type': 'application/json',
@@ -720,7 +651,6 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                   },
                   body: JSON.stringify(payload),
                 });
-                const n8nText = await n8nRes.text();
                 // console.log('[NOVO UPLOAD] Resposta do n8n:', n8nRes.status, n8nText);
               }
             }
@@ -801,11 +731,9 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
   useEffect(() => {
     const fetchSignedUrls = async () => {
       if (acceptanceLetter?.acceptance_letter_url && !acceptanceLetterSignedUrls['acceptance_letter_url']) {
-        setLoadingAcceptanceUrls(prev => ({ ...prev, acceptance_letter_url: true }));
         const filePath = getRelativePath(acceptanceLetter.acceptance_letter_url);
         const { data, error } = await supabase.storage.from('document-attachments').createSignedUrl(filePath, 60 * 60);
         setAcceptanceLetterSignedUrls(prev => ({ ...prev, acceptance_letter_url: error ? null : data.signedUrl }));
-        setLoadingAcceptanceUrls(prev => ({ ...prev, acceptance_letter_url: false }));
       }
     };
     fetchSignedUrls();
@@ -830,7 +758,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
 
   useEffect(() => {
     // Gera signedUrl para todos os uploads exibidos
-    Object.entries(uploads).forEach(([requestId, uploadsArr]) => {
+    Object.entries(uploads).forEach(([, uploadsArr]) => {
       uploadsArr.forEach(up => {
         const filePath = up.file_url && up.file_url.startsWith('/') ? up.file_url.slice(1) : up.file_url;
         if (filePath && !signedUrls[up.id] && !loadingUrls[up.id]) {
@@ -878,6 +806,131 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
   // Padronizar status para snake_case
   const normalizeStatus = (status: string) => (status || '').toLowerCase().replace(/\s+/g, '_');
 
+  // Funções para Transfer Form
+  const handleStudentUploadTransferForm = async () => {
+    if (!selectedTransferFormFile || !applicationId) return;
+    
+    setUploadingTransferForm(true);
+    try {
+      // Upload do arquivo
+      const { data, error } = await supabase.storage
+        .from('document-attachments')
+        .upload(`transfer-forms-filled/${Date.now()}_${selectedTransferFormFile.name}`, selectedTransferFormFile);
+      
+      if (error) throw error;
+      
+      // Deletar upload anterior se existir
+      if (transferFormUploads.length > 0) {
+        await supabase
+          .from('transfer_form_uploads')
+          .delete()
+          .eq('application_id', applicationId);
+      }
+      
+      // Criar novo registro
+      const { error: insertError } = await supabase
+        .from('transfer_form_uploads')
+        .insert({
+          application_id: applicationId,
+          file_url: data.path,
+          uploaded_by: currentUserId,
+          status: 'under_review'
+        });
+      
+      if (insertError) throw insertError;
+      
+      // Atualizar estado local
+      setTransferFormUploads([{
+        id: 'temp',
+        application_id: applicationId,
+        file_url: data.path,
+        uploaded_by: currentUserId,
+        status: 'under_review',
+        uploaded_at: new Date().toISOString()
+      }]);
+      
+      setSelectedTransferFormFile(null);
+      
+      // Recarregar dados
+      const { data: newUploads } = await supabase
+        .from('transfer_form_uploads')
+        .select('*')
+        .eq('application_id', applicationId)
+        .order('uploaded_at', { ascending: false });
+      
+      if (newUploads) {
+        setTransferFormUploads(newUploads);
+      }
+      
+    } catch (error: any) {
+      console.error('Erro ao fazer upload do transfer form:', error);
+      setError('Erro ao fazer upload do formulário: ' + error.message);
+    } finally {
+      setUploadingTransferForm(false);
+    }
+  };
+
+  const handleApproveTransferFormUpload = async (uploadId: string) => {
+    try {
+      const { error } = await supabase
+        .from('transfer_form_uploads')
+        .update({ 
+          status: 'approved',
+          reviewed_at: new Date().toISOString(),
+          reviewed_by: currentUserId
+        })
+        .eq('id', uploadId);
+      
+      if (error) throw error;
+      
+      // Recarregar uploads
+      const { data: newUploads } = await supabase
+        .from('transfer_form_uploads')
+        .select('*')
+        .eq('application_id', applicationId)
+        .order('uploaded_at', { ascending: false });
+      
+      if (newUploads) {
+        setTransferFormUploads(newUploads);
+      }
+      
+    } catch (error: any) {
+      console.error('Erro ao aprovar transfer form:', error);
+      setError('Erro ao aprovar formulário: ' + error.message);
+    }
+  };
+
+  const handleRejectTransferFormUpload = async (uploadId: string, reason: string) => {
+    try {
+      const { error } = await supabase
+        .from('transfer_form_uploads')
+        .update({ 
+          status: 'rejected',
+          rejection_reason: reason,
+          reviewed_at: new Date().toISOString(),
+          reviewed_by: currentUserId
+        })
+        .eq('id', uploadId);
+      
+      if (error) throw error;
+      
+      // Recarregar uploads
+      const { data: newUploads } = await supabase
+        .from('transfer_form_uploads')
+        .select('*')
+        .eq('application_id', applicationId)
+        .order('uploaded_at', { ascending: false });
+      
+      if (newUploads) {
+        setTransferFormUploads(newUploads);
+      }
+      
+    } catch (error: any) {
+      console.error('Erro ao rejeitar transfer form:', error);
+      setError('Erro ao rejeitar formulário: ' + error.message);
+    }
+  };
+
   return (
     <div className="max-w-3xl mx-auto p-0 sm:p-6">
       {isSchool && (
@@ -904,14 +957,6 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
           </div>
         ) : (
           requests.map(req => {
-            // Determinar status principal do upload do aluno para cor da borda
-            const mainUpload = uploads[req.id]?.[0];
-            let borderColor = '#F1F5F9';
-            if (mainUpload) {
-              if (mainUpload.status === 'approved') borderColor = '#22C55E';
-              else if (mainUpload.status === 'pending') borderColor = '#FACC15';
-              else if (mainUpload.status === 'rejected') borderColor = '#EF4444';
-            }
             return (
               <div key={req.id} className="bg-white p-3 sm:p-4 rounded-lg border border-slate-200 mb-3">
                 <div className="flex items-start justify-between mb-3">
@@ -1021,7 +1066,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                               </button>
                               
                               {/* Botões de aprovação e rejeição para administradores */}
-                              {isSchool && (normalizedStatus === 'pending' || normalizedStatus === 'under_review') && normalizedStatus !== 'rejected' && (
+                              {isSchool && (normalizedStatus === 'pending' || normalizedStatus === 'under_review') && (
                                 <>
                                   <button
                                     className="text-green-600 hover:text-green-800 text-xs sm:text-sm font-medium hover:underline"
@@ -1255,22 +1300,41 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
 
       {/* Transfer Form block: só para transfer, no final da página */}
       {studentType === 'transfer' && (
-        <div className="bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-300 rounded-2xl p-8 mt-8 shadow-xl hover:shadow-2xl transition-shadow duration-300 ring-1 ring-blue-100">
-          <div className="flex items-center gap-3 mb-4">
-            <svg className="w-9 h-9 text-blue-500 drop-shadow" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m2 4H7a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2z" /></svg>
-            <div>
-              <h3 className="text-2xl font-extrabold text-blue-900 mb-1 drop-shadow">{t('studentDashboard.documentRequests.forms.transferForm')}</h3>
-              <p className="text-blue-800 text-base">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mt-4 sm:mt-8 relative">
+          {/* Header escuro azul */}
+          <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-3 py-3 sm:px-6 sm:py-5">
+            <div className="flex items-center gap-2 sm:gap-4">
+              <div className="w-8 h-8 sm:w-12 sm:h-12 bg-white rounded-full flex items-center justify-center shadow-sm flex-shrink-0">
+                <svg className="w-4 h-4 sm:w-7 sm:h-7 text-blue-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m2 4H7a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+              <div className="min-w-0 flex-1">
+                <h3 className="text-base sm:text-2xl font-bold text-white mb-1 truncate">{t('studentDashboard.documentRequests.forms.transferForm')}</h3>
+              </div>
+            </div>
+          </div>
+          
+          {/* Conteúdo principal */}
+          <div className="p-3 sm:p-8">
+            {/* Instruções - só mostrar se não há upload aprovado */}
+            {!transferFormUploads.some(upload => upload.status === 'approved') && (
+              <p className="text-slate-700 text-xs sm:text-lg mb-4 sm:mb-8 leading-relaxed max-w-4xl">
                 {isSchool
                   ? t('studentDashboard.documentRequests.forms.transferFormDescriptionSchool')
                   : t('studentDashboard.documentRequests.forms.transferFormDescriptionStudent')}
               </p>
-            </div>
-          </div>
+            )}
+            
           {/* Upload para escola */}
           {isSchool ? (
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-2 w-full">
-                             <label className="btn-ghost cursor-pointer bg-[#F1F5F9] hover:bg-[#3B82F6]/10 text-[#3B82F6] px-3 py-2 rounded-lg font-medium transition w-full sm:w-auto" title={t('studentDashboard.documentRequests.actions.uploadTransferFormTitle')}>
+              <div className="space-y-4">
+                {/* Upload do template pela universidade */}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full">
+                  <label className="cursor-pointer bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-3 rounded-lg font-medium transition flex items-center justify-center gap-2 flex-1 sm:flex-none" title={t('studentDashboard.documentRequests.actions.uploadTransferFormTitle')}>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
                  <span>{t('studentDashboard.documentRequests.actions.uploadTransferForm')}</span>
                 <input
                   id="transfer-form-upload"
@@ -1282,11 +1346,11 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                 />
               </label>
               {selectedFiles['transfer_form'] && (
-                <div className="text-sm text-gray-700 max-w-xs w-full sm:w-auto">
+                    <div className="text-sm text-slate-600 flex-1 min-w-0">
                   <TruncatedText
                     text={selectedFiles['transfer_form']?.name || ''}
                     maxLength={40}
-                    className="text-sm text-gray-700"
+                        className="text-sm text-slate-600"
                     showTooltip={true}
                     tooltipPosition="top"
                     breakWords={true}
@@ -1296,49 +1360,424 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                 </div>
               )}
               <button
-                className={`bg-[#22C55E] text-white px-4 py-2 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all w-full sm:w-auto`}
+                    className={`bg-blue-600 text-white px-4 py-3 rounded-lg font-semibold shadow hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 flex-1 sm:flex-none`}
                 disabled={!selectedFiles['transfer_form'] || uploading['transfer_form']}
                 onClick={() => handleSendUpload('transfer_form')}
                 title={t('studentDashboard.documentRequests.actions.sendTransferFormTitle')}
               >
-                {uploading['transfer_form'] ? t('studentDashboard.documentRequests.forms.uploading') : t('studentDashboard.documentRequests.forms.upload')}
+                    {uploading['transfer_form'] ? (
+                      <div className="flex items-center gap-2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        {t('studentDashboard.documentRequests.forms.uploading')}
+                      </div>
+                    ) : (
+                      <>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                        </svg>
+                        {t('studentDashboard.documentRequests.forms.upload')}
+                      </>
+                    )}
               </button>
+                </div>
+
+                {/* Upload do aluno para revisão */}
+                {transferFormUploads.length > 0 && (
+                  <div className="border-t border-slate-200 pt-4">
+                    <h4 className="text-sm font-semibold text-slate-700 mb-3">Student Upload Status</h4>
+                    {transferFormUploads.map((upload) => {
+                      const statusColor = upload.status === 'approved' ? 'bg-green-100 text-green-800 border-green-200' :
+                                        upload.status === 'rejected' ? 'bg-red-100 text-red-800 border-red-200' :
+                                        'bg-yellow-100 text-yellow-800 border-yellow-200';
+                      
+                      return (
+                        <div key={upload.id} className="bg-white border border-slate-200 rounded-lg p-4">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              <svg className="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m2 4H7a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2z" />
+                              </svg>
+                              <span className="text-sm font-medium text-slate-700">
+                                {upload.file_url.split('/').pop()}
+                              </span>
+                            </div>
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium border ${statusColor}`}>
+                              {upload.status.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                            </span>
+                          </div>
+                          
+                          {upload.rejection_reason && (
+                            <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                              <p className="text-xs font-medium text-red-600 mb-1">Rejection reason:</p>
+                              <p className="text-sm text-red-700">{upload.rejection_reason}</p>
+                            </div>
+                          )}
+                          
+                          <div className="flex gap-2">
+                            <button
+                              className="text-blue-600 hover:text-blue-800 text-xs font-medium hover:underline"
+                              onClick={() => {
+                                const signedUrl = upload.file_url;
+                                if (signedUrl) {
+                                  setPreviewUrl(signedUrl);
+                                }
+                              }}
+                            >
+                              View
+                            </button>
+                            <button
+                              className="text-blue-600 hover:text-blue-800 text-xs font-medium hover:underline"
+                              onClick={async () => {
+                                const signedUrl = upload.file_url;
+                                if (signedUrl) {
+                                  await handleForceDownload(signedUrl, upload.file_url.split('/').pop() || 'transfer_form.pdf');
+                                }
+                              }}
+                            >
+                              Download
+                            </button>
+                            
+                            {upload.status === 'under_review' && (
+                              <>
+                                <button
+                                  className="text-green-600 hover:text-green-800 text-xs font-medium hover:underline"
+                                  onClick={() => handleApproveTransferFormUpload(upload.id)}
+                                >
+                                  Approve
+                                </button>
+                                <button
+                                  className="text-red-600 hover:text-red-800 text-xs font-medium hover:underline"
+                                  onClick={() => {
+                                    setPendingRejectUploadId(upload.id);
+                                    setShowRejectModal(true);
+                                  }}
+                                >
+                                  Reject
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
             </div>
           ) : (
             // Download/visualização para aluno
-            <div className="flex flex-col gap-2 mt-2">
-              {/* Exibir botão de download se houver transfer form enviado pela escola */}
+              <div className="flex flex-col items-center gap-3 sm:gap-4">
+                {/* Se há upload aprovado, não mostrar template */}
+                {transferFormUploads.some(upload => upload.status === 'approved') ? null : (
+                  <>
               {transferForm?.transfer_form_url ? (
-                <div className="flex items-center gap-3">
+                      <div className="text-center w-full max-w-sm">
+                        <div className="mb-3 sm:mb-4 relative">
+                          <span className="inline-block px-3 py-2 sm:px-6 sm:py-3 bg-green-100 text-green-800 border border-green-300 rounded-xl text-sm sm:text-base font-semibold break-words">
+                            {t('studentDashboard.documentRequests.forms.transferFormReceived')}
+                          </span>
+                        </div>
+                        <p className="text-green-700 text-xs sm:text-sm mb-3 sm:mb-4 px-2 leading-relaxed">
+                          {t('studentDashboard.documentRequests.forms.transferFormReadyMessage')}
+                        </p>
+                        <div className="flex flex-col sm:flex-row gap-2 justify-center w-full px-2">
                   <button
-                    className="bg-blue-600 text-white px-4 py-2 rounded font-semibold shadow hover:bg-blue-700 transition"
-                    onClick={() => {
-                      // Usar a URL pública diretamente para download
-                      handleForceDownload(transferForm.transfer_form_url, transferForm.transfer_form_url.split('/').pop() || 'transfer_form.pdf');
-                    }}
-                  >
+                            className="bg-blue-600 text-white px-3 py-2 sm:px-4 rounded-lg font-semibold shadow hover:bg-blue-700 transition flex items-center justify-center gap-2 text-sm sm:text-base w-full sm:w-auto"
+                            onClick={async () => {
+                              try {
+                                // Função utilitária para extrair caminho relativo
+                                const getRelativePath = (fullUrl: string) => {
+                                  const baseUrl = 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/document-attachments/';
+                                  if (fullUrl.startsWith(baseUrl)) {
+                                    return fullUrl.replace(baseUrl, '');
+                                  }
+                                  return fullUrl;
+                                };
+
+                                const filePath = getRelativePath(transferForm.transfer_form_url);
+                                const { data, error } = await supabase.storage
+                                  .from('document-attachments')
+                                  .createSignedUrl(filePath, 60 * 60);
+                                
+                                if (error) {
+                                  console.error('Erro ao gerar signed URL:', error);
+                                  alert('Erro ao baixar documento');
+                                  return;
+                                }
+                                
+                                // Fazer download
+                                const response = await fetch(data.signedUrl);
+                                if (!response.ok) throw new Error('Failed to download document');
+                                
+                                const blob = await response.blob();
+                                const url = URL.createObjectURL(blob);
+                                const link = document.createElement('a');
+                                link.href = url;
+                                link.download = 'transfer_form.pdf';
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+                                URL.revokeObjectURL(url);
+                              } catch (error) {
+                                console.error('Erro no download:', error);
+                                alert('Erro ao baixar documento');
+                              }
+                            }}
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
                     {t('studentDashboard.documentRequests.forms.downloadTransferForm')}
                   </button>
                   <button
-                    className="bg-white text-blue-600 border border-blue-600 px-4 py-2 rounded font-semibold shadow hover:bg-blue-50 transition"
-                    onClick={() => {
-                      // Usar a URL pública diretamente para visualização
-                      setPreviewUrl(transferForm.transfer_form_url);
-                    }}
-                  >
+                            className="bg-white text-blue-600 border border-blue-600 px-3 py-2 sm:px-4 rounded-lg font-semibold shadow hover:bg-blue-50 transition flex items-center justify-center gap-2 text-sm sm:text-base w-full sm:w-auto"
+                            onClick={async () => {
+                              try {
+                                // Função utilitária para extrair caminho relativo
+                                const getRelativePath = (fullUrl: string) => {
+                                  const baseUrl = 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/document-attachments/';
+                                  if (fullUrl.startsWith(baseUrl)) {
+                                    return fullUrl.replace(baseUrl, '');
+                                  }
+                                  return fullUrl;
+                                };
+
+                                const filePath = getRelativePath(transferForm.transfer_form_url);
+                                const { data, error } = await supabase.storage
+                                  .from('document-attachments')
+                                  .createSignedUrl(filePath, 60 * 60);
+                                
+                                if (error) {
+                                  console.error('Erro ao gerar signed URL:', error);
+                                  alert('Erro ao visualizar documento');
+                                  return;
+                                }
+                                
+                                setPreviewUrl(data.signedUrl);
+                              } catch (error) {
+                                console.error('Erro ao visualizar:', error);
+                                alert('Erro ao visualizar documento');
+                              }
+                            }}
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
                     {t('studentDashboard.documentRequests.forms.view')}
                   </button>
+                        </div>
                   {transferForm.transfer_form_sent_at && (
-                    <span className="text-xs text-slate-500">
+                          <p className="text-xs text-slate-500 mt-2">
                       {t('studentDashboard.documentRequests.forms.sentOn')} {new Date(transferForm.transfer_form_sent_at).toLocaleDateString()}
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="px-6 py-3 bg-yellow-100 text-yellow-800 border border-yellow-300 rounded-xl text-base font-semibold">
+                        {t('studentDashboard.documentRequests.status.waitingForUniversity')}
                     </span>
                   )}
+                  </>
+                )}
+
+                {/* Área de upload do formulário preenchido pelo aluno */}
+                {transferForm?.transfer_form_url && (
+                  <>
+                    {/* Se há upload aprovado, mostrar apenas ele */}
+                    {transferFormUploads.some(upload => upload.status === 'approved') ? (
+                      <div className="w-full max-w-md p-4 bg-slate-50 rounded-lg border border-slate-200">
+                        {transferFormUploads
+                          .filter(upload => upload.status === 'approved')
+                          .map((upload) => (
+                            <div key={upload.id} className="text-center">
+                              <div className="flex items-center justify-center gap-2 mb-3">
+                                <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span className="text-sm font-medium text-slate-700">
+                                  {upload.file_url.split('/').pop()}
+                                </span>
+                              </div>
+                              
+                              {/* Botões de ação simplificados */}
+                              <div className="flex gap-2 justify-center">
+                                <button
+                                  className="bg-blue-600 text-white px-3 py-2 rounded-lg font-medium shadow hover:bg-blue-700 transition flex items-center justify-center gap-2 text-sm"
+                                  onClick={async () => {
+                                    try {
+                                      const getRelativePath = (fullUrl: string) => {
+                                        const baseUrl = 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/document-attachments/';
+                                        if (fullUrl.startsWith(baseUrl)) {
+                                          return fullUrl.replace(baseUrl, '');
+                                        }
+                                        return fullUrl;
+                                      };
+
+                                      const filePath = getRelativePath(upload.file_url);
+                                      const { data, error } = await supabase.storage
+                                        .from('document-attachments')
+                                        .createSignedUrl(filePath, 60 * 60);
+                                      
+                                      if (error) {
+                                        console.error('Erro ao gerar signed URL:', error);
+                                        alert('Erro ao baixar documento');
+                                        return;
+                                      }
+                                      
+                                      const response = await fetch(data.signedUrl);
+                                      if (!response.ok) throw new Error('Failed to download document');
+                                      
+                                      const blob = await response.blob();
+                                      const url = URL.createObjectURL(blob);
+                                      const link = document.createElement('a');
+                                      link.href = url;
+                                      link.download = upload.file_url.split('/').pop() || 'transfer_form.pdf';
+                                      document.body.appendChild(link);
+                                      link.click();
+                                      document.body.removeChild(link);
+                                      URL.revokeObjectURL(url);
+                                    } catch (error) {
+                                      console.error('Erro no download:', error);
+                                      alert('Erro ao baixar documento');
+                                    }
+                                  }}
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                  </svg>
+                                  Download
+                                </button>
+                                <button
+                                  className="bg-white text-blue-600 border border-blue-600 px-3 py-2 rounded-lg font-medium shadow hover:bg-blue-50 transition flex items-center justify-center gap-2 text-sm"
+                                  onClick={async () => {
+                                    try {
+                                      const getRelativePath = (fullUrl: string) => {
+                                        const baseUrl = 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/document-attachments/';
+                                        if (fullUrl.startsWith(baseUrl)) {
+                                          return fullUrl.replace(baseUrl, '');
+                                        }
+                                        return fullUrl;
+                                      };
+
+                                      const filePath = getRelativePath(upload.file_url);
+                                      const { data, error } = await supabase.storage
+                                        .from('document-attachments')
+                                        .createSignedUrl(filePath, 60 * 60);
+                                      
+                                      if (error) {
+                                        console.error('Erro ao gerar signed URL:', error);
+                                        alert('Erro ao visualizar documento');
+                                        return;
+                                      }
+                                      
+                                      setPreviewUrl(data.signedUrl);
+                                    } catch (error) {
+                                      console.error('Erro ao visualizar:', error);
+                                      alert('Erro ao visualizar documento');
+                                    }
+                                  }}
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                  </svg>
+                                  View
+                                </button>
+                              </div>
+                            </div>
+                          ))}
                 </div>
               ) : (
-                <span className="text-slate-400 text-xs">{t('studentDashboard.documentRequests.forms.noTransferFormUploadedYet')}</span>
-              )}
+                      /* Se não há upload aprovado, mostrar área completa de upload */
+                      <div className="w-full max-w-md mt-6 p-4 bg-slate-50 rounded-lg border border-slate-200">
+                        <h4 className="text-sm font-semibold text-slate-700 mb-3">Upload Filled Form</h4>
+                        
+                        {/* Status do upload atual */}
+                        {transferFormUploads.length > 0 && (
+                          <div className="mb-4">
+                            {transferFormUploads.map((upload) => {
+                              const statusColor = upload.status === 'approved' ? 'bg-green-100 text-green-800 border-green-200' :
+                                                upload.status === 'rejected' ? 'bg-red-100 text-red-800 border-red-200' :
+                                                'bg-yellow-100 text-yellow-800 border-yellow-200';
+                              
+                              return (
+                                <div key={upload.id} className="mb-3">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <span className="text-sm font-medium text-slate-700">
+                                      {upload.file_url.split('/').pop()}
+                                    </span>
+                                    <span className={`px-2 py-1 rounded-full text-xs font-medium border ${statusColor}`}>
+                                      {upload.status.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                                    </span>
+                                  </div>
+                                  
+                                  {upload.rejection_reason && (
+                                    <div className="p-3 bg-red-50 border border-red-200 rounded-lg mb-2">
+                                      <p className="text-xs font-medium text-red-600 mb-1">Rejection reason:</p>
+                                      <p className="text-sm text-red-700">{upload.rejection_reason}</p>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
             </div>
           )}
+                        
+                        {/* Upload area */}
+                        <div className="flex flex-col gap-3">
+                          <label className="cursor-pointer bg-white hover:bg-slate-50 text-slate-700 px-4 py-3 rounded-lg font-medium transition flex items-center justify-center gap-2 border border-slate-300">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            <span>Select Filled Form</span>
+                            <input
+                              type="file"
+                              className="sr-only"
+                              onChange={e => setSelectedTransferFormFile(e.target.files ? e.target.files[0] : null)}
+                            />
+                          </label>
+                          
+                          {selectedTransferFormFile && (
+                            <div className="text-sm text-slate-600">
+                              <TruncatedText
+                                text={selectedTransferFormFile.name}
+                                maxLength={40}
+                                className="text-sm text-slate-600"
+                                showTooltip={true}
+                                tooltipPosition="top"
+                                breakWords={true}
+                                isFilename={true}
+                              />
+                            </div>
+                          )}
+                          
+                          <button
+                            className="bg-blue-600 text-white px-4 py-3 rounded-lg font-semibold shadow hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            disabled={!selectedTransferFormFile || uploadingTransferForm}
+                            onClick={handleStudentUploadTransferForm}
+                          >
+                            {uploadingTransferForm ? (
+                              <div className="flex items-center gap-2">
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                Uploading...
+                              </div>
+                            ) : (
+                              <>
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                </svg>
+                                Upload Filled Form
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -1627,7 +2066,16 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                 disabled={!pendingRejectUploadId}
                 onClick={async () => {
                   if (!pendingRejectUploadId) return;
+                  
+                  // Verificar se é transfer form ou document request
+                  const isTransferForm = transferFormUploads.some(upload => upload.id === pendingRejectUploadId);
+                  
+                  if (isTransferForm) {
+                    await handleRejectTransferFormUpload(pendingRejectUploadId, rejectNotes.trim());
+                  } else {
                   await handleRejectUpload(pendingRejectUploadId, rejectNotes.trim());
+                  }
+                  
                   setShowRejectModal(false);
                   setPendingRejectUploadId(null);
                   setRejectNotes('');

@@ -41,7 +41,8 @@ import {
   Download,
   Calendar,
   Globe,
-  Users
+  Users,
+  MessageCircle
 } from 'lucide-react';
 
 interface StudentRecord {
@@ -212,6 +213,10 @@ const AdminStudentDetails: React.FC = () => {
   // Estados para formulário de transferência
   const [transferFormFile, setTransferFormFile] = useState<File | null>(null);
   const [uploadingTransferForm, setUploadingTransferForm] = useState(false);
+  const [transferFormUploads, setTransferFormUploads] = useState<any[]>([]);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [pendingRejectUploadId, setPendingRejectUploadId] = useState<string | null>(null);
+  const [rejectNotes, setRejectNotes] = useState('');
   const [referralInfo, setReferralInfo] = useState<{
     type: 'seller' | 'affiliate' | 'student' | null;
     name: string | null;
@@ -825,6 +830,32 @@ const AdminStudentDetails: React.FC = () => {
     }
   }, [activeTab, student]);
 
+  // Buscar uploads do transfer form
+  useEffect(() => {
+    const fetchTransferFormUploads = async () => {
+      if (!student) return;
+      
+      // Encontrar aplicação transfer
+      const transferApp = getTransferApplication();
+      
+      if (!transferApp) return;
+      
+      const { data, error } = await supabase
+        .from('transfer_form_uploads')
+        .select('*')
+        .eq('application_id', transferApp.id)
+        .order('uploaded_at', { ascending: false });
+      
+      if (!error && data) {
+        setTransferFormUploads(data);
+      } else if (error) {
+        console.error('Erro ao buscar transfer form uploads:', error);
+      }
+    };
+    
+    fetchTransferFormUploads();
+  }, [student]);
+
   const getStepStatus = (st: StudentRecord, step: string) => {
     switch (step) {
       case 'selection_fee':
@@ -862,7 +893,7 @@ const AdminStudentDetails: React.FC = () => {
   };
 
 
-  const steps = [
+  const allSteps = [
     { key: 'selection_fee', label: 'Selection Fee', icon: CreditCard },
     { key: 'apply', label: 'Application', icon: FileText },
     { key: 'review', label: 'Review', icon: Eye },
@@ -873,6 +904,15 @@ const AdminStudentDetails: React.FC = () => {
     { key: 'i20_fee', label: 'I-20 Fee', icon: CreditCard },
     { key: 'enrollment', label: 'Enrollment', icon: Award }
   ];
+
+  // Filtrar steps baseado no student_process_type
+  const steps = allSteps.filter(step => {
+    if (step.key === 'transfer_form') {
+      // Só mostrar transfer_form se o student_process_type for 'transfer'
+      return student?.student_process_type === 'transfer';
+    }
+    return true;
+  });
 
   const approveableTypes = new Set(['passport', 'funds_proof', 'diploma']);
   const handleApproveDocument = async (applicationId: string, docType: string) => {
@@ -985,13 +1025,7 @@ const AdminStudentDetails: React.FC = () => {
       
       try {
         // Buscar nome do admin
-        const { data: adminProfile } = await supabase
-          .from('user_profiles')
-          .select('full_name')
-          .eq('user_id', user?.id)
-          .single();
 
-        const adminName = adminProfile?.full_name || 'Platform Admin';
 
       // 1. ENVIAR EMAIL VIA WEBHOOK (payload idêntico ao da universidade)
       const rejectionPayload = {
@@ -2574,9 +2608,7 @@ const AdminStudentDetails: React.FC = () => {
       setUploadingTransferForm(true);
       
       // Encontrar aplicação do aluno transfer
-      const transferApp = student.all_applications?.find((app: any) => 
-        app.student_process_type === 'transfer'
-      );
+      const transferApp = getTransferApplication();
       
       if (!transferApp) {
         showToast('No transfer application found for this student', 'error');
@@ -2781,6 +2813,99 @@ const AdminStudentDetails: React.FC = () => {
     }
   };
 
+  // Funções para gerenciar uploads do transfer form
+  // Função utilitária para encontrar a aplicação transfer correta (priorizando a que tem application fee paga)
+  const getTransferApplication = () => {
+    const transferApps = student?.all_applications?.filter((app: any) => 
+      app.student_process_type === 'transfer'
+    ) || [];
+    
+    // Priorizar aplicação com application fee paga
+    return transferApps.find((app: any) => app.is_application_fee_paid) || transferApps[0];
+  };
+
+  // Função para redirecionar para o inbox do chat
+  const handleOpenChat = () => {
+    if (student?.user_id) {
+      // Redirecionar para a página UsersHub na aba messages com o student_id como recipient_id
+      // Isso permitirá que o sistema crie uma nova conversa ou encontre uma existente
+      navigate(`/admin/dashboard/users?tab=messages&recipient_id=${student.user_id}`);
+    }
+  };
+
+  const handleApproveTransferFormUpload = async (uploadId: string) => {
+    try {
+      const { error } = await supabase
+        .from('transfer_form_uploads')
+        .update({ 
+          status: 'approved',
+          reviewed_at: new Date().toISOString(),
+          reviewed_by: user?.id
+        })
+        .eq('id', uploadId);
+      
+      if (error) throw error;
+      
+      // Recarregar uploads
+      const transferApp = getTransferApplication();
+      
+      if (transferApp) {
+        const { data: newUploads } = await supabase
+          .from('transfer_form_uploads')
+          .select('*')
+          .eq('application_id', transferApp.id)
+          .order('uploaded_at', { ascending: false });
+        
+        if (newUploads) {
+          setTransferFormUploads(newUploads);
+        }
+      }
+      
+      showToast('Transfer form approved successfully!', 'success');
+      
+    } catch (error: any) {
+      console.error('Erro ao aprovar transfer form:', error);
+      showToast('Error approving transfer form: ' + error.message, 'error');
+    }
+  };
+
+  const handleRejectTransferFormUpload = async (uploadId: string, reason: string) => {
+    try {
+      const { error } = await supabase
+        .from('transfer_form_uploads')
+        .update({ 
+          status: 'rejected',
+          rejection_reason: reason,
+          reviewed_at: new Date().toISOString(),
+          reviewed_by: user?.id
+        })
+        .eq('id', uploadId);
+      
+      if (error) throw error;
+      
+      // Recarregar uploads
+      const transferApp = getTransferApplication();
+      
+      if (transferApp) {
+        const { data: newUploads } = await supabase
+          .from('transfer_form_uploads')
+          .select('*')
+          .eq('application_id', transferApp.id)
+          .order('uploaded_at', { ascending: false });
+        
+        if (newUploads) {
+          setTransferFormUploads(newUploads);
+        }
+      }
+      
+      showToast('Transfer form rejected successfully!', 'success');
+      
+    } catch (error: any) {
+      console.error('Erro ao rejeitar transfer form:', error);
+      showToast('Error rejecting transfer form: ' + error.message, 'error');
+    }
+  };
+
   if (loading || !student) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
@@ -2796,12 +2921,25 @@ const AdminStudentDetails: React.FC = () => {
           <h1 className="text-2xl font-bold text-slate-900">Student Details</h1>
           <p className="text-slate-600">Detailed view for {student.student_name}</p>
         </div>
-        <button
-          onClick={() => navigate(-1)}
-          className="px-3 py-2 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50"
-        >
-          Back
-        </button>
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={handleOpenChat}
+            className="group relative px-6 py-3 bg-white border border-slate-200 text-slate-700 rounded-xl flex items-center space-x-3 transition-all duration-200 hover:border-slate-300 hover:shadow-md hover:shadow-slate-100 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-200 focus:ring-offset-2"
+            title="Send message to student"
+          >
+            <div className="relative">
+              <MessageCircle className="w-5 h-5 transition-transform duration-200 group-hover:scale-110" />
+              <div className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
+            </div>
+            <span className="font-medium text-sm relative z-10">Send Message</span>
+          </button>
+          <button
+            onClick={() => navigate(-1)}
+            className="px-4 py-3 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-slate-200 focus:ring-offset-2"
+          >
+            <span className="font-medium text-sm">Back</span>
+          </button>
+        </div>
       </div>
 
       {/* Tabs Navigation */}
@@ -4603,9 +4741,7 @@ const AdminStudentDetails: React.FC = () => {
               <div className="p-6">
                 {(() => {
                   // Encontrar aplicação transfer
-                  const transferApp = student.all_applications?.find((app: any) => 
-                    app.student_process_type === 'transfer'
-                  );
+                  const transferApp = getTransferApplication();
                   
                   if (transferApp?.transfer_form_url) {
                     // Formulário já enviado
@@ -4750,6 +4886,109 @@ const AdminStudentDetails: React.FC = () => {
                             </div>
                           </div>
                         )}
+
+                        {/* Seção para gerenciar uploads do aluno */}
+                        {transferFormUploads.length > 0 && (
+                          <div className="mt-6 bg-slate-50 border border-slate-200 rounded-2xl p-6">
+                            <h4 className="text-lg font-semibold text-[#05294E] mb-4 flex items-center">
+                              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m2 4H7a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2z" />
+                              </svg>
+                              Student Uploads
+                            </h4>
+                            
+                            <div className="space-y-4">
+                              {transferFormUploads.map((upload) => {
+                                const statusColor = upload.status === 'approved' ? 'bg-green-100 text-green-800 border-green-200' :
+                                                  upload.status === 'rejected' ? 'bg-red-100 text-red-800 border-red-200' :
+                                                  'bg-yellow-100 text-yellow-800 border-yellow-200';
+                                
+                                return (
+                                  <div key={upload.id} className="bg-white border border-slate-200 rounded-lg p-4">
+                                    <div className="flex items-center justify-between mb-3">
+                                      <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                                          <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m2 4H7a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2z" />
+                                          </svg>
+                                        </div>
+                                        <div>
+                                          <p className="font-medium text-slate-900">
+                                            {upload.file_url.split('/').pop()}
+                                          </p>
+                                          <p className="text-sm text-slate-500">
+                                            Uploaded on {new Date(upload.uploaded_at).toLocaleDateString()}
+                                          </p>
+                                        </div>
+                                      </div>
+                                      <span className={`px-3 py-1 rounded-full text-sm font-medium border ${statusColor}`}>
+                                        {upload.status.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                                      </span>
+                                    </div>
+                                    
+                                    {upload.rejection_reason && (
+                                      <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                                        <p className="text-sm font-medium text-red-600 mb-1">Rejection reason:</p>
+                                        <p className="text-sm text-red-700">{upload.rejection_reason}</p>
+                                      </div>
+                                    )}
+                                    
+                                    <div className="flex gap-2">
+                                      <button
+                                        className="text-blue-600 hover:text-blue-800 text-sm font-medium hover:underline"
+                                        onClick={() => {
+                                          const signedUrl = upload.file_url;
+                                          if (signedUrl) {
+                                            handleViewDocument({
+                                              file_url: signedUrl,
+                                              filename: upload.file_url.split('/').pop() || 'transfer_form.pdf'
+                                            });
+                                          }
+                                        }}
+                                      >
+                                        View
+                                      </button>
+                                      <button
+                                        className="text-blue-600 hover:text-blue-800 text-sm font-medium hover:underline"
+                                        onClick={() => {
+                                          const signedUrl = upload.file_url;
+                                          if (signedUrl) {
+                                            handleDownloadDocument({
+                                              file_url: signedUrl,
+                                              filename: upload.file_url.split('/').pop() || 'transfer_form.pdf'
+                                            });
+                                          }
+                                        }}
+                                      >
+                                        Download
+                                      </button>
+                                      
+                                      {upload.status === 'under_review' && isPlatformAdmin && (
+                                        <>
+                                          <button
+                                            className="text-green-600 hover:text-green-800 text-sm font-medium hover:underline"
+                                            onClick={() => handleApproveTransferFormUpload(upload.id)}
+                                          >
+                                            Approve
+                                          </button>
+                                          <button
+                                            className="text-red-600 hover:text-red-800 text-sm font-medium hover:underline"
+                                            onClick={() => {
+                                              setPendingRejectUploadId(upload.id);
+                                              setShowRejectModal(true);
+                                            }}
+                                          >
+                                            Reject
+                                          </button>
+                                        </>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     );
                   } else {
@@ -4833,10 +5072,10 @@ const AdminStudentDetails: React.FC = () => {
               studentDocuments={[]}
               documentRequests={documentRequests}
               scholarshipApplication={(() => {
-                // Priorizar aplicação com acceptance letter
+                // Priorizar aplicação com application fee pago (aplicação ativa)
                 const apps = student?.all_applications || [];
-                const appWithLetter = apps.find(app => app.acceptance_letter_url);
-                return appWithLetter || apps[0];
+                const paidApp = apps.find(app => app.is_application_fee_paid);
+                return paidApp || apps[0];
               })()}
               studentId={student?.user_id}
               onViewDocument={handleViewDocument}
@@ -4966,6 +5205,68 @@ const AdminStudentDetails: React.FC = () => {
                 className="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {rejectDocData && rejectingDocs[`${rejectDocData.applicationId}:${rejectDocData.docType}`] ? 'Rejecting...' : 'Reject Document'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reject Transfer Form Modal */}
+      {showRejectModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Reject Transfer Form</h3>
+              <button
+                onClick={() => {
+                  setShowRejectModal(false);
+                  setPendingRejectUploadId(null);
+                  setRejectNotes('');
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <XCircle className="w-6 h-6" />
+              </button>
+            </div>
+            
+            <div className="mb-4">
+              <label htmlFor="rejectNotes" className="block text-sm font-medium text-gray-700 mb-2">
+                Rejection Reason *
+              </label>
+              <textarea
+                id="rejectNotes"
+                value={rejectNotes}
+                onChange={(e) => setRejectNotes(e.target.value)}
+                placeholder="Enter the reason for rejecting this transfer form..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                rows={4}
+                required
+              />
+            </div>
+            
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setShowRejectModal(false);
+                  setPendingRejectUploadId(null);
+                  setRejectNotes('');
+                }}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  if (!pendingRejectUploadId) return;
+                  await handleRejectTransferFormUpload(pendingRejectUploadId, rejectNotes.trim());
+                  setShowRejectModal(false);
+                  setPendingRejectUploadId(null);
+                  setRejectNotes('');
+                }}
+                disabled={!rejectNotes.trim()}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Reject Transfer Form
               </button>
             </div>
           </div>

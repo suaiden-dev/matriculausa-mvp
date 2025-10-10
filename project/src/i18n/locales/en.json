@@ -1934,17 +1934,17 @@
         "title": "Document Management",
         "subtitle": "Request and manage student documents",
         "congratulations": {
-          "title": "🎉 Congratulations! All documents have been approved!",
+          "title": "Congratulations! All documents have been approved!",
           "subtitle": "Your documentation has been accepted by the university. You can now proceed to the next step."
         },
         "acceptanceLetter": {
-          "title": "📋 Waiting for Acceptance Letter",
-          "description": "With all documents approved, the university is preparing your official acceptance letter. You will be notified as soon as it becomes available.",
-          "status": "⏳ Waiting for the university to send the official acceptance letter",
-          "received": "✅ Acceptance Letter Received!",
+          "title": "Acceptance Letter",
+          "description": "Your official acceptance letter from the university.",
+          "status": "Waiting for the university to send the official acceptance letter",
+          "received": "Acceptance Letter Received!",
           "readyForDownload": "Your official acceptance letter is ready for download",
-          "downloadButton": "📄 Download Acceptance Letter",
-          "viewButton": "👁️ View"
+          "downloadButton": "Download Acceptance Letter",
+          "viewButton": "View"
         },
         "documentStatus": {
           "title": "Document Status",
@@ -2034,6 +2034,17 @@
         "transferFormDescriptionSchool": "Upload the transfer form for this student. Only visible for transfer students.",
         "transferFormDescriptionStudent": "Your university will upload your transfer form here. Download it when available.",
         "transferForm": "Transfer Form",
+        "transferFormUploadButton": "Upload Filled Form",
+        "transferFormUploaded": "Transfer form uploaded",
+        "transferFormUnderReview": "Under university review",
+        "transferFormApproved": "Approved",
+        "transferFormRejected": "Rejected",
+        "transferFormRejectionReason": "Rejection reason",
+        "transferFormReupload": "Upload new version",
+        "approveTransferForm": "Approve Transfer Form",
+        "rejectTransferForm": "Reject Transfer Form",
+        "transferFormReceived": "Transfer Form Received",
+        "transferFormReadyMessage": "Your transfer form is ready for download. Download it, fill it out, and send it back to the university.",
         "sentOn": "Sent on",
         "studentUploads": "Student uploads:",
         "yourUploads": "Your uploads:",

@@ -13,7 +13,8 @@ import {
   Building,
   CreditCard,
   Tag,
-  Route
+  Route,
+  XCircle
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
@@ -87,6 +88,8 @@ const Overview: React.FC<OverviewProps> = ({
       case 'approved': return 'bg-green-100 text-green-800';
       case 'rejected': return 'bg-red-100 text-red-800';
       case 'under_review': return 'bg-yellow-100 text-yellow-800';
+      case 'pending': return 'bg-blue-100 text-blue-800';
+      case 'enrolled': return 'bg-green-100 text-green-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -94,8 +97,10 @@ const Overview: React.FC<OverviewProps> = ({
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'approved': return CheckCircle;
-      case 'rejected': return Clock;
+      case 'rejected': return XCircle;
       case 'under_review': return Clock;
+      case 'pending': return Clock;
+      case 'enrolled': return CheckCircle;
       default: return Clock;
     }
   };
