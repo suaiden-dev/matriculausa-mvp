@@ -1990,6 +1990,31 @@ const PaymentManagement = (): React.JSX.Element => {
         console.log('🔍 DEBUG: Final overrides map:', overridesMap);
       }
 
+      // Buscar system_type de todos os usuários
+      let userSystemTypesMap = new Map<string, string>();
+      if (uniqueUserIds.length > 0) {
+        console.log('🔍 [DEBUG] Buscando system_type para user IDs:', uniqueUserIds.slice(0, 5), '... (total:', uniqueUserIds.length, ')');
+        
+        const { data: systemTypes, error: systemTypesError } = await supabase
+          .from('user_profiles')
+          .select('user_id, system_type')
+          .in('user_id', uniqueUserIds);
+
+        if (systemTypesError) {
+          console.warn('⚠️ [DEBUG] Erro ao buscar system_type:', systemTypesError);
+        } else {
+          systemTypes?.forEach(st => {
+            userSystemTypesMap.set(st.user_id, st.system_type || 'legacy');
+          });
+          console.log('🔍 [DEBUG] System types carregados:', userSystemTypesMap.size, 'usuários');
+          
+          // Debug específico para jolie8862@uorak.com
+          const jolieUserId = '935e0eec-82c6-4a70-b013-e85dde6e63f7';
+          const jolieSystemType = userSystemTypesMap.get(jolieUserId);
+          console.log('🔍 [DEBUG] jolie8862@uorak.com system_type:', jolieSystemType);
+        }
+      }
+
       // Buscar valores reais de pagamento da tabela affiliate_referrals
       console.log('🔍 [DEBUG] Buscando affiliate_referrals para user IDs:', uniqueUserIds.slice(0, 5), '... (total:', uniqueUserIds.length, ')');
       
@@ -2169,8 +2194,11 @@ const PaymentManagement = (): React.JSX.Element => {
           selectionProcessFee = Math.round(userOverrides.selection_process_fee * 100);
           console.log(`🔍 DEBUG: Using override for Selection Process Fee: $${userOverrides.selection_process_fee} (${selectionProcessFee} cents)`);
         } else {
-          selectionProcessFee = Math.round((getFeeAmount('selection_process') + dependentCost) * 100);
-          console.log(`🔍 DEBUG: Using default for Selection Process Fee: $${getFeeAmount('selection_process')} + $${dependentCost/100} = $${(selectionProcessFee/100).toFixed(2)}`);
+          // Usar system_type para determinar valor base
+          const systemType = userSystemTypesMap.get(student.user_id) || 'legacy';
+          const baseAmount = systemType === 'simplified' ? 350 : 400;
+          selectionProcessFee = Math.round((baseAmount + dependentCost) * 100);
+          console.log(`🔍 DEBUG: Using system_type (${systemType}) for Selection Process Fee: $${baseAmount} + $${dependentCost/100} = $${(selectionProcessFee/100).toFixed(2)}`);
         }
         
         // I-20 Control Fee - prioridade: valor real > override > pacote > padrão (sem dependentes)
@@ -2195,8 +2223,11 @@ const PaymentManagement = (): React.JSX.Element => {
           scholarshipFee = Math.round(userOverrides.scholarship_fee * 100);
           console.log(`🔍 DEBUG: Using override for Scholarship Fee: $${userOverrides.scholarship_fee} (${scholarshipFee} cents)`);
         } else {
-          scholarshipFee = Math.round(getFeeAmount('scholarship_fee') * 100);
-          console.log(`🔍 DEBUG: Using default for Scholarship Fee: $${getFeeAmount('scholarship_fee')} (${scholarshipFee} cents)`);
+          // Usar system_type para determinar valor
+          const systemType = userSystemTypesMap.get(student.user_id) || 'legacy';
+          const amount = systemType === 'simplified' ? 550 : 900;
+          scholarshipFee = Math.round(amount * 100);
+          console.log(`🔍 DEBUG: Using system_type (${systemType}) for Scholarship Fee: $${amount} (${scholarshipFee} cents)`);
         }
         
         // Debug: Log de todas as taxas calculadas
@@ -2562,9 +2593,12 @@ const PaymentManagement = (): React.JSX.Element => {
             console.log(`  - [PM] Using override: ${userOverrides.selection_process_fee} -> ${selectionProcessFee} cents`);
           }
         } else {
-          selectionProcessFee = Math.round((getFeeAmount('selection_process') + dependentCost) * 100);
+          // Usar system_type para determinar valor base
+          const systemType = userSystemTypesMap.get(stripeUser.user_id) || 'legacy';
+          const baseAmount = systemType === 'simplified' ? 350 : 400;
+          selectionProcessFee = Math.round((baseAmount + dependentCost) * 100);
           if (studentName.includes('Sara Bianey') || studentName.includes('Alondra')) {
-            console.log(`  - [PM] Using default: ${getFeeAmount('selection_process')} + ${dependentCost} = ${getFeeAmount('selection_process') + dependentCost} -> ${selectionProcessFee} cents`);
+            console.log(`  - [PM] Using system_type (${systemType}): ${baseAmount} + ${dependentCost} = ${baseAmount + dependentCost} -> ${selectionProcessFee} cents`);
           }
         }
         
@@ -2587,7 +2621,10 @@ const PaymentManagement = (): React.JSX.Element => {
         if (userOverrides.scholarship_fee !== undefined) {
           scholarshipFee = Math.round(userOverrides.scholarship_fee * 100);
         } else {
-          scholarshipFee = Math.round(getFeeAmount('scholarship_fee') * 100);
+          // Usar system_type para determinar valor
+          const systemType = userSystemTypesMap.get(stripeUser.user_id) || 'legacy';
+          const amount = systemType === 'simplified' ? 550 : 900;
+          scholarshipFee = Math.round(amount * 100);
         }
         // Application Fee - para usuários Stripe, usar valor padrão do sistema
         const applicationFee = Math.round(getFeeAmount('application_fee') * 100);

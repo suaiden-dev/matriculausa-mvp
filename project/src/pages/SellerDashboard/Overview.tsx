@@ -30,6 +30,7 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
   const [studentPackageFees, setStudentPackageFees] = useStateReact<{[key: string]: any}>({});
   const [studentDependents, setStudentDependents] = useStateReact<{[key: string]: number}>({});
   const [studentFeeOverrides, setStudentFeeOverrides] = useStateReact<{[key: string]: any}>({});
+  const [studentSystemTypes, setStudentSystemTypes] = useStateReact<{[key: string]: string}>({});
   const [loadingCalc, setLoadingCalc] = useStateReact<boolean>(false);
 
   // Debug específico para investigar discrepância de receita
@@ -64,35 +65,47 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
       setLoadingCalc(true);
       try {
         // 🚨 CRITICAL: Usar mesma lógica do MyStudents.tsx para consistência
-        // Buscar dependents por user_id (student ID) diretamente
+        // Buscar dependents e system_type por user_id (student ID) diretamente
         if (idsToLoadDeps.length > 0) {
-          console.log('🔍 [OVERVIEW] Carregando dependents para student IDs:', idsToLoadDeps);
+          console.log('🔍 [OVERVIEW] Carregando dependents e system_type para student IDs:', idsToLoadDeps);
           
           const { data: depsRows, error: depsError } = await supabase
             .from('user_profiles')
-            .select('user_id, dependents')
+            .select('user_id, dependents, system_type')
             .in('user_id', idsToLoadDeps); // Buscar por user_id (student ID) como MyStudents
           
           if (!depsError && depsRows) {
             const newDeps: {[key: string]: number} = {};
-            // Inicializar todos como 0
-            idsToLoadDeps.forEach((id: string) => { newDeps[id] = 0; });
+            const newSystemTypes: {[key: string]: string} = {};
+            // Inicializar todos como 0 e 'legacy'
+            idsToLoadDeps.forEach((id: string) => { 
+              newDeps[id] = 0; 
+              newSystemTypes[id] = 'legacy';
+            });
             
             // Mapear resultados diretamente
             depsRows.forEach((r: any) => {
               if (r.user_id) {
                 const deps = Number(r.dependents || 0);
+                const systemType = r.system_type || 'legacy';
                 newDeps[r.user_id] = deps;
-                console.log('🔍 [OVERVIEW] Dependents para', r.user_id, ':', deps);
+                newSystemTypes[r.user_id] = systemType;
+                console.log('🔍 [OVERVIEW] Dependents e system_type para', r.user_id, ':', deps, systemType);
               }
             });
             
             setStudentDependents(prev => ({ ...prev, ...newDeps }));
+            setStudentSystemTypes(prev => ({ ...prev, ...newSystemTypes }));
           } else {
-            console.warn('🔍 [OVERVIEW] Erro ao carregar dependents:', depsError);
+            console.warn('🔍 [OVERVIEW] Erro ao carregar dependents e system_type:', depsError);
             const newDeps: {[key: string]: number} = {};
-            idsToLoadDeps.forEach((id: string) => { newDeps[id] = 0; });
+            const newSystemTypes: {[key: string]: string} = {};
+            idsToLoadDeps.forEach((id: string) => { 
+              newDeps[id] = 0; 
+              newSystemTypes[id] = 'legacy';
+            });
             setStudentDependents(prev => ({ ...prev, ...newDeps }));
+            setStudentSystemTypes(prev => ({ ...prev, ...newSystemTypes }));
           }
         }
 
@@ -210,12 +223,13 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
           console.log('🔍 [OVERVIEW_DEBUG] Selection Process (override):', selectionAmount, 'de', overrides.selection_process_fee);
         }
       } else {
-        // Sem override: usar taxa padrão + dependentes
-        const baseSelectionFee = getFeeAmount('selection_process');
+        // Sem override: usar taxa baseada no system_type + dependentes
+        const systemType = studentSystemTypes[student.id] || 'legacy';
+        const baseSelectionFee = systemType === 'simplified' ? 350 : 400;
         const selectionAmount = baseSelectionFee + (deps * 150);
         total += selectionAmount;
         if (isDebugStudent) {
-          console.log('🔍 [OVERVIEW_DEBUG] Selection Process (padrão + deps):', selectionAmount, '=', baseSelectionFee, '+', (deps * 150));
+          console.log('🔍 [OVERVIEW_DEBUG] Selection Process (system_type + deps):', selectionAmount, '=', baseSelectionFee, '+', (deps * 150), 'system_type:', systemType);
         }
       }
     }
@@ -230,11 +244,12 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
           console.log('🔍 [OVERVIEW_DEBUG] Scholarship (override):', scholarshipAmount, 'de', overrides.scholarship_fee);
         }
       } else {
-        // Sem override: usar taxa padrão
-        const scholarshipFee = getFeeAmount('scholarship_fee');
+        // Sem override: usar taxa baseada no system_type
+        const systemType = studentSystemTypes[student.id] || 'legacy';
+        const scholarshipFee = systemType === 'simplified' ? 550 : 900;
         total += scholarshipFee;
         if (isDebugStudent) {
-          console.log('🔍 [OVERVIEW_DEBUG] Scholarship (padrão):', scholarshipFee);
+          console.log('🔍 [OVERVIEW_DEBUG] Scholarship (system_type):', scholarshipFee, 'system_type:', systemType);
         }
       }
     }
@@ -249,8 +264,8 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
           console.log('🔍 [OVERVIEW_DEBUG] I-20 Control (override):', i20Amount, 'de', overrides.i20_control_fee);
         }
       } else {
-        // Sem override: usar taxa padrão
-        const baseI20Fee = getFeeAmount('i20_control_fee');
+        // Sem override: I-20 Control Fee é sempre $900 para ambos os sistemas
+        const baseI20Fee = 900;
         total += baseI20Fee;
         if (isDebugStudent) {
           console.log('🔍 [OVERVIEW_DEBUG] I-20 Control (padrão):', baseI20Fee);

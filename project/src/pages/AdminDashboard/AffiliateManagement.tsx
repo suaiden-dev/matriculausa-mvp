@@ -119,17 +119,18 @@ const AffiliateManagement: React.FC = () => {
         // 3. Buscar perfis de estudantes vinculados via seller_referral_code
         const { data: profiles, error: profilesErr } = await supabase
           .from('user_profiles')
-          .select(`
-            id,
-            user_id,
-            has_paid_selection_process_fee, 
-            has_paid_i20_control_fee, 
-            selection_process_fee_payment_method,
-            i20_control_fee_payment_method,
-            dependents,
-            seller_referral_code,
-            scholarship_applications(is_scholarship_fee_paid, scholarship_fee_payment_method)
-          `)
+        .select(`
+          id,
+          user_id,
+          has_paid_selection_process_fee, 
+          has_paid_i20_control_fee, 
+          selection_process_fee_payment_method,
+          i20_control_fee_payment_method,
+          dependents,
+          seller_referral_code,
+          system_type,
+          scholarship_applications(is_scholarship_fee_paid, scholarship_fee_payment_method)
+        `)
           .in('seller_referral_code', referralCodes);
         
         if (profilesErr || !profiles) {
@@ -161,12 +162,14 @@ const AffiliateManagement: React.FC = () => {
         const manualRevenue = (profiles || []).reduce((sum, p) => {
           const deps = Number(p?.dependents || 0);
           const ov = overridesMap[p?.user_id] || {};
+          const systemType = p?.system_type || 'legacy';
 
           // Selection Process manual
           let selManual = 0;
           const isSelManual = !!p?.has_paid_selection_process_fee && p?.selection_process_fee_payment_method === 'manual';
           if (isSelManual) {
-            const baseSel = ov.selection_process_fee != null ? Number(ov.selection_process_fee) : 400;
+            const baseSelDefault = systemType === 'simplified' ? 350 : 400;
+            const baseSel = ov.selection_process_fee != null ? Number(ov.selection_process_fee) : baseSelDefault;
             selManual = ov.selection_process_fee != null ? baseSel : baseSel + (deps * 150);
           }
 
@@ -174,7 +177,8 @@ const AffiliateManagement: React.FC = () => {
           const hasScholarshipPaidManual = Array.isArray(p?.scholarship_applications)
             ? p.scholarship_applications.some((a: any) => !!a?.is_scholarship_fee_paid && a?.scholarship_fee_payment_method === 'manual')
             : false;
-          const schBase = ov.scholarship_fee != null ? Number(ov.scholarship_fee) : 900;
+          const baseScholarshipDefault = systemType === 'simplified' ? 550 : 900;
+          const schBase = ov.scholarship_fee != null ? Number(ov.scholarship_fee) : baseScholarshipDefault;
           const schManual = hasScholarshipPaidManual ? schBase : 0;
 
           // I-20 Control manual (seguir mesma regra base: exigir scholarship pago para contar I-20)
@@ -293,24 +297,28 @@ const AffiliateManagement: React.FC = () => {
       const dependents = Number(dependentsMap[s.profile_id]) || 0;
       let total = 0;
       
-      // Para cada estudante, usar valores padrão baseados no sistema
-      // TODO: Implementar detecção individual do sistema de cada usuário
+      // Determinar valores base baseado no system_type do estudante
+      const systemType = s.system_type || 'legacy';
+      const baseSelectionFee = systemType === 'simplified' ? 350 : 400;
+      const baseScholarshipFee = systemType === 'simplified' ? 550 : 900;
+      const baseI20Fee = 900; // Sempre 900 para ambos os sistemas
+      
       if (s.has_paid_selection_process_fee) {
         const sel = o.selection_process_fee != null
           ? Number(o.selection_process_fee)
-          : 400 + (dependents * 150); // Usar valor padrão por enquanto
+          : baseSelectionFee + (dependents * 150);
         total += sel || 0;
       }
       if (s.is_scholarship_fee_paid) {
         const schol = o.scholarship_fee != null
           ? Number(o.scholarship_fee)
-          : 900; // Usar valor padrão por enquanto
+          : baseScholarshipFee;
         total += schol || 0;
       }
       if (s.has_paid_i20_control_fee) {
         const i20 = o.i20_control_fee != null
           ? Number(o.i20_control_fee)
-          : 900; // Usar valor padrão por enquanto
+          : baseI20Fee;
         total += i20 || 0;
       }
       return { ...s, total_paid_adjusted: total };

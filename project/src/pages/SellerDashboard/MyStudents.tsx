@@ -94,6 +94,8 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
   const [studentDependents, setStudentDependents] = useStateReact<{[key: string]: number}>({});
   // Estado para armazenar overrides de taxas por estudante
   const [studentFeeOverrides, setStudentFeeOverrides] = useStateReact<{[key: string]: any}>({});
+  // Estado para armazenar system_type por estudante
+  const [studentSystemTypes, setStudentSystemTypes] = useStateReact<{[key: string]: string}>({});
   // Estado para controlar requisições em andamento
   const [loadingRequests, setLoadingRequests] = useStateReact<Set<string>>(new Set());
   // Métodos de pagamento por estudante (para calcular valor pago manualmente)
@@ -172,16 +174,19 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
     try {
       const { data, error } = await supabase
         .from('user_profiles')
-        .select('dependents')
+        .select('dependents, system_type')
         .eq('user_id', studentUserId)
         .single();
       if (!error && data) {
         setStudentDependents(prev => ({ ...prev, [studentUserId]: Number(data.dependents || 0) }));
+        setStudentSystemTypes(prev => ({ ...prev, [studentUserId]: data.system_type || 'legacy' }));
       } else {
         setStudentDependents(prev => ({ ...prev, [studentUserId]: 0 }));
+        setStudentSystemTypes(prev => ({ ...prev, [studentUserId]: 'legacy' }));
       }
     } catch {
       setStudentDependents(prev => ({ ...prev, [studentUserId]: 0 }));
+      setStudentSystemTypes(prev => ({ ...prev, [studentUserId]: 'legacy' }));
     } finally {
       // Remover da lista de carregando
       setLoadingRequests(prev => {
@@ -603,8 +608,9 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
       if (overrides && overrides.selection_process_fee !== undefined && overrides.selection_process_fee !== null) {
         selectionProcessFee = Number(overrides.selection_process_fee);
       } else {
-        // Sem override: usar taxa padrão + dependentes
-        const baseSelectionFee = getFeeAmount('selection_process');
+        // Sem override: usar taxa baseada no system_type + dependentes
+        const systemType = studentSystemTypes[student.id] || 'legacy';
+        const baseSelectionFee = systemType === 'simplified' ? 350 : 400;
         selectionProcessFee = baseSelectionFee + (deps * 150);
       }
       
@@ -619,7 +625,9 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
       if (overrides && overrides.application_fee !== undefined && overrides.application_fee !== null) {
         applicationFee = Number(overrides.application_fee);
       } else {
-        applicationFee = getFeeAmount('application_fee');
+        // Application fee é variável por universidade, usar valor do pacote se disponível
+        const packageFees = studentPackageFees[student.id];
+        applicationFee = packageFees?.application_fee || 0;
       }
       missingFees.push({ name: 'Application', amount: applicationFee, color: 'gray' });
     }
@@ -630,7 +638,9 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
       if (overrides && overrides.scholarship_fee !== undefined && overrides.scholarship_fee !== null) {
         scholarshipFee = Number(overrides.scholarship_fee);
       } else {
-        scholarshipFee = getFeeAmount('scholarship_fee');
+        // Sem override: usar taxa baseada no system_type
+        const systemType = studentSystemTypes[student.id] || 'legacy';
+        scholarshipFee = systemType === 'simplified' ? 550 : 900;
       }
       missingFees.push({ name: 'Scholarship', amount: scholarshipFee, color: 'blue' });
     }
@@ -642,7 +652,8 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
       if (overrides && overrides.i20_control_fee !== undefined && overrides.i20_control_fee !== null) {
         i20ControlFee = Number(overrides.i20_control_fee);
       } else {
-        i20ControlFee = getFeeAmount('i20_control_fee');
+        // I-20 Control Fee é sempre $900 para ambos os sistemas
+        i20ControlFee = 900;
       }
       missingFees.push({ name: 'I20 Control', amount: i20ControlFee, color: 'orange' });
     }
@@ -723,8 +734,9 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
           console.log('🔍 [MYSTUDENTS_DEBUG] Selection Process (override):', selectionAmount, 'de', overrides.selection_process_fee);
         }
       } else {
-        // Sem override: usar taxa padrão + dependentes
-        const baseSelectionFee = getFeeAmount('selection_process');
+        // Sem override: usar taxa baseada no system_type + dependentes
+        const systemType = studentSystemTypes[student.id] || 'legacy';
+        const baseSelectionFee = systemType === 'simplified' ? 350 : 400;
         const selectionAmount = baseSelectionFee + (deps * 150);
         total += selectionAmount;
         if (student.email === 'wilfried8078@uorak.com' || student.email === 'crashroiali0@gmail.com' || student.email === 'zhenhua4777@uorak.com') {
@@ -743,8 +755,8 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
           console.log('🔍 [MYSTUDENTS_DEBUG] I-20 Control (override):', i20Amount, 'de', overrides.i20_control_fee);
         }
       } else {
-        // Sem override: usar taxa padrão (I-20 normalmente não tem dependentes, mas mantendo consistência)
-        const baseI20Fee = getFeeAmount('i20_control_fee');
+        // Sem override: I-20 Control Fee é sempre $900 para ambos os sistemas
+        const baseI20Fee = 900;
         total += baseI20Fee;
         if (student.email === 'wilfried8078@uorak.com' || student.email === 'crashroiali0@gmail.com' || student.email === 'zhenhua4777@uorak.com') {
           console.log('🔍 [MYSTUDENTS_DEBUG] I-20 Control (padrão):', baseI20Fee);
@@ -762,8 +774,9 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
           console.log('🔍 [MYSTUDENTS_DEBUG] Scholarship (override):', scholarshipAmount, 'de', overrides.scholarship_fee);
         }
       } else {
-        // Sem override: usar taxa padrão
-        const scholarshipFee = getFeeAmount('scholarship_fee');
+        // Sem override: usar taxa baseada no system_type
+        const systemType = studentSystemTypes[student.id] || 'legacy';
+        const scholarshipFee = systemType === 'simplified' ? 550 : 900;
         total += scholarshipFee;
         if (student.email === 'wilfried8078@uorak.com' || student.email === 'crashroiali0@gmail.com' || student.email === 'zhenhua4777@uorak.com') {
           console.log('🔍 [MYSTUDENTS_DEBUG] Scholarship (padrão):', scholarshipFee);
@@ -800,7 +813,8 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
       if (overrides && overrides.selection_process_fee !== undefined && overrides.selection_process_fee !== null) {
         total += Number(overrides.selection_process_fee);
       } else {
-        const baseSelectionFee = getFeeAmount('selection_process');
+        const systemType = studentSystemTypes[student.id] || 'legacy';
+        const baseSelectionFee = systemType === 'simplified' ? 350 : 400;
         total += baseSelectionFee + (deps * 150);
       }
     }
@@ -810,7 +824,8 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
       if (overrides && overrides.scholarship_fee !== undefined && overrides.scholarship_fee !== null) {
         total += Number(overrides.scholarship_fee);
       } else {
-        const scholarshipFee = getFeeAmount('scholarship_fee');
+        const systemType = studentSystemTypes[student.id] || 'legacy';
+        const scholarshipFee = systemType === 'simplified' ? 550 : 900;
         total += scholarshipFee;
       }
     }
@@ -820,7 +835,8 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
       if (overrides && overrides.i20_control_fee !== undefined && overrides.i20_control_fee !== null) {
         total += Number(overrides.i20_control_fee);
       } else {
-        const baseI20Fee = getFeeAmount('i20_control_fee');
+        // I-20 Control Fee é sempre $900 para ambos os sistemas
+        const baseI20Fee = 900;
         total += baseI20Fee;
       }
     }

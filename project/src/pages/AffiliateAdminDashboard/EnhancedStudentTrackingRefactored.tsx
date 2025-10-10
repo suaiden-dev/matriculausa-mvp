@@ -60,22 +60,24 @@ function EnhancedStudentTracking(props) {
   const [dependentsMap, setDependentsMap] = useState({});
   // Função para calcular taxas de um estudante específico
   const getStudentFees = (student: any) => {
-    // Se o email é do sistema simplificado, usar valores fixos
-    if (student.email === 'nemesio922@uorak.com') {
-      return {
-        selectionProcessFee: 350,
-        scholarshipFee: 550,
-        i20ControlFee: 900,
-        isSimplified: true
-      };
+    // Usar system_type do estudante para determinar os valores
+    const systemType = student.system_type || 'legacy';
+    const isSimplified = systemType === 'simplified';
+    
+    // Debug para jolie8862@uorak.com
+    if (student.email === 'jolie8862@uorak.com') {
+      console.log('🔍 [getStudentFees] jolie8862@uorak.com:', {
+        systemType: systemType,
+        isSimplified: isSimplified,
+        studentData: student
+      });
     }
     
-    // Para outros usuários, usar valores legacy
     return {
-      selectionProcessFee: Number(feeConfig.selection_process_fee) || 400,
-      scholarshipFee: Number(feeConfig.scholarship_fee_default) || 900,
-      i20ControlFee: Number(feeConfig.i20_control_fee) || 900,
-      isSimplified: false
+      selectionProcessFee: isSimplified ? 350 : (Number(feeConfig.selection_process_fee) || 400),
+      scholarshipFee: isSimplified ? 550 : (Number(feeConfig.scholarship_fee_default) || 900),
+      i20ControlFee: 900, // Sempre 900 para ambos os sistemas
+      isSimplified: isSimplified
     };
   };
 
@@ -200,52 +202,50 @@ function EnhancedStudentTracking(props) {
         }
       });
 
+      // ✅ CORREÇÃO: Usar o total_paid que já vem da função SQL em vez de recalcular
       let total = 0;
-      if (s.has_paid_selection_process_fee) {
-        // ✅ CORREÇÃO: Se houver override para selection, usar exatamente o override;
-        // caso contrário, usar valor padrão + dependentes
-        const studentFees = getStudentFees(s);
-        const baseSelectionFee = studentFees.selectionProcessFee;
-        console.log(`🔍 Using fees for ${s.email}:`, studentFees);
-        const sel = o.selection_process_fee != null
-          ? Number(o.selection_process_fee) // ✅ Usar diretamente o override
-          : baseSelectionFee + (dependents * 150); // ✅ Valor baseado no sistema + dependentes
-        total += sel || 0;
-        console.log(`🔍 Selection Process Fee for ${s.email}:`, {
-          hasOverride: o.selection_process_fee != null,
-          overrideValue: o.selection_process_fee,
-          defaultValue: feeConfig.selection_process_fee,
-          dependents: dependents,
-          finalAmount: sel
+      
+      // Se o estudante tem total_paid da função SQL, usar esse valor
+      if (s.total_paid && s.total_paid > 0) {
+        total = Number(s.total_paid);
+        console.log(`🔍 Using SQL total_paid for ${s.email}:`, {
+          total_paid: s.total_paid,
+          finalAmount: total
         });
-      }
-      // Application fee NÃO entra no somatório de receita deste dashboard
-      if (s.is_scholarship_fee_paid) {
-        const studentFees = getStudentFees(s);
-        const baseScholarshipFee = studentFees.scholarshipFee;
-        const schol = o.scholarship_fee != null 
-          ? Number(o.scholarship_fee) 
-          : baseScholarshipFee;
-        total += schol || 0;
-        console.log(`🔍 Scholarship Fee for ${s.email}:`, {
-          hasOverride: o.scholarship_fee != null,
-          overrideValue: o.scholarship_fee,
-          defaultValue: feeConfig.scholarship_fee_default,
-          finalAmount: schol
-        });
-      }
-      if (s.has_paid_i20_control_fee) {
-        const studentFees = getStudentFees(s);
-        const baseI20Fee = studentFees.i20ControlFee;
-        const i20 = o.i20_control_fee != null 
-          ? Number(o.i20_control_fee) 
-          : baseI20Fee;
-        total += i20 || 0;
-        console.log(`🔍 I20 Control Fee for ${s.email}:`, {
-          hasOverride: o.i20_control_fee != null,
-          overrideValue: o.i20_control_fee,
-          defaultValue: feeConfig.i20_control_fee,
-          finalAmount: i20
+      } else {
+        // Fallback para cálculo manual se não houver total_paid
+        if (s.has_paid_selection_process_fee) {
+          const studentFees = getStudentFees(s);
+          const baseSelectionFee = studentFees.selectionProcessFee;
+          console.log(`🔍 Using fees for ${s.email}:`, studentFees);
+          const sel = o.selection_process_fee != null
+            ? Number(o.selection_process_fee)
+            : baseSelectionFee + (dependents * 150);
+          total += sel || 0;
+        }
+        if (s.is_scholarship_fee_paid) {
+          const studentFees = getStudentFees(s);
+          const baseScholarshipFee = studentFees.scholarshipFee;
+          const schol = o.scholarship_fee != null 
+            ? Number(o.scholarship_fee) 
+            : baseScholarshipFee;
+          total += schol || 0;
+        }
+        if (s.has_paid_i20_control_fee) {
+          const studentFees = getStudentFees(s);
+          const baseI20Fee = studentFees.i20ControlFee;
+          const i20 = o.i20_control_fee != null 
+            ? Number(o.i20_control_fee) 
+            : baseI20Fee;
+          total += i20 || 0;
+        }
+        console.log(`🔍 Fallback calculation for ${s.email}:`, {
+          totalCalculated: total,
+          breakdown: {
+            selectionPaid: s.has_paid_selection_process_fee,
+            scholarshipPaid: s.is_scholarship_fee_paid,  
+            i20Paid: s.has_paid_i20_control_fee
+          }
         });
       }
 

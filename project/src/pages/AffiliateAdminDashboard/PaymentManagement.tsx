@@ -18,9 +18,13 @@ import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
 import FinancialOverview from './FinancialOverview';
 import { AffiliatePaymentRequestService } from '../../services/AffiliatePaymentRequestService';
+import { useFeeConfig } from '../../hooks/useFeeConfig';
 
 const PaymentManagement: React.FC = () => {
   const { user } = useAuth();
+  
+  // Hook para configurações de taxas (usando user_id do affiliate admin)
+  const { getFeeAmount } = useFeeConfig(user?.id);
   
   // Tab state
   const [activeTab, setActiveTab] = useState<'financial-overview' | 'payment-requests' | 'commission-history'>('financial-overview');
@@ -111,6 +115,7 @@ const PaymentManagement: React.FC = () => {
           i20_control_fee_payment_method,
           dependents,
           seller_referral_code,
+          system_type,
           scholarship_applications(is_scholarship_fee_paid, scholarship_fee_payment_method)
         `)
         .in('seller_referral_code', referralCodes);
@@ -159,11 +164,11 @@ const PaymentManagement: React.FC = () => {
         const hasAnyScholarshipPaid = Array.isArray(p?.scholarship_applications)
           ? p.scholarship_applications.some((a) => !!a?.is_scholarship_fee_paid)
           : false;
-        const schBase = ov.scholarship_fee != null ? Number(ov.scholarship_fee) : 900;
+        const schBase = ov.scholarship_fee != null ? Number(ov.scholarship_fee) : getFeeAmount('scholarship_fee');
         const schPaid = hasAnyScholarshipPaid ? schBase : 0;
 
         // I-20 Control (sem dependentes)
-        const i20Base = ov.i20_control_fee != null ? Number(ov.i20_control_fee) : 900;
+        const i20Base = ov.i20_control_fee != null ? Number(ov.i20_control_fee) : getFeeAmount('i20_control_fee');
         const i20Paid = (hasAnyScholarshipPaid && p?.has_paid_i20_control_fee) ? i20Base : 0;
 
         return sum + selPaid + schPaid + i20Paid;
@@ -189,7 +194,7 @@ const PaymentManagement: React.FC = () => {
         const hasScholarshipPaidManual = Array.isArray(p?.scholarship_applications)
           ? p.scholarship_applications.some((a: any) => !!a?.is_scholarship_fee_paid && a?.scholarship_fee_payment_method === 'manual')
           : false;
-        const schBase = ov.scholarship_fee != null ? Number(ov.scholarship_fee) : 900;
+        const schBase = ov.scholarship_fee != null ? Number(ov.scholarship_fee) : getFeeAmount('scholarship_fee');
         const schManual = hasScholarshipPaidManual ? schBase : 0;
 
         // I-20 Control manual (seguir mesma regra base: exigir scholarship pago para contar I-20)
@@ -197,7 +202,7 @@ const PaymentManagement: React.FC = () => {
           ? p.scholarship_applications.some((a: any) => !!a?.is_scholarship_fee_paid)
           : false;
         const isI20Manual = !!p?.has_paid_i20_control_fee && p?.i20_control_fee_payment_method === 'manual';
-        const i20Base = ov.i20_control_fee != null ? Number(ov.i20_control_fee) : 900;
+        const i20Base = ov.i20_control_fee != null ? Number(ov.i20_control_fee) : getFeeAmount('i20_control_fee');
         const i20Manual = (hasAnyScholarshipPaid && isI20Manual) ? i20Base : 0;
 
         return sum + selManual + schManual + i20Manual;

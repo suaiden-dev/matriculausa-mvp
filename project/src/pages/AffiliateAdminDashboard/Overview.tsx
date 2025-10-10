@@ -96,6 +96,7 @@ const Overview = ({ stats, sellers = [], onRefresh }) => {
             has_paid_i20_control_fee, 
             dependents,
             seller_referral_code,
+            system_type,
             scholarship_applications(is_scholarship_fee_paid)
           `)
           .in('seller_referral_code', referralCodes);
@@ -133,7 +134,9 @@ const Overview = ({ stats, sellers = [], onRefresh }) => {
           // Selection Process
           let selPaid = 0;
           if (p?.has_paid_selection_process_fee) {
-            const baseSel = ov.selection_process_fee != null ? Number(ov.selection_process_fee) : 400;
+            // Usar valor baseado no system_type do aluno (350 para simplified, 400 para legacy)
+            const baseSelDefault = p?.system_type === 'simplified' ? 350 : 400;
+            const baseSel = ov.selection_process_fee != null ? Number(ov.selection_process_fee) : baseSelDefault;
             selPaid = ov.selection_process_fee != null ? baseSel : baseSel + (deps * 150);
           }
 
@@ -141,10 +144,12 @@ const Overview = ({ stats, sellers = [], onRefresh }) => {
           const hasAnyScholarshipPaid = Array.isArray(p?.scholarship_applications)
             ? p.scholarship_applications.some((a) => !!a?.is_scholarship_fee_paid)
             : false;
-          const schBase = ov.scholarship_fee != null ? Number(ov.scholarship_fee) : 900;
+          // Usar valor baseado no system_type do aluno (550 para simplified, 900 para legacy)
+          const schBaseDefault = p?.system_type === 'simplified' ? 550 : 900;
+          const schBase = ov.scholarship_fee != null ? Number(ov.scholarship_fee) : schBaseDefault;
           const schPaid = hasAnyScholarshipPaid ? schBase : 0;
 
-          // I-20 Control (sem dependentes)
+          // I-20 Control (sem dependentes) - sempre 900 para ambos os sistemas
           const i20Base = ov.i20_control_fee != null ? Number(ov.i20_control_fee) : 900;
           // Contar I-20 somente se a bolsa estiver paga (fluxo esperado)
           const i20Paid = (hasAnyScholarshipPaid && p?.has_paid_i20_control_fee) ? i20Base : 0;

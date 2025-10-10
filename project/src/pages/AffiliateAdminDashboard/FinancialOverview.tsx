@@ -202,6 +202,7 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
           i20_control_fee_payment_method,
           dependents,
           seller_referral_code,
+          system_type,
           created_at,
           scholarship_applications(is_scholarship_fee_paid, scholarship_fee_payment_method)
         `)
@@ -239,7 +240,9 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
         // Selection Process
         let selPaid = 0;
         if (p?.has_paid_selection_process_fee) {
-          const baseSel = ov.selection_process_fee != null ? Number(ov.selection_process_fee) : 400;
+          // Usar valor baseado no system_type do aluno (350 para simplified, 400 para legacy)
+          const baseSelDefault = p?.system_type === 'simplified' ? 350 : 400;
+          const baseSel = ov.selection_process_fee != null ? Number(ov.selection_process_fee) : baseSelDefault;
           selPaid = ov.selection_process_fee != null ? baseSel : baseSel + (deps * 150);
         }
 
@@ -247,10 +250,13 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
         const hasAnyScholarshipPaid = Array.isArray(p?.scholarship_applications)
           ? p.scholarship_applications.some((a) => !!a?.is_scholarship_fee_paid)
           : false;
-        const schBase = ov.scholarship_fee != null ? Number(ov.scholarship_fee) : 900;
+        // Usar valor baseado no system_type do aluno (550 para simplified, 900 para legacy)
+        const schBaseDefault = p?.system_type === 'simplified' ? 550 : 900;
+        const schBase = ov.scholarship_fee != null ? Number(ov.scholarship_fee) : schBaseDefault;
         const schPaid = hasAnyScholarshipPaid ? schBase : 0;
 
         // I-20 Control (sem dependentes)
+        // I-20 Control Fee - sempre 900 para ambos os sistemas
         const i20Base = ov.i20_control_fee != null ? Number(ov.i20_control_fee) : 900;
         const i20Paid = (hasAnyScholarshipPaid && p?.has_paid_i20_control_fee) ? i20Base : 0;
 
@@ -266,7 +272,9 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
         let selManual = 0;
         const isSelManual = !!p?.has_paid_selection_process_fee && p?.selection_process_fee_payment_method === 'manual';
         if (isSelManual) {
-          const baseSel = ov.selection_process_fee != null ? Number(ov.selection_process_fee) : 400;
+          // Usar valor baseado no system_type do aluno (350 para simplified, 400 para legacy)
+          const baseSelDefault = p?.system_type === 'simplified' ? 350 : 400;
+          const baseSel = ov.selection_process_fee != null ? Number(ov.selection_process_fee) : baseSelDefault;
           selManual = ov.selection_process_fee != null ? baseSel : baseSel + (deps * 150);
         }
 
@@ -274,7 +282,9 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
         const hasScholarshipPaidManual = Array.isArray(p?.scholarship_applications)
           ? p.scholarship_applications.some((a: any) => !!a?.is_scholarship_fee_paid && a?.scholarship_fee_payment_method === 'manual')
           : false;
-        const schBase = ov.scholarship_fee != null ? Number(ov.scholarship_fee) : 900;
+        // Usar valor baseado no system_type do aluno (550 para simplified, 900 para legacy)
+        const schBaseDefault = p?.system_type === 'simplified' ? 550 : 900;
+        const schBase = ov.scholarship_fee != null ? Number(ov.scholarship_fee) : schBaseDefault;
         const schManual = hasScholarshipPaidManual ? schBase : 0;
 
         // I-20 Control manual (seguir mesma regra base: exigir scholarship pago para contar I-20)
@@ -282,6 +292,7 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
           ? p.scholarship_applications.some((a: any) => !!a?.is_scholarship_fee_paid)
           : false;
         const isI20Manual = !!p?.has_paid_i20_control_fee && p?.i20_control_fee_payment_method === 'manual';
+        // I-20 Control Fee - sempre 900 para ambos os sistemas
         const i20Base = ov.i20_control_fee != null ? Number(ov.i20_control_fee) : 900;
         const i20Manual = (hasAnyScholarshipPaid && isI20Manual) ? i20Base : 0;
 
@@ -320,7 +331,9 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
           // Selection Process
           let selPaid = 0;
           if (p?.has_paid_selection_process_fee) {
-            const baseSel = ov.selection_process_fee != null ? Number(ov.selection_process_fee) : 400;
+            // Usar valor baseado no system_type do aluno (350 para simplified, 400 para legacy)
+          const baseSelDefault = p?.system_type === 'simplified' ? 350 : 400;
+          const baseSel = ov.selection_process_fee != null ? Number(ov.selection_process_fee) : baseSelDefault;
             selPaid = ov.selection_process_fee != null ? baseSel : baseSel + (deps * 150);
           }
 
@@ -328,11 +341,14 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
           const hasAnyScholarshipPaid = Array.isArray(p?.scholarship_applications)
             ? p.scholarship_applications.some((a: any) => !!a?.is_scholarship_fee_paid)
             : false;
-          const schBase = ov.scholarship_fee != null ? Number(ov.scholarship_fee) : 900;
+          // Usar valor baseado no system_type do aluno (550 para simplified, 900 para legacy)
+        const schBaseDefault = p?.system_type === 'simplified' ? 550 : 900;
+        const schBase = ov.scholarship_fee != null ? Number(ov.scholarship_fee) : schBaseDefault;
           const schPaid = hasAnyScholarshipPaid ? schBase : 0;
 
           // I-20 Control (sem dependentes)
-          const i20Base = ov.i20_control_fee != null ? Number(ov.i20_control_fee) : 900;
+          // I-20 Control Fee - sempre 900 para ambos os sistemas
+        const i20Base = ov.i20_control_fee != null ? Number(ov.i20_control_fee) : 900;
           const i20Paid = (hasAnyScholarshipPaid && p?.has_paid_i20_control_fee) ? i20Base : 0;
 
           return sum + selPaid + schPaid + i20Paid;
@@ -521,7 +537,9 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
 
       // Calcular valores usando a lógica de overrides
       if (paidSelection) {
-        const baseSel = ov.selection_process_fee != null ? Number(ov.selection_process_fee) : 400;
+        // Usar valor baseado no system_type do aluno (350 para simplified, 400 para legacy)
+        const baseSelDefault = row?.system_type === 'simplified' ? 350 : 400;
+        const baseSel = ov.selection_process_fee != null ? Number(ov.selection_process_fee) : baseSelDefault;
         const selectionFeeAmount = ov.selection_process_fee != null ? baseSel : baseSel + (deps * 150);
         recentActivity.push({
           date: row.created_at,
@@ -532,7 +550,9 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
       }
 
       if (hasAnyScholarshipPaid) {
-        const schBase = ov.scholarship_fee != null ? Number(ov.scholarship_fee) : 900;
+        // Usar valor baseado no system_type do aluno (550 para simplified, 900 para legacy)
+        const schBaseDefault = row?.system_type === 'simplified' ? 550 : 900;
+        const schBase = ov.scholarship_fee != null ? Number(ov.scholarship_fee) : schBaseDefault;
         recentActivity.push({
           date: row.created_at,
           type: 'commission',
@@ -542,6 +562,7 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
       }
 
       if (hasAnyScholarshipPaid && paidI20Control) {
+        // I-20 Control Fee - sempre 900 para ambos os sistemas
         const i20Base = ov.i20_control_fee != null ? Number(ov.i20_control_fee) : 900;
         recentActivity.push({
           date: row.created_at,

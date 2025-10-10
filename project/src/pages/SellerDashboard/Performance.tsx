@@ -31,6 +31,7 @@ const Performance: React.FC<PerformanceProps> = ({ sellerProfile, students }) =>
   const [studentPackageFees, setStudentPackageFees] = useState<{[key: string]: any}>({});
   const [studentDependents, setStudentDependents] = useState<{[key: string]: number}>({});
   const [studentFeeOverrides, setStudentFeeOverrides] = useState<{[key: string]: any}>({});
+  const [studentSystemTypes, setStudentSystemTypes] = useState<{[key: string]: string}>({});
   const [originalMonthlyData, setOriginalMonthlyData] = useState<PerformanceData['monthly_data']>([]);
   const [adjustedMonthlyData, setAdjustedMonthlyData] = useState<PerformanceData['monthly_data']>([]);
   const [rpcTotalRevenue, setRpcTotalRevenue] = useState<number>(0);
@@ -86,21 +87,25 @@ const Performance: React.FC<PerformanceProps> = ({ sellerProfile, students }) =>
     try {
       const { data, error } = await supabase
         .from('user_profiles')
-        .select('user_id, dependents')
+        .select('user_id, dependents, system_type')
         .eq('user_id', studentUserId) // 🚨 Usar user_id direto como no Overview corrigido
         .single();
       
       if (!error && data) {
         const deps = Number(data.dependents || 0);
-        console.log('🔍 [PERFORMANCE] Dependents carregados para', student.email, ':', deps);
+        const systemType = data.system_type || 'legacy';
+        console.log('🔍 [PERFORMANCE] Dependents e system_type carregados para', student.email, ':', deps, systemType);
         setStudentDependents(prev => ({ ...prev, [studentUserId]: deps }));
+        setStudentSystemTypes(prev => ({ ...prev, [studentUserId]: systemType }));
       } else {
-        console.log('🔍 [PERFORMANCE] Nenhum dependent encontrado para', student.email, '- usando 0');
+        console.log('🔍 [PERFORMANCE] Nenhum dependent encontrado para', student.email, '- usando 0 e legacy');
         setStudentDependents(prev => ({ ...prev, [studentUserId]: 0 }));
+        setStudentSystemTypes(prev => ({ ...prev, [studentUserId]: 'legacy' }));
       }
     } catch (err) {
       console.warn('🔍 [PERFORMANCE] Erro ao carregar dependents para', student.email, ':', err);
       setStudentDependents(prev => ({ ...prev, [studentUserId]: 0 }));
+      setStudentSystemTypes(prev => ({ ...prev, [studentUserId]: 'legacy' }));
     }
   };
 
@@ -205,12 +210,13 @@ const Performance: React.FC<PerformanceProps> = ({ sellerProfile, students }) =>
           console.log('🔍 [PERFORMANCE_DEBUG] Selection Process (override):', selectionAmount, 'de', overrides.selection_process_fee);
         }
       } else {
-        // Sem override: usar taxa padrão + dependentes
-        const baseSelectionFee = getFeeAmount('selection_process');
+        // Sem override: usar taxa baseada no system_type + dependentes
+        const systemType = studentSystemTypes[student.id] || 'legacy';
+        const baseSelectionFee = systemType === 'simplified' ? 350 : 400;
         const selectionAmount = baseSelectionFee + (deps * 150);
         total += selectionAmount;
         if (isDebugStudent) {
-          console.log('🔍 [PERFORMANCE_DEBUG] Selection Process (padrão + deps):', selectionAmount, '=', baseSelectionFee, '+', (deps * 150));
+          console.log('🔍 [PERFORMANCE_DEBUG] Selection Process (system_type + deps):', selectionAmount, '=', baseSelectionFee, '+', (deps * 150), 'system_type:', systemType);
         }
       }
     }
@@ -225,11 +231,12 @@ const Performance: React.FC<PerformanceProps> = ({ sellerProfile, students }) =>
           console.log('🔍 [PERFORMANCE_DEBUG] Scholarship (override):', scholarshipAmount, 'de', overrides.scholarship_fee);
         }
       } else {
-        // Sem override: usar taxa padrão
-        const scholarshipFee = getFeeAmount('scholarship_fee');
+        // Sem override: usar taxa baseada no system_type
+        const systemType = studentSystemTypes[student.id] || 'legacy';
+        const scholarshipFee = systemType === 'simplified' ? 550 : 900;
         total += scholarshipFee;
         if (isDebugStudent) {
-          console.log('🔍 [PERFORMANCE_DEBUG] Scholarship (padrão):', scholarshipFee);
+          console.log('🔍 [PERFORMANCE_DEBUG] Scholarship (system_type):', scholarshipFee, 'system_type:', systemType);
         }
       }
     }
@@ -244,8 +251,8 @@ const Performance: React.FC<PerformanceProps> = ({ sellerProfile, students }) =>
           console.log('🔍 [PERFORMANCE_DEBUG] I-20 Control (override):', i20Amount, 'de', overrides.i20_control_fee);
         }
       } else {
-        // Sem override: usar taxa padrão
-        const baseI20Fee = getFeeAmount('i20_control_fee');
+        // Sem override: I-20 Control Fee é sempre $900 para ambos os sistemas
+        const baseI20Fee = 900;
         total += baseI20Fee;
         if (isDebugStudent) {
           console.log('🔍 [PERFORMANCE_DEBUG] I-20 Control (padrão):', baseI20Fee);
