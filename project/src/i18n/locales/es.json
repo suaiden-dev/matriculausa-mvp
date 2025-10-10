@@ -2151,17 +2151,17 @@
         "title": "Gestión de Documentos",
         "subtitle": "Solicitar y gestionar documentos del estudiante",
         "congratulations": {
-          "title": "🎉 ¡Felicitaciones! ¡Todos los documentos han sido aprobados!",
+          "title": "¡Felicitaciones! ¡Todos los documentos han sido aprobados!",
           "subtitle": "Su documentación ha sido aceptada por la universidad. Ahora puede proceder al siguiente paso."
         },
         "acceptanceLetter": {
-          "title": "📋 Esperando Carta de Aceptación",
-          "description": "Con todos los documentos aprobados, la universidad está preparando su carta de aceptación oficial. Será notificado tan pronto como esté disponible.",
-          "status": "⏳ Esperando que la universidad envíe la carta de aceptación oficial",
-          "received": "✅ ¡Carta de Aceptación Recibida!",
+          "title": "Carta de Aceptación",
+          "description": "Su carta de aceptación oficial de la universidad.",
+          "status": "Esperando que la universidad envíe la carta de aceptación oficial",
+          "received": "¡Carta de Aceptación Recibida!",
           "readyForDownload": "Su carta de aceptación oficial está lista para descargar",
-          "downloadButton": "📄 Descargar Carta de Aceptación",
-          "viewButton": "👁️ Ver"
+          "downloadButton": "Descargar Carta de Aceptación",
+          "viewButton": "Ver"
         },
         "documentStatus": {
           "title": "Estado de los Documentos",
@@ -2252,6 +2252,17 @@
         "transferFormDescriptionSchool": "Sube el formulario de transferencia para este estudiante. Solo visible para estudiantes de transferencia.",
         "transferFormDescriptionStudent": "Tu universidad subirá tu formulario de transferencia aquí. Descárgalo cuando esté disponible.",
         "transferForm": "Formulario de Transferencia",
+        "transferFormUploadButton": "Subir Formulario Completado",
+        "transferFormUploaded": "Formulario de transferencia subido",
+        "transferFormUnderReview": "En revisión por la universidad",
+        "transferFormApproved": "Aprobado",
+        "transferFormRejected": "Rechazado",
+        "transferFormRejectionReason": "Motivo del rechazo",
+        "transferFormReupload": "Subir nueva versión",
+        "approveTransferForm": "Aprobar Formulario de Transferencia",
+        "rejectTransferForm": "Rechazar Formulario de Transferencia",
+        "transferFormReceived": "Formulario de Transferencia Recibido",
+        "transferFormReadyMessage": "Tu formulario de transferencia está listo para descargar. Descárgalo, complétalo y envíalo de vuelta a la universidad.",
         "studentUploads": "Cargas del estudiante:",
         "yourUploads": "Tus cargas:",
         "uploading": "Subiendo...",

@@ -75,6 +75,12 @@ const StudentDetails: React.FC = () => {
 
   const [isFileSelecting, setIsFileSelecting] = useState(false);
 
+  // Estados para Transfer Form
+  const [transferFormUploads, setTransferFormUploads] = useState<any[]>([]);
+  const [selectedTransferFormFile, setSelectedTransferFormFile] = useState<File | null>(null);
+  const [uploadingTransferForm, setUploadingTransferForm] = useState(false);
+  const [transferForm, setTransferForm] = useState<any>(null);
+
   // Estados para o modal de nova solicitação de documento
   const [newDocumentRequest, setNewDocumentRequest] = useState({
     title: '',
@@ -258,6 +264,12 @@ const StudentDetails: React.FC = () => {
       console.log('Carregando dados dos documentos para application:', applicationId);
       fetchDocumentRequests();
       fetchStudentDocuments();
+      
+      // Buscar dados do Transfer Form se for aplicação de transfer
+      if (application?.student_process_type === 'transfer') {
+        fetchTransferForm();
+        fetchTransferFormUploads();
+      }
     }
   }, [applicationId, application]); // Incluída a dependência 'application' para garantir que os documentos sejam recarregados quando a aplicação for atualizada
 
@@ -499,6 +511,58 @@ const StudentDetails: React.FC = () => {
     } catch (error) {
       console.error("Error in fetchStudentDocuments:", error);
       setStudentDocuments([]);
+    }
+  };
+
+  // Função para buscar dados do Transfer Form
+  const fetchTransferForm = async () => {
+    if (!application) return;
+    
+    try {
+      console.log('=== Buscando Transfer Form ===');
+      console.log('Application ID:', application.id);
+      
+      const { data, error } = await supabase
+        .from('scholarship_applications')
+        .select('id, transfer_form_url, transfer_form_status, transfer_form_sent_at')
+        .eq('id', application.id)
+        .single();
+
+      if (error) {
+        console.error('Erro ao buscar transfer form:', error);
+        return;
+      }
+
+      console.log('Transfer form data:', data);
+      setTransferForm(data);
+    } catch (error) {
+      console.error('Error in fetchTransferForm:', error);
+    }
+  };
+
+  // Função para buscar uploads do Transfer Form
+  const fetchTransferFormUploads = async () => {
+    if (!application) return;
+    
+    try {
+      console.log('=== Buscando Transfer Form Uploads ===');
+      console.log('Application ID:', application.id);
+      
+      const { data, error } = await supabase
+        .from('transfer_form_uploads')
+        .select('*')
+        .eq('application_id', application.id)
+        .order('uploaded_at', { ascending: false });
+
+      if (error) {
+        console.error('Erro ao buscar transfer form uploads:', error);
+        return;
+      }
+
+      console.log('Transfer form uploads:', data);
+      setTransferFormUploads(data || []);
+    } catch (error) {
+      console.error('Error in fetchTransferFormUploads:', error);
     }
   };
 
@@ -1157,6 +1221,122 @@ const StudentDetails: React.FC = () => {
     } catch (err: any) {
       console.error("Error rejecting document:", err);
       alert(`Failed to reject document: ${err.message}`);
+    }
+  };
+
+  // Função para upload do Transfer Form pela universidade
+  const handleUploadTransferForm = async (file: File) => {
+    if (!application || !file) return;
+
+    setUploadingTransferForm(true);
+    try {
+      // Sanitizar nome do arquivo
+      const sanitizedFileName = file.name
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9.-]/g, '_')
+        .replace(/_+/g, '_')
+        .replace(/^_|_$/g, '');
+
+      const fileName = `transfer-forms/${Date.now()}_${sanitizedFileName}`;
+      
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('document-attachments')
+        .upload(fileName, file);
+
+      if (uploadError) {
+        throw new Error('Failed to upload file: ' + uploadError.message);
+      }
+
+      // Obter URL pública
+      const { data: { publicUrl } } = supabase.storage
+        .from('document-attachments')
+        .getPublicUrl(uploadData.path);
+
+      // Atualizar aplicação
+      const { error: updateError } = await supabase
+        .from('scholarship_applications')
+        .update({
+          transfer_form_url: publicUrl,
+          transfer_form_status: 'sent',
+          transfer_form_sent_at: new Date().toISOString()
+        })
+        .eq('id', application.id);
+
+      if (updateError) {
+        throw new Error('Failed to update application: ' + updateError.message);
+      }
+
+      // Atualizar estado local
+      setTransferForm(prev => ({
+        ...prev,
+        transfer_form_url: publicUrl,
+        transfer_form_status: 'sent',
+        transfer_form_sent_at: new Date().toISOString()
+      }));
+
+      // Recarregar dados
+      await fetchTransferForm();
+      
+      alert('Transfer form template uploaded successfully!');
+    } catch (error: any) {
+      console.error('Error uploading transfer form:', error);
+      alert(`Failed to upload transfer form: ${error.message}`);
+    } finally {
+      setUploadingTransferForm(false);
+    }
+  };
+
+  // Função para aprovar upload do Transfer Form do aluno
+  const handleApproveTransferFormUpload = async (uploadId: string) => {
+    try {
+      const { error } = await supabase
+        .from('transfer_form_uploads')
+        .update({ 
+          status: 'approved',
+          reviewed_at: new Date().toISOString(),
+          reviewed_by: user?.id
+        })
+        .eq('id', uploadId);
+      
+      if (error) {
+        throw new Error('Failed to approve transfer form: ' + error.message);
+      }
+
+      // Recarregar uploads
+      await fetchTransferFormUploads();
+      
+      alert('Transfer form approved successfully!');
+    } catch (error: any) {
+      console.error('Error approving transfer form:', error);
+      alert(`Failed to approve transfer form: ${error.message}`);
+    }
+  };
+
+  // Função para rejeitar upload do Transfer Form do aluno
+  const handleRejectTransferFormUpload = async (uploadId: string, reason: string) => {
+    try {
+      const { error } = await supabase
+        .from('transfer_form_uploads')
+        .update({ 
+          status: 'rejected',
+          rejection_reason: reason,
+          reviewed_at: new Date().toISOString(),
+          reviewed_by: user?.id
+        })
+        .eq('id', uploadId);
+      
+      if (error) {
+        throw new Error('Failed to reject transfer form: ' + error.message);
+      }
+
+      // Recarregar uploads
+      await fetchTransferFormUploads();
+      
+      alert('Transfer form rejected successfully!');
+    } catch (error: any) {
+      console.error('Error rejecting transfer form:', error);
+      alert(`Failed to reject transfer form: ${error.message}`);
     }
   };
 
@@ -2446,6 +2626,221 @@ const StudentDetails: React.FC = () => {
                   )}
                 </div>
               </div>
+
+              {/* Transfer Form Section - Only for Transfer Students */}
+              {application?.student_process_type === 'transfer' && (
+                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-3xl shadow-sm relative overflow-hidden mt-8">
+                  <div className="bg-gradient-to-r from-[#05294E] to-[#041f38] px-6 py-5 rounded-t-3xl">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg">
+                        <svg className="w-6 h-6 text-[#05294E]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <h4 className="text-xl font-bold text-white">Transfer Form</h4>
+                        <p className="text-blue-100 text-sm">Upload template and manage student submissions</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="p-6">
+                    <div className="bg-white rounded-3xl p-6 mb-6">
+                      <p className="text-slate-700 mb-6 leading-relaxed">
+                        Upload the transfer form template for the student to download, fill out, and submit back to you for review.
+                      </p>
+                      
+                      {/* Upload Template Section */}
+                      <div className="mb-6">
+                        <h5 className="text-lg font-semibold text-slate-800 mb-4">Transfer Form Template</h5>
+                        
+                        {transferForm?.transfer_form_url ? (
+                          <div className="bg-green-50 border border-green-200 rounded-2xl p-4">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-3">
+                                <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <div>
+                                  <p className="font-semibold text-green-800">Template Uploaded</p>
+                                  <p className="text-sm text-green-600">
+                                    Sent on {transferForm.transfer_form_sent_at ? new Date(transferForm.transfer_form_sent_at).toLocaleDateString() : 'Unknown date'}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex space-x-2">
+                                <button
+                                  onClick={() => {
+                                    const link = document.createElement('a');
+                                    link.href = transferForm.transfer_form_url;
+                                    link.download = 'transfer_form_template.pdf';
+                                    link.click();
+                                  }}
+                                  className="bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition"
+                                >
+                                  Download
+                                </button>
+                                <button
+                                  onClick={() => setPreviewUrl(transferForm.transfer_form_url)}
+                                  className="bg-white text-green-600 border border-green-600 px-3 py-2 rounded-lg text-sm font-medium hover:bg-green-50 transition"
+                                >
+                                  View
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="border-2 border-dashed border-blue-300 rounded-3xl p-6 bg-blue-50">
+                            <div className="text-center">
+                              <svg className="w-16 h-16 text-blue-500 mx-auto mb-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                              </svg>
+                              <h5 className="font-semibold text-blue-900 mb-2">Upload Transfer Form Template</h5>
+                              <p className="text-blue-700 text-sm mb-4">Select the transfer form template for the student</p>
+                              
+                              {selectedTransferFormFile ? (
+                                <div className="mb-4">
+                                  <div className="flex items-center justify-center space-x-2 bg-blue-100 rounded-lg px-4 py-2">
+                                    <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                    <span className="text-blue-800 font-medium">{selectedTransferFormFile.name}</span>
+                                  </div>
+                                </div>
+                              ) : null}
+                              
+                              <div className="flex flex-col items-center space-y-4">
+                                <label className="bg-[#05294E] hover:bg-[#041f38] text-white px-6 py-3 rounded-xl font-medium transition-colors cursor-pointer inline-flex items-center justify-center">
+                                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                  </svg>
+                                  <span>{selectedTransferFormFile ? 'Change File' : 'Choose File'}</span>
+                                  <input
+                                    type="file"
+                                    className="sr-only"
+                                    accept=".pdf,.doc,.docx"
+                                    onChange={(e) => setSelectedTransferFormFile(e.target.files ? e.target.files[0] : null)}
+                                    disabled={uploadingTransferForm}
+                                  />
+                                </label>
+                                
+                                {selectedTransferFormFile && (
+                                  <button
+                                    onClick={() => handleUploadTransferForm(selectedTransferFormFile)}
+                                    disabled={uploadingTransferForm}
+                                    className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-xl font-semibold transition-colors shadow-sm flex items-center space-x-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                                  >
+                                    {uploadingTransferForm ? (
+                                      <>
+                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                        <span>Uploading...</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                        </svg>
+                                        <span>Upload Template</span>
+                                      </>
+                                    )}
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Student Uploads Section */}
+                      {transferFormUploads.length > 0 && (
+                        <div>
+                          <h5 className="text-lg font-semibold text-slate-800 mb-4">Student Submissions</h5>
+                          <div className="space-y-3">
+                            {transferFormUploads.map((upload) => {
+                              const statusColor = upload.status === 'approved' ? 'bg-green-100 text-green-800 border-green-200' :
+                                                upload.status === 'rejected' ? 'bg-red-100 text-red-800 border-red-200' :
+                                                'bg-yellow-100 text-yellow-800 border-yellow-200';
+                              
+                              return (
+                                <div key={upload.id} className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
+                                  <div className="flex items-start justify-between">
+                                    <div className="flex items-start space-x-3 flex-1">
+                                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                        <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                        </svg>
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <p className="font-medium text-slate-900">
+                                          {upload.file_url.split('/').pop()}
+                                        </p>
+                                        <p className="text-sm text-slate-500">
+                                          Uploaded: {new Date(upload.uploaded_at).toLocaleDateString()}
+                                        </p>
+                                        {upload.rejection_reason && (
+                                          <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-lg">
+                                            <p className="text-xs font-medium text-red-600 mb-1">Rejection reason:</p>
+                                            <p className="text-sm text-red-700">{upload.rejection_reason}</p>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                    
+                                    <div className="flex items-center space-x-3 ml-4">
+                                      <span className={`px-3 py-1 rounded-full text-sm font-medium border ${statusColor}`}>
+                                        {upload.status.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                                      </span>
+                                      
+                                      {/* Action buttons for under_review status */}
+                                      {upload.status === 'under_review' && (
+                                        <div className="flex items-center space-x-2">
+                                          <button
+                                            onClick={() => handleApproveTransferFormUpload(upload.id)}
+                                            className="px-3 py-1.5 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
+                                          >
+                                            Approve
+                                          </button>
+                                          <button
+                                            onClick={() => {
+                                              setPendingRejectDocumentId(upload.id);
+                                              setShowRejectDocumentModal(true);
+                                            }}
+                                            className="px-3 py-1.5 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors"
+                                          >
+                                            Reject
+                                          </button>
+                                        </div>
+                                      )}
+                                      
+                                      <button 
+                                        onClick={() => {
+                                          const link = document.createElement('a');
+                                          link.href = upload.file_url;
+                                          link.download = upload.file_url.split('/').pop() || 'transfer_form.pdf';
+                                          link.click();
+                                        }}
+                                        className="text-[#05294E] hover:text-[#041f38] text-sm font-medium px-3 py-2 rounded-lg hover:bg-slate-100 transition-colors"
+                                      >
+                                        Download
+                                      </button>
+                                      <button 
+                                        onClick={() => setPreviewUrl(upload.file_url)}
+                                        className="text-[#05294E] hover:text-[#041f38] text-sm font-medium px-3 py-2 rounded-lg hover:bg-slate-100 transition-colors"
+                                      >
+                                        View
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -2672,7 +3067,15 @@ const StudentDetails: React.FC = () => {
               <button
                 onClick={() => {
                   if (pendingRejectDocumentId) {
-                    handleRejectDocument(pendingRejectDocumentId, rejectDocumentReason);
+                    // Verificar se é um transfer form upload ou document request upload
+                    const isTransferFormUpload = transferFormUploads.some(upload => upload.id === pendingRejectDocumentId);
+                    
+                    if (isTransferFormUpload) {
+                      handleRejectTransferFormUpload(pendingRejectDocumentId, rejectDocumentReason);
+                    } else {
+                      handleRejectDocument(pendingRejectDocumentId, rejectDocumentReason);
+                    }
+                    
                     setShowRejectDocumentModal(false);
                     setRejectDocumentReason('');
                     setPendingRejectDocumentId(null);

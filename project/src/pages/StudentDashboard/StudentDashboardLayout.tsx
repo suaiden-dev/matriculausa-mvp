@@ -39,7 +39,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
   loading,
   children
 }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
   const { logout } = useAuth();
@@ -404,7 +404,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
                 )}
               </div>
 
-              {/* Language Selector */}
+              {/* Language Selector - Desktop */}
               <div className="hidden sm:block">
                 <LanguageSelector variant="dashboard" showLabel={true} />
               </div>
@@ -452,9 +452,35 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
                         <User className="h-3 w-3 sm:h-4 sm:w-4 mr-2 sm:mr-3" />
                         Profile Settings
                       </Link>
-                      {/* Language selector inside user menu */}
-                      <div className="px-3 sm:px-4 py-2 flex justify-center md:justify-start sm:hidden">
-                        <LanguageSelector variant="dashboard" showLabel={true} />
+                      {/* Language selector inside user menu - Mobile optimized */}
+                      <div className="px-3 sm:px-4 py-2 sm:hidden border-t border-slate-100">
+                        <div className="space-y-2">
+                          <p className="text-xs font-medium text-slate-600 text-center">Language</p>
+                          
+                          {/* Language buttons in a row */}
+                          <div className="flex justify-center space-x-1">
+                            {[
+                              { code: 'en', flag: '🇺🇸' },
+                              { code: 'pt', flag: '🇧🇷' },
+                              { code: 'es', flag: '🇪🇸' }
+                            ].map((language) => (
+                              <button
+                                key={language.code}
+                                onClick={() => {
+                                  i18n.changeLanguage(language.code);
+                                  setUserMenuOpen(false);
+                                }}
+                                className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all duration-200 ${
+                                  i18n.language === language.code
+                                    ? 'bg-blue-600 text-white shadow-md scale-105'
+                                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                }`}
+                              >
+                                <span className="text-lg">{language.flag}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
                       </div>
                     </div>
                     

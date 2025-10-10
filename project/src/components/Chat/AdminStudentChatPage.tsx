@@ -59,7 +59,7 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
     setShowMobileInbox(false); // Hide inbox on mobile when conversation is selected
   };
 
-  // Buscar email/telefone do destinatário para o header (quando admin/affiliate_admin)
+  // Buscar informações do destinatário para o header (quando admin/affiliate_admin)
   useEffect(() => {
     const fetchRecipientInfo = async () => {
       if (!selectedRecipientId || !(userProfile?.role === 'admin' || userProfile?.role === 'affiliate_admin')) {
@@ -70,9 +70,15 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
       try {
         const { data } = await supabase
           .from('user_profiles')
-          .select('id, email, phone')
+          .select('id, email, phone, full_name')
           .eq('user_id', selectedRecipientId)
           .single();
+        
+        // Se não temos o nome do destinatário ainda, definir agora
+        if (data?.full_name && !selectedRecipientName) {
+          setSelectedRecipientName(data.full_name);
+        }
+        
         setSelectedRecipientInfo({ email: data?.email || '', phone: data?.phone || '' });
         setSelectedRecipientProfileId(data?.id || null);
       } catch {
@@ -81,7 +87,7 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
       }
     };
     fetchRecipientInfo();
-  }, [selectedRecipientId, userProfile?.role]);
+  }, [selectedRecipientId, userProfile?.role, selectedRecipientName]);
 
   // Mostrar uma mensagem de orientação apenas na primeira vez que o aluno abre o chat
   useEffect(() => {
