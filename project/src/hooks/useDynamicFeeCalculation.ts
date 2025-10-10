@@ -52,9 +52,9 @@ export const useDynamicFeeCalculation = (userId?: string): DynamicFeeCalculation
       selectionProcessFee,
       scholarshipFee,
       i20ControlFee,
-      selectionProcessFeeString: `$${selectionProcessFee}`,
-      scholarshipFeeString: `$${scholarshipFee}`,
-      i20ControlFeeString: `$${i20ControlFee}`,
+      selectionProcessFeeString: `$${selectionProcessFee.toFixed(2)}`,
+      scholarshipFeeString: `$${scholarshipFee.toFixed(2)}`,
+      i20ControlFeeString: `$${i20ControlFee.toFixed(2)}`,
       systemType: 'legacy',
       isSimplified: false
     };
@@ -98,25 +98,7 @@ export const useDynamicFeeCalculationForUser = (targetUserId: string): DynamicFe
   }, [targetUserId]);
   
   return useMemo(() => {
-    // Se ainda está carregando, usar valores padrão
-    if (loading) {
-      const selectionProcessFee = Number(getFeeAmount('selection_process')) || 400;
-      const scholarshipFee = Number(getFeeAmount('scholarship_fee')) || 900;
-      const i20ControlFee = Number(getFeeAmount('i20_control_fee')) || 900;
-
-      return {
-        selectionProcessFee,
-        scholarshipFee,
-        i20ControlFee,
-        selectionProcessFeeString: `$${selectionProcessFee}`,
-        scholarshipFeeString: `$${scholarshipFee}`,
-        i20ControlFeeString: `$${i20ControlFee}`,
-        systemType: 'legacy',
-        isSimplified: false
-      };
-    }
-
-    // Para sistema simplificado, usar valores fixos
+    // Para sistema simplificado, usar valores fixos (PRIORIDADE)
     if (userSystemType === 'simplified' && !simplifiedFeesLoading) {
       return {
         selectionProcessFee: fee350,
@@ -130,6 +112,24 @@ export const useDynamicFeeCalculationForUser = (targetUserId: string): DynamicFe
       };
     }
 
+    // Se ainda está carregando, usar valores padrão temporários
+    if (loading || simplifiedFeesLoading) {
+      const selectionProcessFee = Number(getFeeAmount('selection_process')) || 350;
+      const scholarshipFee = Number(getFeeAmount('scholarship_fee')) || 550;
+      const i20ControlFee = Number(getFeeAmount('i20_control_fee')) || 900;
+
+      return {
+        selectionProcessFee,
+        scholarshipFee,
+        i20ControlFee,
+        selectionProcessFeeString: `$${selectionProcessFee.toFixed(2)}`,
+        scholarshipFeeString: `$${scholarshipFee.toFixed(2)}`,
+        i20ControlFeeString: `$${i20ControlFee.toFixed(2)}`,
+        systemType: 'legacy',
+        isSimplified: false
+      };
+    }
+
     // Para sistema legacy, usar valores do feeConfig ou padrões
     const selectionProcessFee = Number(getFeeAmount('selection_process')) || 400;
     const scholarshipFee = Number(getFeeAmount('scholarship_fee')) || 900;
@@ -139,9 +139,9 @@ export const useDynamicFeeCalculationForUser = (targetUserId: string): DynamicFe
       selectionProcessFee,
       scholarshipFee,
       i20ControlFee,
-      selectionProcessFeeString: `$${selectionProcessFee}`,
-      scholarshipFeeString: `$${scholarshipFee}`,
-      i20ControlFeeString: `$${i20ControlFee}`,
+      selectionProcessFeeString: `$${selectionProcessFee.toFixed(2)}`,
+      scholarshipFeeString: `$${scholarshipFee.toFixed(2)}`,
+      i20ControlFeeString: `$${i20ControlFee.toFixed(2)}`,
       systemType: 'legacy',
       isSimplified: false
     };

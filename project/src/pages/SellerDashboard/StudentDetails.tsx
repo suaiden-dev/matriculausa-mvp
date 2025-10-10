@@ -14,7 +14,6 @@ import { supabase } from '../../lib/supabase';
 import { getDocumentStatusDisplay } from '../../utils/documentStatusMapper';
 import DocumentViewerModal from '../../components/DocumentViewerModal';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
-import { useDynamicFeeCalculation, useDynamicFeeCalculationForUser } from '../../hooks/useDynamicFeeCalculation';
 
 interface StudentInfo {
   student_id: string;
@@ -117,66 +116,19 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
   const [loadingApplication, setLoadingApplication] = useState(false);
   
   // Hook para configurações dinâmicas de taxas (usando student_id para ver overrides do estudante)
-  const { getFeeAmount, formatFeeAmount, hasOverride } = useFeeConfig(studentInfo?.student_id);
+  const { getFeeAmount, formatFeeAmount, hasOverride, userSystemType } = useFeeConfig(studentInfo?.student_id);
   
-  // Hook para valores dinâmicos baseados no sistema do usuário específico
-  const { selectionProcessFee, scholarshipFee, i20ControlFee, isSimplified } = useDynamicFeeCalculationForUser(studentInfo?.student_id || '');
-  
-  // Estados para detecção do sistema do estudante
-  const [studentSystemType, setStudentSystemType] = useState<'legacy' | 'simplified'>('legacy');
-  const [systemLoading, setSystemLoading] = useState(true);
   
   // Estados para taxas dinâmicas do estudante
   const [studentPackageFees, setStudentPackageFees] = useState<any>(null);
   const [dependents, setDependents] = useState<number>(0);
 
-  // Detectar sistema do estudante
-  useEffect(() => {
-    const detectStudentSystem = async () => {
-      if (!studentInfo?.student_id) {
-        setStudentSystemType('legacy');
-        setSystemLoading(false);
-        return;
-      }
-
-      try {
-        setSystemLoading(true);
-        console.log('🔍 [StudentDetails] Detecting system for student:', studentInfo.student_id);
-        
-        const { data, error } = await supabase
-          .rpc('get_user_system_type', { user_id_param: studentInfo.student_id });
-
-        if (error) {
-          console.error('Error detecting student system type:', error);
-          setStudentSystemType('legacy');
-        } else {
-          console.log('🔍 [StudentDetails] Student system type detected:', data);
-          setStudentSystemType(data as 'legacy' | 'simplified');
-        }
-      } catch (err) {
-        console.error('Error detecting student system type:', err);
-        setStudentSystemType('legacy');
-      } finally {
-        setSystemLoading(false);
-      }
-    };
-
-    detectStudentSystem();
-  }, [studentInfo?.student_id]);
 
   // Função para obter valores corretos baseados no sistema do estudante
   const getStudentFees = () => {
-    if (systemLoading) {
-      return {
-        selectionProcessFee: 400,
-        scholarshipFee: 900,
-        i20ControlFee: 900,
-        isSimplified: false
-      };
-    }
-
-    if (studentSystemType === 'simplified') {
-      console.log('🔍 [StudentDetails] Using simplified values for student');
+    // Usar userSystemType do hook useFeeConfig (mesmo durante loading)
+    if (userSystemType === 'simplified') {
+      console.log('🔍 [StudentDetails] Using simplified values for student (from useFeeConfig)');
       return {
         selectionProcessFee: 350,
         scholarshipFee: 550,
@@ -185,7 +137,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
       };
     }
 
-    console.log('🔍 [StudentDetails] Using legacy values for student');
+    console.log('🔍 [StudentDetails] Using legacy values for student (from useFeeConfig)');
     return {
       selectionProcessFee: Number(getFeeAmount('selection_process')) || 400,
       scholarshipFee: Number(getFeeAmount('scholarship_fee')) || 900,

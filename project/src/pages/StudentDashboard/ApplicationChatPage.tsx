@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useAuth } from '../../hooks/useAuth';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
+import { useDynamicFees } from '../../hooks/useDynamicFees';
 import { useStudentLogs } from '../../hooks/useStudentLogs';
 import { useUnreadMessages } from '../../contexts/UnreadMessagesContext';
 import { useStudentChatUnreadCount } from '../../hooks/useStudentChatUnreadCount';
@@ -43,6 +44,7 @@ const ApplicationChatPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const { user, userProfile, refetchUserProfile } = useAuth();
   const { formatFeeAmount, getFeeAmount } = useFeeConfig(user?.id);
+  const { i20ControlFee } = useDynamicFees();
   const { logAction } = useStudentLogs(userProfile?.id || '');
   const { resetUnreadCount } = useUnreadMessages();
   const { markStudentMessagesAsRead } = useStudentChatUnreadCount();
@@ -408,9 +410,12 @@ const ApplicationChatPage: React.FC = () => {
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
         const apiUrl = `${supabaseUrl}/functions/v1/stripe-checkout-i20-control-fee`;
         
-        // Novo modelo: I-20 NÃO recebe adicionais por dependentes
-        const baseAmount = getFeeAmount('i20_control_fee');
-        const finalAmount = baseAmount;
+        // ✅ CORREÇÃO: Usar useDynamicFees que já considera system_type
+        if (!i20ControlFee) {
+          setI20Error('I-20 Control Fee ainda está carregando. Aguarde um momento e tente novamente.');
+          return;
+        }
+        const finalAmount = parseFloat(i20ControlFee.replace('$', ''));
         
         const res = await fetch(apiUrl, {
           method: 'POST',

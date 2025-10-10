@@ -47,6 +47,7 @@ export interface Student {
   is_scholarship_fee_paid: boolean;
   scholarship_title?: string;
   university_name?: string;
+  system_type?: string;
 }
 
 export const useAffiliateData = () => {
@@ -173,6 +174,7 @@ export const useAffiliateData = () => {
                   seller_referral_code,
                   has_paid_selection_process_fee,
                   has_paid_i20_control_fee,
+                  system_type,
                   scholarship_applications (
                     id,
                     is_scholarship_fee_paid,
@@ -226,7 +228,8 @@ export const useAffiliateData = () => {
                     has_paid_i20_control_fee: profile.has_paid_i20_control_fee,
                     is_scholarship_fee_paid: scholarshipApp?.is_scholarship_fee_paid || false,
                     scholarship_title: scholarshipApp?.scholarships?.title,
-                    university_name: scholarshipApp?.scholarships?.universities?.name
+                    university_name: scholarshipApp?.scholarships?.universities?.name,
+                    system_type: profile.system_type
                   };
                 });
 

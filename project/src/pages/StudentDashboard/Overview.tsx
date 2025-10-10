@@ -25,6 +25,13 @@ import { ProgressBar } from '../../components/ProgressBar';
 import StepByStepButton from '../../components/OnboardingTour/StepByStepButton';
 import './Overview.css'; // Adicionar um arquivo de estilos dedicado para padronização visual
 
+// Componente de skeleton para valores de taxa
+const FeeSkeleton = () => (
+  <div className="animate-pulse">
+    <div className="h-4 bg-gray-300 rounded w-16"></div>
+  </div>
+);
+
 interface OverviewProps {
   profile: any;
   scholarships: any[];
@@ -60,21 +67,20 @@ const Overview: React.FC<OverviewProps> = ({
 
   // Exibir skeleton até os dados de perfil e taxas estarem prontos para evitar flicker
   useEffect(() => {
-    // Considera carregado quando perfil está resolvido (mesmo que null) e já tivemos uma avaliação inicial das taxas
-    // Também adiciona um pequeno debounce para permitir cálculos de overrides/discounts estabilizarem
+    // Considera carregado quando perfil está resolvido e as taxas do useDynamicFees estão carregadas
     const debounce = setTimeout(() => {
-      const selection = Number(getFeeAmount('selection_process')) || 0;
-      const scholarship = Number(getFeeAmount('scholarship_fee')) || 0;
-      const i20 = Number(getFeeAmount('i20_control_fee')) || 0;
       const hasProfileResolved = user !== undefined; // quando hook de auth já rodou
-      const someFeeKnown = selection > 0 || scholarship > 0 || i20 > 0;
-      if (hasProfileResolved && someFeeKnown) {
+      const feesLoaded = selectionProcessFeeAmount !== undefined && 
+                        scholarshipFeeAmount !== undefined && 
+                        i20ControlFeeAmount !== undefined;
+      
+      if (hasProfileResolved && feesLoaded) {
         setFeesLoading(false);
       }
     }, 250);
 
     return () => clearTimeout(debounce);
-  }, [user, userProfile, userFeeOverrides, getFeeAmount]);
+  }, [user, userProfile, selectionProcessFeeAmount, scholarshipFeeAmount, i20ControlFeeAmount]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -126,17 +132,34 @@ const Overview: React.FC<OverviewProps> = ({
   const hasScholarshipFeePaid = recentApplications.some(app => app.is_scholarship_fee_paid);
 
   // Base fee amounts with user overrides - usar valores do useDynamicFees
-  // useDynamicFees já inclui dependentes, então não precisamos somar novamente
-  const selectionWithDependents = selectionProcessFeeAmount;
-  const scholarshipBase = scholarshipFeeAmount;
-  const i20WithDependents = i20ControlFeeAmount;
+  const selectionBase = selectionProcessFeeAmount || 0;
+  const scholarshipBase = scholarshipFeeAmount || 0;
+  const i20Base = i20ControlFeeAmount || 0;
+
+  // Verificar se as taxas estão carregando
+  const isFeesLoading = selectionProcessFeeAmount === undefined || 
+                       scholarshipFeeAmount === undefined || 
+                       i20ControlFeeAmount === undefined;
+
+  // Dependents impact: $150 por dependente somente no Selection Process
+  // APENAS se não há override personalizado (override já inclui dependentes se necessário)
+  const dependents = (userProfile?.dependents as number) || 0;
+  const hasSelectionOverride = userFeeOverrides?.selection_process_fee !== undefined;
+  const hasI20Override = userFeeOverrides?.i20_control_fee !== undefined;
+  
+  const selectionExtra = hasSelectionOverride ? 0 : (dependents * 150); // Só soma dependentes se não tem override
+  const i20Extra = hasI20Override ? 0 : 0; // I-20 nunca tem dependentes
+
+  // Display amounts
+  const selectionWithDependents = selectionBase + selectionExtra;
+  const i20WithDependents = i20Base + i20Extra;
 
   // Valores das taxas para o ProgressBar (Application fee é variável)
   const dynamicFeeValues = [
-    `$${selectionWithDependents}`, // Selection Process Fee (inclui dependentes)
+    isFeesLoading ? <FeeSkeleton /> : `$${selectionWithDependents}`, // Selection Process Fee (inclui dependentes)
     'As per university', // Application Fee (variável - não mostra valor específico)
-    `$${scholarshipBase}`, // Scholarship Fee (sem dependentes)
-    `$${i20WithDependents}`, // I-20 Control Fee (inclui dependentes)
+    isFeesLoading ? <FeeSkeleton /> : `$${scholarshipBase}`, // Scholarship Fee (sem dependentes)
+    isFeesLoading ? <FeeSkeleton /> : `$${i20WithDependents}`, // I-20 Control Fee (inclui dependentes)
   ];
 
   // Lógica da barra de progresso dinâmica

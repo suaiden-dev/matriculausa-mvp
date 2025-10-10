@@ -40,10 +40,23 @@ const SellerRegistrationsManagerSimple: React.FC<SellerRegistrationsManagerProps
     setLoading(true);
     try {
       // 1. Buscar códigos criados por este admin
+      // Primeiro, buscar o affiliate_admin_id do usuário
+      const { data: affiliateAdmin, error: adminError } = await supabase
+        .from('affiliate_admins')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (adminError || !affiliateAdmin) {
+        console.error('Error finding affiliate admin:', adminError);
+        setError('Affiliate admin not found');
+        return;
+      }
+
       const { data: adminCodes, error: codesError } = await supabase
         .from('seller_registration_codes')
         .select('code')
-        .eq('admin_id', user.id)
+        .eq('admin_id', affiliateAdmin.id)
         .eq('is_active', true);
 
       if (codesError) {

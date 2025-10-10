@@ -154,23 +154,36 @@ const SellerRegistration: React.FC<SellerRegistrationProps> = () => {
           .single();
 
         if (codeError || !codeData?.admin_id) {
+          console.error('❌ [SELLER_REG] Erro ao buscar admin_id:', codeError);
           throw new Error('Affiliate admin not found for this code.');
         }
 
+        console.log('✅ [SELLER_REG] Admin ID encontrado:', codeData.admin_id);
+
+        const registrationData = {
+          user_id: authData.user.id,
+          admin_id: null, // Deve ser NULL para passar na política RLS
+          registration_code: formData.registration_code,
+          email: formData.email.trim().toLowerCase(),
+          full_name: formData.full_name,
+          phone: formData.phone,
+          status: 'pending'
+        };
+
+        console.log('📝 [SELLER_REG] Dados do registro:', registrationData);
+
         const { error: registrationError } = await supabase
           .from('seller_registrations')
-          .insert({
-            user_id: authData.user.id,
-            admin_id: null, // Deve ser NULL para passar na política RLS
-            registration_code: formData.registration_code,
-            email: formData.email.trim().toLowerCase(),
-            full_name: formData.full_name,
-            phone: formData.phone,
-            status: 'pending'
-          });
+          .insert(registrationData);
 
         if (registrationError) {
           console.error('❌ [SELLER_REG] Erro ao criar registro:', registrationError);
+          console.error('❌ [SELLER_REG] Detalhes do erro:', {
+            message: registrationError.message,
+            details: registrationError.details,
+            hint: registrationError.hint,
+            code: registrationError.code
+          });
           throw registrationError;
         }
 

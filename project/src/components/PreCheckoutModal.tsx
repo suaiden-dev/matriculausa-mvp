@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { useFeeConfig } from '../hooks/useFeeConfig';
+import { useDynamicFees } from '../hooks/useDynamicFees';
 import { useTermsAcceptance } from '../hooks/useTermsAcceptance';
 import { useAffiliateTermsAcceptance } from '../hooks/useAffiliateTermsAcceptance';
 
@@ -43,7 +44,8 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
   
   const { t } = useTranslation();
   const { user, userProfile } = useAuth();
-  const { getFeeAmount, userFeeOverrides } = useFeeConfig(user?.id);
+  const { getFeeAmount } = useFeeConfig(user?.id);
+  const { selectionProcessFee, scholarshipFee } = useDynamicFees();
   const { recordTermAcceptance } = useTermsAcceptance();
   const { recordAffiliateTermAcceptance, checkIfUserHasAffiliate } = useAffiliateTermsAcceptance();
   const [discountCode, setDiscountCode] = useState('');
@@ -58,23 +60,28 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
   const [codeApplied, setCodeApplied] = useState(false);
   const [hasReferralCode, setHasReferralCode] = useState(false);
   const [showCodeStep, setShowCodeStep] = useState(false);
-  // Preço calculado conforme feeType e dependentes (Selection Process inclui dependentes)
+  // Verificar se as taxas estão carregando (para uso futuro se necessário)
+  // const isFeesLoading = (() => {
+  //   if (userProfile?.system_type === 'simplified') {
+  //     return simplifiedFeesLoading || !selectionProcessFee || !scholarshipFee;
+  //   } else {
+  //     return feeLoading || !selectionProcessFee || !scholarshipFee;
+  //   }
+  // })();
+
+  // Preço calculado usando useDynamicFees que já considera system_type e dependentes
   const computedBasePrice = (() => {
-    const dependents = Number(userProfile?.dependents) || 0;
     switch (feeType) {
       case 'selection_process':
-        const hasOverride = userFeeOverrides?.selection_process_fee !== undefined;
-        if (hasOverride) {
-          // Se há override, usar apenas o valor do override (já inclui dependentes se necessário)
-          return Number(getFeeAmount('selection_process'));
-        } else {
-          // Se não há override, aplicar lógica de dependentes aos valores padrão
-          return Number(getFeeAmount('selection_process')) + dependents * 150;
-        }
+        // ✅ CORREÇÃO: Usar useDynamicFees que já considera system_type e dependentes
+        if (!selectionProcessFee) return 0; // Aguardar carregamento
+        return parseFloat(selectionProcessFee.replace('$', ''));
       case 'application_fee':
         return Number(getFeeAmount('application_fee'));
       case 'scholarship_fee':
-        return Number(getFeeAmount('scholarship_fee'));
+        // ✅ CORREÇÃO: Usar useDynamicFees que já considera system_type
+        if (!scholarshipFee) return 0; // Aguardar carregamento
+        return parseFloat(scholarshipFee.replace('$', ''));
       case 'enrollment_fee':
       default:
         return productPrice;

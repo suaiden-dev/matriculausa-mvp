@@ -578,7 +578,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               const { data: validationResult, error: validationError } = await supabase
                 .rpc('validate_and_apply_referral_code', {
                   user_id_param: session.user.id,
-                  affiliate_code_param: session.user.user_metadata.affiliate_code
+                  affiliate_code_param: session.user.user_metadata.affiliate_code,
+                  email_param: session.user.email
                 });
 
               if (validationError) {
@@ -790,6 +791,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       ...cleanUserData,
       name: cleanUserData.full_name, // redundância para garantir compatibilidade
       full_name: cleanUserData.full_name, // Adicionar full_name explicitamente
+      email: normalizedEmail, // Adicionar email do aluno ao metadata
     };
     
     console.log('🔍 [USEAUTH] signUpData final:', signUpData);
