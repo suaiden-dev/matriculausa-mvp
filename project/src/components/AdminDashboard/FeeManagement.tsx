@@ -20,6 +20,7 @@ interface Student {
   has_paid_selection_process_fee: boolean;
   has_paid_i20_control_fee: boolean;
   seller_referral_code?: string | null;
+  system_type?: string;
 }
 
 interface FeeOverride {
@@ -39,7 +40,6 @@ interface StudentWithFees extends Student {
   };
 }
 
-import { useDynamicFeeCalculation } from '../../hooks/useDynamicFeeCalculation';
 
 const FeeManagement: React.FC = () => {
   const [students, setStudents] = useState<StudentWithFees[]>([]);
@@ -53,8 +53,6 @@ const FeeManagement: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(20);
   
-  // Usar valores dinâmicos baseados no sistema do usuário
-  const { selectionProcessFee, scholarshipFee, i20ControlFee, isSimplified } = useDynamicFeeCalculation();
 
   useEffect(() => {
     fetchStudents();
@@ -68,7 +66,7 @@ const FeeManagement: React.FC = () => {
       // Buscar todos os estudantes
       const { data: studentsData, error: studentsError } = await supabase
         .from('user_profiles')
-        .select('id, user_id, full_name, email, dependents, has_paid_selection_process_fee, has_paid_i20_control_fee, seller_referral_code, created_at')
+        .select('id, user_id, full_name, email, dependents, has_paid_selection_process_fee, has_paid_i20_control_fee, seller_referral_code, system_type, created_at')
         .eq('role', 'student')
         .order('created_at', { ascending: false });
 
@@ -88,15 +86,21 @@ const FeeManagement: React.FC = () => {
         const override = (overridesData || []).find(o => o.user_id === student.user_id);
         const dependents = student.dependents || 0;
         const dependentsExtra = dependents * 150; // $150 por dependente apenas no Selection Process
+        
+        // Determinar valores base baseado no system_type do estudante
+        const systemType = student.system_type || 'legacy';
+        const baseSelectionFee = systemType === 'simplified' ? 350 : 400;
+        const baseScholarshipFee = systemType === 'simplified' ? 550 : 900;
+        const baseI20Fee = 900; // Sempre 900 para ambos os sistemas
 
         return {
           ...student,
           feeOverrides: override || undefined,
           calculatedFees: {
-            selection_process: override?.selection_process_fee || (selectionProcessFee + dependentsExtra),
+            selection_process: override?.selection_process_fee || (baseSelectionFee + dependentsExtra),
             application: 0, // Application fee é variável por universidade
-            scholarship: override?.scholarship_fee || scholarshipFee,
-            i20_control: override?.i20_control_fee || i20ControlFee
+            scholarship: override?.scholarship_fee || baseScholarshipFee,
+            i20_control: override?.i20_control_fee || baseI20Fee
           }
         };
       });

@@ -1,9 +1,9 @@
 import React, { useState, useCallback } from 'react';
 import { useAuth } from '../../hooks/useAuth';
-import { useAdminStudentChat } from '../../hooks/useAdminStudentChat';
+import { useAdminStudentChat, useAdminStudentConversations } from '../../hooks/useAdminStudentChat';
 import ApplicationChat from '../ApplicationChat';
 import ChatInbox from './ChatInbox';
-import { ArrowLeft, MessageSquare, Users, ExternalLink, HelpCircle } from 'lucide-react';
+import { ArrowLeft, Users, ExternalLink, HelpCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 
@@ -29,8 +29,11 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
   const [selectedRecipientProfileId, setSelectedRecipientProfileId] = useState<string | null>(null);
   const [showGuide, setShowGuide] = useState(false);
 
+  // Get conversations hook to access updateConversationUnreadCount
+  const { updateConversationUnreadCount } = useAdminStudentConversations();
+  
   // Initialize chat with selected conversation or recipient
-  const chat = useAdminStudentChat(selectedConversationId, selectedRecipientId);
+  const chat = useAdminStudentChat(selectedConversationId, selectedRecipientId, updateConversationUnreadCount);
 
   const handleConversationSelect = useCallback((conversationId: string, recipientId: string, recipientName: string) => {
     setSelectedConversationId(conversationId);
@@ -207,7 +210,7 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
               </div>
 
               {/* Chat component */}
-              <div className="flex-1">
+              <div className="flex-1 min-h-0">
                 <ApplicationChat
                   messages={chat.messages}
                   onSend={handleSendMessage}
@@ -219,6 +222,7 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
                   currentUserId={user.id}
                   onMarkAllAsRead={chat.markAllAsRead}
                   overrideHeights={true}
+                  className="h-full"
                 />
               </div>
             </>

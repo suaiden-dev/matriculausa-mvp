@@ -58,19 +58,6 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
   // Debug: Verificar se os overrides estão sendo carregados
   useEffect(() => {
     if (studentDetails?.student_id) {
-      console.log('🔍 [StudentDetailsView] Debug - Student ID:', studentDetails.student_id);
-      console.log('🔍 [StudentDetailsView] Debug - Email:', studentDetails.email);
-      console.log('🔍 [StudentDetailsView] Debug - User Fee Overrides:', userFeeOverrides);
-      console.log('🔍 [StudentDetailsView] Debug - getFeeAmount(selection_process):', getFeeAmount('selection_process'));
-      console.log('🔍 [StudentDetailsView] Debug - getFeeAmount(scholarship_fee):', getFeeAmount('scholarship_fee'));
-      console.log('🔍 [StudentDetailsView] Debug - getFeeAmount(i20_control_fee):', getFeeAmount('i20_control_fee'));
-      console.log('🔍 [StudentDetailsView] Debug - studentFees:', studentFees);
-      console.log('🔍 [StudentDetailsView] Debug - isSimplified:', studentFees.isSimplified);
-      console.log('🔍 [StudentDetailsView] Debug - scholarshipApplication:', scholarshipApplication);
-      console.log('🔍 [StudentDetailsView] Debug - is_scholarship_fee_paid:', scholarshipApplication?.is_scholarship_fee_paid);
-      console.log('🔍 [StudentDetailsView] Debug - is_application_fee_paid:', scholarshipApplication?.is_application_fee_paid);
-      console.log('🔍 [StudentDetailsView] Debug - application_fee_amount:', scholarshipApplication?.scholarships?.application_fee_amount);
-      console.log('🔍 [StudentDetailsView] Debug - scholarship_fee_amount:', scholarshipApplication?.scholarships?.scholarship_fee_amount);
     }
   }, [studentDetails?.student_id, studentDetails?.email, userFeeOverrides, getFeeAmount, scholarshipApplication]);
   
@@ -85,7 +72,6 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
   useEffect(() => {
     if (studentDetails?.dependents !== undefined) {
       setStudentDependents(studentDetails.dependents);
-      console.log('🔍 [StudentDetailsView] Dependents updated from studentDetails:', studentDetails.dependents);
     }
   }, [studentDetails?.dependents]);
   
@@ -131,14 +117,12 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
         return;
       }
 
-      console.log('🔍 [StudentDetailsView] Profile data loaded:', profileData);
       
       // Atualizar dependentes
       setStudentDependents(Number(profileData.dependents) || 0);
       
       // Se não tem desired_scholarship_range, retornar null
       if (!profileData.desired_scholarship_range) {
-        console.log('🔍 [StudentDetailsView] No desired scholarship range set');
         setStudentPackageFees(null);
         return;
       }
@@ -175,7 +159,6 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
         dependents: dependents // ✅ Informação dos dependentes
       };
       
-      console.log('🔍 [StudentDetailsView] Package fees set:', packageFees);
       setStudentPackageFees(packageFees);
     } catch (error) {
       console.error('Error loading student package fees:', error);
@@ -451,14 +434,24 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                               const appStatus = (studentDetails as any)?.status || (studentDetails as any)?.application_status as string | undefined;
                               const documentsStatus = (studentDetails as any)?.documents_status as string | undefined;
                               
+                              // Debug: Verificar valores
+                              console.log('🔍 [ENROLLMENT_DEBUG] studentDetails:', studentDetails);
+                              console.log('🔍 [ENROLLMENT_DEBUG] acceptanceStatus:', acceptanceStatus);
+                              console.log('🔍 [ENROLLMENT_DEBUG] appStatus:', appStatus);
+                              console.log('🔍 [ENROLLMENT_DEBUG] documentsStatus:', documentsStatus);
+                              
                               // Para usuários com aplicação de bolsa: verificar status da aplicação
                               // Para usuários sem aplicação de bolsa: verificar documents_status
+                              // ✅ CORREÇÃO: acceptance_letter_status pode ser 'sent' ou 'approved'
                               const isEnrolled = appStatus === 'enrolled' || 
                                                 acceptanceStatus === 'approved' || 
+                                                acceptanceStatus === 'sent' ||
                                                 (documentsStatus === 'approved' && !appStatus);
                               const label = isEnrolled ? 'Enrolled' : 'Pending Acceptance';
                               const color = isEnrolled ? 'text-green-700' : 'text-yellow-700';
                               const dot = isEnrolled ? 'bg-green-500' : 'bg-yellow-500';
+                              
+                              console.log('🔍 [ENROLLMENT_DEBUG] isEnrolled:', isEnrolled);
                               
                               return (
                                 <div className="flex items-center space-x-2">
@@ -806,14 +799,12 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                               // Para sistema simplificado, usar valores fixos
                               if (studentFees.isSimplified) {
                                 const finalAmount = studentFees.selectionProcessFee + (studentDependents * 150);
-                                console.log('🔍 [StudentDetailsView] Selection Process - Simplified:', studentFees.selectionProcessFee, 'Final:', finalAmount, 'Dependents:', studentDependents);
                                 return formatFeeAmount(finalAmount);
                               }
                               
                               // Para sistema legacy, usar lógica de overrides
                               const baseFee = getFeeAmount('selection_process'); // já considera overrides
                               const finalAmount = calculateFeeWithDependents(baseFee, studentDependents, 'selection_process');
-                              console.log('🔍 [StudentDetailsView] Selection Process - Legacy - Base (with override):', baseFee, 'Final:', finalAmount, 'Dependents:', studentDependents, 'Has Override:', hasOverride && hasOverride('selection_process'));
                               return formatFeeAmount(finalAmount);
                             })()}
                           </span>
@@ -837,11 +828,9 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                                // ✅ CORREÇÃO: Mostrar valor da bolsa aplicada (scholarship amount)
                                if (scholarshipApplication?.scholarships?.application_fee_amount) {
                                  const amount = Number(scholarshipApplication.scholarships.application_fee_amount);
-                                 console.log('🔍 [StudentDetailsView] Application Fee - Using scholarship amount:', amount);
                                  return formatFeeAmount(amount);
                                } else {
                                  const fallbackAmount = getFeeAmount('application_fee');
-                                 console.log('🔍 [StudentDetailsView] Application Fee - Using fallback amount:', fallbackAmount);
                                  return formatFeeAmount(fallbackAmount);
                                }
                              })()}
@@ -865,18 +854,15 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                              {(() => {
                                // Para sistema simplificado, usar valores fixos
                                if (studentFees.isSimplified) {
-                                 console.log('🔍 [StudentDetailsView] Scholarship Fee - Simplified:', studentFees.scholarshipFee);
                                  return formatFeeAmount(studentFees.scholarshipFee);
                                }
                                
                                // Para sistema legacy, usar lógica de overrides
                                if (scholarshipApplication?.scholarships?.scholarship_fee_amount) {
                                  const amount = Number(scholarshipApplication.scholarships.scholarship_fee_amount);
-                                 console.log('🔍 [StudentDetailsView] Scholarship Fee - Legacy - Using scholarship amount:', amount);
                                  return formatFeeAmount(amount);
                                } else {
                                  const fallbackAmount = getFeeAmount('scholarship_fee');
-                                 console.log('🔍 [StudentDetailsView] Scholarship Fee - Legacy - Using fallback amount:', fallbackAmount);
                                  return formatFeeAmount(fallbackAmount);
                                }
                              })()}
@@ -900,14 +886,12 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                             {(() => {
                               // Para sistema simplificado, usar valores fixos
                               if (studentFees.isSimplified) {
-                                console.log('🔍 [StudentDetailsView] I-20 Control - Simplified:', studentFees.i20ControlFee);
                                 return formatFeeAmount(studentFees.i20ControlFee);
                               }
                               
                               // Para sistema legacy, usar lógica de overrides
                               const baseFee = getFeeAmount('i20_control_fee'); // já considera overrides
                               const finalAmount = calculateFeeWithDependents(baseFee, studentDependents, 'i20_control_fee');
-                              console.log('🔍 [StudentDetailsView] I-20 Control - Legacy - Base (with override):', baseFee, 'Final:', finalAmount, 'Has Override:', hasOverride && hasOverride('i20_control_fee'));
                               return formatFeeAmount(finalAmount);
                             })()}
                           </span>

@@ -255,32 +255,30 @@ const SellerDashboard: React.FC = () => {
             scholarship_fee_paid_date: null
           });
         } else {
-          // Aplicar filtro baseado na application fee paga (mesmo comportamento do StudentDashboard)
-          // Priorizar aplicações com scholarship_fee_paid: true
-          const chosenPaidApp = studentApplications.find(
-            (app) => !!app.is_scholarship_fee_paid
-          ) || studentApplications.find(
-            (app) => !!app.is_application_fee_paid
-          );
-          const applicationsToShow = chosenPaidApp
-            ? studentApplications.filter((app) => app.id === chosenPaidApp.id)
-            : studentApplications;
+          // ✅ CORREÇÃO: Verificar se QUALQUER aplicação foi paga (não filtrar)
+          const hasAnyScholarshipPaid = studentApplications.some((app: any) => !!app.is_scholarship_fee_paid);
+          const hasAnyApplicationPaid = studentApplications.some((app: any) => !!app.is_application_fee_paid);
+          const hasAnyAcceptanceLetter = studentApplications.some((app: any) => !!app.acceptance_letter_sent_at);
+          
+          // Usar a aplicação mais recente para dados de exibição
+          const mostRecentApp = studentApplications.sort((a: any, b: any) => 
+            new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+          )[0];
 
-          // Criar uma entrada para cada aplicação (após filtro)
-          applicationsToShow.forEach((app: any) => {
-            studentsData.push({
-              ...baseStudent,
-              ...profileFlags,
-              application_id: app.id,
-              is_scholarship_fee_paid: !!app.is_scholarship_fee_paid,
-              is_application_fee_paid: !!app.is_application_fee_paid,
-              acceptance_letter_sent_at: app.acceptance_letter_sent_at || null,
-              acceptance_letter_status: app.acceptance_letter_status || null,
-              scholarship_fee_paid_date: null,
-              // Sobrescrever com dados específicos da aplicação se disponíveis
-              scholarship_title: app.scholarships?.title || baseStudent.scholarship_title,
-              university_name: app.scholarships?.universities?.name || baseStudent.university_name
-            });
+          // Criar UMA entrada por estudante com flags de QUALQUER aplicação paga
+          studentsData.push({
+            ...baseStudent,
+            ...profileFlags,
+            application_id: mostRecentApp.id,
+            // ✅ CORREÇÃO: Usar flags de QUALQUER aplicação paga
+            is_scholarship_fee_paid: hasAnyScholarshipPaid,
+            is_application_fee_paid: hasAnyApplicationPaid,
+            acceptance_letter_sent_at: hasAnyAcceptanceLetter ? mostRecentApp.acceptance_letter_sent_at : null,
+            acceptance_letter_status: hasAnyAcceptanceLetter ? mostRecentApp.acceptance_letter_status : null,
+            scholarship_fee_paid_date: null,
+            // Usar dados da aplicação mais recente para exibição
+            scholarship_title: mostRecentApp.scholarships?.title || baseStudent.scholarship_title,
+            university_name: mostRecentApp.scholarships?.universities?.name || baseStudent.university_name
           });
         }
       });

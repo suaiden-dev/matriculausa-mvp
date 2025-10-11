@@ -442,7 +442,7 @@ const FinancialAnalytics: React.FC = () => {
     if (uniqueUserIds.length > 0) {
       const overrideEntries = await Promise.allSettled(
         uniqueUserIds.map(async (userId) => {
-          const { data, error } = await supabase.rpc('get_user_fee_overrides', { user_id_param: userId });
+          const { data, error } = await supabase.rpc('get_user_fee_overrides', { target_user_id: userId });
           return { userId, data: error ? null : data };
         })
       );

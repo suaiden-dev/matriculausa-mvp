@@ -16,13 +16,15 @@ import {
   Loader2,
   GraduationCap,
   Eye,
-  Building
+  Building,
+  CreditCard
 } from 'lucide-react';
 import { useAffiliateData } from '../../hooks/useAffiliateData';
 import { supabase } from '../../lib/supabase';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
-import { useDynamicFeeCalculation } from '../../hooks/useDynamicFeeCalculation';
-import { useUserSpecificFees } from '../../hooks/useUserSpecificFees';
+import { AffiliatePaymentRequestService } from '../../services/AffiliatePaymentRequestService';
+// import removido: useDynamicFeeCalculation não é usado aqui
+// import removido: useUserSpecificFees não é usado aqui
 
 interface FilterState {
   search: string;
@@ -57,9 +59,150 @@ const AffiliateManagement: React.FC = () => {
 
   // ===== Overrides e Dependentes (igual EnhancedStudentTrackingRefactored) =====
   const { feeConfig } = useFeeConfig();
-  const { selectionProcessFee, scholarshipFee, i20ControlFee, isSimplified } = useDynamicFeeCalculation();
   const [overridesMap, setOverridesMap] = useState<Record<string, any>>({}); // por user_id
   const [dependentsMap, setDependentsMap] = useState<Record<string, number>>({}); // por profile_id
+
+  // ===== Estados para informações de pagamento =====
+  const [affiliatePaymentRequests, setAffiliatePaymentRequests] = useState<any[]>([]);
+  const [affiliateManualPayments, setAffiliateManualPayments] = useState<Record<string, number>>({});
+  const [loadingPaymentRequests, setLoadingPaymentRequests] = useState(false);
+  const [loadingManualPayments, setLoadingManualPayments] = useState(false);
+
+  // Função para carregar informações de pagamento dos affiliate admins
+  const loadAffiliatePaymentRequests = async () => {
+    try {
+      setLoadingPaymentRequests(true);
+      const data = await AffiliatePaymentRequestService.listAllPaymentRequests();
+      setAffiliatePaymentRequests(data);
+    } catch (error: any) {
+      console.error('Error loading affiliate payment requests:', error);
+      setAffiliatePaymentRequests([]);
+    } finally {
+      setLoadingPaymentRequests(false);
+    }
+  };
+
+  // Função para carregar pagamentos manuais de cada affiliate admin
+  const loadAffiliateManualPayments = async () => {
+    try {
+      setLoadingManualPayments(true);
+      const manualPaymentsMap: Record<string, number> = {};
+      
+      // Para cada affiliate admin, calcular os pagamentos manuais
+      for (const affiliate of affiliates) {
+        // 1. Descobrir affiliate_admin_id
+        const { data: aaList, error: aaErr } = await supabase
+          .from('affiliate_admins')
+          .select('id')
+          .eq('user_id', affiliate.user_id)
+          .limit(1);
+        
+        if (aaErr || !aaList || aaList.length === 0) {
+          manualPaymentsMap[affiliate.user_id] = 0;
+          continue;
+        }
+        const affiliateAdminId = aaList[0].id;
+
+        // 2. Buscar sellers vinculados a este affiliate admin
+        const { data: sellers, error: sellersErr } = await supabase
+          .from('sellers')
+          .select('referral_code')
+          .eq('affiliate_admin_id', affiliateAdminId);
+        
+        if (sellersErr || !sellers || sellers.length === 0) {
+          manualPaymentsMap[affiliate.user_id] = 0;
+          continue;
+        }
+        
+        const referralCodes = sellers.map(s => s.referral_code);
+        
+        // 3. Buscar perfis de estudantes vinculados via seller_referral_code
+        const { data: profiles, error: profilesErr } = await supabase
+          .from('user_profiles')
+        .select(`
+          id,
+          user_id,
+          has_paid_selection_process_fee, 
+          has_paid_i20_control_fee, 
+          selection_process_fee_payment_method,
+          i20_control_fee_payment_method,
+          dependents,
+          seller_referral_code,
+          system_type,
+          scholarship_applications(is_scholarship_fee_paid, scholarship_fee_payment_method)
+        `)
+          .in('seller_referral_code', referralCodes);
+        
+        if (profilesErr || !profiles) {
+          manualPaymentsMap[affiliate.user_id] = 0;
+          continue;
+        }
+
+        // 4. Preparar overrides por user_id
+        const uniqueUserIds = Array.from(new Set((profiles || []).map((p) => p.user_id).filter(Boolean)));
+        const overrideEntries = await Promise.allSettled(uniqueUserIds.map(async (uid) => {
+          const { data, error } = await supabase.rpc('get_user_fee_overrides', { target_user_id: uid });
+          return [uid, error ? null : data];
+        }));
+        const overridesMap: Record<string, any> = overrideEntries.reduce((acc: Record<string, any>, res) => {
+          if (res.status === 'fulfilled') {
+            const arr = res.value;
+            const uid = arr[0];
+            const data = arr[1];
+            if (data) acc[uid] = {
+              selection_process_fee: data.selection_process_fee != null ? Number(data.selection_process_fee) : undefined,
+              scholarship_fee: data.scholarship_fee != null ? Number(data.scholarship_fee) : undefined,
+              i20_control_fee: data.i20_control_fee != null ? Number(data.i20_control_fee) : undefined,
+            };
+          }
+          return acc;
+        }, {});
+
+        // 5. Calcular receita manual (pagamentos por fora) com a mesma lógica do FinancialOverview
+        const manualRevenue = (profiles || []).reduce((sum, p) => {
+          const deps = Number(p?.dependents || 0);
+          const ov = overridesMap[p?.user_id] || {};
+          const systemType = p?.system_type || 'legacy';
+
+          // Selection Process manual
+          let selManual = 0;
+          const isSelManual = !!p?.has_paid_selection_process_fee && p?.selection_process_fee_payment_method === 'manual';
+          if (isSelManual) {
+            const baseSelDefault = systemType === 'simplified' ? 350 : 400;
+            const baseSel = ov.selection_process_fee != null ? Number(ov.selection_process_fee) : baseSelDefault;
+            selManual = ov.selection_process_fee != null ? baseSel : baseSel + (deps * 150);
+          }
+
+          // Scholarship manual (se qualquer application estiver paga via manual)
+          const hasScholarshipPaidManual = Array.isArray(p?.scholarship_applications)
+            ? p.scholarship_applications.some((a: any) => !!a?.is_scholarship_fee_paid && a?.scholarship_fee_payment_method === 'manual')
+            : false;
+          const baseScholarshipDefault = systemType === 'simplified' ? 550 : 900;
+          const schBase = ov.scholarship_fee != null ? Number(ov.scholarship_fee) : baseScholarshipDefault;
+          const schManual = hasScholarshipPaidManual ? schBase : 0;
+
+          // I-20 Control manual (seguir mesma regra base: exigir scholarship pago para contar I-20)
+          const hasAnyScholarshipPaid = Array.isArray(p?.scholarship_applications)
+            ? p.scholarship_applications.some((a: any) => !!a?.is_scholarship_fee_paid)
+            : false;
+          const isI20Manual = !!p?.has_paid_i20_control_fee && p?.i20_control_fee_payment_method === 'manual';
+          const i20Base = ov.i20_control_fee != null ? Number(ov.i20_control_fee) : 900;
+          const i20Manual = (hasAnyScholarshipPaid && isI20Manual) ? i20Base : 0;
+
+          return sum + selManual + schManual + i20Manual;
+        }, 0);
+
+        manualPaymentsMap[affiliate.user_id] = manualRevenue;
+      }
+      
+      setAffiliateManualPayments(manualPaymentsMap);
+    } catch (error: any) {
+      console.error('Error loading affiliate manual payments:', error);
+      setAffiliateManualPayments({});
+    } finally {
+      setLoadingManualPayments(false);
+    }
+  };
 
   useEffect(() => {
     const loadOverrides = async () => {
@@ -72,7 +215,7 @@ const AffiliateManagement: React.FC = () => {
 
         const results = await Promise.allSettled(
           uniqueIds.map(async (userId) => {
-            const { data, error } = await supabase.rpc('get_user_fee_overrides', { user_id_param: userId });
+            const { data, error } = await supabase.rpc('get_user_fee_overrides', { target_user_id: userId });
             return { userId, data: error ? null : data };
           })
         );
@@ -101,6 +244,18 @@ const AffiliateManagement: React.FC = () => {
     };
     loadOverrides();
   }, [allStudents]);
+
+  // Carregar informações de pagamento dos affiliate admins
+  useEffect(() => {
+    loadAffiliatePaymentRequests();
+  }, []);
+
+  // Carregar pagamentos manuais quando os affiliates mudarem
+  useEffect(() => {
+    if (affiliates.length > 0) {
+      loadAffiliateManualPayments();
+    }
+  }, [affiliates]);
 
   useEffect(() => {
     const loadDependents = async () => {
@@ -133,27 +288,7 @@ const AffiliateManagement: React.FC = () => {
     loadDependents();
   }, [allStudents]);
 
-  // Função para calcular taxas de um usuário específico
-  const calculateUserFees = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .rpc('get_user_system_type', { user_id_param: userId });
-      
-      if (error) {
-        console.error('Error detecting user system type:', error);
-        return { selectionProcessFee: 400, scholarshipFee: 900, i20ControlFee: 900 };
-      }
-      
-      if (data === 'simplified') {
-        return { selectionProcessFee: 350, scholarshipFee: 550, i20ControlFee: 900 };
-      } else {
-        return { selectionProcessFee: 400, scholarshipFee: 900, i20ControlFee: 900 };
-      }
-    } catch (err) {
-      console.error('Error calculating user fees:', err);
-      return { selectionProcessFee: 400, scholarshipFee: 900, i20ControlFee: 900 };
-    }
-  };
+  // Removido: calculateUserFees não é usado neste componente
 
   // Students com valores ajustados
   const adjustedStudents = useMemo(() => {
@@ -162,26 +297,46 @@ const AffiliateManagement: React.FC = () => {
       const dependents = Number(dependentsMap[s.profile_id]) || 0;
       let total = 0;
       
-      // Para cada estudante, usar valores padrão baseados no sistema
-      // TODO: Implementar detecção individual do sistema de cada usuário
+      // Determinar valores base baseado no system_type do estudante
+      const systemType = s.system_type || 'legacy';
+      const baseSelectionFee = systemType === 'simplified' ? 350 : 400;
+      const baseScholarshipFee = systemType === 'simplified' ? 550 : 900;
+      const baseI20Fee = 900; // Sempre 900 para ambos os sistemas
+      
       if (s.has_paid_selection_process_fee) {
         const sel = o.selection_process_fee != null
           ? Number(o.selection_process_fee)
-          : 400 + (dependents * 150); // Usar valor padrão por enquanto
+          : baseSelectionFee + (dependents * 150);
         total += sel || 0;
       }
       if (s.is_scholarship_fee_paid) {
         const schol = o.scholarship_fee != null
           ? Number(o.scholarship_fee)
-          : 900; // Usar valor padrão por enquanto
+          : baseScholarshipFee;
         total += schol || 0;
       }
-      if (s.has_paid_i20_control_fee) {
+      // ✅ CORREÇÃO: I-20 só conta se scholarship foi pago
+      if (s.is_scholarship_fee_paid && s.has_paid_i20_control_fee) {
         const i20 = o.i20_control_fee != null
           ? Number(o.i20_control_fee)
-          : 900; // Usar valor padrão por enquanto
+          : baseI20Fee;
         total += i20 || 0;
       }
+      
+      // Debug para marjorie1454@uorak.com
+      if (s.email === 'marjorie1454@uorak.com') {
+        console.log('🔍 [AffiliateManagement] marjorie1454@uorak.com calculado:', {
+          systemType,
+          totalCalculated: total,
+          breakdown: {
+            selectionPaid: s.has_paid_selection_process_fee,
+            scholarshipPaid: s.is_scholarship_fee_paid,
+            i20Paid: s.has_paid_i20_control_fee,
+            i20ShouldCount: s.is_scholarship_fee_paid && s.has_paid_i20_control_fee
+          }
+        });
+      }
+      
       return { ...s, total_paid_adjusted: total };
     });
     return result;
@@ -330,6 +485,43 @@ const AffiliateManagement: React.FC = () => {
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US');
+  };
+
+  // Função para calcular informações de pagamento de um affiliate admin
+  const getAffiliatePaymentInfo = (affiliateUserId: string, totalRevenue: number) => {
+    const affiliateRequests = affiliatePaymentRequests.filter(req => req.referrer_user_id === affiliateUserId);
+    
+    // Verificar se os dados ainda estão carregando
+    const isLoading = loadingPaymentRequests || loadingManualPayments;
+    
+    // Outside Payments = pagamentos manuais (payment_method = 'manual')
+    const outsidePayments = affiliateManualPayments[affiliateUserId] || 0;
+    
+    // Calcular Available Balance seguindo a mesma lógica do FinancialOverview.tsx
+    // availableBalance = Math.max(0, (totalRevenue - manualRevenue) - totalPaidOut - totalApproved - totalPending)
+    const manualRevenue = outsidePayments; // Pagamentos manuais (outside payments)
+    
+    const totalPaidOut = affiliateRequests
+      .filter(req => req.status === 'paid')
+      .reduce((sum, req) => sum + (req.amount_usd || 0), 0);
+    
+    const totalApproved = affiliateRequests
+      .filter(req => req.status === 'approved')
+      .reduce((sum, req) => sum + (req.amount_usd || 0), 0);
+    
+    const totalPending = affiliateRequests
+      .filter(req => req.status === 'pending')
+      .reduce((sum, req) => sum + (req.amount_usd || 0), 0);
+    
+    const availableBalance = Math.max(0, (totalRevenue - manualRevenue) - totalPaidOut - totalApproved - totalPending);
+    
+    return {
+      outsidePayments,
+      pendingPayments: totalPending + totalApproved,
+      availableBalance,
+      totalRequests: affiliateRequests.length,
+      isLoading
+    };
   };
 
   const updateFilters = (newFilters: Partial<FilterState>) => {
@@ -700,7 +892,7 @@ const AffiliateManagement: React.FC = () => {
                     
                     <div className="flex items-center space-x-4">
                       {/* Quick Stats */}
-                      <div className="grid grid-cols-4 gap-4 text-center">
+                      <div className="grid grid-cols-6 gap-4 text-center">
                         <div>
                           <p className="text-lg font-bold text-slate-900">{affiliate.total_sellers}</p>
                           <p className="text-xs text-slate-600">Sellers</p>
@@ -713,12 +905,42 @@ const AffiliateManagement: React.FC = () => {
                           <p className="text-lg font-bold text-green-600">
                             ${affiliate.total_revenue.toLocaleString()}
                           </p>
-                          <p className="text-xs text-slate-600">Revenue</p>
+                          <p className="text-xs text-slate-600">Total Revenue</p>
                         </div>
-                        <div>
-                          <p className="text-lg font-bold text-blue-600">{affiliate.active_sellers}</p>
-                          <p className="text-xs text-slate-600">Active</p>
-                        </div>
+             <div>
+               {(() => {
+                 const paymentInfo = getAffiliatePaymentInfo(affiliate.user_id, affiliate.total_revenue);
+                 return (
+                   <>
+                     <p className="text-lg font-bold text-purple-600">
+                       {paymentInfo.isLoading ? (
+                         <div className="animate-pulse bg-slate-200 h-6 w-16 rounded"></div>
+                       ) : (
+                         `$${paymentInfo.outsidePayments.toLocaleString()}`
+                       )}
+                     </p>
+                     <p className="text-xs text-slate-600">Outside Payments</p>
+                   </>
+                 );
+               })()}
+             </div>
+             <div>
+               {(() => {
+                 const paymentInfo = getAffiliatePaymentInfo(affiliate.user_id, affiliate.total_revenue);
+                 return (
+                   <>
+                     <p className="text-lg font-bold text-orange-600">
+                       {paymentInfo.isLoading ? (
+                         <div className="animate-pulse bg-slate-200 h-6 w-16 rounded"></div>
+                       ) : (
+                         `$${paymentInfo.availableBalance.toLocaleString()}`
+                       )}
+                     </p>
+                     <p className="text-xs text-slate-600">Available Balance</p>
+                   </>
+                 );
+               })()}
+             </div>
                       </div>
                       
                       {/* Expand Button */}
@@ -738,10 +960,100 @@ const AffiliateManagement: React.FC = () => {
 
                 {/* Expanded Content */}
                 <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                  isExpanded ? 'max-h-screen opacity-100' : 'max-h-0 opacity-0'
+                  isExpanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'
                 }`}>
                   <div className="border-t border-slate-200 bg-slate-50">
                     <div className="p-6">
+                      {/* Payment Information */}
+                      <div className="mb-8">
+                        <h4 className="text-xl font-semibold text-slate-900 mb-6 flex items-center">
+                          <DollarSign className="h-6 w-6 mr-3" />
+                          Payment Information
+                        </h4>
+                        
+                 {(() => {
+                   const paymentInfo = getAffiliatePaymentInfo(affiliate.user_id, affiliate.total_revenue);
+                   return (
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                              <div className="bg-white rounded-lg border border-slate-200 p-6">
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <p className="text-sm font-medium text-slate-600">Total Revenue</p>
+                                    <p className="text-2xl font-bold text-green-600">
+                                      ${affiliate.total_revenue.toLocaleString()}
+                                    </p>
+                                  </div>
+                                  <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                                    <DollarSign className="h-6 w-6 text-green-600" />
+                                  </div>
+                                </div>
+                              </div>
+                              
+                       <div className="bg-white rounded-lg border border-slate-200 p-6">
+                         <div className="flex items-center justify-between">
+                           <div>
+                             <p className="text-sm font-medium text-slate-600">Outside Payments</p>
+                             {paymentInfo.isLoading ? (
+                               <div className="animate-pulse bg-slate-200 h-8 w-24 rounded mb-1"></div>
+                             ) : (
+                               <p className="text-2xl font-bold text-purple-600">
+                                 ${paymentInfo.outsidePayments.toLocaleString()}
+                               </p>
+                             )}
+
+                           </div>
+                           <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                             <DollarSign className="h-6 w-6 text-purple-600" />
+                           </div>
+                         </div>
+                       </div>
+                       
+                       <div className="bg-white rounded-lg border border-slate-200 p-6">
+                         <div className="flex items-center justify-between">
+                           <div>
+                             <p className="text-sm font-medium text-slate-600">Available Balance</p>
+                             {paymentInfo.isLoading ? (
+                               <div className="animate-pulse bg-slate-200 h-8 w-24 rounded mb-1"></div>
+                             ) : (
+                               <p className="text-2xl font-bold text-orange-600">
+                                 ${paymentInfo.availableBalance.toLocaleString()}
+                               </p>
+                             )}
+                             <p className="text-xs text-slate-500 mt-1">
+                               Pending withdrawal
+                             </p>
+                           </div>
+                           <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                             <DollarSign className="h-6 w-6 text-orange-600" />
+                           </div>
+                         </div>
+                       </div>
+                       
+                       <div className="bg-white rounded-lg border border-slate-200 p-6">
+                         <div className="flex items-center justify-between">
+                           <div>
+                             <p className="text-sm font-medium text-slate-600">Payment Requests</p>
+                             {paymentInfo.isLoading ? (
+                               <div className="animate-pulse bg-slate-200 h-8 w-24 rounded mb-1"></div>
+                             ) : (
+                               <p className="text-2xl font-bold text-blue-600">
+                                 ${paymentInfo.pendingPayments.toLocaleString()}
+                               </p>
+                             )}
+                             <p className="text-xs text-slate-500 mt-1">
+                               {paymentInfo.totalRequests} request{paymentInfo.totalRequests !== 1 ? 's' : ''} pending/approved
+                             </p>
+                           </div>
+                           <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                             <CreditCard className="h-6 w-6 text-blue-600" />
+                           </div>
+                         </div>
+                       </div>
+                            </div>
+                          );
+                        })()}
+                      </div>
+
                       {/* Sellers - Full Width */}
                       <div>
                         <h4 className="text-xl font-semibold text-slate-900 mb-6 flex items-center">
@@ -820,7 +1132,7 @@ const AffiliateManagement: React.FC = () => {
                                     {/* Lista de Estudantes Expandida */}
                                     <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
                                       isSellerExpanded && sellerStudents.length > 0 
-                                        ? 'max-h-96 opacity-100 mt-4' 
+                                        ? 'max-h-[1200px] opacity-100 mt-4' 
                                         : 'max-h-0 opacity-0 mt-0'
                                     }`}>
                                       <div className="pt-4 border-t border-slate-200">

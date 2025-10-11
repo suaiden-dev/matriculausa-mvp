@@ -185,7 +185,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
           .from('document_requests')
           .select(`
             *,
-            document_request_uploads (
+            document_request_uploads!inner (
               *,
               reviewed_by,
               reviewed_at
@@ -193,6 +193,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
           `)
           .eq('is_global', true)
           .eq('university_id', universityId)
+          .eq('document_request_uploads.uploaded_by', studentId)  // ✅ CORREÇÃO: Filtrar apenas uploads do aluno específico
           .order('created_at', { ascending: false });
 
         if (globalError) {
@@ -300,7 +301,12 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
           
           // Se não encontrou pela aplicação existente, buscar a aplicação do estudante específico
           if (!applications || applications.length === 0) {
-            const { data: studentApp, error: studentAppError } = await supabase
+            // ✅ CORREÇÃO: Buscar primeiro aplicação enrolled, depois approved
+            let studentApp: any[] = [];
+            let studentAppError: any = null;
+            
+            // Primeiro, tentar buscar aplicação enrolled
+            const { data: enrolledApp, error: enrolledError } = await supabase
               .from('scholarship_applications')
               .select(`
                 *,
@@ -308,15 +314,45 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                   id,
                   title,
                   universities(
-                  id,
-                  name
+                    id,
+                    name
+                  )
                 )
-              )
-            `)
-            .eq('student_id', profileData.id)
-            .order('acceptance_letter_url', { ascending: false, nullsFirst: false })
-            .order('created_at', { ascending: false })
-            .limit(1);
+              `)
+              .eq('student_id', profileData.id)
+              .eq('status', 'enrolled')
+              .order('created_at', { ascending: false })
+              .limit(1);
+            
+            if (!enrolledError && enrolledApp && enrolledApp.length > 0) {
+              console.log('🔍 [ACCEPTANCE_LETTER_DEBUG] Found enrolled application:', enrolledApp[0]);
+              studentApp = enrolledApp;
+              studentAppError = null;
+            } else {
+              console.log('🔍 [ACCEPTANCE_LETTER_DEBUG] No enrolled application found, searching approved...');
+              // Se não encontrou enrolled, buscar approved
+              const { data: approvedApp, error: approvedError } = await supabase
+                .from('scholarship_applications')
+                .select(`
+                  *,
+                  scholarships(
+                    id,
+                    title,
+                    universities(
+                      id,
+                      name
+                    )
+                  )
+                `)
+                .eq('student_id', profileData.id)
+                .eq('status', 'approved')
+                .order('created_at', { ascending: false })
+                .limit(1);
+              
+              studentApp = approvedApp || [];
+              studentAppError = approvedError;
+              console.log('🔍 [ACCEPTANCE_LETTER_DEBUG] Found approved application:', approvedApp?.[0]);
+            }
           
             if (!studentAppError && studentApp && studentApp.length > 0) {
               applications = studentApp;
@@ -338,6 +374,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                 `)
                 .eq('student_id', profileData.id)
                 .eq('is_application_fee_paid', true)
+                .order('status', { ascending: true }) // enrolled vem antes de approved
                 .order('acceptance_letter_url', { ascending: false, nullsFirst: false })
                 .order('created_at', { ascending: false })
                 .limit(1);
@@ -361,6 +398,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                     )
                   `)
                   .eq('student_id', profileData.id)
+                  .order('status', { ascending: true }) // enrolled vem antes de approved
                   .order('created_at', { ascending: false })
                   .limit(1);
                 
@@ -398,7 +436,13 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
   // Usar a aplicação real se disponível, senão usar a passada como prop
   const currentApplication = realScholarshipApplication || scholarshipApplication;
   
-  // Debug: Log para verificar se há acceptance letter (removido para performance)
+  // Debug: Verificar dados da acceptance letter
+  console.log('🔍 [ACCEPTANCE_LETTER_DEBUG] currentApplication:', currentApplication);
+  if (currentApplication) {
+    console.log('🔍 [ACCEPTANCE_LETTER_DEBUG] acceptance_letter_status:', currentApplication.acceptance_letter_status);
+    console.log('🔍 [ACCEPTANCE_LETTER_DEBUG] acceptance_letter_url:', currentApplication.acceptance_letter_url);
+    console.log('🔍 [ACCEPTANCE_LETTER_DEBUG] acceptance_letter_sent_at:', currentApplication.acceptance_letter_sent_at);
+  }
   
   // ✅ CORREÇÃO: Função para extrair nome do arquivo e construir URL completa
   const getDocumentInfo = (upload: any) => {

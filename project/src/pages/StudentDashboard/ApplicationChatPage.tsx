@@ -4,7 +4,10 @@ import { useTranslation } from 'react-i18next';
 
 import { useAuth } from '../../hooks/useAuth';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
+import { useDynamicFees } from '../../hooks/useDynamicFees';
 import { useStudentLogs } from '../../hooks/useStudentLogs';
+import { useUnreadMessages } from '../../contexts/UnreadMessagesContext';
+import { useStudentChatUnreadCount } from '../../hooks/useStudentChatUnreadCount';
 import DocumentRequestsCard from '../../components/DocumentRequestsCard';
 import { supabase } from '../../lib/supabase';
 import DocumentViewerModal from '../../components/DocumentViewerModal';
@@ -41,7 +44,10 @@ const ApplicationChatPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const { user, userProfile, refetchUserProfile } = useAuth();
   const { formatFeeAmount, getFeeAmount } = useFeeConfig(user?.id);
+  const { i20ControlFee } = useDynamicFees();
   const { logAction } = useStudentLogs(userProfile?.id || '');
+  const { resetUnreadCount } = useUnreadMessages();
+  const { markStudentMessagesAsRead } = useStudentChatUnreadCount();
 
   // Todos os hooks devem vir ANTES de qualquer return condicional
   const [i20Loading, setI20Loading] = useState(false);
@@ -54,6 +60,8 @@ const ApplicationChatPage: React.FC = () => {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'stripe' | 'zelle' | 'pix' | null>(null);
   // Ajustar tipo de activeTab para incluir 'welcome'
   const [activeTab, setActiveTab] = useState<'welcome' | 'details' | 'i20' | 'documents' | 'chat'>('welcome');
+  
+  // Estados para controlar document requests (removidos - não mais utilizados)
 
   // useEffect também deve vir antes de qualquer return condicional
   useEffect(() => {
@@ -78,6 +86,14 @@ const ApplicationChatPage: React.FC = () => {
       setActiveTab(tabParam as typeof activeTab);
     }
   }, [searchParams]);
+
+  // Resetar contador de mensagens não lidas quando acessar o chat
+  useEffect(() => {
+    if (activeTab === 'chat') {
+      markStudentMessagesAsRead();
+      resetUnreadCount();
+    }
+  }, [activeTab, resetUnreadCount, markStudentMessagesAsRead]);
 
   // Polling para atualizar o perfil do usuário a cada 2 minutos (modo conservador)
   useEffect(() => {
@@ -138,6 +154,8 @@ const ApplicationChatPage: React.FC = () => {
     
     fetchScholarshipFeeDeadline();
   }, [userProfile]);
+
+  // Document requests logic removed - no longer needed
 
   // Cronômetro regressivo para a deadline
   useEffect(() => {
@@ -244,9 +262,12 @@ const ApplicationChatPage: React.FC = () => {
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
         const apiUrl = `${supabaseUrl}/functions/v1/stripe-checkout-i20-control-fee`;
         
-        // Novo modelo: I-20 NÃO recebe adicionais por dependentes
-        const baseAmount = getFeeAmount('i20_control_fee');
-        const finalAmount = baseAmount;
+        // ✅ CORREÇÃO: Usar useDynamicFees que já considera system_type
+        if (!i20ControlFee) {
+          setI20Error('I-20 Control Fee ainda está carregando. Aguarde um momento e tente novamente.');
+          return;
+        }
+        const finalAmount = parseFloat(i20ControlFee.replace('$', ''));
         
         const res = await fetch(apiUrl, {
           method: 'POST',
@@ -460,7 +481,7 @@ const ApplicationChatPage: React.FC = () => {
                 {t('studentDashboard.applicationChatPage.chat.title') || 'Application Chat'}
               </h2>
             </div>
-            <div className="p-0">
+            <div className="p-0 h-96">
               <ApplicationChat
                 messages={chat.messages}
                 onSend={chat.sendMessage as any}
@@ -469,6 +490,7 @@ const ApplicationChatPage: React.FC = () => {
                 error={chat.error}
                 currentUserId={user?.id || ''}
                 messageContainerClassName="gap-6 py-4"
+                className="h-full"
               />
             </div>
           </div>
@@ -937,12 +959,14 @@ const ApplicationChatPage: React.FC = () => {
               </h2>
               <p className="text-slate-200 text-xs sm:text-sm mt-1">{t('studentDashboard.applicationChatPage.documents.subtitle')}</p>
             </div>
-            <div className="p-3 sm:p-6">
+            <div className="p-3 sm:p-6 space-y-6">
+              {/* Seção de Document Requests */}
               <DocumentRequestsCard 
                 applicationId={applicationId!} 
                 isSchool={false} 
                 currentUserId={user.id} 
                 studentType={applicationDetails.student_process_type || 'initial'}
+                showAcceptanceLetter={false} // Não mostrar acceptance letter aqui, será controlado separadamente
                 onDocumentUploaded={async (requestId: string, fileName: string, isResubmission: boolean) => {
                   try {
                     if (logAction && user?.id) {
@@ -964,6 +988,128 @@ const ApplicationChatPage: React.FC = () => {
                   }
                 }}
               />
+                {/* Seção de Acceptance Letter - Mostrar apenas quando enviado */}
+                {applicationDetails.acceptance_letter_url && 
+                 (applicationDetails.acceptance_letter_status === 'approved' || applicationDetails.acceptance_letter_status === 'sent') && (
+                 <div className="bg-white rounded-lg mb-3 max-w-3xl mx-auto p-4 sm:p-6 border border-slate-200">
+                   {/* Header da seção */}
+                   <div className="flex items-center gap-3 mb-4 pb-3 border-b border-slate-200">
+                     <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                       <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m2 4H7a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2z" />
+                            </svg>
+                          </div>
+                          <div>
+                       <h3 className="text-lg font-bold text-slate-900">{t('studentDashboard.applicationChatPage.documents.acceptanceLetter.title')}</h3>
+                       <p className="text-sm text-slate-600">{t('studentDashboard.applicationChatPage.documents.acceptanceLetter.description')}</p>
+                          </div>
+                        </div>
+
+                   {/* Status de recebimento */}
+                   <div className="px-4 py-3 bg-green-50 border border-green-200 rounded-lg mb-4">
+                     <div className="flex items-center gap-2">
+                       <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                         <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                       </svg>
+                       <p className="text-green-800 font-semibold text-sm">
+                                  {t('studentDashboard.applicationChatPage.documents.acceptanceLetter.received')}
+                                </p>
+                     </div>
+                     <p className="text-green-700 text-sm mt-1 ml-7">
+                                  {t('studentDashboard.applicationChatPage.documents.acceptanceLetter.readyForDownload')}
+                                </p>
+                              </div>
+                   
+                   {/* Botões de ação */}
+                   <div className="flex flex-col sm:flex-row gap-3">
+                                <button
+                       className="flex-1 bg-blue-600 text-white px-4 py-3 rounded-lg font-semibold shadow hover:bg-blue-700 transition flex items-center justify-center gap-2"
+                                  onClick={async () => {
+                                    try {
+                                      // Função utilitária para extrair caminho relativo
+                                      const getRelativePath = (fullUrl: string) => {
+                                        const baseUrl = 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/document-attachments/';
+                                        if (fullUrl.startsWith(baseUrl)) {
+                                          return fullUrl.replace(baseUrl, '');
+                                        }
+                                        return fullUrl;
+                                      };
+
+                                      const filePath = getRelativePath(applicationDetails.acceptance_letter_url);
+                                      const { data, error } = await supabase.storage
+                                        .from('document-attachments')
+                                        .createSignedUrl(filePath, 60 * 60);
+                                      
+                                      if (error) {
+                                        console.error('Erro ao gerar signed URL:', error);
+                                        alert('Erro ao baixar documento');
+                                        return;
+                                      }
+                                      
+                                      // Fazer download
+                                      const response = await fetch(data.signedUrl);
+                                      if (!response.ok) throw new Error('Failed to download document');
+                                      
+                                      const blob = await response.blob();
+                                      const url = URL.createObjectURL(blob);
+                                      const link = document.createElement('a');
+                                      link.href = url;
+                                      link.download = 'acceptance_letter.pdf';
+                                      document.body.appendChild(link);
+                                      link.click();
+                                      document.body.removeChild(link);
+                                      URL.revokeObjectURL(url);
+                                    } catch (error) {
+                                      console.error('Erro no download:', error);
+                                      alert('Erro ao baixar documento');
+                                    }
+                                  }}
+                                >
+                       <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                       </svg>
+                                  {t('studentDashboard.applicationChatPage.documents.acceptanceLetter.downloadButton')}
+                                </button>
+                                <button
+                       className="flex-1 bg-white text-blue-600 border border-blue-600 px-4 py-3 rounded-lg font-semibold shadow hover:bg-blue-50 transition flex items-center justify-center gap-2"
+                                  onClick={async () => {
+                                    try {
+                                      const getRelativePath = (fullUrl: string) => {
+                                        const baseUrl = 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/document-attachments/';
+                                        if (fullUrl.startsWith(baseUrl)) {
+                                          return fullUrl.replace(baseUrl, '');
+                                        }
+                                        return fullUrl;
+                                      };
+
+                                      const filePath = getRelativePath(applicationDetails.acceptance_letter_url);
+                                      const { data, error } = await supabase.storage
+                                        .from('document-attachments')
+                                        .createSignedUrl(filePath, 60 * 60);
+                                      
+                                      if (error) {
+                                        console.error('Erro ao gerar signed URL:', error);
+                                        alert('Erro ao visualizar documento');
+                                        return;
+                                      }
+                                      
+                                      setPreviewUrl(data.signedUrl);
+                                    } catch (error) {
+                                      console.error('Erro ao visualizar:', error);
+                                      alert('Erro ao visualizar documento');
+                                    }
+                                  }}
+                                >
+                       <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                         <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                         <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                       </svg>
+                                  {t('studentDashboard.applicationChatPage.documents.acceptanceLetter.viewButton')}
+                                </button>
+                              </div>
+                            </div>
+               )}
+              
             </div>
           </div>
         )}

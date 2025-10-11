@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
-import { useAdminStudentChat } from '../../hooks/useAdminStudentChat';
+import { useAdminStudentChat, useAdminStudentConversations } from '../../hooks/useAdminStudentChat';
 import ApplicationChat from '../ApplicationChat';
 import ChatInbox from './ChatInbox';
 import { MessageSquare, ArrowLeft, Users, HelpCircle } from 'lucide-react';
@@ -34,7 +34,8 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
   const [guideExit, setGuideExit] = useState(false);
 
   // Hook for the selected conversation
-  const chat = useAdminStudentChat(selectedConversationId || undefined, selectedRecipientId || undefined);
+  const { updateConversationUnreadCount } = useAdminStudentConversations();
+  const chat = useAdminStudentChat(selectedConversationId || undefined, selectedRecipientId || undefined, updateConversationUnreadCount);
 
   // Removed conversations hook here to avoid duplicate realtime subscriptions; inbox owns the list
 
@@ -58,7 +59,7 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
     setShowMobileInbox(false); // Hide inbox on mobile when conversation is selected
   };
 
-  // Buscar email/telefone do destinatário para o header (quando admin/affiliate_admin)
+  // Buscar informações do destinatário para o header (quando admin/affiliate_admin)
   useEffect(() => {
     const fetchRecipientInfo = async () => {
       if (!selectedRecipientId || !(userProfile?.role === 'admin' || userProfile?.role === 'affiliate_admin')) {
@@ -69,9 +70,15 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
       try {
         const { data } = await supabase
           .from('user_profiles')
-          .select('id, email, phone')
+          .select('id, email, phone, full_name')
           .eq('user_id', selectedRecipientId)
           .single();
+        
+        // Se não temos o nome do destinatário ainda, definir agora
+        if (data?.full_name && !selectedRecipientName) {
+          setSelectedRecipientName(data.full_name);
+        }
+        
         setSelectedRecipientInfo({ email: data?.email || '', phone: data?.phone || '' });
         setSelectedRecipientProfileId(data?.id || null);
       } catch {
@@ -80,7 +87,7 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
       }
     };
     fetchRecipientInfo();
-  }, [selectedRecipientId, userProfile?.role]);
+  }, [selectedRecipientId, userProfile?.role, selectedRecipientName]);
 
   // Mostrar uma mensagem de orientação apenas na primeira vez que o aluno abre o chat
   useEffect(() => {
@@ -126,9 +133,9 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
   // Helper function to determine the correct label for the other party
   const getOtherPartyLabel = () => {
     if (userProfile?.role === 'affiliate_admin' || userProfile?.role === 'admin') {
-      return selectedRecipientName || t('studentChat.recipientLabel.student', { defaultValue: 'Student' });
+      return selectedRecipientName || t('studentDashboard.applicationChatPage.studentChat.recipientLabel.student', { defaultValue: 'Student' });
     } else {
-      return t('studentChat.recipientLabel.support', { defaultValue: 'Administration' });
+      return t('studentDashboard.applicationChatPage.studentChat.recipientLabel.support', { defaultValue: 'Administration' });
     }
   };
 
@@ -167,8 +174,8 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
           <div className="flex items-center justify-between p-4 border-b border-gray-100 bg-white gap-4">
             <div className="flex items-center min-w-0">
               <div className="min-w-0">
-                  <h3 className="font-medium text-gray-900 truncate">{t('studentChat.header.title', { defaultValue: 'Equipe de suporte' })}</h3>
-                <p className="text-xs text-gray-500 mt-0.5">{t('studentChat.header.responseTime', { defaultValue: 'Response time: 1-2 hours' })}</p>
+                  <h3 className="font-medium text-gray-900 truncate">{t('studentDashboard.applicationChatPage.studentChat.header.title', { defaultValue: 'Equipe de suporte' })}</h3>
+                <p className="text-xs text-gray-500 mt-0.5">{t('studentDashboard.applicationChatPage.studentChat.header.responseTime', { defaultValue: 'Tempo de resposta: 1-2 horas úteis' })}</p>
               </div>
             </div>
             <button
@@ -187,24 +194,24 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
                 <div className="flex items-start gap-3">
                   <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold">i</div>
                   <div className="text-slate-700">
-                    <p className="text-sm font-semibold mb-1">{t('studentChat.guide.title', { defaultValue: 'Chat with Administration' })}</p>
-                    <p className="text-xs leading-relaxed">{t('studentChat.guide.subtitle', { defaultValue: 'Ask about scholarships, documents and your application progress.' })}</p>
+                    <p className="text-sm font-semibold mb-1">{t('studentDashboard.applicationChatPage.studentChat.guide.title', { defaultValue: 'Chat with Administration' })}</p>
+                    <p className="text-xs leading-relaxed">{t('studentDashboard.applicationChatPage.studentChat.guide.subtitle', { defaultValue: 'Ask about scholarships, documents and your application progress.' })}</p>
                     <ul className="mt-2 text-xs text-slate-600 list-disc pl-4 space-y-1">
-                      <li>{t('studentChat.guide.supportsAttachments', { defaultValue: 'Send messages and attachments' })}</li>
-                      <li>{t('studentChat.guide.businessHours', { defaultValue: 'Replies during business hours' })}</li>
-                      <li>{t('studentChat.guide.historySaved', { defaultValue: 'Conversation history is saved' })}</li>
+                      <li>{t('studentDashboard.applicationChatPage.studentChat.guide.supportsAttachments', { defaultValue: 'Send messages and attachments' })}</li>
+                      <li>{t('studentDashboard.applicationChatPage.studentChat.guide.businessHours', { defaultValue: 'Replies during business hours' })}</li>
+                      <li>{t('studentDashboard.applicationChatPage.studentChat.guide.historySaved', { defaultValue: 'Conversation history is saved' })}</li>
                     </ul>
                     <div className="mt-3 flex items-center gap-2">
                       <button
                         onClick={dismissGuide}
                         className="px-3 py-1.5 rounded-md text-xs bg-[#05294E] text-white hover:bg-[#041f3f]"
-                        title={t('studentChat.guide.ctaStart', { defaultValue: 'Start' })}
-                      >{t('studentChat.guide.ctaStart', { defaultValue: 'Start' })}</button>
+                        title={t('studentDashboard.applicationChatPage.studentChat.guide.ctaStart', { defaultValue: 'Start' })}
+                      >{t('studentDashboard.applicationChatPage.studentChat.guide.ctaStart', { defaultValue: 'Entendi' })}</button>
                       <button
                         onClick={dismissGuide}
                         className="px-3 py-1.5 rounded-md text-xs bg-slate-100 text-slate-700 hover:bg-slate-200"
-                        title={t('studentChat.guide.ctaLater', { defaultValue: 'Not now' })}
-                      >{t('studentChat.guide.ctaLater', { defaultValue: 'Not now' })}</button>
+                        title={t('studentDashboard.applicationChatPage.studentChat.guide.ctaLater', { defaultValue: 'Not now' })}
+                      >{t('studentDashboard.applicationChatPage.studentChat.guide.ctaLater', { defaultValue: 'Agora não' })}</button>
                     </div>
                   </div>
                 </div>
@@ -226,7 +233,7 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
             hideBubbleHeader={true}
             overrideHeights={true}
             className="flex-1 min-h-0"
-            inputPlaceholder={t('studentChat.input.placeholder', { defaultValue: 'Type your message...' })}
+            inputPlaceholder={t('studentDashboard.applicationChatPage.studentChat.input.placeholder', { defaultValue: 'Type your message...' })}
           />
         </div>
       );
@@ -291,14 +298,14 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
           <div className="flex items-center justify-between p-4 border-b border-gray-100 bg-white gap-4">
             <div className="flex items-center min-w-0">
               <div className="min-w-0">
-                <h3 className="font-medium text-gray-900 truncate">Equipe de suporte</h3>
-                <p className="text-xs text-gray-500 mt-0.5">Tempo de resposta: 1-2 horas úteis</p>
+                <h3 className="font-medium text-gray-900 truncate">{t('studentDashboard.applicationChatPage.studentChat.header.title')}</h3>
+                <p className="text-xs text-gray-500 mt-0.5">{t('studentDashboard.applicationChatPage.studentChat.header.responseTime')}</p>
               </div>
             </div>
             <button
               onClick={() => setShowStudentGuidance(true)}
               className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-gray-200 text-gray-600 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#05294E]/20 transition-all duration-300"
-              title="Como funciona o chat?"
+              title={t('studentDashboard.applicationChatPage.studentChat.header.helpTooltip')}
             >
               <HelpCircle className="w-4 h-4" />
             </button>
@@ -308,14 +315,14 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
             <div className="px-4 py-3 bg-blue-50 text-blue-900 text-xs border-b border-blue-100">
               <div className="flex items-start justify-between gap-3">
                 <p className="leading-relaxed">
-                  Este chat conecta você diretamente com a Administração. Use-o para dúvidas sobre bolsas, documentos e andamento da sua inscrição. Evite compartilhar dados sensíveis (senhas ou números de cartão).
+                  {t('studentDashboard.applicationChatPage.studentChat.guide.subtitle')}
                 </p>
                 <button
                   className="text-blue-700 hover:text-blue-900 whitespace-nowrap"
                   onClick={() => setShowStudentGuidance(false)}
-                  title="Fechar"
+                  title={t('studentDashboard.applicationChatPage.studentChat.guide.ctaStart')}
                 >
-                  Entendi
+                  {t('studentDashboard.applicationChatPage.studentChat.guide.ctaStart')}
                 </button>
               </div>
             </div>
@@ -335,6 +342,7 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
             hideBubbleHeader={true}
             overrideHeights={true}
             className="flex-1 min-h-0"
+            inputPlaceholder={t('studentDashboard.applicationChatPage.studentChat.input.placeholder')}
           />
       </div>
     );
@@ -397,8 +405,10 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
                   error={chat.error}
                   currentUserId={user.id}
                   onMarkAllAsRead={chat.markAllAsRead}
-                otherPartyLabel={getOtherPartyLabel()}
-                hideBubbleHeader={true}
+                  otherPartyLabel={getOtherPartyLabel()}
+                  hideBubbleHeader={true}
+                  overrideHeights={true}
+                  className="h-full"
                 />
             </>
           ) : (

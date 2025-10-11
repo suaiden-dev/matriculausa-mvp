@@ -81,19 +81,9 @@ const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], userId }) =>
       
       const referralCodes = sellers.map(s => s.referral_code);
       
-      // Buscar perfis de estudantes vinculados via seller_referral_code
+      // ✅ CORREÇÃO: Buscar perfis usando RPC centralizada que verifica TODAS as aplicações
       const { data: profiles, error: profilesErr } = await supabase
-        .from('user_profiles')
-        .select(`
-          id,
-          user_id,
-          has_paid_selection_process_fee, 
-          has_paid_i20_control_fee, 
-          dependents,
-          seller_referral_code,
-          scholarship_applications(is_scholarship_fee_paid)
-        `)
-        .in('seller_referral_code', referralCodes);
+        .rpc('get_affiliate_admin_profiles_with_fees', { admin_user_id: currentUserId });
       if (profilesErr || !profiles) {
         setClientAdjustedRevenue(null);
         return;
@@ -102,7 +92,7 @@ const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], userId }) =>
       // Preparar overrides por user_id
       const uniqueUserIds = Array.from(new Set((profiles || []).map((p) => p.user_id).filter(Boolean)));
       const overrideEntries = await Promise.allSettled(uniqueUserIds.map(async (uid) => {
-        const { data, error } = await supabase.rpc('get_user_fee_overrides', { user_id_param: uid });
+        const { data, error } = await supabase.rpc('get_user_fee_overrides', { target_user_id: uid });
         return [uid, error ? null : data];
       }));
       const overridesMap: Record<string, any> = overrideEntries.reduce((acc: Record<string, any>, res) => {
@@ -128,18 +118,21 @@ const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], userId }) =>
         // Selection Process
         let selPaid = 0;
         if (p?.has_paid_selection_process_fee) {
-          const baseSel = ov.selection_process_fee != null ? Number(ov.selection_process_fee) : 400;
+          // Usar valor baseado no system_type do aluno (350 para simplified, 400 para legacy)
+          const baseSelDefault = p?.system_type === 'simplified' ? 350 : 400;
+          const baseSel = ov.selection_process_fee != null ? Number(ov.selection_process_fee) : baseSelDefault;
           selPaid = ov.selection_process_fee != null ? baseSel : baseSel + (deps * 150);
         }
 
         // Scholarship Fee (sem dependentes)
-        const hasAnyScholarshipPaid = Array.isArray(p?.scholarship_applications)
-          ? p.scholarship_applications.some((a) => !!a?.is_scholarship_fee_paid)
-          : false;
-        const schBase = ov.scholarship_fee != null ? Number(ov.scholarship_fee) : 900;
+        // ✅ CORREÇÃO: Usar diretamente a flag já calculada pela RPC
+        const hasAnyScholarshipPaid = p?.is_scholarship_fee_paid || false;
+        // Usar valor baseado no system_type do aluno (550 para simplified, 900 para legacy)
+        const schBaseDefault = p?.system_type === 'simplified' ? 550 : 900;
+        const schBase = ov.scholarship_fee != null ? Number(ov.scholarship_fee) : schBaseDefault;
         const schPaid = hasAnyScholarshipPaid ? schBase : 0;
 
-        // I-20 Control (sem dependentes)
+        // I-20 Control (sem dependentes) - sempre 900 para ambos os sistemas
         const i20Base = ov.i20_control_fee != null ? Number(ov.i20_control_fee) : 900;
         // Contar I-20 somente se a bolsa estiver paga (fluxo esperado)
         const i20Paid = (hasAnyScholarshipPaid && p?.has_paid_i20_control_fee) ? i20Base : 0;
@@ -230,7 +223,7 @@ const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], userId }) =>
       // Preparar overrides por user_id
       const uniqueUserIds = Array.from(new Set((profiles || []).map((p) => p.user_id).filter(Boolean)));
       const overrideEntries = await Promise.allSettled(uniqueUserIds.map(async (uid) => {
-        const { data, error } = await supabase.rpc('get_user_fee_overrides', { user_id_param: uid });
+        const { data, error } = await supabase.rpc('get_user_fee_overrides', { target_user_id: uid });
         return [uid, error ? null : data];
       }));
       const overridesMap: Record<string, any> = overrideEntries.reduce((acc: Record<string, any>, res) => {
@@ -275,15 +268,18 @@ const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], userId }) =>
         // Selection Process
         let selPaid = 0;
         if (p?.has_paid_selection_process_fee) {
-          const baseSel = ov.selection_process_fee != null ? Number(ov.selection_process_fee) : 400;
+          // Usar valor baseado no system_type do aluno (350 para simplified, 400 para legacy)
+          const baseSelDefault = p?.system_type === 'simplified' ? 350 : 400;
+          const baseSel = ov.selection_process_fee != null ? Number(ov.selection_process_fee) : baseSelDefault;
           selPaid = ov.selection_process_fee != null ? baseSel : baseSel + (deps * 150);
         }
 
         // Scholarship Fee (sem dependentes)
-        const hasAnyScholarshipPaid = Array.isArray(p?.scholarship_applications)
-          ? p.scholarship_applications.some((a) => !!a?.is_scholarship_fee_paid)
-          : false;
-        const schBase = ov.scholarship_fee != null ? Number(ov.scholarship_fee) : 900;
+        // ✅ CORREÇÃO: Usar diretamente a flag já calculada pela RPC
+        const hasAnyScholarshipPaid = p?.is_scholarship_fee_paid || false;
+        // Usar valor baseado no system_type do aluno (550 para simplified, 900 para legacy)
+        const schBaseDefault = p?.system_type === 'simplified' ? 550 : 900;
+        const schBase = ov.scholarship_fee != null ? Number(ov.scholarship_fee) : schBaseDefault;
         const schPaid = hasAnyScholarshipPaid ? schBase : 0;
 
         // I-20 Control (sem dependentes)

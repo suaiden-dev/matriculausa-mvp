@@ -163,7 +163,8 @@ const AffiliateAdminDashboard: React.FC = () => {
         total_paid: student.total_paid || 0,
         created_at: student.created_at,
         status: student.status || 'active',
-        application_status: student.application_status || 'Not specified'
+        application_status: student.application_status || 'Not specified',
+        system_type: student.system_type || 'legacy'
       }));
 
       // Atualizar estatísticas

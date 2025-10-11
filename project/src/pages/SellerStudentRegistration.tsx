@@ -11,7 +11,17 @@ const SellerStudentRegistration: React.FC = () => {
   const [searchParams] = useSearchParams();
   const sellerCode = searchParams.get('ref') || '';
   
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    full_name: string;
+    email: string;
+    password: string;
+    confirmPassword: string;
+    phone: string;
+    sellerReferralCode: string;
+    selectedPackage: string;
+    desiredScholarshipRange: number | null; // ✅ Pode ser null ou number
+    dependents: number;
+  }>({
     full_name: '',
     email: '',
     password: '',
@@ -20,7 +30,7 @@ const SellerStudentRegistration: React.FC = () => {
     sellerReferralCode: sellerCode,
     // Selecionar por padrão o pacote principal fixo
     selectedPackage: '1',
-    desiredScholarshipRange: 3800, // Default value
+    desiredScholarshipRange: null, // ✅ Null por padrão - aluno verá todas as bolsas
     dependents: 0
   });
   

@@ -1316,7 +1316,7 @@ const SelectionProcess: React.FC = () => {
         .from('scholarship_applications')
         .update({
           acceptance_letter_url: uploadData.path,
-          acceptance_letter_status: 'approved',
+          acceptance_letter_status: 'sent',
           acceptance_letter_sent_at: new Date().toISOString(),
           status: 'enrolled'
         })

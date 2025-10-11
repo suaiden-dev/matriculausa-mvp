@@ -132,16 +132,6 @@ const AffiliateAdminDashboardLayout: React.FC<AffiliateAdminDashboardLayoutProps
               </div>
             </div>
             
-            <div className="flex items-center justify-center mt-3">
-              <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-                systemType === 'legacy' 
-                  ? 'bg-blue-100 text-[#05294E]' 
-                  : 'bg-green-100 text-green-800'
-              }`}>
-                <Shield className="h-3 w-3 mr-1" />
-                {systemType === 'legacy' ? 'Legacy System' : 'Simplified System'}
-              </span>
-            </div>
           </div>
 
           {/* Navigation */}

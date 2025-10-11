@@ -190,22 +190,9 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
       
       const referralCodes = sellers.map(s => s.referral_code);
       
-      // 3. Buscar perfis de estudantes vinculados via seller_referral_code
+      // ✅ CORREÇÃO: Buscar perfis usando RPC centralizada que verifica TODAS as aplicações
       const { data: profiles, error: profilesErr } = await supabase
-        .from('user_profiles')
-        .select(`
-          id,
-          user_id,
-          has_paid_selection_process_fee, 
-          has_paid_i20_control_fee, 
-          selection_process_fee_payment_method,
-          i20_control_fee_payment_method,
-          dependents,
-          seller_referral_code,
-          created_at,
-          scholarship_applications(is_scholarship_fee_paid, scholarship_fee_payment_method)
-        `)
-        .in('seller_referral_code', referralCodes);
+        .rpc('get_affiliate_admin_profiles_with_fees', { admin_user_id: currentUserId });
       if (profilesErr || !profiles) {
         console.error('Error fetching student profiles:', profilesErr);
         return;
@@ -214,7 +201,7 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
       // 4. Preparar overrides por user_id
       const uniqueUserIds = Array.from(new Set((profiles || []).map((p) => p.user_id).filter(Boolean)));
       const overrideEntries = await Promise.allSettled(uniqueUserIds.map(async (uid) => {
-        const { data, error } = await supabase.rpc('get_user_fee_overrides', { user_id_param: uid });
+        const { data, error } = await supabase.rpc('get_user_fee_overrides', { target_user_id: uid });
         return [uid, error ? null : data];
       }));
       const overridesMap: Record<string, any> = overrideEntries.reduce((acc: Record<string, any>, res) => {
@@ -239,18 +226,22 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
         // Selection Process
         let selPaid = 0;
         if (p?.has_paid_selection_process_fee) {
-          const baseSel = ov.selection_process_fee != null ? Number(ov.selection_process_fee) : 400;
+          // Usar valor baseado no system_type do aluno (350 para simplified, 400 para legacy)
+          const baseSelDefault = p?.system_type === 'simplified' ? 350 : 400;
+          const baseSel = ov.selection_process_fee != null ? Number(ov.selection_process_fee) : baseSelDefault;
           selPaid = ov.selection_process_fee != null ? baseSel : baseSel + (deps * 150);
         }
 
         // Scholarship Fee (sem dependentes)
-        const hasAnyScholarshipPaid = Array.isArray(p?.scholarship_applications)
-          ? p.scholarship_applications.some((a) => !!a?.is_scholarship_fee_paid)
-          : false;
-        const schBase = ov.scholarship_fee != null ? Number(ov.scholarship_fee) : 900;
+        // ✅ CORREÇÃO: Usar diretamente a flag já calculada pela RPC
+        const hasAnyScholarshipPaid = p?.is_scholarship_fee_paid || false;
+        // Usar valor baseado no system_type do aluno (550 para simplified, 900 para legacy)
+        const schBaseDefault = p?.system_type === 'simplified' ? 550 : 900;
+        const schBase = ov.scholarship_fee != null ? Number(ov.scholarship_fee) : schBaseDefault;
         const schPaid = hasAnyScholarshipPaid ? schBase : 0;
 
         // I-20 Control (sem dependentes)
+        // I-20 Control Fee - sempre 900 para ambos os sistemas
         const i20Base = ov.i20_control_fee != null ? Number(ov.i20_control_fee) : 900;
         const i20Paid = (hasAnyScholarshipPaid && p?.has_paid_i20_control_fee) ? i20Base : 0;
 
@@ -266,15 +257,18 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
         let selManual = 0;
         const isSelManual = !!p?.has_paid_selection_process_fee && p?.selection_process_fee_payment_method === 'manual';
         if (isSelManual) {
-          const baseSel = ov.selection_process_fee != null ? Number(ov.selection_process_fee) : 400;
+          // Usar valor baseado no system_type do aluno (350 para simplified, 400 para legacy)
+          const baseSelDefault = p?.system_type === 'simplified' ? 350 : 400;
+          const baseSel = ov.selection_process_fee != null ? Number(ov.selection_process_fee) : baseSelDefault;
           selManual = ov.selection_process_fee != null ? baseSel : baseSel + (deps * 150);
         }
 
         // Scholarship manual (se qualquer application estiver paga via manual)
-        const hasScholarshipPaidManual = Array.isArray(p?.scholarship_applications)
-          ? p.scholarship_applications.some((a: any) => !!a?.is_scholarship_fee_paid && a?.scholarship_fee_payment_method === 'manual')
-          : false;
-        const schBase = ov.scholarship_fee != null ? Number(ov.scholarship_fee) : 900;
+        // ✅ CORREÇÃO: Para manual, assumir que se scholarship está pago, pode ser manual (RPC não distingue método)
+        const hasScholarshipPaidManual = p?.is_scholarship_fee_paid || false;
+        // Usar valor baseado no system_type do aluno (550 para simplified, 900 para legacy)
+        const schBaseDefault = p?.system_type === 'simplified' ? 550 : 900;
+        const schBase = ov.scholarship_fee != null ? Number(ov.scholarship_fee) : schBaseDefault;
         const schManual = hasScholarshipPaidManual ? schBase : 0;
 
         // I-20 Control manual (seguir mesma regra base: exigir scholarship pago para contar I-20)
@@ -282,6 +276,7 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
           ? p.scholarship_applications.some((a: any) => !!a?.is_scholarship_fee_paid)
           : false;
         const isI20Manual = !!p?.has_paid_i20_control_fee && p?.i20_control_fee_payment_method === 'manual';
+        // I-20 Control Fee - sempre 900 para ambos os sistemas
         const i20Base = ov.i20_control_fee != null ? Number(ov.i20_control_fee) : 900;
         const i20Manual = (hasAnyScholarshipPaid && isI20Manual) ? i20Base : 0;
 
@@ -297,9 +292,8 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
       rows.forEach((p: any) => {
         // Verificar se tem algum pagamento usando a nova lógica
         const hasSelectionPaid = !!p?.has_paid_selection_process_fee;
-        const hasScholarshipPaid = Array.isArray(p?.scholarship_applications)
-          ? p.scholarship_applications.some((a: any) => !!a?.is_scholarship_fee_paid)
-          : false;
+        // ✅ CORREÇÃO: Usar diretamente a flag já calculada pela RPC
+        const hasScholarshipPaid = p?.is_scholarship_fee_paid || false;
         const hasI20Paid = !!p?.has_paid_i20_control_fee;
         
         const hasAnyPayment = hasSelectionPaid || hasScholarshipPaid || hasI20Paid;
@@ -320,7 +314,9 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
           // Selection Process
           let selPaid = 0;
           if (p?.has_paid_selection_process_fee) {
-            const baseSel = ov.selection_process_fee != null ? Number(ov.selection_process_fee) : 400;
+            // Usar valor baseado no system_type do aluno (350 para simplified, 400 para legacy)
+          const baseSelDefault = p?.system_type === 'simplified' ? 350 : 400;
+          const baseSel = ov.selection_process_fee != null ? Number(ov.selection_process_fee) : baseSelDefault;
             selPaid = ov.selection_process_fee != null ? baseSel : baseSel + (deps * 150);
           }
 
@@ -328,11 +324,14 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
           const hasAnyScholarshipPaid = Array.isArray(p?.scholarship_applications)
             ? p.scholarship_applications.some((a: any) => !!a?.is_scholarship_fee_paid)
             : false;
-          const schBase = ov.scholarship_fee != null ? Number(ov.scholarship_fee) : 900;
+          // Usar valor baseado no system_type do aluno (550 para simplified, 900 para legacy)
+        const schBaseDefault = p?.system_type === 'simplified' ? 550 : 900;
+        const schBase = ov.scholarship_fee != null ? Number(ov.scholarship_fee) : schBaseDefault;
           const schPaid = hasAnyScholarshipPaid ? schBase : 0;
 
           // I-20 Control (sem dependentes)
-          const i20Base = ov.i20_control_fee != null ? Number(ov.i20_control_fee) : 900;
+          // I-20 Control Fee - sempre 900 para ambos os sistemas
+        const i20Base = ov.i20_control_fee != null ? Number(ov.i20_control_fee) : 900;
           const i20Paid = (hasAnyScholarshipPaid && p?.has_paid_i20_control_fee) ? i20Base : 0;
 
           return sum + selPaid + schPaid + i20Paid;
@@ -521,7 +520,9 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
 
       // Calcular valores usando a lógica de overrides
       if (paidSelection) {
-        const baseSel = ov.selection_process_fee != null ? Number(ov.selection_process_fee) : 400;
+        // Usar valor baseado no system_type do aluno (350 para simplified, 400 para legacy)
+        const baseSelDefault = row?.system_type === 'simplified' ? 350 : 400;
+        const baseSel = ov.selection_process_fee != null ? Number(ov.selection_process_fee) : baseSelDefault;
         const selectionFeeAmount = ov.selection_process_fee != null ? baseSel : baseSel + (deps * 150);
         recentActivity.push({
           date: row.created_at,
@@ -532,7 +533,9 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
       }
 
       if (hasAnyScholarshipPaid) {
-        const schBase = ov.scholarship_fee != null ? Number(ov.scholarship_fee) : 900;
+        // Usar valor baseado no system_type do aluno (550 para simplified, 900 para legacy)
+        const schBaseDefault = row?.system_type === 'simplified' ? 550 : 900;
+        const schBase = ov.scholarship_fee != null ? Number(ov.scholarship_fee) : schBaseDefault;
         recentActivity.push({
           date: row.created_at,
           type: 'commission',
@@ -542,6 +545,7 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
       }
 
       if (hasAnyScholarshipPaid && paidI20Control) {
+        // I-20 Control Fee - sempre 900 para ambos os sistemas
         const i20Base = ov.i20_control_fee != null ? Number(ov.i20_control_fee) : 900;
         recentActivity.push({
           date: row.created_at,

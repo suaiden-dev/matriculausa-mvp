@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './useAuth';
+import { channelManager } from '../lib/supabaseChannelManager';
 
 export const useUnreadMessagesCount = () => {
   const { user } = useAuth();
@@ -39,8 +40,9 @@ export const useUnreadMessagesCount = () => {
   useEffect(() => {
     if (!user) return;
 
-    const channel = supabase
-      .channel('unread-messages-count')
+    const channelName = `unread-messages-count-${user.id}`;
+
+    const channel = channelManager.subscribe(channelName)
       .on(
         'postgres_changes',
         { 
@@ -76,11 +78,10 @@ export const useUnreadMessagesCount = () => {
         () => {
           fetchUnreadCount();
         }
-      )
-      .subscribe();
+      );
 
     return () => {
-      supabase.removeChannel(channel);
+      channelManager.unsubscribe(channelName);
     };
   }, [user]);
 

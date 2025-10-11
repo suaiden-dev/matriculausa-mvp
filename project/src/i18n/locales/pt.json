@@ -1312,7 +1312,8 @@
       "selectedScholarships": "Bolsas Selecionadas",
       "myApplications": "Minhas Candidaturas",
       "matriculaRewards": "Recompensas Matrícula",
-      "profile": "Perfil"
+      "profile": "Perfil",
+      "supportChat": "Chat de Suporte"
     },
     "profileStatus": {
       "title": "Status do Perfil",
@@ -1889,7 +1890,62 @@
         }
       },
       "chat": {
-        "title": "Chat da Aplicação"
+        "title": "Chat da Aplicação",
+        "subtitle": "Comunique-se diretamente com a universidade",
+        "placeholder": "Digite sua mensagem...",
+        "sendButton": "Enviar",
+        "attachFile": "Anexar arquivo",
+        "fileUploaded": "Arquivo anexado: {{fileName}}",
+        "messageSent": "Mensagem enviada com sucesso",
+        "messageError": "Erro ao enviar mensagem. Tente novamente.",
+        "noMessages": "Nenhuma mensagem ainda. Inicie uma conversa!",
+        "loading": "Carregando mensagens...",
+        "sending": "Enviando...",
+        "online": "Online",
+        "lastSeen": "Visto por último {{time}}",
+        "typing": "Digitando...",
+        "messageStatus": {
+          "sent": "Enviado",
+          "delivered": "Entregue",
+          "read": "Lido"
+        },
+        "actions": {
+          "markAsRead": "Marcar como lido",
+          "deleteMessage": "Excluir mensagem",
+          "downloadAttachment": "Baixar anexo"
+        },
+        "edit": {
+          "placeholder": "Edite sua mensagem...",
+          "save": "Salvar",
+          "cancel": "Cancelar"
+        },
+        "attachment": {
+          "label": "Anexo",
+          "remove": "Remover"
+        }
+      },
+      "studentChat": {
+        "header": {
+          "title": "Equipe de suporte",
+          "responseTime": "Tempo de resposta: 1-2 horas úteis",
+          "helpTooltip": "Como funciona o chat?"
+        },
+        "guide": {
+          "title": "Chat com a Administração",
+          "subtitle": "Este chat conecta você diretamente com a Administração. Use-o para dúvidas sobre bolsas, documentos e andamento da sua inscrição. Evite compartilhar dados sensíveis (senhas ou números de cartão).",
+          "supportsAttachments": "Envie mensagens e anexos",
+          "businessHours": "Respostas durante horário comercial",
+          "historySaved": "Histórico da conversa é salvo",
+          "ctaStart": "Entendi",
+          "ctaLater": "Agora não"
+        },
+        "input": {
+          "placeholder": "Digite sua mensagem..."
+        },
+        "recipientLabel": {
+          "student": "Estudante",
+          "support": "Administração"
+        }
       },
       "details": {
         "studentInformation": {
@@ -1972,7 +2028,26 @@
       },
       "documents": {
         "title": "Gerenciamento de Documentos",
-        "subtitle": "Solicitar e gerenciar documentos do estudante"
+        "subtitle": "Solicitar e gerenciar documentos do estudante",
+        "congratulations": {
+          "title": "Parabéns! Todos os documentos foram aprovados!",
+          "subtitle": "Sua documentação foi aceita pela universidade. Agora você pode prosseguir para a próxima etapa."
+        },
+        "acceptanceLetter": {
+          "title": "Carta de Aceitação",
+          "description": "Sua carta de aceitação oficial da universidade.",
+          "status": "Aguardando a universidade enviar a carta de aceite oficial",
+          "received": "Carta de Aceite Recebida!",
+          "readyForDownload": "Sua carta de aceite oficial está pronta para download",
+          "downloadButton": "Baixar Carta de Aceite",
+          "viewButton": "Visualizar"
+        },
+        "documentStatus": {
+          "title": "Status dos Documentos",
+          "description": "Continue enviando os documentos solicitados pela universidade. A carta de aceite será disponibilizada apenas após todos os documentos serem aprovados.",
+          "progress": "Progresso:",
+          "approved": "documentos aprovados"
+        }
       },
       "documentTypes": {
         "passport": {
@@ -2055,6 +2130,17 @@
         "transferFormDescriptionSchool": "Envie o formulário de transferência para este estudante. Visível apenas para estudantes de transferência.",
         "transferFormDescriptionStudent": "Sua universidade enviará seu formulário de transferência aqui. Baixe-o quando disponível.",
         "transferForm": "Formulário de Transferência",
+        "transferFormUploadButton": "Enviar Formulário Preenchido",
+        "transferFormUploaded": "Formulário de transferência enviado",
+        "transferFormUnderReview": "Em análise pela universidade",
+        "transferFormApproved": "Aprovado",
+        "transferFormRejected": "Rejeitado",
+        "transferFormRejectionReason": "Motivo da rejeição",
+        "transferFormReupload": "Enviar nova versão",
+        "approveTransferForm": "Aprovar Formulário de Transferência",
+        "rejectTransferForm": "Rejeitar Formulário de Transferência",
+        "transferFormReceived": "Formulário de Transferência Recebido",
+        "transferFormReadyMessage": "Seu formulário de transferência está pronto para download. Baixe-o, preencha e envie de volta para a universidade.",
         "sentOn": "Enviado em",
         "studentUploads": "Uploads do estudante:",
         "yourUploads": "Seus uploads:",

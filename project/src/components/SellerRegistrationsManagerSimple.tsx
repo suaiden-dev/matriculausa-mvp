@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Check, X, Eye, Clock, UserCheck, UserX } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
+import { useAffiliateAdminId } from '../hooks/useAffiliateAdminId';
 
 interface SellerRegistration {
   id: string;
@@ -22,6 +23,7 @@ interface SellerRegistrationsManagerProps {
 
 const SellerRegistrationsManagerSimple: React.FC<SellerRegistrationsManagerProps> = ({ onRefresh }) => {
   const { user } = useAuth();
+  const { affiliateAdminId, loading: affiliateAdminLoading, error: affiliateAdminError } = useAffiliateAdminId();
   const [registrations, setRegistrations] = useState<SellerRegistration[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -29,13 +31,16 @@ const SellerRegistrationsManagerSimple: React.FC<SellerRegistrationsManagerProps
   const [hasLoaded, setHasLoaded] = useState(false);
 
   useEffect(() => {
-    if (user && !hasLoaded) {
+    if (user && affiliateAdminId && !hasLoaded && !affiliateAdminLoading) {
       loadRegistrations();
     }
-  }, [user?.id, hasLoaded]);
+  }, [user?.id, affiliateAdminId, hasLoaded, affiliateAdminLoading]);
 
   const loadRegistrations = async () => {
-    if (!user) return;
+    if (!affiliateAdminId) {
+      console.log('⚠️ No affiliate admin ID available');
+      return;
+    }
 
     setLoading(true);
     try {
@@ -43,7 +48,7 @@ const SellerRegistrationsManagerSimple: React.FC<SellerRegistrationsManagerProps
       const { data: adminCodes, error: codesError } = await supabase
         .from('seller_registration_codes')
         .select('code')
-        .eq('admin_id', user.id)
+        .eq('admin_id', affiliateAdminId)
         .eq('is_active', true);
 
       if (codesError) {
@@ -179,8 +184,8 @@ const SellerRegistrationsManagerSimple: React.FC<SellerRegistrationsManagerProps
         .insert({
           user_id: userId,
           affiliate_admin_id: affiliateAdmin.id,
-          name: userProfile.full_name,
-          email: userProfile.email,
+          name: registration.full_name, // ✅ Usar do registration
+          email: registration.email, // ✅ Usar do registration (sempre preenchido)
           referral_code: `SELL${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
           is_active: true
         })
@@ -215,7 +220,9 @@ const SellerRegistrationsManagerSimple: React.FC<SellerRegistrationsManagerProps
         .update({
           role: 'seller',
           seller_referral_code: null, // ✅ Limpar o código antigo para evitar auto-referência
-          system_type: sellerSystemType // ✅ Usar o system_type do admin
+          system_type: sellerSystemType, // ✅ Usar o system_type do admin
+          email: registration.email, // ✅ Garantir que email esteja no perfil
+          full_name: registration.full_name // ✅ Garantir que nome esteja atualizado
         })
         .eq('user_id', userId);
 
@@ -269,11 +276,26 @@ const SellerRegistrationsManagerSimple: React.FC<SellerRegistrationsManagerProps
     }
   };
 
-  if (loading) {
+  // Mostrar loading se ainda estiver carregando o affiliate admin ID
+  if (affiliateAdminLoading || loading) {
     return (
       <div className="flex items-center justify-center p-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         <span className="ml-2">Loading registrations...</span>
+      </div>
+    );
+  }
+
+  // Mostrar erro se não conseguir encontrar o affiliate admin ID
+  if (affiliateAdminError || !affiliateAdminId) {
+    return (
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="text-center py-8">
+          <p className="text-red-600 mb-2">Erro ao carregar dados do administrador</p>
+          <p className="text-sm text-gray-500">
+            {affiliateAdminError || 'Usuário não é um administrador de afiliados'}
+          </p>
+        </div>
       </div>
     );
   }

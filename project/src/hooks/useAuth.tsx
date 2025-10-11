@@ -223,24 +223,53 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             }
           } else {
             profile = data || null;
-            // Ensure dependents persists from metadata if profile exists without correct value
-            const mdDependentsVal = Number(session.user.user_metadata?.dependents ?? NaN);
-            if (
-              profile &&
-              !Number.isNaN(mdDependentsVal) &&
-              (profile as any).dependents !== mdDependentsVal
-            ) {
-              try {
-                const { data: updatedProfile, error: depUpdateError } = await supabase
-                  .from('user_profiles')
-                  .update({ dependents: mdDependentsVal })
-                  .eq('user_id', session.user.id)
-                  .select()
-                  .single();
-                if (!depUpdateError && updatedProfile) {
-                  profile = updatedProfile as any;
+            
+            // ✅ CORREÇÃO: Atualizar email e dependents se estiverem diferentes ou null
+            if (profile) {
+              const updates: any = {};
+              
+              // Atualizar email se estiver null ou diferente
+              if (!profile.email || profile.email !== session.user.email) {
+                updates.email = session.user.email;
+              }
+              
+              // Ensure dependents persists from metadata if profile exists without correct value
+              const mdDependentsVal = Number(session.user.user_metadata?.dependents ?? NaN);
+              if (
+                !Number.isNaN(mdDependentsVal) &&
+                (profile as any).dependents !== mdDependentsVal
+              ) {
+                updates.dependents = mdDependentsVal;
+              }
+              
+              // Aplicar atualizações se houver alguma
+              if (Object.keys(updates).length > 0) {
+                console.log('🔄 [USEAUTH] Atualizando perfil existente:', { 
+                  antigo: { email: profile.email, dependents: (profile as any).dependents }, 
+                  novo: { email: session.user.email, dependents: mdDependentsVal },
+                  updates 
+                });
+                
+                try {
+                  const { data: updatedProfile, error: updateError } = await supabase
+                    .from('user_profiles')
+                    .update(updates)
+                    .eq('user_id', session.user.id)
+                    .select()
+                    .single();
+                  
+                  if (!updateError && updatedProfile) {
+                    profile = updatedProfile as any;
+                    console.log('✅ [USEAUTH] Perfil existente atualizado com sucesso:', updatedProfile);
+                  } else {
+                    console.log('❌ [USEAUTH] Erro ao atualizar perfil existente:', updateError);
+                  }
+                } catch (error) {
+                  console.log('❌ [USEAUTH] Erro geral ao atualizar perfil existente:', error);
                 }
-              } catch (_) {}
+              } else {
+                console.log('ℹ️ [USEAUTH] Perfil existente já está correto, não precisa de atualização.');
+              }
             }
           }
         } catch (error) {
@@ -355,10 +384,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                     console.log('❌ [USEAUTH] Erro ao buscar perfil existente:', fetchError);
                   } else if (existingProfile) {
                     profile = existingProfile;
-                    // Atualizar telefone e dependents se estiverem diferentes
+                    // Atualizar telefone, email e dependents se estiverem diferentes
                     const updates: any = {};
                     if (existingProfile.phone !== phone) {
                       updates.phone = phone;
+                    }
+                    // ✅ CORREÇÃO: Atualizar email se estiver null ou diferente
+                    if (!existingProfile.email || existingProfile.email !== session.user.email) {
+                      updates.email = session.user.email;
                     }
                     const mdDependents = Number(session.user.user_metadata?.dependents || 0);
                     if (
@@ -368,7 +401,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                       updates.dependents = mdDependents;
                     }
                     if (Object.keys(updates).length > 0) {
-                      console.log('🔄 [USEAUTH] Atualizando telefone do perfil existente:', { antigo: existingProfile.phone, novo: phone });
+                      console.log('🔄 [USEAUTH] Atualizando perfil existente:', { 
+                        antigo: { phone: existingProfile.phone, email: existingProfile.email }, 
+                        novo: { phone, email: session.user.email },
+                        updates 
+                      });
                       const { data: updatedProfile, error: updateError } = await supabase
                         .from('user_profiles')
                         .update(updates)
@@ -376,13 +413,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                         .select()
                         .single();
                       if (updateError) {
-                        console.log('❌ [USEAUTH] Erro ao atualizar telefone:', updateError);
+                        console.log('❌ [USEAUTH] Erro ao atualizar perfil:', updateError);
                       } else {
-                        console.log('✅ [USEAUTH] Telefone atualizado com sucesso:', updatedProfile);
+                        console.log('✅ [USEAUTH] Perfil atualizado com sucesso:', updatedProfile);
                         profile = updatedProfile;
                       }
                     } else {
-                      console.log('ℹ️ [USEAUTH] Telefone já está correto no perfil existente.');
+                      console.log('ℹ️ [USEAUTH] Perfil já está correto, não precisa de atualização.');
                     }
                   }
                 } catch (error) {
@@ -578,7 +615,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               const { data: validationResult, error: validationError } = await supabase
                 .rpc('validate_and_apply_referral_code', {
                   user_id_param: session.user.id,
-                  affiliate_code_param: session.user.user_metadata.affiliate_code
+                  affiliate_code_param: session.user.user_metadata.affiliate_code,
+                  email_param: session.user.email
                 });
 
               if (validationError) {
@@ -786,16 +824,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     console.log('🔍 [USEAUTH] userData original:', userData);
     console.log('🔍 [USEAUTH] cleanUserData:', cleanUserData);
     
+    // Normaliza o e-mail para evitar duplicidade por case/espacos
+    const normalizedEmail = (email || '').trim().toLowerCase();
+    
     const signUpData = {
       ...cleanUserData,
       name: cleanUserData.full_name, // redundância para garantir compatibilidade
       full_name: cleanUserData.full_name, // Adicionar full_name explicitamente
+      email: normalizedEmail, // Adicionar email do aluno ao metadata
     };
     
     console.log('🔍 [USEAUTH] signUpData final:', signUpData);
-    
-    // Normaliza o e-mail para evitar duplicidade por case/espacos
-    const normalizedEmail = (email || '').trim().toLowerCase();
 
     console.log('🔍 [USEAUTH] Tentando signUp com:', {
       email: normalizedEmail,

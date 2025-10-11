@@ -431,20 +431,40 @@ const UserManagement: React.FC<UserManagementProps> = ({
                           
                           try {
                             if (newRole === 'affiliate_admin') {
-                              const { error } = await supabase.rpc('promote_to_affiliate_admin', {
+                              console.log('🔍 [UserManagement] Iniciando promoção para affiliate admin...');
+                              console.log('🔍 [UserManagement] User email:', user.email);
+                              console.log('🔍 [UserManagement] User ID:', user.user_id);
+                              console.log('🔍 [UserManagement] Current role:', user.role);
+                              
+                              const { data, error } = await supabase.rpc('promote_to_affiliate_admin', {
                                 user_email: user.email
                               });
-                              if (error) throw error;
+                              
+                              console.log('🔍 [UserManagement] RPC Response - Data:', data);
+                              console.log('🔍 [UserManagement] RPC Response - Error:', error);
+                              
+                              if (error) {
+                                console.error('❌ [UserManagement] Erro na promoção:', error);
+                                throw error;
+                              }
+                              
+                              console.log('✅ [UserManagement] Promoção realizada com sucesso!');
                               alert('User promoted to Affiliate Admin successfully!');
                             } else {
+                              console.log('🔍 [UserManagement] Atualizando role para:', newRole);
                               const { error } = await supabase
                                 .from('user_profiles')
                                 .update({ role: newRole })
                                 .eq('user_id', user.user_id);
-                              if (error) throw error;
+                              if (error) {
+                                console.error('❌ [UserManagement] Erro ao atualizar role:', error);
+                                throw error;
+                              }
+                              console.log('✅ [UserManagement] Role atualizado com sucesso!');
                               alert(`Role updated to ${newRole} successfully!`);
                             }
                             
+                            console.log('🔄 [UserManagement] Chamando onRefresh...');
                             if (onRefresh) onRefresh();
                           } catch (error: any) {
                             console.error('Error updating role:', error);
@@ -516,20 +536,40 @@ const UserManagement: React.FC<UserManagementProps> = ({
                                 
                                 try {
                                   if (newRole === 'affiliate_admin') {
-                                    const { error } = await supabase.rpc('promote_to_affiliate_admin', {
+                                    console.log('🔍 [UserManagement] Iniciando promoção para affiliate admin (List View)...');
+                                    console.log('🔍 [UserManagement] User email:', user.email);
+                                    console.log('🔍 [UserManagement] User ID:', user.user_id);
+                                    console.log('🔍 [UserManagement] Current role:', user.role);
+                                    
+                                    const { data, error } = await supabase.rpc('promote_to_affiliate_admin', {
                                       user_email: user.email
                                     });
-                                    if (error) throw error;
+                                    
+                                    console.log('🔍 [UserManagement] RPC Response - Data:', data);
+                                    console.log('🔍 [UserManagement] RPC Response - Error:', error);
+                                    
+                                    if (error) {
+                                      console.error('❌ [UserManagement] Erro na promoção:', error);
+                                      throw error;
+                                    }
+                                    
+                                    console.log('✅ [UserManagement] Promoção realizada com sucesso!');
                                     alert('User promoted to Affiliate Admin successfully!');
                                   } else {
+                                    console.log('🔍 [UserManagement] Atualizando role para:', newRole);
                                     const { error } = await supabase
                                       .from('user_profiles')
                                       .update({ role: newRole })
                                       .eq('user_id', user.user_id);
-                                    if (error) throw error;
+                                    if (error) {
+                                      console.error('❌ [UserManagement] Erro ao atualizar role:', error);
+                                      throw error;
+                                    }
+                                    console.log('✅ [UserManagement] Role atualizado com sucesso!');
                                     alert(`Role updated to ${newRole} successfully!`);
                                   }
                                   
+                                  console.log('🔄 [UserManagement] Chamando onRefresh...');
                                   if (onRefresh) onRefresh();
                                 } catch (error: any) {
                                   console.error('Error updating role:', error);
@@ -810,20 +850,40 @@ const UserManagement: React.FC<UserManagementProps> = ({
                             
                             try {
                               if (newRole === 'affiliate_admin') {
-                                const { error } = await supabase.rpc('promote_to_affiliate_admin', {
+                                console.log('🔍 [UserManagement] Iniciando promoção para affiliate admin (Modal)...');
+                                console.log('🔍 [UserManagement] User email:', selectedUser.email);
+                                console.log('🔍 [UserManagement] User ID:', selectedUser.user_id);
+                                console.log('🔍 [UserManagement] Current role:', selectedUser.role);
+                                
+                                const { data, error } = await supabase.rpc('promote_to_affiliate_admin', {
                                   user_email: selectedUser.email
                                 });
-                                if (error) throw error;
+                                
+                                console.log('🔍 [UserManagement] RPC Response - Data:', data);
+                                console.log('🔍 [UserManagement] RPC Response - Error:', error);
+                                
+                                if (error) {
+                                  console.error('❌ [UserManagement] Erro na promoção:', error);
+                                  throw error;
+                                }
+                                
+                                console.log('✅ [UserManagement] Promoção realizada com sucesso!');
                                 alert('User promoted to Affiliate Admin successfully!');
                               } else {
+                                console.log('🔍 [UserManagement] Atualizando role para:', newRole);
                                 const { error } = await supabase
                                   .from('user_profiles')
                                   .update({ role: newRole })
                                   .eq('user_id', selectedUser.user_id);
-                                if (error) throw error;
+                                if (error) {
+                                  console.error('❌ [UserManagement] Erro ao atualizar role:', error);
+                                  throw error;
+                                }
+                                console.log('✅ [UserManagement] Role atualizado com sucesso!');
                                 alert(`Role updated to ${newRole} successfully!`);
                               }
                               
+                              console.log('🔄 [UserManagement] Chamando onRefresh...');
                               setSelectedUser(null);
                               if (onRefresh) onRefresh();
                             } catch (error: any) {
