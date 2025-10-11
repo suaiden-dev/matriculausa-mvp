@@ -81,20 +81,9 @@ const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], userId }) =>
       
       const referralCodes = sellers.map(s => s.referral_code);
       
-      // Buscar perfis de estudantes vinculados via seller_referral_code
+      // ✅ CORREÇÃO: Buscar perfis usando RPC centralizada que verifica TODAS as aplicações
       const { data: profiles, error: profilesErr } = await supabase
-        .from('user_profiles')
-        .select(`
-          id,
-          user_id,
-          has_paid_selection_process_fee, 
-          has_paid_i20_control_fee, 
-          dependents,
-          seller_referral_code,
-          system_type,
-          scholarship_applications(is_scholarship_fee_paid)
-        `)
-        .in('seller_referral_code', referralCodes);
+        .rpc('get_affiliate_admin_profiles_with_fees', { admin_user_id: currentUserId });
       if (profilesErr || !profiles) {
         setClientAdjustedRevenue(null);
         return;
@@ -136,9 +125,8 @@ const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], userId }) =>
         }
 
         // Scholarship Fee (sem dependentes)
-        const hasAnyScholarshipPaid = Array.isArray(p?.scholarship_applications)
-          ? p.scholarship_applications.some((a) => !!a?.is_scholarship_fee_paid)
-          : false;
+        // ✅ CORREÇÃO: Usar diretamente a flag já calculada pela RPC
+        const hasAnyScholarshipPaid = p?.is_scholarship_fee_paid || false;
         // Usar valor baseado no system_type do aluno (550 para simplified, 900 para legacy)
         const schBaseDefault = p?.system_type === 'simplified' ? 550 : 900;
         const schBase = ov.scholarship_fee != null ? Number(ov.scholarship_fee) : schBaseDefault;
@@ -287,9 +275,8 @@ const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], userId }) =>
         }
 
         // Scholarship Fee (sem dependentes)
-        const hasAnyScholarshipPaid = Array.isArray(p?.scholarship_applications)
-          ? p.scholarship_applications.some((a) => !!a?.is_scholarship_fee_paid)
-          : false;
+        // ✅ CORREÇÃO: Usar diretamente a flag já calculada pela RPC
+        const hasAnyScholarshipPaid = p?.is_scholarship_fee_paid || false;
         // Usar valor baseado no system_type do aluno (550 para simplified, 900 para legacy)
         const schBaseDefault = p?.system_type === 'simplified' ? 550 : 900;
         const schBase = ov.scholarship_fee != null ? Number(ov.scholarship_fee) : schBaseDefault;

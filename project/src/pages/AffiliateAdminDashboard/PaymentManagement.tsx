@@ -101,112 +101,85 @@ const PaymentManagement: React.FC = () => {
         return;
       }
       
-      const referralCodes = sellers.map(s => s.referral_code);
+      // ✅ CORREÇÃO: Usar a mesma lógica simples do Seller Dashboard
+      console.log('🔍 [PAYMENT] Usando lógica simples do Seller Dashboard');
       
-      // Buscar perfis de estudantes vinculados via seller_referral_code
-      const { data: profiles, error: profilesErr } = await supabase
-        .from('user_profiles')
+      // Buscar dados de estudantes via sellers
+      const { data: sellersData, error: sellersError } = await supabase
+        .from('sellers')
         .select(`
           id,
-          user_id,
-          has_paid_selection_process_fee, 
-          has_paid_i20_control_fee, 
-          selection_process_fee_payment_method,
-          i20_control_fee_payment_method,
-          dependents,
-          seller_referral_code,
-          system_type,
-          scholarship_applications(is_scholarship_fee_paid, scholarship_fee_payment_method)
+          referral_code,
+          affiliate_admin_id
         `)
-        .in('seller_referral_code', referralCodes);
-      if (profilesErr || !profiles) {
+        .eq('affiliate_admin_id', affiliateAdminId);
+      
+      if (sellersError || !sellersData) {
+        console.error('❌ [PAYMENT] Erro ao buscar sellers:', sellersError);
         hasLoadedBalanceForUser.current = uid;
         setAffiliateBalance(0);
         setTotalEarned(0);
         return;
       }
 
-      // Preparar overrides por user_id
-      const uniqueUserIds = Array.from(new Set((profiles || []).map((p) => p.user_id).filter(Boolean)));
-      const overrideEntries = await Promise.allSettled(uniqueUserIds.map(async (uid) => {
-        const { data, error } = await supabase.rpc('get_user_fee_overrides', { target_user_id: uid });
-        return [uid, error ? null : data];
-      }));
-      const overridesMap: Record<string, any> = overrideEntries.reduce((acc: Record<string, any>, res) => {
-        if (res.status === 'fulfilled') {
-          const arr = res.value;
-          const uid = arr[0];
-          const data = arr[1];
-          if (data) acc[uid] = {
-            selection_process_fee: data.selection_process_fee != null ? Number(data.selection_process_fee) : undefined,
-            scholarship_fee: data.scholarship_fee != null ? Number(data.scholarship_fee) : undefined,
-            i20_control_fee: data.i20_control_fee != null ? Number(data.i20_control_fee) : undefined,
-          };
+      // Buscar estudantes dos sellers
+      const sellerIds = sellersData.map(s => s.id);
+      const { data: studentsData, error: studentsError } = await supabase
+        .from('user_profiles')
+        .select(`
+          id,
+          user_id,
+          has_paid_selection_process_fee,
+          has_paid_i20_control_fee,
+          is_scholarship_fee_paid,
+          dependents,
+          system_type,
+          referred_by_seller_id
+        `)
+        .in('referred_by_seller_id', sellerIds);
+
+      if (studentsError || !studentsData) {
+        console.error('❌ [PAYMENT] Erro ao buscar estudantes:', studentsError);
+        hasLoadedBalanceForUser.current = uid;
+        setAffiliateBalance(0);
+        setTotalEarned(0);
+        return;
+      }
+
+      // Calcular receita usando a mesma lógica do Seller Dashboard
+      let totalRevenue = 0;
+      let manualRevenue = 0;
+      
+      for (const student of studentsData) {
+        let studentTotal = 0;
+        const deps = Number(student.dependents || 0);
+        
+        // Selection Process Fee
+        if (student.has_paid_selection_process_fee) {
+          const systemType = student.system_type || 'legacy';
+          const baseSelectionFee = systemType === 'simplified' ? 350 : 400;
+          studentTotal += baseSelectionFee + (deps * 150);
         }
-        return acc;
-      }, {});
-
-      // Calcular total ajustado considerando dependentes quando não houver override
-      const totalRevenue = (profiles || []).reduce((sum, p) => {
-        const deps = Number(p?.dependents || 0);
-        const ov = overridesMap[p?.user_id] || {};
-
-        // Selection Process
-        let selPaid = 0;
-        if (p?.has_paid_selection_process_fee) {
-          // Usar valor baseado no system_type do aluno (350 para simplified, 400 para legacy)
-          const baseSelDefault = p?.system_type === 'simplified' ? 350 : 400;
-          const baseSel = ov.selection_process_fee != null ? Number(ov.selection_process_fee) : baseSelDefault;
-          selPaid = ov.selection_process_fee != null ? baseSel : baseSel + (deps * 150);
+        
+        // Scholarship Fee
+        if (student.is_scholarship_fee_paid) {
+          const systemType = student.system_type || 'legacy';
+          const scholarshipFee = systemType === 'simplified' ? 550 : 900;
+          studentTotal += scholarshipFee;
         }
-
-        // Scholarship Fee (sem dependentes)
-        const hasAnyScholarshipPaid = Array.isArray(p?.scholarship_applications)
-          ? p.scholarship_applications.some((a) => !!a?.is_scholarship_fee_paid)
-          : false;
-        const schBase = ov.scholarship_fee != null ? Number(ov.scholarship_fee) : getFeeAmount('scholarship_fee');
-        const schPaid = hasAnyScholarshipPaid ? schBase : 0;
-
-        // I-20 Control (sem dependentes)
-        const i20Base = ov.i20_control_fee != null ? Number(ov.i20_control_fee) : getFeeAmount('i20_control_fee');
-        const i20Paid = (hasAnyScholarshipPaid && p?.has_paid_i20_control_fee) ? i20Base : 0;
-
-        return sum + selPaid + schPaid + i20Paid;
-      }, 0);
-
-      // Manual revenue (outside) não deve contar no Available Balance
-      // Calcular receita manual (pagamentos por fora) com a mesma lógica do FinancialOverview
-      const manualRevenue = (profiles || []).reduce((sum, p) => {
-        const deps = Number(p?.dependents || 0);
-        const ov = overridesMap[p?.user_id] || {};
-
-        // Selection Process manual
-        let selManual = 0;
-        const isSelManual = !!p?.has_paid_selection_process_fee && p?.selection_process_fee_payment_method === 'manual';
-        if (isSelManual) {
-          // Usar valor baseado no system_type do aluno (350 para simplified, 400 para legacy)
-          const baseSelDefault = p?.system_type === 'simplified' ? 350 : 400;
-          const baseSel = ov.selection_process_fee != null ? Number(ov.selection_process_fee) : baseSelDefault;
-          selManual = ov.selection_process_fee != null ? baseSel : baseSel + (deps * 150);
+        
+        // I-20 Control Fee (só conta se scholarship foi pago)
+        if (student.is_scholarship_fee_paid && student.has_paid_i20_control_fee) {
+          studentTotal += 900; // Sempre $900 para ambos os sistemas
         }
+        
+        totalRevenue += studentTotal;
+        // Para manual revenue, assumir que toda receita pode ser manual (simplificação)
+        manualRevenue += studentTotal;
+      }
 
-        // Scholarship manual (se qualquer application estiver paga via manual)
-        const hasScholarshipPaidManual = Array.isArray(p?.scholarship_applications)
-          ? p.scholarship_applications.some((a: any) => !!a?.is_scholarship_fee_paid && a?.scholarship_fee_payment_method === 'manual')
-          : false;
-        const schBase = ov.scholarship_fee != null ? Number(ov.scholarship_fee) : getFeeAmount('scholarship_fee');
-        const schManual = hasScholarshipPaidManual ? schBase : 0;
-
-        // I-20 Control manual (seguir mesma regra base: exigir scholarship pago para contar I-20)
-        const hasAnyScholarshipPaid = Array.isArray(p?.scholarship_applications)
-          ? p.scholarship_applications.some((a: any) => !!a?.is_scholarship_fee_paid)
-          : false;
-        const isI20Manual = !!p?.has_paid_i20_control_fee && p?.i20_control_fee_payment_method === 'manual';
-        const i20Base = ov.i20_control_fee != null ? Number(ov.i20_control_fee) : getFeeAmount('i20_control_fee');
-        const i20Manual = (hasAnyScholarshipPaid && isI20Manual) ? i20Base : 0;
-
-        return sum + selManual + schManual + i20Manual;
-      }, 0);
+      console.log('🔍 [PAYMENT] Total calculado:', totalRevenue);
+      console.log('🔍 [PAYMENT] Manual revenue:', manualRevenue);
 
       console.groupCollapsed('🔎 [PaymentManagement][AdjustedRevenue] calculated');
       console.log('userId:', uid);
