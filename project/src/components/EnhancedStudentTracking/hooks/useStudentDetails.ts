@@ -97,6 +97,19 @@ export const useStudentDetails = () => {
           studentData.scholarship_fee_amount = scholarshipFeeAmount;
           studentData.total_fees_paid = calculatedTotalPaid;
           
+          // ✅ CORREÇÃO: Adicionar campos da acceptance letter da função SQL
+          studentData.acceptance_letter_status = studentData.acceptance_letter_status || 'pending';
+          studentData.acceptance_letter_url = studentData.acceptance_letter_url || null;
+          studentData.acceptance_letter_sent_at = studentData.acceptance_letter_sent_at || null;
+          
+          // Debug: Verificar dados da acceptance letter
+          console.log('🔍 [ACCEPTANCE_LETTER_DEBUG] studentData from SQL:', {
+            acceptance_letter_status: studentData.acceptance_letter_status,
+            acceptance_letter_url: studentData.acceptance_letter_url,
+            acceptance_letter_sent_at: studentData.acceptance_letter_sent_at,
+            application_status: studentData.application_status
+          });
+          
           // Adicionar dados do scholarship se disponíveis
           if (studentData.application_fee_amount || studentData.scholarship_fee_amount) {
             studentData.scholarship = {
@@ -126,8 +139,8 @@ export const useStudentDetails = () => {
           return;
         }
 
-        // Buscar aplicação de bolsa mais recente
-        const { data: applicationData, error: applicationError } = await supabase
+        // ✅ CORREÇÃO: Buscar TODAS as aplicações para verificar se QUALQUER uma foi paga
+        const { data: allApplications, error: applicationError } = await supabase
           .from('scholarship_applications')
           .select(`
             *,
@@ -143,9 +156,14 @@ export const useStudentDetails = () => {
             )
           `)
           .eq('student_id', profile_id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single();
+          .order('created_at', { ascending: false });
+
+        // ✅ CORREÇÃO: Verificar se QUALQUER aplicação foi paga
+        const hasAnyScholarshipPaid = allApplications?.some((app: any) => app.is_scholarship_fee_paid) || false;
+        const hasAnyApplicationPaid = allApplications?.some((app: any) => app.is_application_fee_paid) || false;
+        
+        // Usar a aplicação mais recente para dados de exibição
+        const applicationData = allApplications?.[0] || null;
 
         let sellerData = null;
         if (profileData.seller_referral_code) {
@@ -237,12 +255,15 @@ export const useStudentDetails = () => {
           university_name: applicationData?.scholarships?.universities?.name || 'University not specified',
           selected_scholarship_id: applicationData?.scholarship_id || null,
           documents_status: profileData.documents_status || 'Not started',
-          is_application_fee_paid: profileData.is_application_fee_paid || false,
-          is_scholarship_fee_paid: profileData.is_scholarship_fee_paid || false,
+          // ✅ CORREÇÃO: Usar flags de QUALQUER aplicação paga
+          is_application_fee_paid: hasAnyApplicationPaid,
+          is_scholarship_fee_paid: hasAnyScholarshipPaid,
           has_paid_selection_process_fee: profileData.has_paid_selection_process_fee || false,
           has_paid_i20_control_fee: profileData.has_paid_i20_control_fee || false,
           student_process_type: applicationData?.student_process_type || 'Not specified',
           application_status: applicationData?.status || 'Pending',
+          status: applicationData?.status || 'Pending', // ✅ Adicionar status da aplicação
+          acceptance_letter_status: applicationData?.acceptance_letter_status || 'pending', // ✅ Adicionar status da carta de aceite
           documents: documentsData || [],
           dependents: dependents, // ✅ Adicionar campo dependents
           selection_process_fee_amount: selectionProcessFeeAmount, // ✅ Adicionar campo da taxa calculada
@@ -258,10 +279,15 @@ export const useStudentDetails = () => {
       }
       
       if (studentData) {
-        const { data: applicationData, error: applicationError } = await supabase
+        // ✅ CORREÇÃO: Buscar TODAS as aplicações para verificar se QUALQUER uma foi paga
+        const { data: allApplications, error: applicationError } = await supabase
           .from('scholarship_applications')
           .select(`
             *,
+            acceptance_letter_status,
+            acceptance_letter_url,
+            acceptance_letter_sent_at,
+            status,
             scholarships (
               id,
               title,
@@ -275,10 +301,15 @@ export const useStudentDetails = () => {
           `)
           .eq('student_id', profile_id)
           // ✅ CORREÇÃO: Priorizar aplicações enrolled > approved > pending > rejected
-          .order('status', { ascending: true }) // enrolled vem antes de pending
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single();
+          .order('status', { ascending: false }) // enrolled vem antes de pending
+          .order('created_at', { ascending: false });
+
+        // ✅ CORREÇÃO: Verificar se QUALQUER aplicação foi paga
+        const hasAnyScholarshipPaid = allApplications?.some((app: any) => app.is_scholarship_fee_paid) || false;
+        const hasAnyApplicationPaid = allApplications?.some((app: any) => app.is_application_fee_paid) || false;
+        
+        // Usar a aplicação mais recente para dados de exibição
+        const applicationData = allApplications?.[0] || null;
 
 
         studentData.documents = applicationData?.documents;
@@ -685,8 +716,9 @@ export const useStudentDetails = () => {
             acceptance_letter_status: applicationData.acceptance_letter_status || 'pending',
             acceptance_letter_url: applicationData.acceptance_letter_url || '',
             acceptance_letter_sent_at: applicationData.acceptance_letter_sent_at || null,
-            is_application_fee_paid: applicationData.is_application_fee_paid || false,
-            is_scholarship_fee_paid: applicationData.is_scholarship_fee_paid || false,
+            // ✅ CORREÇÃO: Usar flags de QUALQUER aplicação paga
+            is_application_fee_paid: hasAnyApplicationPaid,
+            is_scholarship_fee_paid: hasAnyScholarshipPaid,
             paid_at: applicationData.paid_at || new Date().toISOString(),
             payment_status: applicationData.payment_status || 'pending',
             has_paid_selection_process_fee: studentData.has_paid_selection_process_fee || false,

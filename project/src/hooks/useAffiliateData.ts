@@ -63,13 +63,18 @@ export const useAffiliateData = () => {
       setLoading(true);
       setError(null);
 
-      console.log('🔍 [AdminAffiliates] Carregando dados de todos os afiliados...');
+      console.log('🔍 [AdminAffiliates] Carregando dados de todos os afiliados...', new Date().toISOString());
+      console.log('🔍 [AdminAffiliates] VERSÃO ATUALIZADA - Lógica do Seller Dashboard aplicada!');
+      console.log('🔍 [AdminAffiliates] Cache busting timestamp:', Date.now());
+      console.log('🔍 [AdminAffiliates] FORÇANDO RELOAD - Versão 2.0');
+      console.log('🔍 [AdminAffiliates] SUPER ADMIN DASHBOARD - Cache busting:', Math.random());
 
       // TESTE: Verificar se temos dados básicos primeiro
       const { data: testData, error: testError } = await supabase
         .from('affiliate_admins')
         .select('*')
-        .limit(5);
+        .limit(5)
+        .abortSignal(AbortSignal.timeout(30000));
       
       console.log('🔍 [AdminAffiliates] TESTE - Dados brutos da tabela affiliate_admins:', testData);
       console.log('🔍 [AdminAffiliates] TESTE - Erro (se houver):', testError);
@@ -83,7 +88,8 @@ export const useAffiliateData = () => {
           is_active,
           created_at
         `)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .abortSignal(AbortSignal.timeout(30000));
 
       if (affiliateAdminsError) {
         throw new Error(`Failed to load affiliate admins: ${affiliateAdminsError.message}`);
@@ -110,7 +116,8 @@ export const useAffiliateData = () => {
           country,
           created_at
         `)
-        .in('user_id', userIds);
+        .in('user_id', userIds)
+        .abortSignal(AbortSignal.timeout(30000));
 
       if (userProfilesError) {
         console.warn('🔍 [AdminAffiliates] Erro ao buscar perfis de usuários:', userProfilesError);
@@ -145,7 +152,8 @@ export const useAffiliateData = () => {
                 is_active,
                 created_at
               `)
-              .eq('affiliate_admin_id', affiliateId);
+              .eq('affiliate_admin_id', affiliateId)
+              .abortSignal(AbortSignal.timeout(30000));
 
             if (sellersError) {
               console.warn(`Erro ao buscar sellers para affiliate ${affiliateId}:`, sellersError);
@@ -175,6 +183,7 @@ export const useAffiliateData = () => {
                   has_paid_selection_process_fee,
                   has_paid_i20_control_fee,
                   system_type,
+                  dependents,
                   scholarship_applications (
                     id,
                     is_scholarship_fee_paid,
@@ -187,7 +196,8 @@ export const useAffiliateData = () => {
                   )
                 `)
                 .in('seller_referral_code', sellerCodes)
-                .eq('role', 'student');
+                .eq('role', 'student')
+                .abortSignal(AbortSignal.timeout(30000));
 
               if (!userProfilesError && userProfilesData) {
                 studentsData = userProfilesData.map((profile: any) => {
@@ -195,16 +205,50 @@ export const useAffiliateData = () => {
                   const sellerCode = profile.seller_referral_code;
                   const referringSeller = sellers.find((s: any) => s.referral_code === sellerCode);
 
-                  // Calcular receita do estudante (usando lógica similar ao EnhancedStudentTracking)
+                  // ✅ CORREÇÃO: Usar a mesma lógica simples do Seller Dashboard
                   let studentRevenue = 0;
+                  const systemType = profile.system_type || 'legacy';
+                  
+                  // Debug para marjorie1454@uorak.com
+                  if (profile.email === 'marjorie1454@uorak.com') {
+                    console.log('🔍 [useAffiliateData] marjorie1454@uorak.com:', {
+                      systemType,
+                      hasPaidSelection: profile.has_paid_selection_process_fee,
+                      hasPaidI20: profile.has_paid_i20_control_fee,
+                      scholarshipApps: profile.scholarship_applications,
+                      dependents: profile.dependents
+                    });
+                  }
+                  
+                  // Selection Process Fee
                   if (profile.has_paid_selection_process_fee) {
-                    studentRevenue += 400; // Valor padrão da taxa de seleção (será calculado dinamicamente)
+                    const baseSelectionFee = systemType === 'simplified' ? 350 : 400;
+                    const dependents = Number(profile.dependents || 0);
+                    studentRevenue += baseSelectionFee + (dependents * 150);
                   }
-                  if (profile.has_paid_i20_control_fee) {
-                    studentRevenue += 900; // Valor padrão da taxa de I20 (será calculado dinamicamente)
-                  }
+                  
+                  // Scholarship Fee
                   if (profile.scholarship_applications?.some((app: any) => app.is_scholarship_fee_paid)) {
-                    studentRevenue += 900; // Valor padrão da taxa de scholarship (será calculado dinamicamente)
+                    const scholarshipFee = systemType === 'simplified' ? 550 : 900;
+                    studentRevenue += scholarshipFee;
+                  }
+                  
+                  // I-20 Control Fee (só conta se scholarship foi pago)
+                  if (profile.scholarship_applications?.some((app: any) => app.is_scholarship_fee_paid) && profile.has_paid_i20_control_fee) {
+                    studentRevenue += 900; // Sempre $900 para ambos os sistemas
+                  }
+
+                  if (profile.email === 'marjorie1454@uorak.com') {
+                    console.log('🔍 [useAffiliateData] marjorie1454@uorak.com calculado:', {
+                      studentRevenue,
+                      breakdown: {
+                        selectionPaid: profile.has_paid_selection_process_fee,
+                        scholarshipPaid: profile.scholarship_applications?.some((app: any) => app.is_scholarship_fee_paid),
+                        i20Paid: profile.has_paid_i20_control_fee
+                      },
+                      scholarshipApps: profile.scholarship_applications,
+                      systemType: profile.system_type
+                    });
                   }
 
                   totalRevenue += studentRevenue;
@@ -226,7 +270,7 @@ export const useAffiliateData = () => {
                     status: 'active',
                     has_paid_selection_process_fee: profile.has_paid_selection_process_fee,
                     has_paid_i20_control_fee: profile.has_paid_i20_control_fee,
-                    is_scholarship_fee_paid: scholarshipApp?.is_scholarship_fee_paid || false,
+                    is_scholarship_fee_paid: profile.scholarship_applications?.some((app: any) => app.is_scholarship_fee_paid) || false,
                     scholarship_title: scholarshipApp?.scholarships?.title,
                     university_name: scholarshipApp?.scholarships?.universities?.name,
                     system_type: profile.system_type
@@ -300,6 +344,27 @@ export const useAffiliateData = () => {
         totalSellers: allSellersFlat.length,
         totalStudents: allStudentsFlat.length
       });
+      
+      // Debug: Verificar receita total calculada
+      const totalRevenueCalculated = affiliatesWithData.reduce((sum, aff) => sum + (aff.total_revenue || 0), 0);
+      console.log('🔍 [AdminAffiliates] RECEITA TOTAL CALCULADA:', totalRevenueCalculated);
+      
+      // Debug: Verificar receita do mahmood5807 especificamente
+      const mahmoodAffiliate = affiliatesWithData.find(aff => aff.email === 'mahmood5807@uorak.com');
+      if (mahmoodAffiliate) {
+        console.log('🔍 [AdminAffiliates] mahmood5807 receita:', mahmoodAffiliate.total_revenue);
+        console.log('🔍 [AdminAffiliates] mahmood5807 sellers:', mahmoodAffiliate.sellers);
+        
+        // Debug detalhado dos sellers
+        mahmoodAffiliate.sellers.forEach((seller, index) => {
+          console.log(`🔍 [AdminAffiliates] mahmood5807 seller ${index}:`, {
+            name: seller.name,
+            email: seller.email,
+            total_revenue: seller.total_revenue,
+            students_count: seller.students_count
+          });
+        });
+      }
 
       setAffiliates(affiliatesWithData);
       setAllSellers(allSellersFlat);

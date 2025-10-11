@@ -86,82 +86,56 @@ const Overview = ({ stats, sellers = [], onRefresh }) => {
         
         const referralCodes = sellers.map(s => s.referral_code);
         
-        // Buscar perfis de estudantes vinculados via seller_referral_code
-        const { data: profiles, error: profilesErr } = await supabase
-          .from('user_profiles')
-          .select(`
-            id,
-            user_id,
-            has_paid_selection_process_fee, 
-            has_paid_i20_control_fee, 
-            dependents,
-            seller_referral_code,
-            system_type,
-            scholarship_applications(is_scholarship_fee_paid)
-          `)
-          .in('seller_referral_code', referralCodes);
-        if (profilesErr || !profiles) {
-          if (mounted) setClientAdjustedRevenue(null);
-          return;
+        // ✅ CORREÇÃO: Usar a mesma lógica simples do Seller Dashboard
+        console.log('🔍 [OVERVIEW] Usando lógica simples do Seller Dashboard');
+        
+        // Calcular receita usando a mesma lógica do Seller Dashboard
+        let totalRevenue = 0;
+        const revenueByReferral = {};
+        
+        for (const seller of sellers || []) {
+          let sellerRevenue = 0;
+          
+          // Buscar estudantes deste seller
+          const sellerStudents = students.filter(s => s.referred_by_seller_id === seller.id);
+          
+          for (const student of sellerStudents) {
+            let studentTotal = 0;
+            const deps = Number(student.dependents || 0);
+            
+            // Selection Process Fee
+            if (student.has_paid_selection_process_fee) {
+              const systemType = student.system_type || 'legacy';
+              const baseSelectionFee = systemType === 'simplified' ? 350 : 400;
+              studentTotal += baseSelectionFee + (deps * 150);
+            }
+            
+            // Scholarship Fee
+            if (student.is_scholarship_fee_paid) {
+              const systemType = student.system_type || 'legacy';
+              const scholarshipFee = systemType === 'simplified' ? 550 : 900;
+              studentTotal += scholarshipFee;
+            }
+            
+            // I-20 Control Fee (só conta se scholarship foi pago)
+            if (student.is_scholarship_fee_paid && student.has_paid_i20_control_fee) {
+              studentTotal += 900; // Sempre $900 para ambos os sistemas
+            }
+            
+            sellerRevenue += studentTotal;
+          }
+          
+          if (seller.referral_code) {
+            revenueByReferral[seller.referral_code] = sellerRevenue;
+          }
+          totalRevenue += sellerRevenue;
         }
 
-        // Preparar overrides por user_id
-        const uniqueUserIds = Array.from(new Set((profiles || []).map((p) => p.user_id).filter(Boolean)));
-        const overrideEntries = await Promise.allSettled(uniqueUserIds.map(async (uid) => {
-          const { data, error } = await supabase.rpc('get_user_fee_overrides', { target_user_id: uid });
-          return [uid, error ? null : data];
-        }));
-        const overridesMap = overrideEntries.reduce((acc, res) => {
-          if (res.status === 'fulfilled') {
-            const arr = res.value;
-            const uid = arr[0];
-            const data = arr[1];
-            if (data) acc[uid] = {
-              selection_process_fee: data.selection_process_fee != null ? Number(data.selection_process_fee) : undefined,
-              scholarship_fee: data.scholarship_fee != null ? Number(data.scholarship_fee) : undefined,
-              i20_control_fee: data.i20_control_fee != null ? Number(data.i20_control_fee) : undefined,
-            };
-          }
-          return acc;
-        }, {});
-
-        // Calcular total ajustado considerando dependentes quando não houver override e somar por referral_code
-        const revenueByReferral = {};
-        const total = (profiles || []).reduce((sum, p) => {
-          const deps = Number(p?.dependents || 0);
-          const ov = overridesMap[p?.user_id] || {};
-
-          // Selection Process
-          let selPaid = 0;
-          if (p?.has_paid_selection_process_fee) {
-            // Usar valor baseado no system_type do aluno (350 para simplified, 400 para legacy)
-            const baseSelDefault = p?.system_type === 'simplified' ? 350 : 400;
-            const baseSel = ov.selection_process_fee != null ? Number(ov.selection_process_fee) : baseSelDefault;
-            selPaid = ov.selection_process_fee != null ? baseSel : baseSel + (deps * 150);
-          }
-
-          // Scholarship Fee (sem dependentes)
-          const hasAnyScholarshipPaid = Array.isArray(p?.scholarship_applications)
-            ? p.scholarship_applications.some((a) => !!a?.is_scholarship_fee_paid)
-            : false;
-          // Usar valor baseado no system_type do aluno (550 para simplified, 900 para legacy)
-          const schBaseDefault = p?.system_type === 'simplified' ? 550 : 900;
-          const schBase = ov.scholarship_fee != null ? Number(ov.scholarship_fee) : schBaseDefault;
-          const schPaid = hasAnyScholarshipPaid ? schBase : 0;
-
-          // I-20 Control (sem dependentes) - sempre 900 para ambos os sistemas
-          const i20Base = ov.i20_control_fee != null ? Number(ov.i20_control_fee) : 900;
-          // Contar I-20 somente se a bolsa estiver paga (fluxo esperado)
-          const i20Paid = (hasAnyScholarshipPaid && p?.has_paid_i20_control_fee) ? i20Base : 0;
-
-          const subtotal = selPaid + schPaid + i20Paid;
-          const ref = p?.seller_referral_code || '__unknown__';
-          revenueByReferral[ref] = (revenueByReferral[ref] || 0) + subtotal;
-          return sum + subtotal;
-        }, 0);
+        console.log('🔍 [OVERVIEW] Total calculado:', totalRevenue);
+        console.log('🔍 [OVERVIEW] Revenue por referral:', revenueByReferral);
 
         if (mounted) {
-          setClientAdjustedRevenue(total);
+          setClientAdjustedRevenue(totalRevenue);
           setAdjustedRevenueByReferral(revenueByReferral);
         }
       } catch {

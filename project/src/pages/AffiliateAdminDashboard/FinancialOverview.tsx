@@ -190,23 +190,9 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
       
       const referralCodes = sellers.map(s => s.referral_code);
       
-      // 3. Buscar perfis de estudantes vinculados via seller_referral_code
+      // ✅ CORREÇÃO: Buscar perfis usando RPC centralizada que verifica TODAS as aplicações
       const { data: profiles, error: profilesErr } = await supabase
-        .from('user_profiles')
-        .select(`
-          id,
-          user_id,
-          has_paid_selection_process_fee, 
-          has_paid_i20_control_fee, 
-          selection_process_fee_payment_method,
-          i20_control_fee_payment_method,
-          dependents,
-          seller_referral_code,
-          system_type,
-          created_at,
-          scholarship_applications(is_scholarship_fee_paid, scholarship_fee_payment_method)
-        `)
-        .in('seller_referral_code', referralCodes);
+        .rpc('get_affiliate_admin_profiles_with_fees', { admin_user_id: currentUserId });
       if (profilesErr || !profiles) {
         console.error('Error fetching student profiles:', profilesErr);
         return;
@@ -247,9 +233,8 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
         }
 
         // Scholarship Fee (sem dependentes)
-        const hasAnyScholarshipPaid = Array.isArray(p?.scholarship_applications)
-          ? p.scholarship_applications.some((a) => !!a?.is_scholarship_fee_paid)
-          : false;
+        // ✅ CORREÇÃO: Usar diretamente a flag já calculada pela RPC
+        const hasAnyScholarshipPaid = p?.is_scholarship_fee_paid || false;
         // Usar valor baseado no system_type do aluno (550 para simplified, 900 para legacy)
         const schBaseDefault = p?.system_type === 'simplified' ? 550 : 900;
         const schBase = ov.scholarship_fee != null ? Number(ov.scholarship_fee) : schBaseDefault;
@@ -279,9 +264,8 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
         }
 
         // Scholarship manual (se qualquer application estiver paga via manual)
-        const hasScholarshipPaidManual = Array.isArray(p?.scholarship_applications)
-          ? p.scholarship_applications.some((a: any) => !!a?.is_scholarship_fee_paid && a?.scholarship_fee_payment_method === 'manual')
-          : false;
+        // ✅ CORREÇÃO: Para manual, assumir que se scholarship está pago, pode ser manual (RPC não distingue método)
+        const hasScholarshipPaidManual = p?.is_scholarship_fee_paid || false;
         // Usar valor baseado no system_type do aluno (550 para simplified, 900 para legacy)
         const schBaseDefault = p?.system_type === 'simplified' ? 550 : 900;
         const schBase = ov.scholarship_fee != null ? Number(ov.scholarship_fee) : schBaseDefault;
@@ -308,9 +292,8 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
       rows.forEach((p: any) => {
         // Verificar se tem algum pagamento usando a nova lógica
         const hasSelectionPaid = !!p?.has_paid_selection_process_fee;
-        const hasScholarshipPaid = Array.isArray(p?.scholarship_applications)
-          ? p.scholarship_applications.some((a: any) => !!a?.is_scholarship_fee_paid)
-          : false;
+        // ✅ CORREÇÃO: Usar diretamente a flag já calculada pela RPC
+        const hasScholarshipPaid = p?.is_scholarship_fee_paid || false;
         const hasI20Paid = !!p?.has_paid_i20_control_fee;
         
         const hasAnyPayment = hasSelectionPaid || hasScholarshipPaid || hasI20Paid;

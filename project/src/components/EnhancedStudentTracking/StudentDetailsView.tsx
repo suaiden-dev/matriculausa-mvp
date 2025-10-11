@@ -434,14 +434,24 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                               const appStatus = (studentDetails as any)?.status || (studentDetails as any)?.application_status as string | undefined;
                               const documentsStatus = (studentDetails as any)?.documents_status as string | undefined;
                               
+                              // Debug: Verificar valores
+                              console.log('🔍 [ENROLLMENT_DEBUG] studentDetails:', studentDetails);
+                              console.log('🔍 [ENROLLMENT_DEBUG] acceptanceStatus:', acceptanceStatus);
+                              console.log('🔍 [ENROLLMENT_DEBUG] appStatus:', appStatus);
+                              console.log('🔍 [ENROLLMENT_DEBUG] documentsStatus:', documentsStatus);
+                              
                               // Para usuários com aplicação de bolsa: verificar status da aplicação
                               // Para usuários sem aplicação de bolsa: verificar documents_status
+                              // ✅ CORREÇÃO: acceptance_letter_status pode ser 'sent' ou 'approved'
                               const isEnrolled = appStatus === 'enrolled' || 
                                                 acceptanceStatus === 'approved' || 
+                                                acceptanceStatus === 'sent' ||
                                                 (documentsStatus === 'approved' && !appStatus);
                               const label = isEnrolled ? 'Enrolled' : 'Pending Acceptance';
                               const color = isEnrolled ? 'text-green-700' : 'text-yellow-700';
                               const dot = isEnrolled ? 'bg-green-500' : 'bg-yellow-500';
+                              
+                              console.log('🔍 [ENROLLMENT_DEBUG] isEnrolled:', isEnrolled);
                               
                               return (
                                 <div className="flex items-center space-x-2">

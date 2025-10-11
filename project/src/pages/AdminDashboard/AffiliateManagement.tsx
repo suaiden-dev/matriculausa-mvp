@@ -315,12 +315,28 @@ const AffiliateManagement: React.FC = () => {
           : baseScholarshipFee;
         total += schol || 0;
       }
-      if (s.has_paid_i20_control_fee) {
+      // ✅ CORREÇÃO: I-20 só conta se scholarship foi pago
+      if (s.is_scholarship_fee_paid && s.has_paid_i20_control_fee) {
         const i20 = o.i20_control_fee != null
           ? Number(o.i20_control_fee)
           : baseI20Fee;
         total += i20 || 0;
       }
+      
+      // Debug para marjorie1454@uorak.com
+      if (s.email === 'marjorie1454@uorak.com') {
+        console.log('🔍 [AffiliateManagement] marjorie1454@uorak.com calculado:', {
+          systemType,
+          totalCalculated: total,
+          breakdown: {
+            selectionPaid: s.has_paid_selection_process_fee,
+            scholarshipPaid: s.is_scholarship_fee_paid,
+            i20Paid: s.has_paid_i20_control_fee,
+            i20ShouldCount: s.is_scholarship_fee_paid && s.has_paid_i20_control_fee
+          }
+        });
+      }
+      
       return { ...s, total_paid_adjusted: total };
     });
     return result;

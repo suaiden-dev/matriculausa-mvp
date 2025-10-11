@@ -203,39 +203,29 @@ function EnhancedStudentTracking(props) {
       const o = overridesMap[s.user_id] || {};
       const dependents = Number(dependentsMap[s.profile_id]) || 0;
 
-      // ✅ CORREÇÃO: Usar o total_paid que já vem da função SQL em vez de recalcular
+      // ✅ CORREÇÃO: Usar a mesma lógica simples do Seller Dashboard
       let total = 0;
       
-      // Se o estudante tem total_paid da função SQL, usar esse valor
-      if (s.total_paid && s.total_paid > 0) {
-        total = Number(s.total_paid);
-      } else {
-        // Fallback para cálculo manual se não houver total_paid
-        if (s.has_paid_selection_process_fee) {
-          const studentFees = getStudentFees(s);
-          const baseSelectionFee = studentFees.selectionProcessFee;
-          const sel = o.selection_process_fee != null
-            ? Number(o.selection_process_fee)
-            : baseSelectionFee + (dependents * 150);
-          total += sel || 0;
-        }
-        if (s.is_scholarship_fee_paid) {
-          const studentFees = getStudentFees(s);
-          const baseScholarshipFee = studentFees.scholarshipFee;
-          const schol = o.scholarship_fee != null 
-            ? Number(o.scholarship_fee) 
-            : baseScholarshipFee;
-          total += schol || 0;
-        }
-        if (s.has_paid_i20_control_fee) {
-          const studentFees = getStudentFees(s);
-          const baseI20Fee = studentFees.i20ControlFee;
-          const i20 = o.i20_control_fee != null 
-            ? Number(o.i20_control_fee) 
-            : baseI20Fee;
-          total += i20 || 0;
-        }
-        console.log(`🔍 Fallback calculation for ${s.email}:`, {
+      // Selection Process Fee
+      if (s.has_paid_selection_process_fee) {
+        const systemType = s.system_type || 'legacy';
+        const baseSelectionFee = systemType === 'simplified' ? 350 : 400;
+        total += baseSelectionFee + (dependents * 150);
+      }
+      
+      // Scholarship Fee
+      if (s.is_scholarship_fee_paid) {
+        const systemType = s.system_type || 'legacy';
+        const scholarshipFee = systemType === 'simplified' ? 550 : 900;
+        total += scholarshipFee;
+      }
+      
+      // I-20 Control Fee (só conta se scholarship foi pago)
+      if (s.is_scholarship_fee_paid && s.has_paid_i20_control_fee) {
+        total += 900; // Sempre $900 para ambos os sistemas
+      }
+      
+      console.log(`🔍 [ENHANCED_TRACKING] Calculado para ${s.email}:`, {
           totalCalculated: total,
           breakdown: {
             selectionPaid: s.has_paid_selection_process_fee,
@@ -243,7 +233,6 @@ function EnhancedStudentTracking(props) {
             i20Paid: s.has_paid_i20_control_fee
           }
         });
-      }
 
       const adjusted = { 
         ...s, 
