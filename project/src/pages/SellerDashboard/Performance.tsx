@@ -122,7 +122,7 @@ const Performance: React.FC<PerformanceProps> = ({ sellerProfile, students }) =>
       let error = null;
 
       try {
-        const rpcResult = await supabase.rpc('get_user_fee_overrides', { user_id_param: studentUserId });
+        const rpcResult = await supabase.rpc('get_user_fee_overrides', { target_user_id: studentUserId });
         if (!rpcResult.error && rpcResult.data) {
           overrides = rpcResult.data;
           // Debug log para wilfried8078@uorak.com

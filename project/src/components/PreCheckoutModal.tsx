@@ -9,6 +9,7 @@ import { useFeeConfig } from '../hooks/useFeeConfig';
 import { useDynamicFees } from '../hooks/useDynamicFees';
 import { useTermsAcceptance } from '../hooks/useTermsAcceptance';
 import { useAffiliateTermsAcceptance } from '../hooks/useAffiliateTermsAcceptance';
+import { useReferralCode } from '../hooks/useReferralCode';
 
 interface Term {
   id: string;
@@ -48,6 +49,7 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
   const { selectionProcessFee, scholarshipFee } = useDynamicFees();
   const { recordTermAcceptance } = useTermsAcceptance();
   const { recordAffiliateTermAcceptance, checkIfUserHasAffiliate } = useAffiliateTermsAcceptance();
+  const { activeDiscount } = useReferralCode();
   const [discountCode, setDiscountCode] = useState('');
   const [isValidating, setIsValidating] = useState(false);
   const [validationResult, setValidationResult] = useState<{
@@ -273,6 +275,13 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
   // Check if user already used referral code
   const checkReferralCodeUsage = async () => {
     try {
+      // ✅ CORREÇÃO: Se já tem activeDiscount, não bloquear o usuário
+      if (activeDiscount?.has_discount) {
+        console.log('🔍 [PreCheckoutModal] Usuário já tem desconto ativo, permitindo pagamento');
+        setHasUsedReferralCode(false); // Não bloquear
+        return;
+      }
+
       const { data, error } = await supabase
         .from('used_referral_codes')
         .select('id')
@@ -448,7 +457,8 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
       }
 
       // Check if user already used any code
-      if (hasUsedReferralCode) {
+      // ✅ CORREÇÃO: Se já tem activeDiscount, permitir usar o código
+      if (hasUsedReferralCode && !activeDiscount?.has_discount) {
         console.log('🔍 [PreCheckoutModal] ❌ Usuário já usou código anteriormente');
         setValidationResult({
           isValid: false,
@@ -573,7 +583,8 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
       }
 
       // Check if user already used any code
-      if (hasUsedReferralCode) {
+      // ✅ CORREÇÃO: Se já tem activeDiscount, permitir usar o código
+      if (hasUsedReferralCode && !activeDiscount?.has_discount) {
         console.log('🔍 [PreCheckoutModal] ❌ Usuário já usou código anteriormente');
         setValidationResult({
           isValid: false,
@@ -658,6 +669,7 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
     console.log('🔍 [PreCheckoutModal] hasAffiliateCode:', hasAffiliateCode);
     console.log('🔍 [PreCheckoutModal] userAffiliateCode:', userProfile?.affiliate_code);
     console.log('🔍 [PreCheckoutModal] hasSellerReferralCode:', hasSellerReferralCode);
+    console.log('🔍 [PreCheckoutModal] activeDiscount:', activeDiscount);
     
     // ✅ CORREÇÃO: Para usuários com seller_referral_code, não precisa de código de desconto
     if (hasSellerReferralCode) {
@@ -668,10 +680,19 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
       return;
     }
     
-    // ✅ Se usuário marcou que tem código, precisa validar
+    // ✅ NOVO: Se usuário tem activeDiscount (código já aplicado no registro)
+    if (activeDiscount?.has_discount) {
+      console.log('🔍 [PreCheckoutModal] ✅ Usuário com desconto ativo - prosseguindo (edge function aplicará desconto)');
+      // ✅ SEGURANÇA: Não calcular desconto no frontend, deixar edge function controlar
+      onProceedToCheckout(computedBasePrice);
+      onClose();
+      return;
+    }
+    
+    // ✅ Se usuário marcou que tem código (e não tem activeDiscount), precisa validar
     if (hasReferralCode) {
       if (validationResult?.isValid && discountCode.trim() && codeApplied) {
-        console.log('🔍 [PreCheckoutModal] ✅ Aplicando código e continuando para checkout');
+        console.log('🔍 [PreCheckoutModal] ✅ Aplicando código novo e continuando');
         const discount = validationResult?.discountAmount || 0;
         const finalAmount = Math.max(productPrice - discount, 0);
         onProceedToCheckout(finalAmount, discountCode.trim().toUpperCase());
@@ -681,8 +702,8 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
         alert(t('preCheckoutModal.mustEnterValidCode'));
       }
     } else {
-      // ✅ Se usuário não marcou que tem código, prosseguir sem código
-      console.log('🔍 [PreCheckoutModal] ✅ Usuário não tem código - prosseguindo sem código');
+      // ✅ Usuário não tem código - prosseguir sem desconto
+      console.log('🔍 [PreCheckoutModal] ✅ Prosseguindo sem código');
       const finalAmount = computedBasePrice;
       onProceedToCheckout(finalAmount);
       onClose();
@@ -769,14 +790,27 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
 
 
               {/* Discount Code Section - Apenas para usuários sem seller_referral_code */}
-              {!hasUsedReferralCode && !hasSellerReferralCode ? (
+              {(!hasUsedReferralCode && !hasSellerReferralCode) || activeDiscount?.has_discount ? (
                 <div className="space-y-4">
                   <div className="text-center">
                     <h3 className="text-lg font-semibold text-gray-900 mb-2">
                       {t('preCheckoutModal.referralCode')}
                     </h3>
                   </div>
-                  
+
+                  {/* ✅ NOVO: Mostrar desconto já aplicado */}
+                  {activeDiscount?.has_discount ? (
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                      <div className="flex items-center">
+                        <CheckCircle className="h-5 w-5 text-green-500 mr-3" />
+                        <div>
+                          <p className="text-green-800 font-semibold">Code already used</p>
+                          <p className="text-green-600 text-sm">Your discount has already been applied previously</p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
                   {/* Checkbox para perguntar se tem código */}
                   <div className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
                     <input
@@ -857,6 +891,8 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
                       )}
                     </div>
                   )}
+                    </>
+                  )}
                 </div>
               ) : !hasSellerReferralCode && (
                 <div className="bg-green-50 rounded-xl p-6 text-center border-0">
@@ -893,12 +929,12 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
             <div className="px-4 sm:px-6 py-4 sm:py-6 border-t border-gray-200 bg-gray-50 flex-shrink-0">
               <button
                 onClick={handleProceed}
-                disabled={isLoading || !termsAccepted || (hasReferralCode && !(validationResult?.isValid && codeApplied))}
+                disabled={isLoading || !termsAccepted || (hasReferralCode && !(validationResult?.isValid && codeApplied) && !activeDiscount?.has_discount)}
                 className={`w-full px-4 sm:px-6 py-3 sm:py-4 rounded-xl font-semibold transition-all shadow-lg hover:shadow-xl transform hover:scale-105 text-sm sm:text-base ${
                   validationResult?.isValid && codeApplied
                     ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700' 
                     : 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700'
-                } ${isLoading || !termsAccepted || (hasReferralCode && !(validationResult?.isValid && codeApplied)) ? 'opacity-75 cursor-not-allowed' : ''}`}
+                } ${isLoading || !termsAccepted || (hasReferralCode && !(validationResult?.isValid && codeApplied) && !activeDiscount?.has_discount) ? 'opacity-75 cursor-not-allowed' : ''}`}
               >
                 {isLoading ? (
                   <div className="flex items-center justify-center space-x-2">

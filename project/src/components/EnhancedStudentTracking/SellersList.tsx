@@ -58,24 +58,26 @@ const SellersList: React.FC<SellersListProps> = ({
       });
     }
     
-    // Verificar Selection Process Fee - usar apenas o flag booleano
+    // ✅ ORDEM CORRETA: Selection Process → Application → Scholarship → I-20 Control
+    
+    // 1. Verificar Selection Process Fee - usar apenas o flag booleano
     if (!student.has_paid_selection_process_fee) {
       missingFees.push({ name: 'Selection Process', amount: getFeeAmount('selection_process'), color: 'red' });
     }
     
-    // Verificar I20 Control Fee - usar apenas o flag booleano
-    if (!student.has_paid_i20_control_fee) {
-      missingFees.push({ name: 'I20 Control', amount: getFeeAmount('i20_control_fee'), color: 'orange' });
+    // 2. Verificar Application Fee - usar apenas o flag booleano
+    if (!student.is_application_fee_paid) {
+      missingFees.push({ name: 'Application', amount: getFeeAmount('application_fee'), color: 'gray' });
     }
     
-    // Verificar Scholarship Fee - usar apenas o flag booleano
+    // 3. Verificar Scholarship Fee - usar apenas o flag booleano
     if (!student.is_scholarship_fee_paid) {
       missingFees.push({ name: 'Scholarship', amount: getFeeAmount('scholarship_fee'), color: 'blue' });
     }
     
-    // Verificar Application Fee - usar apenas o flag booleano
-    if (!student.is_application_fee_paid) {
-      missingFees.push({ name: 'Application', amount: getFeeAmount('application_fee'), color: 'gray' });
+    // 4. Verificar I20 Control Fee - usar apenas o flag booleano
+    if (!student.has_paid_i20_control_fee) {
+      missingFees.push({ name: 'I20 Control', amount: getFeeAmount('i20_control_fee'), color: 'orange' });
     }
     
     // Debug: Log do resultado final
@@ -106,7 +108,6 @@ const SellersList: React.FC<SellersListProps> = ({
         const sellerStudents = filteredStudents.filter((student: any) => 
           student.referred_by_seller_id === seller.id
         );
-        console.log(`🔍 SellersList - Seller ${seller.name} (${seller.id}) has ${sellerStudents.length} students:`, sellerStudents.map(s => s.full_name));
 
         return (
           <div key={seller.id} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
@@ -198,21 +199,12 @@ const SellersList: React.FC<SellersListProps> = ({
                             <tr 
                               className="hover:bg-blue-50 hover:shadow-sm cursor-pointer transition-all duration-200 group"
                               onClick={() => {
-                                console.log(`🔍 STUDENT CLICK - ${student.email}:`, {
-                                  hasMultipleApplications: student.hasMultipleApplications,
-                                  applicationCount: student.applicationCount,
-                                  allApplications: student.allApplications?.length || 0,
-                                  student_id: student.id,
-                                  profile_id: student.profile_id
-                                });
                                 
                                 if (student.hasMultipleApplications) {
                                   // Se tem múltiplas aplicações, expandir/contrair dropdown
-                                  console.log(`🔍 EXPANDING STUDENT ${student.email} - multiple applications detected`);
                                   onToggleStudentExpansion(student.id);
                                 } else {
                                   // Se tem apenas uma aplicação, ir direto para os detalhes
-                                  console.log(`🔍 NAVIGATING TO DETAILS FOR ${student.email} - single application`);
                                   onViewStudentDetails(student.id, student.profile_id);
                                 }
                               }}

@@ -2018,14 +2018,7 @@ const AdminStudentDetails: React.FC = () => {
       if (applicationIds.length > 0) {
         const { data: specificRequests, error: specificError } = await supabase
           .from('document_requests')
-          .select(`
-            *,
-            document_request_uploads (
-              *,
-              reviewed_by,
-              reviewed_at
-            )
-          `)
+          .select('*')
           .in('scholarship_application_id', applicationIds)
           .order('created_at', { ascending: false });
 
@@ -2043,14 +2036,7 @@ const AdminStudentDetails: React.FC = () => {
       if (uniqueUniversityIds.length > 0) {
         const { data: globalRequests, error: globalError } = await supabase
           .from('document_requests')
-          .select(`
-            *,
-            document_request_uploads (
-              *,
-              reviewed_by,
-              reviewed_at
-            )
-          `)
+          .select('*')
           .eq('is_global', true)
           .in('university_id', uniqueUniversityIds)
           .order('created_at', { ascending: false });
@@ -2060,8 +2046,41 @@ const AdminStudentDetails: React.FC = () => {
         allRequests = [...allRequests, ...(globalRequests || [])];
       }
       
-      // Remover busca de TODOS os requests globais - apenas mostrar os específicos do aluno
-
+      // ✅ CORREÇÃO: Buscar uploads separadamente e filtrar por estudante
+      if (allRequests.length > 0) {
+        const requestIds = allRequests.map(req => req.id);
+        const studentUserId = student.student_id; // user_id do estudante
+        
+        console.log('🔍 [ADMIN] Buscando uploads para requests:', requestIds);
+        console.log('🔍 [ADMIN] Filtrando por estudante:', studentUserId);
+        
+        const { data: uploads, error: uploadsError } = await supabase
+          .from('document_request_uploads')
+          .select(`
+            *,
+            reviewed_by,
+            reviewed_at
+          `)
+          .in('document_request_id', requestIds)
+          .eq('uploaded_by', studentUserId); // ✅ Filtrar apenas uploads deste estudante
+        
+        if (uploadsError) {
+          console.error('❌ [ADMIN] Error fetching uploads:', uploadsError);
+        } else {
+          console.log('✅ [ADMIN] Uploads encontrados para este estudante:', uploads);
+          
+          // Estruturar os requests com seus uploads
+          const requestsWithUploads = allRequests.map(request => ({
+            ...request,
+            document_request_uploads: uploads?.filter(upload => upload.document_request_id === request.id) || []
+          }));
+          
+          setDocumentRequests(requestsWithUploads);
+          return; // Sair da função aqui
+        }
+      }
+      
+      // Se não há requests ou uploads, definir como array vazio
       setDocumentRequests(allRequests);
     } catch (error) {
       console.error('Error fetching document requests:', error);

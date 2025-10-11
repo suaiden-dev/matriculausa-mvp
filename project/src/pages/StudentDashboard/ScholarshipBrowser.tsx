@@ -24,10 +24,12 @@ import { useAuth } from '../../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { useCartStore } from '../../stores/applicationStore';
 import { useFavorites } from '../../hooks/useFavorites';
+import { useDynamicFees } from '../../hooks/useDynamicFees';
 import { supabase } from '../../lib/supabase';
 import { STRIPE_PRODUCTS } from '../../stripe-config';
 import ScholarshipDetailModal from '../../components/ScholarshipDetailModal';
 import { PreCheckoutModal } from '../../components/PreCheckoutModal';
+import { PaymentMethodSelector } from '../../components/PaymentMethodSelector';
 import FavoriteButton from '../../components/FavoriteButton';
 import FavoritesFilter from '../../components/FavoritesFilter';
 import { ApplicationFeeBlockedMessage } from '../../components/ApplicationFeeBlockedMessage';
@@ -43,6 +45,8 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
   applications
 }) => {
   const { t } = useTranslation();
+  const { selectionProcessFee } = useDynamicFees();
+  
   // Universidades a serem ocultadas (case-insensitive, igualdade exata de nome)
   const EXCLUDED_UNIVERSITY_NAMES = useMemo(() => new Set([
     'universt',
@@ -66,7 +70,8 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
   const { userProfile, user, refetchUserProfile } = useAuth();
   
   // Obter faixa de bolsa desejada do perfil do usuário
-  const desiredScholarshipRange = (userProfile as any)?.desired_scholarship_range ?? 3800;
+  // ✅ Se for null/undefined, aluno verá TODAS as bolsas (sem filtro de valor)
+  const desiredScholarshipRange = (userProfile as any)?.desired_scholarship_range ?? null;
   
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLevel, setSelectedLevel] = useState('all');
@@ -97,6 +102,12 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
   const [selectedScholarshipForCheckout, setSelectedScholarshipForCheckout] = useState<any>(null);
   const [isCheckingDiscount, setIsCheckingDiscount] = useState(false);
   const [isOpeningStripe, setIsOpeningStripe] = useState(false);
+  
+  // Estados para PaymentMethodSelector
+  const [showPaymentMethodSelector, setShowPaymentMethodSelector] = useState(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'stripe' | 'zelle' | 'pix' | null>(null);
+  const [finalAmount, setFinalAmount] = useState<number>(0);
+  const [discountCode, setDiscountCode] = useState<string>('');
 
   // Estados para filtros aplicados (separados dos valores dos campos)
   const [appliedSearch, setAppliedSearch] = useState('');
@@ -791,6 +802,203 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
     addToCart(scholarship, user.id);
     // NÃO redirecionar para o carrinho - deixar usuário continuar selecionando
     // navigate('/student/dashboard/cart'); // REMOVIDO - quebrava o fluxo
+  };
+
+  // Função para lidar com seleção de método de pagamento
+  const handlePaymentMethodSelect = async (method: 'stripe' | 'zelle' | 'pix') => {
+    console.log('🔍 [ScholarshipBrowser] Método de pagamento selecionado:', method);
+    setSelectedPaymentMethod(method);
+    
+    try {
+      await handleCheckout(method);
+    } catch (error) {
+      console.error('Error processing payment:', error);
+      // Em caso de erro, fechar modal e redirecionar para página de erro
+      setShowPaymentMethodSelector(false);
+      setSelectedPaymentMethod(null);
+      navigate('/student/dashboard/selection-process-fee-error');
+    }
+  };
+
+  // ✅ ÚNICA função handleCheckout (igual ao StripeCheckout) para os 3 métodos
+  const handleCheckout = async (paymentMethod: 'stripe' | 'zelle' | 'pix') => {
+    setIsOpeningStripe(true);
+    
+    try {
+      // ✅ Zelle é especial - redireciona para página própria (igual ao StripeCheckout)
+      if (paymentMethod === 'zelle') {
+        const finalAmountToUse = (window as any).__checkout_final_amount || finalAmount;
+        
+        // ✅ Usar MESMA URL que o StripeCheckout usa
+        const params = new URLSearchParams({
+          feeType: 'selection_process',
+          amount: finalAmountToUse.toString(),
+          scholarshipsIds: '' // Para selection process não tem scholarships
+        });
+        
+        const zelleUrl = `/checkout/zelle?${params.toString()}`;
+        console.log('🔍 [ScholarshipBrowser] Redirecionando para Zelle:', zelleUrl);
+        
+        setShowPaymentMethodSelector(false);
+        setSelectedPaymentMethod(null);
+        window.location.href = zelleUrl; // ✅ Usar window.location.href como StripeCheckout
+        return;
+      }
+
+      // ✅ Stripe e PIX usam a MESMA edge function
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      
+      if (!token) {
+        throw new Error('Usuário não autenticado');
+      }
+
+      // ✅ Obter valor final de window (igual ao StripeCheckout)
+      let finalAmountToUse: number;
+      if ((window as any).__checkout_final_amount && typeof (window as any).__checkout_final_amount === 'number') {
+        finalAmountToUse = (window as any).__checkout_final_amount;
+      } else {
+        finalAmountToUse = finalAmount;
+      }
+
+      console.log('🔍 [ScholarshipBrowser] Valor final para checkout:', finalAmountToUse);
+
+      // ✅ Aplicar código de desconto se houver (para ambos Stripe e PIX)
+      if (discountCode) {
+        console.log('🔍 [ScholarshipBrowser] Aplicando código de desconto:', discountCode);
+        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/validate-referral-code`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({ affiliate_code: discountCode }),
+        });
+
+        const result = await response.json();
+        if (!result.success) {
+          throw new Error(result.error || 'Erro ao aplicar código de desconto');
+        }
+      }
+
+      // ✅ Chamar MESMA edge function para Stripe e PIX
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout-selection-process-fee`;
+      
+      const requestBody = {
+        price_id: STRIPE_PRODUCTS.selectionProcess.priceId,
+        amount: finalAmountToUse,
+        payment_method: paymentMethod, // ✅ 'stripe' ou 'pix'
+        success_url: `${window.location.origin}/student/dashboard/selection-process-fee-success?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${window.location.origin}/student/dashboard/selection-process-fee-error`,
+        mode: 'payment',
+        payment_type: 'selection_process',
+        fee_type: 'selection_process'
+      };
+
+      console.log(`🔍 [ScholarshipBrowser] Chamando edge function com paymentMethod: ${paymentMethod}`);
+      
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(requestBody)
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erro ao criar sessão de checkout');
+      }
+
+      const data = await response.json();
+      
+      if (data.session_url) {
+        // ✅ Se for PIX, injetar script de polling (igual ao StripeCheckout)
+        if (paymentMethod === 'pix') {
+          console.log('[PIX] Incluindo script de redirecionamento...');
+          
+          const script = document.createElement('script');
+          script.textContent = `
+            (function() {
+              console.log('[PIX] Script de redirecionamento ativado na página do Stripe');
+              
+              const checkPixStatus = async () => {
+                try {
+                  const SUPABASE_PROJECT_URL = '${import.meta.env.VITE_SUPABASE_URL}';
+                  const EDGE_FUNCTION_ENDPOINT = SUPABASE_PROJECT_URL + '/functions/v1/verify-stripe-session-selection-process-fee';
+                  
+                  let token = null;
+                  try {
+                    const raw = localStorage.getItem('sb-' + SUPABASE_PROJECT_URL.split('//')[1].split('.')[0] + '-auth-token');
+                    if (raw) {
+                      const tokenObj = JSON.parse(raw);
+                      token = tokenObj?.access_token || null;
+                    }
+                  } catch (e) {
+                    token = null;
+                  }
+                  
+                  const response = await fetch(EDGE_FUNCTION_ENDPOINT, {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      ...(token && { 'Authorization': 'Bearer ' + token }),
+                    },
+                    body: JSON.stringify({ sessionId: '${data.session_id}' }),
+                  });
+                  
+                  const data = await response.json();
+                  
+                  if (data.payment_method === 'pix' && data.status === 'complete') {
+                    console.log('[PIX] Pagamento confirmado! Redirecionando...');
+                    window.location.href = '${`${window.location.origin}/student/dashboard/selection-process-fee-success`}';
+                    return true;
+                  }
+                  
+                  return false;
+                } catch (error) {
+                  console.error('[PIX] Erro ao verificar status:', error);
+                  return false;
+                }
+              };
+              
+              // Verificar imediatamente
+              checkPixStatus();
+              
+              // Verificar a cada 3 segundos
+              const interval = setInterval(async () => {
+                const redirected = await checkPixStatus();
+                if (redirected) {
+                  clearInterval(interval);
+                }
+              }, 3000);
+              
+              // Timeout após 2 minutos
+              setTimeout(() => {
+                clearInterval(interval);
+                console.log('[PIX] Timeout - redirecionando...');
+                window.location.href = '${`${window.location.origin}/student/dashboard/selection-process-fee-success`}';
+              }, 120000);
+              
+            })();
+          `;
+          document.head.appendChild(script);
+        }
+
+        // ✅ Redirecionar NA MESMA ABA (para ambos Stripe e PIX)
+        setShowPaymentMethodSelector(false);
+        setSelectedPaymentMethod(null);
+        window.location.href = data.session_url;
+      } else {
+        throw new Error('URL da sessão não encontrada na resposta');
+      }
+    } catch (error: any) {
+      console.error('Checkout error:', error);
+      throw error;
+    } finally {
+      setIsOpeningStripe(false);
+    }
   };
 
   // Funções para controlar o modal
@@ -1836,102 +2044,79 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
       />
 
       {/* PreCheckoutModal para Matricula Rewards */}
-      {showPreCheckoutModal && selectedScholarshipForCheckout && (
+      {showPreCheckoutModal && selectedScholarshipForCheckout && selectionProcessFee && (
         <PreCheckoutModal
           isOpen={showPreCheckoutModal}
           onClose={() => {
             setShowPreCheckoutModal(false);
             setSelectedScholarshipForCheckout(null);
           }}
-          onProceedToCheckout={async (discountCode) => {
-            console.log('🎯 [ScholarshipBrowser] Código de desconto aplicado:', discountCode);
+          onProceedToCheckout={async (finalAmountFromModal, appliedDiscountCode) => {
+            console.log('🎯 [ScholarshipBrowser] Código de desconto aplicado:', appliedDiscountCode, 'Valor final:', finalAmountFromModal);
             
-            // Ativar loading imediatamente
-            setIsOpeningStripe(true);
-            
-            try {
-              // PRIMEIRO: Se há código de desconto, aplicar via edge function (igual ao StripeCheckout)
-              if (discountCode) {
-                console.log('🎯 [ScholarshipBrowser] Aplicando código de desconto via edge function...');
-                const { data: sessionData } = await supabase.auth.getSession();
-                const token = sessionData.session?.access_token;
-                
-                if (!token) {
-                  throw new Error('Usuário não autenticado');
-                }
-
-                // Aplicar código de desconto
-                const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/validate-referral-code`, {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
-                  },
-                  body: JSON.stringify({ affiliate_code: discountCode }),
-                });
-
-                const result = await response.json();
-                console.log('🎯 [ScholarshipBrowser] Resultado da aplicação do código:', result);
-                
-                if (!result.success) {
-                  console.error('🎯 [ScholarshipBrowser] ❌ Erro ao aplicar código:', result.error);
-                  throw new Error(result.error || 'Erro ao aplicar código de desconto');
-                }
-                
-                console.log('🎯 [ScholarshipBrowser] ✅ Código aplicado com sucesso');
-              }
-
-              // SEGUNDO: Agora ir para o checkout (o desconto já foi aplicado)
-              console.log('🎯 [ScholarshipBrowser] Continuando para checkout...');
-              const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout-selection-process-fee`;
-              const { data: sessionData } = await supabase.auth.getSession();
-              const token = sessionData.session?.access_token;
-              
-              const response = await fetch(apiUrl, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                  price_id: STRIPE_PRODUCTS.selectionProcess.priceId,
-                  success_url: `${window.location.origin}/student/dashboard/selection-process-fee-success?session_id={CHECKOUT_SESSION_ID}`,
-                  cancel_url: `${window.location.origin}/student/dashboard/selection-process-fee-error`,
-                  mode: 'payment',
-                  payment_type: 'selection_process',
-                  fee_type: 'selection_process'
-                  // NÃO precisamos mais passar discount_code aqui, pois já foi aplicado
-                })
-              });
-              
-              const data = await response.json();
-              if (data.session_url) {
-                // Abrir Stripe em nova aba SEM fechar o modal
-                window.open(data.session_url, '_blank');
-                // O modal permanece aberto para o usuário
-              } else {
-                console.error('Error creating Stripe session:', data);
-                // Em caso de erro, fechar modal e redirecionar para página de erro
-                setShowPreCheckoutModal(false);
-                setSelectedScholarshipForCheckout(null);
-                navigate('/student/dashboard/selection-process-fee-error');
-              }
-            } catch (error) {
-              console.error('Error proceeding to checkout:', error);
-              // Em caso de erro, fechar modal e redirecionar para página de erro
-              setShowPreCheckoutModal(false);
-              setSelectedScholarshipForCheckout(null);
-              navigate('/student/dashboard/selection-process-fee-error');
-            } finally {
-              // Sempre desativar loading
-              setIsOpeningStripe(false);
+            // ✅ Guardar valor final em window (igual ao StripeCheckout)
+            if (typeof finalAmountFromModal === 'number') {
+              (window as any).__checkout_final_amount = finalAmountFromModal;
             }
+            setFinalAmount(finalAmountFromModal);
+            setDiscountCode(appliedDiscountCode || '');
+            setShowPreCheckoutModal(false);
+            setShowPaymentMethodSelector(true);
           }}
           feeType="selection_process"
           productName="Selection Process Fee"
-          productPrice={50} // Preço da taxa de seleção
+          productPrice={parseFloat(selectionProcessFee.replace('$', ''))} // Valor dinâmico correto (sem fallback)
           isLoading={isOpeningStripe} // Passar o estado de loading
         />
+      )}
+
+      {/* PaymentMethodSelector Modal */}
+      {showPaymentMethodSelector && (
+        <div className="relative z-50">
+          {/* Backdrop */}
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-30" aria-hidden="true" />
+          
+          {/* Modal Container */}
+          <div className="fixed inset-0 flex items-center justify-center p-2 sm:p-4 z-30">
+            <div className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl overflow-hidden relative border-0">
+              {/* Header */}
+              <div className="relative bg-gradient-to-r from-blue-600 to-blue-800 text-white p-4 sm:p-6">
+                <button
+                  onClick={() => {
+                    console.log('🔍 [ScholarshipBrowser] Fechando seletor de método de pagamento');
+                    setShowPaymentMethodSelector(false);
+                    setSelectedPaymentMethod(null);
+                  }}
+                  className="absolute top-2 right-2 sm:top-4 sm:right-4 p-2 hover:bg-white/10 rounded-full transition-colors"
+                  title="Fechar modal"
+                >
+                  <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+                
+                <div className="pr-12">
+                  <h2 className="text-xl sm:text-2xl font-bold mb-2">
+                    {t('paymentSelector.title')}
+                  </h2>
+                  <p className="text-blue-100 text-sm">
+                    {t('paymentSelector.subtitle', { feeType: 'Selection Process Fee' })}
+                  </p>
+                </div>
+              </div>
+
+              {/* Content */}
+              <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+                <PaymentMethodSelector
+                  selectedMethod={selectedPaymentMethod}
+                  onMethodSelect={handlePaymentMethodSelect}
+                  feeType="selection_process"
+                  amount={finalAmount}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

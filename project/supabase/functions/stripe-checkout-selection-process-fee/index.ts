@@ -271,10 +271,24 @@ Deno.serve(async (req) => {
       console.log('[stripe-checkout-selection-process-fee] Coupon ID:', activeDiscount.stripe_coupon_id);
       console.log('[stripe-checkout-selection-process-fee] Discount Amount:', activeDiscount.discount_amount);
       
+      let couponId = activeDiscount.stripe_coupon_id;
+      let discountAmount = activeDiscount.discount_amount;
+      
+      // ✅ NOVO: Se for PIX, criar cupom em BRL
+      if (payment_method === 'pix') {
+        console.log('[PIX] 💰 Criando cupom específico para BRL');
+        couponId = `MATR_BRL_${activeDiscount.affiliate_code}`;
+        discountAmount = Math.round(activeDiscount.discount_amount * exchangeRate); // USD → BRL
+        
+        console.log('[PIX] 💰 Desconto USD:', activeDiscount.discount_amount);
+        console.log('[PIX] 💰 Desconto BRL:', discountAmount);
+        console.log('[PIX] 💰 Taxa de câmbio:', exchangeRate);
+      }
+      
       // Verificar se o cupom existe no Stripe antes de usar
       let couponExists = false;
       try {
-        await stripe.coupons.retrieve(activeDiscount.stripe_coupon_id);
+        await stripe.coupons.retrieve(couponId);
         couponExists = true;
         console.log('[stripe-checkout-selection-process-fee] ✅ Cupom existe no Stripe');
       } catch (couponError: any) {
@@ -284,15 +298,17 @@ Deno.serve(async (req) => {
         try {
           console.log('[stripe-checkout-selection-process-fee] 🔧 Criando novo cupom no Stripe...');
           const newCoupon = await stripe.coupons.create({
-            id: activeDiscount.stripe_coupon_id,
-            amount_off: activeDiscount.discount_amount * 100,
-            currency: 'usd',
+            id: couponId,
+            amount_off: discountAmount * 100,
+            currency: payment_method === 'pix' ? 'brl' : 'usd',
             duration: 'once',
-            name: `Matricula Rewards - ${activeDiscount.affiliate_code}`,
+            name: `Matricula Rewards - ${activeDiscount.affiliate_code}${payment_method === 'pix' ? ' (BRL)' : ''}`,
             metadata: { 
               affiliate_code: activeDiscount.affiliate_code, 
               user_id: user.id, 
-              referrer_id: activeDiscount.referrer_id 
+              referrer_id: activeDiscount.referrer_id,
+              payment_method: payment_method || 'stripe',
+              original_amount_usd: activeDiscount.discount_amount
             }
           });
           
@@ -305,14 +321,18 @@ Deno.serve(async (req) => {
       }
       
       if (couponExists) {
-        sessionConfig.discounts = [{ coupon: activeDiscount.stripe_coupon_id }];
+        sessionConfig.discounts = [{ coupon: couponId }];
         // Remove allow_promotion_codes quando há desconto aplicado
         delete sessionConfig.allow_promotion_codes;
         
         sessionMetadata.referral_discount = true;
         sessionMetadata.affiliate_code = activeDiscount.affiliate_code;
         sessionMetadata.referrer_id = activeDiscount.referrer_id;
-        sessionMetadata.discount_amount = activeDiscount.discount_amount;
+        sessionMetadata.discount_amount = activeDiscount.discount_amount; // Manter USD original
+        
+        if (payment_method === 'pix') {
+          sessionMetadata.discount_amount_brl = discountAmount;
+        }
         
         console.log('[stripe-checkout-selection-process-fee] ✅ Desconto aplicado na sessão!');
         console.log('[stripe-checkout-selection-process-fee] 📋 Metadata atualizada:', sessionMetadata);

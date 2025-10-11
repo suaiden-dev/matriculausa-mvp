@@ -141,7 +141,7 @@ const AffiliateManagement: React.FC = () => {
         // 4. Preparar overrides por user_id
         const uniqueUserIds = Array.from(new Set((profiles || []).map((p) => p.user_id).filter(Boolean)));
         const overrideEntries = await Promise.allSettled(uniqueUserIds.map(async (uid) => {
-          const { data, error } = await supabase.rpc('get_user_fee_overrides', { user_id_param: uid });
+          const { data, error } = await supabase.rpc('get_user_fee_overrides', { target_user_id: uid });
           return [uid, error ? null : data];
         }));
         const overridesMap: Record<string, any> = overrideEntries.reduce((acc: Record<string, any>, res) => {
@@ -215,7 +215,7 @@ const AffiliateManagement: React.FC = () => {
 
         const results = await Promise.allSettled(
           uniqueIds.map(async (userId) => {
-            const { data, error } = await supabase.rpc('get_user_fee_overrides', { user_id_param: userId });
+            const { data, error } = await supabase.rpc('get_user_fee_overrides', { target_user_id: userId });
             return { userId, data: error ? null : data };
           })
         );

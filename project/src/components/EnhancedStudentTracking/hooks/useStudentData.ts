@@ -38,7 +38,6 @@ export const useStudentData = (userId?: string) => {
       // Se userId estiver disponível, tentar usar funções SQL corrigidas para dados reais
       if (userId) {
         try {
-          console.log('🔍 Attempting to load data using SQL functions for admin user:', userId);
           
           // Primeiro, buscar o ID do affiliate admin baseado no user_id
           const { data: affiliateAdminData, error: affiliateAdminError } = await supabase
@@ -48,19 +47,16 @@ export const useStudentData = (userId?: string) => {
             .single();
 
           if (affiliateAdminError || !affiliateAdminData) {
-            console.log('🔍 User is not an affiliate admin, will use fallback query');
             throw new Error('User is not an affiliate admin');
           }
 
           const affiliateAdminId = affiliateAdminData.id;
-          console.log('🔍 Found affiliate admin ID:', affiliateAdminId);
           
           // Buscar dados reais usando função SQL com dependentes
           // A função espera o user_id do affiliate admin, não o affiliate_admin_id
           const { data: realSellersData, error: realSellersError } = await supabase
             .rpc('get_admin_sellers_analytics_with_dependents', { admin_user_id: userId });
 
-          console.log('🔍 SQL sellers response:', { data: realSellersData, error: realSellersError });
 
           let processedSellers: any[] = [];
           let processedStudents: any[] = [];
@@ -77,24 +73,18 @@ export const useStudentData = (userId?: string) => {
               total_revenue: Number(seller.total_revenue) || 0
             }));
             
-            console.log('🔍 Processed sellers from SQL:', processedSellers);
           } else {
-            console.log('🔍 SQL sellers function failed or returned no data, will use fallback');
           }
 
           // Usar apenas a função que existe e foi atualizada
           const { data: basicStudentsData, error: basicStudentsError } = await supabase
-            .rpc('get_admin_students_analytics', { admin_user_id: affiliateAdminId });
+            .rpc('get_admin_students_analytics', { admin_user_id: userId });
+
 
           // Para compatibilidade, usar os mesmos dados
           const detailedStudentsData = basicStudentsData;
           const detailedStudentsError = basicStudentsError;
 
-          console.log('🔍 DETAILED STUDENTS RESPONSE:', { 
-            data: detailedStudentsData?.length || 0, 
-            error: detailedStudentsError?.message || 'No error',
-            hasData: !detailedStudentsError && detailedStudentsData && detailedStudentsData.length > 0
-          });
 
           // Priorizar dados detalhados com múltiplas aplicações
           let realStudentsData, realStudentsError;
@@ -102,11 +92,9 @@ export const useStudentData = (userId?: string) => {
           if (!detailedStudentsError && detailedStudentsData && detailedStudentsData.length > 0) {
             realStudentsData = detailedStudentsData;
             realStudentsError = detailedStudentsError;
-            console.log('🔍 ✅ USING DETAILED STUDENTS DATA - Multiple applications enabled!');
           } else {
             realStudentsData = basicStudentsData;
             realStudentsError = basicStudentsError;
-            console.log('🔍 ⚠️ FALLBACK TO BASIC STUDENTS DATA - No multiple applications', detailedStudentsError?.message);
           }
 
           if (!realStudentsError && realStudentsData && realStudentsData.length > 0) {
@@ -115,20 +103,10 @@ export const useStudentData = (userId?: string) => {
             
             if (hasApplicationData) {
               // Processar dados com múltiplas aplicações
-              console.log('🔍 PROCESSING MULTIPLE APPLICATIONS DATA');
               const studentsMap = new Map();
               
               realStudentsData.forEach((row: any) => {
               const studentId = row.student_id;
-              console.log('🔍 PROCESSING ROW FOR STUDENT:', studentId, {
-                student_name: row.student_name,
-                student_email: row.student_email,
-                user_id: row.user_id, // ✅ ADICIONADO: Log do user_id para debug
-                profile_id: row.profile_id, // ✅ ADICIONADO: Log do profile_id para debug
-                application_id: row.application_id,
-                scholarship_title: row.scholarship_title,
-                university_name: row.university_name
-              });
               
               if (!studentsMap.has(studentId)) {
                 // Primeiro registro deste estudante
@@ -238,24 +216,6 @@ export const useStudentData = (userId?: string) => {
                 return student;
               });
               
-              console.log('🔍 FINAL PROCESSED STUDENTS FROM MAP (after application fee filter):', processedStudents.length);
-              processedStudents.forEach((student: any) => {
-                console.log(`🔍 STUDENT ${student.email}:`, {
-                  hasMultipleApplications: student.hasMultipleApplications,
-                  applicationCount: student.applicationCount,
-                  allApplications: student.allApplications?.length || 0,
-                  university_name: student.university_name,
-                  has_paid_application_fee: student.is_application_fee_paid
-                });
-                
-                // Debug específico para jolie8862@uorak.com
-                if (student.email === 'jolie8862@uorak.com') {
-                  console.log('🔍 [useStudentData SQL Multiple Apps] jolie8862@uorak.com data:', {
-                    system_type: student.system_type,
-                    full_data: student
-                  });
-                }
-              });
             } else {
               // Processar dados básicos (sem múltiplas aplicações)
               processedStudents = realStudentsData.map((student: any) => {
@@ -287,51 +247,29 @@ export const useStudentData = (userId?: string) => {
                   allApplications: []
                 };
                 
-                // Debug para jolie8862@uorak.com
-                if (student.student_email === 'jolie8862@uorak.com') {
-                  console.log('🔍 [useStudentData SQL] jolie8862@uorak.com data:', {
-                    system_type: student.system_type,
-                    studentData: studentData
-                  });
-                }
                 
                 return studentData;
               });
             }
             
-            console.log('🔍 Processed students from SQL with real revenue:', processedStudents);
-            console.log('🔍 SQL Students debug - referred_by_seller_id values:', processedStudents.map((s: any) => ({
-              name: s.full_name,
-              referred_by_seller_id: s.referred_by_seller_id,
-              seller_name: s.seller_name,
-              total_paid: s.total_paid
-            })));
             
             setStudents(processedStudents);
           } else {
-            console.log('🔍 SQL students function failed or returned no data, will use fallback');
           }
 
           // Se ambas as funções SQL funcionaram (mesmo que retornem arrays vazios), não usar fallback
           if (!realSellersError && !realStudentsError) {
-            console.log('🔍 SQL functions successful, skipping fallback');
-            console.log('🔍 Final state - Students loaded via SQL:', realStudentsData?.length || 0);
-            console.log('🔍 Final state - Sellers loaded via SQL:', realSellersData?.length || 0);
             
-            // Debug: verificar se os dados estão sendo mapeados corretamente
-            console.log('🔍 Final processed students:', processedStudents);
-            console.log('🔍 Final processed sellers:', processedSellers);
             
             // Verificar se os estudantes têm referred_by_seller_id
             const studentsWithSellerId = processedStudents.filter((s: any) => s.referred_by_seller_id);
-            console.log('🔍 Students with referred_by_seller_id:', studentsWithSellerId.length);
-            console.log('🔍 Students without referred_by_seller_id:', processedStudents.length - studentsWithSellerId.length);
             
             // Calcular receita real para vendedores SQL
             const sellersWithRealRevenue = processedSellers.map((seller: any) => {
               const sellerStudents = processedStudents.filter((student: any) => 
                 student.referred_by_seller_id === seller.id
               );
+              
               
               const actualRevenue = sellerStudents.reduce((sum, student) => sum + (student.total_paid || 0), 0);
               
@@ -342,7 +280,6 @@ export const useStudentData = (userId?: string) => {
               };
             });
             
-            console.log('🔍 Sellers with real revenue:', sellersWithRealRevenue);
             
             setSellers(sellersWithRealRevenue);
             setStudents(processedStudents);
@@ -354,7 +291,6 @@ export const useStudentData = (userId?: string) => {
       }
 
       // Se chegou aqui, as funções SQL falharam - usar query direta como fallback
-      console.log('🔍 SQL functions failed, using direct query fallback');
       
       // Buscar sellers diretamente
       const { data: sellersData, error: sellersError } = await supabase
@@ -375,11 +311,15 @@ export const useStudentData = (userId?: string) => {
           id: seller.id,
           name: seller.name,
           email: seller.email,
+          phone: '', // Campo obrigatório
+          territory: '', // Campo obrigatório
           referral_code: seller.referral_code,
           is_active: seller.is_active,
           created_at: seller.created_at,
+          students: [], // Campo obrigatório
           students_count: 0,
-          total_revenue: 0
+          total_revenue: 0,
+          total_students: 0 // Campo obrigatório
         }));
         setSellers(processedSellers);
 
@@ -436,7 +376,23 @@ export const useStudentData = (userId?: string) => {
                 is_scholarship_fee_paid: scholarshipApp?.is_scholarship_fee_paid || false,
                 scholarship_title: scholarshipApp?.scholarships?.title,
                 university_name: scholarshipApp?.scholarships?.universities?.name,
-                system_type: profile.system_type
+                system_type: profile.system_type,
+                // Campos obrigatórios com valores padrão
+                phone: '',
+                field_of_interest: '',
+                academic_level: '',
+                gpa: 0,
+                english_proficiency: '',
+                registration_date: profile.created_at,
+                current_status: 'active',
+                total_fees_paid: 0,
+                fees_count: 0,
+                selected_scholarship_id: null,
+                documents_status: 'pending',
+                is_application_fee_paid: false,
+                student_process_type: '',
+                application_status: 'Not specified',
+                documents: []
               };
               
               // Debug para jolie8862@uorak.com
@@ -451,8 +407,6 @@ export const useStudentData = (userId?: string) => {
             });
             
             // Debug: verificar quantos estudantes foram carregados
-            console.log('🔍 [FALLBACK] Students loaded:', processedStudents.length);
-            console.log('🔍 [FALLBACK] Students with system_type:', processedStudents.filter(s => s.system_type).length);
             
             setStudents(processedStudents);
           }

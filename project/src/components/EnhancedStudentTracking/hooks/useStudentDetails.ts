@@ -44,22 +44,57 @@ export const useStudentDetails = () => {
         if (!sqlError && sqlData && sqlData.length > 0) {
           studentData = sqlData[0];
           
-          // ✅ CORREÇÃO: Calcular selection process fee com dependentes
+          // ✅ CORREÇÃO: Calcular taxas com overrides e system_type
           const dependents = studentData.dependents || 0;
-          const selectionProcessFeeAmount = 400 + (dependents * 150);
-          
-          // Calcular total paid correto incluindo selection process fee
+          const systemType = studentData.system_type || 'legacy';
+
+          // Buscar overrides do usuário
+          const { data: feeOverrides } = await supabase.rpc('get_user_fee_overrides', { 
+            target_user_id: studentData.student_id 
+          });
+
+          // Selection Process Fee (com dependentes se não houver override)
+          let selectionProcessFeeAmount = 0;
+          if (feeOverrides?.selection_process_fee) {
+            selectionProcessFeeAmount = feeOverrides.selection_process_fee;
+          } else {
+            const baseFee = systemType === 'simplified' ? 350 : 400;
+            selectionProcessFeeAmount = baseFee + (dependents * 150);
+          }
+
+          // I-20 Control Fee (sem dependentes, com override)
+          let i20ControlFeeAmount = 0;
+          if (feeOverrides?.i20_control_fee) {
+            i20ControlFeeAmount = feeOverrides.i20_control_fee;
+          } else {
+            i20ControlFeeAmount = 900;
+          }
+
+          // Scholarship Fee (com override)
+          let scholarshipFeeAmount = 0;
+          if (feeOverrides?.scholarship_fee) {
+            scholarshipFeeAmount = feeOverrides.scholarship_fee;
+          } else {
+            scholarshipFeeAmount = systemType === 'simplified' ? 550 : 900;
+          }
+
+          // Calcular total paid
           let calculatedTotalPaid = 0;
           if (studentData.has_paid_selection_process_fee) {
             calculatedTotalPaid += selectionProcessFeeAmount;
           }
           if (studentData.has_paid_i20_control_fee) {
-            calculatedTotalPaid += 900;
+            calculatedTotalPaid += i20ControlFeeAmount;
+          }
+          if (studentData.is_scholarship_fee_paid) {
+            calculatedTotalPaid += scholarshipFeeAmount;
           }
           
           // Adicionar campos calculados
           studentData.dependents = dependents;
           studentData.selection_process_fee_amount = selectionProcessFeeAmount;
+          studentData.i20_control_fee_amount = i20ControlFeeAmount;
+          studentData.scholarship_fee_amount = scholarshipFeeAmount;
           studentData.total_fees_paid = calculatedTotalPaid;
           
           // Adicionar dados do scholarship se disponíveis
@@ -70,10 +105,6 @@ export const useStudentDetails = () => {
             };
           }
           
-          console.log('🔍 [USE_STUDENT_DETAILS] SQL data loaded with scholarship:', studentData.scholarship);
-          console.log('🔍 [SELECTION_PROCESS_FEE] Dependents:', dependents);
-          console.log('🔍 [SELECTION_PROCESS_FEE] Calculated fee amount:', selectionProcessFeeAmount);
-          console.log('🔍 [SELECTION_PROCESS_FEE] Total fees paid:', calculatedTotalPaid);
         } else {
           studentError = sqlError;
         }
@@ -139,17 +170,50 @@ export const useStudentDetails = () => {
         // Extrair documentos da aplicação principal
         let documentsData: any = applicationData?.documents;
 
-        // ✅ CORREÇÃO: Calcular selection process fee com dependentes no fallback
+        // ✅ CORREÇÃO: Calcular taxas com overrides e system_type no fallback
         const dependents = profileData.dependents || 0;
-        const selectionProcessFeeAmount = 400 + (dependents * 150);
+        const systemType = profileData.system_type || 'legacy';
+
+        // Buscar overrides do usuário
+        const { data: feeOverrides } = await supabase.rpc('get_user_fee_overrides', { 
+          target_user_id: profileData.user_id 
+        });
+
+        // Selection Process Fee (com dependentes se não houver override)
+        let selectionProcessFeeAmount = 0;
+        if (feeOverrides?.selection_process_fee) {
+          selectionProcessFeeAmount = feeOverrides.selection_process_fee;
+        } else {
+          const baseFee = systemType === 'simplified' ? 350 : 400;
+          selectionProcessFeeAmount = baseFee + (dependents * 150);
+        }
+
+        // I-20 Control Fee (sem dependentes, com override)
+        let i20ControlFeeAmount = 0;
+        if (feeOverrides?.i20_control_fee) {
+          i20ControlFeeAmount = feeOverrides.i20_control_fee;
+        } else {
+          i20ControlFeeAmount = 900;
+        }
+
+        // Scholarship Fee (com override)
+        let scholarshipFeeAmount = 0;
+        if (feeOverrides?.scholarship_fee) {
+          scholarshipFeeAmount = feeOverrides.scholarship_fee;
+        } else {
+          scholarshipFeeAmount = systemType === 'simplified' ? 550 : 900;
+        }
         
-        // Calcular total paid correto incluindo selection process fee
+        // Calcular total paid
         let calculatedTotalPaid = 0;
         if (profileData.has_paid_selection_process_fee) {
           calculatedTotalPaid += selectionProcessFeeAmount;
         }
         if (profileData.has_paid_i20_control_fee) {
-          calculatedTotalPaid += 900;
+          calculatedTotalPaid += i20ControlFeeAmount;
+        }
+        if (profileData.is_scholarship_fee_paid) {
+          calculatedTotalPaid += scholarshipFeeAmount;
         }
 
         // Construir objeto de dados do estudante
@@ -182,25 +246,18 @@ export const useStudentDetails = () => {
           documents: documentsData || [],
           dependents: dependents, // ✅ Adicionar campo dependents
           selection_process_fee_amount: selectionProcessFeeAmount, // ✅ Adicionar campo da taxa calculada
+          i20_control_fee_amount: i20ControlFeeAmount, // ✅ Adicionar campo I-20 Control Fee
+          scholarship_fee_amount: scholarshipFeeAmount, // ✅ Adicionar campo Scholarship Fee
           scholarship: applicationData?.scholarships ? {
             application_fee_amount: applicationData.scholarships?.application_fee_amount,
             scholarship_fee_amount: applicationData.scholarships?.scholarship_fee_amount
           } : undefined
         };
         
-        console.log('🔍 [FALLBACK_SELECTION_PROCESS_FEE] Dependents:', dependents);
-        console.log('🔍 [FALLBACK_SELECTION_PROCESS_FEE] Calculated fee amount:', selectionProcessFeeAmount);
-        console.log('🔍 [FALLBACK_SELECTION_PROCESS_FEE] Total fees paid:', calculatedTotalPaid);
-
         setStudentDocuments(applicationData?.documents);
-        
-        console.log('🔍 [USE_STUDENT_DETAILS] Scholarship data loaded:', applicationData?.scholarships);
-        console.log('🔍 [USE_STUDENT_DETAILS] Application fee amount:', applicationData?.scholarships?.application_fee_amount);
-        console.log('🔍 [USE_STUDENT_DETAILS] Scholarship fee amount:', applicationData?.scholarships?.scholarship_fee_amount);
       }
       
       if (studentData) {
-        console.log('🔍 [AFFILIATE_DEBUG] Searching scholarship application for profile_id:', profile_id);
         const { data: applicationData, error: applicationError } = await supabase
           .from('scholarship_applications')
           .select(`
@@ -217,32 +274,18 @@ export const useStudentDetails = () => {
             )
           `)
           .eq('student_id', profile_id)
+          // ✅ CORREÇÃO: Priorizar aplicações enrolled > approved > pending > rejected
+          .order('status', { ascending: true }) // enrolled vem antes de pending
           .order('created_at', { ascending: false })
           .limit(1)
           .single();
 
-        console.log('🔍 [AFFILIATE_DEBUG] Scholarship application query result:', {
-          data: applicationData,
-          error: applicationError,
-          hasData: !!applicationData,
-          applicationId: applicationData?.id,
-          documents: applicationData?.documents,
-          scholarships: applicationData?.scholarships,
-          university_id: applicationData?.scholarships?.universities?.id,
-          is_application_fee_paid: applicationData?.is_application_fee_paid,
-          is_scholarship_fee_paid: applicationData?.is_scholarship_fee_paid,
-          application_fee_amount: applicationData?.scholarships?.application_fee_amount,
-          scholarship_fee_amount: applicationData?.scholarships?.scholarship_fee_amount
-        });
 
         studentData.documents = applicationData?.documents;
         setStudentDocuments(applicationData?.documents);
 
         // Buscar document requests da universidade para este estudante
         if (applicationData?.scholarship_id) {
-          console.log('🔍 [DOCUMENT REQUEST] Fetching for scholarship:', applicationData.scholarship_id);
-          console.log('🔍 [DOCUMENT REQUEST] University ID:', applicationData.scholarships?.universities?.id);
-          console.log('🔍 [DOCUMENT REQUEST] Application ID:', applicationData.id);
           
           try {
             // ✅ CORREÇÃO: Seguir o mesmo padrão da universidade
@@ -258,21 +301,65 @@ export const useStudentDetails = () => {
               console.log('✅ [DOCUMENT REQUEST] Requests found:', requestsForApp);
             }
             
-            // ✅ CORREÇÃO: Buscar uploads para cada request encontrado
-            let uploads: any[] = [];
-            if (requestsForApp && requestsForApp.length > 0) {
-              const requestIds = requestsForApp.map(req => req.id);
-              console.log('🔍 [DOCUMENT REQUEST] Request IDs to search uploads:', requestIds);
+            // Buscar requests globais da universidade
+            let globalRequests: any[] = [];
+            if (applicationData?.scholarships?.universities?.id) {
+              const universityId = applicationData.scholarships.universities.id;
+              console.log('🔍 [DOCUMENT REQUEST] Fetching global requests for university:', universityId);
               
+              const { data: globalData, error: globalError } = await supabase
+                .from('document_requests')
+                .select('*')
+                .eq('is_global', true)
+                .eq('university_id', universityId);
+              
+              if (globalError) {
+                console.log('❌ [DOCUMENT REQUEST] Error fetching global requests:', globalError);
+              } else {
+                console.log('✅ [DOCUMENT REQUEST] Global requests found:', globalData);
+                globalRequests = globalData || [];
+              }
+            }
+
+            // Buscar requests específicos do estudante criados pelo super admin
+            let studentSpecificRequests: any[] = [];
+            if (applicationData?.id) {
+              console.log('🔍 [DOCUMENT REQUEST] Fetching student-specific requests for application:', applicationData.id);
+              
+              const { data: studentData, error: studentError } = await supabase
+                .from('document_requests')
+                .select('*')
+                .eq('scholarship_application_id', applicationData.id)
+                .eq('is_global', false);
+              
+              if (studentError) {
+                console.log('❌ [DOCUMENT REQUEST] Error fetching student-specific requests:', studentError);
+              } else {
+                console.log('✅ [DOCUMENT REQUEST] Student-specific requests found:', studentData);
+                studentSpecificRequests = studentData || [];
+              }
+            }
+
+            // Combinar requests específicos, globais e específicos do estudante
+            const allRequestsForApp = [...(requestsForApp || []), ...globalRequests, ...studentSpecificRequests];
+            
+            // ✅ CORREÇÃO: Buscar uploads para cada request encontrado (APENAS DO ESTUDANTE ATUAL)
+            let uploads: any[] = [];
+            if (allRequestsForApp && allRequestsForApp.length > 0) {
+              const requestIds = allRequestsForApp.map(req => req.id);
+              
+              // ✅ CORREÇÃO CRÍTICA: Filtrar uploads apenas do estudante atual
               const { data: uploadsForRequests, error: uploadsError } = await supabase
                 .from('document_request_uploads')
                 .select('*')
-                .in('document_request_id', requestIds);
+                .in('document_request_id', requestIds)
+                .eq('uploaded_by', studentData.student_id);  // ✅ Filtrar por estudante
               
               if (uploadsError) {
                 console.log('❌ [DOCUMENT REQUEST] Error fetching uploads for requests:', uploadsError);
               } else {
-                console.log('✅ [DOCUMENT REQUEST] Uploads found for requests:', uploadsForRequests);
+                console.log('✅ [DOCUMENT REQUEST] Uploads found for THIS STUDENT:', uploadsForRequests);
+                console.log('✅ [DOCUMENT REQUEST] Filtered by uploaded_by:', studentData.student_id);
                 uploads = uploadsForRequests || [];
               }
             }
@@ -280,8 +367,6 @@ export const useStudentDetails = () => {
             // ✅ CORREÇÃO: Se não encontrou nada pelos requests, tentar buscar por uploaded_by
             if (uploads.length === 0) {
               console.log('🔄 [AFFILIATE_DEBUG] No uploads found for requests, trying uploaded_by =', studentId);
-              console.log('🔍 [AFFILIATE_DEBUG] studentData available:', !!studentData);
-              console.log('🔍 [AFFILIATE_DEBUG] studentData.email:', studentData?.email);
               
               // ✅ CORREÇÃO: Usar user_id do profile ao invés de buscar auth.users
               let authUserId = null;
@@ -299,25 +384,14 @@ export const useStudentDetails = () => {
                 searchIds.push(authUserId);
               }
               
-              console.log('🔍 [AFFILIATE_DEBUG] Searching uploads with IDs:', searchIds);
-              console.log('🔍 [AFFILIATE_DEBUG] searchIds type:', typeof searchIds);
-              console.log('🔍 [AFFILIATE_DEBUG] searchIds length:', searchIds.length);
               
               // Teste 1: Buscar apenas document_request_uploads
-              console.log('🔍 [DOCUMENT REQUEST] Test 1: Simple query on document_request_uploads');
               let { data: simpleUploads, error: simpleError } = await supabase
                 .from('document_request_uploads')
                 .select('*')
                 .in('uploaded_by', searchIds);
               
-              console.log('🔍 [DOCUMENT REQUEST] Simple query result:', {
-                data: simpleUploads,
-                error: simpleError,
-                count: simpleUploads?.length || 0
-              });
-              
               // Teste 2: Buscar com join para document_requests
-              console.log('🔍 [DOCUMENT REQUEST] Test 2: Query with join to document_requests');
               let { data: uploadsByUser, error: error1 } = await supabase
                 .from('document_request_uploads')
                 .select(`
@@ -336,11 +410,6 @@ export const useStudentDetails = () => {
                 `)
                 .in('uploaded_by', searchIds);
               
-              console.log('🔍 [DOCUMENT REQUEST] Join query result:', {
-                data: uploadsByUser,
-                error: error1,
-                count: uploadsByUser?.length || 0
-              });
 
               if (error1) {
                 console.log('❌ [DOCUMENT REQUEST] Error fetching by uploaded_by:', error1);
@@ -399,8 +468,8 @@ export const useStudentDetails = () => {
               const documentRequestsMap = new Map();
               
               // Primeiro, adicionar os requests encontrados
-              if (requestsForApp && requestsForApp.length > 0) {
-                requestsForApp.forEach(request => {
+              if (allRequestsForApp && allRequestsForApp.length > 0) {
+                allRequestsForApp.forEach(request => {
                   documentRequestsMap.set(request.id, {
                     id: request.id,
                     title: request.title,
@@ -620,8 +689,8 @@ export const useStudentDetails = () => {
             is_scholarship_fee_paid: applicationData.is_scholarship_fee_paid || false,
             paid_at: applicationData.paid_at || new Date().toISOString(),
             payment_status: applicationData.payment_status || 'pending',
-            has_paid_selection_process_fee: applicationData.has_paid_selection_process_fee || false,
-            has_paid_i20_control_fee: applicationData.has_paid_i20_control_fee || false,
+            has_paid_selection_process_fee: studentData.has_paid_selection_process_fee || false,
+            has_paid_i20_control_fee: studentData.has_paid_i20_control_fee || false,
             // ✅ CORREÇÃO: Incluir dados de scholarships e universities
             scholarships: applicationData.scholarships || null
           };
@@ -659,12 +728,6 @@ export const useStudentDetails = () => {
       console.error('❌ [AFFILIATE_DEBUG] Error loading student details:', error);
       setError('Failed to load student details');
     } finally {
-      console.log('🔍 [AFFILIATE_DEBUG] ===== LOADING COMPLETED =====');
-      console.log('🔍 [AFFILIATE_DEBUG] Final states:');
-      console.log('🔍 [AFFILIATE_DEBUG] - studentDetails:', !!studentDetails);
-      console.log('🔍 [AFFILIATE_DEBUG] - scholarshipApplication:', !!scholarshipApplication);
-      console.log('🔍 [AFFILIATE_DEBUG] - studentDocuments:', studentDocuments?.length || 0);
-      console.log('🔍 [AFFILIATE_DEBUG] - documentRequests:', documentRequests?.length || 0);
       setLoadingStudentDetails(false);
     }
   }, [isAuthenticated, supabaseUser]);

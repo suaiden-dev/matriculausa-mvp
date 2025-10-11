@@ -41,31 +41,22 @@ export const useReferralCodeCapture = () => {
         length: refCode.length
       });
       
-      if (isSellerCode) {
-        // Código de seller - salva separadamente
-        const existingSellerCode = localStorage.getItem('pending_seller_referral_code');
-        if (!existingSellerCode || existingSellerCode !== refCode) {
-          localStorage.setItem('pending_seller_referral_code', refCode);
-          // IMPORTANTE: Limpar o código de Matricula Rewards se existir
-          localStorage.removeItem('pending_affiliate_code');
-          console.log('[useReferralCodeCapture] ✅ Código de seller capturado e salvo:', refCode);
-        }
-      } else if (isMatriculaRewardsCode) {
-        // Código de Matricula Rewards - salva no campo original
-        const existingCode = localStorage.getItem('pending_affiliate_code');
+      // ✅ NOVO FLUXO UNIFICADO: Salvar ambos os tipos no mesmo campo
+      if (isSellerCode || isMatriculaRewardsCode) {
+        // ✅ Salvar código no campo único
+        const existingCode = localStorage.getItem('pending_referral_code');
         if (!existingCode || existingCode !== refCode) {
-          localStorage.setItem('pending_affiliate_code', refCode);
-          // IMPORTANTE: Limpar o código de seller se existir
-          localStorage.removeItem('pending_seller_referral_code');
-          console.log('[useReferralCodeCapture] ✅ Código de Matricula Rewards capturado e salvo:', refCode);
+          localStorage.setItem('pending_referral_code', refCode);
+          // ✅ Salvar tipo para validação correta
+          localStorage.setItem('pending_referral_code_type', isSellerCode ? 'seller' : 'rewards');
+          console.log('[useReferralCodeCapture] ✅ Código capturado:', refCode, 'Tipo:', isSellerCode ? 'seller' : 'rewards');
         }
       } else {
         // Código não reconhecido - tenta salvar como Matricula Rewards por padrão
-        const existingCode = localStorage.getItem('pending_affiliate_code');
+        const existingCode = localStorage.getItem('pending_referral_code');
         if (!existingCode || existingCode !== refCode) {
-          localStorage.setItem('pending_affiliate_code', refCode);
-          // IMPORTANTE: Limpar o código de seller se existir
-          localStorage.removeItem('pending_seller_referral_code');
+          localStorage.setItem('pending_referral_code', refCode);
+          localStorage.setItem('pending_referral_code_type', 'rewards');
           console.log('[useReferralCodeCapture] ⚠️ Código não reconhecido, salvo como Matricula Rewards:', refCode);
         }
       }

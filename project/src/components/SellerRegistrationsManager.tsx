@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Check, X, Eye, Clock, UserCheck, UserX } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
+import { useAffiliateAdminId } from '../hooks/useAffiliateAdminId';
 
 interface SellerRegistration {
   id: string;
@@ -22,6 +23,7 @@ interface SellerRegistrationsManagerProps {
 
 const SellerRegistrationsManager: React.FC<SellerRegistrationsManagerProps> = ({ onRefresh }) => {
   const { user } = useAuth();
+  const { affiliateAdminId, loading: affiliateAdminLoading, error: affiliateAdminError } = useAffiliateAdminId();
   const [registrations, setRegistrations] = useState<SellerRegistration[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedRegistration, setSelectedRegistration] = useState<SellerRegistration | null>(null);
@@ -32,13 +34,16 @@ const SellerRegistrationsManager: React.FC<SellerRegistrationsManagerProps> = ({
 
   // Load registrations apenas uma vez
   useEffect(() => {
-    if (user && !hasLoaded) {
+    if (user && affiliateAdminId && !hasLoaded && !affiliateAdminLoading) {
       loadRegistrations();
     }
-  }, [user?.id, hasLoaded]); // Depender apenas do ID do usuário e da flag de carregamento
+  }, [user?.id, affiliateAdminId, hasLoaded, affiliateAdminLoading]); // Depender do affiliateAdminId
 
   const loadRegistrations = async () => {
-    if (!user) return;
+    if (!affiliateAdminId) {
+      console.log('⚠️ No affiliate admin ID available');
+      return;
+    }
 
     setLoading(true);
     try {
@@ -48,7 +53,7 @@ const SellerRegistrationsManager: React.FC<SellerRegistrationsManagerProps> = ({
       const { data: adminCodes, error: codesError } = await supabase
         .from('seller_registration_codes')
         .select('code')
-        .eq('admin_id', user.id)
+        .eq('admin_id', affiliateAdminId)
         .eq('is_active', true);
 
       if (codesError) {
@@ -413,7 +418,7 @@ const SellerRegistrationsManager: React.FC<SellerRegistrationsManagerProps> = ({
         console.log('🔍 [SellerApproval] Email não encontrado no user_profiles, buscando alternativas...');
         
         // Primeiro, tentar buscar na registration atual (mais confiável)
-        const currentRegistration = registrations.find(r => r.id === userId);
+        const currentRegistration = registrations.find(r => r.user_id === userId);
         if (currentRegistration?.email) {
           userEmail = currentRegistration.email;
           console.log('🔍 [SellerApproval] Email encontrado na registration:', userEmail);
@@ -533,12 +538,14 @@ const SellerRegistrationsManager: React.FC<SellerRegistrationsManagerProps> = ({
 
       if (!existingSeller) {
         // 5. Create seller record in sellers table
+        // Buscar o registration para obter dados confiáveis
+        const currentRegistration = registrations.find(r => r.user_id === userId);
         const sellerData = {
           user_id: userId,
           affiliate_admin_id: affiliateAdmin.id,
-          name: userProfile.full_name,
-          email: userProfile.email,
-          phone: userProfile.phone,
+          name: currentRegistration?.full_name || userProfile.full_name, // ✅ Usar do registration primeiro
+          email: currentRegistration?.email || userProfile.email, // ✅ Usar do registration primeiro
+          phone: currentRegistration?.phone || userProfile.phone,
           territory: 'General',
           referral_code: `SELL${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
           is_active: true,
@@ -567,6 +574,24 @@ const SellerRegistrationsManager: React.FC<SellerRegistrationsManagerProps> = ({
         if (sellerError) {
           console.error('Error creating seller record:', sellerError);
           throw sellerError;
+        }
+      }
+
+      // 5.1. Atualizar user_profiles com dados do registration para garantir consistência
+      if (currentRegistration) {
+        const { error: profileUpdateError } = await supabase
+          .from('user_profiles')
+          .update({
+            email: currentRegistration.email, // ✅ Garantir que email esteja no perfil
+            full_name: currentRegistration.full_name, // ✅ Garantir que nome esteja atualizado
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', userId);
+
+        if (profileUpdateError) {
+          console.warn('⚠️ [SellerApproval] Não foi possível atualizar user_profiles com dados do registration:', profileUpdateError);
+        } else {
+          console.log('✅ [SellerApproval] user_profiles atualizado com dados do registration');
         }
       }
 
@@ -783,10 +808,25 @@ const SellerRegistrationsManager: React.FC<SellerRegistrationsManagerProps> = ({
     setShowDetailsModal(true);
   };
 
-  if (loading) {
+  // Mostrar loading se ainda estiver carregando o affiliate admin ID
+  if (affiliateAdminLoading || loading) {
     return (
       <div className="flex justify-center items-center py-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  // Mostrar erro se não conseguir encontrar o affiliate admin ID
+  if (affiliateAdminError || !affiliateAdminId) {
+    return (
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="text-center py-8">
+          <p className="text-red-600 mb-2">Erro ao carregar dados do administrador</p>
+          <p className="text-sm text-gray-500">
+            {affiliateAdminError || 'Usuário não é um administrador de afiliados'}
+          </p>
+        </div>
       </div>
     );
   }
