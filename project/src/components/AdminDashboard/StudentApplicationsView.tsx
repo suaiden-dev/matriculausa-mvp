@@ -797,15 +797,15 @@ const StudentApplicationsView: React.FC = () => {
 
   const ApplicationFlowSteps = ({ student }: { student: StudentRecord }) => {
     const allSteps = [
-      { key: 'selection_fee', label: 'Selection Fee', icon: CreditCard, shortLabel: 'Fee' },
-      { key: 'apply', label: 'Application', icon: FileText, shortLabel: 'App' },
+      { key: 'selection_fee', label: 'Selection Fee', icon: CreditCard, shortLabel: 'Selection Fee' },
+      { key: 'apply', label: 'Application', icon: FileText, shortLabel: 'Application' },
       { key: 'review', label: 'Review', icon: Eye, shortLabel: 'Review' },
-      { key: 'application_fee', label: 'App Fee', icon: DollarSign, shortLabel: 'Pay' },
-      { key: 'scholarship_fee', label: 'Scholarship Fee', icon: Award, shortLabel: 'Sch' },
-      { key: 'acceptance_letter', label: 'Acceptance', icon: BookOpen, shortLabel: 'Acc' },
-      { key: 'transfer_form', label: 'Transfer Form', icon: FileText, shortLabel: 'Trans' },
-      { key: 'i20_fee', label: 'I-20 Fee', icon: CreditCard, shortLabel: 'I-20' },
-      { key: 'enrollment', label: 'Enrollment', icon: GraduationCap, shortLabel: 'Enroll' }
+      { key: 'application_fee', label: 'App Fee', icon: DollarSign, shortLabel: 'App Fee' },
+      { key: 'scholarship_fee', label: 'Scholarship Fee', icon: Award, shortLabel: 'Scholarship Fee' },
+      { key: 'acceptance_letter', label: 'Acceptance', icon: BookOpen, shortLabel: 'Acceptance' },
+      { key: 'transfer_form', label: 'Transfer Form', icon: FileText, shortLabel: 'Transfer Form' },
+      { key: 'i20_fee', label: 'I-20 Fee', icon: CreditCard, shortLabel: 'I-20 Fee' },
+      { key: 'enrollment', label: 'Enrollment', icon: GraduationCap, shortLabel: 'Enrollment' }
     ];
 
     // Filtrar steps baseado no student_process_type
@@ -875,15 +875,15 @@ const StudentApplicationsView: React.FC = () => {
         {/* Informações compactas */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center space-x-2">
-            <span className="text-sm font-medium text-gray-900">
+            <span className="text-sm font-medium text-gray-900 truncate">
               {currentStep.shortLabel}
             </span>
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-gray-500 flex-shrink-0">
               {completedSteps}/{totalSteps}
             </span>
           </div>
           <div className="flex items-center space-x-1 mt-1">
-            {steps.slice(0, 6).map((step, index) => {
+            {steps.slice(0, 8).map((step, index) => {
               const status = getStepStatus(student, step.key);
               return (
                 <div
@@ -898,8 +898,8 @@ const StudentApplicationsView: React.FC = () => {
                 />
               );
             })}
-            {steps.length > 6 && (
-              <span className="text-xs text-gray-400 ml-1">+{steps.length - 6}</span>
+            {steps.length > 8 && (
+              <span className="text-xs text-gray-400 ml-1">+{steps.length - 8}</span>
             )}
           </div>
         </div>
