@@ -23,7 +23,6 @@ export const useSimplifiedFees = (): SimplifiedFees => {
 
     const fetchSimplifiedFees = async () => {
       try {
-        console.log('🔍 [useSimplifiedFees] Iniciando busca das taxas simplificadas...');
 
         const { data, error } = await supabase
           .from('system_settings')
@@ -56,7 +55,6 @@ export const useSimplifiedFees = (): SimplifiedFees => {
                 break;
             }
           });
-          console.log('✅ [useSimplifiedFees] Taxas carregadas do banco:', feeData);
         } else {
           console.log('⚠️ [useSimplifiedFees] Nenhum dado encontrado, usando valores padrão');
         }

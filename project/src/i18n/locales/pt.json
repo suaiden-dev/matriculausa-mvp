@@ -2425,10 +2425,10 @@
       "manualVerification": "Processamento pode levar até 48 horas",
       "important": "Importante:",
       "zelleUploadNote": "Após realizar o pagamento via Zelle, será necessário enviar um print da confirmação mostrando o código, data, valor e destinatário.",
-    "loading": {
-      "message": "Carregando métodos de pagamento...",
-      "processing": "Processando..."
-    },
+      "loading": {
+        "message": "Carregando métodos de pagamento...",
+        "processing": "Processando..."
+      },
       "feeTypes": {
         "selection_process": "processo seletivo",
         "application_fee": "candidatura",

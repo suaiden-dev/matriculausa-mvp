@@ -2543,10 +2543,10 @@
       "manualVerification": "El procesamiento puede tomar hasta 48 horas",
       "important": "Importante:",
       "zelleUploadNote": "Después de realizar el pago vía Zelle, deberás subir una captura de pantalla de la confirmación mostrando el código, fecha, monto y destinatario.",
-    "loading": {
-      "message": "Cargando métodos de pago...",
-      "processing": "Procesando..."
-    },
+      "loading": {
+        "message": "Cargando métodos de pago...",
+        "processing": "Procesando..."
+      },
       "feeTypes": {
         "selection_process": "proceso de selección",
         "application_fee": "solicitud",
