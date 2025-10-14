@@ -3189,25 +3189,37 @@ const PaymentManagement = (): React.JSX.Element => {
           </div>
         </div>
 
-        <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-xl p-6 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-green-100 text-sm font-medium">Paid Payments</p>
-              <p className="text-2xl font-bold">{stats.paidPayments}</p>
-            </div>
-            <CheckCircle size={32} className="text-green-200" />
-          </div>
-        </div>
+        {(() => {
+          const filteredTotals = calculateFilteredTotals();
+          const stripeData = filteredTotals.breakdownByMethod.stripe || { count: 0, amount: 0 };
+          const zelleData = filteredTotals.breakdownByMethod.zelle || { count: 0, amount: 0 };
+          
+          return (
+            <>
+              <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-6 text-white">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-blue-100 text-sm font-medium">Stripe Payments</p>
+                    <p className="text-2xl font-bold">${formatCentsToDollars(stripeData.amount).toLocaleString()}</p>
+                    <p className="text-blue-200 text-xs">{stripeData.count} payments</p>
+                  </div>
+                  <CreditCard size={32} className="text-blue-200" />
+                </div>
+              </div>
 
-        <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl p-6 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-orange-100 text-sm font-medium">Pending Payments</p>
-              <p className="text-2xl font-bold">{stats.pendingPayments}</p>
-            </div>
-            <XCircle size={32} className="text-orange-200" />
-          </div>
-        </div>
+              <div className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl p-6 text-white">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-purple-100 text-sm font-medium">Zelle Payments</p>
+                    <p className="text-2xl font-bold">${formatCentsToDollars(zelleData.amount).toLocaleString()}</p>
+                    <p className="text-purple-200 text-xs">{zelleData.count} payments</p>
+                  </div>
+                  <CheckCircle size={32} className="text-purple-200" />
+                </div>
+              </div>
+            </>
+          );
+        })()}
 
         <div className="bg-[#05294E] rounded-xl p-6 text-white">
           <div className="flex items-center justify-between">
@@ -3220,56 +3232,6 @@ const PaymentManagement = (): React.JSX.Element => {
         </div>
       </div>
 
-      {/* Filtered Results Summary */}
-      {(() => {
-        const filteredTotals = calculateFilteredTotals();
-        return (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                <Calculator size={20} />
-                Filtered Results Summary
-              </h2>
-              <div className="text-sm text-gray-600">
-                {filteredTotals.totalCount} payments
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="bg-blue-50 rounded-lg p-4">
-                <div className="text-sm font-medium text-blue-600 mb-1">Total Amount</div>
-                <div className="text-2xl font-bold text-blue-900">
-                  ${formatCentsToDollars(filteredTotals.totalAmount).toLocaleString()}
-                </div>
-              </div>
-              
-              {Object.entries(filteredTotals.breakdownByMethod).map(([method, data]) => {
-                const methodLabel = method === 'manual' ? 'Outside' : 
-                                  method === 'zelle' ? 'Zelle' : 
-                                  method === 'stripe' ? 'Stripe' : 
-                                  method.charAt(0).toUpperCase() + method.slice(1);
-                const methodColor = method === 'manual' ? 'gray' : 
-                                  method === 'zelle' ? 'purple' : 
-                                  method === 'stripe' ? 'blue' : 'green';
-                
-                return (
-                  <div key={method} className={`bg-${methodColor}-50 rounded-lg p-4`}>
-                    <div className={`text-sm font-medium text-${methodColor}-600 mb-1`}>
-                      {methodLabel}
-                    </div>
-                    <div className={`text-xl font-bold text-${methodColor}-900`}>
-                      ${formatCentsToDollars(data.amount).toLocaleString()}
-                    </div>
-                    <div className={`text-xs text-${methodColor}-600`}>
-                      {data.count} payments
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })()}
 
       {/* Selected Payments Summary */}
       {selectedPayments.size > 0 && (() => {
