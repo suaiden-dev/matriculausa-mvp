@@ -1903,15 +1903,20 @@
       "paymentStatus": {
         "title": "Estado del Pago",
         "applicationFee": "Tarifa de Aplicación",
+        "applicationFeeDescription": "Requerido para procesar la aplicación",
         "scholarshipFee": "Tarifa de la Beca",
+        "scholarshipFeeDescription": "Paso final para asegurar tu lugar",
         "paid": "Pagado",
         "payApplicationFee": "Pagar Tarifa de Aplicación",
         "payScholarshipFee": "Pagar Tarifa de la Beca",
+        "paymentCompleted": "Pago Completado",
         "uploading": "Subiendo...",
         "uploadDocument": "Subir Documento",
         "selected": "Seleccionado:"
       },
       "documents": {
+        "title": "Documentos",
+        "statusText": "Todos los documentos enviados y verificados",
         "checklist": "Lista de Verificación de Documentos",
         "passport": "Pasaporte",
         "highSchoolDiploma": "Diploma de Secundaria",
@@ -2037,6 +2042,20 @@
       },
       "rejectedApplication": {
         "reason": "Motivo:"
+      },
+      "statusDetails": {
+        "title": "Detalles del Estado"
+      },
+      "status": {
+        "applicationNotSelected": "Aplicación No Seleccionada",
+        "applied": "Aplicado",
+        "complete": "Completado",
+        "inProgress": "En Progreso"
+      },
+      "general": {
+        "value": "Valor",
+        "annualValue": "Valor Anual",
+        "accessYourApplication": "Accede a tu Aplicación"
       }
     },
     "applicationChatPage": {
@@ -3167,6 +3186,10 @@
       "stripe": {
         "title": "Stripe",
         "description": "Paga de forma segura con tarjeta de crédito o débito"
+      },
+      "pix": {
+        "title": "PIX",
+        "description": "Sistema de pago instantáneo brasileño"
       },
       "zelle": {
         "title": "Zelle",

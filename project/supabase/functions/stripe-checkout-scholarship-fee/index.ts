@@ -26,9 +26,14 @@ function corsResponse(body: string | object | null, status = 200) {
 
 Deno.serve(async (req) => {
   try {
+    console.log('[stripe-checkout-scholarship-fee] 🚀 Function invoked');
+    
     if (req.method === 'OPTIONS') {
+      console.log('[stripe-checkout-scholarship-fee] 🔧 Handling OPTIONS request');
       return corsResponse(null, 204);
     }
+
+    console.log('[stripe-checkout-scholarship-fee] 📥 Processing POST request');
 
     // Obter configuração do Stripe baseada no ambiente detectado
     const config = getStripeConfig(req);
@@ -44,10 +49,20 @@ Deno.serve(async (req) => {
     console.log(`🔧 Using Stripe in ${config.environment.environment} mode`);
 
     // scholarships_ids pode vir como array (frontend envia string[])
-    const { price_id, success_url, cancel_url, mode, metadata, scholarships_ids, amount, payment_method } = await req.json();
+    let requestBody;
+    try {
+      requestBody = await req.json();
+      console.log('[stripe-checkout-scholarship-fee] 📋 Request body received:', JSON.stringify(requestBody, null, 2));
+    } catch (parseError) {
+      console.error('[stripe-checkout-scholarship-fee] ❌ Error parsing request body:', parseError);
+      return corsResponse({ error: 'Invalid JSON in request body' }, 400);
+    }
+
+    const { price_id, success_url, cancel_url, mode, metadata, scholarships_ids, amount, payment_method } = requestBody;
     
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
+      console.error('[stripe-checkout-scholarship-fee] ❌ No authorization header');
       return corsResponse({ error: 'No authorization header' }, 401);
     }
 
@@ -55,10 +70,12 @@ Deno.serve(async (req) => {
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     
     if (authError || !user) {
+      console.error('[stripe-checkout-scholarship-fee] ❌ Invalid token:', authError);
       return corsResponse({ error: 'Invalid token' }, 401);
     }
 
-    console.log('[stripe-checkout-scholarship-fee] Received payload:', { price_id, success_url, cancel_url, mode, metadata });
+    console.log('[stripe-checkout-scholarship-fee] ✅ User authenticated:', user.id);
+    console.log('[stripe-checkout-scholarship-fee] 📋 Payload validation:', { price_id, success_url, cancel_url, mode, amount, payment_method });
 
     // Buscar taxas do pacote do usuário
     type UserPackageFees = {
@@ -248,7 +265,16 @@ Deno.serve(async (req) => {
 
     return corsResponse({ session_url: session.url }, 200);
   } catch (error) {
-    console.error('Checkout error:', error);
-    return corsResponse({ error: 'Internal server error' }, 500);
+    console.error('[stripe-checkout-scholarship-fee] ❌ Checkout error:', error);
+    console.error('[stripe-checkout-scholarship-fee] ❌ Error details:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    });
+    return corsResponse({ 
+      error: 'Internal server error', 
+      details: error.message,
+      timestamp: new Date().toISOString()
+    }, 500);
   }
 }); 

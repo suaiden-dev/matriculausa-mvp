@@ -29,7 +29,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                        location.pathname.includes('/microsoft') ||
                        location.pathname.includes('/email/inbox') ||
                        location.pathname.includes('/inbox') ||
-                       location.pathname === '/smart-assistant';
+                       location.pathname === '/smart-assistant' ||
+                       location.pathname.includes('/applications');
   
   // Debug log
   console.log('🔍 Layout Debug:', {
