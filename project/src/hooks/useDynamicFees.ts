@@ -24,10 +24,6 @@ export const useDynamicFees = (): DynamicFeeValues => {
   // Pacotes dinâmicos descontinuados com nova estrutura de preços
 
   return useMemo(() => {
-    console.log('🔍 [useDynamicFees] systemType:', systemType);
-    console.log('🔍 [useDynamicFees] simplifiedFeesLoading:', simplifiedFeesLoading);
-    console.log('🔍 [useDynamicFees] feeLoading:', feeLoading);
-    console.log('🔍 [useDynamicFees] fee350:', fee350, 'fee550:', fee550, 'fee900:', fee900);
     
     // Para sistema simplificado, usar valores fixos (PRIORIDADE MÁXIMA)
     if (systemType === 'simplified') {
@@ -46,7 +42,6 @@ export const useDynamicFees = (): DynamicFeeValues => {
         };
       }
       
-      console.log('✅ [useDynamicFees] Usando valores do sistema simplificado:', { fee350, fee550, fee900 });
       return {
         selectionProcessFee: `$${fee350.toFixed(2)}`,
         scholarshipFee: `$${fee550.toFixed(2)}`,
@@ -60,7 +55,6 @@ export const useDynamicFees = (): DynamicFeeValues => {
 
     // Para sistema legacy, aguardar carregamento das taxas
     if (feeLoading) {
-      console.log('⏳ [useDynamicFees] Sistema legacy carregando, aguardando...');
       // Retornar valores undefined para indicar que ainda está carregando
       return {
         selectionProcessFee: undefined as any,
@@ -74,7 +68,6 @@ export const useDynamicFees = (): DynamicFeeValues => {
     }
 
     // Calcular valores usando lógica de overrides (SISTEMA LEGACY)
-    console.log('🔍 [useDynamicFees] Usando lógica do sistema legacy');
     const baseScholarship = Number(getFeeAmount('scholarship_fee'));
     const baseI20 = Number(getFeeAmount('i20_control_fee'));
 

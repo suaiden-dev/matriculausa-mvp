@@ -3,13 +3,15 @@ import Header from './Header';
 import Footer from './Footer';
 import { useLocation } from 'react-router-dom';
 import SmartChat from './SmartChat';
+import { ModalProvider, useModal } from '../contexts/ModalContext';
 
 interface LayoutProps {
   children: React.ReactNode;
 }
 
-const Layout: React.FC<LayoutProps> = ({ children }) => {
+const LayoutContent: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation();
+  const { isModalOpen } = useModal();
   
   console.log('[Layout] 🔍 Layout renderizado - pathname:', location.pathname, 'Timestamp:', new Date().toISOString());
   
@@ -24,17 +26,20 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const isAdmin = location.pathname.startsWith('/admin');
   const isStudentChatPage = location.pathname.startsWith('/student/dashboard/chat');
   
-  // Esconder SmartChat apenas na página do inbox
+  // Esconder SmartChat apenas na página do inbox OU quando modal está aberto
   const hideSmartChat = location.pathname.includes('/microsoft-inbox') || 
                        location.pathname.includes('/microsoft') ||
                        location.pathname.includes('/email/inbox') ||
                        location.pathname.includes('/inbox') ||
-                       location.pathname === '/smart-assistant';
+                       location.pathname === '/smart-assistant' ||
+                       location.pathname.includes('/applications') ||
+                       isModalOpen; // 🎯 NOVA CONDIÇÃO: esconder quando modal está aberto
   
   // Debug log
   console.log('🔍 Layout Debug:', {
     pathname: location.pathname,
     hideSmartChat,
+    isModalOpen,
     shouldShow: !isAdmin && !hideSmartChat
   });
 
@@ -53,6 +58,14 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       </main>
       {!hideFooter && <Footer />}
     </div>
+  );
+};
+
+const Layout: React.FC<LayoutProps> = ({ children }) => {
+  return (
+    <ModalProvider>
+      <LayoutContent>{children}</LayoutContent>
+    </ModalProvider>
   );
 };
 
