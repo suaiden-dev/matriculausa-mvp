@@ -447,7 +447,7 @@ const StudentApplicationsView: React.FC = () => {
           // Se não há aplicação locked, deixar campo scholarship vazio
         }
 
-        return {
+        const studentRecord = {
           student_id: student.id,
           user_id: student.user_id,
           student_name: student.full_name || 'N/A',
@@ -477,6 +477,9 @@ const StudentApplicationsView: React.FC = () => {
           // Guardar todas as aplicações para o modal
           all_applications: student.scholarship_applications || []
         };
+        
+        
+        return studentRecord;
       }) || [];
 
       setStudents(formattedData);

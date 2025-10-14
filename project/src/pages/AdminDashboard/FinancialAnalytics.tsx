@@ -55,6 +55,8 @@ interface FinancialMetrics {
   totalStudents: number;
   pendingPayouts: number;
   completedPayouts: number;
+  universityPayouts: number;
+  affiliatePayouts: number;
 }
 
 interface RevenueData {
@@ -78,12 +80,6 @@ interface FeeTypeData {
   percentage: number;
 }
 
-interface UniversityRevenueData {
-  university: string;
-  revenue: number;
-  students: number;
-  conversionRate: number;
-}
 
 const FinancialAnalytics: React.FC = () => {
   const { user } = useAuth();
@@ -102,13 +98,14 @@ const FinancialAnalytics: React.FC = () => {
     averageTransactionValue: 0,
     totalStudents: 0,
     pendingPayouts: 0,
-    completedPayouts: 0
+    completedPayouts: 0,
+    universityPayouts: 0,
+    affiliatePayouts: 0
   });
 
   const [revenueData, setRevenueData] = useState<RevenueData[]>([]);
   const [paymentMethodData, setPaymentMethodData] = useState<PaymentMethodData[]>([]);
   const [feeTypeData, setFeeTypeData] = useState<FeeTypeData[]>([]);
-  const [universityData, setUniversityData] = useState<UniversityRevenueData[]>([]);
 
   // Filtros de período
   const [timeFilter, setTimeFilter] = useState<'7d' | '30d' | '90d' | '1y' | 'all'>('30d');
@@ -217,7 +214,6 @@ const FinancialAnalytics: React.FC = () => {
   const loadFinancialData = async () => {
     try {
       setLoading(true);
-      console.log('🔍 Loading financial analytics data...');
 
       const { start: startDate, end: endDate } = getDateRange();
       // Período anterior de mesmo tamanho
@@ -255,9 +251,8 @@ const FinancialAnalytics: React.FC = () => {
               name
             )
           )
-        `)
-        .gte('created_at', startDate.toISOString())
-        .lte('created_at', endDate.toISOString());
+        `);
+        // Removido filtro de período para igualar Payment Management
 
       if (appsError) throw appsError;
 
@@ -331,13 +326,91 @@ const FinancialAnalytics: React.FC = () => {
           i20_control_fee_payment_method
         `)
         .eq('role', 'student')
-        .or('has_paid_selection_process_fee.eq.true,is_application_fee_paid.eq.true,is_scholarship_fee_paid.eq.true,has_paid_i20_control_fee.eq.true')
-        .gte('created_at', startDate.toISOString())
-        .lte('created_at', endDate.toISOString());
+        .or('has_paid_selection_process_fee.eq.true,is_application_fee_paid.eq.true,is_scholarship_fee_paid.eq.true,has_paid_i20_control_fee.eq.true');
+        // Removido filtro de período para igualar Payment Management
       
       if (stripeError) throw stripeError;
 
-      // Busca global segura (evita 400): seleciona tudo e filtra no cliente
+      // Filtrar apenas usuários que NÃO têm aplicação (igual ao Payment Management)
+      const applicationUserIds = applications?.map(app => app.user_profiles?.user_id).filter(Boolean) || [];
+      const filteredStripeUsers = stripeUsers?.filter((user: any) => !applicationUserIds.includes(user.user_id)) || [];
+
+      // Buscar overrides de taxas para todos os usuários (igual ao Payment Management)
+      const allUserIds = [
+        ...(applications?.map(app => app.user_profiles?.user_id).filter(Boolean) || []),
+        ...(zellePayments?.map(payment => payment.user_id).filter(Boolean) || []),
+        ...(filteredStripeUsers?.map(user => user.user_id).filter(Boolean) || [])
+      ];
+      const uniqueUserIds = [...new Set(allUserIds)];
+      
+      let overridesMap: { [key: string]: any } = {};
+      if (uniqueUserIds.length > 0) {
+        const overrideEntries = await Promise.allSettled(
+          uniqueUserIds.map(async (userId) => {
+            const { data, error } = await supabase.rpc('get_user_fee_overrides', { target_user_id: userId });
+            return { userId, data: error ? null : data };
+          })
+        );
+        
+        overridesMap = overrideEntries.reduce((acc: { [key: string]: any }, res) => {
+          if (res.status === 'fulfilled') {
+            const { userId, data } = res.value;
+            if (data) {
+              acc[userId] = {
+                selection_process_fee: data.selection_process_fee != null ? Number(data.selection_process_fee) : undefined,
+                application_fee: data.application_fee != null ? Number(data.application_fee) : undefined,
+                scholarship_fee: data.scholarship_fee != null ? Number(data.scholarship_fee) : undefined,
+                i20_control_fee: data.i20_control_fee != null ? Number(data.i20_control_fee) : undefined,
+              };
+            }
+          }
+          return acc;
+        }, {});
+      }
+
+      // Buscar system_type de todos os usuários (igual ao Payment Management)
+      let userSystemTypesMap = new Map<string, string>();
+      if (uniqueUserIds.length > 0) {
+        const { data: systemTypes, error: systemTypesError } = await supabase
+          .from('user_profiles')
+          .select('user_id, system_type')
+          .in('user_id', uniqueUserIds);
+
+        if (systemTypesError) {
+          console.warn('⚠️ Erro ao buscar system_type:', systemTypesError);
+        } else {
+          systemTypes?.forEach(st => {
+            userSystemTypesMap.set(st.user_id, st.system_type || 'legacy');
+          });
+        }
+      }
+
+      // Buscar valores reais de pagamento da tabela affiliate_referrals (igual ao Payment Management)
+      const batchSize = 50;
+      let allAffiliateReferrals: any[] = [];
+      
+      for (let i = 0; i < uniqueUserIds.length; i += batchSize) {
+        const batch = uniqueUserIds.slice(i, i + batchSize);
+        
+        const { data: batchData, error: batchError } = await supabase
+          .from('affiliate_referrals')
+          .select('referred_id, payment_amount')
+          .in('referred_id', batch);
+
+        if (batchError) {
+          console.warn(`⚠️ Erro ao buscar lote ${Math.floor(i/batchSize) + 1}:`, batchError);
+        } else {
+          if (batchData) {
+            allAffiliateReferrals = allAffiliateReferrals.concat(batchData);
+          }
+        }
+      }
+
+      // Criar mapa de valores reais por user_id
+      const realPaymentAmounts = new Map<string, number>();
+      allAffiliateReferrals?.forEach(ar => {
+        realPaymentAmounts.set(ar.referred_id, ar.payment_amount);
+      });
 
       // 3. Buscar requisições de pagamento universitário (primeiro tenta payout, depois payment)
       let universityRequests: any[] | null = null;
@@ -378,7 +451,11 @@ const FinancialAnalytics: React.FC = () => {
         zellePaymentsPrev || [],
         // globais
         allStudents || [],
-        stripeUsers || []
+        filteredStripeUsers || [],
+        // novos parâmetros do Payment Management
+        overridesMap,
+        userSystemTypesMap,
+        realPaymentAmounts
       );
 
     } catch (error) {
@@ -398,9 +475,11 @@ const FinancialAnalytics: React.FC = () => {
     applicationsPrev: any[],
     zellePaymentsPrev: any[],
     allStudents: any[],
-    stripeUsers: any[]
+    stripeUsers: any[],
+    overridesMap: { [key: string]: any },
+    userSystemTypesMap: Map<string, string>,
+    realPaymentAmounts: Map<string, number>
   ) => {
-    console.log('📊 Processing financial data...');
 
     // Criar registros de pagamento apenas para taxas que foram realmente pagas (igual ao PaymentManagement)
     const paymentRecords: any[] = [];
@@ -430,52 +509,36 @@ const FinancialAnalytics: React.FC = () => {
       packageDataMap[pkg.id] = pkg;
     });
 
-    // Buscar overrides de taxas para todos os usuários (igual ao PaymentManagement)
-    const allUserIds = [
-      ...(applications?.map(app => app.user_profiles?.user_id).filter(Boolean) || []),
-      ...(zellePayments?.map(payment => payment.user_profiles?.user_id).filter(Boolean) || []),
-      ...(stripeUsers?.map(user => user.user_id).filter(Boolean) || [])
-    ];
-    const uniqueUserIds = [...new Set(allUserIds)];
-    
-    let overridesMap: { [key: string]: any } = {};
-    if (uniqueUserIds.length > 0) {
-      const overrideEntries = await Promise.allSettled(
-        uniqueUserIds.map(async (userId) => {
-          const { data, error } = await supabase.rpc('get_user_fee_overrides', { target_user_id: userId });
-          return { userId, data: error ? null : data };
-        })
-      );
-      
-      overridesMap = overrideEntries.reduce((acc: { [key: string]: any }, res) => {
-        if (res.status === 'fulfilled') {
-          const { userId, data } = res.value;
-          if (data) {
-            acc[userId] = {
-              selection_process_fee: data.selection_process_fee != null ? Number(data.selection_process_fee) : undefined,
-              application_fee: data.application_fee != null ? Number(data.application_fee) : undefined,
-              scholarship_fee: data.scholarship_fee != null ? Number(data.scholarship_fee) : undefined,
-              i20_control_fee: data.i20_control_fee != null ? Number(data.i20_control_fee) : undefined,
-            };
-          }
-        }
-        return acc;
-      }, {});
-    }
 
     // Mapas para evitar duplicação de taxas globais (selection_process, i20_control e application_fee)
     const globalFeesProcessed: { [userId: string]: { selection_process: boolean; i20_control: boolean; application_fee: boolean } } = {};
 
-    // Processar aplicações - criar registros apenas para taxas pagas (igual ao PaymentManagement)
-    applications.forEach((app: any) => {
+    // Processar aplicações de bolsa (igual ao Payment Management)
+    applications?.forEach((app: any) => {
       const student = app.user_profiles;
       const scholarship = app.scholarships;
       const university = scholarship?.universities;
 
-      if (!student || !scholarship || !university) return;
+      // Verificar se o usuário já foi processado via Stripe (para evitar duplicação)
+      const hasStripePayment = stripeUsers?.some(stripeUser => 
+        stripeUser.user_id === student?.user_id
+      );
 
-      // Pular aplicações da "Current Students Scholarship" pois foram matriculadas diretamente
-      if (scholarship.title === 'Current Students Scholarship') {
+      if (hasStripePayment) {
+        return;
+      }
+
+      if (!student || !scholarship || !university) {
+        return;
+      }
+
+      // Verificar se os dados essenciais existem
+      const studentName = student.full_name || 'Unknown Student';
+      const studentEmail = student.email || '';
+      const universityName = university.name || 'Unknown University';
+      const scholarshipTitle = scholarship.title || 'Unknown Scholarship';
+
+      if (!studentName || !universityName) {
         return;
       }
 
@@ -490,73 +553,82 @@ const FinancialAnalytics: React.FC = () => {
       }
       universityRevenue[universityKey].students++;
 
-      // Obter valores dinâmicos do pacote ou usar valores padrão (igual ao PaymentManagement)
-      const packageData = packageDataMap[student?.scholarship_package_id];
+      // Obter valores dinâmicos do pacote + dependentes ou usar valores padrão + dependentes
       const dependents = Number(student?.dependents) || 0;
-      const dependentCostDollars = dependents * 150; // $150 por dependente somente Selection Process (em dólares)
-      
-      // Buscar override do usuário
+      const dependentCost = dependents * 150; // $150 por dependente apenas para Selection Process (em centavos)
       const userOverrides = overridesMap[student?.user_id] || {};
       
-      // Selection Process Fee - prioridade: override > pacote > padrão
+      // Selection Process Fee - prioridade: valor real > override > system_type + dependents > default
       let selectionProcessFee: number;
-      if (userOverrides.selection_process_fee !== undefined) {
-        selectionProcessFee = toCents(userOverrides.selection_process_fee);
-      } else if (packageData?.selection_process_fee != null) {
-        selectionProcessFee = toCents((packageData.selection_process_fee || 0) + dependentCostDollars);
+      const realAmount = realPaymentAmounts.get(student?.user_id);
+      
+      if (realAmount !== undefined) {
+        // Usar valor real pago (já em dólares, converter para centavos)
+        selectionProcessFee = Math.round(realAmount * 100);
+      } else if (userOverrides.selection_process_fee !== undefined) {
+        // Se há override, usar exatamente o valor do override (já inclui dependentes se necessário)
+        selectionProcessFee = Math.round(userOverrides.selection_process_fee * 100);
       } else {
-        selectionProcessFee = toCents((getFeeAmount('selection_process') || 0) + dependentCostDollars);
+        // Usar system_type para determinar valor base
+        const systemType = userSystemTypesMap.get(student.user_id) || 'legacy';
+        const baseAmount = systemType === 'simplified' ? 350 : 400;
+        selectionProcessFee = Math.round((baseAmount + dependentCost) * 100);
       }
       
-      // I-20 Control Fee - prioridade: override > pacote > padrão (sem dependentes)
+      // I-20 Control Fee - prioridade: valor real > override > default (sem dependentes)
       let i20ControlFee: number;
-      if (userOverrides.i20_control_fee !== undefined) {
-        i20ControlFee = toCents(userOverrides.i20_control_fee);
-      } else if (packageData?.i20_control_fee != null) {
-        i20ControlFee = toCents(packageData.i20_control_fee);
+      const realI20Amount = realPaymentAmounts.get(student?.user_id);
+      
+      if (realI20Amount !== undefined) {
+        // Usar valor real pago (já em dólares, converter para centavos)
+        i20ControlFee = Math.round(realI20Amount * 100);
+      } else if (userOverrides.i20_control_fee !== undefined) {
+        i20ControlFee = Math.round(userOverrides.i20_control_fee * 100);
       } else {
-        i20ControlFee = toCents(getFeeAmount('i20_control_fee'));
+        i20ControlFee = Math.round(getFeeAmount('i20_control_fee') * 100);
       }
       
-      // Scholarship Fee - prioridade: override > pacote > padrão (sem dependentes)
+      // Scholarship Fee - prioridade: override > system_type > default
       let scholarshipFee: number;
       if (userOverrides.scholarship_fee !== undefined) {
-        scholarshipFee = toCents(userOverrides.scholarship_fee);
-      } else if (packageData?.scholarship_fee != null) {
-        scholarshipFee = toCents(packageData.scholarship_fee);
+        scholarshipFee = Math.round(userOverrides.scholarship_fee * 100);
       } else {
-        scholarshipFee = toCents(getFeeAmount('scholarship_fee'));
+        // Usar system_type para determinar valor
+        const systemType = userSystemTypesMap.get(student.user_id) || 'legacy';
+        const amount = systemType === 'simplified' ? 550 : 900;
+        scholarshipFee = Math.round(amount * 100);
       }
       
       // Application Fee dinâmico baseado na bolsa específica
       let applicationFee: number;
-      if (app.scholarships?.application_fee_amount) {
-        const rawValue = parseFloat(app.scholarships.application_fee_amount);
+      if (scholarship?.application_fee_amount) {
+        const rawValue = parseFloat(scholarship.application_fee_amount);
+        // Detectar se o valor já está em centavos (valores muito altos) ou em dólares
         if (rawValue > 1000) {
+          // Valor já está em centavos, usar diretamente
           applicationFee = Math.round(rawValue);
         } else {
+          // Valor está em dólares, converter para centavos
           applicationFee = Math.round(rawValue * 100);
         }
-        console.log(`🔍 [FA] Application fee from scholarship for ${student.full_name}: $${rawValue} -> ${applicationFee} cents`);
       } else {
-        applicationFee = toCents(getFeeAmount('application_fee'));
-        console.log(`🔍 [FA] Application fee from getFeeAmount for ${student.full_name}: $${getFeeAmount('application_fee')} -> ${applicationFee} cents`);
+        // Fallback para valor padrão do sistema (converter dólares para centavos)
+        applicationFee = Math.round(getFeeAmount('application_fee') * 100);
       }
 
-      // Criar registros apenas para taxas que foram pagas (igual ao PaymentManagement)
+      // Criar registros apenas para taxas que foram pagas
       // Selection Process Fee - apenas uma vez por usuário (taxa global)
       if (student.has_paid_selection_process_fee && !globalFeesProcessed[student.user_id]?.selection_process) {
-        console.log(`✅ [FA] Creating selection_process record for ${student.full_name}: $${(selectionProcessFee / 100).toFixed(2)}`);
         paymentRecords.push({
           id: `${student.user_id}-selection`,
           fee_type: 'selection_process',
           amount: selectionProcessFee,
           status: 'paid',
           payment_method: student.selection_process_fee_payment_method || 'manual',
-          student_name: student.full_name,
-          student_email: student.email,
-          university_name: university.name,
-          created_at: student.created_at || app.created_at
+          student_name: studentName,
+          student_email: studentEmail,
+          university_name: universityName,
+          created_at: app.created_at
         });
         
         // Marcar como processado para este usuário
@@ -568,17 +640,16 @@ const FinancialAnalytics: React.FC = () => {
 
       // Application Fee - apenas uma vez por usuário (taxa global)
       if (app.is_application_fee_paid && !globalFeesProcessed[student.user_id]?.application_fee) {
-        console.log(`✅ [FA] Creating application record for ${student.full_name}: $${(applicationFee / 100).toFixed(2)}`);
         paymentRecords.push({
           id: `${student.user_id}-application`,
           fee_type: 'application',
           amount: applicationFee,
           status: 'paid',
           payment_method: app.application_fee_payment_method || 'manual',
-          student_name: student.full_name,
-          student_email: student.email,
-          university_name: university.name,
-          created_at: student.created_at || app.created_at
+          student_name: studentName,
+          student_email: studentEmail,
+          university_name: universityName,
+          created_at: app.created_at
         });
         
         // Marcar como processado para este usuário
@@ -588,34 +659,33 @@ const FinancialAnalytics: React.FC = () => {
         globalFeesProcessed[student.user_id].application_fee = true;
       }
 
-      if (app.is_scholarship_fee_paid) {
-        console.log(`✅ [FA] Creating scholarship record for ${student.full_name}: $${(scholarshipFee / 100).toFixed(2)}`);
+      // Scholarship Fee - criar apenas se foi paga E não for da bolsa "Current Students Scholarship"
+      if (app.is_scholarship_fee_paid && scholarship.id !== '31c9b8e6-af11-4462-8494-c79854f3f66e') {
         paymentRecords.push({
           id: `${app.id}-scholarship`,
           fee_type: 'scholarship',
           amount: scholarshipFee,
           status: 'paid',
           payment_method: app.scholarship_fee_payment_method || 'manual',
-          student_name: student.full_name,
-          student_email: student.email,
-          university_name: university.name,
-          created_at: student.created_at || app.created_at
+          student_name: studentName,
+          student_email: studentEmail,
+          university_name: universityName,
+          created_at: app.created_at
         });
       }
 
       // I-20 Control Fee - apenas uma vez por usuário (taxa global)
       if (student.has_paid_i20_control_fee && !globalFeesProcessed[student.user_id]?.i20_control) {
-        console.log(`✅ [FA] Creating i20_control_fee record for ${student.full_name}: $${(i20ControlFee / 100).toFixed(2)}`);
         paymentRecords.push({
           id: `${student.user_id}-i20`,
           fee_type: 'i20_control_fee',
           amount: i20ControlFee,
           status: 'paid',
           payment_method: student.i20_control_fee_payment_method || 'manual',
-          student_name: student.full_name,
-          student_email: student.email,
-          university_name: university.name,
-          created_at: student.created_at || app.created_at
+          student_name: studentName,
+          student_email: studentEmail,
+          university_name: universityName,
+          created_at: app.created_at
         });
         
         // Marcar como processado para este usuário
@@ -626,7 +696,8 @@ const FinancialAnalytics: React.FC = () => {
       }
     });
 
-    // Processar pagamentos Zelle aprovados (apenas para usuários sem aplicação)
+    // Processar pagamentos Zelle (apenas para usuários sem aplicação) - igual ao Payment Management
+    // Agrupar pagamentos Zelle por usuário para evitar duplicação
     const zellePaymentsByUser: { [userId: string]: any[] } = {};
     zellePayments?.forEach((zellePayment: any) => {
       const student = zellePayment.user_profiles;
@@ -638,12 +709,22 @@ const FinancialAnalytics: React.FC = () => {
       }
     });
 
+    // Processar cada usuário apenas uma vez
     Object.keys(zellePaymentsByUser).forEach(userId => {
       const userZellePayments = zellePaymentsByUser[userId];
       const firstPayment = userZellePayments[0];
       const student = firstPayment.user_profiles;
 
-      if (!student) return;
+      if (!student) {
+        return;
+      }
+
+      const studentName = student.full_name || 'Unknown Student';
+      const studentEmail = student.email || '';
+
+      if (!studentName) {
+        return;
+      }
 
       // Verificar se o usuário já tem uma aplicação (para evitar duplicação)
       const hasApplication = applications?.some(app => 
@@ -651,12 +732,12 @@ const FinancialAnalytics: React.FC = () => {
       );
 
       if (hasApplication) {
-        console.log('⚠️ Skipping Zelle payment for', student.full_name, '- user already has application');
         return;
       }
 
       // Verificar quais taxas foram pagas via Zelle
       const paidFeeTypes = new Set(userZellePayments.map(payment => {
+        // Mapear fee_type para fee_type_global quando necessário
         if (payment.fee_type === 'application_fee') return 'application';
         if (payment.fee_type === 'selection_process_fee') return 'selection_process';
         if (payment.fee_type === 'scholarship_fee') return 'scholarship';
@@ -683,8 +764,8 @@ const FinancialAnalytics: React.FC = () => {
               amount: Math.round(parseFloat(payment.amount) * 100),
               status: 'paid',
               payment_method: 'zelle',
-              student_name: student.full_name,
-              student_email: student.email,
+              student_name: studentName,
+              student_email: studentEmail,
               university_name: 'No University Selected',
               created_at: payment.created_at
             });
@@ -693,13 +774,14 @@ const FinancialAnalytics: React.FC = () => {
       });
     });
 
-    // Processar usuários Stripe (apenas para usuários sem aplicação e sem Zelle)
+    // Processar usuários Stripe (apenas para usuários sem aplicação) - igual ao Payment Management
     stripeUsers?.forEach((stripeUser: any) => {
-      const packageData = packageDataMap[stripeUser.scholarship_package_id];
       const studentName = stripeUser.full_name || 'Unknown Student';
       const studentEmail = stripeUser.email || '';
 
-      if (!studentName) return;
+      if (!studentName) {
+        return;
+      }
 
       // Verificar se o usuário já tem uma aplicação (para evitar duplicação)
       const hasApplication = applications?.some(app => 
@@ -707,57 +789,66 @@ const FinancialAnalytics: React.FC = () => {
       );
 
       if (hasApplication) {
-        console.log('⚠️ Skipping Stripe user for', studentName, '- user already has application');
         return;
       }
 
       // Verificar se o usuário tem pagamentos Zelle
       const hasZellePayment = Object.keys(zellePaymentsByUser).includes(stripeUser.user_id);
       if (hasZellePayment) {
-        console.log('⚠️ Skipping Stripe user for', studentName, '- user has Zelle payments');
         return;
       }
 
-      // Calcular valores das taxas (igual ao PaymentManagement)
+      // Calcular valores das taxas (igual ao Payment Management)
       const dependents = Number(stripeUser?.dependents) || 0;
-      const dependentCostDollars = dependents * 150;
+      const dependentCost = dependents * 150; // $150 por dependente apenas para Selection Process (em centavos)
       const userOverrides = overridesMap[stripeUser?.user_id] || {};
       
-
-      
+      // Selection Process Fee - prioridade: valor real > override > system_type + dependents > default
       let selectionProcessFee: number;
-      if (userOverrides.selection_process_fee !== undefined) {
+      const realAmount = realPaymentAmounts.get(stripeUser?.user_id);
+      
+      if (realAmount !== undefined) {
+        // Usar valor real pago (já em dólares, converter para centavos)
+        selectionProcessFee = Math.round(realAmount * 100);
+      } else if (userOverrides.selection_process_fee !== undefined) {
+        // Se há override, usar exatamente o valor do override (já inclui dependentes se necessário)
         selectionProcessFee = Math.round(userOverrides.selection_process_fee * 100);
-      } else if (packageData?.selection_process_fee) {
-        selectionProcessFee = Math.round((packageData.selection_process_fee + dependentCostDollars) * 100);
       } else {
-        selectionProcessFee = Math.round((getFeeAmount('selection_process') + dependentCostDollars) * 100);
+        // Usar system_type para determinar valor base
+        const systemType = userSystemTypesMap.get(stripeUser.user_id) || 'legacy';
+        const baseAmount = systemType === 'simplified' ? 350 : 400;
+        selectionProcessFee = Math.round((baseAmount + dependentCost) * 100);
       }
       
+      // I-20 Control Fee - prioridade: valor real > override > default (sem dependentes)
       let i20ControlFee: number;
-      if (userOverrides.i20_control_fee !== undefined) {
+      const realI20Amount = realPaymentAmounts.get(stripeUser?.user_id);
+      
+      if (realI20Amount !== undefined) {
+        // Usar valor real pago (já em dólares, converter para centavos)
+        i20ControlFee = Math.round(realI20Amount * 100);
+      } else if (userOverrides.i20_control_fee !== undefined) {
         i20ControlFee = Math.round(userOverrides.i20_control_fee * 100);
-      } else if (packageData?.i20_control_fee) {
-        i20ControlFee = Math.round(packageData.i20_control_fee * 100);
       } else {
         i20ControlFee = Math.round(getFeeAmount('i20_control_fee') * 100);
       }
       
+      // Scholarship Fee - prioridade: override > system_type > default
       let scholarshipFee: number;
       if (userOverrides.scholarship_fee !== undefined) {
         scholarshipFee = Math.round(userOverrides.scholarship_fee * 100);
-      } else if (packageData?.scholarship_fee) {
-        scholarshipFee = Math.round(packageData.scholarship_fee * 100);
       } else {
-        scholarshipFee = Math.round(getFeeAmount('scholarship_fee') * 100);
+        // Usar system_type para determinar valor
+        const systemType = userSystemTypesMap.get(stripeUser.user_id) || 'legacy';
+        const amount = systemType === 'simplified' ? 550 : 900;
+        scholarshipFee = Math.round(amount * 100);
       }
 
       const applicationFee = Math.round(getFeeAmount('application_fee') * 100);
-      console.log(`🔍 [FA] Stripe user application fee for ${studentName}: $${getFeeAmount('application_fee')} -> ${applicationFee} cents`);
-      console.log(`📋 [FA] Processing Stripe user: ${studentName} with fees: SPF=${stripeUser.has_paid_selection_process_fee}, APP=${stripeUser.is_application_fee_paid}, SCH=${stripeUser.is_scholarship_fee_paid}, I20=${stripeUser.has_paid_i20_control_fee}`);
 
       // Criar registros apenas para taxas que foram pagas
-      if (stripeUser.has_paid_selection_process_fee) {
+      // Selection Process Fee - apenas uma vez por usuário (taxa global)
+      if (stripeUser.has_paid_selection_process_fee && !globalFeesProcessed[stripeUser.user_id]?.selection_process) {
         paymentRecords.push({
           id: `stripe-${stripeUser.id}-selection`,
           fee_type: 'selection_process',
@@ -769,9 +860,16 @@ const FinancialAnalytics: React.FC = () => {
           university_name: 'No University Selected',
           created_at: stripeUser.created_at
         });
+        
+        // Marcar como processado para este usuário
+        if (!globalFeesProcessed[stripeUser.user_id]) {
+          globalFeesProcessed[stripeUser.user_id] = { selection_process: false, i20_control: false, application_fee: false };
+        }
+        globalFeesProcessed[stripeUser.user_id].selection_process = true;
       }
 
-      if (stripeUser.is_application_fee_paid) {
+      // Application Fee - apenas uma vez por usuário (taxa global)
+      if (stripeUser.is_application_fee_paid && !globalFeesProcessed[stripeUser.user_id]?.application_fee) {
         paymentRecords.push({
           id: `stripe-${stripeUser.id}-application`,
           fee_type: 'application',
@@ -783,8 +881,15 @@ const FinancialAnalytics: React.FC = () => {
           university_name: 'No University Selected',
           created_at: stripeUser.created_at
         });
+        
+        // Marcar como processado para este usuário
+        if (!globalFeesProcessed[stripeUser.user_id]) {
+          globalFeesProcessed[stripeUser.user_id] = { selection_process: false, i20_control: false, application_fee: false };
+        }
+        globalFeesProcessed[stripeUser.user_id].application_fee = true;
       }
 
+      // Scholarship Fee - NÃO é global, pode ser paga múltiplas vezes
       if (stripeUser.is_scholarship_fee_paid) {
         paymentRecords.push({
           id: `stripe-${stripeUser.id}-scholarship`,
@@ -799,7 +904,8 @@ const FinancialAnalytics: React.FC = () => {
         });
       }
 
-      if (stripeUser.has_paid_i20_control_fee) {
+      // I-20 Control Fee - apenas uma vez por usuário (taxa global)
+      if (stripeUser.has_paid_i20_control_fee && !globalFeesProcessed[stripeUser.user_id]?.i20_control) {
         paymentRecords.push({
           id: `stripe-${stripeUser.id}-i20`,
           fee_type: 'i20_control_fee',
@@ -811,6 +917,12 @@ const FinancialAnalytics: React.FC = () => {
           university_name: 'No University Selected',
           created_at: stripeUser.created_at
         });
+        
+        // Marcar como processado para este usuário
+        if (!globalFeesProcessed[stripeUser.user_id]) {
+          globalFeesProcessed[stripeUser.user_id] = { selection_process: false, i20_control: false, application_fee: false };
+        }
+        globalFeesProcessed[stripeUser.user_id].i20_control = true;
       }
     });
 
@@ -820,8 +932,15 @@ const FinancialAnalytics: React.FC = () => {
     const paidPayments = paidRecords.length;
     const pendingPayments = totalPayments - paidPayments;
     
-    // Calcular total revenue baseado nos registros reais (igual ao PaymentManagement)
-    const totalRevenue = paidRecords.reduce((sum, p) => sum + p.amount, 0);
+    // Calcular student revenue baseado nos registros reais (igual ao PaymentManagement)
+    const studentRevenue = paidRecords.reduce((sum, p) => sum + p.amount, 0);
+    
+    // Calcular payouts separadamente (não incluídos no student revenue)
+    const universityPayouts = universityRequests.reduce((sum, req) => sum + (req.amount || 0), 0);
+    const affiliatePayouts = affiliateRequests.reduce((sum, req) => sum + (req.amount || 0), 0);
+    
+    // Total revenue agora é apenas student revenue (para igualar Payment Management)
+    const totalRevenue = studentRevenue;
     
     // Processar dados por método de pagamento
     paidRecords.forEach(record => {
@@ -868,7 +987,7 @@ const FinancialAnalytics: React.FC = () => {
 
     const totalFeeRevenue = Object.values(paymentsByFeeType).reduce((sum, fee) => sum + fee.revenue, 0);
     console.log('📊 Payment Records Count:', paymentRecords.length);
-    console.log('💰 Total Revenue (cents):', totalRevenue);
+    console.log('💰 Student Revenue (cents):', studentRevenue);
     console.log('� Total Revenue (dollars):', totalRevenue / 100);
     console.log('🔍 DEBUG: Paid records count:', paidPayments);
     console.log('🔍 DEBUG: Pending payments count:', pendingPayments);
@@ -893,17 +1012,6 @@ const FinancialAnalytics: React.FC = () => {
       revenue: data.revenue,
       percentage: totalFeeRevenue > 0 ? (data.revenue / totalFeeRevenue) * 100 : 0
     }));
-
-    // Calcular dados por universidade
-    const universityData: UniversityRevenueData[] = Object.values(universityRevenue)
-      .map(uni => ({
-        university: uni.name,
-        revenue: uni.revenue,
-        students: uni.students,
-        conversionRate: uni.students > 0 ? (uni.paidStudents / uni.students) * 100 : 0
-      }))
-      .sort((a, b) => b.revenue - a.revenue)
-      .slice(0, 10); // Top 10 universidades
 
     // Calcular dados de receita ao longo do tempo baseado nos registros de pagamento
     const revenueData: RevenueData[] = [];
@@ -972,13 +1080,14 @@ const FinancialAnalytics: React.FC = () => {
       averageTransactionValue,
       totalStudents: allStudents.length,
       pendingPayouts,
-      completedPayouts
+      completedPayouts,
+      universityPayouts,
+      affiliatePayouts
     });
 
     setRevenueData(revenueData);
     setPaymentMethodData(paymentMethodData);
     setFeeTypeData(feeTypeData);
-    setUniversityData(universityData);
 
     console.log('✅ Financial data processed successfully');
   };
@@ -1134,12 +1243,12 @@ const FinancialAnalytics: React.FC = () => {
       </div>
 
       {/* Key Metrics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Total Revenue */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6">
+        {/* Student Revenue */}
         <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-6 text-white">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-blue-100 text-sm font-medium">Total Revenue</p>
+              <p className="text-blue-100 text-sm font-medium">Student Revenue</p>
               <p className="text-2xl font-bold">${formatCentsToUSD(metrics.totalRevenue)}</p>
               <div className="flex items-center mt-2">
                 {metrics.revenueGrowth >= 0 ? (
@@ -1182,6 +1291,38 @@ const FinancialAnalytics: React.FC = () => {
               
             </div>
             <CreditCard size={32} className="text-purple-200" />
+          </div>
+        </div>
+
+        {/* University Payouts */}
+        <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl p-6 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-orange-100 text-sm font-medium">University Payouts</p>
+              <p className="text-2xl font-bold">${formatCentsToUSD(metrics.universityPayouts || 0)}</p>
+              <div className="flex items-center mt-2">
+                <span className="text-sm text-orange-100">
+                  {metrics.pendingPayouts} pending
+                </span>
+              </div>
+            </div>
+            <Users size={32} className="text-orange-200" />
+          </div>
+        </div>
+
+        {/* Affiliate Payouts */}
+        <div className="bg-gradient-to-r from-teal-500 to-teal-600 rounded-xl p-6 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-teal-100 text-sm font-medium">Affiliate Payouts</p>
+              <p className="text-2xl font-bold">${formatCentsToUSD(metrics.affiliatePayouts || 0)}</p>
+              <div className="flex items-center mt-2">
+                <span className="text-sm text-teal-100">
+                  {metrics.completedPayouts} completed
+                </span>
+              </div>
+            </div>
+            <TrendingUp size={32} className="text-teal-200" />
           </div>
         </div>
 
@@ -1291,57 +1432,6 @@ const FinancialAnalytics: React.FC = () => {
         </div>
       </div>
 
-      {/* Top Universities by Revenue */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2">
-          <TrendingUp className="h-5 w-5" />
-          Top Universities by Revenue
-        </h2>
-        
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">University</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Students</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Revenue</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Conversion Rate</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {universityData.map((uni, index) => (
-                <tr key={uni.university} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0 h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center">
-                        <span className="text-sm font-medium text-blue-600">#{index + 1}</span>
-                      </div>
-                      <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">{uni.university}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {uni.students}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    ${formatCentsToUSD(uni.revenue)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      uni.conversionRate >= 70 ? 'bg-green-100 text-green-800' :
-                      uni.conversionRate >= 50 ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-red-100 text-red-800'
-                    }`}>
-                      {uni.conversionRate.toFixed(1)}%
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
 
       
     </div>
