@@ -24,7 +24,9 @@ import {
   Clock,
   CheckCircle2,
   Shield,
-  MessageSquare
+  MessageSquare,
+  Calculator,
+  CheckSquare
 } from 'lucide-react';
 import DocumentViewerModal from '../../components/DocumentViewerModal';
 import ZellePaymentReviewModal from '../../components/ZellePaymentReviewModal';
@@ -288,6 +290,10 @@ const PaymentManagement = (): React.JSX.Element => {
   const [selectedPayment, setSelectedPayment] = useState<PaymentRecord | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
+  
+  // Estados para seleção de linhas e cálculos
+  const [selectedPayments, setSelectedPayments] = useState<Set<string>>(new Set());
+  const [selectAll, setSelectAll] = useState(false);
 
   // Estados para University Payment Requests
   const [activeTab, setActiveTab] = useState<'payments' | 'university-requests' | 'affiliate-requests' | 'zelle-payments'>('payments');
@@ -3013,6 +3019,77 @@ const PaymentManagement = (): React.JSX.Element => {
     setCurrentPage(1); // Reset para primeira página ao ordenar
   };
 
+  // Funções para cálculos de totais
+  const calculateFilteredTotals = () => {
+    const filteredPayments = sortedPayments;
+    const totalAmount = filteredPayments.reduce((sum, payment) => sum + payment.amount, 0);
+    
+    const breakdownByMethod = filteredPayments.reduce((acc, payment) => {
+      const method = payment.payment_method || 'manual';
+      if (!acc[method]) {
+        acc[method] = { count: 0, amount: 0 };
+      }
+      acc[method].count += 1;
+      acc[method].amount += payment.amount;
+      return acc;
+    }, {} as Record<string, { count: number; amount: number }>);
+
+    return {
+      totalAmount,
+      breakdownByMethod,
+      totalCount: filteredPayments.length
+    };
+  };
+
+  const calculateSelectedTotals = () => {
+    const selectedPaymentRecords = payments.filter(payment => selectedPayments.has(payment.id));
+    const totalAmount = selectedPaymentRecords.reduce((sum, payment) => sum + payment.amount, 0);
+    
+    const breakdownByMethod = selectedPaymentRecords.reduce((acc, payment) => {
+      const method = payment.payment_method || 'manual';
+      if (!acc[method]) {
+        acc[method] = { count: 0, amount: 0 };
+      }
+      acc[method].count += 1;
+      acc[method].amount += payment.amount;
+      return acc;
+    }, {} as Record<string, { count: number; amount: number }>);
+
+    return {
+      totalAmount,
+      breakdownByMethod,
+      totalCount: selectedPaymentRecords.length
+    };
+  };
+
+  // Funções para seleção de linhas
+  const handleSelectPayment = (paymentId: string) => {
+    const newSelected = new Set(selectedPayments);
+    if (newSelected.has(paymentId)) {
+      newSelected.delete(paymentId);
+    } else {
+      newSelected.add(paymentId);
+    }
+    setSelectedPayments(newSelected);
+    setSelectAll(newSelected.size === currentPayments.length && currentPayments.length > 0);
+  };
+
+  const handleSelectAll = () => {
+    if (selectAll) {
+      setSelectedPayments(new Set());
+      setSelectAll(false);
+    } else {
+      const allIds = new Set(currentPayments.map(payment => payment.id));
+      setSelectedPayments(allIds);
+      setSelectAll(true);
+    }
+  };
+
+  const clearSelection = () => {
+    setSelectedPayments(new Set());
+    setSelectAll(false);
+  };
+
   if (loading) {
     return (
       <div className="p-4 md:p-6">
@@ -3112,25 +3189,37 @@ const PaymentManagement = (): React.JSX.Element => {
           </div>
         </div>
 
-        <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-xl p-6 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-green-100 text-sm font-medium">Paid Payments</p>
-              <p className="text-2xl font-bold">{stats.paidPayments}</p>
-            </div>
-            <CheckCircle size={32} className="text-green-200" />
-          </div>
-        </div>
+        {(() => {
+          const filteredTotals = calculateFilteredTotals();
+          const stripeData = filteredTotals.breakdownByMethod.stripe || { count: 0, amount: 0 };
+          const zelleData = filteredTotals.breakdownByMethod.zelle || { count: 0, amount: 0 };
+          
+          return (
+            <>
+              <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-6 text-white">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-blue-100 text-sm font-medium">Stripe Payments</p>
+                    <p className="text-2xl font-bold">${formatCentsToDollars(stripeData.amount).toLocaleString()}</p>
+                    <p className="text-blue-200 text-xs">{stripeData.count} payments</p>
+                  </div>
+                  <CreditCard size={32} className="text-blue-200" />
+                </div>
+              </div>
 
-        <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl p-6 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-orange-100 text-sm font-medium">Pending Payments</p>
-              <p className="text-2xl font-bold">{stats.pendingPayments}</p>
-            </div>
-            <XCircle size={32} className="text-orange-200" />
-          </div>
-        </div>
+              <div className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl p-6 text-white">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-purple-100 text-sm font-medium">Zelle Payments</p>
+                    <p className="text-2xl font-bold">${formatCentsToDollars(zelleData.amount).toLocaleString()}</p>
+                    <p className="text-purple-200 text-xs">{zelleData.count} payments</p>
+                  </div>
+                  <CheckCircle size={32} className="text-purple-200" />
+                </div>
+              </div>
+            </>
+          );
+        })()}
 
         <div className="bg-[#05294E] rounded-xl p-6 text-white">
           <div className="flex items-center justify-between">
@@ -3142,6 +3231,66 @@ const PaymentManagement = (): React.JSX.Element => {
           </div>
         </div>
       </div>
+
+
+      {/* Selected Payments Summary */}
+      {selectedPayments.size > 0 && (() => {
+        const selectedTotals = calculateSelectedTotals();
+        return (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <CheckSquare size={20} />
+                Selected Payments Summary
+              </h2>
+              <div className="flex items-center gap-2">
+                <div className="text-sm text-gray-600">
+                  {selectedTotals.totalCount} selected
+                </div>
+                <button
+                  onClick={clearSelection}
+                  className="px-3 py-1 text-sm font-medium text-gray-600 hover:text-gray-800 transition-colors"
+                >
+                  Clear Selection
+                </button>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-green-50 rounded-lg p-4">
+                <div className="text-sm font-medium text-green-600 mb-1">Total Selected</div>
+                <div className="text-2xl font-bold text-green-900">
+                  ${formatCentsToDollars(selectedTotals.totalAmount).toLocaleString()}
+                </div>
+              </div>
+              
+              {Object.entries(selectedTotals.breakdownByMethod).map(([method, data]) => {
+                const methodLabel = method === 'manual' ? 'Outside' : 
+                                  method === 'zelle' ? 'Zelle' : 
+                                  method === 'stripe' ? 'Stripe' : 
+                                  method.charAt(0).toUpperCase() + method.slice(1);
+                const methodColor = method === 'manual' ? 'gray' : 
+                                  method === 'zelle' ? 'purple' : 
+                                  method === 'stripe' ? 'blue' : 'green';
+                
+                return (
+                  <div key={method} className={`bg-${methodColor}-50 rounded-lg p-4`}>
+                    <div className={`text-sm font-medium text-${methodColor}-600 mb-1`}>
+                      {methodLabel}
+                    </div>
+                    <div className={`text-xl font-bold text-${methodColor}-900`}>
+                      ${formatCentsToDollars(data.amount).toLocaleString()}
+                    </div>
+                    <div className={`text-xs text-${methodColor}-600`}>
+                      {data.count} payments
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Filters */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
@@ -3339,6 +3488,14 @@ const PaymentManagement = (): React.JSX.Element => {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <input
+                      type="checkbox"
+                      checked={selectAll}
+                      onChange={handleSelectAll}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                  </th>
                   <th 
                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
                     onClick={() => handleSort('student_name')}
@@ -3428,7 +3585,7 @@ const PaymentManagement = (): React.JSX.Element => {
               <tbody className="bg-white divide-y divide-gray-200">
                 {currentPayments.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-6 py-12 text-center">
+                    <td colSpan={8} className="px-6 py-12 text-center">
                       <AlertCircle className="mx-auto h-12 w-12 text-gray-400" />
                       <h3 className="mt-2 text-sm font-medium text-gray-900">No payments found</h3>
                       <p className="mt-1 text-sm text-gray-500">
@@ -3439,6 +3596,14 @@ const PaymentManagement = (): React.JSX.Element => {
                 ) : (
                   currentPayments.map((payment) => (
                     <tr key={payment.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <input
+                          type="checkbox"
+                          checked={selectedPayments.has(payment.id)}
+                          onChange={() => handleSelectPayment(payment.id)}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div className="flex-shrink-0 h-10 w-10">

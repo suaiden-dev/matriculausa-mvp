@@ -17,7 +17,8 @@ import {
   Activity,
   AlertTriangle,
   CheckCircle,
-  CreditCard
+  CreditCard,
+  DollarSign
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import AdminStudentChatNotifications from '../../components/AdminStudentChatNotifications';
@@ -50,6 +51,7 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
     const path = location.pathname;
     if (path.includes('/admin/dashboard/students')) return 'users';
     if (path.includes('/universities')) return 'universities';
+    if (path.includes('/university-financial-management')) return 'university-financial-management';
     if (path.includes('/users')) return 'users';
     if (path.includes('/scholarships')) return 'scholarships';
     if (path.includes('/payments')) return 'payments';
@@ -104,6 +106,7 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
     { id: 'users', label: 'Users', icon: Users, path: '/admin/dashboard/users', badge: null },
     { id: 'scholarships', label: 'Scholarships', icon: Award, path: '/admin/dashboard/scholarships', badge: null },
     { id: 'universities', label: 'Universities', icon: Building, path: '/admin/dashboard/universities', badge: null },
+    { id: 'university-financial-management', label: 'University Finances', icon: DollarSign, path: '/admin/dashboard/university-financial-management', badge: null },
     { id: 'payments', label: 'Payment Management', icon: CreditCard, path: '/admin/dashboard/payments', badge: null },
     { id: 'financial-analytics', label: 'Financial Analytics', icon: BarChart3, path: '/admin/dashboard/financial-analytics', badge: null },
     { id: 'affiliate-management', label: 'Affiliate Management', icon: Users, path: '/admin/dashboard/affiliate-management', badge: null },
@@ -238,6 +241,7 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
                 <h1 className="text-2xl font-bold text-slate-900">
                   {activeTab === 'overview' && 'Dashboard Overview'}
                   {activeTab === 'universities' && 'Universities'}
+                  {activeTab === 'university-financial-management' && 'University Finances'}
                   {activeTab === 'users' && 'Users'}
                   {activeTab === 'scholarships' && 'Scholarships'}
                   {activeTab === 'payments' && 'Payment Management'}
@@ -249,6 +253,7 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
                 <p className="text-slate-600">
                   {activeTab === 'overview' && 'System overview and key metrics'}
                   {activeTab === 'universities' && 'Manage university partnerships'}
+                  {activeTab === 'university-financial-management' && 'Monitor university revenues and financial data'}
                   {activeTab === 'users' && 'Manage student and user accounts'}
                   {activeTab === 'scholarships' && 'Manage scholarship programs'}
                   {activeTab === 'payments' && 'Payment processing and management'}

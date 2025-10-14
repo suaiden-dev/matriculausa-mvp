@@ -7,6 +7,7 @@ import AdminDashboardLayout from './AdminDashboardLayout';
 import Overview from './Overview';
 import UniversityManagement from './UniversityManagement';
 import UniversityDetails from './UniversityDetails';
+import UniversityFinancialManagement from './UniversityFinancialManagement';
 import UsersHub from './UsersHub';
 import ScholarshipManagement from './ScholarshipManagement';
 import PaymentManagement from './PaymentManagement';
@@ -589,6 +590,7 @@ const AdminDashboard: React.FC = () => {
         <Route path="/transfer-management" element={<AdminTransferManagement />} />
         <Route path="/transfer-settings" element={<AutoTransferSettings />} />
         <Route path="/financial-analytics" element={<FinancialAnalytics />} />
+        <Route path="/university-financial-management" element={<UniversityFinancialManagement />} />
         <Route path="/affiliate-management" element={<AffiliateManagement />} />
         <Route path="/chat" element={<AdminChatPage />} />
         <Route path="/terms" element={<TermsManagement />} />
