@@ -366,7 +366,7 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
       {isInDrawer ? (
         <DrawerFooter className="flex-row gap-2">
           <DrawerClose className="flex-1 bg-white text-gray-700 py-2.5 px-4 rounded-lg font-medium border border-gray-300 hover:bg-gray-50 transition-colors text-sm">
-            {t('common.cancel')}
+            {t('scholarshipConfirmationModal.payment.cancel')}
           </DrawerClose>
           <button
             onClick={handleProceed}
@@ -376,7 +376,7 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
             {isProcessing || submitting ? (
               <div className="flex items-center justify-center">
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                {t('common.processing')}
+                {t('scholarshipConfirmationModal.loading.processing')}
               </div>
             ) : (
               modalContent.buttonText
@@ -390,7 +390,7 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
             disabled={isProcessing || submitting}
             className="flex-1 bg-white text-gray-700 py-2.5 sm:py-3 px-4 sm:px-6 rounded-lg font-medium border border-gray-300 hover:bg-gray-50 transition-colors text-sm sm:text-base"
           >
-            {t('common.cancel')}
+            {t('scholarshipConfirmationModal.payment.cancel')}
           </button>
           
           <button
@@ -401,7 +401,7 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
             {isProcessing || submitting ? (
               <div className="flex items-center justify-center">
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                {t('common.processing')}
+                {t('scholarshipConfirmationModal.loading.processing')}
               </div>
             ) : (
               modalContent.buttonText
