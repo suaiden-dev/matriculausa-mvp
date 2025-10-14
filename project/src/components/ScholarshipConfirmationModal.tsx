@@ -1,13 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog } from '@headlessui/react';
+import { 
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerClose
+} from '@/components/ui/drawer';
 import { useNavigate } from 'react-router-dom';
-import { AlertTriangle, CreditCard, Smartphone, CheckCircle, X } from 'lucide-react';
+import { CreditCard, CheckCircle, X } from 'lucide-react';
 import { Scholarship } from '../types';
-import { formatCentsToDollars } from '../utils/currency';
 import { useFeeConfig } from '../hooks/useFeeConfig';
 import { useTranslation } from 'react-i18next';
 
-// Componente SVG para o logo do PIX (oficial)
+// Componente SVG para o logo do PIX
 const PixIcon = ({ className }: { className?: string }) => (
   <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
     <path fill="#4db6ac" d="M11.9,12h-0.68l8.04-8.04c2.62-2.61,6.86-2.61,9.48,0L36.78,12H36.1c-1.6,0-3.11,0.62-4.24,1.76l-6.8,6.77c-0.59,0.59-1.53,0.59-2.12,0l-6.8-6.77C15.01,12.62,13.5,12,11.9,12z"/>
@@ -16,7 +24,7 @@ const PixIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
-// Componente SVG para o logo do Zelle (oficial)
+// Componente SVG para o logo do Zelle
 const ZelleIcon = ({ className }: { className?: string }) => (
   <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
     <path fill="#a0f" d="M35,42H13c-3.866,0-7-3.134-7-7V13c0-3.866,3.134-7,7-7h22c3.866,0,7,3.134,7,7v22C42,38.866,38.866,42,35,42z"/>
@@ -28,22 +36,14 @@ const ZelleIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
-// Componente SVG para o logo do Stripe (baseado no ícone oficial)
-const StripeIcon = ({ className }: { className?: string }) => (
-  <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-    <rect x="2" y="4" width="20" height="16" rx="2" fill="#7950F2"/>
-    <path d="M6 8h12M6 12h8M6 16h4" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
-  </svg>
-);
-
 interface ScholarshipConfirmationModalProps {
   isOpen: boolean;
   onClose: () => void;
   scholarship: Scholarship;
   onStripeCheckout: () => void;
-  onPixCheckout?: () => void; // Nova prop para PIX
+  onPixCheckout?: () => void;
   isProcessing?: boolean;
-  feeType?: 'application_fee' | 'scholarship_fee'; // Novo prop para identificar o tipo de taxa
+  feeType?: 'application_fee' | 'scholarship_fee';
 }
 
 export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModalProps> = ({
@@ -53,14 +53,28 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
   onStripeCheckout,
   onPixCheckout,
   isProcessing = false,
-  feeType = 'application_fee' // Default para application fee
+  feeType = 'application_fee'
 }) => {
   const navigate = useNavigate();
-  const { getFeeAmount: getFeeAmountFromConfig, formatFeeAmount } = useFeeConfig();
+  const { getFeeAmount: getFeeAmountFromConfig } = useFeeConfig();
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'stripe' | 'zelle' | 'pix' | null>(null);
   const { t } = useTranslation();
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [spinnerVisible, setSpinnerVisible] = useState<boolean>(false);
+  
+  // Hook para detectar se é mobile
+  const [isMobile, setIsMobile] = useState(false);
+  
+  useEffect(() => {
+    const checkIsMobile = () => {
+      setIsMobile(window.innerWidth < 640); // sm breakpoint
+    };
+    
+    checkIsMobile();
+    window.addEventListener('resize', checkIsMobile);
+    
+    return () => window.removeEventListener('resize', checkIsMobile);
+  }, []);
 
   // Evitar flicker: só mostra spinner após pequeno atraso
   useEffect(() => {
@@ -83,7 +97,6 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
       document.body.classList.remove('modal-open');
     }
 
-    // Cleanup on unmount
     return () => {
       document.body.classList.remove('modal-open');
     };
@@ -92,18 +105,16 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
   // Valor dinâmico baseado no tipo de taxa
   const getFeeAmount = () => {
     if (feeType === 'scholarship_fee') {
-      return scholarship.scholarship_fee_amount || getFeeAmountFromConfig('scholarship_fee') * 100; // Usar valor do useFeeConfig (em centavos)
+      return scholarship.scholarship_fee_amount || getFeeAmountFromConfig('scholarship_fee');
     }
     
-    // Para application fee, usar o valor real da bolsa ou valor padrão se não existir
     let applicationFeeAmount = scholarship.application_fee_amount;
     
-    // Se não houver valor definido pela universidade, usar valor padrão
     if (!applicationFeeAmount) {
-      applicationFeeAmount = 35000; // $350.00 em centavos (valor padrão)
+      applicationFeeAmount = 350; // $350.00 (valor padrão)
     }
     
-    // Se o valor for maior que 1000, provavelmente está em centavos, converter para dólares
+    // Se o valor estiver em centavos (ex: 35000), converter para dólares
     if (applicationFeeAmount > 1000) {
       applicationFeeAmount = applicationFeeAmount / 100;
     }
@@ -112,8 +123,6 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
   };
 
   const feeAmount = getFeeAmount();
-  
-  // Nome da universidade - usa o relacionamento ou campo denormalizado
   const universityName = scholarship.universities?.name || scholarship.university_name || 'University';
 
   // Títulos e textos dinâmicos baseados no tipo de taxa
@@ -123,9 +132,7 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
         title: t('scholarshipConfirmationModal.scholarshipFee.title'),
         subtitle: t('scholarshipConfirmationModal.scholarshipFee.subtitle'),
         feeLabel: t('scholarshipConfirmationModal.scholarshipFee.feeLabel'),
-        feeDescription: t('scholarshipConfirmationModal.scholarshipFee.feeDescription'),
-        buttonText: t('scholarshipConfirmationModal.scholarshipFee.buttonText', { amount: getFeeAmountFromConfig('scholarship_fee') }),
-        warningText: t('scholarshipConfirmationModal.scholarshipFee.warningText')
+        buttonText: t('scholarshipConfirmationModal.scholarshipFee.buttonText', { amount: getFeeAmountFromConfig('scholarship_fee') })
       };
     }
     
@@ -133,9 +140,7 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
       title: t('scholarshipConfirmationModal.applicationFee.title'),
       subtitle: t('scholarshipConfirmationModal.applicationFee.subtitle'),
       feeLabel: t('scholarshipConfirmationModal.applicationFee.feeLabel'),
-      feeDescription: t('scholarshipConfirmationModal.applicationFee.feeDescription'),
-      buttonText: t('scholarshipConfirmationModal.applicationFee.buttonText', { amount: feeAmount.toFixed(2) }),
-      warningText: t('scholarshipConfirmationModal.applicationFee.warningText')
+      buttonText: t('scholarshipConfirmationModal.applicationFee.buttonText', { amount: feeAmount.toFixed(2) })
     };
   };
 
@@ -153,7 +158,6 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
       if (selectedPaymentMethod === 'stripe') {
         onStripeCheckout();
       } else if (selectedPaymentMethod === 'pix') {
-        // Para PIX, usar função específica se disponível, senão usar Stripe
         if (onPixCheckout) {
           onPixCheckout();
         } else {
@@ -166,7 +170,6 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
           scholarshipsIds: scholarship.id
         });
         
-        // Adicionar campos específicos baseados no tipo de taxa
         if (feeType === 'application_fee') {
           params.append('applicationFeeAmount', feeAmount.toString());
         } else if (feeType === 'scholarship_fee') {
@@ -184,383 +187,248 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
 
   const canProceed = selectedPaymentMethod !== null;
 
-  // Renderização simplificada para scholarship fee
-  if (feeType === 'scholarship_fee') {
-    return (
-      <Dialog open={isOpen} onClose={onClose} className="relative z-50">
-        {/* Backdrop */}
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-30" aria-hidden="true" />
-        
-        {/* Modal */}
-        <div className="fixed inset-0 flex items-center justify-center p-4 z-30">
-          <Dialog.Panel className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden relative border-0">
-            {/* Loading Overlay (anti-flicker) */}
-            {(isProcessing || submitting) && spinnerVisible && (
-              <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex items-center justify-center">
-                <div className="text-center">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                  <p className="text-lg font-semibold text-gray-900">{t('scholarshipConfirmationModal.loading.processing')}</p>
-                  <p className="text-sm text-gray-600 mt-2">{t('scholarshipConfirmationModal.loading.redirecting')}</p>
-                </div>
-              </div>
-            )}
-            
-            {/* Header */}
-            <div className="relative bg-gradient-to-r from-blue-600 to-blue-800 text-white p-6">
-              <button
-                onClick={onClose}
-                disabled={isProcessing || submitting}
-                className="absolute top-4 right-4 p-2 hover:bg-white/10 rounded-full transition-colors"
-                title={t('common.close')}
-              >
-                <X className="w-6 h-6" />
-              </button>
-              
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 bg-white/20 rounded-lg">
-                  <CheckCircle className="w-6 h-6" />
-                </div>
-                <div>
-                  <Dialog.Title className="text-xl font-bold">
-                    {modalContent.title}
-                  </Dialog.Title>
-                  <p className="text-blue-100 text-sm">
-                    {modalContent.subtitle}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Content */}
-            <div className="p-6 space-y-6">
-              {/* Scholarship Info */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h3 className="font-semibold text-gray-900 mb-2">{t('scholarshipConfirmationModal.labels.selectedScholarship')}</h3>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">{t('scholarshipConfirmationModal.labels.scholarship')}:</span>
-                    <span className="font-medium text-gray-900">{scholarship.title}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">{t('scholarshipConfirmationModal.labels.university')}:</span>
-                    <span className="font-medium text-gray-900">{universityName}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">{modalContent.feeLabel}</span>
-                    <span className="font-bold text-lg text-green-600">${formatCentsToDollars(feeAmount * 100)} USD</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Payment Method Selection */}
-              <div className="space-y-4">
-                <h3 className="font-semibold text-gray-900">{t('scholarshipConfirmationModal.labels.choosePaymentMethod')}</h3>
-                
-                <div className="grid gap-3">
-                  {/* Stripe Option */}
-                  <label className="relative flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-300 hover:bg-blue-50">
-                    <input
-                      type="radio"
-                      name="payment-method"
-                      value="stripe"
-                      checked={selectedPaymentMethod === 'stripe'}
-                      onChange={() => handlePaymentMethodSelect('stripe')}
-                      className="sr-only"
-                    />
-                    <div className={`w-5 h-5 border-2 rounded-full mr-3 flex items-center justify-center ${
-                      selectedPaymentMethod === 'stripe' 
-                        ? 'border-blue-600 bg-blue-600' 
-                        : 'border-gray-300'
-                    }`}>
-                      {selectedPaymentMethod === 'stripe' && (
-                        <div className="w-2 h-2 bg-white rounded-full"></div>
-                      )}
-                    </div>
-                    
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-blue-100 rounded-lg">
-                        <CreditCard className="w-5 h-5 text-blue-600" />
-                      </div>
-                      <div>
-                        <div className="font-medium text-gray-900">{t('scholarshipConfirmationModal.payment.stripe.title')}</div>
-                        <div className="text-sm text-gray-600">{t('scholarshipConfirmationModal.payment.stripe.description')}</div>
-                      </div>
-                    </div>
-                  </label>
-
-                  {/* Zelle Option */}
-                  <label className="relative flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-300 hover:bg-blue-50">
-                    <input
-                      type="radio"
-                      name="payment-method"
-                      value="zelle"
-                      checked={selectedPaymentMethod === 'zelle'}
-                      onChange={() => handlePaymentMethodSelect('zelle')}
-                      className="sr-only"
-                    />
-                    <div className={`w-5 h-5 border-2 rounded-full mr-3 flex items-center justify-center ${
-                      selectedPaymentMethod === 'zelle' 
-                        ? 'border-blue-600 bg-blue-600' 
-                        : 'border-gray-300'
-                    }`}>
-                      {selectedPaymentMethod === 'zelle' && (
-                        <div className="w-2 h-2 bg-white rounded-full"></div>
-                      )}
-                    </div>
-                    
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-green-100 rounded-lg">
-                        <Smartphone className="w-5 h-5 text-green-600" />
-                      </div>
-                      <div>
-                        <div className="font-medium text-gray-900">{t('scholarshipConfirmationModal.payment.zelle.title')}</div>
-                        <div className="text-sm text-gray-600">{t('scholarshipConfirmationModal.payment.zelle.description')}</div>
-                      </div>
-                    </div>
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="bg-gray-50 px-6 py-4 flex gap-3">
-              <button
-                onClick={onClose}
-                disabled={isProcessing || submitting}
-                className="flex-1 bg-white text-gray-700 py-3 px-6 rounded-lg font-medium border border-gray-300 hover:bg-gray-50 transition-colors"
-              >
-                {t('common.cancel')}
-              </button>
-              
-              <button
-                onClick={handleProceed}
-                disabled={!canProceed || isProcessing || submitting}
-                className="flex-1 bg-blue-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
-              >
-                {isProcessing || submitting ? (
-                  <div className="flex items-center justify-center">
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                    {t('common.processing')}
-                  </div>
-                ) : (
-                  modalContent.buttonText
-                )}
-              </button>
-            </div>
-          </Dialog.Panel>
+  // Componente de conteúdo comum para Drawer e Dialog
+  const ModalContent = ({ isInDrawer = false }: { isInDrawer?: boolean }) => (
+    <>
+      {/* Loading Overlay */}
+      {(isProcessing || submitting) && spinnerVisible && (
+        <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-lg font-semibold text-gray-900">{t('scholarshipConfirmationModal.loading.processing')}</p>
+            <p className="text-sm text-gray-600 mt-2">{t('scholarshipConfirmationModal.loading.redirecting')}</p>
+          </div>
         </div>
-      </Dialog>
+      )}
+      
+      {/* Header */}
+      {isInDrawer ? (
+        <DrawerHeader className="text-center">
+          <DrawerTitle className="text-xl font-bold text-gray-900">
+            {modalContent.title}
+          </DrawerTitle>
+          <DrawerDescription className="text-gray-600">
+            {modalContent.subtitle}
+          </DrawerDescription>
+        </DrawerHeader>
+      ) : (
+        <div className="relative bg-gradient-to-r from-blue-600 to-blue-800 text-white p-4 sm:p-6 flex-shrink-0">
+          <button
+            onClick={onClose}
+            disabled={isProcessing || submitting}
+            className="absolute top-3 sm:top-4 right-3 sm:right-4 p-2 hover:bg-white/10 rounded-full transition-colors"
+            title={t('common.close')}
+          >
+            <X className="w-5 h-5 sm:w-6 sm:h-6" />
+          </button>
+          
+          <div className="flex items-center gap-3 pr-12">
+            <div className="p-2 bg-white/20 rounded-lg">
+              <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6" />
+            </div>
+            <div>
+              <h2 className="text-lg sm:text-xl font-bold">
+                {modalContent.title}
+              </h2>
+              <p className="text-blue-100 text-sm">
+                {modalContent.subtitle}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Content */}
+      <div className={`${isInDrawer ? 'p-4' : 'flex-1 overflow-y-auto p-4 sm:p-6'} space-y-4`}>
+        {/* Scholarship Info */}
+        <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
+          <h3 className="font-semibold text-gray-900 mb-2 text-sm sm:text-base">{t('scholarshipConfirmationModal.labels.selectedScholarship')}</h3>
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-600">{t('scholarshipConfirmationModal.labels.scholarship')}:</span>
+              <span className="font-medium text-gray-900 text-right ml-2 flex-1">{scholarship.title}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-600">{t('scholarshipConfirmationModal.labels.university')}:</span>
+              <span className="font-medium text-gray-900 text-right ml-2 flex-1">{universityName}</span>
+            </div>
+            <div className="flex justify-between text-sm border-t border-gray-200 pt-2">
+              <span className="text-gray-600">{modalContent.feeLabel}</span>
+              <span className="font-bold text-base sm:text-lg text-green-600">${feeAmount.toFixed(2)} USD</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Payment Method Selection */}
+        <div className="space-y-3">
+          <h3 className="font-semibold text-gray-900 text-sm sm:text-base">{t('scholarshipConfirmationModal.labels.choosePaymentMethod')}</h3>
+          
+          <div className="grid gap-2 sm:gap-3">
+            {/* Stripe Option */}
+            <label className="relative flex items-center p-3 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-300 hover:bg-blue-50">
+              <input
+                type="radio"
+                name="payment-method"
+                value="stripe"
+                checked={selectedPaymentMethod === 'stripe'}
+                onChange={() => handlePaymentMethodSelect('stripe')}
+                className="sr-only"
+              />
+              <div className={`w-4 h-4 sm:w-5 sm:h-5 border-2 rounded-full mr-2 sm:mr-3 flex items-center justify-center flex-shrink-0 ${
+                selectedPaymentMethod === 'stripe' 
+                  ? 'border-blue-600 bg-blue-600' 
+                  : 'border-gray-300'
+              }`}>
+                {selectedPaymentMethod === 'stripe' && (
+                  <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white rounded-full"></div>
+                )}
+              </div>
+              
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                <div className="p-1.5 sm:p-2 bg-blue-100 rounded-lg flex-shrink-0">
+                  <CreditCard className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
+                </div>
+                <div className="min-w-0">
+                  <div className="font-medium text-gray-900 text-sm sm:text-base">{t('scholarshipConfirmationModal.payment.stripe.title')}</div>
+                  <div className="text-xs sm:text-sm text-gray-600">{t('scholarshipConfirmationModal.payment.stripe.description')}</div>
+                </div>
+              </div>
+            </label>
+
+            {/* Zelle Option */}
+            <label className="relative flex items-center p-3 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-300 hover:bg-blue-50">
+              <input
+                type="radio"
+                name="payment-method"
+                value="zelle"
+                checked={selectedPaymentMethod === 'zelle'}
+                onChange={() => handlePaymentMethodSelect('zelle')}
+                className="sr-only"
+              />
+              <div className={`w-4 h-4 sm:w-5 sm:h-5 border-2 rounded-full mr-2 sm:mr-3 flex items-center justify-center flex-shrink-0 ${
+                selectedPaymentMethod === 'zelle' 
+                  ? 'border-blue-600 bg-blue-600' 
+                  : 'border-gray-300'
+              }`}>
+                {selectedPaymentMethod === 'zelle' && (
+                  <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white rounded-full"></div>
+                )}
+              </div>
+              
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                <div className="p-1.5 sm:p-2 bg-green-100 rounded-lg flex-shrink-0">
+                  <ZelleIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+                </div>
+                <div className="min-w-0">
+                  <div className="font-medium text-gray-900 text-sm sm:text-base">{t('scholarshipConfirmationModal.payment.zelle.title')}</div>
+                  <div className="text-xs sm:text-sm text-gray-600">{t('scholarshipConfirmationModal.payment.zelle.description')}</div>
+                </div>
+              </div>
+            </label>
+
+            {/* PIX Option (if available) */}
+            {onPixCheckout && (
+              <label className="relative flex items-center p-3 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-300 hover:bg-blue-50">
+                <input
+                  type="radio"
+                  name="payment-method"
+                  value="pix"
+                  checked={selectedPaymentMethod === 'pix'}
+                  onChange={() => handlePaymentMethodSelect('pix')}
+                  className="sr-only"
+                />
+                <div className={`w-4 h-4 sm:w-5 sm:h-5 border-2 rounded-full mr-2 sm:mr-3 flex items-center justify-center flex-shrink-0 ${
+                  selectedPaymentMethod === 'pix' 
+                    ? 'border-blue-600 bg-blue-600' 
+                    : 'border-gray-300'
+                }`}>
+                  {selectedPaymentMethod === 'pix' && (
+                    <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white rounded-full"></div>
+                  )}
+                </div>
+                
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                  <div className="p-1.5 sm:p-2 bg-green-100 rounded-lg flex-shrink-0">
+                    <PixIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="font-medium text-gray-900 text-sm sm:text-base">{t('scholarshipConfirmationModal.payment.pix.title')}</div>
+                    <div className="text-xs sm:text-sm text-gray-600">{t('scholarshipConfirmationModal.payment.pix.description')}</div>
+                  </div>
+                </div>
+              </label>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Footer */}
+      {isInDrawer ? (
+        <DrawerFooter className="flex-row gap-2">
+          <DrawerClose className="flex-1 bg-white text-gray-700 py-2.5 px-4 rounded-lg font-medium border border-gray-300 hover:bg-gray-50 transition-colors text-sm">
+            {t('common.cancel')}
+          </DrawerClose>
+          <button
+            onClick={handleProceed}
+            disabled={!canProceed || isProcessing || submitting}
+            className="flex-1 bg-blue-600 text-white py-2.5 px-4 rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors text-sm"
+          >
+            {isProcessing || submitting ? (
+              <div className="flex items-center justify-center">
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                {t('common.processing')}
+              </div>
+            ) : (
+              modalContent.buttonText
+            )}
+          </button>
+        </DrawerFooter>
+      ) : (
+        <div className="bg-gray-50 px-4 sm:px-6 py-3 sm:py-4 flex gap-2 sm:gap-3 flex-shrink-0 border-t border-gray-100">
+          <button
+            onClick={onClose}
+            disabled={isProcessing || submitting}
+            className="flex-1 bg-white text-gray-700 py-2.5 sm:py-3 px-4 sm:px-6 rounded-lg font-medium border border-gray-300 hover:bg-gray-50 transition-colors text-sm sm:text-base"
+          >
+            {t('common.cancel')}
+          </button>
+          
+          <button
+            onClick={handleProceed}
+            disabled={!canProceed || isProcessing || submitting}
+            className="flex-1 bg-blue-600 text-white py-2.5 sm:py-3 px-4 sm:px-6 rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors text-sm sm:text-base"
+          >
+            {isProcessing || submitting ? (
+              <div className="flex items-center justify-center">
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                {t('common.processing')}
+              </div>
+            ) : (
+              modalContent.buttonText
+            )}
+          </button>
+        </div>
+      )}
+    </>
+  );
+
+  // Usar Drawer em mobile, Dialog em desktop
+  if (isMobile) {
+    return (
+      <Drawer open={isOpen} onOpenChange={onClose}>
+        <DrawerContent className="max-h-[90vh] bg-white">
+          <ModalContent isInDrawer={true} />
+        </DrawerContent>
+      </Drawer>
     );
   }
-
-  // Modal completo para application fee (com referral code e outros campos)
+  
   return (
     <Dialog open={isOpen} onClose={onClose} className="relative z-50">
-      {/* Backdrop */}
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-30" aria-hidden="true" />
-      
-      {/* Modal */}
-      <div className="fixed inset-0 flex items-end sm:items-center justify-center z-30">
-        <Dialog.Panel className="w-full h-full sm:h-auto sm:max-w-2xl bg-white  md:rounded-2xl shadow-2xl overflow-hidden relative border-0 sm:max-h-[90vh] flex flex-col">
-          {(isProcessing || submitting) && spinnerVisible && (
-            <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex items-center justify-center">
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                <p className="text-lg font-semibold text-gray-900">{t('scholarshipConfirmationModal.loading.processing')}</p>
-                <p className="text-sm text-gray-600 mt-2">{t('scholarshipConfirmationModal.loading.redirecting')}</p>
-              </div>
-            </div>
-          )}
-          
-          {/* Header */}
-          <div className="relative bg-gradient-to-r from-blue-600 to-blue-800 text-white p-3 sm:p-6 flex-shrink-0">
-            <button
-              onClick={onClose}
-              disabled={isProcessing || submitting}
-              className="absolute top-4 right-4 p-2 hover:bg-white/10 rounded-full transition-colors"
-              title={t('common.close')}
-            >
-              <X className="w-6 h-6" />
-            </button>
-            
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-white/20 rounded-lg">
-                <CheckCircle className="w-6 h-6" />
-              </div>
-              <div>
-                <Dialog.Title className="text-2xl font-bold">
-                  {modalContent.title}
-                </Dialog.Title>
-                <p className="text-blue-100">
-                  {modalContent.subtitle}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Content */}
-          <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-3 sm:space-y-6">
-            {/* Scholarship Info */}
-            <div className="bg-gray-50 rounded-lg p-2 sm:p-3">
-              <h3 className="font-semibold text-gray-900 mb-2">{t('scholarshipConfirmationModal.labels.selectedScholarship')}</h3>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">{t('scholarshipConfirmationModal.labels.scholarship')}:</span>
-                  <span className="font-medium text-gray-900">{scholarship.title}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">{t('scholarshipConfirmationModal.labels.university')}:</span>
-                  <span className="font-medium text-gray-900">{universityName}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">{modalContent.feeLabel}</span>
-                  <span className="font-bold text-lg text-green-600">${feeAmount.toFixed(2)} USD</span>
-                </div>
-                <div className="text-xs text-gray-500 mt-1">
-                  {modalContent.feeDescription}
-                </div>
-              </div>
-            </div>
-
-            {/* Important Decision Warning */}
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2 sm:p-3">
-              <div className="flex items-start gap-3">
-                <AlertTriangle className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" />
-                <div>
-                  <h4 className="font-semibold text-yellow-800 mb-1">{t('scholarshipConfirmationModal.labels.importantDecision')}</h4>
-                  <p className="text-sm text-yellow-700">
-                    {modalContent.warningText}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Payment Method Selection */}
-            <div className="space-y-4">
-              <h3 className="font-semibold text-gray-900">{t('scholarshipConfirmationModal.labels.choosePaymentMethod')}</h3>
-              
-              <div className="grid gap-3">
-                {/* Stripe Option */}
-                <label className="relative flex items-center p-2 sm:p-3 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-300 hover:bg-blue-50">
-                  <input
-                    type="radio"
-                    name="payment-method"
-                    value="stripe"
-                    checked={selectedPaymentMethod === 'stripe'}
-                    onChange={() => handlePaymentMethodSelect('stripe')}
-                    className="sr-only"
-                  />
-                  <div className={`w-5 h-5 border-2 rounded-full mr-3 flex items-center justify-center ${
-                    selectedPaymentMethod === 'stripe' 
-                      ? 'border-blue-600 bg-blue-600' 
-                      : 'border-gray-300'
-                  }`}>
-                    {selectedPaymentMethod === 'stripe' && (
-                      <div className="w-2 h-2 bg-white rounded-full"></div>
-                    )}
-                  </div>
-                  
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-blue-100 rounded-lg">
-                      <StripeIcon className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <div className="font-medium text-gray-900">{t('scholarshipConfirmationModal.payment.stripe.title')}</div>
-                      <div className="text-sm text-gray-600">{t('scholarshipConfirmationModal.payment.stripe.description')}</div>
-                    </div>
-                  </div>
-                </label>
-
-                {/* PIX Option */}
-                <label className="relative flex items-center p-2 sm:p-3 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-300 hover:bg-blue-50">
-                  <input
-                    type="radio"
-                    name="payment-method"
-                    value="pix"
-                    checked={selectedPaymentMethod === 'pix'}
-                    onChange={() => handlePaymentMethodSelect('pix')}
-                    className="sr-only"
-                  />
-                  <div className={`w-5 h-5 border-2 rounded-full mr-3 flex items-center justify-center ${
-                    selectedPaymentMethod === 'pix' 
-                      ? 'border-blue-600 bg-blue-600' 
-                      : 'border-gray-300'
-                  }`}>
-                    {selectedPaymentMethod === 'pix' && (
-                      <div className="w-2 h-2 bg-white rounded-full"></div>
-                    )}
-                  </div>
-                  
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-green-100 rounded-lg">
-                      <PixIcon className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <div className="font-medium text-gray-900">PIX</div>
-                      <div className="text-sm text-gray-600">Pay instantly with PIX (Brazil)</div>
-                    </div>
-                  </div>
-                </label>
-
-                {/* Zelle Option */}
-                <label className="relative flex items-center p-2 sm:p-3 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-300 hover:bg-blue-50">
-                  <input
-                    type="radio"
-                    name="payment-method"
-                    value="zelle"
-                    checked={selectedPaymentMethod === 'zelle'}
-                    onChange={() => handlePaymentMethodSelect('zelle')}
-                    className="sr-only"
-                  />
-                  <div className={`w-5 h-5 border-2 rounded-full mr-3 flex items-center justify-center ${
-                    selectedPaymentMethod === 'zelle' 
-                      ? 'border-blue-600 bg-blue-600' 
-                      : 'border-gray-300'
-                  }`}>
-                    {selectedPaymentMethod === 'zelle' && (
-                      <div className="w-2 h-2 bg-white rounded-full"></div>
-                    )}
-                  </div>
-                  
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-green-100 rounded-lg">
-                      <ZelleIcon className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <div className="font-medium text-gray-900">{t('scholarshipConfirmationModal.payment.zelle.title')}</div>
-                      <div className="text-sm text-gray-600">{t('scholarshipConfirmationModal.payment.zelle.descriptionDetailed')}</div>
-                    </div>
-                  </div>
-                </label>
-              </div>
-            </div>
-          </div>
-
-          {/* Footer */}
-          <div className="bg-gray-50 px-3 sm:px-6 py-2 sm:py-4 flex gap-2 sm:gap-3 flex-shrink-0">
-            <button
-              onClick={onClose}
-              disabled={isProcessing || submitting}
-              className="flex-1 bg-white text-gray-700 py-2 px-3 rounded-lg font-medium border border-gray-300 hover:bg-gray-50 transition-colors text-sm"
-            >
-              {t('scholarshipConfirmationModal.labels.thinkAboutIt')}
-            </button>
-            
-            <button
-              onClick={handleProceed}
-              disabled={!canProceed || isProcessing || submitting}
-              className="flex-1 bg-green-600 text-white py-2 px-3 rounded-lg font-medium hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors text-sm"
-            >
-              {(isProcessing || submitting) ? (
-                <div className="flex items-center justify-center">
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                  {t('common.processing')}
-                </div>
-              ) : (
-                modalContent.buttonText
-              )}
-            </button>
-          </div>
+      <div className="fixed inset-0 flex items-center justify-center p-4 z-30">
+        <Dialog.Panel className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden relative border-0 max-h-[80vh] flex flex-col">
+          <ModalContent isInDrawer={false} />
         </Dialog.Panel>
       </div>
     </Dialog>

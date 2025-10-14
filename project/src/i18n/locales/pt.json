@@ -1723,15 +1723,20 @@
       "paymentStatus": {
         "title": "Status do Pagamento",
         "applicationFee": "Taxa de Aplicação",
+        "applicationFeeDescription": "Necessário para processar a candidatura",
         "scholarshipFee": "Taxa da Bolsa",
+        "scholarshipFeeDescription": "Passo final para garantir sua vaga",
         "paid": "Pago",
         "payApplicationFee": "Pagar Taxa de Aplicação",
         "payScholarshipFee": "Pagar Taxa da Bolsa",
+        "paymentCompleted": "Pagamento Concluído",
         "uploading": "Fazendo upload...",
         "uploadDocument": "Fazer Upload do Documento",
         "selected": "Selecionado:"
       },
       "documents": {
+        "title": "Documentos",
+        "statusText": "Todos os documentos enviados e verificados",
         "checklist": "Lista de Verificação de Documentos",
         "passport": "Passaporte",
         "highSchoolDiploma": "Diploma do Ensino Médio",
@@ -1857,6 +1862,20 @@
       },
       "rejectedApplication": {
         "reason": "Motivo:"
+      },
+      "statusDetails": {
+        "title": "Detalhes do Status"
+      },
+      "status": {
+        "applicationNotSelected": "Candidatura Não Selecionada",
+        "applied": "Candidatado",
+        "complete": "Completo",
+        "inProgress": "Em Andamento"
+      },
+      "general": {
+        "value": "Valor",
+        "annualValue": "Valor Anual",
+        "accessYourApplication": "Acesse Sua Candidatura"
       }
     },
     "applicationChatPage": {
@@ -2406,10 +2425,10 @@
       "manualVerification": "Processamento pode levar até 48 horas",
       "important": "Importante:",
       "zelleUploadNote": "Após realizar o pagamento via Zelle, será necessário enviar um print da confirmação mostrando o código, data, valor e destinatário.",
-    "loading": {
-      "message": "Carregando métodos de pagamento...",
-      "processing": "Processando..."
-    },
+      "loading": {
+        "message": "Carregando métodos de pagamento...",
+        "processing": "Processando..."
+      },
       "feeTypes": {
         "selection_process": "processo seletivo",
         "application_fee": "candidatura",
@@ -3050,6 +3069,10 @@
         "title": "Stripe",
         "description": "Pague com cartão de crédito ou débito com segurança"
       },
+      "pix": {
+        "title": "PIX",
+        "description": "Sistema de pagamento instantâneo brasileiro"
+      },
       "zelle": {
         "title": "Zelle",
         "description": "Pague via transferência Zelle",
@@ -3060,11 +3083,6 @@
       "processing": "Processando pagamento...",
       "redirecting": "Aguarde, estamos redirecionando para o checkout"
     }
-  },
-  "common": {
-    "close": "Fechar",
-    "cancel": "Cancelar",
-    "processing": "Processando..."
   },
   "successPages": {
     "pixPayment": {

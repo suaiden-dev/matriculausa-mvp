@@ -10,7 +10,8 @@ import {
   Building, 
   Award,
   ArrowRight,
-  GraduationCap
+  GraduationCap,
+  ChevronDown
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation } from 'react-router-dom';
@@ -18,7 +19,6 @@ import { useAuth } from '../../hooks/useAuth';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
 import { supabase } from '../../lib/supabase';
 import { Application, Scholarship } from '../../types';
-import { StripeCheckout } from '../../components/StripeCheckout';
 import { useCartStore } from '../../stores/applicationStore';
 import { ScholarshipConfirmationModal } from '../../components/ScholarshipConfirmationModal';
 import { formatCentsToDollars } from '../../utils/currency';
@@ -69,9 +69,6 @@ const MyApplications: React.FC = () => {
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
   const [pendingApplication, setPendingApplication] = useState<ApplicationWithScholarship | null>(null);
   const [isProcessingCheckout, setIsProcessingCheckout] = useState(false);
-
-  // Payment method selection states
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'stripe' | 'zelle' | 'pix' | null>(null);
 
   // Modal confirmation states para Scholarship Fee
   const [showScholarshipFeeModal, setShowScholarshipFeeModal] = useState(false);
@@ -708,32 +705,11 @@ const getLevelColor = (level: any) => {
     setShowConfirmationModal(true);
   };
 
-  const handleCancelPayment = () => {
-    setShowConfirmationModal(false);
-    setPendingApplication(null);
-    setSelectedPaymentMethod(null);
+  // Function to handle scholarship fee payment confirmation
+  const handleScholarshipFeeClick = (application: ApplicationWithScholarship) => {
+    setPendingScholarshipFeeApplication(application);
+    setShowScholarshipFeeModal(true);
   };
-
-  // Função para lidar com seleção de método de pagamento
-  const handlePaymentMethodSelect = (method: 'stripe' | 'zelle' | 'pix') => {
-    setSelectedPaymentMethod(method);
-    
-    // Processar pagamento baseado no método selecionado
-    if (method === 'stripe') {
-      handleStripeCheckout();
-    } else if (method === 'pix') {
-      handlePixCheckout();
-    } else if (method === 'zelle') {
-      handleZelleCheckout();
-    }
-  };
-
-  // Count other approved applications
-  const otherApprovedApps = applications.filter(app => 
-    app.status === 'approved' && 
-    app.id !== pendingApplication?.id &&
-    !app.is_application_fee_paid
-  );
 
   // Função para processar checkout Stripe
   const handleStripeCheckout = async () => {
@@ -971,9 +947,91 @@ const getLevelColor = (level: any) => {
       // Ativar loading
       setIsProcessingScholarshipFeeCheckout(true);
       
-      console.log('Iniciando checkout Stripe para scholarship fee com application ID:', pendingScholarshipFeeApplication.id);
+      const scholarshipFeeAmount = getFeeAmount('scholarship_fee');
+      console.log('Iniciando checkout Stripe para scholarship fee:');
+      console.log('- Application ID:', pendingScholarshipFeeApplication.id);
+      console.log('- Scholarship ID:', pendingScholarshipFeeApplication.scholarship_id);
+      console.log('- Fee Amount:', scholarshipFeeAmount);
       
       // Chamar diretamente a Edge Function do Stripe para scholarship fee
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      
+      if (!token) {
+        throw new Error('Usuário não autenticado');
+      }
+
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout-scholarship-fee`;
+      
+      const requestPayload = {
+        price_id: 'price_scholarship_fee', // ID do produto no Stripe
+        success_url: `${window.location.origin}/student/dashboard/scholarship-fee-success?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${window.location.origin}/student/dashboard/scholarship-fee-error`,
+        mode: 'payment',
+        payment_type: 'scholarship_fee',
+        fee_type: 'scholarship_fee',
+        amount: scholarshipFeeAmount, // Valor da scholarship fee do useFeeConfig
+        metadata: {
+          application_id: pendingScholarshipFeeApplication.id,
+          selected_scholarship_id: pendingScholarshipFeeApplication.scholarship_id,
+          fee_type: 'scholarship_fee',
+          amount: scholarshipFeeAmount,
+          scholarship_fee_amount: scholarshipFeeAmount
+        },
+        scholarships_ids: [pendingScholarshipFeeApplication.scholarship_id],
+      };
+      
+      console.log('Payload sendo enviado:', JSON.stringify(requestPayload, null, 2));
+      
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(requestPayload),
+      });
+
+      if (!response.ok) {
+        let errorData: any;
+        try {
+          errorData = await response.json();
+        } catch {
+          errorData = { error: `HTTP ${response.status}: ${response.statusText}` };
+        }
+        console.error('Erro na resposta da API:', errorData);
+        throw new Error(errorData.error || 'Erro ao criar sessão de checkout');
+      }
+
+      const { session_url } = await response.json();
+      if (session_url) {
+        console.log('Sessão criada com sucesso, redirecionando para:', session_url);
+        // Redirecionar diretamente para o checkout do Stripe
+        window.location.href = session_url;
+      } else {
+        throw new Error('URL da sessão não encontrada na resposta');
+      }
+      
+    } catch (error) {
+      console.error('Erro ao processar checkout da scholarship fee:', error);
+      console.error('Stack trace:', error instanceof Error ? error.stack : 'No stack trace available');
+      // Reabrir o modal em caso de erro
+      setShowScholarshipFeeModal(true);
+    } finally {
+      // Desativar loading
+      setIsProcessingScholarshipFeeCheckout(false);
+    }
+  };
+
+  // Função para processar checkout PIX da Scholarship Fee
+  const handleScholarshipFeePixCheckout = async () => {
+    if (!pendingScholarshipFeeApplication) return;
+    
+    try {
+      setIsProcessingScholarshipFeeCheckout(true);
+      
+      console.log('Iniciando checkout PIX para scholarship fee com application ID:', pendingScholarshipFeeApplication.id);
+      
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token;
       
@@ -990,17 +1048,18 @@ const getLevelColor = (level: any) => {
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          price_id: 'price_scholarship_fee', // ID do produto no Stripe
+          price_id: 'price_scholarship_fee',
           success_url: `${window.location.origin}/student/dashboard/scholarship-fee-success?session_id={CHECKOUT_SESSION_ID}`,
           cancel_url: `${window.location.origin}/student/dashboard/scholarship-fee-error`,
           mode: 'payment',
           payment_type: 'scholarship_fee',
           fee_type: 'scholarship_fee',
+          payment_method: 'pix', // Especificar PIX
           metadata: {
             application_id: pendingScholarshipFeeApplication.id,
             selected_scholarship_id: pendingScholarshipFeeApplication.scholarship_id,
             fee_type: 'scholarship_fee',
-            amount: getFeeAmount('scholarship_fee'), // Valor da scholarship fee do useFeeConfig
+            amount: getFeeAmount('scholarship_fee'),
             scholarship_fee_amount: getFeeAmount('scholarship_fee')
           },
           scholarships_ids: [pendingScholarshipFeeApplication.scholarship_id],
@@ -1009,210 +1068,26 @@ const getLevelColor = (level: any) => {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Erro ao criar sessão de checkout');
+        throw new Error(errorData.error || 'Erro ao criar sessão de checkout PIX para scholarship fee');
       }
 
       const { session_url } = await response.json();
       if (session_url) {
-        // Redirecionar diretamente para o checkout do Stripe
         window.location.href = session_url;
       } else {
         throw new Error('URL da sessão não encontrada na resposta');
       }
       
     } catch (error) {
-      console.error('Erro ao processar checkout da scholarship fee:', error);
-      // Reabrir o modal em caso de erro
+      console.error('Erro ao processar checkout PIX para scholarship fee:', error);
       setShowScholarshipFeeModal(true);
     } finally {
-      // Desativar loading
       setIsProcessingScholarshipFeeCheckout(false);
     }
   };
 
   return (
     <>
-      {/* Confirmation Modal */}
-      {showConfirmationModal && pendingApplication && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex items-end sm:items-center justify-center min-h-dvh text-center">
-            {/* Background overlay */}
-            <div 
-              className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
-              onClick={handleCancelPayment}
-            ></div>
-
-             {/* Modal panel */}
-              <div className="relative align-bottom bg-white sm:rounded-3xl px-3 pt-3 pb-3 text-left overflow-hidden shadow-xl transform transition-all w-full max-w-lg sm:align-middle sm:p-4 max-h-[50vh] sm:max-h-[60vh] flex flex-col">
-               {/* Modal Header */}
-               <div className="flex-shrink-0">
-                 <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-2 text-center sm:text-left">
-                   {t('studentDashboard.myApplications.confirmationModal.title')}
-                 </h3>
-               </div>
-
-               {/* Modal Content - Scrollable */}
-               <div className="flex-1 overflow-y-auto min-h-0">
-                 <div className="space-y-2">
-                   <div className="bg-gradient-to-r from-amber-50 to-yellow-50 rounded-xl p-2 border border-amber-200">
-                     <div className="flex items-start">
-                       <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0 mr-3" />
-                       <div className="flex-1">
-                         <h4 className="text-center sm:text-left font-bold text-amber-900 mb-2">{t('studentDashboard.myApplications.confirmationModal.importantDecision')}</h4>
-                         <p className="text-amber-800 text-sm leading-relaxed mb-3">
-                           {t('studentDashboard.myApplications.confirmationModal.description')}
-                         </p>
-                         {otherApprovedApps.length > 0 && (
-                           <div className="bg-white rounded-xl p-3 border border-amber-200">
-                             <p className="text-amber-800 text-sm font-semibold mb-2">
-                               {otherApprovedApps.length === 1 
-                                 ? t('studentDashboard.myApplications.confirmationModal.willRemoveOthers', { count: otherApprovedApps.length })
-                                 : t('studentDashboard.myApplications.confirmationModal.willRemoveOthersPlural', { count: otherApprovedApps.length })
-                               }:
-                             </p>
-                             <ul className="text-amber-700 text-xs space-y-1">
-                               {otherApprovedApps.map(app => (
-                                 <li key={app.id} className="flex items-center">
-                                   <span className="w-1.5 h-1.5 bg-amber-500 rounded-full mr-2"></span>
-                                   {app.scholarships?.title} - {app.scholarships?.universities?.name}
-                                 </li>
-                               ))}
-                             </ul>
-                           </div>
-                         )}
-                       </div>
-                     </div>
-                   </div>
-                 </div>
-               </div>
-               
-               {/* Choose Payment Method */}
-               <div className="flex-shrink-0 pt-3 mt-2 border-t border-gray-100">
-                 <h3 className="font-semibold text-gray-900 mb-3">{t('studentDashboard.myApplications.confirmationModal.choosePaymentMethod')}</h3>
-                 
-                 <div className="grid gap-3 mb-4">
-                   {/* Stripe Option */}
-                   <label className="relative flex items-center p-3 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-300 hover:bg-blue-50">
-                     <input
-                       type="radio"
-                       name="payment-method"
-                       value="stripe"
-                       checked={selectedPaymentMethod === 'stripe'}
-                       onChange={() => handlePaymentMethodSelect('stripe')}
-                       className="sr-only"
-                     />
-                     <div className={`w-5 h-5 border-2 rounded-full mr-3 flex items-center justify-center ${
-                       selectedPaymentMethod === 'stripe' 
-                         ? 'border-blue-600 bg-blue-600' 
-                         : 'border-gray-300'
-                     }`}>
-                       {selectedPaymentMethod === 'stripe' && (
-                         <div className="w-2 h-2 bg-white rounded-full"></div>
-                       )}
-                     </div>
-                     
-                     <div className="flex items-center gap-3">
-                       <div className="p-2 bg-blue-100 rounded-lg">
-                         <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
-                           <path d="M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 0-.831.683-1.305 1.901-1.305 2.227 0 4.515.858 6.09 1.631l.89-5.494C18.252.274 15.697 0 12.165 0 9.667 0 7.589.654 6.104 1.872 4.56 3.147 3.757 4.992 3.757 7.218c0 4.039 2.467 5.76 6.476 7.219 2.585.92 3.445 1.574 3.445 2.583 0 .98-.84 1.581-2.354 1.581-1.412 0-2.686-.292-4.978-1.348L5.016 22.38c1.125.405 2.125.57 3.418.57 2.125 0 3.663-.654 5.09-1.86 1.48-1.26 2.298-3.09 2.298-5.282 0-4.237-2.467-5.76-6.476-7.219z"/>
-                         </svg>
-                       </div>
-                       <div>
-                         <div className="font-medium text-gray-900">Stripe</div>
-                         <div className="text-sm text-gray-600">Pay securely with credit or debit card</div>
-                       </div>
-                     </div>
-                   </label>
-
-                   {/* PIX Option */}
-                   <label className="relative flex items-center p-3 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-300 hover:bg-blue-50">
-                     <input
-                       type="radio"
-                       name="payment-method"
-                       value="pix"
-                       checked={selectedPaymentMethod === 'pix'}
-                       onChange={() => handlePaymentMethodSelect('pix')}
-                       className="sr-only"
-                     />
-                     <div className={`w-5 h-5 border-2 rounded-full mr-3 flex items-center justify-center ${
-                       selectedPaymentMethod === 'pix' 
-                         ? 'border-blue-600 bg-blue-600' 
-                         : 'border-gray-300'
-                     }`}>
-                       {selectedPaymentMethod === 'pix' && (
-                         <div className="w-2 h-2 bg-white rounded-full"></div>
-                       )}
-                     </div>
-                     
-                     <div className="flex items-center gap-3">
-                       <div className="p-2 bg-green-100 rounded-lg">
-                         <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 48 48">
-                           <path fill="#4db6ac" d="M11.9,12h-0.68l8.04-8.04c2.62-2.61,6.86-2.61,9.48,0L36.78,12H36.1c-1.6,0-3.11,0.62-4.24,1.76l-6.8,6.77c-0.59,0.59-1.53,0.59-2.12,0l-6.8-6.77C15.01,12.62,13.5,12,11.9,12z"/>
-                           <path fill="#4db6ac" d="M36.1,36h0.68l-8.04,8.04c-2.62,2.61-6.86,2.61-9.48,0L11.22,36h0.68c1.6,0,3.11-0.62,4.24-1.76l6.8-6.77c0.59-0.59,1.53-0.59,2.12,0l6.8,6.77C32.99,35.38,34.5,36,36.1,36z"/>
-                           <path fill="#4db6ac" d="M44.04,28.74L38.78,34H36.1c-1.07,0-2.07-0.42-2.83-1.17l-6.8-6.78c-1.36-1.36-3.58-1.36-4.94,0l-6.8,6.78C13.97,33.58,12.97,34,11.9,34H9.22l-5.26-5.26c-2.61-2.62-2.61-6.86,0-9.48L9.22,14h2.68c1.07,0,2.07,0.42,2.83,1.17l6.8,6.78c0.68,0.68,1.58,1.02,2.47,1.02s1.79-0.34,2.47-1.02l6.8-6.78C34.03,14.42,35.03,14,36.1,14h2.68l5.26,5.26C46.65,21.88,46.65,26.12,44.04,28.74z"/>
-                         </svg>
-                       </div>
-                       <div>
-                         <div className="font-medium text-gray-900">PIX</div>
-                         <div className="text-sm text-gray-600">Pay instantly with PIX (Brazil)</div>
-                       </div>
-                     </div>
-                   </label>
-
-                   {/* Zelle Option */}
-                   <label className="relative flex items-center p-3 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-300 hover:bg-blue-50">
-                     <input
-                       type="radio"
-                       name="payment-method"
-                       value="zelle"
-                       checked={selectedPaymentMethod === 'zelle'}
-                       onChange={() => handlePaymentMethodSelect('zelle')}
-                       className="sr-only"
-                     />
-                     <div className={`w-5 h-5 border-2 rounded-full mr-3 flex items-center justify-center ${
-                       selectedPaymentMethod === 'zelle' 
-                         ? 'border-blue-600 bg-blue-600' 
-                         : 'border-gray-300'
-                     }`}>
-                       {selectedPaymentMethod === 'zelle' && (
-                         <div className="w-2 h-2 bg-white rounded-full"></div>
-                       )}
-                     </div>
-                     
-                     <div className="flex items-center gap-3">
-                       <div className="p-2 bg-green-100 rounded-lg">
-                         <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 48 48">
-                           <path fill="#a0f" d="M35,42H13c-3.866,0-7-3.134-7-7V13c0-3.866,3.134-7,7-7h22c3.866,0,7,3.134,7,7v22C42,38.866,38.866,42,35,42z"/>
-                           <path fill="#fff" d="M17.5,18.5h14c0.552,0,1-0.448,1-1V15c0-0.552-0.448-1-1-1h-14c-0.552,0-1,0.448-1,1v2.5C16.5,18.052,16.948,18.5,17.5,18.5z"/>
-                           <path fill="#fff" d="M17,34.5h14.5c0.552,0,1-0.448,1-1V31c0-0.552-0.448-1-1-1H17c-0.552,0-1,0.448-1,1v2.5C16,34.052,16.448,34.5,17,34.5z"/>
-                           <path fill="#fff" d="M22.25,11v6c0,0.276,0.224,0.5,0.5,0.5h3.5c0.276,0,0.5-0.224,0.5-0.5v-6c0-0.276-0.224-0.5-0.5-0.5h-3.5C22.474,10.5,22.25,10.724,22.25,11z"/>
-                           <path fill="#fff" d="M22.25,32v6c0,0.276,0.224,0.5,0.5,0.5h3.5c0.276,0,0.5-0.224,0.5-0.5v-6c0-0.276-0.224-0.5-0.5-0.5h-3.5C22.474,31.5,22.25,31.724,22.25,32z"/>
-                           <path fill="#fff" d="M16.578,30.938H22l10.294-12.839c0.178-0.222,0.019-0.552-0.266-0.552H26.5L16.275,30.298C16.065,30.553,16.247,30.938,16.578,30.938z"/>
-                         </svg>
-                       </div>
-                       <div>
-                         <div className="font-medium text-gray-900">Zelle</div>
-                         <div className="text-sm text-gray-600">Pay via Zelle transfer</div>
-                       </div>
-                     </div>
-                   </label>
-                 </div>
-
-                 <div className="flex gap-2">
-                <button
-                  type="button"
-                     className="flex-1 bg-white text-gray-700 px-3 py-2 rounded-lg font-semibold border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 text-sm"
-                  onClick={handleCancelPayment}
-                >
-                  {t('studentDashboard.myApplications.confirmationModal.letMeThink')}
-                </button>
-                 </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
     <div className="pt-6 sm:pt-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 sm:space-y-8">
         {/* Header */}
@@ -1422,67 +1297,87 @@ const getLevelColor = (level: any) => {
                       
                       return (
                         <div key={application.id} className="bg-white rounded-3xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 overflow-hidden group w-full md:w-80 md:flex-shrink-0 md:min-w-0 md:self-start">
-                <div className="p-4 sm:p-6">
-                  {/* Header Section */}
-                  <div className="mb-4 sm:mb-6">
-                    {/* Status Badge - Primeiro elemento */}
-                    <div className="mb-3">
-                      <span className={`inline-flex items-center px-3 py-2 rounded-xl text-xs font-bold border ${getStatusColor(application.status === 'enrolled' ? 'approved' : application.status)}`}>
-                        <Icon className="h-4 w-4 mr-2" />
+                <div className="p-4">
+                  {/* Header Section Compacto */}
+                  <div className="mb-4">
+                    {/* Linha 1: Título e Status Badge */}
+                    <div className="flex justify-between items-start mb-2">
+                      <h2 className="font-bold text-gray-900 text-base leading-tight flex-1 pr-3">
+                        {scholarship.title}
+                      </h2>
+                      <span className={`inline-flex items-center px-2 py-1 rounded-lg text-xs font-bold border ${getStatusColor(application.status === 'enrolled' ? 'approved' : application.status)}`}>
+                        <Icon className="h-3 w-3 mr-1" />
                         {getStatusLabel(application.status === 'enrolled' ? 'approved' : application.status)}
                       </span>
                     </div>
                     
-                    {/* Scholarship Title */}
-                    <h2 className="font-bold text-gray-900 text-lg mb-3 group-hover:text-blue-600 transition-colors leading-tight">
-                      {scholarship.title}
-                    </h2>
-                    
-                    {/* University */}
-                    <div className="flex items-center text-gray-600 mb-3">
-                      <Building className="h-4 w-4 mr-2 text-gray-500 flex-shrink-0" />
-                      <span className="font-medium text-sm">{scholarship.universities?.name}</span>
-                    </div>
-                    
-                    {/* Level Badge */}
-                    <div className="flex items-center">
-                      <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold border ${getLevelColor(scholarship.level)}`}>
-                        <GraduationCap className="h-4 w-4 mr-1.5" />
+                    {/* Linha 2: Universidade + Level */}
+                    <div className="flex items-center justify-between text-sm mb-3">
+                      <div className="flex items-center text-gray-600">
+                        <Building className="h-3 w-3 mr-1.5 text-gray-500 flex-shrink-0" />
+                        <span className="font-medium">{scholarship.universities?.name}</span>
+                      </div>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold ${getLevelColor(scholarship.level)}`}>
+                        <GraduationCap className="h-3 w-3 mr-1" />
                         {scholarship.level.charAt(0).toUpperCase() + scholarship.level.slice(1)}
                       </span>
                     </div>
+                    
+                    {/* Linha 3: Data de aplicação + Valor */}
+                    <div className="flex items-center justify-between text-sm bg-gray-50 rounded-lg p-2">
+                      <div className="flex items-center">
+                        <Calendar className="h-3 w-3 mr-1.5 text-gray-500" />
+                        <span className="text-gray-700 font-medium mr-1">
+                          {new Date(application.applied_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </span>
+                        <span className="text-gray-500 text-xs">Applied</span>
+                      </div>
+                      <div className="flex items-center">
+                        <span className="text-green-700 font-bold mr-1">
+                          {formatAmount(scholarship.annual_value_with_scholarship ?? 0)}
+                        </span>
+                        <span className="text-gray-500 text-xs">Annual</span>
+                      </div>
+                    </div>
                   </div>
 
-                  {/* Status Description Card */}
-                  <div className={`mb-4 sm:mb-6 rounded-2xl p-4 border ${statusInfo.bgColor} ${statusInfo.borderColor}`}>
-                    <div className="flex items-start mb-3">
-                      <div className="flex-1">
+                  {/* Status Details Dropdown */}
+                  <details className="group/details mb-4">
+                    <summary className="cursor-pointer bg-slate-50 hover:bg-slate-100 rounded-lg p-3 transition-colors flex items-center justify-between border border-gray-200">
+                      <div className="flex items-center">
+                        <FileText className="h-4 w-4 mr-2 text-blue-600" />
+                        <span className="text-sm font-medium text-gray-700">Status Details</span>
+                      </div>
+                      <ChevronDown className="w-4 h-4 text-gray-500 transition-transform duration-300 ease-in-out group-open/details:rotate-180" />
+                    </summary>
+                    <div className="overflow-hidden transition-all duration-300 ease-in-out group-open/details:max-h-96 max-h-0">
+                      <div className={`mt-2 rounded-lg p-3 border ${statusInfo.bgColor} ${statusInfo.borderColor}`}>
                         <h3 className={`font-bold text-sm ${statusInfo.color} mb-2`}>
                           {statusInfo.title}
                         </h3>
-                        <p className="text-sm text-slate-700 leading-relaxed">
+                        <p className="text-sm text-slate-700 leading-relaxed mb-3">
                           {statusInfo.description}
                         </p>
+                        
+                        {/* Next Steps */}
+                        {statusInfo.nextSteps && statusInfo.nextSteps.length > 0 && (
+                          <div>
+                            <h4 className={`font-semibold text-xs ${statusInfo.color} mb-2 uppercase tracking-wide`}>
+                              {t('studentDashboard.myApplications.nextSteps')}
+                            </h4>
+                            <ul className="space-y-2">
+                              {statusInfo.nextSteps.map((step, index) => (
+                                <li key={index} className="flex items-start text-xs text-slate-700">
+                                  <span className="w-1.5 h-1.5 bg-slate-400 rounded-full mr-2 mt-1.5 flex-shrink-0"></span>
+                                  {step}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
                       </div>
                     </div>
-                    
-                    {/* Next Steps */}
-                    {statusInfo.nextSteps && statusInfo.nextSteps.length > 0 && (
-                      <div className="mt-4">
-                        <h4 className={`font-semibold text-xs ${statusInfo.color} mb-2 uppercase tracking-wide`}>
-                          {t('studentDashboard.myApplications.nextSteps')}
-                        </h4>
-                        <ul className="space-y-2">
-                          {statusInfo.nextSteps.map((step, index) => (
-                            <li key={index} className="flex items-start text-xs text-slate-700">
-                              <span className="w-1.5 h-1.5 bg-slate-400 rounded-full mr-2 mt-1.5 flex-shrink-0"></span>
-                              {step}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
+                  </details>
   
                   {/* Details Section */}
                   <div className="bg-gradient-to-br from-slate-50 to-blue-50 rounded-2xl p-3 sm:p-4 mb-4 sm:mb-6 border border-slate-200">
@@ -1555,18 +1450,13 @@ const getLevelColor = (level: any) => {
                             {t('studentDashboard.myApplications.paymentStatus.paid')}
                           </div>
                         ) : (
-                          <StripeCheckout
-                            productId="scholarshipFee"
-                            feeType="scholarship_fee"
-                            paymentType="scholarship_fee"
-                            buttonText={t('studentDashboard.myApplications.paymentStatus.payScholarshipFee')}
+                          <button
+                            onClick={() => handleScholarshipFeeClick(application)}
                             className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-2 rounded-lg font-semibold hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 text-sm"
-                            successUrl={`${window.location?.origin || ''}/student/dashboard/scholarship-fee-success?session_id={CHECKOUT_SESSION_ID}`}
-                            cancelUrl={`${window.location?.origin || ''}/student/dashboard/scholarship-fee-error`}
                             disabled={!applicationFeePaid || scholarshipFeePaid || (hasSelectedScholarship && !scholarshipFeePaid)}
-                            scholarshipsIds={[application.scholarship_id]}
-                            metadata={{ application_id: application.id, selected_scholarship_id: application.scholarship_id }}
-                          />
+                          >
+                            {t('studentDashboard.myApplications.paymentStatus.payScholarshipFee')}
+                          </button>
                         )}
                       </div>
                     </div>
@@ -1628,92 +1518,88 @@ const getLevelColor = (level: any) => {
                       const statusInfo = getStatusDescription(application);
                       
                       return (
-                        <div key={application.id} className="bg-white rounded-3xl hover:-translate-y-1 transition-all duration-300 border border-slate-100 overflow-hidden group w-full md:w-80 md:flex-shrink-0 md:min-w-0 md:self-start">
+                        <div key={application.id} className="bg-white rounded-3xl hover:-translate-y-1 transition-all duration-300 border border-slate-100 overflow-hidden group w-full">
                           <div className="p-4 sm:p-6">
-                            {/* Header Section - mesma estrutura da seção aprovada */}
-                            <div className="mb-4 sm:mb-6">
-                              {/* Status Badge - Primeiro elemento */}
-                              <div className="mb-3">
-                                <span className={`inline-flex items-center px-3 py-2 rounded-xl text-xs font-bold border ${getStatusColor(application.status)}`}>
-                                  <Icon className="h-4 w-4 mr-2" />
+                            {/* Compact Mobile Header */}
+                            <div className="mb-4">
+                              {/* Line 1: Title + Status */}
+                              <div className="flex items-start justify-between mb-2">
+                                <h3 className="font-bold text-slate-900 text-lg group-hover:text-blue-600 transition-colors leading-tight flex-1 pr-3">
+                                  {scholarship.title}
+                                </h3>
+                                <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold border ${getStatusColor(application.status)} flex-shrink-0`}>
+                                  <Icon className="h-3 w-3 mr-1" />
                                   {getStatusLabel(application.status)}
                                 </span>
                               </div>
                               
-                              {/* Scholarship Title */}
-                              <h3 className="font-bold text-slate-900 text-lg mb-3 group-hover:text-blue-600 transition-colors leading-tight">
-                                {scholarship.title}
-                              </h3>
-                              
-                              {/* University */}
-                              <div className="flex items-center text-slate-600 mb-3">
-                                <Building className="h-4 w-4 mr-2 text-slate-500 flex-shrink-0" />
-                                <span className="font-medium text-sm truncate">{scholarship.universities?.name}</span>
-                              </div>
-                              
-                              {/* Level Badge */}
-                              <div className="flex items-center">
-                                <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold border ${getLevelColor(scholarship.level)}`}>
-                                  <GraduationCap className="h-4 w-4 mr-1.5" />
+                              {/* Line 2: University + Level */}
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center text-slate-600 flex-1">
+                                  <Building className="h-4 w-4 mr-2 text-slate-500 flex-shrink-0" />
+                                  <span className="font-medium text-sm truncate">{scholarship.universities?.name}</span>
+                                </div>
+                                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${getLevelColor(scholarship.level)} ml-2 flex-shrink-0`}>
+                                  <GraduationCap className="h-3 w-3 mr-1" />
                                   {scholarship.level.charAt(0).toUpperCase() + scholarship.level.slice(1)}
                                 </span>
                               </div>
+                              
+                              {/* Line 3: Application Date + Annual Value */}
+                              <div className="flex items-center justify-between bg-gray-50 rounded-lg p-2 text-sm">
+                                <div className="flex items-center text-slate-600">
+                                  <Calendar className="h-4 w-4 mr-2 text-slate-500" />
+                                  <span className="font-medium">
+                                    {new Date(application.applied_at).toLocaleDateString()}
+                                  </span>
+                                </div>
+                                <div className="flex items-center text-green-600">
+                                  <DollarSign className="h-4 w-4 mr-1 text-green-600" />
+                                  <span className="font-semibold">
+                                    {formatAmount(scholarship.annual_value_with_scholarship ?? 0)}
+                                  </span>
+                                </div>
+                              </div>
                             </div>
 
-                            {/* Status Description Card */}
-                            <div className={`mb-4 sm:mb-6 rounded-2xl p-4 border ${statusInfo.bgColor} ${statusInfo.borderColor}`}>
-                              <div className="flex items-start mb-3">
-                                <div className="flex-1">
+                            {/* Status Details Dropdown */}
+                            <details className="group/details mb-4">
+                              <summary className="cursor-pointer bg-slate-50 hover:bg-slate-100 rounded-lg p-3 transition-colors flex items-center justify-between border border-gray-200">
+                                <div className="flex items-center">
+                                  <FileText className="h-4 w-4 mr-2 text-blue-600" />
+                                  <span className="text-sm font-medium text-gray-700">Status Details</span>
+                                </div>
+                                <ChevronDown className="w-4 h-4 text-gray-500 transition-transform duration-300 ease-in-out group-open/details:rotate-180" />
+                              </summary>
+                              <div className="overflow-hidden transition-all duration-300 ease-in-out group-open/details:max-h-96 max-h-0">
+                                <div className={`mt-2 rounded-lg p-3 border ${statusInfo.bgColor} ${statusInfo.borderColor}`}>
                                   <h3 className={`font-bold text-sm ${statusInfo.color} mb-2`}>
                                     {statusInfo.title}
                                   </h3>
-                                  <p className="text-sm text-slate-700 leading-relaxed">
+                                  <p className="text-sm text-slate-700 leading-relaxed mb-3">
                                     {statusInfo.description}
                                   </p>
+                                  
+                                  {/* Next Steps */}
+                                  {statusInfo.nextSteps && statusInfo.nextSteps.length > 0 && (
+                                    <div>
+                                      <h4 className={`font-semibold text-xs ${statusInfo.color} mb-2 uppercase tracking-wide`}>
+                                        {t('studentDashboard.myApplications.nextSteps')}
+                                      </h4>
+                                      <ul className="space-y-2">
+                                        {statusInfo.nextSteps.map((step, index) => (
+                                          <li key={index} className="flex items-start text-xs text-slate-700">
+                                            <span className="w-1.5 h-1.5 bg-slate-400 rounded-full mr-2 mt-1.5 flex-shrink-0"></span>
+                                            {step}
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  )}
                                 </div>
                               </div>
-                              
-                              {/* Next Steps */}
-                              {statusInfo.nextSteps && statusInfo.nextSteps.length > 0 && (
-                                <div className="mt-4">
-                                                            <h4 className={`font-semibold text-xs ${statusInfo.color} mb-2 uppercase tracking-wide`}>
-                            {t('studentDashboard.myApplications.nextSteps')}
-                          </h4>
-                                  <ul className="space-y-2">
-                                    {statusInfo.nextSteps.map((step, index) => (
-                                      <li key={index} className="flex items-start text-xs text-slate-700">
-                                        <span className="w-1.5 h-1.5 bg-slate-400 rounded-full mr-2 mt-1.5 flex-shrink-0"></span>
-                                        {step}
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              )}
-                            </div>
+                            </details>
 
-                            {/* Scholarship Details */}
-                            <div className="bg-gradient-to-br from-slate-50 to-blue-50 rounded-2xl p-4 mb-6 border border-slate-200">
-                              <div className="grid grid-cols-1 gap-4 text-sm">
-                                <div className="flex items-center">
-                                  <DollarSign className="h-5 w-5 mr-3 text-green-600 flex-shrink-0" />
-                                  <div>
-                                    <span className="font-semibold text-green-700 text-base">
-                                      {formatAmount(scholarship.annual_value_with_scholarship ?? 0)}
-                                    </span>
-                                    <p className="text-slate-600 text-xs">{t('studentDashboard.myApplications.scholarshipDetails.annualValue')}</p>
-                                  </div>
-                                </div>
-                                <div className="flex items-center">
-                                  <Calendar className="h-5 w-5 mr-3 text-slate-500 flex-shrink-0" />
-                                  <div>
-                                    <span className="font-semibold text-slate-700">
-                                      {new Date(application.applied_at).toLocaleDateString()}
-                                    </span>
-                                    <p className="text-slate-600 text-xs">{t('studentDashboard.myApplications.scholarshipDetails.appliedOn')}</p>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
 
                             {/* Not selected reason for rejected applications */}
                             {application.status === 'rejected' && (application as any).notes && (
@@ -2017,6 +1903,7 @@ const getLevelColor = (level: any) => {
           onClose={() => setShowScholarshipFeeModal(false)}
           scholarship={pendingScholarshipFeeApplication.scholarships!}
           onStripeCheckout={handleScholarshipFeeCheckout}
+          onPixCheckout={handleScholarshipFeePixCheckout}
           isProcessing={isProcessingScholarshipFeeCheckout}
           feeType="scholarship_fee"
         />

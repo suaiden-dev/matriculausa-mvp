@@ -1627,15 +1627,20 @@
       "paymentStatus": {
         "title": "Payment Status",
         "applicationFee": "Application Fee",
+        "applicationFeeDescription": "Required to process application",
         "scholarshipFee": "Scholarship Fee",
+        "scholarshipFeeDescription": "Final step to secure your spot",
         "paid": "Paid",
         "payApplicationFee": "Pay Application Fee",
         "payScholarshipFee": "Pay Scholarship Fee",
+        "paymentCompleted": "Payment Completed",
         "uploading": "Uploading...",
         "uploadDocument": "Upload Document",
         "selected": "Selected:"
       },
       "documents": {
+        "title": "Documents",
+        "statusText": "All documents submitted and verified",
         "checklist": "Documents Checklist",
         "passport": "Passport",
         "highSchoolDiploma": "High School Diploma",
@@ -1761,6 +1766,20 @@
       },
       "rejectedApplication": {
         "reason": "Reason:"
+      },
+      "statusDetails": {
+        "title": "Status Details"
+      },
+      "status": {
+        "applicationNotSelected": "Application Not Selected",
+        "applied": "Applied",
+        "complete": "Complete",
+        "inProgress": "In Progress"
+      },
+      "general": {
+        "value": "Value",
+        "annualValue": "Annual Value",
+        "accessYourApplication": "Access Your Application"
       }
     },
     "applicationChatPage": {
@@ -2922,6 +2941,10 @@
       "stripe": {
         "title": "Stripe",
         "description": "Pay securely with credit or debit card"
+      },
+      "pix": {
+        "title": "PIX",
+        "description": "Brazilian instant payment system"
       },
       "zelle": {
         "title": "Zelle",

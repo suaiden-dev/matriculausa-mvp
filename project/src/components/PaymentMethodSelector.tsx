@@ -194,67 +194,71 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
         </div>
 
         <div className="grid gap-4">
-          {paymentMethods.map((method) => (
-            <div
-              key={method.id}
-              className={`relative border-2 rounded-lg p-4 cursor-pointer transition-all duration-200 ${
-                selectedMethod === method.id
-                  ? 'border-blue-500 bg-blue-50'
-                  : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-              } ${processingSelection ? 'pointer-events-none opacity-60' : ''}`}
-              onClick={() => handleMethodSelect(method.id as 'stripe' | 'zelle' | 'pix')}
-            >
-              <div className="flex items-start space-x-3">
-                <div className="flex-shrink-0">
-                  {method.icon ? (
-                    <method.icon className={`w-6 h-6 ${
-                      selectedMethod === method.id ? 'text-blue-600' : 'text-gray-400'
-                    }`} />
-                  ) : (
-                    <CreditCard className={`w-6 h-6 ${
-                      selectedMethod === method.id ? 'text-blue-600' : 'text-gray-400'
-                    }`} />
-                  )}
-                </div>
-                
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-900">
-                        {method.display_name}
-                      </h4>
-                      <p className="text-sm text-gray-500 mt-1">
-                        {method.description}
-                      </p>
-                    </div>
-                    
-                    {selectedMethod === method.id && !processingSelection && (
-                      <CheckCircle className="w-5 h-5 text-blue-600" />
+          {paymentMethods.map((method) => {
+            const isSelected = selectedMethod === method.id;
+            
+            return (
+              <div
+                key={method.id}
+                className={`relative border-2 rounded-lg p-4 cursor-pointer transition-all duration-200 ${
+                  isSelected
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                } ${processingSelection ? 'pointer-events-none opacity-60' : ''}`}
+                onClick={() => handleMethodSelect(method.id as 'stripe' | 'zelle' | 'pix')}
+              >
+                <div className="flex items-start space-x-3">
+                  <div className="flex-shrink-0">
+                    {method.icon ? (
+                      <method.icon className={`w-6 h-6 ${
+                        isSelected ? 'text-blue-600' : 'text-gray-400'
+                      }`} />
+                    ) : (
+                      <CreditCard className={`w-6 h-6 ${
+                        isSelected ? 'text-blue-600' : 'text-gray-400'
+                      }`} />
                     )}
                   </div>
                   
-                  {method.requires_verification && (
-                    <div className="mt-2 flex items-center space-x-1">
-                      <AlertCircle className="w-4 h-4 text-amber-500" />
-                      <span className="text-xs text-amber-700">
-                        {t('paymentSelector.manualVerification')}
-                      </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="text-sm font-medium text-gray-900">
+                          {method.display_name}
+                        </h4>
+                        <p className="text-sm text-gray-500 mt-1">
+                          {method.description}
+                        </p>
+                      </div>
+                      
+                      {isSelected && !processingSelection && (
+                        <CheckCircle className="w-5 h-5 text-blue-600" />
+                      )}
                     </div>
-                  )}
+                    
+                    {method.requires_verification && (
+                      <div className="mt-2 flex items-center space-x-1">
+                        <AlertCircle className="w-4 h-4 text-amber-500" />
+                        <span className="text-xs text-amber-700">
+                          {t('paymentSelector.manualVerification')}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </div>
+                
+                {isSelected && (
+                  <div className="mt-3 pt-3 border-t border-blue-200">
+                    {method.name === 'zelle' && (
+                      <div className="mt-2 text-xs text-amber-700 bg-amber-50 p-2 rounded">
+                        <strong>{t('paymentSelector.important')}</strong> {t('paymentSelector.zelleUploadNote')}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-              
-              {selectedMethod === method.id && (
-                <div className="mt-3 pt-3 border-t border-blue-200">
-                  {method.name === 'zelle' && (
-                    <div className="mt-2 text-xs text-amber-700 bg-amber-50 p-2 rounded">
-                      <strong>{t('paymentSelector.important')}</strong> {t('paymentSelector.zelleUploadNote')}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>
