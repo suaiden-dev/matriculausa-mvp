@@ -456,7 +456,7 @@ const StudentApplicationsView: React.FC = () => {
 
   const fetchStudents = async () => {
     try {
-      // Buscar apenas estudantes que pagaram a taxa de seleção
+      // Buscar estudantes com informações de atividade recente
       const { data, error } = await supabase
         .from('user_profiles')
         .select(`
@@ -465,6 +465,7 @@ const StudentApplicationsView: React.FC = () => {
           full_name,
           email,
           created_at,
+          updated_at,
           has_paid_selection_process_fee,
           has_paid_i20_control_fee,
           role,
@@ -483,6 +484,7 @@ const StudentApplicationsView: React.FC = () => {
             student_process_type,
             transfer_form_status,
             documents,
+            updated_at,
             scholarships (
               title,
               universities (
@@ -528,6 +530,30 @@ const StudentApplicationsView: React.FC = () => {
           // Se não há aplicação locked, deixar campo scholarship vazio
         }
 
+        // Calcular a data de atividade mais recente
+        const getMostRecentActivity = () => {
+          const activities = [];
+          
+          // Data de atualização do perfil
+          if (student.updated_at) {
+            activities.push(new Date(student.updated_at));
+          }
+          
+          // Datas das aplicações
+          if (student.scholarship_applications) {
+            student.scholarship_applications.forEach((app: any) => {
+              if (app.applied_at) activities.push(new Date(app.applied_at));
+              if (app.updated_at) activities.push(new Date(app.updated_at));
+              if (app.reviewed_at) activities.push(new Date(app.reviewed_at));
+            });
+          }
+          
+          // Retornar a data mais recente ou a data de criação se não houver atividades
+          return activities.length > 0 ? new Date(Math.max(...activities.map(d => d.getTime()))) : new Date(student.created_at);
+        };
+
+        const mostRecentActivity = getMostRecentActivity();
+
         return {
           student_id: student.id,
           user_id: student.user_id,
@@ -556,9 +582,16 @@ const StudentApplicationsView: React.FC = () => {
           is_locked: !!lockedApplication,
           total_applications: student.scholarship_applications ? student.scholarship_applications.length : 0,
           // Guardar todas as aplicações para o modal
-          all_applications: student.scholarship_applications || []
+          all_applications: student.scholarship_applications || [],
+          // Campo para ordenação por atividade recente
+          most_recent_activity: mostRecentActivity
         };
       }) || [];
+
+      // Ordenar por atividade recente (mais recente primeiro)
+      formattedData.sort((a, b) => {
+        return new Date(b.most_recent_activity).getTime() - new Date(a.most_recent_activity).getTime();
+      });
 
       setStudents(formattedData);
     } catch (error) {
@@ -764,48 +797,113 @@ const StudentApplicationsView: React.FC = () => {
 
   const ApplicationFlowSteps = ({ student }: { student: StudentRecord }) => {
     const allSteps = [
-      { key: 'selection_fee', label: 'Selection Fee', icon: CreditCard },
-      { key: 'apply', label: 'Application', icon: FileText },
-      { key: 'review', label: 'Review', icon: Eye },
-      { key: 'application_fee', label: 'App Fee', icon: DollarSign },
-      { key: 'scholarship_fee', label: 'Scholarship Fee', icon: Award },
-      { key: 'acceptance_letter', label: 'Acceptance', icon: BookOpen },
-      { key: 'transfer_form', label: 'Transfer Form', icon: FileText },
-      { key: 'i20_fee', label: 'I-20 Fee', icon: CreditCard },
-      { key: 'enrollment', label: 'Enrollment', icon: GraduationCap }
+      { key: 'selection_fee', label: 'Selection Fee', icon: CreditCard, shortLabel: 'Fee' },
+      { key: 'apply', label: 'Application', icon: FileText, shortLabel: 'App' },
+      { key: 'review', label: 'Review', icon: Eye, shortLabel: 'Review' },
+      { key: 'application_fee', label: 'App Fee', icon: DollarSign, shortLabel: 'Pay' },
+      { key: 'scholarship_fee', label: 'Scholarship Fee', icon: Award, shortLabel: 'Sch' },
+      { key: 'acceptance_letter', label: 'Acceptance', icon: BookOpen, shortLabel: 'Acc' },
+      { key: 'transfer_form', label: 'Transfer Form', icon: FileText, shortLabel: 'Trans' },
+      { key: 'i20_fee', label: 'I-20 Fee', icon: CreditCard, shortLabel: 'I-20' },
+      { key: 'enrollment', label: 'Enrollment', icon: GraduationCap, shortLabel: 'Enroll' }
     ];
 
     // Filtrar steps baseado no student_process_type
     const steps = allSteps.filter(step => {
       if (step.key === 'transfer_form') {
-        // Só mostrar transfer_form se o student_process_type for 'transfer'
         return student?.student_process_type === 'transfer';
       }
       return true;
     });
 
-    return (
-      <div className="flex items-center space-x-2 overflow-x-auto">
-        {steps.map((step, index) => {
-          const status = getStepStatus(student, step.key);
-          const StatusIcon = getStatusIcon(status);
-          const StepIcon = step.icon;
+    // Calcular progresso geral
+    const completedSteps = steps.filter(step => getStepStatus(student, step.key) === 'completed').length;
+    const totalSteps = steps.length;
+    const progressPercentage = (completedSteps / totalSteps) * 100;
 
-          return (
-            <React.Fragment key={step.key}>
-              <div className={`flex flex-col items-center p-2 rounded-lg transition-all ${getStatusColor(status)}`}>
-                <div className="relative">
-                  <StepIcon className="h-5 w-5 mb-1" />
-                  <StatusIcon className="h-3 w-3 absolute -top-1 -right-1" />
-                </div>
-                <span className="text-xs font-medium text-center">{step.label}</span>
-              </div>
-              {index < steps.length - 1 && (
-                <ArrowRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
-              )}
-            </React.Fragment>
-          );
-        })}
+    // Encontrar a etapa atual
+    const currentStepIndex = steps.findIndex(step => {
+      const status = getStepStatus(student, step.key);
+      return status === 'in_progress' || status === 'pending';
+    });
+    const currentStep = currentStepIndex >= 0 ? steps[currentStepIndex] : steps[steps.length - 1];
+
+    return (
+      <div className="flex items-center space-x-3">
+        {/* Progresso Circular */}
+        <div className="relative w-8 h-8 flex-shrink-0">
+          <svg className="w-8 h-8 transform -rotate-90" viewBox="0 0 32 32">
+            {/* Background circle */}
+            <circle
+              cx="16"
+              cy="16"
+              r="14"
+              stroke="currentColor"
+              strokeWidth="2"
+              fill="none"
+              className="text-gray-200"
+            />
+            {/* Progress circle */}
+            <circle
+              cx="16"
+              cy="16"
+              r="14"
+              stroke="currentColor"
+              strokeWidth="2"
+              fill="none"
+              strokeDasharray={`${2 * Math.PI * 14}`}
+              strokeDashoffset={`${2 * Math.PI * 14 * (1 - progressPercentage / 100)}`}
+              className={`transition-all duration-300 ${
+                progressPercentage === 100 ? 'text-green-500' : 
+                progressPercentage >= 50 ? 'text-blue-500' : 
+                'text-yellow-500'
+              }`}
+            />
+          </svg>
+          {/* Ícone da etapa atual no centro */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            {React.createElement(currentStep.icon, { 
+              className: `h-3 w-3 ${
+                progressPercentage === 100 ? 'text-green-600' : 
+                progressPercentage >= 50 ? 'text-blue-600' : 
+                'text-yellow-600'
+              }` 
+            })}
+          </div>
+        </div>
+
+        {/* Informações compactas */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center space-x-2">
+            <span className="text-sm font-medium text-gray-900">
+              {currentStep.shortLabel}
+            </span>
+            <span className="text-xs text-gray-500">
+              {completedSteps}/{totalSteps}
+            </span>
+          </div>
+          <div className="flex items-center space-x-1 mt-1">
+            {steps.slice(0, 6).map((step, index) => {
+              const status = getStepStatus(student, step.key);
+              return (
+                <div
+                  key={step.key}
+                  className={`w-2 h-2 rounded-full ${
+                    status === 'completed' ? 'bg-green-500' :
+                    status === 'in_progress' ? 'bg-blue-500' :
+                    status === 'rejected' ? 'bg-red-500' :
+                    'bg-gray-300'
+                  }`}
+                  title={`${step.label}: ${status}`}
+                />
+              );
+            })}
+            {steps.length > 6 && (
+              <span className="text-xs text-gray-400 ml-1">+{steps.length - 6}</span>
+            )}
+          </div>
+        </div>
+
       </div>
     );
   };
@@ -1116,6 +1214,9 @@ const StudentApplicationsView: React.FC = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Applied Date
                 </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Last Activity
+                </th>
                 
               </tr>
             </thead>
@@ -1193,6 +1294,26 @@ const StudentApplicationsView: React.FC = () => {
                         ? new Date(student.applied_at).toLocaleDateString()
                         : `Joined ${new Date(student.student_created_at).toLocaleDateString()}`
                       }
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <div className="flex items-center">
+                      <Clock className="h-4 w-4 mr-1" />
+                      {(() => {
+                        const now = new Date();
+                        const activityDate = new Date(student.most_recent_activity);
+                        const hoursDiff = (now.getTime() - activityDate.getTime()) / (1000 * 60 * 60);
+                        
+                        if (hoursDiff < 1) {
+                          return 'Just now';
+                        } else if (hoursDiff < 24) {
+                          return `${Math.floor(hoursDiff)}h ago`;
+                        } else if (hoursDiff < 168) { // 7 days
+                          return `${Math.floor(hoursDiff / 24)}d ago`;
+                        } else {
+                          return activityDate.toLocaleDateString();
+                        }
+                      })()}
                     </div>
                   </td>
                   
