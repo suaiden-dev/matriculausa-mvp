@@ -260,15 +260,18 @@ export const useFeeConfig = (userId?: string) => {
     }
 
     // PRIORIDADE 1.5: Para selection_process sem valor real pago, usar system_type
+    // MAS APENAS se não houver override personalizado
     if (feeType === 'selection_process' && (!realPaymentAmounts || !realPaymentAmounts.selection_process)) {
-      if (userSystemType === 'simplified') {
-        // Debug para jolie8862@uorak.com
-        if (userId === '935e0eec-82c6-4a70-b013-e85dde6e63f7') {
-          console.log('🔍 [useFeeConfig] jolie8862@uorak.com - Using system_type simplified for Selection Process: 350');
-        }
-        return 350;
+      // Verificar se há override primeiro
+      if (userFeeOverrides && userFeeOverrides.selection_process_fee !== undefined) {
+        // Se há override, não usar system_type, deixar para a verificação de override abaixo
       } else {
-        return 400; // legacy
+        // Só usar system_type se não houver override
+        if (userSystemType === 'simplified') {
+          return 350;
+        } else {
+          return 400; // legacy
+        }
       }
     }
 
@@ -277,6 +280,10 @@ export const useFeeConfig = (userId?: string) => {
       switch (feeType) {
         case 'selection_process':
           if (userFeeOverrides.selection_process_fee !== undefined) {
+            // Debug para danielbamsesi@gmail.com
+            if (userId === 'e8244c53-3547-4028-83de-cae495953642') {
+              console.log('🔍 [useFeeConfig] danielbamsesi@gmail.com - Using override for Selection Process:', userFeeOverrides.selection_process_fee);
+            }
             return userFeeOverrides.selection_process_fee;
           }
           break;
