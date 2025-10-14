@@ -200,7 +200,7 @@ const StudentApplicationsView: React.FC = () => {
       // Log da ação
       try {
         await supabase.rpc('log_student_action', {
-          p_student_id: selectedStudent?.id,
+          p_student_id: selectedStudent?.student_id,
           p_action_type: 'document_rejection',
           p_action_description: `Document ${docType} rejected by platform admin: ${reason}`,
           p_performed_by: user?.id || '',
@@ -247,16 +247,97 @@ const StudentApplicationsView: React.FC = () => {
   const [timeFilter, setTimeFilter] = useState('all');
   const [startDate, setStartDate] = useState<dayjs.Dayjs | null>(null);
   const [endDate, setEndDate] = useState<dayjs.Dayjs | null>(null);
+  const [onlyPaidSelectionFee, setOnlyPaidSelectionFee] = useState(false);
   
   // Dados para os filtros
   const [affiliates, setAffiliates] = useState<any[]>([]);
   const [scholarships, setScholarships] = useState<any[]>([]);
   const [universities, setUniversities] = useState<any[]>([]);
 
+  // Chave para localStorage
+  const FILTERS_STORAGE_KEY = 'admin_student_filters';
+
+  // Função para salvar filtros no localStorage
+  const saveFiltersToStorage = () => {
+    const filters = {
+      searchTerm,
+      statusFilter,
+      stageFilter,
+      affiliateFilter,
+      scholarshipFilter,
+      universityFilter,
+      timeFilter,
+      startDate: startDate?.toISOString() || null,
+      endDate: endDate?.toISOString() || null,
+      onlyPaidSelectionFee,
+      currentPage
+    };
+    localStorage.setItem(FILTERS_STORAGE_KEY, JSON.stringify(filters));
+  };
+
+  // Função para carregar filtros do localStorage
+  const loadFiltersFromStorage = () => {
+    try {
+      const savedFilters = localStorage.getItem(FILTERS_STORAGE_KEY);
+      if (savedFilters) {
+        const filters = JSON.parse(savedFilters);
+        setSearchTerm(filters.searchTerm || '');
+        setStatusFilter(filters.statusFilter || 'all');
+        setStageFilter(filters.stageFilter || 'all');
+        setAffiliateFilter(filters.affiliateFilter || 'all');
+        setScholarshipFilter(filters.scholarshipFilter || 'all');
+        setUniversityFilter(filters.universityFilter || 'all');
+        setTimeFilter(filters.timeFilter || 'all');
+        setStartDate(filters.startDate ? dayjs(filters.startDate) : null);
+        setEndDate(filters.endDate ? dayjs(filters.endDate) : null);
+        setOnlyPaidSelectionFee(filters.onlyPaidSelectionFee || false);
+        setCurrentPage(filters.currentPage || 1);
+      }
+    } catch (error) {
+      console.error('Error loading filters from localStorage:', error);
+    }
+  };
+
+  // Função para limpar filtros salvos (opcional)
+  const clearSavedFilters = () => {
+    localStorage.removeItem(FILTERS_STORAGE_KEY);
+    // Resetar todos os filtros para valores padrão
+    setSearchTerm('');
+    setStatusFilter('all');
+    setStageFilter('all');
+    setAffiliateFilter('all');
+    setScholarshipFilter('all');
+    setUniversityFilter('all');
+    setTimeFilter('all');
+    setStartDate(null);
+    setEndDate(null);
+    setOnlyPaidSelectionFee(false);
+    setCurrentPage(1);
+  };
+
   useEffect(() => {
+    // Carregar filtros salvos primeiro
+    loadFiltersFromStorage();
     fetchStudents();
     fetchFilterData();
   }, []);
+
+  // Salvar filtros no localStorage sempre que mudarem
+  useEffect(() => {
+    saveFiltersToStorage();
+  }, [
+    searchTerm,
+    statusFilter,
+    stageFilter,
+    affiliateFilter,
+    scholarshipFilter,
+    universityFilter,
+    timeFilter,
+    startDate,
+    endDate,
+    onlyPaidSelectionFee,
+    currentPage
+  ]);
 
   // Carregar dependents quando selectedStudent mudar (mantido para compatibilidade, mas modal foi substituído por página dedicada)
   useEffect(() => {
@@ -308,7 +389,7 @@ const StudentApplicationsView: React.FC = () => {
               .eq('user_id', admin.user_id)
               .single();
             
-            let sellers = [];
+            let sellers: any[] = [];
             if (affiliateAdminData) {
               // Buscar sellers que pertencem a este affiliate admin
               const { data: sellersData } = await supabase
@@ -545,8 +626,6 @@ const StudentApplicationsView: React.FC = () => {
   };
 
   const filteredStudents = students.filter((student: StudentRecord) => {
-    // Nota: Agora todos os estudantes já pagaram a taxa de seleção (filtro aplicado na query)
-    
     const matchesSearch = 
       student.student_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       student.student_email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -560,64 +639,55 @@ const StudentApplicationsView: React.FC = () => {
       (statusFilter === 'locked' && student.is_locked) ||
       (statusFilter === 'single_application' && student.total_applications === 1);
     
+    // Filtro para mostrar apenas usuários que pagaram a taxa de seleção
+    const matchesSelectionFee = !onlyPaidSelectionFee || student.has_paid_selection_process_fee;
+    
     // Filtro por etapa do processo (baseado no Application Flow)
     const matchesStage = stageFilter === 'all' || (() => {
-      // Debug: Log do estado do estudante
-      if (stageFilter !== 'all') {
-        console.log(`🔍 DEBUG: Student ${student.student_name} - Stage Filter: ${stageFilter}`, {
-          has_paid_selection_process_fee: student.has_paid_selection_process_fee,
-          total_applications: student.total_applications,
-          is_locked: student.is_locked,
-          status: student.status,
-          is_application_fee_paid: student.is_application_fee_paid,
-          is_scholarship_fee_paid: student.is_scholarship_fee_paid,
-          acceptance_letter_status: student.acceptance_letter_status,
-          has_paid_i20_control_fee: student.has_paid_i20_control_fee
-        });
-      }
-
       let result = false;
       switch (stageFilter) {
         case 'selection_fee':
-          // Estudantes que pagaram a Selection Process Fee
-          result = !!student.has_paid_selection_process_fee;
+          // Estudantes que pagaram a Selection Process Fee mas ainda não fizeram aplicações
+          result = student.has_paid_selection_process_fee && (student.total_applications || 0) === 0;
           break;
         case 'application':
-          // Estudantes que já fizeram alguma aplicação
-          result = (student.total_applications || 0) > 0;
+          // Estudantes que fizeram aplicações mas ainda não foram aprovados
+          result = (student.total_applications || 0) > 0 && 
+                   student.status !== 'approved' && 
+                   student.status !== 'enrolled' && 
+                   !student.is_application_fee_paid;
           break;
         case 'review':
-          // Estudantes com alguma aplicação em revisão/aprovada/rejeitada
-          result = !!student.status || (student.total_applications || 0) > 0;
+          // Estudantes com aplicações aprovadas mas ainda não pagaram application fee
+          result = student.status === 'approved' && !student.is_application_fee_paid;
           break;
         case 'app_fee':
-          // Application fee paga
-          result = !!student.is_application_fee_paid;
+          // Application fee paga mas ainda não pagaram scholarship fee
+          result = student.is_application_fee_paid && !student.is_scholarship_fee_paid;
           break;
         case 'scholarship_fee':
-          // Scholarship fee paga
-          result = !!student.is_scholarship_fee_paid;
+          // Scholarship fee paga mas ainda não tem acceptance letter
+          result = student.is_scholarship_fee_paid && !student.acceptance_letter_status;
           break;
         case 'acceptance':
-          // Carta de aceitação enviada/assinada/aprovada
+          // Carta de aceitação enviada/assinada/aprovada mas ainda não pagaram I-20 fee
           result = !!student.acceptance_letter_status && 
                    (student.acceptance_letter_status === 'sent' || 
                     student.acceptance_letter_status === 'signed' || 
-                    student.acceptance_letter_status === 'approved');
+                    student.acceptance_letter_status === 'approved') &&
+                   !student.has_paid_i20_control_fee;
           break;
         case 'i20_fee':
-          // I-20 Control Fee paga
-          result = !!student.has_paid_i20_control_fee;
+          // I-20 Control Fee paga mas ainda não matriculado
+          result = student.has_paid_i20_control_fee && student.status !== 'enrolled';
           break;
         case 'enrollment':
-          // Considerar matriculado quando status for 'enrolled'
+          // Matriculado
           result = student.status === 'enrolled';
           break;
         default:
           result = true;
       }
-      
-      if (stageFilter !== 'all') console.log(`  → Result: ${result}`);
       return result;
     })();
     
@@ -631,25 +701,8 @@ const StudentApplicationsView: React.FC = () => {
     
     // Filtro por affiliate admin
     const matchesAffiliate = affiliateFilter === 'all' || (() => {
-      if (affiliateFilter !== 'all') {
-        console.log(`🔍 DEBUG: Checking affiliate filter for student ${student.student_name}:`, {
-          student_referral_code: student.seller_referral_code,
-          affiliateFilter,
-          student_id: student.student_id,
-          available_affiliates: affiliates.map(a => ({ 
-            id: a.id, 
-            name: a.name, 
-            referral_code: a.referral_code,
-            sellers: a.sellers?.map(s => s.referral_code) || []
-          }))
-        });
-      }
-      
       if (!student.seller_referral_code) {
         // Se não tem referral code, só aparece se filtro for "all"
-        if (affiliateFilter !== 'all') {
-          console.log(`  → Student has no referral code, excluding from filter`);
-        }
         return affiliateFilter === 'all';
       }
       
@@ -657,28 +710,14 @@ const StudentApplicationsView: React.FC = () => {
       // Primeiro tenta pelo referral_code direto do affiliate
       let affiliate = affiliates.find(aff => aff.referral_code === student.seller_referral_code);
       
-      if (affiliate) {
-        console.log(`  → Found affiliate by direct referral_code:`, affiliate);
-      } else {
+      if (!affiliate) {
         // Se não encontrar, busca pelos sellers do affiliate
         affiliate = affiliates.find(aff => 
-          aff.sellers?.some(seller => seller.referral_code === student.seller_referral_code)
+          aff.sellers?.some((seller: any) => seller.referral_code === student.seller_referral_code)
         );
-        
-        if (affiliate) {
-          console.log(`  → Found affiliate by seller referral_code:`, affiliate);
-        } else {
-          console.log(`  → No affiliate found for referral_code: ${student.seller_referral_code}`);
-        }
       }
       
-      const result = affiliate && affiliate.id === affiliateFilter;
-      
-      if (affiliateFilter !== 'all') {
-        console.log(`  → Final result: ${result} (affiliate.id: ${affiliate?.id}, filter: ${affiliateFilter})`);
-      }
-      
-      return result;
+      return affiliate && affiliate.id === affiliateFilter;
     })();
     
     // Filtro por tempo
@@ -713,26 +752,11 @@ const StudentApplicationsView: React.FC = () => {
       }
     })();
     
-    const finalResult = matchesSearch && matchesStatus && matchesStage && matchesScholarship && matchesUniversity && matchesAffiliate && matchesTime;
-    
-    if (affiliateFilter !== 'all' && finalResult) {
-      console.log(`✅ Student ${student.student_name} PASSED affiliate filter`);
-    }
+    const finalResult = matchesSearch && matchesStatus && matchesSelectionFee && matchesStage && matchesScholarship && matchesUniversity && matchesAffiliate && matchesTime;
     
     return finalResult;
   });
   
-  // Log do resultado final do filtro
-  if (affiliateFilter !== 'all') {
-    console.log(`🔍 DEBUG: Affiliate filter "${affiliateFilter}" resulted in ${filteredStudents.length} students`);
-    console.log(`🔍 DEBUG: All students with referral codes:`, 
-      students.map(s => ({ 
-        name: s.student_name, 
-        referral_code: s.seller_referral_code,
-        has_referral: !!s.seller_referral_code 
-      }))
-    );
-  }
 
   const totalPages = Math.ceil(filteredStudents.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -931,7 +955,7 @@ const StudentApplicationsView: React.FC = () => {
                       <LocalizationProvider dateAdapter={AdapterDayjs}>
                         <DatePicker
                           value={startDate}
-                          onChange={(newValue) => setStartDate(newValue)}
+                          onChange={(newValue) => setStartDate(newValue as dayjs.Dayjs | null)}
                           slotProps={{
                             textField: {
                               size: 'small',
@@ -981,7 +1005,7 @@ const StudentApplicationsView: React.FC = () => {
                       <LocalizationProvider dateAdapter={AdapterDayjs}>
                         <DatePicker
                           value={endDate}
-                          onChange={(newValue) => setEndDate(newValue)}
+                          onChange={(newValue) => setEndDate(newValue as dayjs.Dayjs | null)}
                           slotProps={{
                             textField: {
                               size: 'small',
@@ -1047,6 +1071,29 @@ const StudentApplicationsView: React.FC = () => {
                 ))}
               </select>
             </div>
+          </div>
+          
+          {/* Checkbox para filtrar apenas usuários que pagaram a taxa de seleção e botão para limpar filtros */}
+          <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="onlyPaidSelectionFee"
+                checked={onlyPaidSelectionFee}
+                onChange={(e) => setOnlyPaidSelectionFee(e.target.checked)}
+                className="h-4 w-4 text-[#05294E] focus:ring-[#05294E] border-gray-300 rounded"
+              />
+              <label htmlFor="onlyPaidSelectionFee" className="text-sm font-medium text-gray-700">
+                Show only students who paid Selection Process Fee
+              </label>
+            </div>
+            <button
+              onClick={clearSavedFilters}
+              className="text-sm text-gray-500 hover:text-gray-700 underline"
+              title="Clear all filters and reset to default"
+            >
+              Clear All Filters
+            </button>
           </div>
         </div>
       </div>
