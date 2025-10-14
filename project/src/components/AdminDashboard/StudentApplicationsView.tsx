@@ -200,7 +200,7 @@ const StudentApplicationsView: React.FC = () => {
       // Log da ação
       try {
         await supabase.rpc('log_student_action', {
-          p_student_id: selectedStudent?.id,
+          p_student_id: selectedStudent?.student_id,
           p_action_type: 'document_rejection',
           p_action_description: `Document ${docType} rejected by platform admin: ${reason}`,
           p_performed_by: user?.id || '',
@@ -247,16 +247,97 @@ const StudentApplicationsView: React.FC = () => {
   const [timeFilter, setTimeFilter] = useState('all');
   const [startDate, setStartDate] = useState<dayjs.Dayjs | null>(null);
   const [endDate, setEndDate] = useState<dayjs.Dayjs | null>(null);
+  const [onlyPaidSelectionFee, setOnlyPaidSelectionFee] = useState(false);
   
   // Dados para os filtros
   const [affiliates, setAffiliates] = useState<any[]>([]);
   const [scholarships, setScholarships] = useState<any[]>([]);
   const [universities, setUniversities] = useState<any[]>([]);
 
+  // Chave para localStorage
+  const FILTERS_STORAGE_KEY = 'admin_student_filters';
+
+  // Função para salvar filtros no localStorage
+  const saveFiltersToStorage = () => {
+    const filters = {
+      searchTerm,
+      statusFilter,
+      stageFilter,
+      affiliateFilter,
+      scholarshipFilter,
+      universityFilter,
+      timeFilter,
+      startDate: startDate?.toISOString() || null,
+      endDate: endDate?.toISOString() || null,
+      onlyPaidSelectionFee,
+      currentPage
+    };
+    localStorage.setItem(FILTERS_STORAGE_KEY, JSON.stringify(filters));
+  };
+
+  // Função para carregar filtros do localStorage
+  const loadFiltersFromStorage = () => {
+    try {
+      const savedFilters = localStorage.getItem(FILTERS_STORAGE_KEY);
+      if (savedFilters) {
+        const filters = JSON.parse(savedFilters);
+        setSearchTerm(filters.searchTerm || '');
+        setStatusFilter(filters.statusFilter || 'all');
+        setStageFilter(filters.stageFilter || 'all');
+        setAffiliateFilter(filters.affiliateFilter || 'all');
+        setScholarshipFilter(filters.scholarshipFilter || 'all');
+        setUniversityFilter(filters.universityFilter || 'all');
+        setTimeFilter(filters.timeFilter || 'all');
+        setStartDate(filters.startDate ? dayjs(filters.startDate) : null);
+        setEndDate(filters.endDate ? dayjs(filters.endDate) : null);
+        setOnlyPaidSelectionFee(filters.onlyPaidSelectionFee || false);
+        setCurrentPage(filters.currentPage || 1);
+      }
+    } catch (error) {
+      console.error('Error loading filters from localStorage:', error);
+    }
+  };
+
+  // Função para limpar filtros salvos (opcional)
+  const clearSavedFilters = () => {
+    localStorage.removeItem(FILTERS_STORAGE_KEY);
+    // Resetar todos os filtros para valores padrão
+    setSearchTerm('');
+    setStatusFilter('all');
+    setStageFilter('all');
+    setAffiliateFilter('all');
+    setScholarshipFilter('all');
+    setUniversityFilter('all');
+    setTimeFilter('all');
+    setStartDate(null);
+    setEndDate(null);
+    setOnlyPaidSelectionFee(false);
+    setCurrentPage(1);
+  };
+
   useEffect(() => {
+    // Carregar filtros salvos primeiro
+    loadFiltersFromStorage();
     fetchStudents();
     fetchFilterData();
   }, []);
+
+  // Salvar filtros no localStorage sempre que mudarem
+  useEffect(() => {
+    saveFiltersToStorage();
+  }, [
+    searchTerm,
+    statusFilter,
+    stageFilter,
+    affiliateFilter,
+    scholarshipFilter,
+    universityFilter,
+    timeFilter,
+    startDate,
+    endDate,
+    onlyPaidSelectionFee,
+    currentPage
+  ]);
 
   // Carregar dependents quando selectedStudent mudar (mantido para compatibilidade, mas modal foi substituído por página dedicada)
   useEffect(() => {
@@ -308,7 +389,7 @@ const StudentApplicationsView: React.FC = () => {
               .eq('user_id', admin.user_id)
               .single();
             
-            let sellers = [];
+            let sellers: any[] = [];
             if (affiliateAdminData) {
               // Buscar sellers que pertencem a este affiliate admin
               const { data: sellersData } = await supabase
@@ -375,7 +456,7 @@ const StudentApplicationsView: React.FC = () => {
 
   const fetchStudents = async () => {
     try {
-      // Buscar apenas estudantes que pagaram a taxa de seleção
+      // Buscar estudantes com informações de atividade recente
       const { data, error } = await supabase
         .from('user_profiles')
         .select(`
@@ -384,6 +465,7 @@ const StudentApplicationsView: React.FC = () => {
           full_name,
           email,
           created_at,
+          updated_at,
           has_paid_selection_process_fee,
           has_paid_i20_control_fee,
           role,
@@ -402,6 +484,7 @@ const StudentApplicationsView: React.FC = () => {
             student_process_type,
             transfer_form_status,
             documents,
+            updated_at,
             scholarships (
               title,
               universities (
@@ -447,6 +530,30 @@ const StudentApplicationsView: React.FC = () => {
           // Se não há aplicação locked, deixar campo scholarship vazio
         }
 
+        // Calcular a data de atividade mais recente
+        const getMostRecentActivity = () => {
+          const activities = [];
+          
+          // Data de atualização do perfil
+          if (student.updated_at) {
+            activities.push(new Date(student.updated_at));
+          }
+          
+          // Datas das aplicações
+          if (student.scholarship_applications) {
+            student.scholarship_applications.forEach((app: any) => {
+              if (app.applied_at) activities.push(new Date(app.applied_at));
+              if (app.updated_at) activities.push(new Date(app.updated_at));
+              if (app.reviewed_at) activities.push(new Date(app.reviewed_at));
+            });
+          }
+          
+          // Retornar a data mais recente ou a data de criação se não houver atividades
+          return activities.length > 0 ? new Date(Math.max(...activities.map(d => d.getTime()))) : new Date(student.created_at);
+        };
+
+        const mostRecentActivity = getMostRecentActivity();
+
         return {
           student_id: student.id,
           user_id: student.user_id,
@@ -475,9 +582,19 @@ const StudentApplicationsView: React.FC = () => {
           is_locked: !!lockedApplication,
           total_applications: student.scholarship_applications ? student.scholarship_applications.length : 0,
           // Guardar todas as aplicações para o modal
-          all_applications: student.scholarship_applications || []
+          all_applications: student.scholarship_applications || [],
+          // Campo para ordenação por atividade recente
+          most_recent_activity: mostRecentActivity
         };
+        
+        
+        return studentRecord;
       }) || [];
+
+      // Ordenar por atividade recente (mais recente primeiro)
+      formattedData.sort((a, b) => {
+        return new Date(b.most_recent_activity).getTime() - new Date(a.most_recent_activity).getTime();
+      });
 
       setStudents(formattedData);
     } catch (error) {
@@ -545,8 +662,6 @@ const StudentApplicationsView: React.FC = () => {
   };
 
   const filteredStudents = students.filter((student: StudentRecord) => {
-    // Nota: Agora todos os estudantes já pagaram a taxa de seleção (filtro aplicado na query)
-    
     const matchesSearch = 
       student.student_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       student.student_email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -560,64 +675,55 @@ const StudentApplicationsView: React.FC = () => {
       (statusFilter === 'locked' && student.is_locked) ||
       (statusFilter === 'single_application' && student.total_applications === 1);
     
+    // Filtro para mostrar apenas usuários que pagaram a taxa de seleção
+    const matchesSelectionFee = !onlyPaidSelectionFee || student.has_paid_selection_process_fee;
+    
     // Filtro por etapa do processo (baseado no Application Flow)
     const matchesStage = stageFilter === 'all' || (() => {
-      // Debug: Log do estado do estudante
-      if (stageFilter !== 'all') {
-        console.log(`🔍 DEBUG: Student ${student.student_name} - Stage Filter: ${stageFilter}`, {
-          has_paid_selection_process_fee: student.has_paid_selection_process_fee,
-          total_applications: student.total_applications,
-          is_locked: student.is_locked,
-          status: student.status,
-          is_application_fee_paid: student.is_application_fee_paid,
-          is_scholarship_fee_paid: student.is_scholarship_fee_paid,
-          acceptance_letter_status: student.acceptance_letter_status,
-          has_paid_i20_control_fee: student.has_paid_i20_control_fee
-        });
-      }
-
       let result = false;
       switch (stageFilter) {
         case 'selection_fee':
-          // Estudantes que pagaram a Selection Process Fee
-          result = !!student.has_paid_selection_process_fee;
+          // Estudantes que pagaram a Selection Process Fee mas ainda não fizeram aplicações
+          result = student.has_paid_selection_process_fee && (student.total_applications || 0) === 0;
           break;
         case 'application':
-          // Estudantes que já fizeram alguma aplicação
-          result = (student.total_applications || 0) > 0;
+          // Estudantes que fizeram aplicações mas ainda não foram aprovados
+          result = (student.total_applications || 0) > 0 && 
+                   student.status !== 'approved' && 
+                   student.status !== 'enrolled' && 
+                   !student.is_application_fee_paid;
           break;
         case 'review':
-          // Estudantes com alguma aplicação em revisão/aprovada/rejeitada
-          result = !!student.status || (student.total_applications || 0) > 0;
+          // Estudantes com aplicações aprovadas mas ainda não pagaram application fee
+          result = student.status === 'approved' && !student.is_application_fee_paid;
           break;
         case 'app_fee':
-          // Application fee paga
-          result = !!student.is_application_fee_paid;
+          // Application fee paga mas ainda não pagaram scholarship fee
+          result = student.is_application_fee_paid && !student.is_scholarship_fee_paid;
           break;
         case 'scholarship_fee':
-          // Scholarship fee paga
-          result = !!student.is_scholarship_fee_paid;
+          // Scholarship fee paga mas ainda não tem acceptance letter
+          result = student.is_scholarship_fee_paid && !student.acceptance_letter_status;
           break;
         case 'acceptance':
-          // Carta de aceitação enviada/assinada/aprovada
+          // Carta de aceitação enviada/assinada/aprovada mas ainda não pagaram I-20 fee
           result = !!student.acceptance_letter_status && 
                    (student.acceptance_letter_status === 'sent' || 
                     student.acceptance_letter_status === 'signed' || 
-                    student.acceptance_letter_status === 'approved');
+                    student.acceptance_letter_status === 'approved') &&
+                   !student.has_paid_i20_control_fee;
           break;
         case 'i20_fee':
-          // I-20 Control Fee paga
-          result = !!student.has_paid_i20_control_fee;
+          // I-20 Control Fee paga mas ainda não matriculado
+          result = student.has_paid_i20_control_fee && student.status !== 'enrolled';
           break;
         case 'enrollment':
-          // Considerar matriculado quando status for 'enrolled'
+          // Matriculado
           result = student.status === 'enrolled';
           break;
         default:
           result = true;
       }
-      
-      if (stageFilter !== 'all') console.log(`  → Result: ${result}`);
       return result;
     })();
     
@@ -631,25 +737,8 @@ const StudentApplicationsView: React.FC = () => {
     
     // Filtro por affiliate admin
     const matchesAffiliate = affiliateFilter === 'all' || (() => {
-      if (affiliateFilter !== 'all') {
-        console.log(`🔍 DEBUG: Checking affiliate filter for student ${student.student_name}:`, {
-          student_referral_code: student.seller_referral_code,
-          affiliateFilter,
-          student_id: student.student_id,
-          available_affiliates: affiliates.map(a => ({ 
-            id: a.id, 
-            name: a.name, 
-            referral_code: a.referral_code,
-            sellers: a.sellers?.map(s => s.referral_code) || []
-          }))
-        });
-      }
-      
       if (!student.seller_referral_code) {
         // Se não tem referral code, só aparece se filtro for "all"
-        if (affiliateFilter !== 'all') {
-          console.log(`  → Student has no referral code, excluding from filter`);
-        }
         return affiliateFilter === 'all';
       }
       
@@ -657,28 +746,14 @@ const StudentApplicationsView: React.FC = () => {
       // Primeiro tenta pelo referral_code direto do affiliate
       let affiliate = affiliates.find(aff => aff.referral_code === student.seller_referral_code);
       
-      if (affiliate) {
-        console.log(`  → Found affiliate by direct referral_code:`, affiliate);
-      } else {
+      if (!affiliate) {
         // Se não encontrar, busca pelos sellers do affiliate
         affiliate = affiliates.find(aff => 
-          aff.sellers?.some(seller => seller.referral_code === student.seller_referral_code)
+          aff.sellers?.some((seller: any) => seller.referral_code === student.seller_referral_code)
         );
-        
-        if (affiliate) {
-          console.log(`  → Found affiliate by seller referral_code:`, affiliate);
-        } else {
-          console.log(`  → No affiliate found for referral_code: ${student.seller_referral_code}`);
-        }
       }
       
-      const result = affiliate && affiliate.id === affiliateFilter;
-      
-      if (affiliateFilter !== 'all') {
-        console.log(`  → Final result: ${result} (affiliate.id: ${affiliate?.id}, filter: ${affiliateFilter})`);
-      }
-      
-      return result;
+      return affiliate && affiliate.id === affiliateFilter;
     })();
     
     // Filtro por tempo
@@ -713,26 +788,11 @@ const StudentApplicationsView: React.FC = () => {
       }
     })();
     
-    const finalResult = matchesSearch && matchesStatus && matchesStage && matchesScholarship && matchesUniversity && matchesAffiliate && matchesTime;
-    
-    if (affiliateFilter !== 'all' && finalResult) {
-      console.log(`✅ Student ${student.student_name} PASSED affiliate filter`);
-    }
+    const finalResult = matchesSearch && matchesStatus && matchesSelectionFee && matchesStage && matchesScholarship && matchesUniversity && matchesAffiliate && matchesTime;
     
     return finalResult;
   });
   
-  // Log do resultado final do filtro
-  if (affiliateFilter !== 'all') {
-    console.log(`🔍 DEBUG: Affiliate filter "${affiliateFilter}" resulted in ${filteredStudents.length} students`);
-    console.log(`🔍 DEBUG: All students with referral codes:`, 
-      students.map(s => ({ 
-        name: s.student_name, 
-        referral_code: s.seller_referral_code,
-        has_referral: !!s.seller_referral_code 
-      }))
-    );
-  }
 
   const totalPages = Math.ceil(filteredStudents.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -740,48 +800,113 @@ const StudentApplicationsView: React.FC = () => {
 
   const ApplicationFlowSteps = ({ student }: { student: StudentRecord }) => {
     const allSteps = [
-      { key: 'selection_fee', label: 'Selection Fee', icon: CreditCard },
-      { key: 'apply', label: 'Application', icon: FileText },
-      { key: 'review', label: 'Review', icon: Eye },
-      { key: 'application_fee', label: 'App Fee', icon: DollarSign },
-      { key: 'scholarship_fee', label: 'Scholarship Fee', icon: Award },
-      { key: 'acceptance_letter', label: 'Acceptance', icon: BookOpen },
-      { key: 'transfer_form', label: 'Transfer Form', icon: FileText },
-      { key: 'i20_fee', label: 'I-20 Fee', icon: CreditCard },
-      { key: 'enrollment', label: 'Enrollment', icon: GraduationCap }
+      { key: 'selection_fee', label: 'Selection Fee', icon: CreditCard, shortLabel: 'Selection Fee' },
+      { key: 'apply', label: 'Application', icon: FileText, shortLabel: 'Application' },
+      { key: 'review', label: 'Review', icon: Eye, shortLabel: 'Review' },
+      { key: 'application_fee', label: 'App Fee', icon: DollarSign, shortLabel: 'App Fee' },
+      { key: 'scholarship_fee', label: 'Scholarship Fee', icon: Award, shortLabel: 'Scholarship Fee' },
+      { key: 'acceptance_letter', label: 'Acceptance', icon: BookOpen, shortLabel: 'Acceptance' },
+      { key: 'transfer_form', label: 'Transfer Form', icon: FileText, shortLabel: 'Transfer Form' },
+      { key: 'i20_fee', label: 'I-20 Fee', icon: CreditCard, shortLabel: 'I-20 Fee' },
+      { key: 'enrollment', label: 'Enrollment', icon: GraduationCap, shortLabel: 'Enrollment' }
     ];
 
     // Filtrar steps baseado no student_process_type
     const steps = allSteps.filter(step => {
       if (step.key === 'transfer_form') {
-        // Só mostrar transfer_form se o student_process_type for 'transfer'
         return student?.student_process_type === 'transfer';
       }
       return true;
     });
 
-    return (
-      <div className="flex items-center space-x-2 overflow-x-auto">
-        {steps.map((step, index) => {
-          const status = getStepStatus(student, step.key);
-          const StatusIcon = getStatusIcon(status);
-          const StepIcon = step.icon;
+    // Calcular progresso geral
+    const completedSteps = steps.filter(step => getStepStatus(student, step.key) === 'completed').length;
+    const totalSteps = steps.length;
+    const progressPercentage = (completedSteps / totalSteps) * 100;
 
-          return (
-            <React.Fragment key={step.key}>
-              <div className={`flex flex-col items-center p-2 rounded-lg transition-all ${getStatusColor(status)}`}>
-                <div className="relative">
-                  <StepIcon className="h-5 w-5 mb-1" />
-                  <StatusIcon className="h-3 w-3 absolute -top-1 -right-1" />
-                </div>
-                <span className="text-xs font-medium text-center">{step.label}</span>
-              </div>
-              {index < steps.length - 1 && (
-                <ArrowRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
-              )}
-            </React.Fragment>
-          );
-        })}
+    // Encontrar a etapa atual
+    const currentStepIndex = steps.findIndex(step => {
+      const status = getStepStatus(student, step.key);
+      return status === 'in_progress' || status === 'pending';
+    });
+    const currentStep = currentStepIndex >= 0 ? steps[currentStepIndex] : steps[steps.length - 1];
+
+    return (
+      <div className="flex items-center space-x-3">
+        {/* Progresso Circular */}
+        <div className="relative w-8 h-8 flex-shrink-0">
+          <svg className="w-8 h-8 transform -rotate-90" viewBox="0 0 32 32">
+            {/* Background circle */}
+            <circle
+              cx="16"
+              cy="16"
+              r="14"
+              stroke="currentColor"
+              strokeWidth="2"
+              fill="none"
+              className="text-gray-200"
+            />
+            {/* Progress circle */}
+            <circle
+              cx="16"
+              cy="16"
+              r="14"
+              stroke="currentColor"
+              strokeWidth="2"
+              fill="none"
+              strokeDasharray={`${2 * Math.PI * 14}`}
+              strokeDashoffset={`${2 * Math.PI * 14 * (1 - progressPercentage / 100)}`}
+              className={`transition-all duration-300 ${
+                progressPercentage === 100 ? 'text-green-500' : 
+                progressPercentage >= 50 ? 'text-blue-500' : 
+                'text-yellow-500'
+              }`}
+            />
+          </svg>
+          {/* Ícone da etapa atual no centro */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            {React.createElement(currentStep.icon, { 
+              className: `h-3 w-3 ${
+                progressPercentage === 100 ? 'text-green-600' : 
+                progressPercentage >= 50 ? 'text-blue-600' : 
+                'text-yellow-600'
+              }` 
+            })}
+          </div>
+        </div>
+
+        {/* Informações compactas */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center space-x-2">
+            <span className="text-sm font-medium text-gray-900 truncate">
+              {currentStep.shortLabel}
+            </span>
+            <span className="text-xs text-gray-500 flex-shrink-0">
+              {completedSteps}/{totalSteps}
+            </span>
+          </div>
+          <div className="flex items-center space-x-1 mt-1">
+            {steps.slice(0, 8).map((step, index) => {
+              const status = getStepStatus(student, step.key);
+              return (
+                <div
+                  key={step.key}
+                  className={`w-2 h-2 rounded-full ${
+                    status === 'completed' ? 'bg-green-500' :
+                    status === 'in_progress' ? 'bg-blue-500' :
+                    status === 'rejected' ? 'bg-red-500' :
+                    'bg-gray-300'
+                  }`}
+                  title={`${step.label}: ${status}`}
+                />
+              );
+            })}
+            {steps.length > 8 && (
+              <span className="text-xs text-gray-400 ml-1">+{steps.length - 8}</span>
+            )}
+          </div>
+        </div>
+
       </div>
     );
   };
@@ -931,7 +1056,7 @@ const StudentApplicationsView: React.FC = () => {
                       <LocalizationProvider dateAdapter={AdapterDayjs}>
                         <DatePicker
                           value={startDate}
-                          onChange={(newValue) => setStartDate(newValue)}
+                          onChange={(newValue) => setStartDate(newValue as dayjs.Dayjs | null)}
                           slotProps={{
                             textField: {
                               size: 'small',
@@ -981,7 +1106,7 @@ const StudentApplicationsView: React.FC = () => {
                       <LocalizationProvider dateAdapter={AdapterDayjs}>
                         <DatePicker
                           value={endDate}
-                          onChange={(newValue) => setEndDate(newValue)}
+                          onChange={(newValue) => setEndDate(newValue as dayjs.Dayjs | null)}
                           slotProps={{
                             textField: {
                               size: 'small',
@@ -1048,6 +1173,29 @@ const StudentApplicationsView: React.FC = () => {
               </select>
             </div>
           </div>
+          
+          {/* Checkbox para filtrar apenas usuários que pagaram a taxa de seleção e botão para limpar filtros */}
+          <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="onlyPaidSelectionFee"
+                checked={onlyPaidSelectionFee}
+                onChange={(e) => setOnlyPaidSelectionFee(e.target.checked)}
+                className="h-4 w-4 text-[#05294E] focus:ring-[#05294E] border-gray-300 rounded"
+              />
+              <label htmlFor="onlyPaidSelectionFee" className="text-sm font-medium text-gray-700">
+                Show only students who paid Selection Process Fee
+              </label>
+            </div>
+            <button
+              onClick={clearSavedFilters}
+              className="text-sm text-gray-500 hover:text-gray-700 underline"
+              title="Clear all filters and reset to default"
+            >
+              Clear All Filters
+            </button>
+          </div>
         </div>
       </div>
 
@@ -1068,6 +1216,9 @@ const StudentApplicationsView: React.FC = () => {
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Applied Date
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Last Activity
                 </th>
                 
               </tr>
@@ -1146,6 +1297,26 @@ const StudentApplicationsView: React.FC = () => {
                         ? new Date(student.applied_at).toLocaleDateString()
                         : `Joined ${new Date(student.student_created_at).toLocaleDateString()}`
                       }
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <div className="flex items-center">
+                      <Clock className="h-4 w-4 mr-1" />
+                      {(() => {
+                        const now = new Date();
+                        const activityDate = new Date(student.most_recent_activity);
+                        const hoursDiff = (now.getTime() - activityDate.getTime()) / (1000 * 60 * 60);
+                        
+                        if (hoursDiff < 1) {
+                          return 'Just now';
+                        } else if (hoursDiff < 24) {
+                          return `${Math.floor(hoursDiff)}h ago`;
+                        } else if (hoursDiff < 168) { // 7 days
+                          return `${Math.floor(hoursDiff / 24)}d ago`;
+                        } else {
+                          return activityDate.toLocaleDateString();
+                        }
+                      })()}
                     </div>
                   </td>
                   

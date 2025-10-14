@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, GraduationCap, DollarSign, Calendar, Building } from 'lucide-react';
 import { useApplicationStore } from '../stores/applicationStore';
 import { StripeCheckout } from './StripeCheckout';
+import { useModal } from '../contexts/ModalContext';
 
 interface ApplicationCartProps {
   isOpen: boolean;
@@ -11,6 +12,23 @@ interface ApplicationCartProps {
 const ApplicationCart: React.FC<ApplicationCartProps> = ({ isOpen, onClose }) => {
   const { selectedScholarships, removeScholarship, clearScholarships, getSelectedCount } = useApplicationStore();
   const [showCheckout, setShowCheckout] = useState(false);
+  const { openModal, closeModal } = useModal();
+
+  // Gerenciar estado do modal no contexto global
+  useEffect(() => {
+    if (isOpen) {
+      openModal();
+    } else {
+      closeModal();
+    }
+    
+    // Cleanup quando componente desmonta
+    return () => {
+      if (isOpen) {
+        closeModal();
+      }
+    };
+  }, [isOpen, openModal, closeModal]);
 
   const formatAmount = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
