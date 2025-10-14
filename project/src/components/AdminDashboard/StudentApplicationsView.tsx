@@ -586,6 +586,9 @@ const StudentApplicationsView: React.FC = () => {
           // Campo para ordenação por atividade recente
           most_recent_activity: mostRecentActivity
         };
+        
+        
+        return studentRecord;
       }) || [];
 
       // Ordenar por atividade recente (mais recente primeiro)
