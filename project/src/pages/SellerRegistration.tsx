@@ -142,6 +142,7 @@ const SellerRegistration: React.FC<SellerRegistrationProps> = () => {
       if (!authData.user) throw new Error('Failed to create user');
       
       console.log('✅ [SELLER_REG] Usuário criado com sucesso:', authData.user.id);
+      console.log('✅ [SELLER_REG] Sessão disponível:', !!authData.session);
 
       // 2. Criar registro na tabela seller_registrations para aprovação
       try {
@@ -162,7 +163,7 @@ const SellerRegistration: React.FC<SellerRegistrationProps> = () => {
 
         const registrationData = {
           user_id: authData.user.id,
-          admin_id: null, // Deve ser NULL para passar na política RLS
+          admin_id: codeData.admin_id, // Usar o admin_id do código de registro
           registration_code: formData.registration_code,
           email: formData.email.trim().toLowerCase(),
           full_name: formData.full_name,
@@ -171,6 +172,12 @@ const SellerRegistration: React.FC<SellerRegistrationProps> = () => {
         };
 
         console.log('📝 [SELLER_REG] Dados do registro:', registrationData);
+
+        // Verificar se o usuário está autenticado antes de inserir
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        console.log('🔍 [SELLER_REG] Usuário atual autenticado:', currentUser?.id);
+        console.log('🔍 [SELLER_REG] user_id no registrationData:', registrationData.user_id);
+        console.log('🔍 [SELLER_REG] IDs coincidem?', currentUser?.id === registrationData.user_id);
 
         const { error: registrationError } = await supabase
           .from('seller_registrations')
