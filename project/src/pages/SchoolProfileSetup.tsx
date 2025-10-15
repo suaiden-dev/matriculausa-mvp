@@ -4,6 +4,7 @@ import { Building, MapPin, Phone, Users, CheckCircle, Plus, X } from 'lucide-rea
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import NotificationService from '../services/NotificationService';
+import citiesData from 'cities.json';
 
 import PhoneInput from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
@@ -21,11 +22,11 @@ const US_STATES = [
 ];
 
 const SchoolProfileSetup: React.FC = () => {
-  const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [currentStep, setCurrentStep] = useState(1);
   const [cities, setCities] = useState<string[]>([]);
   const [loadingCities, setLoadingCities] = useState(false);
+  const [citySearch, setCitySearch] = useState('');
   const { user } = useAuth();
 
   const navigate = useNavigate();
@@ -60,29 +61,71 @@ const SchoolProfileSetup: React.FC = () => {
 
   const [newProgram, setNewProgram] = useState('');
 
-  // Função para buscar cidades baseadas no estado
-  const fetchCitiesByState = async (state: string) => {
+  // Interface removida - usando any[] para flexibilidade com diferentes formatos
+
+  // Função para filtrar cidades baseada na busca
+  const filteredCities = cities.filter(city =>
+    city.toLowerCase().includes(citySearch.toLowerCase())
+  );
+
+  // Função para buscar cidades usando dados estáticos
+  const fetchCitiesByState = (state: string) => {
     if (!state) {
       setCities([]);
+      setCitySearch(''); // Limpar busca quando não há estado
       return;
     }
 
     setLoadingCities(true);
+    setCitySearch(''); // Limpar busca quando estado muda
+    
     try {
-      // Usando uma API gratuita para buscar cidades dos EUA
-      const response = await fetch(`https://api.zippopotam.us/us/${getStateAbbreviation(state)}`);
-      if (response.ok) {
-        const data = await response.json();
-        const uniqueCities = [...new Set(data.places?.map((place: any) => place['place name']) || [])].sort() as string[];
-        setCities(uniqueCities);
-      } else {
-        // Fallback: usar uma lista básica de cidades principais por estado
-        setCities(getFallbackCities(state));
-      }
-    } catch (error) {
-      console.error('Error fetching cities:', error);
-      // Fallback em caso de erro
-      setCities(getFallbackCities(state));
+      const stateCode = getStateAbbreviation(state);
+      console.log('🏙️ [CITY-LOADER] Buscando cidades para:', state, '(', stateCode, ')');
+      
+      // Debug: verificar estrutura dos dados
+      console.log('🏙️ [CITY-LOADER] Estrutura dos dados:', citiesData);
+      console.log('🏙️ [CITY-LOADER] Primeiras 5 entradas:', (citiesData as any[]).slice(0, 5));
+      
+      // Debug detalhado: ver campos de cada entrada
+      const firstEntry = (citiesData as any[])[0];
+      console.log('🏙️ [CITY-LOADER] Primeira entrada detalhada:', firstEntry);
+      console.log('🏙️ [CITY-LOADER] Campos da primeira entrada:', Object.keys(firstEntry));
+      
+      // Buscar algumas entradas dos EUA para ver o formato
+      const usEntries = (citiesData as any[]).filter(entry => 
+        entry.country === 'US' || entry.country === 'us' || entry.country === 'United States'
+      ).slice(0, 3);
+      console.log('🏙️ [CITY-LOADER] Entradas dos EUA encontradas:', usEntries);
+      
+      // Filtrar cidades dos EUA para o estado específico
+      const allCities = (citiesData as any[]);
+      console.log('🏙️ [CITY-LOADER] Total de entradas no dataset:', allCities.length);
+      
+      // O dataset usa 'admin1' para o estado, não 'state'
+      const stateCities = allCities
+        .filter(city => {
+          // Verificar se é dos EUA
+          const isUS = city.country === 'US';
+          
+          // Verificar se é do estado correto usando admin1
+          const isState = city.admin1 === stateCode;
+          
+          return isUS && isState;
+        })
+        .map(city => city.name)
+        .filter((city: string, index: number, self: string[]) => 
+          self.indexOf(city) === index // Remove duplicatas
+        )
+        .sort();
+
+      console.log('🏙️ [CITY-LOADER] Total de cidades encontradas:', stateCities.length);
+      console.log('🏙️ [CITY-LOADER] Primeiras 10 cidades:', stateCities.slice(0, 10));
+      
+      setCities(stateCities);
+    } catch (error: any) {
+      console.error('🏙️ [CITY-LOADER] Erro ao buscar cidades:', error.message);
+      setCities([]);
     } finally {
       setLoadingCities(false);
     }
@@ -106,22 +149,6 @@ const SchoolProfileSetup: React.FC = () => {
     return stateAbbreviations[stateName] || '';
   };
 
-  // Função fallback com cidades principais por estado
-  const getFallbackCities = (stateName: string): string[] => {
-    const fallbackCities: Record<string, string[]> = {
-      'California': ['Los Angeles', 'San Francisco', 'San Diego', 'San Jose', 'Fresno', 'Sacramento', 'Long Beach', 'Oakland', 'Bakersfield', 'Anaheim'],
-      'Texas': ['Houston', 'San Antonio', 'Dallas', 'Austin', 'Fort Worth', 'El Paso', 'Arlington', 'Corpus Christi', 'Plano', 'Lubbock'],
-      'Florida': ['Jacksonville', 'Miami', 'Tampa', 'Orlando', 'St. Petersburg', 'Hialeah', 'Tallahassee', 'Fort Lauderdale', 'Port St. Lucie', 'Cape Coral'],
-      'New York': ['New York City', 'Buffalo', 'Rochester', 'Yonkers', 'Syracuse', 'Albany', 'New Rochelle', 'Mount Vernon', 'Schenectady', 'Utica'],
-      'Pennsylvania': ['Philadelphia', 'Pittsburgh', 'Allentown', 'Erie', 'Reading', 'Scranton', 'Bethlehem', 'Lancaster', 'Harrisburg', 'Altoona'],
-      'Illinois': ['Chicago', 'Aurora', 'Rockford', 'Joliet', 'Naperville', 'Springfield', 'Peoria', 'Elgin', 'Waukegan', 'Cicero'],
-      'Ohio': ['Columbus', 'Cleveland', 'Cincinnati', 'Toledo', 'Akron', 'Dayton', 'Parma', 'Canton', 'Youngstown', 'Lorain'],
-      'Georgia': ['Atlanta', 'Augusta', 'Columbus', 'Savannah', 'Athens', 'Sandy Springs', 'Roswell', 'Macon', 'Albany', 'Johns Creek'],
-      'North Carolina': ['Charlotte', 'Raleigh', 'Greensboro', 'Durham', 'Winston-Salem', 'Fayetteville', 'Cary', 'Wilmington', 'High Point', 'Concord'],
-      'Michigan': ['Detroit', 'Grand Rapids', 'Warren', 'Sterling Heights', 'Lansing', 'Ann Arbor', 'Flint', 'Dearborn', 'Livonia', 'Westland']
-    };
-    return fallbackCities[stateName] || ['Please select a state first'];
-  };
 
   useEffect(() => {
     // Check if user has already completed profile setup
@@ -293,7 +320,6 @@ const SchoolProfileSetup: React.FC = () => {
   const handleSubmit = async () => {
     if (!validateStep(4) || !user) return;
 
-    setLoading(true);
     try {
       const universityData = {
         name: formData.name,
@@ -340,8 +366,6 @@ const SchoolProfileSetup: React.FC = () => {
     } catch (error) {
       console.error('Error saving profile:', error);
       alert('Error saving profile. Please try again.');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -489,29 +513,61 @@ const SchoolProfileSetup: React.FC = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">City *</label>
-                  <select
-                    value={formData.address.city}
-                    onChange={(e) => handleInputChange('address.city', e.target.value)}
-                    disabled={!formData.address.state || loadingCities}
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] ${
-                      errors['address.city'] ? 'border-red-300' : 'border-gray-300'
-                    } ${!formData.address.state || loadingCities ? 'bg-gray-100 cursor-not-allowed' : ''}`}
-                  >
-                    <option value="">
-                      {!formData.address.state 
-                        ? 'Select a state first' 
-                        : loadingCities 
-                        ? 'Loading cities...' 
-                        : 'Select a city'
-                      }
-                    </option>
-                    {cities.map((city) => (
-                      <option key={city} value={city}>
-                        {city}
-                      </option>
-                    ))}
-                  </select>
+                  
+                  {!formData.address.state ? (
+                    <div className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-500">
+                      Select a state first
+                    </div>
+                  ) : loadingCities ? (
+                    <div className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-500">
+                      Loading cities...
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      <select
+                        value={formData.address.city}
+                        onChange={(e) => {
+                          handleInputChange('address.city', e.target.value);
+                          setCitySearch(''); // Limpar busca quando seleciona
+                        }}
+                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] ${
+                          errors['address.city'] ? 'border-red-300' : 'border-gray-300'
+                        }`}
+                        size={formData.address.city ? 1 : (filteredCities.length > 10 ? 10 : Math.max(3, filteredCities.length + 1))}
+                      >
+                        <option value="">
+                          {citySearch ? `Search results for "${citySearch}"` : 'Select a city'}
+                        </option>
+                        {filteredCities.map((city) => (
+                          <option key={city} value={city}>
+                            {city}
+                          </option>
+                        ))}
+                      </select>
+                      
+                      {/* Campo de busca integrado - só aparece quando não há cidade selecionada */}
+                      {!formData.address.city && (
+                        <div className="absolute top-0 left-0 right-0 bg-white border border-gray-300 rounded-t-lg px-3 py-1">
+                          <input
+                            type="text"
+                            value={citySearch}
+                            onChange={(e) => setCitySearch(e.target.value)}
+                            placeholder="Search cities..."
+                            className="w-full text-sm border-none outline-none bg-transparent"
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
                   {errors['address.city'] && <p className="text-red-600 text-xs mt-1">{errors['address.city']}</p>}
+                  {cities.length > 0 && !loadingCities && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      {cities.length} cities available
+                      {citySearch && ` • ${filteredCities.length} matching "${citySearch}"`}
+                    </p>
+                  )}
                 </div>
 
                 <div className="md:col-span-2">
