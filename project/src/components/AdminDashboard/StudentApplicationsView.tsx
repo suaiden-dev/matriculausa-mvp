@@ -1250,12 +1250,7 @@ const StudentApplicationsView: React.FC = () => {
                           <div className="text-sm font-medium text-gray-900">
                             {student.student_name}
                           </div>
-                          {student.is_locked && (
-                            <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                              <Lock className="h-3 w-3 mr-1" />
-                              Selected
-                            </span>
-                          )}
+
                           {!student.is_locked && student.total_applications > 1 && (
                             <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">
                               {student.total_applications} Applications
