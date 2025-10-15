@@ -60,6 +60,7 @@ interface StudentRecord {
   is_locked: boolean;
   total_applications: number;
   all_applications: any[];
+  most_recent_activity?: Date;
 }
 
 const StudentApplicationsView: React.FC = () => {
@@ -589,14 +590,13 @@ const StudentApplicationsView: React.FC = () => {
           // Campo para ordenação por atividade recente
           most_recent_activity: mostRecentActivity
         };
-        
-        
-        return studentRecord;
       }) || [];
 
       // Ordenar por atividade recente (mais recente primeiro)
       formattedData.sort((a, b) => {
-        return new Date(b.most_recent_activity).getTime() - new Date(a.most_recent_activity).getTime();
+        const dateA = a.most_recent_activity || new Date(a.student_created_at);
+        const dateB = b.most_recent_activity || new Date(b.student_created_at);
+        return new Date(dateB).getTime() - new Date(dateA).getTime();
       });
 
       setStudents(formattedData);
@@ -622,6 +622,8 @@ const StudentApplicationsView: React.FC = () => {
         return student.is_application_fee_paid ? 'completed' : 'pending';
       case 'scholarship_fee':
         return student.is_scholarship_fee_paid ? 'completed' : 'pending';
+      case 'i20_fee':
+        return student.has_paid_i20_control_fee ? 'completed' : 'pending';
       case 'acceptance_letter':
         if (student.acceptance_letter_status === 'approved' || student.acceptance_letter_status === 'sent') return 'completed';
         return 'pending';
@@ -633,8 +635,6 @@ const StudentApplicationsView: React.FC = () => {
           return 'completed';
         }
         return 'pending';
-      case 'i20_fee':
-        return student.has_paid_i20_control_fee ? 'completed' : 'pending';
       case 'enrollment':
         return student.application_status === 'enrolled' ? 'completed' : 'pending';
       default:
@@ -709,20 +709,20 @@ const StudentApplicationsView: React.FC = () => {
           result = student.is_application_fee_paid && !student.is_scholarship_fee_paid;
           break;
         case 'scholarship_fee':
-          // Scholarship fee paga mas ainda não tem acceptance letter
-          result = student.is_scholarship_fee_paid && !student.acceptance_letter_status;
+          // Scholarship fee paga mas ainda não pagaram I-20 fee
+          result = student.is_scholarship_fee_paid && !student.has_paid_i20_control_fee;
+          break;
+        case 'i20_fee':
+          // I-20 Control Fee paga mas ainda não tem acceptance letter
+          result = student.has_paid_i20_control_fee && !student.acceptance_letter_status;
           break;
         case 'acceptance':
-          // Carta de aceitação enviada/assinada/aprovada mas ainda não pagaram I-20 fee
+          // Carta de aceitação enviada/assinada/aprovada mas ainda não matriculado
           result = !!student.acceptance_letter_status && 
                    (student.acceptance_letter_status === 'sent' || 
                     student.acceptance_letter_status === 'signed' || 
                     student.acceptance_letter_status === 'approved') &&
-                   !student.has_paid_i20_control_fee;
-          break;
-        case 'i20_fee':
-          // I-20 Control Fee paga mas ainda não matriculado
-          result = student.has_paid_i20_control_fee && student.status !== 'enrolled';
+                   student.status !== 'enrolled';
           break;
         case 'enrollment':
           // Matriculado
@@ -812,9 +812,9 @@ const StudentApplicationsView: React.FC = () => {
       { key: 'review', label: 'Review', icon: Eye, shortLabel: 'Review' },
       { key: 'application_fee', label: 'App Fee', icon: DollarSign, shortLabel: 'App Fee' },
       { key: 'scholarship_fee', label: 'Scholarship Fee', icon: Award, shortLabel: 'Scholarship Fee' },
+      { key: 'i20_fee', label: 'I-20 Fee', icon: CreditCard, shortLabel: 'I-20 Fee' },
       { key: 'acceptance_letter', label: 'Acceptance', icon: BookOpen, shortLabel: 'Acceptance' },
       { key: 'transfer_form', label: 'Transfer Form', icon: FileText, shortLabel: 'Transfer Form' },
-      { key: 'i20_fee', label: 'I-20 Fee', icon: CreditCard, shortLabel: 'I-20 Fee' },
       { key: 'enrollment', label: 'Enrollment', icon: GraduationCap, shortLabel: 'Enrollment' }
     ];
 
@@ -1305,6 +1305,9 @@ const StudentApplicationsView: React.FC = () => {
                     <div className="flex items-center">
                       <Clock className="h-4 w-4 mr-1" />
                       {(() => {
+                        if (!student.most_recent_activity) {
+                          return new Date(student.student_created_at).toLocaleDateString();
+                        }
                         const now = new Date();
                         const activityDate = new Date(student.most_recent_activity);
                         const hoursDiff = (now.getTime() - activityDate.getTime()) / (1000 * 60 * 60);

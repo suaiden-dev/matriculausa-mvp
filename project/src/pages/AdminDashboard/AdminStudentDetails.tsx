@@ -871,6 +871,8 @@ const AdminStudentDetails: React.FC = () => {
         return st.is_application_fee_paid ? 'completed' : 'pending';
       case 'scholarship_fee':
         return st.is_scholarship_fee_paid ? 'completed' : 'pending';
+      case 'i20_fee':
+        return st.has_paid_i20_control_fee ? 'completed' : 'pending';
       case 'acceptance_letter':
         if (st.acceptance_letter_status === 'approved' || st.acceptance_letter_status === 'sent') return 'completed';
         return 'pending';
@@ -883,8 +885,6 @@ const AdminStudentDetails: React.FC = () => {
           (app.transfer_form_status === 'approved' || app.transfer_form_status === 'sent')
         );
         return transferApp ? 'completed' : 'pending';
-      case 'i20_fee':
-        return st.has_paid_i20_control_fee ? 'completed' : 'pending';
       case 'enrollment':
         return st.application_status === 'enrolled' ? 'completed' : 'pending';
       default:
@@ -899,9 +899,9 @@ const AdminStudentDetails: React.FC = () => {
     { key: 'review', label: 'Review', icon: Eye },
     { key: 'application_fee', label: 'App Fee', icon: CreditCard },
     { key: 'scholarship_fee', label: 'Scholarship Fee', icon: Award },
+    { key: 'i20_fee', label: 'I-20 Fee', icon: CreditCard },
     { key: 'acceptance_letter', label: 'Acceptance', icon: FileText },
     { key: 'transfer_form', label: 'Transfer Form', icon: FileText },
-    { key: 'i20_fee', label: 'I-20 Fee', icon: CreditCard },
     { key: 'enrollment', label: 'Enrollment', icon: Award }
   ];
 
@@ -1805,32 +1805,9 @@ const AdminStudentDetails: React.FC = () => {
           console.error('Failed to log action:', logError);
         }
 
-        // Se houver uma aplicação aprovada, matricular (enrolled)
-        try {
-          const approvedApp = student.all_applications?.find((app: any) => app.status === 'approved' || app.status === 'enrolled');
-          if (approvedApp?.id) {
-            const { error: enrollErr } = await supabase
-              .from('scholarship_applications')
-              .update({ status: 'enrolled' })
-              .eq('id', approvedApp.id);
-            if (enrollErr) {
-              console.error('Error setting application to enrolled:', enrollErr);
-            } else {
-              setStudent(prev => prev ? { ...prev, application_status: 'enrolled' } : prev);
-              try {
-                await logAction(
-                  'application_enrolled',
-                  'Student enrolled after I-20 fee payment',
-                  user?.id || '',
-                  'admin',
-                  { application_id: approvedApp.id }
-                );
-              } catch (e) { /* noop */ }
-            }
-          }
-        } catch (e) {
-          console.error('Enroll update failed:', e);
-        }
+        // Nota: No novo fluxo, o enrollment (matrícula) acontece após a acceptance letter ser enviada,
+        // não imediatamente após o pagamento do I-20. A universidade enviará a acceptance letter
+        // após receber o pagamento do I-20, e então o aluno será considerado enrolled.
       }
 
       showToast(`${feeType === 'selection_process' ? 'Selection Process Fee' : feeType === 'application' ? 'Application Fee' : feeType === 'scholarship' ? 'Scholarship Fee' : 'I-20 Control Fee'} marked as paid successfully!`, 'success');
@@ -4452,22 +4429,20 @@ const AdminStudentDetails: React.FC = () => {
                           <span className="text-sm font-medium text-red-600">Not Paid</span>
                         </div>
                           {isPlatformAdmin && (() => {
-                            // Guardas: só pode marcar I-20 se SP Fee pago e acceptance letter enviada
+                            // Guardas: só pode marcar I-20 se SP Fee pago e scholarship fee paga
                             // Se o aluno já está enrolled, permitir marcar I-20 como pago independente dos outros fees
-                            const approvedApp = student.all_applications?.find((app: any) => app.status === 'approved' || app.status === 'enrolled');
-                            const acceptanceSent = !!approvedApp?.acceptance_letter_status && approvedApp.acceptance_letter_status === 'sent';
                             const isEnrolled = student.application_status === 'enrolled';
                             
                             // Se está enrolled, pode marcar I-20 independente dos outros fees
-                            // Se não está enrolled, precisa ter SP fee pago e acceptance letter enviada
-                            const canMarkI20 = isEnrolled || (student.has_paid_selection_process_fee && acceptanceSent);
+                            // Se não está enrolled, precisa ter SP fee pago e scholarship fee paga
+                            const canMarkI20 = isEnrolled || (student.has_paid_selection_process_fee && student.is_scholarship_fee_paid);
                             
                             return (
                               <button
                                 onClick={() => openPaymentModal('i20_control')}
                                 disabled={markingAsPaid[`${student.student_id}:i20_control`] || !canMarkI20}
                                 className="px-4 py-2 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-sm rounded-lg flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed w-fit"
-                                title={!canMarkI20 ? (isEnrolled ? 'I-20 can be marked as paid for enrolled students' : 'Complete previous steps: Selection Process Fee and Acceptance Letter must be completed first') : ''}
+                                title={!canMarkI20 ? (isEnrolled ? 'I-20 can be marked as paid for enrolled students' : 'Complete previous steps: Selection Process Fee and Scholarship Fee must be completed first') : ''}
                               >
                                 <CheckCircle className="w-4 h-4" />
                                 <span>{markingAsPaid[`${student.student_id}:i20_control`] ? 'Marking...' : (!canMarkI20 ? 'Complete previous steps' : 'Mark as Paid')}</span>

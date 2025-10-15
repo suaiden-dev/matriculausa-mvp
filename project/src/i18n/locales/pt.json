@@ -2030,12 +2030,11 @@
         "deadlineExpired": "O prazo para pagar a Taxa de Controle I-20 expirou!",
         "paymentSuccess": {
           "title": "Taxa de Controle I-20 Paga com Sucesso!",
-          "description": "Seu pagamento da Taxa de Controle I-20 foi processado com sucesso. Seu documento I-20 agora será preparado e enviado para você pela universidade.",
+          "description": "Seu pagamento da Taxa de Controle I-20 foi processado com sucesso. A universidade agora processará sua carta de aceitação.",
           "nextSteps": "Próximos passos:",
           "nextStepsList": [
-            "Aguarde a universidade processar seu documento I-20",
-            "Você receberá seu documento I-20 por email",
-            "Use o I-20 para solicitar seu visto de estudante F-1",
+            "Aguarde a universidade processar sua carta de aceitação",
+            "Sua carta de aceitação aparecerá na aba Documentos quando estiver pronta",
             "Entre em contato com a universidade se tiver dúvidas sobre o processo"
           ]
         },
@@ -2059,7 +2058,12 @@
           "received": "Carta de Aceite Recebida!",
           "readyForDownload": "Sua carta de aceite oficial está pronta para download",
           "downloadButton": "Baixar Carta de Aceite",
-          "viewButton": "Visualizar"
+          "viewButton": "Visualizar",
+          "pendingI20Title": "Carta de Aceitação - Aguardando Pagamento do I-20",
+          "pendingI20Description": "Sua carta de aceitação ficará disponível após você completar o pagamento da Taxa de Controle do I-20. Assim que o pagamento for confirmado e a universidade processar sua carta de aceitação, ela aparecerá aqui para download.",
+          "payI20Button": "Pagar Taxa de Controle do I-20 Agora",
+          "waitingForUniversityTitle": "Carta de Aceitação - Aguardando Universidade",
+          "waitingForUniversityDescription": "Sua Taxa de Controle do I-20 foi paga com sucesso. A universidade está processando sua carta de aceitação. Ela aparecerá aqui assim que a universidade enviar."
         },
         "documentStatus": {
           "title": "Status dos Documentos",
