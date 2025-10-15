@@ -3200,7 +3200,8 @@
         "title": "Zelle",
         "description": "Paga vía transferencia Zelle",
         "descriptionDetailed": "Paga vía Zelle"
-      }
+      },
+      "cancel": "Cancelar"
     },
     "loading": {
       "processing": "Procesando el pago...",

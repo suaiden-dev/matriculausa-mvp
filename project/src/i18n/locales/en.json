@@ -2954,7 +2954,8 @@
         "title": "Zelle",
         "description": "Pay via Zelle transfer",
         "descriptionDetailed": "Pay via Zelle transfer"
-      }
+      },
+      "cancel": "Cancel"
     },
     "loading": {
       "processing": "Processing payment...",

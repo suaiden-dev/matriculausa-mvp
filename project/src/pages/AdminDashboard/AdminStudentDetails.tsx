@@ -1929,6 +1929,8 @@ const AdminStudentDetails: React.FC = () => {
       } catch (logError) {
         console.error('Failed to log action:', logError);
       }
+
+      window.location.reload();
       
       showToast('Application approved successfully! The student will be notified.', 'success');
     } catch (error: any) {
@@ -1971,6 +1973,8 @@ const AdminStudentDetails: React.FC = () => {
       } catch (logError) {
         console.error('Failed to log action:', logError);
       }
+
+      window.location.reload();
       
       showToast('Application rejected successfully.', 'success');
     } catch (error: any) {
