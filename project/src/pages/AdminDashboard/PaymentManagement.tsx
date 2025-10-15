@@ -1236,9 +1236,7 @@ const PaymentManagement = (): React.JSX.Element => {
               if (!packageError && userPackageFees && userPackageFees.length > 0) {
                 const packageFees = userPackageFees[0];
                 correctAmount = packageFees.scholarship_fee;
-                console.log('✅ [approveZellePayment] Valor dinâmico encontrado para scholarship_fee:', correctAmount, 'Pacote:', packageFees.package_name);
               } else {
-                console.log('ℹ️ [approveZellePayment] Usuário sem pacote, usando valor padrão para scholarship_fee:', correctAmount);
               }
             } catch (error) {
               console.warn('⚠️ [approveZellePayment] Erro ao buscar valor dinâmico para scholarship_fee, usando valor padrão:', error);
@@ -3190,10 +3188,19 @@ const PaymentManagement = (): React.JSX.Element => {
         </div>
 
         {(() => {
-          const filteredTotals = calculateFilteredTotals();
-          const stripeData = filteredTotals.breakdownByMethod.stripe || { count: 0, amount: 0 };
-          const zelleData = filteredTotals.breakdownByMethod.zelle || { count: 0, amount: 0 };
-          
+          // Totais fixos (não dependem dos filtros aplicados)
+          const allPaid = payments.filter(p => p.status === 'paid');
+          const totalsByMethod = allPaid.reduce((acc: Record<string, { count: number; amount: number }>, p) => {
+            const method = (p.payment_method || 'manual').toLowerCase();
+            if (!acc[method]) acc[method] = { count: 0, amount: 0 };
+            acc[method].count += 1;
+            acc[method].amount += p.amount;
+            return acc;
+          }, {});
+
+          const stripeData = totalsByMethod.stripe || { count: 0, amount: 0 };
+          const zelleData = totalsByMethod.zelle || { count: 0, amount: 0 };
+
           return (
             <>
               <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-6 text-white">
