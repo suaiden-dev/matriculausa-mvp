@@ -266,17 +266,6 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
             </div>
 
             <div className="flex items-center space-x-4">
-              {/* Search */}
-              <div className="hidden lg:block">
-                <div className="relative">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
-                  <input
-                    type="text"
-                    placeholder="Search..."
-                    className="w-80 pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-purple-600 transition-all duration-200"
-                  />
-                </div>
-              </div>
 
               {/* Notifications */}
               <AdminStudentChatNotifications 

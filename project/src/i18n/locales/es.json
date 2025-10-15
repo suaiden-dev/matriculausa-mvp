@@ -1308,12 +1308,12 @@
         "deadlineExpired": "¡El plazo para pagar la Tarifa de Control I-20 ha expirado!",
         "paymentSuccess": {
           "title": "¡Tarifa de Control I-20 Pagada Exitosamente!",
-          "description": "Tu pago de la Tarifa de Control I-20 ha sido procesado exitosamente. Tu documento I-20 ahora será preparado y enviado para ti por la universidad.",
+          "description": "Tu pago de la Tarifa de Control I-20 ha sido procesado exitosamente. La universidad ahora procesará tu carta de aceptación.",
           "nextSteps": "Próximos pasos:",
           "nextStepsList": [
-            "Espera a que la universidad procese tu documento I-20",
-            "Recibirás tu documento I-20 por email",
-            "Usa el I-20 para solicitar tu visa de estudiante F-1",
+            "Espera a que la universidad procese tu carta de aceptación",
+            "Tu carta de aceptación aparecerá en la pestaña Documentos cuando esté lista",
+            "Usa la carta de aceptación para solicitar tu visa de estudiante F-1",
             "Contacta con la universidad si tienes alguna pregunta sobre el proceso"
           ]
         },
@@ -2151,12 +2151,12 @@
         "deadlineExpired": "¡El plazo para pagar la Tarifa de Control I-20 ha expirado!",
         "paymentSuccess": {
           "title": "¡Tarifa de Control I-20 Pagada Exitosamente!",
-          "description": "Tu pago de la Tarifa de Control I-20 ha sido procesado exitosamente. Tu documento I-20 ahora será preparado y enviado a ti por la universidad.",
+          "description": "Tu pago de la Tarifa de Control I-20 ha sido procesado exitosamente. La universidad ahora procesará tu carta de aceptación.",
           "nextSteps": "Próximos pasos:",
           "nextStepsList": [
-            "Espera a que la universidad procese tu documento I-20",
-            "Recibirás tu documento I-20 por email",
-            "Usa el I-20 para solicitar tu visa de estudiante F-1",
+            "Espera a que la universidad procese tu carta de aceptación",
+            "Tu carta de aceptación aparecerá en la pestaña Documentos cuando esté lista",
+            "Usa la carta de aceptación para solicitar tu visa de estudiante F-1",
             "Contacta con la universidad si tienes preguntas sobre el proceso"
           ]
         },
@@ -2180,7 +2180,12 @@
           "received": "¡Carta de Aceptación Recibida!",
           "readyForDownload": "Su carta de aceptación oficial está lista para descargar",
           "downloadButton": "Descargar Carta de Aceptación",
-          "viewButton": "Ver"
+          "viewButton": "Ver",
+          "pendingI20Title": "Carta de Aceptación - Pendiente Pago I-20",
+          "pendingI20Description": "Su carta de aceptación estará disponible después de que complete el pago de la Tarifa de Control I-20. Una vez que el pago sea confirmado y la universidad procese su carta de aceptación, aparecerá aquí para descargar.",
+          "payI20Button": "Pagar Tarifa de Control I-20 Ahora",
+          "waitingForUniversityTitle": "Carta de Aceptación - Esperando Universidad",
+          "waitingForUniversityDescription": "Su Tarifa de Control I-20 ha sido pagada exitosamente. La universidad está procesando su carta de aceptación. Aparecerá aquí una vez que la universidad la envíe."
         },
         "documentStatus": {
           "title": "Estado de los Documentos",
@@ -3195,7 +3200,8 @@
         "title": "Zelle",
         "description": "Paga vía transferencia Zelle",
         "descriptionDetailed": "Paga vía Zelle"
-      }
+      },
+      "cancel": "Cancelar"
     },
     "loading": {
       "processing": "Procesando el pago...",

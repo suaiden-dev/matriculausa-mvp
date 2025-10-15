@@ -1280,7 +1280,7 @@ const getLevelColor = (level: any) => {
                       </div>
                     </div>
                   </div>
-                  <div className="grid grid-cols-1 md:flex md:justify-start md:gap-6 md:overflow-x-auto md:pb-4 md:items-start gap-6" style={{ 
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 md:gap-6 md:overflow-x-auto md:pb-4 gap-6" style={{ 
                     scrollbarWidth: 'none', 
                     msOverflowStyle: 'none',
                     WebkitOverflowScrolling: 'touch'
@@ -1296,7 +1296,7 @@ const getLevelColor = (level: any) => {
                       const statusInfo = getStatusDescription(application);
                       
                       return (
-                        <div key={application.id} className="bg-white rounded-3xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 overflow-hidden group w-full md:w-80 md:flex-shrink-0 md:min-w-0 md:self-start">
+                        <div key={application.id} className="bg-white rounded-3xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 overflow-hidden group w-full md:flex-shrink-0 md:min-w-0 md:self-start">
                 <div className="p-4">
                   {/* Header Section Compacto */}
                   <div className="mb-4">

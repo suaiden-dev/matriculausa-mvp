@@ -5,6 +5,7 @@ import { useAdminStudentChatNotifications } from '../../hooks/useAdminStudentCha
 import { useUnreadMessages } from '../../contexts/UnreadMessagesContext';
 import { Users, MessageSquare, Plus } from 'lucide-react';
 import StudentSelector from './StudentSelector';
+import { supabase } from '../../lib/supabase';
 
 interface ChatInboxProps {
   className?: string;
@@ -19,7 +20,7 @@ interface ConversationItemProps {
 }
 
 const ConversationItem: React.FC<ConversationItemProps> = ({ conversation, isSelected, onClick }) => {
-  const { userProfile } = useAuth();
+  const { user, userProfile } = useAuth();
   
   // Determine recipient based on current user role
   const recipient = (userProfile?.role === 'affiliate_admin' || userProfile?.role === 'admin')
@@ -101,7 +102,7 @@ const ChatInbox: React.FC<ChatInboxProps> = ({
   onConversationSelect,
   selectedConversationId 
 }) => {
-  const { userProfile } = useAuth();
+  const { user, userProfile } = useAuth();
   const { conversations, loading, error, isInitialLoad, refetchConversations, updateConversationUnreadCount } = useAdminStudentConversations();
   const { markConversationAsRead } = useAdminStudentChatNotifications();
   const { resetUnreadCount } = useUnreadMessages();
@@ -149,10 +150,39 @@ const ChatInbox: React.FC<ChatInboxProps> = ({
     onConversationSelect?.(conversation.id, recipientId, recipientName);
   };
 
-  const handleStudentSelect = (studentId: string, studentName: string) => {
-    // When admin selects a student, start a new conversation
-    // We pass null as conversationId to let the hook create a new one
-    onConversationSelect?.('', studentId, studentName);
+  const handleStudentSelect = async (studentId: string, studentName: string) => {
+    // First, try to find existing conversation with this student
+    try {
+      let query = supabase
+        .from('admin_student_conversations')
+        .select('id, admin_id')
+        .eq('student_id', studentId);
+
+      // For affiliate admins, only look for their own conversations
+      // For regular admins, look for any existing conversation with this student
+      if (userProfile?.role === 'affiliate_admin') {
+        query = query.eq('admin_id', user?.id);
+      }
+
+      const { data: existingConversations, error } = await query;
+
+      if (error) {
+        console.error('Error finding existing conversation:', error);
+      }
+
+      if (existingConversations && existingConversations.length > 0) {
+        // Use the first existing conversation (most recent)
+        const existingConversation = existingConversations[0];
+        onConversationSelect?.(existingConversation.id, studentId, studentName);
+      } else {
+        // Create new conversation by passing empty string
+        onConversationSelect?.('', studentId, studentName);
+      }
+    } catch (e) {
+      console.error('Error in handleStudentSelect:', e);
+      // Fallback to creating new conversation
+      onConversationSelect?.('', studentId, studentName);
+    }
     setShowStudentSelector(false);
   };
 

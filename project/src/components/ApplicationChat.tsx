@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useAuth } from '../hooks/useAuth';
 import ImagePreviewModal from './ImagePreviewModal';
 
 export interface ChatMessage {
@@ -37,6 +37,7 @@ interface ApplicationChatProps {
   overrideHeights?: boolean; // If true, do not apply default min/max heights to message container
   className?: string; // Wrapper className for the entire chat component
   inputPlaceholder?: string; // i18n placeholder for the input
+  adminSenders?: Record<string, string>; // map of admin user_id -> display name
 }
 
 interface I20ControlFeeCardProps {
@@ -143,8 +144,10 @@ const ApplicationChat: React.FC<ApplicationChatProps & {
   hideBubbleHeader = false,
   overrideHeights = false,
   className = '',
-  inputPlaceholder = 'Type your message...'
+  inputPlaceholder = 'Type your message...',
+  adminSenders
 }) => {
+  const { user } = useAuth();
   const [text, setText] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -321,11 +324,16 @@ const ApplicationChat: React.FC<ApplicationChatProps & {
             </div>
           )}
           
-          {messages.map((msg, index) => (
+          {messages.map((msg, index) => {
+            const isAdminContext = !!adminSenders;
+            const isFromAdmin = isAdminContext && !!(adminSenders && adminSenders[msg.senderId]);
+            const isFromCurrentUser = msg.senderId === user?.id;
+            const alignRight = isAdminContext ? isFromCurrentUser : msg.isOwn;
+            return (
             <div
               key={msg.id}
               className={`max-w-[85%] transform transition-all duration-500 ease-out group ${
-                msg.isOwn 
+                alignRight 
                   ? 'self-end ml-auto animate-slide-in-right' 
                   : 'self-start animate-slide-in-left'
               }`}
@@ -334,21 +342,19 @@ const ApplicationChat: React.FC<ApplicationChatProps & {
               }}
             >
               <div className={`p-3 rounded-2xl shadow-lg border relative ${
-                msg.isOwn 
+                alignRight 
                   ? 'bg-[#05294E] text-white shadow-[#05294E]/20' 
                   : 'bg-white text-gray-800 border-gray-200 shadow-gray-100'
               } transition-all duration-300 hover:shadow-xl`}>
                 {!hideBubbleHeader && (
                   <div className="flex items-center gap-2 mb-2">
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
-                      msg.isOwn 
-                        ? 'bg-white/20 text-white' 
-                        : 'bg-[#05294E] text-white'
-                    }`}>
-                      {msg.isOwn ? 'Y' : 'U'}
-                    </div>
+                    
                     <span className="font-semibold text-xs truncate flex-1">
-                      {msg.isOwn ? 'You' : otherPartyLabel}
+                      {alignRight 
+                        ? 'You' 
+                        : (isAdminContext && isFromAdmin) 
+                          ? (adminSenders[msg.senderId] || 'Admin')
+                          : otherPartyLabel}
                     </span>
                     <div className="flex items-center gap-2">
                       {msg.editedAt && (
@@ -468,7 +474,7 @@ const ApplicationChat: React.FC<ApplicationChatProps & {
                 
 
                 {/* Status indicators */}
-                {msg.isOwn && (
+                {alignRight && (
                   <div className="flex items-center justify-end gap-1 mt-2">
                     {msg.status === 'pending' && <ClockIcon />}
                     {msg.status === 'error' && <ErrorIcon />}
@@ -479,13 +485,13 @@ const ApplicationChat: React.FC<ApplicationChatProps & {
               </div>
               
               {/* Message Actions (Edit/Delete) - floating buttons below message */}
-              {msg.isOwn && !msg.isDeleted && (onEditMessage || onDeleteMessage) && (
+              {alignRight && !msg.isDeleted && (onEditMessage || onDeleteMessage) && (
                 <div className="flex gap-1 mt-2 justify-end opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                   {onEditMessage && (
                     <button
                       onClick={() => handleEditMessage(msg.id, msg.message)}
                       className={`p-1.5 rounded-md transition-colors ${
-                        msg.isOwn 
+                        alignRight 
                           ? 'hover:bg-gray-100 text-gray-500 hover:text-gray-700' 
                           : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
                       }`}
@@ -514,7 +520,7 @@ const ApplicationChat: React.FC<ApplicationChatProps & {
                 </div>
               )}
             </div>
-          ))}
+          )})}
           
           
           <div ref={messagesEndRef} />

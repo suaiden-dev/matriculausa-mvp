@@ -32,6 +32,7 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
   const [selectedRecipientProfileId, setSelectedRecipientProfileId] = useState<string | null>(null);
   const [guideEnter, setGuideEnter] = useState(false);
   const [guideExit, setGuideExit] = useState(false);
+  const [adminSenders, setAdminSenders] = useState<Record<string, string>>({});
 
   // Hook for the selected conversation
   const { updateConversationUnreadCount } = useAdminStudentConversations();
@@ -102,6 +103,26 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
       }
     }
   }, [userProfile]);
+
+  // Carregar mapa de admins (user_id -> display name) para rotular mensagens de outros admins
+  useEffect(() => {
+    const loadAdmins = async () => {
+      try {
+        const { data } = await supabase
+          .from('user_profiles')
+          .select('user_id, full_name, email, role')
+          .in('role', ['admin', 'affiliate_admin']);
+        const map: Record<string, string> = {};
+        (data || []).forEach((u: any) => {
+          map[u.user_id] = u.full_name || u.email || u.user_id;
+        });
+        setAdminSenders(map);
+      } catch {
+        setAdminSenders({});
+      }
+    };
+    loadAdmins();
+  }, []);
 
   // Controla animação de entrada ao montar a dica
   useEffect(() => {
@@ -234,6 +255,7 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
             overrideHeights={true}
             className="flex-1 min-h-0"
             inputPlaceholder={t('studentDashboard.applicationChatPage.studentChat.input.placeholder', { defaultValue: 'Type your message...' })}
+            adminSenders={adminSenders}
           />
         </div>
       );
@@ -282,6 +304,7 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
               currentUserId={user.id}
               onMarkAllAsRead={chat.markAllAsRead}
               otherPartyLabel={getOtherPartyLabel()}
+              adminSenders={adminSenders}
             />
           </div>
         </div>
@@ -343,6 +366,7 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
             overrideHeights={true}
             className="flex-1 min-h-0"
             inputPlaceholder={t('studentDashboard.applicationChatPage.studentChat.input.placeholder')}
+            adminSenders={adminSenders}
           />
       </div>
     );
@@ -406,9 +430,10 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
                   currentUserId={user.id}
                   onMarkAllAsRead={chat.markAllAsRead}
                   otherPartyLabel={getOtherPartyLabel()}
-                  hideBubbleHeader={true}
+                  hideBubbleHeader={false}
                   overrideHeights={true}
                   className="h-full"
+                  adminSenders={adminSenders}
                 />
             </>
           ) : (
