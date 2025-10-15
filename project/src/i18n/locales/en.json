@@ -1934,12 +1934,11 @@
         "deadlineExpired": "The deadline to pay the I-20 Control Fee has expired!",
         "paymentSuccess": {
           "title": "I-20 Control Fee Paid Successfully!",
-          "description": "Your I-20 Control Fee payment has been processed successfully. Your I-20 document will now be prepared and sent to you by the university.",
+          "description": "Your I-20 Control Fee payment has been processed successfully. The university will now process your acceptance letter.",
           "nextSteps": "Next steps:",
           "nextStepsList": [
-            "Wait for the university to process your I-20 document",
-            "You will receive your I-20 document via email",
-            "Use the I-20 to apply for your F-1 student visa",
+            "Wait for the university to process your acceptance letter",
+            "Your acceptance letter will appear in the Documents tab once ready",
             "Contact the university if you have any questions about the process"
           ]
         },
@@ -1963,7 +1962,12 @@
           "received": "Acceptance Letter Received!",
           "readyForDownload": "Your official acceptance letter is ready for download",
           "downloadButton": "Download Acceptance Letter",
-          "viewButton": "View"
+          "viewButton": "View",
+          "pendingI20Title": "Acceptance Letter - Pending I-20 Payment",
+          "pendingI20Description": "Your acceptance letter will be available after you complete the I-20 Control Fee payment. Once the payment is confirmed and the university processes your acceptance letter, it will appear here for download.",
+          "payI20Button": "Pay I-20 Control Fee Now",
+          "waitingForUniversityTitle": "Acceptance Letter - Waiting for University",
+          "waitingForUniversityDescription": "Your I-20 Control Fee has been paid successfully. The university is now processing your acceptance letter. It will appear here once they send it to you."
         },
         "documentStatus": {
           "title": "Document Status",
@@ -2950,7 +2954,8 @@
         "title": "Zelle",
         "description": "Pay via Zelle transfer",
         "descriptionDetailed": "Pay via Zelle transfer"
-      }
+      },
+      "cancel": "Cancel"
     },
     "loading": {
       "processing": "Processing payment...",

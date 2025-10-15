@@ -47,17 +47,17 @@ export const useMicrosoftConnection = (): UseMicrosoftConnectionReturn => {
       let { data: { session } } = await supabase.auth.getSession();
       
       if (!session?.user) {
-        console.log('⚠️ Sessão não encontrada, tentando obter sessão atual...');
+        // Sessão não encontrada, tentando obter sessão atual
         const { data: { user }, error: userError } = await supabase.auth.getUser();
         if (userError || !user) {
-          console.log('❌ No session found');
+          // No session found
           return false;
         }
         session = { user } as any;
       }
       
       if (!session?.user) {
-        console.log('❌ No session found');
+        // No session found
         return false;
       }
 
@@ -93,7 +93,7 @@ export const useMicrosoftConnection = (): UseMicrosoftConnectionReturn => {
           );
           if (activeConn) {
             setActiveConnectionState(activeConn);
-            console.log('✅ Setting active connection:', activeConn.email_address);
+            // Setting active connection
           }
         }
         
@@ -115,7 +115,7 @@ export const useMicrosoftConnection = (): UseMicrosoftConnectionReturn => {
       if (connection) {
         setActiveConnectionState(connection);
         localStorage.setItem(ACTIVE_MICROSOFT_CONNECTION_KEY, email);
-        console.log('✅ Setting active connection:', email);
+        // Setting active connection
       }
     } catch (error) {
       console.error('❌ Error setting active connection:', error);
@@ -135,7 +135,7 @@ export const useMicrosoftConnection = (): UseMicrosoftConnectionReturn => {
         );
         if (activeConn) {
           setActiveConnectionState(activeConn);
-          console.log('✅ Setting active connection:', activeConn.email_address);
+          // Setting active connection
         }
       }
     }
@@ -146,11 +146,15 @@ export const useMicrosoftConnection = (): UseMicrosoftConnectionReturn => {
       setLoading(true);
       setError(null);
 
-      console.log('🔐 Iniciando conexão Microsoft via Web App flow...');
+      // Iniciando conexão Microsoft via Web App flow
       
       // USAR APENAS WEB APP FLOW - Redirecionar para Azure AD
       const clientId = import.meta.env.VITE_AZURE_CLIENT_ID;
-      const redirectUri = import.meta.env.VITE_AZURE_REDIRECT_URI || `${window.location.origin}/microsoft-email`;
+      // Para desenvolvimento local, usar o redirect URI configurado no Azure AD
+      const redirectUri = import.meta.env.VITE_AZURE_REDIRECT_URI || 
+        (window.location.origin.includes('localhost') 
+          ? 'https://fitpynguasqqutuhzifx.supabase.co/functions/v1/microsoft-auth-callback'
+          : `${window.location.origin}/microsoft-email`);
       const scopes = ['User.Read', 'Mail.Read', 'Mail.ReadWrite', 'Mail.Send', 'offline_access'].join(' ');
       
       // Construir URL de autorização do Azure AD
@@ -163,8 +167,7 @@ export const useMicrosoftConnection = (): UseMicrosoftConnectionReturn => {
       authUrl.searchParams.set('prompt', 'consent'); // Forçar consentimento para obter refresh token
       authUrl.searchParams.set('state', 'microsoft-connection');
       
-      console.log('🔄 Redirecionando para Azure AD...');
-      console.log('🔗 URL:', authUrl.toString());
+      // Redirecionando para Azure AD
       
       // Redirecionar para Azure AD
       window.location.href = authUrl.toString();
@@ -181,7 +184,7 @@ export const useMicrosoftConnection = (): UseMicrosoftConnectionReturn => {
       setLoading(true);
       setError(null);
 
-      console.log('🔌 Disconnecting Microsoft account:', email);
+      // Disconnecting Microsoft account
 
       // Buscar sessão atual
       const { data: { session } } = await supabase.auth.getSession();
@@ -202,7 +205,7 @@ export const useMicrosoftConnection = (): UseMicrosoftConnectionReturn => {
         throw deleteError;
       }
 
-      console.log('✅ Microsoft connection deleted from database');
+      // Microsoft connection deleted from database
 
       // Limpar localStorage
       if (activeConnection?.email_address === email) {
@@ -224,7 +227,7 @@ export const useMicrosoftConnection = (): UseMicrosoftConnectionReturn => {
   // Função para ativar interceptador de fetch
   const handleActivateFetchInterceptor = useCallback(() => {
     activateFetchInterceptor();
-    console.log('✅ Interceptador de fetch ativado');
+    // Interceptador de fetch ativado
   }, []);
 
   return {

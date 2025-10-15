@@ -1,4 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useEffect as _useEffectAlias, useMemo } from 'react';
+import ReactOriginal, { lazy, Suspense } from 'react';
+import { useSearchParams } from 'react-router-dom';
+const UniversityFinancialManagement = lazy(() => import('./UniversityFinancialManagement'));
+import { DollarSign } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Building, 
@@ -21,6 +25,7 @@ import {
   List,
   Grid3X3
 } from 'lucide-react';
+import { useUniversityFinancialData } from '../../hooks/useUniversityFinancialData';
 
 interface UniversityManagementProps {
   universities: any[];
@@ -43,8 +48,35 @@ const UniversityManagement: React.FC<UniversityManagementProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
+  const [activeTab, setActiveTab] = useState<'overview' | 'financial'>('overview');
+  const [financialLoaded, setFinancialLoaded] = useState(false);
+  const [expandedUniversities, setExpandedUniversities] = useState<Set<string>>(new Set());
   const UNIVERSITIES_PER_PAGE = 12;
+  const [searchParams] = useSearchParams();
+
+  // Dados financeiros para ordenar corretamente por faturamento
+  const { universities: financialUniversities } = useUniversityFinancialData();
+  const revenueByUniversityId = useMemo(() => {
+    const map = new Map<string, number>();
+    (financialUniversities || []).forEach((u: any) => {
+      const value = typeof u?.totalRevenue === 'number' ? u.totalRevenue : Number(u?.totalRevenue) || 0;
+      if (u?.id) map.set(u.id, value);
+    });
+    return map;
+  }, [financialUniversities]);
+
+  const hasApplicationsByUniversityId = useMemo(() => {
+    const map = new Map<string, boolean>();
+    (financialUniversities || []).forEach((u: any) => {
+      if (!u?.id) return;
+      const paid = Number(u?.paidApplicationsCount || 0) > 0;
+      const totalApps = Number(u?.applicationsCount || u?.totalApplications || 0) > 0;
+      const hasStudentsArray = Array.isArray(u?.students) && u.students.length > 0;
+      map.set(u.id, paid || totalApps || hasStudentsArray);
+    });
+    return map;
+  }, [financialUniversities]);
 
   // Carregar preferência de visualização do localStorage
   useEffect(() => {
@@ -53,6 +85,30 @@ const UniversityManagement: React.FC<UniversityManagementProps> = ({
       setViewMode(savedViewMode);
     }
   }, []);
+
+  // Carregar a aba financeira apenas na primeira abertura e manter montada
+  useEffect(() => {
+    if (activeTab === 'financial' && !financialLoaded) {
+      setFinancialLoaded(true);
+    }
+  }, [activeTab, financialLoaded]);
+
+  // Deep-link: ?tab=financial&university=<id>
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    const universityId = searchParams.get('university');
+    if (tab === 'financial') {
+      setActiveTab('financial');
+      setFinancialLoaded(true);
+    }
+    if (universityId) {
+      setExpandedUniversities(prev => new Set(prev).add(universityId));
+      setTimeout(() => {
+        const el = document.getElementById(`uni-${universityId}`);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 300);
+    }
+  }, [searchParams]);
 
   // Salvar preferência no localStorage quando mudar
   const handleViewModeChange = (mode: 'grid' | 'list') => {
@@ -71,13 +127,79 @@ const UniversityManagement: React.FC<UniversityManagementProps> = ({
     return matchesSearch && matchesStatus;
   });
 
+  // Ordenar por faturamento (desc) semelhante ao UniversityFinancialManagement
+  const getUniversityRevenue = (u: any): number => {
+    // Preferir total agregado; aceitar number ou string numérica
+    const toNumSafe = (v: any) => {
+      if (v === null || v === undefined) return 0;
+      const n = typeof v === 'number' ? v : Number(String(v).replace(/[,\s]/g, ''));
+      return Number.isFinite(n) ? n : 0;
+    };
+
+    const primary = toNumSafe(u?.totalRevenue ?? u?.revenue ?? u?.total_revenue);
+    if (primary > 0) return primary;
+
+    // Fallback: somar quebras conhecidas quando disponíveis
+    const breakdownSum =
+      toNumSafe(u?.manualPaymentsRevenue) +
+      toNumSafe(u?.stripePaymentsRevenue) +
+      toNumSafe(u?.zellePaymentsRevenue);
+    return breakdownSum;
+  };
+
+  const sortedByRevenue = [...filteredUniversities].sort((a, b) => {
+    const aRev = revenueByUniversityId.get(a.id) ?? getUniversityRevenue(a);
+    const bRev = revenueByUniversityId.get(b.id) ?? getUniversityRevenue(b);
+    if (bRev !== aRev) return bRev - aRev; // desc por faturamento
+    // Segundo critério: universidades com alunos com aplicações nas suas bolsas primeiro
+    const aActive = hasApplicationsByUniversityId.get(a.id) ? 1 : 0;
+    const bActive = hasApplicationsByUniversityId.get(b.id) ? 1 : 0;
+    if (bActive !== aActive) return bActive - aActive;
+    // Desempate estável por nome (asc)
+    return String(a?.name || '').localeCompare(String(b?.name || ''));
+  });
+
   // Calcular paginação
-  const totalPages = Math.ceil(filteredUniversities.length / UNIVERSITIES_PER_PAGE);
+  const totalPages = Math.ceil(sortedByRevenue.length / UNIVERSITIES_PER_PAGE);
   const startIndex = (currentPage - 1) * UNIVERSITIES_PER_PAGE;
-  const currentUniversities = filteredUniversities.slice(startIndex, startIndex + UNIVERSITIES_PER_PAGE);
+  const currentUniversities = sortedByRevenue.slice(startIndex, startIndex + UNIVERSITIES_PER_PAGE);
 
   return (
     <div className="space-y-8">
+      {/* Header + Tabs (same style as UsersHub) */}
+      <div className="border-b border-gray-200">
+        <nav className="-mb-px flex space-x-8">
+          <button
+            onClick={() => setActiveTab('overview')}
+            className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'overview'
+                ? 'border-[#05294E] text-[#05294E]'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            <div className="flex items-center space-x-2">
+              <Building className="h-5 w-5" />
+              <span>Overview</span>
+            </div>
+          </button>
+          <button
+            onClick={() => setActiveTab('financial')}
+            className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'financial'
+                ? 'border-[#05294E] text-[#05294E]'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            <div className="flex items-center space-x-2">
+              <DollarSign className="h-5 w-5" />
+              <span>Financial</span>
+            </div>
+          </button>
+        </nav>
+      </div>
+
+      {activeTab === 'overview' && (
+        <>
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
@@ -174,9 +296,9 @@ const UniversityManagement: React.FC<UniversityManagementProps> = ({
         </div>
 
         <div className="mt-4 flex items-center text-sm text-slate-600">
-          <span className="font-medium">{filteredUniversities.length}</span>
+          <span className="font-medium">{sortedByRevenue.length}</span>
           <span className="ml-1">
-            universit{filteredUniversities.length !== 1 ? 'ies' : 'y'} found
+            universit{sortedByRevenue.length !== 1 ? 'ies' : 'y'} found
           </span>
         </div>
       </div>
@@ -200,6 +322,7 @@ const UniversityManagement: React.FC<UniversityManagementProps> = ({
                   {currentUniversities.map((university) => (
                     <div 
                       key={university.id} 
+                      id={`uni-${university.id}`}
                       className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-2xl p-6 border border-slate-200 hover:shadow-lg transition-all duration-300 group cursor-pointer"
                       onClick={() => navigate(`universities/${university.id}`)}
                     >
@@ -465,6 +588,16 @@ const UniversityManagement: React.FC<UniversityManagementProps> = ({
           )}
         </div>
       </div>
+        </>
+      )}
+
+      {financialLoaded && (
+        <div className={`${activeTab === 'financial' ? '' : 'hidden'} space-y-6`}>
+          <Suspense fallback={<div className="p-6">Loading financial data...</div>}>
+            <UniversityFinancialManagement />
+          </Suspense>
+        </div>
+      )}
     </div>
   );
 };

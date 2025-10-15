@@ -251,9 +251,7 @@ const EmailInbox = () => {
     }
 
     try {
-      console.log('📧 Carregando emails para configuração:', selectedConfig, 'Folder:', activeTab, 'Page:', page, 'LoadMore:', loadMore);
-      console.log('📧 Configurações disponíveis:', configurations.length);
-      console.log('📧 selectedConfig existe nas configurações?', configurations.find(c => c.id === selectedConfig));
+      // Carregando emails para configuração
       
       if (loadMore) {
         setLoadingMore(true);
@@ -261,9 +259,8 @@ const EmailInbox = () => {
         setLoading(true);
       }
 
-      // Debug: verificar se a configuração existe
+      // Verificar se a configuração existe
       const selectedConfigData = configurations.find(c => c.id === selectedConfig);
-      console.log('🔍 Dados da configuração selecionada:', selectedConfigData);
 
       let data = [];
       let error = null;
@@ -272,7 +269,7 @@ const EmailInbox = () => {
 
       // Se for pasta de enviados, consultar tabela sent_emails
       if (activeTab === 'sent') {
-        console.log('📤 Carregando emails enviados...');
+        // Carregando emails enviados
         const sentQuery = supabase
           .from('sent_emails')
           .select('*')
@@ -284,18 +281,11 @@ const EmailInbox = () => {
         data = sentData || [];
         error = sentError;
 
-        console.log('📤 Dados brutos de sent_emails:', data);
-        console.log('📤 Primeiro email raw:', data[0]);
+        // Dados de emails enviados carregados
 
         // Transformar dados de sent_emails para formato compatível com received_emails
         data = data.map(email => {
-          console.log('📤 Processando email:', {
-            id: email.id,
-            sent_at: email.sent_at,
-            created_at: email.created_at,
-            sent_at_type: typeof email.sent_at,
-            created_at_type: typeof email.created_at
-          });
+          // Processando email enviado
           
           // Função para validar e obter data segura
           const getSafeDate = (dateString) => {
@@ -366,13 +356,13 @@ const EmailInbox = () => {
         // Aplicar filtros apenas para received_emails
         if (filter === 'read') {
           query = query.eq('is_read', true);
-          console.log('👁️ Aplicando filtro: apenas lidos');
+          // Aplicando filtro: apenas lidos
         } else if (filter === 'unread') {
           query = query.eq('is_read', false);
-          console.log('👁️ Aplicando filtro: apenas não lidos');
+          // Aplicando filtro: apenas não lidos
         }
 
-        console.log('🔍 Executando query de emails...');
+        // Executando query de emails
         const result = await query;
         data = result.data || [];
         error = result.error;
@@ -387,23 +377,19 @@ const EmailInbox = () => {
       const hasMore = data.length === emailsPerPage * currentPage;
       setHasMoreEmails(hasMore);
 
-      console.log('✅ Emails carregados:', data?.length || 0, 'for folder:', activeTab, 'HasMore:', hasMore);
-      console.log('📧 Primeiros 3 emails:', data?.slice(0, 3));
-      console.log('📧 Estado atual dos emails antes de atualizar:', emails.length);
+      // Emails carregados com sucesso
       
       if (loadMore) {
         // Adicionar novos emails à lista existente
-        console.log('📧 Adicionando emails à lista existente...');
+        // Adicionando emails à lista existente
         setEmails(prevEmails => {
           const newEmails = [...prevEmails, ...data];
-          console.log('📧 Total de emails após adicionar:', newEmails.length);
           return newEmails;
         });
       } else {
         // Substituir lista de emails
-        console.log('📧 Substituindo lista de emails...');
+        // Substituindo lista de emails
         setEmails(data || []);
-        console.log('📧 Emails definidos:', (data || []).length);
       }
     } catch (error) {
       console.error('❌ Erro ao carregar emails:', error);

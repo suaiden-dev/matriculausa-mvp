@@ -12,12 +12,40 @@ export default defineConfig({
     }
   },
   build: {
+    // Otimizações para reduzir uso de memória
+    target: 'esnext',
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true,
+      },
+    },
     rollupOptions: {
-      // Vite automatically detects index.html as entry point
-    }
+      output: {
+        manualChunks: {
+          // Separa bibliotecas pesadas em chunks separados
+          vendor: ['react', 'react-dom'],
+          ui: ['@mui/material', '@mui/lab', '@mui/x-date-pickers'],
+          charts: ['chart.js', 'react-chartjs-2', 'recharts'],
+          editor: ['@ckeditor/ckeditor5-build-classic', '@monaco-editor/react'],
+          utils: ['date-fns', 'dayjs', 'framer-motion', 'lucide-react']
+        }
+      }
+    },
+    // Reduz o tamanho dos chunks
+    chunkSizeWarningLimit: 1000,
+    // Otimizações de memória
+    sourcemap: false,
+    reportCompressedSize: false
   },
   optimizeDeps: {
     exclude: ['lucide-react'],
+    include: [
+      'react',
+      'react-dom',
+      'react-router-dom'
+    ]
   },
   server: {
     hmr: {
