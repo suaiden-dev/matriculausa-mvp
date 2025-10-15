@@ -23,7 +23,6 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
   const { t } = useTranslation();
   const { userProfile, user } = useAuth();
   const { fetchCart, clearCart } = useCartStore();
-  const [documentsApproved, setDocumentsApproved] = useState(userProfile?.documents_status === 'approved');
   const [processType, setProcessType] = useState<string | null>(window.localStorage.getItem('studentProcessType'));
   const [studentType, setStudentType] = useState<string | null>(null);
   const [isSavingType, setIsSavingType] = useState(false);
@@ -66,12 +65,8 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
       setProcessType(savedProcessType);
       // Se já tem processType, documentos serão mostrados automaticamente
     }
-  }, [documentsApproved]);
+  }, []);
 
-  // Atualizar estado quando userProfile muda
-  useEffect(() => {
-    setDocumentsApproved(userProfile?.documents_status === 'approved');
-  }, [userProfile?.documents_status]);
 
   // Função para sanitizar nome do arquivo
   const sanitizeFileName = (fileName: string): string => {
@@ -252,7 +247,6 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
           
           setAnalyzing(false);
           setFieldErrors({});
-          setDocumentsApproved(true);
           navigate('/student/dashboard/application-fee');
         } else {
           // Documentos com erro - apenas salvar no perfil para revisão manual
@@ -504,10 +498,6 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
       setProcessType(type);
       window.localStorage.setItem('studentProcessType', type);
       
-      // Se documentos já aprovados, vai direto para pagamento
-      if (documentsApproved) {
-        navigate('/student/dashboard/application-fee');
-      }
     } catch (e) {
       console.error('Error in saveStudentType:', e);
       alert('Failed to save student type. Please try again.');
@@ -863,7 +853,7 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
         )}
 
 
-        {processType && !documentsApproved && (
+        {processType && (
           <div className="bg-white rounded-2xl sm:rounded-3xl shadow-lg border border-slate-200 p-4 sm:p-8 mb-6 sm:mb-8">
             <div className="text-center mb-6 sm:mb-8">
               <h2 className="text-xl sm:text-2xl font-bold text-slate-800 mb-3 sm:mb-4">
@@ -1038,29 +1028,6 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
           </div>
         )}
 
-        {/* Step 3: Documents Approved */}
-        {processType && documentsApproved && (
-          <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-2xl sm:rounded-3xl p-6 sm:p-8 text-center shadow-lg">
-            <div className="inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 bg-green-100 rounded-full mb-4 sm:mb-6">
-              <CheckCircle className="w-6 h-6 sm:w-8 sm:h-8 text-green-600" />
-            </div>
-            <h2 className="text-xl sm:text-2xl font-bold text-green-800 mb-3 sm:mb-4">
-              {t('studentDashboard.documentsAndScholarshipChoice.documentsApprovedTitle')}
-            </h2>
-            <p className="text-green-700 text-sm sm:text-lg mb-4 sm:mb-6 max-w-xl mx-auto px-2">
-              {t('studentDashboard.documentsAndScholarshipChoice.documentsApprovedDescription')}
-            </p>
-            <button
-              onClick={() => navigate('/student/dashboard/application-fee')}
-              className="bg-green-600 text-white px-8 sm:px-12 py-3 sm:py-4 rounded-xl sm:rounded-2xl font-bold text-sm sm:text-lg hover:bg-green-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 w-full sm:w-auto"
-            >
-              <span className="flex items-center justify-center">
-                {t('studentDashboard.documentsAndScholarshipChoice.proceedToPayment')}
-                <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 ml-2" />
-              </span>
-            </button>
-          </div>
-        )}
 
         {/* Manual Review Message Modal - Simplified */}
         {showManualReviewMessage && (

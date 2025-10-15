@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { 
   ArrowLeft, 
+  DollarSign,
   Building, 
   MapPin, 
   Globe, 
@@ -508,13 +509,22 @@ const UniversityDetails: React.FC = () => {
 
               <div className="flex items-center gap-3">
                 {!isEditing ? (
-                  <button
-                    onClick={() => setIsEditing(true)}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
-                  >
-                    <Edit className="h-4 w-4" />
-                    Edit University
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setIsEditing(true)}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+                    >
+                      <Edit className="h-4 w-4" />
+                      Edit University
+                    </button>
+                    <button
+                      onClick={() => navigate(`/admin/dashboard/universities?tab=financial&university=${university.id}`)}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors shadow-sm"
+                    >
+                      <DollarSign className="h-4 w-4" />
+                      Open Financial
+                    </button>
+                  </div>
                 ) : (
                   <div className="flex items-center gap-2">
                     <button

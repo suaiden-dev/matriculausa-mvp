@@ -369,7 +369,8 @@ const ApplicationChatPage: React.FC = () => {
     { id: 'welcome', label: t('studentDashboard.applicationChatPage.tabs.welcome'), icon: Home },
     { id: 'details', label: t('studentDashboard.applicationChatPage.tabs.details'), icon: Info },
     { id: 'chat', label: t('studentDashboard.applicationChatPage.tabs.chat') || 'Chat', icon: FileText },
-    ...(applicationDetails && applicationDetails.status === 'enrolled' ? [
+    // I-20 agora aparece após scholarship fee ser paga
+    ...(applicationDetails && applicationDetails.is_scholarship_fee_paid ? [
       { id: 'i20', label: t('studentDashboard.applicationChatPage.tabs.i20'), icon: FileCheck }
     ] : []),
     
@@ -457,8 +458,8 @@ const ApplicationChatPage: React.FC = () => {
                   <button onClick={() => setActiveTab('details')} className="bg-blue-600 text-white px-5 py-2 rounded-lg font-semibold shadow hover:bg-blue-700 transition-all duration-200">{t('studentDashboard.applicationChatPage.welcome.applicationDetails.button')}</button>
                 </div>
               </div>
-              {/* Passo 4: I-20 Control Fee (só se liberado) */}
-              {(applicationDetails.status === 'enrolled' || applicationDetails.acceptance_letter_status === 'approved') && (
+              {/* Passo 4: I-20 Control Fee (liberado após scholarship fee) */}
+              {applicationDetails.is_scholarship_fee_paid && (
                 <div className="w-full bg-blue-50 rounded-xl p-6 flex flex-col md:flex-row items-center gap-4 shadow">
                   <Award className="w-10 h-10 text-blue-600 flex-shrink-0" />
                   <div className="flex-1">
@@ -872,7 +873,7 @@ const ApplicationChatPage: React.FC = () => {
             </div>
           </div>
         )}
-        {activeTab === 'i20' && applicationDetails && applicationDetails.status === 'enrolled' && (
+        {activeTab === 'i20' && applicationDetails && applicationDetails.is_scholarship_fee_paid && (
           <DashboardCard>
             <h3 className="text-xl font-bold text-[#05294E] mb-4">{t('studentDashboard.applicationChatPage.i20ControlFee.title')}</h3>
             
@@ -960,6 +961,29 @@ const ApplicationChatPage: React.FC = () => {
               <p className="text-slate-200 text-xs sm:text-sm mt-1">{t('studentDashboard.applicationChatPage.documents.subtitle')}</p>
             </div>
             <div className="p-3 sm:p-6 space-y-6">
+              {/* Aviso sobre Acceptance Letter - Mostrar quando I-20 foi pago mas carta ainda não enviada */}
+              {applicationDetails.is_scholarship_fee_paid && 
+               (userProfile as any)?.has_paid_i20_control_fee && 
+               !applicationDetails.acceptance_letter_url && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 sm:p-6 mb-6">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-lg font-bold text-yellow-900 mb-2">
+                        {t('studentDashboard.applicationChatPage.documents.acceptanceLetter.waitingForUniversityTitle') || 'Acceptance Letter - Waiting for University'}
+                      </h3>
+                      <p className="text-yellow-800 text-sm mb-3">
+                        {t('studentDashboard.applicationChatPage.documents.acceptanceLetter.waitingForUniversityDescription') || 'Your I-20 Control Fee has been paid successfully. The university is now processing your acceptance letter. It will appear here once they send it to you.'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
               {/* Seção de Document Requests */}
               <DocumentRequestsCard 
                 applicationId={applicationId!} 
@@ -988,9 +1012,10 @@ const ApplicationChatPage: React.FC = () => {
                   }
                 }}
               />
-                {/* Seção de Acceptance Letter - Mostrar apenas quando enviado */}
-                {applicationDetails.acceptance_letter_url && 
-                 (applicationDetails.acceptance_letter_status === 'approved' || applicationDetails.acceptance_letter_status === 'sent') && (
+               {/* Seção de Acceptance Letter - Mostrar apenas quando I-20 pago e enviado */}
+               {applicationDetails.acceptance_letter_url && 
+                 (applicationDetails.acceptance_letter_status === 'approved' || applicationDetails.acceptance_letter_status === 'sent') && 
+                 (userProfile as any)?.has_paid_i20_control_fee && (
                  <div className="bg-white rounded-lg mb-3 max-w-3xl mx-auto p-4 sm:p-6 border border-slate-200">
                    {/* Header da seção */}
                    <div className="flex items-center gap-3 mb-4 pb-3 border-b border-slate-200">

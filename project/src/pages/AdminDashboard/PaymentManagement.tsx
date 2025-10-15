@@ -589,10 +589,8 @@ const PaymentManagement = (): React.JSX.Element => {
             .in('user_id', allUserIds);
 
           if (profilesError) {
-            console.error('Error loading user profiles:', profilesError);
           } else {
             userProfiles = profilesData || [];
-            console.log('👥 User profiles loaded:', userProfiles);
           }
         }
 
@@ -634,7 +632,6 @@ const PaymentManagement = (): React.JSX.Element => {
       }
 
       setZellePayments(zellePaymentRecords);
-      console.log('✅ Zelle payments loaded:', zellePaymentRecords.length);
     } catch (error) {
       console.error('❌ Error loading Zelle payments:', error);
       setError('Failed to load Zelle payments');
@@ -749,7 +746,6 @@ const PaymentManagement = (): React.JSX.Element => {
       setShowZelleNotesModal(false);
       setZelleAdminNotes('');
       
-      console.log('📝 Zelle payment notes added successfully');
     } catch (error: any) {
       console.error('Error adding Zelle payment notes:', error);
     } finally {
@@ -757,7 +753,6 @@ const PaymentManagement = (): React.JSX.Element => {
     }
   };
 
-  console.log('🔍 Current Zelle payments:', zellePayments);
 
   const approveZellePayment = async (paymentId: string) => {
     try {
@@ -766,7 +761,6 @@ const PaymentManagement = (): React.JSX.Element => {
       const payment = zellePayments.find(p => p.id === paymentId);
       if (!payment) throw new Error('Payment not found');
 
-      console.log('🔍 [approveZellePayment] Aprovando pagamento:', payment);
 
       // Capturar IP público do cliente (melhor esforço) para enriquecer logs
       let clientIp: string | undefined = undefined;
@@ -794,17 +788,9 @@ const PaymentManagement = (): React.JSX.Element => {
       .eq('id', paymentId);
 
       if (error) throw error;
-
-      // MARCAR COMO PAGO NAS TABELAS CORRETAS
-      console.log('💰 [approveZellePayment] Marcando como pago nas tabelas corretas...');
-      console.log('🔍 [approveZellePayment] payment.fee_type_global:', payment.fee_type_global);
-      console.log('🔍 [approveZellePayment] payment.fee_type:', payment.fee_type);
-      console.log('🔍 [approveZellePayment] payment.user_id:', payment.user_id);
       
       if (payment.fee_type_global === 'selection_process') {
-        console.log('🎯 [approveZellePayment] Entrando na condição selection_process');
-        console.log('🔍 [approveZellePayment] Executando UPDATE user_profiles SET has_paid_selection_process_fee = true WHERE user_id =', payment.user_id);
-        
+       
         // Marcar no user_profiles
         const { data: updateData, error: profileError } = await supabase
           .from('user_profiles')
@@ -816,16 +802,10 @@ const PaymentManagement = (): React.JSX.Element => {
           .eq('user_id', payment.user_id)
           .select();
 
-        console.log('🔍 [approveZellePayment] Resultado da atualização:', { updateData, profileError });
 
         if (profileError) {
           console.error('❌ [approveZellePayment] Erro ao marcar selection_process_fee:', profileError);
         } else {
-          console.log('✅ [approveZellePayment] has_paid_selection_process_fee marcado como true');
-          console.log('🔍 [approveZellePayment] Dados atualizados:', updateData);
-          
-          // Buscar valor dinâmico correto baseado no pacote do usuário
-          console.log('💰 [approveZellePayment] Buscando valor dinâmico correto...');
           let correctAmount = payment.amount; // Valor padrão
           
           try {
@@ -837,9 +817,7 @@ const PaymentManagement = (): React.JSX.Element => {
             if (!packageError && userPackageFees && userPackageFees.length > 0) {
               const packageFees = userPackageFees[0];
               correctAmount = packageFees.selection_process_fee;
-              console.log('✅ [approveZellePayment] Valor dinâmico encontrado:', correctAmount, 'Pacote:', packageFees.package_name);
             } else {
-              console.log('ℹ️ [approveZellePayment] Usuário sem pacote, usando valor padrão:', correctAmount);
             }
           } catch (error) {
             console.warn('⚠️ [approveZellePayment] Erro ao buscar valor dinâmico, usando valor padrão:', error);
@@ -866,8 +844,6 @@ const PaymentManagement = (): React.JSX.Element => {
             console.error('Failed to log payment action:', logError);
           }
 
-          // Registrar no faturamento com valor correto
-          console.log('💰 [approveZellePayment] Registrando selection_process no faturamento com valor:', correctAmount);
           const { error: billingError } = await supabase.rpc('register_payment_billing', {
             user_id_param: payment.user_id,
             fee_type_param: 'selection_process',
@@ -877,31 +853,19 @@ const PaymentManagement = (): React.JSX.Element => {
           });
           
           if (billingError) {
-            console.error('❌ [approveZellePayment] Erro ao registrar faturamento:', billingError);
           } else {
-            console.log('✅ [approveZellePayment] Faturamento registrado com sucesso');
-            
-            // PROCESSAR MATRICULA REWARDS - Selection Process Fee
-            console.log('🎁 [approveZellePayment] Processando Matricula Rewards para Selection Process Fee...');
-            console.log('🎁 [approveZellePayment] payment.user_id para Matricula Rewards:', payment.user_id);
             try {
-              // Buscar o perfil do usuário para verificar se tem código de referência
-              console.log('🎁 [approveZellePayment] Buscando perfil do usuário...');
               const { data: userProfile, error: profileError } = await supabase
                 .from('user_profiles')
                 .select('referral_code_used')
                 .eq('user_id', payment.user_id)
                 .single();
 
-              console.log('🎁 [approveZellePayment] Resultado da busca do perfil:', { userProfile, profileError });
 
               if (profileError) {
                 console.error('❌ [approveZellePayment] Erro ao buscar perfil do usuário:', profileError);
               } else if (userProfile?.referral_code_used) {
-                console.log('🎁 [approveZellePayment] Usuário tem código de referência:', userProfile.referral_code_used);
                 
-                // Buscar o dono do código de referência na tabela affiliate_codes
-                console.log('🎁 [approveZellePayment] Buscando dono do código na tabela affiliate_codes...');
                 const { data: affiliateCode, error: affiliateError } = await supabase
                   .from('affiliate_codes')
                   .select('user_id, code')
@@ -909,21 +873,11 @@ const PaymentManagement = (): React.JSX.Element => {
                   .eq('is_active', true)
                   .single();
 
-                console.log('🎁 [approveZellePayment] Resultado da busca do dono do código:', { affiliateCode, affiliateError });
 
                 if (affiliateError) {
                   console.error('❌ [approveZellePayment] Erro ao buscar dono do código de referência:', affiliateError);
-                } else if (affiliateCode && affiliateCode.user_id !== payment.user_id) {
-                  console.log('🎁 [approveZellePayment] Dono do código encontrado:', affiliateCode.user_id);
-                  console.log('🎁 [approveZellePayment] Verificando se não é auto-referência:', {
-                    affiliateUserId: affiliateCode.user_id,
-                    paymentUserId: payment.user_id,
-                    isDifferent: affiliateCode.user_id !== payment.user_id
-                  });
-                  
-                  // Dar 180 coins para o dono do código
-                  console.log('🎁 [approveZellePayment] Chamando add_coins_to_user_matricula...');
-                  
+                } else if (affiliateCode && affiliateCode.user_id !== payment.user_id) {              
+                
                   // Buscar nome do usuário que pagou
                   const { data: referredUserProfile } = await supabase
                     .from('user_profiles')
@@ -939,17 +893,11 @@ const PaymentManagement = (): React.JSX.Element => {
                     reason: `Referral reward: Selection Process Fee paid by ${referredDisplayName}`
                   });
 
-                  console.log('🎁 [approveZellePayment] Resultado do add_coins_to_user:', { coinsResult, coinsError });
-
                   if (coinsError) {
-                    console.error('❌ [approveZellePayment] Erro ao adicionar coins:', coinsError);
                   } else {
-                    console.log('✅ [approveZellePayment] 180 coins adicionados para o dono do código de referência');
-                    console.log('✅ [approveZellePayment] Resultado:', coinsResult);
                     
                     // Enviar notificação de coins para o dono do código
                     try {
-                      console.log('📧 [approveZellePayment] Enviando notificação de coins...');
                       
                       // Buscar dados do dono do código
                       const { data: referrerProfile } = await supabase
@@ -988,26 +936,15 @@ const PaymentManagement = (): React.JSX.Element => {
                       });
                         
                         if (webhookResponse.ok) {
-                          console.log('✅ [approveZellePayment] Notificação de coins enviada com sucesso!');
                         } else {
-                          console.error('❌ [approveZellePayment] Erro ao enviar notificação de coins:', webhookResponse.status);
                         }
                     } catch (notificationError) {
-                      console.error('❌ [approveZellePayment] Erro ao enviar notificação de coins:', notificationError);
                     }
                   }
                 } else {
-                  console.log('ℹ️ [approveZellePayment] Nenhum dono do código de referência encontrado ou é o próprio usuário');
-                  console.log('ℹ️ [approveZellePayment] Detalhes:', {
-                    affiliateCode: !!affiliateCode,
-                    affiliateUserId: affiliateCode?.user_id,
-                    paymentUserId: payment.user_id,
-                    isSameUser: affiliateCode?.user_id === payment.user_id
-                  });
+
                 }
               } else {
-                console.log('ℹ️ [approveZellePayment] Usuário não tem código de referência Matricula Rewards');
-                console.log('ℹ️ [approveZellePayment] userProfile.referral_code_used:', userProfile?.referral_code_used);
               }
             } catch (rewardsError) {
               console.error('❌ [approveZellePayment] Erro ao processar Matricula Rewards:', rewardsError);
@@ -1015,10 +952,8 @@ const PaymentManagement = (): React.JSX.Element => {
           }
         }
       } else {
-        console.log('⚠️ [approveZellePayment] fee_type_global não é selection_process:', payment.fee_type_global);
       }
 
-      console.log('🔍 [approveZellePayment] Verificando condição I-20 Control Fee...');
       const feeTypeSafe = String(payment.fee_type || '');
       const feeTypeGlobalSafe = String(payment.fee_type_global || '');
       const isI20 =
@@ -1027,12 +962,9 @@ const PaymentManagement = (): React.JSX.Element => {
         feeTypeSafe === 'i20_control' ||
         feeTypeSafe === 'i20_control_fee' ||
         feeTypeSafe === 'i-20_control_fee';
-      console.log('🔍 [approveZellePayment] isI20:', isI20, 'fee_type_global:', feeTypeGlobalSafe, 'fee_type:', feeTypeSafe);
       
       if (isI20) {
-        console.log('🎯 [approveZellePayment] Entrando na condição i20_control_fee');
-        console.log('🔍 [approveZellePayment] Executando UPDATE user_profiles SET has_paid_i20_control_fee = true WHERE user_id =', payment.user_id);
-        
+
         // Marcar no user_profiles
         const { data: updateData, error: profileError } = await supabase
           .from('user_profiles')
@@ -1044,16 +976,9 @@ const PaymentManagement = (): React.JSX.Element => {
           .eq('user_id', payment.user_id)
           .select();
 
-        console.log('🔍 [approveZellePayment] Resultado da atualização i20_control_fee:', { updateData, profileError });
 
         if (profileError) {
-          console.error('❌ [approveZellePayment] Erro ao marcar i20_control_fee:', profileError);
         } else {
-          console.log('✅ [approveZellePayment] has_paid_i20_control_fee marcado como true');
-          console.log('🔍 [approveZellePayment] Dados atualizados i20_control_fee:', updateData);
-          
-          // Buscar valor dinâmico correto baseado no pacote do usuário
-          console.log('💰 [approveZellePayment] Buscando valor dinâmico correto para i20_control_fee...');
           let correctAmount = payment.amount; // Valor padrão
           
           try {
@@ -1065,9 +990,7 @@ const PaymentManagement = (): React.JSX.Element => {
             if (!packageError && userPackageFees && userPackageFees.length > 0) {
               const packageFees = userPackageFees[0];
               correctAmount = packageFees.i20_control_fee;
-              console.log('✅ [approveZellePayment] Valor dinâmico encontrado para i20_control_fee:', correctAmount, 'Pacote:', packageFees.package_name);
             } else {
-              console.log('ℹ️ [approveZellePayment] Usuário sem pacote, usando valor padrão para i20_control_fee:', correctAmount);
             }
           } catch (error) {
             console.warn('⚠️ [approveZellePayment] Erro ao buscar valor dinâmico para i20_control_fee, usando valor padrão:', error);
@@ -1090,19 +1013,17 @@ const PaymentManagement = (): React.JSX.Element => {
                 ip: clientIp
               }
             } as const;
-            console.log('🧭 [approveZellePayment] Calling log_student_action (i20):', logPayload);
             const { data: logData, error: logErr } = await supabase.rpc('log_student_action', logPayload);
             if (logErr) {
               console.error('❌ [approveZellePayment] log_student_action error (i20):', logErr);
             } else {
-              console.log('✅ [approveZellePayment] log_student_action success (i20):', logData);
+              ('✅ [approveZellePayment] log_student_action success (i20):', logData);
             }
           } catch (logError) {
             console.error('Failed to log payment action (i20):', logError);
           }
 
           // Registrar no faturamento com valor correto
-          console.log('💰 [approveZellePayment] Registrando i20_control_fee no faturamento com valor:', correctAmount);
           const { error: billingError } = await supabase.rpc('register_payment_billing', {
             user_id_param: payment.user_id,
             fee_type_param: 'i20_control_fee',
@@ -1114,20 +1035,15 @@ const PaymentManagement = (): React.JSX.Element => {
           if (billingError) {
             console.error('❌ [approveZellePayment] Erro ao registrar faturamento:', billingError);
           } else {
-            console.log('✅ [approveZellePayment] Faturamento registrado com sucesso');
           }
         }
       }
 
       if (payment.fee_type === 'application_fee' || payment.fee_type === 'scholarship_fee') {
-        console.log('🎯 [approveZellePayment] Entrando na condição scholarship_applications');
-        console.log('🔍 [approveZellePayment] fee_type:', payment.fee_type);
-        console.log('🔍 [approveZellePayment] scholarships_ids:', payment.scholarships_ids);
         
         // CORREÇÃO: Atualizar apenas as aplicações específicas das bolsas pagas
         if (payment.scholarships_ids && payment.scholarships_ids.length > 0) {
-          console.log('🔍 [approveZellePayment] Executando UPDATE scholarship_applications WHERE student_id =', payment.student_id, 'AND scholarship_id IN', payment.scholarships_ids);
-          
+       
           // Marcar no scholarship_applications apenas para as bolsas específicas
           const { data: updateData, error: appError } = await supabase
             .from('scholarship_applications')
@@ -1139,14 +1055,9 @@ const PaymentManagement = (): React.JSX.Element => {
             .eq('student_id', payment.student_id)
             .in('scholarship_id', payment.scholarships_ids) // CORREÇÃO: Filtrar por bolsas específicas (array completo)
             .select();
-
-          console.log('🔍 [approveZellePayment] Resultado da atualização scholarship_applications:', { updateData, appError });
-
           if (appError) {
-            console.error('❌ [approveZellePayment] Erro ao marcar scholarship_applications:', appError);
           } else {
-            console.log(`✅ [approveZellePayment] ${payment.fee_type === 'application_fee' ? 'is_application_fee_paid' : 'is_scholarship_fee_paid'} marcado como true para ${updateData.length} aplicação(ões)`);
-            console.log('🔍 [approveZellePayment] Dados atualizados scholarship_applications:', updateData);
+
             
             // Log the payment action para cada aplicação atualizada
             for (const app of updateData) {
@@ -1174,11 +1085,8 @@ const PaymentManagement = (): React.JSX.Element => {
             }
           }
         } else {
-          console.warn('⚠️ [approveZellePayment] Nenhum scholarship_id encontrado no pagamento, não é possível atualizar aplicações específicas');
-          
-          // Fallback: Atualizar todas as aplicações do aluno (comportamento antigo para compatibilidade)
-          console.log('🔍 [approveZellePayment] Executando UPDATE scholarship_applications (fallback) WHERE student_id =', payment.student_id);
-          
+   
+         
           const { data: updateData, error: appError } = await supabase
             .from('scholarship_applications')
             .update({ 
@@ -1189,13 +1097,10 @@ const PaymentManagement = (): React.JSX.Element => {
             .eq('student_id', payment.student_id)
             .select();
 
-          console.log('🔍 [approveZellePayment] Resultado da atualização scholarship_applications (fallback):', { updateData, appError });
 
           if (appError) {
             console.error('❌ [approveZellePayment] Erro ao marcar scholarship_applications (fallback):', appError);
           } else {
-            console.log(`✅ [approveZellePayment] ${payment.fee_type === 'application_fee' ? 'is_application_fee_paid' : 'is_scholarship_fee_paid'} marcado como true (fallback)`);
-            console.log('🔍 [approveZellePayment] Dados atualizados scholarship_applications (fallback):', updateData);
             
             // Log the payment action
             try {
@@ -1224,7 +1129,6 @@ const PaymentManagement = (): React.JSX.Element => {
         // Registrar no faturamento apenas para scholarship_fee (application_fee não gera faturamento)
         if (payment.fee_type === 'scholarship_fee') {
             // Buscar valor dinâmico correto baseado no pacote do usuário
-            console.log('💰 [approveZellePayment] Buscando valor dinâmico correto para scholarship_fee...');
             let correctAmount = payment.amount; // Valor padrão
             
             try {
@@ -1236,15 +1140,12 @@ const PaymentManagement = (): React.JSX.Element => {
               if (!packageError && userPackageFees && userPackageFees.length > 0) {
                 const packageFees = userPackageFees[0];
                 correctAmount = packageFees.scholarship_fee;
-                console.log('✅ [approveZellePayment] Valor dinâmico encontrado para scholarship_fee:', correctAmount, 'Pacote:', packageFees.package_name);
               } else {
-                console.log('ℹ️ [approveZellePayment] Usuário sem pacote, usando valor padrão para scholarship_fee:', correctAmount);
               }
             } catch (error) {
               console.warn('⚠️ [approveZellePayment] Erro ao buscar valor dinâmico para scholarship_fee, usando valor padrão:', error);
             }
 
-            console.log('💰 [approveZellePayment] Registrando scholarship_fee no faturamento com valor:', correctAmount);
             const { error: billingError } = await supabase.rpc('register_payment_billing', {
               user_id_param: payment.user_id,
               fee_type_param: 'scholarship_fee',
@@ -1256,7 +1157,6 @@ const PaymentManagement = (): React.JSX.Element => {
             if (billingError) {
               console.error('❌ [approveZellePayment] Erro ao registrar faturamento:', billingError);
             } else {
-              console.log('✅ [approveZellePayment] Faturamento registrado com sucesso');
             }
           }
         }
@@ -3190,10 +3090,19 @@ const PaymentManagement = (): React.JSX.Element => {
         </div>
 
         {(() => {
-          const filteredTotals = calculateFilteredTotals();
-          const stripeData = filteredTotals.breakdownByMethod.stripe || { count: 0, amount: 0 };
-          const zelleData = filteredTotals.breakdownByMethod.zelle || { count: 0, amount: 0 };
-          
+          // Totais fixos (não dependem dos filtros aplicados)
+          const allPaid = payments.filter(p => p.status === 'paid');
+          const totalsByMethod = allPaid.reduce((acc: Record<string, { count: number; amount: number }>, p) => {
+            const method = (p.payment_method || 'manual').toLowerCase();
+            if (!acc[method]) acc[method] = { count: 0, amount: 0 };
+            acc[method].count += 1;
+            acc[method].amount += p.amount;
+            return acc;
+          }, {});
+
+          const stripeData = totalsByMethod.stripe || { count: 0, amount: 0 };
+          const zelleData = totalsByMethod.zelle || { count: 0, amount: 0 };
+
           return (
             <>
               <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-6 text-white">

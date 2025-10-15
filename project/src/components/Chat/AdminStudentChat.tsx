@@ -28,6 +28,7 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
   const [selectedRecipientInfo, setSelectedRecipientInfo] = useState<{ email?: string; phone?: string } | null>(null);
   const [selectedRecipientProfileId, setSelectedRecipientProfileId] = useState<string | null>(null);
   const [showGuide, setShowGuide] = useState(false);
+  const [adminSenders, setAdminSenders] = useState<Record<string, string>>({});
 
   // Get conversations hook to access updateConversationUnreadCount
   const { updateConversationUnreadCount } = useAdminStudentConversations();
@@ -35,8 +36,33 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
   // Initialize chat with selected conversation or recipient
   const chat = useAdminStudentChat(selectedConversationId, selectedRecipientId, updateConversationUnreadCount);
 
+  // Carregar mapa de admins (user_id -> display name) para rotular mensagens de outros admins
+  React.useEffect(() => {
+    const loadAdmins = async () => {
+      try {
+        const { data } = await supabase
+          .from('user_profiles')
+          .select('user_id, full_name, email, role')
+          .in('role', ['admin', 'affiliate_admin']);
+        const map: Record<string, string> = {};
+        (data || []).forEach((u: any) => {
+          map[u.user_id] = u.full_name || u.email || u.user_id;
+        });
+        setAdminSenders(map);
+      } catch {
+        setAdminSenders({});
+      }
+    };
+    loadAdmins();
+  }, []);
+
   const handleConversationSelect = useCallback((conversationId: string, recipientId: string, recipientName: string) => {
-    setSelectedConversationId(conversationId);
+    // If conversationId is empty, it means admin is starting a new conversation with a student
+    if (conversationId === '') {
+      setSelectedConversationId(undefined); // Let the hook create a new conversation
+    } else {
+      setSelectedConversationId(conversationId);
+    }
     setSelectedRecipientId(recipientId);
     setSelectedRecipientName(recipientName);
     setShowMobileInbox(false); // Hide inbox on mobile when conversation is selected
@@ -139,6 +165,8 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
                 currentUserId={user.id}
                 onMarkAllAsRead={chat.markAllAsRead}
                 overrideHeights={true}
+                hideBubbleHeader={false}
+                adminSenders={adminSenders}
               />
             </div>
           </div>
@@ -223,6 +251,8 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
                   onMarkAllAsRead={chat.markAllAsRead}
                   overrideHeights={true}
                   className="h-full"
+                  hideBubbleHeader={false}
+                  adminSenders={adminSenders}
                 />
               </div>
             </>

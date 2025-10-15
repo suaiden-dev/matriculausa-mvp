@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useMemo, memo, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   Building2, 
   DollarSign, 
@@ -35,6 +35,7 @@ interface FilterState {
 const UniversityFinancialManagement: React.FC = () => {
   const { universities, loading, error, refetch } = useUniversityFinancialData();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   
   const [filters, setFilters] = useState<FilterState>({
     search: '',
@@ -44,6 +45,30 @@ const UniversityFinancialManagement: React.FC = () => {
   });
   
   const [expandedUniversities, setExpandedUniversities] = useState<Set<string>>(new Set());
+  const [studentsPageByUniversity, setStudentsPageByUniversity] = useState<Record<string, number>>({});
+  const STUDENTS_PER_PAGE = 12;
+
+  // Deep-link: expandir e rolar até a universidade indicada em ?university=<id>
+  useEffect(() => {
+    const targetId = searchParams.get('university');
+    if (!targetId) return;
+    if (!universities || universities.length === 0) return;
+
+    setExpandedUniversities(prev => {
+      const next = new Set(prev);
+      next.add(targetId);
+      return next;
+    });
+
+    const timer = setTimeout(() => {
+      const el = document.getElementById(`fin-uni-${targetId}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchParams, universities]);
 
   // Filtrar e ordenar universidades
   const filteredAndSortedUniversities = useMemo(() => {
@@ -151,6 +176,8 @@ const UniversityFinancialManagement: React.FC = () => {
       newExpanded.delete(universityId);
     } else {
       newExpanded.add(universityId);
+      // inicializa página 1 ao expandir
+      setStudentsPageByUniversity(prev => ({ ...prev, [universityId]: prev[universityId] || 1 }));
     }
     setExpandedUniversities(newExpanded);
   };
@@ -377,7 +404,7 @@ const UniversityFinancialManagement: React.FC = () => {
           </div>
         ) : (
           filteredAndSortedUniversities.map((university) => (
-            <div key={university.id} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <div key={university.id} id={`fin-uni-${university.id}`} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
               {/* Header da universidade */}
               <div className="p-6">
                 <div className="flex items-center justify-between">
@@ -483,51 +510,52 @@ const UniversityFinancialManagement: React.FC = () => {
                     </div>
                   </div>
                 </div>
-
-                {/* Payment Method Breakdown */}
-                <div className="mt-6 bg-slate-50 rounded-lg p-4 border border-slate-200">
-                  <h4 className="text-sm font-semibold text-slate-700 mb-3">Payment Method Breakdown</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="bg-white rounded-lg p-3 border border-slate-200">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-xs font-medium text-slate-600 mb-1">Outside Payments</p>
-                          <p className="text-sm font-bold text-slate-900">{university.manualPaymentsCount} applications</p>
-                          <p className="text-lg font-bold text-green-600">{formatCurrency(university.manualPaymentsRevenue)}</p>
-                        </div>
-                        <div className="p-2 bg-green-100 rounded-lg">
-                          <FileText className="w-4 h-4 text-green-600" />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="bg-white rounded-lg p-3 border border-slate-200">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-xs font-medium text-slate-600 mb-1">Stripe Payments</p>
-                          <p className="text-sm font-bold text-slate-900">{university.stripePaymentsCount} applications</p>
-                          <p className="text-lg font-bold text-green-600">{formatCurrency(university.stripePaymentsRevenue)}</p>
-                        </div>
-                        <div className="p-2 bg-green-100 rounded-lg">
-                          <CreditCard className="w-4 h-4 text-green-600" />
+                {/* Payment Method Breakdown - somente quando expandido */}
+                {expandedUniversities.has(university.id) && (
+                  <div className="mt-6 bg-slate-50 rounded-lg p-4 border border-slate-200">
+                    <h4 className="text-sm font-semibold text-slate-700 mb-3">Payment Method Breakdown</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="bg-white rounded-lg p-3 border border-slate-200">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-xs font-medium text-slate-600 mb-1">Outside Payments</p>
+                            <p className="text-sm font-bold text-slate-900">{university.manualPaymentsCount} applications</p>
+                            <p className="text-lg font-bold text-green-600">{formatCurrency(university.manualPaymentsRevenue)}</p>
+                          </div>
+                          <div className="p-2 bg-green-100 rounded-lg">
+                            <FileText className="w-4 h-4 text-green-600" />
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    <div className="bg-white rounded-lg p-3 border border-slate-200">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-xs font-medium text-slate-600 mb-1">Zelle Payments</p>
-                          <p className="text-sm font-bold text-slate-900">{university.zellePaymentsCount} applications</p>
-                          <p className="text-lg font-bold text-green-600">{formatCurrency(university.zellePaymentsRevenue)}</p>
+                      <div className="bg-white rounded-lg p-3 border border-slate-200">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-xs font-medium text-slate-600 mb-1">Stripe Payments</p>
+                            <p className="text-sm font-bold text-slate-900">{university.stripePaymentsCount} applications</p>
+                            <p className="text-lg font-bold text-green-600">{formatCurrency(university.stripePaymentsRevenue)}</p>
+                          </div>
+                          <div className="p-2 bg-green-100 rounded-lg">
+                            <CreditCard className="w-4 h-4 text-green-600" />
+                          </div>
                         </div>
-                        <div className="p-2 bg-green-100 rounded-lg">
-                          <ExternalLink className="w-4 h-4 text-green-600" />
+                      </div>
+
+                      <div className="bg-white rounded-lg p-3 border border-slate-200">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-xs font-medium text-slate-600 mb-1">Zelle Payments</p>
+                            <p className="text-sm font-bold text-slate-900">{university.zellePaymentsCount} applications</p>
+                            <p className="text-lg font-bold text-green-600">{formatCurrency(university.zellePaymentsRevenue)}</p>
+                          </div>
+                          <div className="p-2 bg-green-100 rounded-lg">
+                            <ExternalLink className="w-4 h-4 text-green-600" />
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
-                </div>
+                )}
               </div>
 
               {/* Seção expandida - Estudantes */}
@@ -547,81 +575,128 @@ const UniversityFinancialManagement: React.FC = () => {
                         <p className="text-slate-600">No students found for this university</p>
                       </div>
                     ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {university.students.map((student) => {
-                          const user = Array.isArray(student.users) ? student.users[0] : student.users;
-                          const scholarship = Array.isArray(student.scholarships) ? student.scholarships[0] : student.scholarships;
-                          
-                          return (
-                            <div
-                              key={student.id}
-                              className="bg-white rounded-lg border border-slate-200 p-4 hover:shadow-md transition-shadow cursor-pointer"
-                              onClick={() => handleStudentClick(user?.id)}
-                            >
-                              <div className="flex items-center justify-between mb-2">
-                                <div className="flex items-center space-x-2">
-                                  <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-lg flex items-center justify-center">
-                                    <span className="text-white font-bold text-xs">
-                                      {(user?.name || 'U').charAt(0).toUpperCase()}
-                                    </span>
-                                  </div>
-                                  <div>
-                                    <p className="font-medium text-slate-900 text-sm">{user?.name || 'Unknown Student'}</p>
-                                    <p className="text-xs text-slate-600">{user?.email}</p>
-                                  </div>
-                                </div>
-                                <button className="p-1 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors">
-                                  <Eye className="w-4 h-4" />
-                                </button>
-                              </div>
+                      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                        <div className="overflow-x-auto">
+                          <table className="min-w-full divide-y divide-slate-200">
+                            <thead className="bg-slate-50">
+                              <tr>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">Student</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">Scholarship</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">Fee Status</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">Applied</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">Fee Amount</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium text-slate-600 uppercase tracking-wider">Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-slate-200">
+                              {(() => {
+                                const total = university.students.length;
+                                const currentPage = studentsPageByUniversity[university.id] || 1;
+                                const totalPages = Math.ceil(total / STUDENTS_PER_PAGE) || 1;
+                                const startIndex = (currentPage - 1) * STUDENTS_PER_PAGE;
+                                const pageStudents = university.students.slice(startIndex, startIndex + STUDENTS_PER_PAGE);
+                                const setPage = (page: number) =>
+                                  setStudentsPageByUniversity(prev => ({ ...prev, [university.id]: Math.max(1, Math.min(page, totalPages)) }));
 
-                              <div className="space-y-2">
-                                <div className="flex items-center justify-between text-xs">
-                                  <span className="text-slate-600">Scholarship:</span>
-                                  <span className="font-medium text-slate-900 truncate ml-2" title={scholarship?.title}>
-                                    {scholarship?.title || 'N/A'}
-                                  </span>
-                                </div>
-                                <div className="flex items-center justify-between text-xs">
-                                  <span className="text-slate-600">Fee Status:</span>
-                                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                    student.is_application_fee_paid 
-                                      ? 'bg-green-100 text-green-800' 
-                                      : 'bg-red-100 text-red-800'
-                                  }`}>
-                                    {student.is_application_fee_paid ? 'Paid' : 'Unpaid'}
-                                  </span>
-                                </div>
-                                <div className="flex items-center justify-between text-xs">
-                                  <span className="text-slate-600">Applied:</span>
-                                  <span className="text-slate-900">{formatDate(student.created_at)}</span>
-                                </div>
-                                {student.is_application_fee_paid && scholarship?.application_fee_amount && (
-                                  <div className="flex items-center justify-between text-xs">
-                                    <span className="text-slate-600">Fee Amount:</span>
-                                    <span className="font-medium text-slate-700">
-                                      {formatCurrency(scholarship.application_fee_amount / 100)}
-                                    </span>
-                                  </div>
-                                )}
-                              </div>
+                                const rows = pageStudents.map((student) => {
+                                const user = Array.isArray(student.users) ? student.users[0] : student.users;
+                                const scholarship = Array.isArray(student.scholarships) ? student.scholarships[0] : student.scholarships;
+                                const feePaid = !!student.is_application_fee_paid;
+                                const feeAmount = scholarship?.application_fee_amount;
+                                  return (
+                                  <tr key={student.id} className="hover:bg-slate-50 transition-colors">
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                      <div className="flex items-center">
+                                        <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-lg flex items-center justify-center mr-3">
+                                          <span className="text-white font-bold text-xs">{(user?.name || 'U').charAt(0).toUpperCase()}</span>
+                                        </div>
+                                        <div>
+                                          <div className="text-sm font-medium text-slate-900">{user?.name || 'Unknown Student'}</div>
+                                          <div className="text-xs text-slate-600">{user?.email}</div>
+                                        </div>
+                                      </div>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                      <div className="text-sm text-slate-900 truncate max-w-[240px]" title={scholarship?.title}>{scholarship?.title || 'N/A'}</div>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${feePaid ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                        {feePaid ? 'Paid' : 'Unpaid'}
+                                      </span>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">{formatDate(student.created_at)}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
+                                      {feePaid && feeAmount ? formatCurrency(feeAmount) : '-'}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                      <button
+                                        onClick={() => handleStudentClick(user?.id)}
+                                        className="text-blue-600 hover:text-blue-800 inline-flex items-center gap-1"
+                                        title="View Details"
+                                      >
+                                        <Eye className="w-4 h-4" />
+                                        View
+                                      </button>
+                                    </td>
+                                  </tr>
+                                  );
+                                });
 
-                              <div className="mt-3 pt-3 border-t border-slate-200">
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleStudentClick(user?.id);
-                                  }}
-                                  className="w-full flex items-center justify-center px-3 py-2 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 hover:text-blue-800 transition-colors"
-                                >
-                                  <Eye className="w-3 h-3 mr-1" />
-                                  View Details
-                                  <ChevronRight className="w-3 h-3 ml-1" />
-                                </button>
-                              </div>
-                            </div>
-                          );
-                        })}
+                                return (
+                                  <>
+                                    {rows}
+                                    <tr>
+                                      <td colSpan={6} className="px-6 py-4">
+                                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-sm text-slate-600">
+                                          <div>
+                                            Showing {total === 0 ? 0 : startIndex + 1}-{Math.min(startIndex + STUDENTS_PER_PAGE, total)} of {total} students
+                                          </div>
+                                          <div className="flex items-center gap-2">
+                                            <button
+                                              onClick={() => setPage(1)}
+                                              disabled={currentPage === 1}
+                                              className="p-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                              title="First Page"
+                                            >
+                                              «
+                                            </button>
+                                            <button
+                                              onClick={() => setPage(currentPage - 1)}
+                                              disabled={currentPage === 1}
+                                              className="p-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                              title="Previous Page"
+                                            >
+                                              <ChevronRight className="w-4 h-4 rotate-180" />
+                                            </button>
+                                            <span className="px-3 py-1 rounded-md bg-slate-100 text-slate-700">
+                                              Page {currentPage} of {totalPages}
+                                            </span>
+                                            <button
+                                              onClick={() => setPage(currentPage + 1)}
+                                              disabled={currentPage === totalPages}
+                                              className="p-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                              title="Next Page"
+                                            >
+                                              <ChevronRight className="w-4 h-4" />
+                                            </button>
+                                            <button
+                                              onClick={() => setPage(totalPages)}
+                                              disabled={currentPage === totalPages}
+                                              className="p-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                              title="Last Page"
+                                            >
+                                              »
+                                            </button>
+                                          </div>
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  </>
+                                );
+                              })()}
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -635,4 +710,4 @@ const UniversityFinancialManagement: React.FC = () => {
   );
 };
 
-export default UniversityFinancialManagement;
+export default memo(UniversityFinancialManagement);
