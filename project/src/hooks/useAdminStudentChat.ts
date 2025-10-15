@@ -129,20 +129,26 @@ export const useAdminStudentChat = (conversationId?: string, recipientId?: strin
         .from('admin_student_conversations')
         .select('*');
 
-      if (userProfile.role === 'affiliate_admin' || userProfile.role === 'admin') {
+      if (userProfile.role === 'affiliate_admin') {
+        // Affiliate admins only see their own conversations
         query = query.eq('admin_id', user.id).eq('student_id', targetRecipientId);
+      } else if (userProfile.role === 'admin') {
+        // Regular admins look for any existing conversation with this student
+        query = query.eq('student_id', targetRecipientId);
       } else {
+        // Students look for conversations with them
         query = query.eq('student_id', user.id).eq('admin_id', targetRecipientId);
       }
 
-      const { data: existingConversation, error: fetchError } = await query.single();
+      const { data: existingConversations, error: fetchError } = await query;
 
-      if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 = no rows returned
+      if (fetchError) {
         throw fetchError;
       }
 
-      if (existingConversation) {
-        return existingConversation.id;
+      if (existingConversations && existingConversations.length > 0) {
+        // Return the first existing conversation (most recent)
+        return existingConversations[0].id;
       }
 
       // Create new conversation

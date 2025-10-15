@@ -73,6 +73,9 @@ const StudentApplicationsView: React.FC = () => {
   const [expandedApps, setExpandedApps] = useState<{[key: string]: boolean}>({});
   const [dependents, setDependents] = useState<number>(0);
   const [approvingDocs, setApprovingDocs] = useState<{[key: string]: boolean}>({});
+
+  // Evitar mostrar usuários de teste em produção
+  const isProductionHost = typeof window !== 'undefined' && window.location.origin === 'https://matriculausa.com';
   
   // Hook para configurações dinâmicas de taxas
   const { getFeeAmount, formatFeeAmount, hasOverride } = useFeeConfig(selectedStudent?.user_id);
@@ -662,6 +665,10 @@ const StudentApplicationsView: React.FC = () => {
   };
 
   const filteredStudents = students.filter((student: StudentRecord) => {
+    // Em produção, ocultar usuários de teste com email contendo "uorak"
+    if (isProductionHost && (student.student_email || '').toLowerCase().includes('uorak')) {
+      return false;
+    }
     const matchesSearch = 
       student.student_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       student.student_email.toLowerCase().includes(searchTerm.toLowerCase()) ||
