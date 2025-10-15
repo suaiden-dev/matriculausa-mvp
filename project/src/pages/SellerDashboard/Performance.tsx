@@ -180,25 +180,7 @@ const Performance: React.FC<PerformanceProps> = ({ sellerProfile, students }) =>
     const deps = studentDependents[student.id] || 0;
     const overrides = studentFeeOverrides[student.id];
 
-    // Debug específico para wilfried8078@uorak.com
-    const isDebugStudent = student.email === 'wilfried8078@uorak.com';
-    if (isDebugStudent) {
-      console.log('🔍 [PERFORMANCE_DEBUG] =================================');
-      console.log('🔍 [PERFORMANCE_DEBUG] Calculando total para:', student.email);
-      console.log('🔍 [PERFORMANCE_DEBUG] Student ID:', student.id);
-      console.log('🔍 [PERFORMANCE_DEBUG] Dependents:', deps);
-      console.log('🔍 [PERFORMANCE_DEBUG] Overrides:', overrides);
-      console.log('🔍 [PERFORMANCE_DEBUG] has_paid_selection_process_fee:', student.has_paid_selection_process_fee);
-      console.log('🔍 [PERFORMANCE_DEBUG] has_paid_i20_control_fee:', student.has_paid_i20_control_fee);
-      console.log('🔍 [PERFORMANCE_DEBUG] is_scholarship_fee_paid:', student.is_scholarship_fee_paid);
-      if (overrides) {
-        console.log('🔍 [PERFORMANCE_DEBUG] Override values:', {
-          selection_process_fee: overrides.selection_process_fee,
-          scholarship_fee: overrides.scholarship_fee,
-          i20_control_fee: overrides.i20_control_fee
-        });
-      }
-    }
+    // Calculando total para o estudante
 
     if (student.has_paid_selection_process_fee) {
       // 🚨 CORREÇÃO: Usar mesma lógica do MyStudents.tsx - verificar override primeiro
