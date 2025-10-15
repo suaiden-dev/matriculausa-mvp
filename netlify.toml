@@ -1,6 +1,6 @@
 [build]
   publish = "project/dist"
-  command = "cd project && npm run build"
+  command = "cd project && npm run build:netlify"
 
 [functions]
   directory = "project/netlify/functions"
@@ -19,3 +19,4 @@
 
 [build.environment]
   NODE_VERSION = "18"
+  NODE_OPTIONS = "--max_old_space_size=4096"
