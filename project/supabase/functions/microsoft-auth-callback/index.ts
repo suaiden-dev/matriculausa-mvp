@@ -294,8 +294,12 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-     // Construir redirect URI (deve corresponder ao configurado no Azure)
-     const redirectUri = `http://localhost:5173/microsoft-email`;
+     // Construir redirect URI dinâmico baseado na requisição
+     // Para desenvolvimento local, usar o redirect URI configurado no Azure AD
+     const redirectUri = url.searchParams.get('redirect_uri') || 
+       (APP_BASE_URL.includes('localhost') 
+         ? 'https://fitpynguasqqutuhzifx.supabase.co/functions/v1/microsoft-auth-callback'
+         : `${APP_BASE_URL}/microsoft-email`);
 
     // Trocar code por tokens
     console.log('🔄 Tentando trocar código por tokens...');

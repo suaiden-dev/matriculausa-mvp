@@ -20,14 +20,13 @@ const MicrosoftAccountSelector: React.FC<MicrosoftAccountSelectorProps> = ({ onA
   const [isOpen, setIsOpen] = useState(false);
 
   const handleAccountSelect = (email: string) => {
-    console.log('🔄 MicrosoftAccountSelector: handleAccountSelect called with:', email);
-    console.log('🔄 Current activeConnection:', activeConnection?.email_address);
+    // MicrosoftAccountSelector: handleAccountSelect called
     
     setActiveConnection(email);
     onAccountChange?.(email);
     setIsOpen(false);
     
-    console.log('🔄 MicrosoftAccountSelector: Account selection completed');
+    // MicrosoftAccountSelector: Account selection completed
   };
 
   const handleAddAccount = async () => {

@@ -1,14 +1,14 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
   Mail, RefreshCw, Inbox as InboxIcon,
   Send as SendIcon, Star as StarIcon, FileText, AlertTriangle, Trash,
   Bot, Play, Loader2, XCircle,
   Search, MoreVertical, Reply, Forward, User,
   Plus, Archive, Folder, FolderOpen,
-  X
+  X, Sparkles
 } from 'lucide-react';
 // import { useAuthToken } from '../../hooks/useAuthToken'; // Removido - usando GraphService diretamente
 import { useMicrosoftConnection } from '../../hooks/useMicrosoftConnection';
@@ -17,7 +17,17 @@ import { GraphService } from '../../lib/services/GraphService';
 import EmailAgentManagement from '../../pages/SchoolDashboard/EmailAgentManagement';
 import { useUniversity } from '../../context/UniversityContext';
 import { supabase } from '../../lib/supabase';
-import MicrosoftConnectionStatus from '../MicrosoftConnectionStatus';
+// import MicrosoftConnectionStatus from '../MicrosoftConnectionStatus'; // Removido para evitar banner amarelo
+import { useAuth } from '../../hooks/useAuth';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../ui/dialog';
+import { Button } from '../ui/button';
 
 
 // Interfaces
@@ -65,6 +75,7 @@ interface MicrosoftGraphEmail {
 
 export default function MicrosoftInbox() {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const configId = searchParams.get('config');
   
   // const { getToken, accounts } = useAuthToken(); // Removido - usando GraphService diretamente
@@ -97,6 +108,18 @@ export default function MicrosoftInbox() {
 
   // Estados para controle de requisições (SIMPLIFICADO)
   const [isLoadingData, setIsLoadingData] = useState(false);
+  
+  // Estado para controlar a exibição da mensagem do agente de IA
+  const [showAIAgentMessage, setShowAIAgentMessage] = useState(false);
+  const [hasAIAgent, setHasAIAgent] = useState(false);
+  const [showCreateAgentModal, setShowCreateAgentModal] = useState(false);
+  const [dontShowAgain, setDontShowAgain] = useState(false);
+  
+  // Chave para localStorage
+  const AI_AGENT_MESSAGE_DISMISSED_KEY = 'ai_agent_message_dismissed';
+  
+  // Hook para autenticação
+  const { user } = useAuth();
 
   // Estados do Inbox
   const [selectedEmail, setSelectedEmail] = useState<ProcessedEmail | MicrosoftGraphEmail | null>(null);
@@ -276,7 +299,7 @@ export default function MicrosoftInbox() {
         error.message.includes('401')
       )) {
         // Token renewal is handled by GraphService automatically
-        console.log('🔄 Token renewal will be handled by GraphService');
+        // Token renewal will be handled by GraphService
       }
       
       return [];
@@ -398,6 +421,35 @@ export default function MicrosoftInbox() {
   }, [activeConnection?.access_token, folderCache, isCacheValid]);
 
 
+  // Função para verificar se o usuário já tem um agente de IA configurado
+  const checkAIAgentStatus = useCallback(async () => {
+    try {
+      if (!university?.id) return;
+      
+      const { data, error } = await supabase
+        .from('ai_agents')
+        .select('id, name, is_active')
+        .eq('university_id', university.id)
+        .eq('is_active', true)
+        .limit(1);
+      
+      if (error) {
+        console.error('Erro ao verificar agente de IA:', error);
+        return;
+      }
+      
+      const hasAgent = data && data.length > 0;
+      setHasAIAgent(hasAgent);
+      
+      // Mostrar mensagem apenas se não tiver agente e não foi dispensada
+      if (!hasAgent && !localStorage.getItem(AI_AGENT_MESSAGE_DISMISSED_KEY)) {
+        setShowAIAgentMessage(true);
+      }
+    } catch (error) {
+      console.error('Erro ao verificar status do agente de IA:', error);
+    }
+  }, [university?.id]);
+
   // Função para carregar todas as pastas e seus emails
   const loadAllFolders = useCallback(async () => {
     if (!activeConnection) return;
@@ -455,7 +507,7 @@ export default function MicrosoftInbox() {
   // Carregamento único quando a conexão é estabelecida (sem loops)
   useEffect(() => {
     if (activeConnection && activeConnection.access_token && !isLoadingData) {
-      console.log('📧 MicrosoftInbox: Carregamento único iniciado...');
+      // MicrosoftInbox: Carregamento único iniciado
       
       // Limpar cache e recarregar apenas uma vez
       setFolderCache({});
@@ -473,7 +525,7 @@ export default function MicrosoftInbox() {
   // Sincronizar tokens com o banco de dados (versão simplificada)
   const syncTokensFromDatabase = async () => {
     if (!activeConnection) {
-      console.log('❌ Nenhuma conta ativa para sincronizar tokens');
+      // Nenhuma conta ativa para sincronizar tokens
       return false;
     }
 
@@ -843,7 +895,7 @@ export default function MicrosoftInbox() {
         // Continuar mesmo sem agente - modo demo
       }
 
-      console.log('✅ [testProcessing] Agentes encontrados:', aiConfigs);
+      // Agentes encontrados
 
       // Inicializar chatbot com mensagem de boas-vindas
       const welcomeMessage = aiConfigs && aiConfigs.length > 0 
@@ -884,12 +936,7 @@ export default function MicrosoftInbox() {
 
     try {
       const userId = (await supabase.auth.getUser()).data.user?.id;
-      console.log('📤 [sendChatMessage] Enviando para email-queue-worker:', {
-        message: chatInput.trim(),
-        userId,
-        chatbotMode: true,
-        sessionId
-      });
+      // Enviando para email-queue-worker
 
       // Chamar Edge Function para processar com Gemini
       const { data: result, error } = await supabase.functions.invoke('email-queue-worker', {
@@ -901,15 +948,11 @@ export default function MicrosoftInbox() {
         }
       });
 
-      console.log('📥 [sendChatMessage] Resposta recebida:', { result, error });
+      // Resposta recebida
 
       if (error) {
         console.error('❌ [sendChatMessage] Erro da Edge Function:', error);
-        console.log('🔍 [sendChatMessage] Detalhes do erro:', {
-          message: error.message,
-          status: error.status,
-          name: error.name
-        });
+        // Detalhes do erro
         
         // Verificar se é erro de limite atingido (429 Too Many Requests)
         const isLimitError = error.message?.includes('Daily prompt limit reached') || 
@@ -918,19 +961,19 @@ export default function MicrosoftInbox() {
             error.status === 429 ||
             error.name?.includes('FunctionsHttpError');
             
-        console.log('🔍 [sendChatMessage] Verificando se é erro de limite:', isLimitError);
+        // Verificando se é erro de limite
         
         if (isLimitError) {
-          console.log('🚫 [sendChatMessage] LIMITE ATINGIDO - Bloqueando interface');
+          // LIMITE ATINGIDO - Bloqueando interface
           
           // Atualizar usageInfo para mostrar limite atingido
-          console.log('🔄 [sendChatMessage] Atualizando usageInfo para limite atingido');
+          // Atualizando usageInfo para limite atingido
           setUsageInfo({
             prompts_used: 5,
             max_prompts: 5,
             remaining_prompts: 0
           });
-          console.log('✅ [sendChatMessage] usageInfo atualizado:', { prompts_used: 5, max_prompts: 5, remaining_prompts: 0 });
+          // usageInfo atualizado
           
           const aiMessage = {
             id: (Date.now() + 1).toString(),
@@ -944,7 +987,7 @@ export default function MicrosoftInbox() {
         
         // Fallback: Se for qualquer erro 429, tratar como limite
         if (error.status === 429 || error.message?.includes('429')) {
-          console.log('🚫 [sendChatMessage] FALLBACK - Detectando erro 429 como limite');
+          // FALLBACK - Detectando erro 429 como limite
           setUsageInfo({
             prompts_used: 5,
             max_prompts: 5,
@@ -1047,7 +1090,7 @@ export default function MicrosoftInbox() {
     }
 
     try {
-      console.log('📤 Sending email via Microsoft Graph from inbox...');
+      // Sending email via Microsoft Graph from inbox
       
       // Create GraphService with the active connection
       const graphService = new GraphService(activeConnection.access_token);
@@ -1086,7 +1129,7 @@ export default function MicrosoftInbox() {
       // Send email
       await graphService.sendEmail(emailMessage);
       
-      console.log('✅ Email sent successfully from inbox');
+      // Email sent successfully from inbox
       setComposeNotice(null);
       setShowComposeSuccessModal(true);
       
@@ -1122,6 +1165,13 @@ export default function MicrosoftInbox() {
       }
     } catch {}
   }, []);
+
+  // Verificar status do agente de IA quando o componente carregar
+  useEffect(() => {
+    if (university?.id) {
+      checkAIAgentStatus();
+    }
+  }, [university?.id, checkAIAgentStatus]);
 
 
   const handleReply = () => {
@@ -1192,11 +1242,11 @@ export default function MicrosoftInbox() {
       if (folderId) {
         await fetchEmailsFromFolder(folderId, tabId);
       } else {
-        console.warn(`MicrosoftInbox - Pasta ${tabId} não encontrada no mapeamento`);
+        // Pasta não encontrada no mapeamento
       }
     } else {
       // DESABILITADO: Carregamento automático
-      console.log('⚠️ Pastas não carregadas - use o botão refresh para carregar');
+      // Pastas não carregadas - use o botão refresh para carregar
       // await loadAllFolders();
     }
   };
@@ -1209,16 +1259,12 @@ export default function MicrosoftInbox() {
 
   // Determinar quais emails mostrar baseado na pasta ativa
   const getEmailsToShow = () => {
-    // Debug log removido
-    
     // Se temos emails da pasta específica carregados, usar eles
     if (folderEmails[activeTab] && folderEmails[activeTab].length > 0) {
-      // Usando emails da pasta específica
       return folderEmails[activeTab];
     }
     
     // Para outras pastas, usar emails processados pela IA como fallback
-    // Usando fallback para emails
     return recentEmails;
   };
   
@@ -1243,12 +1289,107 @@ export default function MicrosoftInbox() {
 
   return (
     <div className="h-screen flex flex-col bg-gray-50 m-0 p-0 -mt-8">
-      {/* Connection Status */}
-      <MicrosoftConnectionStatus onReconnect={() => {
-        // Recarregar dados após reconexão
-        loadAllFolders();
-      }} />
+      {/* Connection Status - Removido para evitar banner amarelo */}
       
+      {/* Botão temporário removido */}
+
+      {/* AI Agent Creation Modal */}
+      <Dialog open={showAIAgentMessage} onOpenChange={setShowAIAgentMessage}>
+        <DialogContent className="sm:max-w-md bg-white border-2 border-gray-200 shadow-2xl">
+          <DialogHeader className="text-center">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-r from-blue-500 to-purple-600">
+              <Sparkles className="h-6 w-6 text-white" />
+            </div>
+            <DialogTitle className="text-xl font-semibold">
+              Improve Your AI Responses
+            </DialogTitle>
+            <DialogDescription className="text-base leading-relaxed">
+              Create a personalized AI agent for more precise and contextualized responses to your emails. Configure once and use always.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-2">
+            <div className="text-center">
+              <p className="text-sm text-gray-600">
+                Configure once and use always for automatic and contextualized responses
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            {/* Don't show again checkbox - positioned to the left */}
+            <div className="flex items-center space-x-2 order-1 sm:order-1">
+              <input
+                type="checkbox"
+                id="dontShowAgain"
+                checked={dontShowAgain}
+                onChange={(e) => setDontShowAgain(e.target.checked)}
+                className="h-3 w-3 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <label htmlFor="dontShowAgain" className="text-xs text-gray-500 cursor-pointer">
+                Don't show this again
+              </label>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2 order-2 sm:order-2 sm:ml-auto">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowAIAgentMessage(false);
+                  if (dontShowAgain) {
+                    localStorage.setItem(AI_AGENT_MESSAGE_DISMISSED_KEY, 'true');
+                  }
+                }}
+                className="w-full sm:w-auto"
+              >
+                Maybe Later
+              </Button>
+              <Button
+                onClick={() => {
+                  setShowAIAgentMessage(false);
+                  if (dontShowAgain) {
+                    localStorage.setItem(AI_AGENT_MESSAGE_DISMISSED_KEY, 'true');
+                  }
+                  setShowCreateAgentModal(true);
+                }}
+                className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                Create AI Agent
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create AI Agent Modal */}
+      {showCreateAgentModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden relative">
+            <button
+              onClick={() => setShowCreateAgentModal(false)}
+              className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 transition-colors rounded-lg hover:bg-gray-100 z-10"
+              title="Close modal"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <div className="p-6 overflow-y-auto max-h-[90vh]">
+              <EmailAgentManagement
+                activeEmailConfig={activeConnection ? {
+                  id: activeConnection.id,
+                  email_address: activeConnection.email_address
+                } : undefined}
+                onAgentCreated={() => {
+                  setShowCreateAgentModal(false);
+                  setHasAIAgent(true);
+                  if (dontShowAgain) {
+                    localStorage.setItem(AI_AGENT_MESSAGE_DISMISSED_KEY, 'true');
+                  }
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* New emails notification */}
       {newEmailNotification.show && (
         <div className="fixed top-4 right-4 z-50 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg flex items-center space-x-2 animate-pulse">
@@ -1354,7 +1495,7 @@ export default function MicrosoftInbox() {
           }} /> */}
           <button 
             onClick={() => {
-              console.log('🔄 Refresh manual - carregando emails...');
+              // Refresh manual - carregando emails
               loadAllFolders();
             }}
             disabled={loadingEmails}

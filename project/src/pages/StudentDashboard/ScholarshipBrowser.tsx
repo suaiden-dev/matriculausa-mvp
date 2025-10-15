@@ -317,7 +317,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
         if (filters.appliedMaxValue !== undefined) setAppliedMaxValue(filters.appliedMaxValue);
         if (filters.appliedDeadlineDays !== undefined) setAppliedDeadlineDays(filters.appliedDeadlineDays);
       } catch (error) {
-        console.log('Error loading saved filters:', error);
+        // Error loading saved filters
       }
     }
   }, []);
@@ -693,7 +693,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
 
   // Função para ir direto para Stripe (quando já tem desconto ativo)
   const proceedToStripeDirectly = async () => {
-    console.log('🎯 [ScholarshipBrowser] Indo direto para Stripe (desconto já aplicado)');
+    // Indo direto para Stripe (desconto já aplicado)
     
     try {
       const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout-selection-process-fee`;
@@ -740,7 +740,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
 
     // PRIMEIRO: Verificar se já pagou a selection process fee
     if (!userProfile?.has_paid_selection_process_fee) {
-      console.log('❌ User has not paid selection process fee, checking for active discount...');
+      // User has not paid selection process fee, checking for active discount
       
       // SEGUNDO: Verificar se já tem desconto ativo
       setIsCheckingDiscount(true);
@@ -749,14 +749,14 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
         const token = sessionData.session?.access_token;
         
         if (!token) {
-          console.log('❌ No token, showing referral code modal');
+          // No token, showing referral code modal
           setSelectedScholarshipForCheckout(scholarship);
           setShowPreCheckoutModal(true);
           return;
         }
 
         // Verificar se já há desconto ativo usando função RPC
-        console.log('🔍 [ScholarshipBrowser] Verificando desconto ativo...');
+        // Verificando desconto ativo
         const { data: result, error } = await supabase.rpc('get_user_active_discount', {
           user_id_param: user.id
         });
@@ -769,14 +769,14 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
           return;
         }
 
-        console.log('🔍 [ScholarshipBrowser] Resultado da verificação:', result);
+        // Resultado da verificação obtido
         
         if (result && result.has_discount) {
-          console.log('✅ Usuário já tem desconto ativo, indo direto para Stripe');
+          // Usuário já tem desconto ativo, indo direto para Stripe
           // Se já tem desconto, ir direto para Stripe
           proceedToStripeDirectly();
         } else {
-          console.log('❌ Sem desconto ativo, mostrando modal para código de referência');
+          // Sem desconto ativo, mostrando modal para código de referência
           // Se não tem desconto, mostrar modal
           setSelectedScholarshipForCheckout(scholarship);
           setShowPreCheckoutModal(true);

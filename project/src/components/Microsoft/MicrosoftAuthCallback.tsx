@@ -10,7 +10,7 @@ export default function MicrosoftAuthCallback() {
   useEffect(() => {
     const handleCallback = async () => {
       try {
-        console.log('🔄 Processing Microsoft auth callback...');
+        // Processing Microsoft auth callback
         
         // Obter parâmetros da URL
         const urlParams = new URLSearchParams(window.location.search);
@@ -39,7 +39,7 @@ export default function MicrosoftAuthCallback() {
           return;
         }
         
-        console.log('✅ Authorization code received, exchanging for tokens...');
+        // Authorization code received, exchanging for tokens
         
         // Buscar sessão atual
         const { data: { session } } = await supabase.auth.getSession();
@@ -75,7 +75,7 @@ export default function MicrosoftAuthCallback() {
         }
         
         const tokenData = await response.json();
-        console.log('✅ Tokens received successfully');
+        // Tokens received successfully
         
         // Redirecionar para o inbox
         navigate('/microsoft-inbox');
