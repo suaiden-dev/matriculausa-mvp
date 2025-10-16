@@ -30,7 +30,7 @@ interface MicrosoftAuthUrlParams {
 export const microsoftBFFConfig: MicrosoftAuthConfig = {
   clientId: import.meta.env.VITE_AZURE_CLIENT_ID || '',
   tenantId: 'common', // FORÇAR TENANT COMMON para contas pessoais
-  redirectUri: `http://localhost:5173/microsoft-email`,
+  redirectUri: import.meta.env.VITE_AZURE_REDIRECT_URI || `${window.location.origin}/microsoft-email`,
   scopes: [
     'User.Read',
     'Mail.Read', 
