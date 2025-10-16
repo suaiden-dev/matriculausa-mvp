@@ -29,7 +29,8 @@ export default defineConfig({
           ui: ['@mui/material', '@mui/lab', '@mui/x-date-pickers'],
           charts: ['chart.js', 'react-chartjs-2', 'recharts'],
           editor: ['@ckeditor/ckeditor5-build-classic', '@monaco-editor/react'],
-          utils: ['date-fns', 'dayjs', 'framer-motion', 'lucide-react']
+          utils: ['date-fns', 'dayjs', 'framer-motion', 'lucide-react'],
+          microsoft: ['@azure/msal-browser', '@azure/msal-react']
         }
       }
     },

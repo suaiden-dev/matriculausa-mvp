@@ -13,6 +13,7 @@ import {
 import { Bot } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useMicrosoftConnection } from '../../hooks/useMicrosoftConnection';
+import { redirectToMicrosoftAuth } from '../../lib/microsoftBFFAuth';
 
 const EmailManagement = () => {
   const navigate = useNavigate();
@@ -342,9 +343,6 @@ const EmailManagement = () => {
   const handleDirectMicrosoftConnection = async () => {
     try {
       setNotification({ type: 'info', message: 'Redirecionando para Microsoft...' });
-      
-      // Importar a função BFF (Backend for Frontend)
-      const { redirectToMicrosoftAuth } = await import('../../lib/microsoftBFFAuth');
       
       console.log('🚀 Iniciando conexão Microsoft (redirect na mesma aba)...');
       
