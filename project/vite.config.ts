@@ -23,14 +23,23 @@ export default defineConfig({
     },
     rollupOptions: {
       output: {
-        manualChunks: {
-          // Separa bibliotecas pesadas em chunks separados
-          vendor: ['react', 'react-dom'],
-          ui: ['@mui/material', '@mui/lab', '@mui/x-date-pickers'],
-          charts: ['chart.js', 'react-chartjs-2', 'recharts'],
-          editor: ['@ckeditor/ckeditor5-build-classic', '@monaco-editor/react'],
-          utils: ['date-fns', 'dayjs', 'framer-motion', 'lucide-react'],
-          microsoft: ['@azure/msal-browser', '@azure/msal-react']
+        manualChunks: (id) => {
+          if (id.includes('node_modules')) {
+            // Separar TODAS as bibliotecas grandes
+            if (id.includes('@ckeditor')) return 'editor';
+            if (id.includes('@mui')) return 'mui';
+            if (id.includes('chart.js') || id.includes('recharts')) return 'charts';
+            if (id.includes('@azure') || id.includes('msal')) return 'microsoft';
+            if (id.includes('react') || id.includes('react-dom')) return 'react';
+            if (id.includes('@supabase')) return 'supabase';
+            if (id.includes('lucide-react')) return 'icons';
+            if (id.includes('date-fns') || id.includes('dayjs')) return 'dates';
+            if (id.includes('framer-motion')) return 'animations';
+            // Dividir vendor em chunks menores
+            if (id.includes('lodash') || id.includes('ramda')) return 'utils';
+            if (id.includes('axios') || id.includes('fetch')) return 'http';
+            return 'vendor';
+          }
         }
       }
     },
@@ -45,7 +54,9 @@ export default defineConfig({
     include: [
       'react',
       'react-dom',
-      'react-router-dom'
+      'react-router-dom',
+      '@supabase/supabase-js',
+      '@azure/msal-browser'
     ]
   },
   server: {
