@@ -120,11 +120,21 @@ const SellerRegistration: React.FC<SellerRegistrationProps> = () => {
 
     setLoading(true);
 
+    const timestamp = new Date().toISOString();
     try {
-      console.log('[SELLER_REG] Iniciando processo de registro de vendedor');
-      console.log('[SELLER_REG] Dados do formulário:', formData);
+      console.log(`🚀 [SELLER_REG] ${timestamp} - Iniciando processo de registro de vendedor`);
+      console.log(`📋 [SELLER_REG] ${timestamp} - Dados do formulário:`, formData);
+      console.log(`🔍 [SELLER_REG] ${timestamp} - Validações:`, {
+        email: formData.email.trim().toLowerCase(),
+        password: formData.password.length >= 6 ? '✅ Válida' : '❌ Muito curta',
+        full_name: formData.full_name ? '✅ Preenchido' : '❌ Vazio',
+        phone: formData.phone ? '✅ Preenchido' : '❌ Vazio',
+        registration_code: formData.registration_code ? '✅ Preenchido' : '❌ Vazio',
+        terms_accepted: termsAccepted ? '✅ Aceito' : '❌ Não aceito'
+      });
 
       // 1. Criar usuário na autenticação
+      console.log(`🔐 [SELLER_REG] ${timestamp} - Iniciando criação de usuário...`);
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email.trim().toLowerCase(),
         password: formData.password,
@@ -138,7 +148,35 @@ const SellerRegistration: React.FC<SellerRegistrationProps> = () => {
         }
       });
 
-      if (authError) throw authError;
+      if (authError) {
+        console.log(`❌ [SELLER_REG] ${timestamp} - Erro na criação de usuário:`, {
+          message: authError.message,
+          status: authError.status,
+          name: authError.name
+        });
+        
+        // Se o usuário já existe, tentar fazer login
+        if (authError.message.includes('already registered') || authError.message.includes('already been registered')) {
+          console.log(`⚠️ [SELLER_REG] ${timestamp} - Usuário já existe, tentando fazer login...`);
+          const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+            email: formData.email.trim().toLowerCase(),
+            password: formData.password,
+          });
+
+          if (signInError) {
+            console.error('❌ [SELLER_REG] Erro ao fazer login:', signInError);
+            throw new Error('Usuário já existe mas senha incorreta. Use a senha correta ou um email diferente.');
+          }
+
+          console.log('✅ [SELLER_REG] Login realizado com sucesso:', signInData.user.id);
+          // Usar os dados do login em vez do signup
+          authData.user = signInData.user;
+          authData.session = signInData.session;
+        } else {
+          throw authError;
+        }
+      }
+      
       if (!authData.user) throw new Error('Failed to create user');
       
       console.log('✅ [SELLER_REG] Usuário criado com sucesso:', authData.user.id);
@@ -173,28 +211,30 @@ const SellerRegistration: React.FC<SellerRegistrationProps> = () => {
 
         console.log('📝 [SELLER_REG] Dados do registro:', registrationData);
 
-        // Verificar se o usuário está autenticado antes de inserir
-        const { data: { user: currentUser } } = await supabase.auth.getUser();
-        console.log('🔍 [SELLER_REG] Usuário atual autenticado:', currentUser?.id);
-        console.log('🔍 [SELLER_REG] user_id no registrationData:', registrationData.user_id);
-        console.log('🔍 [SELLER_REG] IDs coincidem?', currentUser?.id === registrationData.user_id);
+        // 2. Usar Edge Function para inserir registro (evita problemas de RLS)
+        console.log(`🚀 [SELLER_REG] ${timestamp} - Chamando Edge Function...`);
+        console.log(`📦 [SELLER_REG] ${timestamp} - Dados enviados para Edge Function:`, registrationData);
+        
+        const { data: functionResult, error: functionError } = await supabase.functions.invoke('create-seller-registration', {
+          body: { registrationData }
+        });
+        
+        console.log(`📥 [SELLER_REG] ${timestamp} - Resposta da Edge Function:`, {
+          data: functionResult,
+          error: functionError
+        });
 
-        const { error: registrationError } = await supabase
-          .from('seller_registrations')
-          .insert(registrationData);
-
-        if (registrationError) {
-          console.error('❌ [SELLER_REG] Erro ao criar registro:', registrationError);
-          console.error('❌ [SELLER_REG] Detalhes do erro:', {
-            message: registrationError.message,
-            details: registrationError.details,
-            hint: registrationError.hint,
-            code: registrationError.code
-          });
-          throw registrationError;
+        if (functionError) {
+          console.error('❌ [SELLER_REG] Erro ao chamar Edge Function:', functionError);
+          throw functionError;
         }
 
-        console.log('✅ [SELLER_REG] Registro criado com sucesso para aprovação');
+        if (!functionResult.success) {
+          console.error('❌ [SELLER_REG] Edge Function retornou erro:', functionResult.error);
+          throw new Error(functionResult.error || 'Erro desconhecido na Edge Function');
+        }
+
+        console.log('✅ [SELLER_REG] Registro criado com sucesso via Edge Function:', functionResult.data);
       } catch (registrationError) {
         console.error('❌ [SELLER_REG] Erro ao criar registro para aprovação:', registrationError);
         // Não interrompe o fluxo se falhar

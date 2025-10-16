@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Check, X, Eye, Clock, UserCheck, UserX } from 'lucide-react';
+import { Check, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { useAffiliateAdminId } from '../hooks/useAffiliateAdminId';
@@ -37,14 +37,19 @@ const SellerRegistrationsManagerSimple: React.FC<SellerRegistrationsManagerProps
   }, [user?.id, affiliateAdminId, hasLoaded, affiliateAdminLoading]);
 
   const loadRegistrations = async () => {
+    const timestamp = new Date().toISOString();
+    console.log(`🔄 [PENDING_ADMIN] ${timestamp} - Iniciando carregamento de registros`);
+    console.log(`🔍 [PENDING_ADMIN] ${timestamp} - Affiliate Admin ID:`, affiliateAdminId);
+    
     if (!affiliateAdminId) {
-      console.log('⚠️ No affiliate admin ID available');
+      console.log(`⚠️ [PENDING_ADMIN] ${timestamp} - Affiliate Admin ID não disponível`);
       return;
     }
 
     setLoading(true);
     try {
       // 1. Buscar códigos criados por este admin
+      console.log(`🔍 [PENDING_ADMIN] ${timestamp} - Buscando códigos de registro...`);
       const { data: adminCodes, error: codesError } = await supabase
         .from('seller_registration_codes')
         .select('code')
@@ -52,20 +57,25 @@ const SellerRegistrationsManagerSimple: React.FC<SellerRegistrationsManagerProps
         .eq('is_active', true);
 
       if (codesError) {
-        console.error('Error loading admin codes:', codesError);
+        console.error(`❌ [PENDING_ADMIN] ${timestamp} - Erro ao buscar códigos:`, codesError);
         setError('Error loading admin codes');
         return;
       }
 
+      console.log(`📋 [PENDING_ADMIN] ${timestamp} - Códigos encontrados:`, adminCodes);
+
       if (!adminCodes || adminCodes.length === 0) {
+        console.log(`⚠️ [PENDING_ADMIN] ${timestamp} - Nenhum código ativo encontrado`);
         setRegistrations([]);
         setHasLoaded(true);
         return;
       }
 
       const codes = adminCodes.map(c => c.code);
+      console.log(`🔢 [PENDING_ADMIN] ${timestamp} - Códigos para buscar:`, codes);
       
       // 2. Carregar registros da tabela seller_registrations
+      console.log(`📊 [PENDING_ADMIN] ${timestamp} - Buscando registros de seller...`);
       const { data: registrationsData, error: registrationsError } = await supabase
         .from('seller_registrations')
         .select(`
@@ -84,10 +94,13 @@ const SellerRegistrationsManagerSimple: React.FC<SellerRegistrationsManagerProps
         .order('created_at', { ascending: false });
 
       if (registrationsError) {
-        console.error('Error loading registrations:', registrationsError);
+        console.error(`❌ [PENDING_ADMIN] ${timestamp} - Erro ao buscar registros:`, registrationsError);
         setError('Error loading registrations');
         return;
       }
+
+      console.log(`📊 [PENDING_ADMIN] ${timestamp} - Registros encontrados:`, registrationsData);
+      console.log(`📈 [PENDING_ADMIN] ${timestamp} - Total de registros:`, registrationsData?.length || 0);
 
       // 3. Transformar registros para o formato esperado
       const transformedRegistrations: SellerRegistration[] = (registrationsData || []).map(reg => ({
@@ -105,8 +118,11 @@ const SellerRegistrationsManagerSimple: React.FC<SellerRegistrationsManagerProps
 
       setRegistrations(transformedRegistrations);
       setHasLoaded(true);
+      
+      console.log(`✅ [PENDING_ADMIN] ${timestamp} - Carregamento concluído com sucesso`);
+      console.log(`📋 [PENDING_ADMIN] ${timestamp} - Registros transformados:`, transformedRegistrations);
     } catch (err) {
-      console.error('Error loading registrations:', err);
+      console.error(`💥 [PENDING_ADMIN] ${timestamp} - Erro geral:`, err);
       setError('Error loading registrations');
     } finally {
       setLoading(false);
@@ -114,48 +130,66 @@ const SellerRegistrationsManagerSimple: React.FC<SellerRegistrationsManagerProps
   };
 
   const approveRegistration = async (userId: string) => {
-    console.log('🔍 [SellerApproval] approveRegistration called with userId:', userId);
+    const timestamp = new Date().toISOString();
+    console.log(`🔍 [SellerApproval] ${timestamp} - approveRegistration called with userId:`, userId);
     
     if (!userId || userId === 'undefined') {
-      console.error('❌ [SellerApproval] Invalid userId:', userId);
+      console.error(`❌ [SellerApproval] ${timestamp} - Invalid userId:`, userId);
       setError('Invalid user ID');
       return;
     }
     
     try {
       // 1. Buscar o perfil do usuário
+      console.log(`🔍 [SellerApproval] ${timestamp} - Buscando perfil do usuário...`);
       const { data: userProfile, error: profileError } = await supabase
         .from('user_profiles')
         .select('*')
         .eq('user_id', userId)
-        .single();
+        .maybeSingle(); // Usar maybeSingle() em vez de single() para evitar erro 406
+        
+      console.log(`📊 [SellerApproval] ${timestamp} - Resultado da busca do perfil:`, {
+        data: userProfile,
+        error: profileError
+      });
 
       if (profileError) {
-        console.error('Error fetching user profile:', profileError);
+        console.error(`❌ [SellerApproval] ${timestamp} - Error fetching user profile:`, profileError);
+        // Se for erro 406 ou similar, dar mensagem mais clara
+        if (profileError.code === 'PGRST116' || profileError.message.includes('406')) {
+          throw new Error('Cannot approve this seller. The user has not yet confirmed their account through the confirmation link sent by email. Please ask the seller to check their inbox and click the confirmation link before trying to approve again.');
+        }
         throw profileError;
       }
 
       if (!userProfile) {
-        throw new Error('User profile not found');
+        console.error(`❌ [SellerApproval] ${timestamp} - User profile not found`);
+        throw new Error('Cannot approve this seller. The user has not yet confirmed their account through the confirmation link sent by email. Please ask the seller to check their inbox and click the confirmation link before trying to approve again.');
       }
 
+      console.log(`✅ [SellerApproval] ${timestamp} - Perfil encontrado:`, userProfile);
+
       // 2. Buscar o registro na tabela seller_registrations
+      console.log(`🔍 [SellerApproval] ${timestamp} - Buscando registro de seller...`);
       const { data: registration, error: regError } = await supabase
         .from('seller_registrations')
         .select('*')
         .eq('user_id', userId)
-        .single();
+        .maybeSingle(); // Usar maybeSingle() em vez de single() para evitar erro 406
 
       if (regError) {
-        console.error('Error fetching registration:', regError);
+        console.error(`❌ [SellerApproval] ${timestamp} - Error fetching registration:`, regError);
         throw regError;
       }
 
+      console.log(`✅ [SellerApproval] ${timestamp} - Registro encontrado:`, registration);
+
       // 3. Buscar o admin do afiliado
+      console.log(`🔍 [SellerApproval] ${timestamp} - Buscando admin do afiliado...`);
       const { data: affiliateAdmin, error: adminError } = await supabase
         .from('affiliate_admins')
         .select('id')
-        .eq('user_id', user.id)
+        .eq('user_id', user?.id)
         .single();
 
       if (adminError) {
@@ -167,7 +201,7 @@ const SellerRegistrationsManagerSimple: React.FC<SellerRegistrationsManagerProps
       const { data: adminProfile, error: adminProfileError } = await supabase
         .from('user_profiles')
         .select('system_type')
-        .eq('user_id', user.id)
+        .eq('user_id', user?.id)
         .single();
 
       if (adminProfileError) {
@@ -179,23 +213,29 @@ const SellerRegistrationsManagerSimple: React.FC<SellerRegistrationsManagerProps
       console.log('🔍 [SellerApproval] Admin system_type:', sellerSystemType);
 
       // 5. Criar o seller na tabela sellers
+      console.log(`🔍 [SellerApproval] ${timestamp} - Criando seller na tabela sellers...`);
+      const sellerData = {
+        user_id: userId,
+        affiliate_admin_id: affiliateAdmin.id,
+        name: registration.full_name, // ✅ Usar do registration
+        email: registration.email, // ✅ Usar do registration (sempre preenchido)
+        referral_code: `SELL${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
+        is_active: true
+      };
+      console.log(`📝 [SellerApproval] ${timestamp} - Dados do seller:`, sellerData);
+      
       const { data: newSeller, error: sellerError } = await supabase
         .from('sellers')
-        .insert({
-          user_id: userId,
-          affiliate_admin_id: affiliateAdmin.id,
-          name: registration.full_name, // ✅ Usar do registration
-          email: registration.email, // ✅ Usar do registration (sempre preenchido)
-          referral_code: `SELL${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
-          is_active: true
-        })
+        .insert(sellerData)
         .select()
         .single();
 
       if (sellerError) {
-        console.error('Error creating seller:', sellerError);
+        console.error(`❌ [SellerApproval] ${timestamp} - Error creating seller:`, sellerError);
         throw sellerError;
       }
+      
+      console.log(`✅ [SellerApproval] ${timestamp} - Seller criado com sucesso:`, newSeller);
 
       // 5. Atualizar o status do registro
       const { error: updateError } = await supabase
@@ -203,7 +243,7 @@ const SellerRegistrationsManagerSimple: React.FC<SellerRegistrationsManagerProps
         .update({
           status: 'approved',
           approved_at: new Date().toISOString(),
-          approved_by: user.id
+          approved_by: user?.id
         })
         .eq('user_id', userId);
 
@@ -253,7 +293,7 @@ const SellerRegistrationsManagerSimple: React.FC<SellerRegistrationsManagerProps
         .update({
           status: 'rejected',
           approved_at: new Date().toISOString(),
-          approved_by: user.id
+          approved_by: user?.id
         })
         .eq('user_id', userId);
 
