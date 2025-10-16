@@ -42,7 +42,7 @@ export class ImprovedTokenRenewalService {
     try {
       console.log('🔄 Obtendo token válido via MSAL para:', email);
       
-      // Importar MSAL dinamicamente
+      // Importar MSAL dinamicamente apenas quando necessário
       const { PublicClientApplication } = await import('@azure/msal-browser');
       const { msalConfig } = await import('../lib/msalConfig');
       

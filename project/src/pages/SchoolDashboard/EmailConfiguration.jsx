@@ -14,6 +14,7 @@ import { supabase } from '../../lib/supabase';
 import EmailAgentManagement from './EmailAgentManagement';
 import MsalProviderWrapper from '../../providers/MsalProvider';
 import { useMsal } from '@azure/msal-react';
+import { openMicrosoftAuthPopup, validateBFFEnvironment } from '../../lib/microsoftBFFAuth';
  
 
 const EmailConfiguration = () => {
@@ -212,9 +213,6 @@ const EmailConfigurationContent = () => {
   const handleMicrosoftAuth = async () => {
     setMicrosoftAuthenticating(true);
     try {
-      // Importar a função BFF (mesmo usado no teste)
-      const { openMicrosoftAuthPopup } = await import('../../lib/microsoftBFFAuth');
-      
       console.log('🚀 Iniciando autenticação BFF...');
       
       // Usar o novo método BFF
@@ -581,9 +579,6 @@ const EmailConfigurationContent = () => {
       } else if (provider === 'microsoft') {
         // Microsoft settings (OAuth) - USANDO BFF (Backend for Frontend)
         console.log('🚀 Usando Microsoft BFF Auth para obter refresh token de 90 dias...');
-        
-        // Importar BFF Auth
-        const { openMicrosoftAuthPopup, validateBFFEnvironment } = await import('../../lib/microsoftBFFAuth');
         
         // Validar configuração
         const validation = validateBFFEnvironment();

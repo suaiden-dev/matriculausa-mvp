@@ -13,8 +13,6 @@ import SEOHead from '../components/SEO/SEOHead';
 import { motion } from 'framer-motion';
 
 const Home: React.FC = () => {
-  console.log('[Home] 🔍 Home renderizado - Timestamp:', new Date().toISOString());
-  console.log('[Home] 🔍 URL:', window.location.href);
   
   const { t } = useTranslationWithFees();
   const { selectionProcessFee, scholarshipFee, i20ControlFee, hasSellerPackage, packageName } = useDynamicFees();
@@ -35,23 +33,26 @@ const Home: React.FC = () => {
           .eq('is_featured', true)
           .order('featured_order');
         
-        if (!error && data) {
+        if (!error && data && data.length > 0) {
           setFeaturedSchools(data);
-        } else {
+        } else if (universities.length > 0) {
           // Fallback para as primeiras 6 universidades se não houver destaque
           setFeaturedSchools(universities.slice(0, 6));
         }
       } catch (error) {
         console.error('Erro ao carregar universidades em destaque:', error);
-        // Fallback para as primeiras 6 universidades
-        setFeaturedSchools(universities.slice(0, 6));
+        if (universities.length > 0) {
+          // Fallback para as primeiras 6 universidades
+          setFeaturedSchools(universities.slice(0, 6));
+        }
       }
     };
 
-    if (universities.length > 0) {
+    // Só executa uma vez quando universities carrega
+    if (universities.length > 0 && featuredSchools.length === 0) {
       fetchFeaturedUniversities();
     }
-  }, [universities]);
+  }, [universities.length]); // Só depende do tamanho, não do array completo
   const { isAuthenticated, user, userProfile } = useAuth();
 
 

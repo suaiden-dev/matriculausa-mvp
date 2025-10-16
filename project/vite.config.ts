@@ -6,6 +6,18 @@ import path from 'path';
 export default defineConfig({
   root: '.',
   plugins: [react()],
+  server: {
+    host: '0.0.0.0',
+    port: 5173,
+    hmr: {
+      overlay: false, // Desabilita overlay de erros
+    },
+    // Configurações para evitar recarregamento automático
+    watch: {
+      // Ignora mudanças em arquivos temporários
+      ignored: ['**/node_modules/**', '**/.git/**', '**/dist/**', '**/.temp/**']
+    }
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src")
@@ -23,13 +35,26 @@ export default defineConfig({
     },
     rollupOptions: {
       output: {
-        manualChunks: {
-          // Separa bibliotecas pesadas em chunks separados
-          vendor: ['react', 'react-dom'],
-          ui: ['@mui/material', '@mui/lab', '@mui/x-date-pickers'],
-          charts: ['chart.js', 'react-chartjs-2', 'recharts'],
-          editor: ['@ckeditor/ckeditor5-build-classic', '@monaco-editor/react'],
-          utils: ['date-fns', 'dayjs', 'framer-motion', 'lucide-react']
+        manualChunks: (id) => {
+          if (id.includes('node_modules')) {
+            // Chunks muito pequenos para mobile
+            if (id.includes('@ckeditor')) return 'editor';
+            if (id.includes('@mui')) return 'mui';
+            if (id.includes('chart.js') || id.includes('recharts')) return 'charts';
+            if (id.includes('@supabase')) return 'supabase';
+            if (id.includes('lucide-react')) return 'icons';
+            if (id.includes('date-fns') || id.includes('dayjs')) return 'dates';
+            if (id.includes('framer-motion')) return 'animations';
+            if (id.includes('lodash') || id.includes('ramda')) return 'utils';
+            if (id.includes('axios') || id.includes('fetch')) return 'http';
+            // Dividir React em chunks menores
+            if (id.includes('react-dom')) return 'react-dom';
+            if (id.includes('react')) return 'react';
+            // Microsoft fica no vendor para carregar depois do React
+            if (id.includes('@azure') || id.includes('msal')) return 'vendor';
+            // Resto fica em vendor
+            return 'vendor';
+          }
         }
       }
     },
@@ -44,18 +69,15 @@ export default defineConfig({
     include: [
       'react',
       'react-dom',
-      'react-router-dom'
-    ]
+      'react-router-dom',
+      '@supabase/supabase-js'
+    ],
+    // Garantir que React carregue primeiro
+    force: true
   },
-  server: {
-    hmr: {
-      overlay: false, // Desabilita overlay de erros
-    },
-    // Configurações para evitar recarregamento automático
-    watch: {
-      // Ignora mudanças em arquivos temporários
-      ignored: ['**/node_modules/**', '**/.git/**', '**/dist/**', '**/.temp/**']
-    }
+  assetsInclude: ['**/*.worker.js'],
+  json: {
+    stringify: true
   },
   // Configurações para desenvolvimento
   define: {

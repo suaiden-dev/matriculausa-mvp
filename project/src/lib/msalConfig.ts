@@ -6,8 +6,8 @@ export const msalConfig: Configuration = {
   auth: {
     clientId: import.meta.env.VITE_AZURE_CLIENT_ID || '',
     authority: 'https://login.microsoftonline.com/common',
-    redirectUri: import.meta.env.VITE_AZURE_REDIRECT_URI || `${window.location.origin}/microsoft-email`,
-    postLogoutRedirectUri: window.location.origin,
+    redirectUri: import.meta.env.VITE_AZURE_REDIRECT_URI || (typeof window !== 'undefined' ? `${window.location.origin}/microsoft-email` : 'http://localhost:5173/microsoft-email'),
+    postLogoutRedirectUri: typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173',
     navigateToLoginRequestUrl: false,
     knownAuthorities: ['https://login.microsoftonline.com/common'],
     cloudDiscoveryMetadata: '',
