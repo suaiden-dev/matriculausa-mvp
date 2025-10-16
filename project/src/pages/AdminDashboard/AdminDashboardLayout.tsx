@@ -23,6 +23,7 @@ import {
 import { useAuth } from '../../hooks/useAuth';
 import AdminStudentChatNotifications from '../../components/AdminStudentChatNotifications';
 import { useAdminStudentChatNotifications } from '../../hooks/useAdminStudentChatNotifications';
+import { useUnreadMessagesCount } from '../../hooks/useUnreadMessagesCount';
 import { useUnreadMessages } from '../../contexts/UnreadMessagesContext';
 
 interface AdminDashboardLayoutProps {
@@ -43,9 +44,15 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const { unreadCount: serverUnreadCount } = useAdminStudentChatNotifications();
   const { unreadCount: contextUnreadCount, updateUnreadCount } = useUnreadMessages();
+  const { unreadCount: messagesFallbackUnreadCount } = useUnreadMessagesCount();
   
   // Use context count if it's been updated, otherwise use server count
-  const displayUnreadCount = contextUnreadCount > 0 ? contextUnreadCount : serverUnreadCount;
+  const displayUnreadCount =
+    contextUnreadCount > 0
+      ? contextUnreadCount
+      : serverUnreadCount > 0
+        ? serverUnreadCount
+        : messagesFallbackUnreadCount;
   
   const getActiveTab = () => {
     const path = location.pathname;
