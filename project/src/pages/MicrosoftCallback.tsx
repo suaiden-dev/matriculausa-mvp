@@ -34,8 +34,12 @@ const MicrosoftCallback: React.FC = () => {
         setStep(2);
         setMessage('Exchanging authorization code for tokens...');
         
+        // Detectar URL do frontend dinamicamente
+        const frontendUrl = window.location.origin;
+        console.log('🌐 Frontend URL detectado:', frontendUrl);
+        
         // Chamar Edge Function para trocar code por tokens
-        const url = `https://fitpynguasqqutuhzifx.supabase.co/functions/v1/microsoft-auth-callback?code=${code}&redirect_uri=${encodeURIComponent('http://localhost:5173/microsoft-email')}`;
+        const url = `https://fitpynguasqqutuhzifx.supabase.co/functions/v1/microsoft-auth-callback?code=${code}&redirect_uri=${encodeURIComponent(`${frontendUrl}/microsoft-email`)}`;
         
         // 🔑 OBTER TOKEN DE AUTORIZAÇÃO DO USUÁRIO
         const { data: { session } } = await supabase.auth.getSession();
