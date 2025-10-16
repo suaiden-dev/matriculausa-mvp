@@ -126,3 +126,4 @@ END $$;
 COMMENT ON FUNCTION public.handle_new_user() IS 'Creates user profile and university entry (if role=school) automatically when user signs up, including email sync, referral codes, and university data';
 
 
+
