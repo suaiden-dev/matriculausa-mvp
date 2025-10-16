@@ -4231,8 +4231,13 @@ const PaymentManagement = (): React.JSX.Element => {
                               Affiliate Request
                             </h3>
                             <p className="text-sm text-gray-500">
-                              ID: {String(request.referrer_user_id).slice(0,8)}...
+                              {request.user_full_name || request.user_email || `ID: ${String(request.referrer_user_id).slice(0,8)}...`}
                             </p>
+                            {request.user_full_name && request.user_email && (
+                              <p className="text-xs text-gray-400">
+                                {request.user_email}
+                              </p>
+                            )}
                           </div>
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                             request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
@@ -4337,10 +4342,10 @@ const PaymentManagement = (): React.JSX.Element => {
                                   </div>
                                   <div className="ml-4">
                                     <div className="text-sm font-medium text-gray-900">
-                                      Affiliate
+                                      {request.user_full_name || 'Affiliate'}
                                     </div>
                                     <div className="text-sm text-gray-500">
-                                      ID: {String(request.referrer_user_id).slice(0,8)}...
+                                      {request.user_email || `ID: ${String(request.referrer_user_id).slice(0,8)}...`}
                                     </div>
                                   </div>
                                 </div>

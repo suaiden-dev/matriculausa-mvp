@@ -113,7 +113,6 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
     { id: 'users', label: 'Users', icon: Users, path: '/admin/dashboard/users', badge: null },
     { id: 'scholarships', label: 'Scholarships', icon: Award, path: '/admin/dashboard/scholarships', badge: null },
     { id: 'universities', label: 'Universities', icon: Building, path: '/admin/dashboard/universities', badge: null },
-    { id: 'university-financial-management', label: 'University Finances', icon: DollarSign, path: '/admin/dashboard/university-financial-management', badge: null },
     { id: 'payments', label: 'Payment Management', icon: CreditCard, path: '/admin/dashboard/payments', badge: null },
     { id: 'financial-analytics', label: 'Financial Analytics', icon: BarChart3, path: '/admin/dashboard/financial-analytics', badge: null },
     { id: 'affiliate-management', label: 'Affiliate Management', icon: Users, path: '/admin/dashboard/affiliate-management', badge: null },
@@ -248,7 +247,6 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
                 <h1 className="text-2xl font-bold text-slate-900">
                   {activeTab === 'overview' && 'Dashboard Overview'}
                   {activeTab === 'universities' && 'Universities'}
-                  {activeTab === 'university-financial-management' && 'University Finances'}
                   {activeTab === 'users' && 'Users'}
                   {activeTab === 'scholarships' && 'Scholarships'}
                   {activeTab === 'payments' && 'Payment Management'}
@@ -318,18 +316,6 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
                     >
                       <Settings className="h-4 w-4 mr-3 text-slate-400" />
                       System Settings
-                    </Link>
-                    
-                    <Link
-                      to="/admin/logs"
-                      className="flex items-center px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
-                      onClick={() => {
-                        setUserMenuOpen(false);
-                        setSidebarOpen(false);
-                      }}
-                    >
-                      <Activity className="h-4 w-4 mr-3 text-slate-400" />
-                      Activity Logs
                     </Link>
                     
                     <div className="border-t border-slate-200 my-2"></div>
