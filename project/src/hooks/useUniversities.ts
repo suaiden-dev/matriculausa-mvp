@@ -31,7 +31,11 @@ export function useUniversities() {
       setLoading(false);
       setHasLoadedData(true);
     }
-    fetchUniversities();
+    
+    // Só executa uma vez
+    if (!hasLoadedData) {
+      fetchUniversities();
+    }
   }, [hasLoadedData]);
 
   return { universities, loading, error };
