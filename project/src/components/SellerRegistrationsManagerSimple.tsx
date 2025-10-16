@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Check, X, Eye, Clock, UserCheck, UserX } from 'lucide-react';
+import { Check, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { useAffiliateAdminId } from '../hooks/useAffiliateAdminId';
@@ -155,12 +155,16 @@ const SellerRegistrationsManagerSimple: React.FC<SellerRegistrationsManagerProps
 
       if (profileError) {
         console.error(`❌ [SellerApproval] ${timestamp} - Error fetching user profile:`, profileError);
+        // Se for erro 406 ou similar, dar mensagem mais clara
+        if (profileError.code === 'PGRST116' || profileError.message.includes('406')) {
+          throw new Error('Cannot approve this seller. The user has not yet confirmed their account through the confirmation link sent by email. Please ask the seller to check their inbox and click the confirmation link before trying to approve again.');
+        }
         throw profileError;
       }
 
       if (!userProfile) {
         console.error(`❌ [SellerApproval] ${timestamp} - User profile not found`);
-        throw new Error('User profile not found');
+        throw new Error('Cannot approve this seller. The user has not yet confirmed their account through the confirmation link sent by email. Please ask the seller to check their inbox and click the confirmation link before trying to approve again.');
       }
 
       console.log(`✅ [SellerApproval] ${timestamp} - Perfil encontrado:`, userProfile);
@@ -185,7 +189,7 @@ const SellerRegistrationsManagerSimple: React.FC<SellerRegistrationsManagerProps
       const { data: affiliateAdmin, error: adminError } = await supabase
         .from('affiliate_admins')
         .select('id')
-        .eq('user_id', user.id)
+        .eq('user_id', user?.id)
         .single();
 
       if (adminError) {
@@ -197,7 +201,7 @@ const SellerRegistrationsManagerSimple: React.FC<SellerRegistrationsManagerProps
       const { data: adminProfile, error: adminProfileError } = await supabase
         .from('user_profiles')
         .select('system_type')
-        .eq('user_id', user.id)
+        .eq('user_id', user?.id)
         .single();
 
       if (adminProfileError) {
@@ -239,7 +243,7 @@ const SellerRegistrationsManagerSimple: React.FC<SellerRegistrationsManagerProps
         .update({
           status: 'approved',
           approved_at: new Date().toISOString(),
-          approved_by: user.id
+          approved_by: user?.id
         })
         .eq('user_id', userId);
 
@@ -289,7 +293,7 @@ const SellerRegistrationsManagerSimple: React.FC<SellerRegistrationsManagerProps
         .update({
           status: 'rejected',
           approved_at: new Date().toISOString(),
-          approved_by: user.id
+          approved_by: user?.id
         })
         .eq('user_id', userId);
 
