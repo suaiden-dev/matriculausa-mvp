@@ -6,6 +6,18 @@ import path from 'path';
 export default defineConfig({
   root: '.',
   plugins: [react()],
+  server: {
+    host: '0.0.0.0',
+    port: 5173,
+    hmr: {
+      overlay: false, // Desabilita overlay de erros
+    },
+    // Configurações para evitar recarregamento automático
+    watch: {
+      // Ignora mudanças em arquivos temporários
+      ignored: ['**/node_modules/**', '**/.git/**', '**/dist/**', '**/.temp/**']
+    }
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src")
@@ -25,7 +37,7 @@ export default defineConfig({
       output: {
         manualChunks: (id) => {
           if (id.includes('node_modules')) {
-            // Separar bibliotecas grandes, mas manter React e Microsoft no bundle principal
+            // Chunks muito pequenos para mobile
             if (id.includes('@ckeditor')) return 'editor';
             if (id.includes('@mui')) return 'mui';
             if (id.includes('chart.js') || id.includes('recharts')) return 'charts';
@@ -33,10 +45,13 @@ export default defineConfig({
             if (id.includes('lucide-react')) return 'icons';
             if (id.includes('date-fns') || id.includes('dayjs')) return 'dates';
             if (id.includes('framer-motion')) return 'animations';
-            // Dividir vendor em chunks menores
             if (id.includes('lodash') || id.includes('ramda')) return 'utils';
             if (id.includes('axios') || id.includes('fetch')) return 'http';
-            // React, react-dom e Microsoft ficam no bundle principal para evitar problemas
+            if (id.includes('@azure') || id.includes('msal')) return 'microsoft';
+            // Dividir React em chunks menores
+            if (id.includes('react-dom')) return 'react-dom';
+            if (id.includes('react')) return 'react';
+            // Resto fica em vendor
             return 'vendor';
           }
         }
@@ -58,15 +73,9 @@ export default defineConfig({
       '@azure/msal-browser'
     ]
   },
-  server: {
-    hmr: {
-      overlay: false, // Desabilita overlay de erros
-    },
-    // Configurações para evitar recarregamento automático
-    watch: {
-      // Ignora mudanças em arquivos temporários
-      ignored: ['**/node_modules/**', '**/.git/**', '**/dist/**', '**/.temp/**']
-    }
+  assetsInclude: ['**/*.worker.js'],
+  json: {
+    stringify: true
   },
   // Configurações para desenvolvimento
   define: {
