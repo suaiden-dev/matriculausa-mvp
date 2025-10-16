@@ -25,11 +25,10 @@ export default defineConfig({
       output: {
         manualChunks: (id) => {
           if (id.includes('node_modules')) {
-            // Separar bibliotecas grandes, mas manter React no bundle principal
+            // Separar bibliotecas grandes, mas manter React e Microsoft no bundle principal
             if (id.includes('@ckeditor')) return 'editor';
             if (id.includes('@mui')) return 'mui';
             if (id.includes('chart.js') || id.includes('recharts')) return 'charts';
-            if (id.includes('@azure') || id.includes('msal')) return 'microsoft';
             if (id.includes('@supabase')) return 'supabase';
             if (id.includes('lucide-react')) return 'icons';
             if (id.includes('date-fns') || id.includes('dayjs')) return 'dates';
@@ -37,7 +36,7 @@ export default defineConfig({
             // Dividir vendor em chunks menores
             if (id.includes('lodash') || id.includes('ramda')) return 'utils';
             if (id.includes('axios') || id.includes('fetch')) return 'http';
-            // React e react-dom ficam no bundle principal para evitar problemas
+            // React, react-dom e Microsoft ficam no bundle principal para evitar problemas
             return 'vendor';
           }
         }
