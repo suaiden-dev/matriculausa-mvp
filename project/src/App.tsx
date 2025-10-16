@@ -51,7 +51,6 @@ import EB3JobsLanding from './pages/EB3JobsLanding';
 
 // Componente interno que usa o hook dentro do contexto do Router
 const AppContent = () => {
-  console.log('[App] 🔍 AppContent renderizado - Timestamp:', new Date().toISOString());
   
   // Hook global para capturar códigos de referência em qualquer página
   useReferralCodeCapture();
