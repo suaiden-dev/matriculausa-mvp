@@ -236,6 +236,8 @@ interface PaymentRecord {
   zelle_status?: 'pending_verification' | 'approved' | 'rejected';
   reviewed_by?: string;
   reviewed_at?: string;
+  // Campo para affiliate
+  seller_referral_code?: string | null;
 }
 
 interface PaymentStats {
@@ -267,6 +269,7 @@ const PaymentManagement = (): React.JSX.Element => {
   const [searchParams] = useSearchParams();
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [universities, setUniversities] = useState<any[]>([]);
+  const [affiliates, setAffiliates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [, setError] = useState<string | null>(null);
   const [stats, setStats] = useState<PaymentStats>({
@@ -285,7 +288,8 @@ const PaymentManagement = (): React.JSX.Element => {
     feeType: 'all',
     status: 'paid', // Padrão: mostrar apenas pagamentos aprovados
     dateFrom: '',
-    dateTo: ''
+    dateTo: '',
+    affiliate: 'all'
   });
 
   const [showFilters, setShowFilters] = useState(false);
@@ -381,6 +385,7 @@ const PaymentManagement = (): React.JSX.Element => {
       }
       if (!hasLoadedUniversities.current) {
         loadUniversities();
+        loadAffiliates();
         hasLoadedUniversities.current = true;
       }
     }
@@ -448,6 +453,74 @@ const PaymentManagement = (): React.JSX.Element => {
       setUniversities(data || []);
     } catch (error) {
       console.error('Error loading universities:', error);
+    }
+  };
+
+  const loadAffiliates = async () => {
+    try {
+      // Buscar usuários com role affiliate_admin da tabela user_profiles
+      const { data: affiliateAdminsData, error: affiliateAdminsError } = await supabase
+        .from('user_profiles')
+        .select('user_id, full_name, email')
+        .eq('role', 'affiliate_admin')
+        .eq('status', 'active')
+        .order('created_at', { ascending: false });
+      
+      if (affiliateAdminsError) {
+        console.error('Error loading affiliate admins:', affiliateAdminsError);
+      } else if (affiliateAdminsData) {
+        console.log('🔍 DEBUG: Found affiliate admins:', affiliateAdminsData);
+        
+        // Para cada affiliate admin, buscar os sellers associados
+        const affiliatesWithSellers = await Promise.all(
+          affiliateAdminsData.map(async (admin) => {
+            // Primeiro buscar o affiliate_admin_id na tabela affiliate_admins
+            const { data: affiliateAdminData } = await supabase
+              .from('affiliate_admins')
+              .select('id')
+              .eq('user_id', admin.user_id)
+              .single();
+            
+            let sellers: any[] = [];
+            if (affiliateAdminData) {
+              // Buscar sellers que pertencem a este affiliate admin
+              const { data: sellersData } = await supabase
+                .from('sellers')
+                .select('id, referral_code, name, email')
+                .eq('affiliate_admin_id', affiliateAdminData.id)
+                .eq('is_active', true);
+              
+              sellers = sellersData || [];
+            }
+            
+            // Se não encontrar sellers diretos, buscar por email
+            if (sellers.length === 0) {
+              const { data: sellersByEmail } = await supabase
+                .from('sellers')
+                .select('id, referral_code, name, email')
+                .eq('email', admin.email)
+                .eq('is_active', true);
+              sellers = sellersByEmail || [];
+            }
+            
+            console.log(`🔍 DEBUG: Affiliate ${admin.full_name} has sellers:`, sellers.map(s => s.referral_code));
+            
+            return {
+              id: admin.user_id,
+              user_id: admin.user_id,
+              name: admin.full_name || admin.email,
+              email: admin.email,
+              referral_code: sellers[0]?.referral_code || null,
+              sellers: sellers
+            };
+          })
+        );
+        
+        console.log('🔍 DEBUG: Loaded affiliates with sellers:', affiliatesWithSellers);
+        setAffiliates(affiliatesWithSellers);
+      }
+    } catch (error) {
+      console.error('Error loading affiliates:', error);
     }
   };
 
@@ -667,6 +740,7 @@ const PaymentManagement = (): React.JSX.Element => {
     if (user && user.role === 'admin') {
       loadPaymentData();
       loadUniversities();
+      loadAffiliates();
       hasLoadedPayments.current = true;
       hasLoadedUniversities.current = true;
     }
@@ -1786,7 +1860,8 @@ const PaymentManagement = (): React.JSX.Element => {
             selection_process_fee_payment_method,
             i20_control_fee_payment_method,
             scholarship_package_id,
-            dependents
+            dependents,
+            seller_referral_code
           ),
           scholarships (
             id,
@@ -1818,7 +1893,7 @@ const PaymentManagement = (): React.JSX.Element => {
         const userIds = zellePaymentsRaw.map(p => p.user_id);
         const { data: userProfiles, error: usersError } = await supabase
           .from('user_profiles')
-          .select('id, user_id, full_name, email, has_paid_selection_process_fee, is_application_fee_paid, is_scholarship_fee_paid, has_paid_i20_control_fee, selection_process_fee_payment_method, i20_control_fee_payment_method, scholarship_package_id, dependents')
+          .select('id, user_id, full_name, email, has_paid_selection_process_fee, is_application_fee_paid, is_scholarship_fee_paid, has_paid_i20_control_fee, selection_process_fee_payment_method, i20_control_fee_payment_method, scholarship_package_id, dependents, seller_referral_code')
           .in('user_id', userIds);
 
         if (usersError) {
@@ -1849,7 +1924,8 @@ const PaymentManagement = (): React.JSX.Element => {
           i20_control_fee_payment_method,
           scholarship_package_id,
           dependents,
-          created_at
+          created_at,
+          seller_referral_code
         `)
         .or('has_paid_selection_process_fee.eq.true,is_application_fee_paid.eq.true,is_scholarship_fee_paid.eq.true,has_paid_i20_control_fee.eq.true');
 
@@ -2206,7 +2282,9 @@ const PaymentManagement = (): React.JSX.Element => {
             status: 'paid',
             payment_date: app.created_at,
             created_at: app.created_at,
-            payment_method: student.selection_process_fee_payment_method || 'manual'
+            payment_method: student.selection_process_fee_payment_method || 'manual',
+            seller_referral_code: student.seller_referral_code,
+            scholarships_ids: scholarship.id ? [scholarship.id] : []
           });
           
           // Marcar como processado para este usuário
@@ -2232,7 +2310,9 @@ const PaymentManagement = (): React.JSX.Element => {
             status: 'paid',
             payment_date: app.created_at,
             created_at: app.created_at,
-            payment_method: app.application_fee_payment_method || 'manual'
+            payment_method: app.application_fee_payment_method || 'manual',
+            seller_referral_code: student.seller_referral_code,
+            scholarships_ids: scholarship.id ? [scholarship.id] : []
           });
           
           // Marcar como processado para este usuário
@@ -2258,7 +2338,9 @@ const PaymentManagement = (): React.JSX.Element => {
             status: 'paid',
             payment_date: app.created_at,
             created_at: app.created_at,
-            payment_method: app.scholarship_fee_payment_method || 'manual'
+            payment_method: app.scholarship_fee_payment_method || 'manual',
+            seller_referral_code: student.seller_referral_code,
+            scholarships_ids: scholarship.id ? [scholarship.id] : []
           });
         } else if (app.is_scholarship_fee_paid && scholarship.id === '31c9b8e6-af11-4462-8494-c79854f3f66e') {
           console.log('🚫 Excluding Current Students Scholarship payment for:', studentName, '- $', (scholarshipFee / 100).toFixed(2));
@@ -2280,7 +2362,9 @@ const PaymentManagement = (): React.JSX.Element => {
             status: 'paid',
             payment_date: app.created_at,
             created_at: app.created_at,
-            payment_method: student.i20_control_fee_payment_method || 'manual'
+            payment_method: student.i20_control_fee_payment_method || 'manual',
+            seller_referral_code: student.seller_referral_code,
+            scholarships_ids: scholarship.id ? [scholarship.id] : []
           });
           
           // Marcar como processado para este usuário
@@ -2373,7 +2457,9 @@ const PaymentManagement = (): React.JSX.Element => {
             zelle_status: 'approved',
             reviewed_by: selectionPayment.admin_approved_by,
             reviewed_at: selectionPayment.admin_approved_at,
-            payment_method: 'zelle'
+            payment_method: 'zelle',
+            seller_referral_code: student.seller_referral_code,
+            scholarships_ids: []
           });
         }
 
@@ -2400,7 +2486,9 @@ const PaymentManagement = (): React.JSX.Element => {
             zelle_status: 'approved',
             reviewed_by: applicationPayment.admin_approved_by,
             reviewed_at: applicationPayment.admin_approved_at,
-            payment_method: 'zelle'
+            payment_method: 'zelle',
+            seller_referral_code: student.seller_referral_code,
+            scholarships_ids: []
           });
         }
 
@@ -2425,7 +2513,9 @@ const PaymentManagement = (): React.JSX.Element => {
             zelle_status: 'approved',
             reviewed_by: scholarshipPayment.admin_approved_by,
             reviewed_at: scholarshipPayment.admin_approved_at,
-            payment_method: 'zelle'
+            payment_method: 'zelle',
+            seller_referral_code: student.seller_referral_code,
+            scholarships_ids: []
           });
         }
 
@@ -2450,7 +2540,9 @@ const PaymentManagement = (): React.JSX.Element => {
             zelle_status: 'approved',
             reviewed_by: i20Payment.admin_approved_by,
             reviewed_at: i20Payment.admin_approved_at,
-            payment_method: 'zelle'
+            payment_method: 'zelle',
+            seller_referral_code: student.seller_referral_code,
+            scholarships_ids: []
           });
         }
       });
@@ -2578,7 +2670,9 @@ const PaymentManagement = (): React.JSX.Element => {
             status: 'paid',
             payment_date: stripeUser.created_at,
             created_at: stripeUser.created_at,
-            payment_method: stripeUser.selection_process_fee_payment_method || 'manual'
+            payment_method: stripeUser.selection_process_fee_payment_method || 'manual',
+            seller_referral_code: stripeUser.seller_referral_code,
+            scholarships_ids: []
           });
         }
 
@@ -2598,7 +2692,9 @@ const PaymentManagement = (): React.JSX.Element => {
             status: 'paid',
             payment_date: stripeUser.created_at,
             created_at: stripeUser.created_at,
-            payment_method: 'manual'
+            payment_method: 'manual',
+            seller_referral_code: stripeUser.seller_referral_code,
+            scholarships_ids: []
           });
         }
 
@@ -2618,7 +2714,9 @@ const PaymentManagement = (): React.JSX.Element => {
             status: 'paid',
             payment_date: stripeUser.created_at,
             created_at: stripeUser.created_at,
-            payment_method: 'manual'
+            payment_method: 'manual',
+            seller_referral_code: stripeUser.seller_referral_code,
+            scholarships_ids: []
           });
         }
 
@@ -2638,7 +2736,9 @@ const PaymentManagement = (): React.JSX.Element => {
             status: 'paid',
             payment_date: stripeUser.created_at,
             created_at: stripeUser.created_at,
-            payment_method: stripeUser.i20_control_fee_payment_method || 'manual'
+            payment_method: stripeUser.i20_control_fee_payment_method || 'manual',
+            seller_referral_code: stripeUser.seller_referral_code,
+            scholarships_ids: []
           });
         }
       });
@@ -2759,7 +2859,7 @@ const PaymentManagement = (): React.JSX.Element => {
   // Resetar para primeira página quando filtros mudarem
   useEffect(() => {
     setCurrentPage(1);
-  }, [filters.search, filters.university, filters.feeType, filters.status, filters.dateFrom, filters.dateTo]);
+  }, [filters.search, filters.university, filters.feeType, filters.status, filters.dateFrom, filters.dateTo, filters.affiliate]);
 
   // Calcular paginação
   const filteredPayments = payments.filter(payment => {
@@ -2776,6 +2876,27 @@ const PaymentManagement = (): React.JSX.Element => {
     const matchesUniversity = filters.university === 'all' || payment.university_id === filters.university;
     const matchesFeeType = filters.feeType === 'all' || payment.fee_type === filters.feeType;
     const matchesStatus = filters.status === 'all' || payment.status === filters.status;
+    
+    // Filtro por affiliate admin
+    const matchesAffiliate = filters.affiliate === 'all' || (() => {
+      if (!payment.seller_referral_code) {
+        // Se o pagamento não tem código de referência, só mostra se "all" estiver selecionado
+        return filters.affiliate === 'all';
+      }
+
+      // Buscar o affiliate admin pelo referral code do pagamento
+      // Primeiro tenta pelo referral_code direto do affiliate
+      let affiliate = affiliates.find(aff => aff.referral_code === payment.seller_referral_code);
+      
+      if (!affiliate) {
+        // Se não encontrar, busca pelos sellers do affiliate
+        affiliate = affiliates.find(aff => 
+          aff.sellers?.some((seller: any) => seller.referral_code === payment.seller_referral_code)
+        );
+      }
+
+      return affiliate && affiliate.id === filters.affiliate;
+    })();
 
     let matchesDate = true;
     if (filters.dateFrom || filters.dateTo) {
@@ -2788,7 +2909,7 @@ const PaymentManagement = (): React.JSX.Element => {
       }
     }
 
-    return matchesSearch && matchesUniversity && matchesFeeType && matchesStatus && matchesDate;
+    return matchesSearch && matchesUniversity && matchesFeeType && matchesStatus && matchesAffiliate && matchesDate;
   });
 
   // Aplicar ordenação aos dados filtrados
@@ -2919,7 +3040,8 @@ const PaymentManagement = (): React.JSX.Element => {
       feeType: 'all',
       status: 'all',
       dateFrom: '',
-      dateTo: ''
+      dateTo: '',
+      affiliate: 'all'
     });
     setCurrentPage(1); // Reset para primeira página
   };
@@ -3275,9 +3397,9 @@ const PaymentManagement = (): React.JSX.Element => {
 
         {/* Advanced Filters */}
         {showFilters && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 pt-4 border-t border-gray-200">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 pt-4 border-t border-gray-200">
             {/* Sort Controls */}
-            <div className="lg:col-span-5 mb-4">
+            <div className="lg:col-span-6 mb-4">
               <h3 className="text-sm font-medium text-gray-700 mb-3">Ordenação</h3>
               <div className="flex flex-wrap gap-4">
                 <div className="flex items-center gap-2">
@@ -3357,6 +3479,24 @@ const PaymentManagement = (): React.JSX.Element => {
             </div>
 
             <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Admin Affiliate</label>
+              <select
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                value={filters.affiliate}
+                onChange={(e) => setFilters({ ...filters, affiliate: e.target.value })}
+                title="Filter by admin affiliate"
+                aria-label="Filter by admin affiliate"
+              >
+                <option value="all">All Affiliates</option>
+                {affiliates.map((affiliate) => (
+                  <option key={affiliate.id} value={affiliate.id}>
+                    {affiliate.name || affiliate.email || 'Unknown'}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">From Date</label>
               <input
                 type="date"
@@ -3382,7 +3522,7 @@ const PaymentManagement = (): React.JSX.Element => {
               />
             </div>
 
-            <div className="lg:col-span-5 flex justify-end">
+            <div className="lg:col-span-6 flex justify-end">
               <button
                 onClick={resetFilters}
                 className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 transition-colors"
