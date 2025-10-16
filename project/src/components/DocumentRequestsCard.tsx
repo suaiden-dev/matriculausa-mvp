@@ -1702,7 +1702,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                               
                               return (
                                 <div key={upload.id} className="mb-3">
-                                  <div className="flex items-center justify-between mb-2">
+                                  <div className="flex flex-col items-center justify-between mb-2">
                                     <span className="text-sm font-medium text-slate-700">
                                       {upload.file_url.split('/').pop()}
                                     </span>
