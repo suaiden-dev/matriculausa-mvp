@@ -25,12 +25,19 @@ export default defineConfig({
       output: {
         manualChunks: (id) => {
           if (id.includes('node_modules')) {
-            // Separar bibliotecas pesadas
+            // Separar TODAS as bibliotecas grandes
             if (id.includes('@ckeditor')) return 'editor';
             if (id.includes('@mui')) return 'mui';
             if (id.includes('chart.js') || id.includes('recharts')) return 'charts';
             if (id.includes('@azure') || id.includes('msal')) return 'microsoft';
             if (id.includes('react') || id.includes('react-dom')) return 'react';
+            if (id.includes('@supabase')) return 'supabase';
+            if (id.includes('lucide-react')) return 'icons';
+            if (id.includes('date-fns') || id.includes('dayjs')) return 'dates';
+            if (id.includes('framer-motion')) return 'animations';
+            // Dividir vendor em chunks menores
+            if (id.includes('lodash') || id.includes('ramda')) return 'utils';
+            if (id.includes('axios') || id.includes('fetch')) return 'http';
             return 'vendor';
           }
         }
