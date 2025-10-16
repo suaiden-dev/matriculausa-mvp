@@ -669,6 +669,8 @@ const AdminStudentDetails: React.FC = () => {
               scholarships (
                 title,
                 university_id,
+                field_of_study,
+                annual_value_with_scholarship,
                 application_fee_amount,
                 universities (
                   name
@@ -2697,6 +2699,8 @@ const AdminStudentDetails: React.FC = () => {
               scholarships (
                 title,
                 university_id,
+                field_of_study,
+                annual_value_with_scholarship,
                 application_fee_amount,
                 universities (
                   name
@@ -3524,6 +3528,31 @@ const AdminStudentDetails: React.FC = () => {
                   <dt className="text-sm font-medium text-slate-600">University</dt>
                   <dd className="text-lg font-semibold text-slate-900 flex items-center"><Building className="w-4 h-4 mr-1" />{student.university_name}</dd>
                 </div>
+                <div>
+                  <dt className="text-sm font-medium text-slate-600">Course</dt>
+                  <dd className="text-base font-semibold text-slate-900">
+                    {(() => {
+                      const paidApplication = (student.all_applications || []).find((app: any) => app.is_application_fee_paid);
+                      const scholarship = paidApplication?.scholarships
+                        ? (Array.isArray(paidApplication.scholarships) ? paidApplication.scholarships[0] : paidApplication.scholarships)
+                        : null;
+                      return scholarship?.field_of_study || 'N/A';
+                    })()}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-sm font-medium text-slate-600">Annual Value (with Scholarship)</dt>
+                  <dd className="text-base font-semibold text-slate-900">
+                    {(() => {
+                      const paidApplication = (student.all_applications || []).find((app: any) => app.is_application_fee_paid);
+                      const scholarship = paidApplication?.scholarships
+                        ? (Array.isArray(paidApplication.scholarships) ? paidApplication.scholarships[0] : paidApplication.scholarships)
+                        : null;
+                      const v = scholarship?.annual_value_with_scholarship;
+                      return typeof v === 'number' ? `$${v.toLocaleString()}` : (v ? `$${Number(v).toLocaleString()}` : 'N/A');
+                    })()}
+                  </dd>
+                </div>
               </div>
             </div>
           ) : null}
@@ -3586,6 +3615,23 @@ const AdminStudentDetails: React.FC = () => {
                                   )}
                                 </h4>
                               <p className="text-sm text-slate-600">{app.scholarships?.universities?.name || 'University'} • {app.documents ? app.documents.length : 0} documents</p>
+                              <div className="mt-1 text-xs text-slate-700">
+                                <div>
+                                  <span className="text-slate-500">Course:</span>{' '}
+                                  <span className="font-medium">{(() => {
+                                    const scholarship = app.scholarships ? (Array.isArray(app.scholarships) ? app.scholarships[0] : app.scholarships) : null;
+                                    return scholarship?.field_of_study || 'N/A';
+                                  })()}</span>
+                                </div>
+                                <div>
+                                  <span className="text-slate-500">Annual Value:</span>{' '}
+                                  <span className="font-medium">{(() => {
+                                    const scholarship = app.scholarships ? (Array.isArray(app.scholarships) ? app.scholarships[0] : app.scholarships) : null;
+                                    const v = scholarship?.annual_value_with_scholarship;
+                                    return typeof v === 'number' ? `$${v.toLocaleString()}` : (v ? `$${Number(v).toLocaleString()}` : 'N/A');
+                                  })()}</span>
+                                </div>
+                              </div>
                               </div>
                             </div>
                             <svg className={`w-5 h-5 text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
