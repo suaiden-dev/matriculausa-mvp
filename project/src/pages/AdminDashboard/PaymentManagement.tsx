@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
@@ -263,6 +264,7 @@ const STATUS_OPTIONS = [
 const PaymentManagement = (): React.JSX.Element => {
   const { user } = useAuth();
   const { getFeeAmount } = useFeeConfig();
+  const [searchParams] = useSearchParams();
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [universities, setUniversities] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -297,6 +299,20 @@ const PaymentManagement = (): React.JSX.Element => {
 
   // Estados para University Payment Requests
   const [activeTab, setActiveTab] = useState<'payments' | 'university-requests' | 'affiliate-requests' | 'zelle-payments'>('payments');
+
+  // Read URL parameters on component mount
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab === 'zelle') {
+      setActiveTab('zelle-payments');
+    } else if (tab === 'university-requests') {
+      setActiveTab('university-requests');
+    } else if (tab === 'affiliate-requests') {
+      setActiveTab('affiliate-requests');
+    } else {
+      setActiveTab('payments');
+    }
+  }, [searchParams]);
   const [universityRequests, setUniversityRequests] = useState<UniversityPaymentRequest[]>([]);
   const [loadingUniversityRequests, setLoadingUniversityRequests] = useState(false);
   const [affiliateRequests, setAffiliateRequests] = useState<any[]>([]);
