@@ -1863,8 +1863,8 @@
           "helpTooltip": "How does the chat work?"
         },
         "guide": {
-          "title": "Chat with Administration",
-          "subtitle": "This chat connects you directly with the Administration. Use it for questions about scholarships, documents, and your application progress. Avoid sharing sensitive data (passwords or card numbers).",
+          "title": "Chat with the support team",
+          "subtitle": "This chat connects you directly with the support team. Use it for questions about scholarships, documents, and your application progress. Avoid sharing sensitive data (passwords or card numbers).",
           "supportsAttachments": "Send messages and attachments",
           "businessHours": "Replies during business hours",
           "historySaved": "Conversation history is saved",
@@ -1876,7 +1876,7 @@
         },
         "recipientLabel": {
           "student": "Student",
-          "support": "Administration"
+          "support": "Support Team"
         }
       },
       "details": {

@@ -213,7 +213,6 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
               <div className={`bg-white border border-slate-200 rounded-2xl shadow-2xl p-4 transition-all duration-300 ${guideEnter && !guideExit ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-2 scale-95'}`}
               >
                 <div className="flex items-start gap-3">
-                  <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold">i</div>
                   <div className="text-slate-700">
                     <p className="text-sm font-semibold mb-1">{t('studentDashboard.applicationChatPage.studentChat.guide.title', { defaultValue: 'Chat with Administration' })}</p>
                     <p className="text-xs leading-relaxed">{t('studentDashboard.applicationChatPage.studentChat.guide.subtitle', { defaultValue: 'Ask about scholarships, documents and your application progress.' })}</p>

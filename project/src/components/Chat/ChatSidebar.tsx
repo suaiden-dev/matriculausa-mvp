@@ -96,7 +96,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ className = '' }) => {
             <div className="flex items-center text-white">
               <MessageSquare className="w-5 h-5 mr-2" />
               <span className="font-medium text-sm">
-                {userProfile.role === 'affiliate_admin' ? 'Student Chat' : 'Support Chat1'}
+                {userProfile.role === 'affiliate_admin' ? 'Student Chat' : 'Support Chat'}
               </span>
               {unreadCount > 0 && !isMinimized && (
                 <span className="ml-2 bg-white/20 text-white text-xs rounded-full px-2 py-1">

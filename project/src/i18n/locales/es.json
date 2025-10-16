@@ -1228,8 +1228,8 @@
           "helpTooltip": "¿Cómo funciona el chat?"
         },
         "guide": {
-          "title": "Chat con la Administración",
-          "subtitle": "Este chat te conecta directamente con la Administración. Úsalo para preguntas sobre becas, documentos y el progreso de tu aplicación. Evita compartir datos sensibles (contraseñas o números de tarjeta).",
+          "title": "Chat con el equipo de soporte",
+          "subtitle": "Este chat te conecta directamente con el equipo de soporte. Úsalo para preguntas sobre becas, documentos y el progreso de tu aplicación. Evita compartir datos sensibles (contraseñas o números de tarjeta).",
           "supportsAttachments": "Envía mensajes y archivos adjuntos",
           "businessHours": "Respuestas durante horario comercial",
           "historySaved": "El historial de conversación se guarda",
@@ -1241,7 +1241,7 @@
         },
         "recipientLabel": {
           "student": "Estudiante",
-          "support": "Administración"
+          "support": "Equipo de Soporte"
         }
       },
       "details": {
