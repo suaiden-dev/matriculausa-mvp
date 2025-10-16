@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from 'jsr:@supabase/supabase-js@2';
+import { detectEnvironment } from '../shared/environment-detector.ts';
 
 // Configuração do Microsoft OAuth
 const MICROSOFT_CLIENT_ID = Deno.env.get('MICROSOFT_CLIENT_ID');
@@ -11,8 +12,41 @@ const supabaseUrl = Deno.env.get('SUPABASE_URL');
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-// URL base da aplicação
-const APP_BASE_URL = Deno.env.get('APP_BASE_URL') || 'http://localhost:5173';
+// Função para detectar automaticamente a URL do frontend
+function getFrontendUrl(req: Request): string {
+  console.log('🔍 Debug: Starting frontend URL detection...');
+  
+  // Detectar se estamos em produção ou desenvolvimento
+  const host = req.headers.get('host') || '';
+  const referer = req.headers.get('referer') || '';
+  const origin = req.headers.get('origin') || '';
+  
+  console.log('🔍 Host:', host);
+  console.log('🔍 Referer:', referer);
+  console.log('🔍 Origin:', origin);
+  
+  // Se o host contém 'supabase.co' ou 'matriculausa.com', estamos em produção
+  if (host.includes('supabase.co') || referer.includes('matriculausa.com') || origin.includes('matriculausa.com') || host.includes('matriculausa.com')) {
+    console.log('🚀 Production environment detected: matriculausa.com');
+    return 'https://matriculausa.com';
+  }
+  
+  // Se o host contém 'staging-matriculausa.netlify.app', estamos em staging
+  if (host.includes('staging-matriculausa.netlify.app') || referer.includes('staging-matriculausa.netlify.app') || origin.includes('staging-matriculausa.netlify.app')) {
+    console.log('🔄 Staging environment detected: staging-matriculausa.netlify.app');
+    return 'https://staging-matriculausa.netlify.app';
+  }
+  
+  // Se o host contém 'localhost' ou '127.0.0.1', estamos em desenvolvimento
+  if (host.includes('localhost') || host.includes('127.0.0.1') || referer.includes('localhost') || origin.includes('localhost')) {
+    console.log('🔧 Development environment detected: localhost');
+    return 'http://localhost:5173';
+  }
+  
+  // Padrão: produção (matriculausa.com)
+  console.log('🚀 Defaulting to production environment: matriculausa.com');
+  return 'https://matriculausa.com';
+}
 
 interface MicrosoftTokenResponse {
   access_token: string;
@@ -209,6 +243,10 @@ Deno.serve(async (req: Request) => {
     console.log('🔍 DEBUG - Method:', req.method);
     console.log('🔍 DEBUG - Headers:', Object.fromEntries(req.headers.entries()));
     
+    // Detectar URL do frontend dinamicamente
+    const APP_BASE_URL = getFrontendUrl(req);
+    console.log('🌐 APP_BASE_URL detectado:', APP_BASE_URL);
+    
     // Verificar método HTTP
     if (req.method === 'OPTIONS') {
       return new Response(null, {
@@ -300,6 +338,8 @@ Deno.serve(async (req: Request) => {
        (APP_BASE_URL.includes('localhost') 
          ? 'https://fitpynguasqqutuhzifx.supabase.co/functions/v1/microsoft-auth-callback'
          : `${APP_BASE_URL}/microsoft-email`);
+     
+     console.log('🔗 Redirect URI construído:', redirectUri);
 
     // Trocar code por tokens
     console.log('🔄 Tentando trocar código por tokens...');
