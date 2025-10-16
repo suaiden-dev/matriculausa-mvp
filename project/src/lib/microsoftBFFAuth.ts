@@ -6,6 +6,22 @@
  * depender do MSAL.js que não retorna refresh tokens confiáveis.
  */
 
+/**
+ * Função helper para obter o redirect URI de forma segura
+ */
+function getRedirectUri(): string {
+  if (import.meta.env.VITE_AZURE_REDIRECT_URI) {
+    return import.meta.env.VITE_AZURE_REDIRECT_URI;
+  }
+  
+  if (typeof window !== 'undefined' && window.location) {
+    return `${window.location.origin}/microsoft-email`;
+  }
+  
+  // Fallback para desenvolvimento
+  return 'http://localhost:5173/microsoft-email';
+}
+
 interface MicrosoftAuthConfig {
   clientId: string;
   tenantId: string;
@@ -30,7 +46,7 @@ interface MicrosoftAuthUrlParams {
 export const microsoftBFFConfig: MicrosoftAuthConfig = {
   clientId: import.meta.env.VITE_AZURE_CLIENT_ID || '',
   tenantId: 'common', // FORÇAR TENANT COMMON para contas pessoais
-  redirectUri: import.meta.env.VITE_AZURE_REDIRECT_URI || `${window.location.origin}/microsoft-email`,
+  redirectUri: getRedirectUri(),
   scopes: [
     'User.Read',
     'Mail.Read', 
