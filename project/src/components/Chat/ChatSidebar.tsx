@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useAdminStudentConversations } from '../../hooks/useAdminStudentChat';
+import { useGlobalStudentUnread } from '../../hooks/useGlobalStudentUnread';
 import AdminStudentChat from './AdminStudentChat';
 import { MessageSquare, X, Minimize2, Maximize2 } from 'lucide-react';
 
@@ -11,6 +12,7 @@ interface ChatSidebarProps {
 const ChatSidebar: React.FC<ChatSidebarProps> = ({ className = '' }) => {
   const { user, userProfile } = useAuth();
   const { conversations } = useAdminStudentConversations();
+  const { totalUnread } = useGlobalStudentUnread();
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -18,8 +20,9 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ className = '' }) => {
   // Calculate total unread messages
   useEffect(() => {
     const total = conversations.reduce((sum, conv) => sum + (conv.unread_count || 0), 0);
-    setUnreadCount(total);
-  }, [conversations]);
+    // Preferir contador global se maior (cobre casos de múltiplos admins)
+    setUnreadCount(Math.max(total, totalUnread));
+  }, [conversations, totalUnread]);
 
   // Auto-minimize when clicking outside (for mobile)
   useEffect(() => {

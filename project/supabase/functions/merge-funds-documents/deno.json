@@ -1,0 +1,5 @@
+{
+  "imports": {
+    "https://esm.sh/pdf-lib@1.17.1": "https://esm.sh/pdf-lib@1.17.1"
+  }
+}

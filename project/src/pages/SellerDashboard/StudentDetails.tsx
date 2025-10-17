@@ -81,6 +81,10 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
   const [realScholarshipApplication, setRealScholarshipApplication] = useState<any>(null);
   const [loadingApplication, setLoadingApplication] = useState(false);
   
+  // Estados para Transfer Form
+  const [transferFormUploads, setTransferFormUploads] = useState<any[]>([]);
+  const [loadingTransferFormUploads, setLoadingTransferFormUploads] = useState(false);
+  
   // Usar dados do hook
   const scholarshipApplication = hookScholarshipApplication;
   const studentDocuments = hookStudentDocuments;
@@ -384,6 +388,31 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
     return `${baseUrl}${application.acceptance_letter_url}`;
   };
 
+  // Função para buscar transfer form uploads
+  const fetchTransferFormUploads = async (applicationId: string) => {
+    if (!applicationId) return;
+    
+    setLoadingTransferFormUploads(true);
+    
+    try {
+      const { data, error } = await supabase
+        .from('transfer_form_uploads')
+        .select('*')
+        .eq('application_id', applicationId)
+        .order('uploaded_at', { ascending: false });
+      
+      if (!error && data) {
+        setTransferFormUploads(data);
+      } else if (error) {
+        console.error('Erro ao buscar transfer form uploads:', error);
+      }
+    } catch (err) {
+      console.error('Erro ao buscar transfer form uploads:', err);
+    } finally {
+      setLoadingTransferFormUploads(false);
+    }
+  };
+
   // Buscar a aplicação real com acceptance letter
   useEffect(() => {
     const fetchRealApplication = async () => {
@@ -491,6 +520,13 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
 
     fetchRealApplication();
   }, [scholarshipApplication, studentDocuments]);
+
+  // Buscar transfer form uploads quando a aplicação for carregada
+  useEffect(() => {
+    if (scholarshipApplication?.id && scholarshipApplication.student_process_type === 'transfer') {
+      fetchTransferFormUploads(scholarshipApplication.id);
+    }
+  }, [scholarshipApplication?.id, scholarshipApplication?.student_process_type]);
 
   // Usar a aplicação real se disponível, senão usar a passada como prop
   const currentApplication = realScholarshipApplication || scholarshipApplication;
@@ -957,8 +993,20 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
     try {
       // Se file_url é um path do storage, converter para URL pública
       if (doc.file_url && !doc.file_url.startsWith('http')) {
+        // Determinar o bucket correto baseado no tipo de documento
+        let bucket = 'student-documents'; // default
+        
+        // Se for transfer form, usar document-attachments
+        if (doc.filename && doc.filename.toLowerCase().includes('transfer')) {
+          bucket = 'document-attachments';
+        }
+        // Se for acceptance letter, usar document-attachments
+        else if (doc.filename && doc.filename.toLowerCase().includes('acceptance')) {
+          bucket = 'document-attachments';
+        }
+        
         const publicUrl = supabase.storage
-          .from('student-documents')
+          .from(bucket)
           .getPublicUrl(doc.file_url)
           .data.publicUrl;
         
@@ -982,8 +1030,20 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
         // Se file_url é um path do storage, converter para URL pública
         let downloadUrl = doc.file_url;
         if (!doc.file_url.startsWith('http')) {
+          // Determinar o bucket correto baseado no tipo de documento
+          let bucket = 'student-documents'; // default
+          
+          // Se for transfer form, usar document-attachments
+          if (doc.filename && doc.filename.toLowerCase().includes('transfer')) {
+            bucket = 'document-attachments';
+          }
+          // Se for acceptance letter, usar document-attachments
+          else if (doc.filename && doc.filename.toLowerCase().includes('acceptance')) {
+            bucket = 'document-attachments';
+          }
+          
           const publicUrl = supabase.storage
-            .from('student-documents')
+            .from(bucket)
             .getPublicUrl(doc.file_url)
             .data.publicUrl;
           downloadUrl = publicUrl;
@@ -2072,10 +2132,10 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
               {/* Transfer Form Section - Only for transfer students */}
               {studentInfo?.student_process_type === 'transfer' && (
                 <div className="bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-200 rounded-3xl shadow-sm relative overflow-hidden mt-8 mb-8">
-                  <div className="bg-gradient-to-r from-indigo-600 to-blue-600 px-4 sm:px-6 py-5 rounded-t-3xl">
+                  <div className="bg-gradient-to-r from-[#05294E] to-[#041f38] px-4 sm:px-6 py-5 rounded-t-3xl">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center sm:space-x-4 gap-3">
                       <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg flex-shrink-0">
-                        <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <svg className="w-6 h-6 text-[#05294E]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
                       </div>
@@ -2087,81 +2147,159 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                   </div>
                   
                   <div className="p-4 sm:p-6">
-                    {(scholarshipApplication as any)?.transfer_form_url ? (
-                      <div className="bg-white rounded-3xl p-4 sm:p-6">
-                        <div className="flex flex-col sm:flex-row gap-4">
-                          <div className="flex items-start space-x-4 min-w-0">
-                            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                              <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                              </svg>
+                    {/* Template enviado pelo admin/universidade */}
+                    {(scholarshipApplication as any)?.transfer_form_url && (
+                      <div className="mb-6">
+                        <h3 className="text-lg font-semibold text-[#05294E] mb-4 flex items-center">
+                          Transfer Form Template
+                        </h3>
+                        
+                        <div className="bg-slate-50 rounded-2xl p-6 border border-slate-200">
+                          <div className="flex items-start space-x-4">
+                            <div className="flex-shrink-0">
+                              <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                                <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                </svg>
+                              </div>
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="font-medium text-slate-900 break-words">
-                                {(scholarshipApplication as any).transfer_form_url.split('/').pop() || 'Transfer Form'}
-                              </p>
-                              <p className="text-sm text-slate-500">
-                                {(scholarshipApplication as any).transfer_form_sent_at ? `Sent on ${formatDate((scholarshipApplication as any).transfer_form_sent_at)}` : 'Available'}
-                              </p>
-                              <p className="text-xs text-slate-400 mt-1">
-                                Transfer student documentation
-                              </p>
-                              <div className="flex items-center mt-2 sm:hidden">
-                                <span className="px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                              <div className="flex flex-wrap gap-2 mb-1">
+                                <p className="font-medium text-slate-900 break-words">
+                                  {(scholarshipApplication as any).transfer_form_url.split('/').pop() || 'Transfer Form Template'}
+                                </p>
+                                <span className="px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 whitespace-nowrap">
                                   Available
                                 </span>
                               </div>
-                            </div>
-                          </div>
+                              <p className="text-sm text-slate-500 break-words">
+                                Sent on {(scholarshipApplication as any).transfer_form_sent_at ? formatDate((scholarshipApplication as any).transfer_form_sent_at) : 'N/A'}
+                              </p>
                               
-                          <div className="flex flex-col sm:flex-row gap-2 sm:items-start sm:ml-auto">
-                            <span className="hidden sm:inline-block px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 whitespace-nowrap">
-                              Available
-                            </span>
-                            
-                            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                              <button 
-                                onClick={() => handleViewDocument({
-                                  file_url: (scholarshipApplication as any).transfer_form_url,
-                                  filename: 'Transfer Form'
-                                })}
-                                className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto text-center"
-                              >
-                                View
-                              </button>
-                              
-                              <button 
-                                onClick={() => handleDownloadDocument({
-                                  file_url: (scholarshipApplication as any).transfer_form_url,
-                                  filename: 'Transfer Form'
-                                })}
-                                className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto text-center"
-                              >
-                                Download
-                              </button>
+                              <div className="flex flex-col sm:flex-row gap-2 mt-3">
+                                <button
+                                  onClick={() => handleViewDocument({
+                                    file_url: (scholarshipApplication as any).transfer_form_url,
+                                    filename: (scholarshipApplication as any).transfer_form_url.split('/').pop() || 'Transfer Form Template'
+                                  })}
+                                  className="bg-[#05294E] hover:bg-[#041f38] text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto text-center"
+                                >
+                                  View Template
+                                </button>
+                                
+                                <button
+                                  onClick={() => handleDownloadDocument({
+                                    file_url: (scholarshipApplication as any).transfer_form_url,
+                                    filename: (scholarshipApplication as any).transfer_form_url.split('/').pop() || 'Transfer Form Template'
+                                  })}
+                                  className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto text-center"
+                                >
+                                  Download Template
+                                </button>
+                              </div>
                             </div>
                           </div>
                         </div>
                       </div>
-                    ) : (
-                      <div className="bg-white rounded-3xl p-8">
-                        <div className="text-center">
-                          <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                          </div>
-                          <h4 className="text-lg font-semibold text-slate-700 mb-2">No Transfer Form Yet</h4>
-                          <p className="text-slate-500 max-w-md mx-auto">
-                            The transfer form will appear here once the university processes your transfer application.
-                          </p>
-                          <div className="mt-4 flex items-center justify-center space-x-2 text-sm text-slate-400">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            <span>Please wait for the university to send your transfer form</span>
-                          </div>
+                    )}
+
+                    {/* Student Uploads */}
+                    {loadingTransferFormUploads ? (
+                      <div className="text-center py-8">
+                        <div className="w-8 h-8 border-4 border-slate-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                        <p className="text-slate-600">Loading transfer form uploads...</p>
+                      </div>
+                    ) : transferFormUploads.length > 0 ? (
+                      <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6">
+                        <h4 className="text-lg font-semibold text-[#05294E] mb-4 flex items-center">
+                          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m2 4H7a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2z" />
+                          </svg>
+                          Student Uploads
+                        </h4>
+                        
+                        <div className="space-y-4">
+                          {transferFormUploads.map((upload) => {
+                            const statusColor = upload.status === 'approved' ? 'bg-green-100 text-green-800 border-green-200' :
+                                              upload.status === 'rejected' ? 'bg-red-100 text-red-800 border-red-200' :
+                                              'bg-yellow-100 text-yellow-800 border-yellow-200';
+                            
+                            return (
+                              <div key={upload.id} className="bg-white border border-slate-200 rounded-lg p-4">
+                                <div className="flex items-center justify-between mb-3">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                                      <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m2 4H7a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2z" />
+                                      </svg>
+                                    </div>
+                                    <div>
+                                      <p className="font-medium text-slate-900">
+                                        {upload.file_url.split('/').pop()}
+                                      </p>
+                                      <p className="text-sm text-slate-500">
+                                        Uploaded on {formatDate(upload.uploaded_at)}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <span className={`px-3 py-1 rounded-full text-sm font-medium border ${statusColor}`}>
+                                    {upload.status.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                                  </span>
+                                </div>
+                                
+                                {upload.rejection_reason && (
+                                  <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                                    <p className="text-sm font-medium text-red-600 mb-1">Rejection reason:</p>
+                                    <p className="text-sm text-red-700">{upload.rejection_reason}</p>
+                                  </div>
+                                )}
+                                
+                                <div className="flex gap-2">
+                                  <button
+                                    className="text-blue-600 hover:text-blue-800 text-sm font-medium hover:underline"
+                                    onClick={() => {
+                                      const signedUrl = upload.file_url;
+                                      if (signedUrl) {
+                                        handleViewDocument({
+                                          file_url: signedUrl,
+                                          filename: upload.file_url.split('/').pop() || 'transfer_form.pdf'
+                                        });
+                                      }
+                                    }}
+                                  >
+                                    View
+                                  </button>
+                                  <button
+                                    className="text-blue-600 hover:text-blue-800 text-sm font-medium hover:underline"
+                                    onClick={() => {
+                                      const signedUrl = upload.file_url;
+                                      if (signedUrl) {
+                                        handleDownloadDocument({
+                                          file_url: signedUrl,
+                                          filename: upload.file_url.split('/').pop() || 'transfer_form.pdf'
+                                        });
+                                      }
+                                    }}
+                                  >
+                                    Download
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
+                      </div>
+                    ) : (
+                      <div className="text-center py-8">
+                        <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                        </div>
+                        <h3 className="text-lg font-semibold text-slate-600 mb-2">No Student Uploads</h3>
+                        <p className="text-sm text-slate-500">
+                          The student hasn't uploaded any transfer form documents yet.
+                        </p>
                       </div>
                     )}
                   </div>

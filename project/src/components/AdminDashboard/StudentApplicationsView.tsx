@@ -22,6 +22,7 @@ import { supabase } from '../../lib/supabase';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
 import { useAuth } from '../../hooks/useAuth';
 import { useStudentUnreadMessages } from '../../hooks/useStudentUnreadMessages';
+import { useGlobalStudentUnread } from '../../hooks/useGlobalStudentUnread';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
@@ -74,6 +75,7 @@ const StudentApplicationsView: React.FC = () => {
   const [expandedApps, setExpandedApps] = useState<{[key: string]: boolean}>({});
   const [dependents, setDependents] = useState<number>(0);
   const [approvingDocs, setApprovingDocs] = useState<{[key: string]: boolean}>({});
+  const [pendingZelleByUser, setPendingZelleByUser] = useState<{ [userId: string]: number }>({});
 
   // Evitar mostrar usuários de teste em produção
   const isProductionHost = typeof window !== 'undefined' && window.location.origin === 'https://matriculausa.com';
@@ -87,6 +89,7 @@ const StudentApplicationsView: React.FC = () => {
   
   // Hook para mensagens não lidas por estudante
   const { getUnreadCount } = useStudentUnreadMessages();
+  const { getUnreadCount: getGlobalUnreadCount } = useGlobalStudentUnread();
 
   // Aprovação e rejeição de documentos pelo admin
   const approveableTypes = new Set(['passport', 'funds_proof', 'diploma']);
@@ -325,6 +328,41 @@ const StudentApplicationsView: React.FC = () => {
     fetchStudents();
     fetchFilterData();
   }, []);
+
+  // Carregar pagamentos Zelle pendentes para os estudantes listados
+  useEffect(() => {
+    const loadPendingZelle = async () => {
+      try {
+        const userIds = (students || []).map(s => s.user_id).filter(Boolean);
+        if (!userIds.length) {
+          setPendingZelleByUser({});
+          return;
+        }
+
+        const { data, error } = await supabase
+          .from('zelle_payments')
+          .select('user_id, status')
+          .in('user_id', userIds)
+          .eq('status', 'pending_verification');
+
+        if (error) {
+          console.error('Error loading pending Zelle payments:', error);
+          return;
+        }
+
+        const counts: { [userId: string]: number } = {};
+        (data || []).forEach((row: any) => {
+          const uid = row.user_id;
+          counts[uid] = (counts[uid] || 0) + 1;
+        });
+        setPendingZelleByUser(counts);
+      } catch (e) {
+        console.error('Unexpected error loading pending Zelle payments:', e);
+      }
+    };
+
+    loadPendingZelle();
+  }, [students]);
 
   // Salvar filtros no localStorage sempre que mudarem
   useEffect(() => {
@@ -1244,10 +1282,13 @@ const StudentApplicationsView: React.FC = () => {
                           <User className="h-5 w-5 text-gray-600" />
                         </div>
                         {/* Indicador de mensagens não lidas */}
-                        {getUnreadCount(student.user_id) > 0 && (
+                        {(getUnreadCount(student.user_id) > 0 || getGlobalUnreadCount(student.user_id) > 0) && (
                           <div className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
                             <span className="text-xs font-bold text-white">
-                              {getUnreadCount(student.user_id) > 9 ? '9+' : getUnreadCount(student.user_id)}
+                              {(() => {
+                                const v = Math.max(getUnreadCount(student.user_id), getGlobalUnreadCount(student.user_id));
+                                return v > 9 ? '9+' : v;
+                              })()}
                             </span>
                           </div>
                         )}
@@ -1257,7 +1298,11 @@ const StudentApplicationsView: React.FC = () => {
                           <div className="text-sm font-medium text-gray-900">
                             {student.student_name}
                           </div>
-
+                          {pendingZelleByUser[student.user_id] > 0 && (
+                            <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800" title="Zelle payment awaiting admin approval">
+                              Zelle pending approval
+                            </span>
+                          )}
                           {!student.is_locked && student.total_applications > 1 && (
                             <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">
                               {student.total_applications} Applications

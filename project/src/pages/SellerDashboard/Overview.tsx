@@ -196,18 +196,14 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
         // ✅ Se há override, usar exatamente o valor do override (já inclui dependentes)
         const selectionAmount = Number(overrides.selection_process_fee);
         total += selectionAmount;
-        if (isDebugStudent) {
-          console.log('🔍 [OVERVIEW_DEBUG] Selection Process (override):', selectionAmount, 'de', overrides.selection_process_fee);
-        }
+
       } else {
         // Sem override: usar taxa baseada no system_type + dependentes
         const systemType = studentSystemTypes[student.id] || 'legacy';
         const baseSelectionFee = systemType === 'simplified' ? 350 : 400;
         const selectionAmount = baseSelectionFee + (deps * 150);
         total += selectionAmount;
-        if (isDebugStudent) {
-          console.log('🔍 [OVERVIEW_DEBUG] Selection Process (system_type + deps):', selectionAmount, '=', baseSelectionFee, '+', (deps * 150), 'system_type:', systemType);
-        }
+
       }
     }
     
@@ -217,17 +213,12 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
         // ✅ Se há override, usar exatamente o valor do override
         const scholarshipAmount = Number(overrides.scholarship_fee);
         total += scholarshipAmount;
-        if (isDebugStudent) {
-          console.log('🔍 [OVERVIEW_DEBUG] Scholarship (override):', scholarshipAmount, 'de', overrides.scholarship_fee);
-        }
+
       } else {
         // Sem override: usar taxa baseada no system_type
         const systemType = studentSystemTypes[student.id] || 'legacy';
         const scholarshipFee = systemType === 'simplified' ? 550 : 900;
         total += scholarshipFee;
-        if (isDebugStudent) {
-          console.log('🔍 [OVERVIEW_DEBUG] Scholarship (system_type):', scholarshipFee, 'system_type:', systemType);
-        }
       }
     }
     
@@ -237,24 +228,14 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
         // ✅ Se há override, usar exatamente o valor do override
         const i20Amount = Number(overrides.i20_control_fee);
         total += i20Amount;
-        if (isDebugStudent) {
-          console.log('🔍 [OVERVIEW_DEBUG] I-20 Control (override):', i20Amount, 'de', overrides.i20_control_fee);
-        }
       } else {
         // Sem override: I-20 Control Fee é sempre $900 para ambos os sistemas
         const baseI20Fee = 900;
         total += baseI20Fee;
-        if (isDebugStudent) {
-          console.log('🔍 [OVERVIEW_DEBUG] I-20 Control (padrão):', baseI20Fee);
-        }
       }
     }
     
     // Application fee não entra na receita do seller
-    if (isDebugStudent) {
-      console.log('🔍 [OVERVIEW_DEBUG] Total final:', total);
-      console.log('🔍 [OVERVIEW_DEBUG] =================================');
-    }
     
     return total;
   };
@@ -281,19 +262,6 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
     if (!uniqueStudents || uniqueStudents.length === 0) return 0;
     
     const total = uniqueStudents.reduce((sum: number, s: any) => sum + calculateStudentAdjustedPaid(s), 0);
-    
-    console.log('💰 [OVERVIEW_TOTAL] Total calculado no Overview.tsx:', total);
-    console.log('💰 [OVERVIEW_TOTAL] Estudantes únicos:', uniqueStudents.length, 'de', students.length, 'originais');
-    
-    // Debug para comparar com MyStudents.tsx
-    console.log('🔍 [OVERVIEW_COMPARISON] Estudantes únicos no Overview:', uniqueStudents.map(s => ({ 
-      id: s.id, 
-      email: s.email,
-      has_paid_selection_process: s.has_paid_selection_process_fee,
-      has_paid_scholarship: s.is_scholarship_fee_paid,
-      has_paid_i20: s.has_paid_i20_control_fee,
-      calculated: calculateStudentAdjustedPaid(s)
-    })));
     
     return total;
   }, [getUniqueStudents, studentPackageFees, studentDependents, studentFeeOverrides]);

@@ -3,6 +3,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { useAdminStudentConversations } from '../../hooks/useAdminStudentChat';
 import { useAdminStudentChatNotifications } from '../../hooks/useAdminStudentChatNotifications';
 import { useUnreadMessages } from '../../contexts/UnreadMessagesContext';
+import { useGlobalStudentUnread } from '../../hooks/useGlobalStudentUnread';
 import { Users, MessageSquare, Plus } from 'lucide-react';
 import StudentSelector from './StudentSelector';
 import { supabase } from '../../lib/supabase';
@@ -17,10 +18,11 @@ interface ConversationItemProps {
   conversation: any;
   isSelected: boolean;
   onClick: () => void;
+  getGlobalUnreadCount: (studentId: string) => number;
 }
 
-const ConversationItem: React.FC<ConversationItemProps> = ({ conversation, isSelected, onClick }) => {
-  const { user, userProfile } = useAuth();
+const ConversationItem: React.FC<ConversationItemProps> = ({ conversation, isSelected, onClick, getGlobalUnreadCount }) => {
+  const { userProfile } = useAuth();
   
   // Determine recipient based on current user role
   const recipient = (userProfile?.role === 'affiliate_admin' || userProfile?.role === 'admin')
@@ -28,7 +30,15 @@ const ConversationItem: React.FC<ConversationItemProps> = ({ conversation, isSel
     : conversation.admin_profile;
   
   const recipientName = recipient?.full_name || 'Unknown User';
-  const hasUnread = conversation.unread_count > 0;
+  
+  // Get global unread count for this student (if it's a student conversation)
+  const globalUnreadCount = (userProfile?.role === 'affiliate_admin' || userProfile?.role === 'admin') 
+    ? getGlobalUnreadCount(conversation.student_id) 
+    : 0;
+  
+  // Use the maximum between conversation unread count and global unread count
+  const effectiveUnreadCount = Math.max(conversation.unread_count, globalUnreadCount);
+  const hasEffectiveUnread = effectiveUnreadCount > 0;
   
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
@@ -74,7 +84,7 @@ const ConversationItem: React.FC<ConversationItemProps> = ({ conversation, isSel
       {/* Content */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between mb-1">
-          <h3 className={`text-sm font-medium text-slate-900 truncate ${hasUnread ? 'font-semibold' : ''}`}>
+          <h3 className={`text-sm font-medium text-slate-900 truncate ${hasEffectiveUnread ? 'font-semibold' : ''}`}>
             {recipientName}
           </h3>
           <span className="text-xs text-slate-500 flex items-center">
@@ -83,12 +93,12 @@ const ConversationItem: React.FC<ConversationItemProps> = ({ conversation, isSel
         </div>
 
         <div className="flex items-center justify-between">
-          <p className={`text-sm text-slate-600 truncate ${hasUnread ? 'font-medium' : ''}`}>
+          <p className={`text-sm text-slate-600 truncate ${hasEffectiveUnread ? 'font-medium' : ''}`}>
             {conversation.last_message || 'No messages yet'}
           </p>
-          {hasUnread && (
+          {hasEffectiveUnread && (
             <span className="ml-2 bg-blue-500 text-white text-xs rounded-full px-2 py-1 min-w-[1.25rem] text-center animate-pulse">
-              {conversation.unread_count > 99 ? '99+' : conversation.unread_count}
+              {effectiveUnreadCount > 99 ? '99+' : effectiveUnreadCount}
             </span>
           )}
         </div>
@@ -106,6 +116,7 @@ const ChatInbox: React.FC<ChatInboxProps> = ({
   const { conversations, loading, error, isInitialLoad, refetchConversations, updateConversationUnreadCount } = useAdminStudentConversations();
   const { markConversationAsRead } = useAdminStudentChatNotifications();
   const { resetUnreadCount } = useUnreadMessages();
+  const { getUnreadCount } = useGlobalStudentUnread();
   const [searchTerm, setSearchTerm] = useState('');
   const [showStudentSelector, setShowStudentSelector] = useState(false);
 
@@ -297,6 +308,7 @@ const ChatInbox: React.FC<ChatInboxProps> = ({
                 conversation={conversation}
                 isSelected={selectedConversationId === conversation.id}
                 onClick={() => handleConversationClick(conversation)}
+                getGlobalUnreadCount={getUnreadCount}
               />
             ))}
           </div>

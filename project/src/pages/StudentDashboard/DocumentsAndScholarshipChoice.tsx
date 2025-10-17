@@ -15,7 +15,10 @@ import {
   ChevronRight,
   ChevronDown,
   MessageCircle,
-  Bot
+  Bot,
+  Plus,
+  X,
+  FileText
 } from 'lucide-react';
 import './DocumentsAndScholarshipChoice.css';
 
@@ -28,13 +31,14 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
   const [isSavingType, setIsSavingType] = useState(false);
   
   // Estados para upload de documentos
-  const [files, setFiles] = useState<Record<string, File | null>>({ 
+  const [files, setFiles] = useState<Record<string, File | File[] | null>>({ 
     passport: null, 
     diploma: null, 
-    funds_proof: null 
+    funds_proof: [] 
   });
   const [uploading, setUploading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
+  const [mergingPdfs, setMergingPdfs] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [showManualReviewMessage, setShowManualReviewMessage] = useState(false);
@@ -78,10 +82,140 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
       .replace(/^_|_$/g, '');
   };
 
+  // Função para obter limite de documentos baseado no tipo de processo
+  const getDocumentLimit = (): number => {
+    const currentProcessType = processType || localStorage.getItem('studentProcessType');
+    switch (currentProcessType) {
+      case 'change_of_status':
+        return 5;
+      case 'transfer':
+        return 10;
+      case 'initial':
+      default:
+        return 5;
+    }
+  };
+
+  // Função para validar tamanho de arquivo
+  const validateFileSize = (file: File): boolean => {
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    return file.size <= maxSize;
+  };
+
+  // Função para validar tamanho total dos arquivos (limite 10MB)
+  const validateTotalSize = (filesList: File[]): boolean => {
+    const totalSize = filesList.reduce((sum, file) => sum + file.size, 0);
+    const maxTotalSize = 10 * 1024 * 1024; // 10MB
+    return totalSize <= maxTotalSize;
+  };
+
+  // Função para fazer merge dos PDFs via Supabase Function
+  const mergeFundsDocuments = async (filePaths: string[]): Promise<string> => {
+    setMergingPdfs(true);
+    try {
+      const SUPABASE_FUNCTIONS_URL = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL || 
+                                    'https://fitpynguasqqutuhzifx.supabase.co/functions/v1';
+      const { data: { session } } = await supabase.auth.getSession();
+      const accessToken = session?.access_token;
+      
+      const mergeResponse = await fetch(`${SUPABASE_FUNCTIONS_URL}/merge-funds-documents`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          user_id: user?.id,
+          file_paths: filePaths
+        }),
+      });
+      
+      if (!mergeResponse.ok) {
+        throw new Error(`Merge request failed: ${mergeResponse.status} ${mergeResponse.statusText}`);
+      }
+      
+      const mergeResult = await mergeResponse.json();
+      
+      if (!mergeResult.success) {
+        throw new Error(mergeResult.error || 'Failed to merge documents');
+      }
+      
+      console.log('✅ Documents merged successfully:', mergeResult.merged_file_path);
+      return mergeResult.merged_file_path;
+      
+    } catch (error) {
+      console.error('Error merging PDFs:', error);
+      throw new Error('Failed to merge PDF documents');
+    } finally {
+      setMergingPdfs(false);
+    }
+  };
+
   // Função para lidar com mudança de arquivo
   const handleFileChange = (type: string, file: File | null) => {
+    if (type === 'funds_proof') {
+      // Para funds_proof, não usar esta função - usar handleFundsFileAdd
+      return;
+    }
     setFiles((prev) => ({ ...prev, [type]: file }));
     setFieldErrors(prev => ({ ...prev, [type]: '' }));
+  };
+
+  // Função para adicionar arquivo de fundos
+  const handleFundsFileAdd = (newFiles: File[]) => {
+    const currentFundsFiles = Array.isArray(files.funds_proof) ? files.funds_proof : [];
+    const documentLimit = getDocumentLimit();
+    
+    // Validar se não excede o limite
+    if (currentFundsFiles.length + newFiles.length > documentLimit) {
+      setFieldErrors(prev => ({ 
+        ...prev, 
+        funds_proof: t('studentDashboard.documentsAndScholarshipChoice.documentLimitExceeded', { limit: documentLimit })
+      }));
+      return;
+    }
+
+    // Validar tamanho individual dos arquivos
+    const invalidSizeFiles = newFiles.filter(file => !validateFileSize(file));
+    if (invalidSizeFiles.length > 0) {
+      setFieldErrors(prev => ({ 
+        ...prev, 
+        funds_proof: t('studentDashboard.documentsAndScholarshipChoice.fileSizeExceeded', { fileName: invalidSizeFiles[0].name })
+      }));
+      return;
+    }
+
+    // Validar se são PDFs
+    const nonPdfFiles = newFiles.filter(file => file.type !== 'application/pdf');
+    if (nonPdfFiles.length > 0) {
+      setFieldErrors(prev => ({ 
+        ...prev, 
+        funds_proof: t('studentDashboard.documentsAndScholarshipChoice.onlyPdfAllowed')
+      }));
+      return;
+    }
+
+    const updatedFiles = [...currentFundsFiles, ...newFiles];
+    
+    // Validar tamanho total
+    if (!validateTotalSize(updatedFiles)) {
+      setFieldErrors(prev => ({ 
+        ...prev, 
+        funds_proof: t('studentDashboard.documentsAndScholarshipChoice.totalSizeExceeded')
+      }));
+      return;
+    }
+
+    setFiles((prev) => ({ ...prev, funds_proof: updatedFiles }));
+    setFieldErrors(prev => ({ ...prev, funds_proof: '' }));
+  };
+
+  // Função para remover arquivo de fundos
+  const handleFundsFileRemove = (index: number) => {
+    const currentFundsFiles = Array.isArray(files.funds_proof) ? files.funds_proof : [];
+    const updatedFiles = currentFundsFiles.filter((_, i) => i !== index);
+    setFiles((prev) => ({ ...prev, funds_proof: updatedFiles }));
+    setFieldErrors(prev => ({ ...prev, funds_proof: '' }));
   };
 
   // Função de upload de documentos (baseada no DocumentUpload.tsx)
@@ -96,32 +230,84 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
       const docUrls: Record<string, string> = {};
       
       for (const doc of DOCUMENT_TYPES) {
-        const file = files[doc.key];
-        if (!file) throw new Error(`Missing file for ${doc.label}`);
+        let fileToUpload: File | null = null;
         
-        const sanitizedFileName = sanitizeFileName(file.name);
-        const { data: storageData, error: storageError } = await supabase.storage
-          .from('student-documents')
-          .upload(`${user.id}/${doc.key}-${Date.now()}-${sanitizedFileName}`, file, { upsert: true });
+        if (doc.key === 'funds_proof') {
+          // Tratar múltiplos arquivos de fundos
+          const fundsFiles = Array.isArray(files.funds_proof) ? files.funds_proof : [];
+          if (fundsFiles.length === 0) {
+            throw new Error(`Missing file for ${doc.label}`);
+          } else if (fundsFiles.length === 1) {
+            // Apenas um arquivo, upload direto
+            fileToUpload = fundsFiles[0];
+            const sanitizedFileName = sanitizeFileName(fileToUpload.name);
+            const { data: storageData, error: storageError } = await supabase.storage
+              .from('student-documents')
+              .upload(`${user.id}/${doc.key}-${Date.now()}-${sanitizedFileName}`, fileToUpload, { upsert: true });
+            
+            if (storageError) throw storageError;
+            if (!storageData?.path) throw new Error('Failed to get storage path');
+            
+            docUrls[doc.key] = storageData.path;
+          } else {
+            // Múltiplos arquivos, fazer upload individual e depois merge
+            const uploadedPaths: string[] = [];
+            
+            for (let i = 0; i < fundsFiles.length; i++) {
+              const file = fundsFiles[i];
+              const sanitizedFileName = sanitizeFileName(file.name);
+              const { data: storageData, error: storageError } = await supabase.storage
+                .from('student-documents')
+                .upload(`${user.id}/temp_funds_${i}_${Date.now()}_${sanitizedFileName}`, file, { upsert: true });
+              
+              if (storageError) throw storageError;
+              if (!storageData?.path) throw new Error('Failed to get storage path');
+              
+              uploadedPaths.push(storageData.path);
+            }
+            
+            // Fazer merge via Supabase Function
+            try {
+              const mergedFilePath = await mergeFundsDocuments(uploadedPaths);
+              docUrls[doc.key] = mergedFilePath;
+            } catch (mergeError) {
+              throw new Error(`Failed to merge funds documents: ${mergeError}`);
+            }
+          }
+        } else {
+          // Documentos únicos (passport, diploma)
+          const file = files[doc.key] as File | null;
+          if (!file) throw new Error(`Missing file for ${doc.label}`);
+          fileToUpload = file;
+          
+          const sanitizedFileName = sanitizeFileName(fileToUpload.name);
+          const { data: storageData, error: storageError } = await supabase.storage
+            .from('student-documents')
+            .upload(`${user.id}/${doc.key}-${Date.now()}-${sanitizedFileName}`, fileToUpload, { upsert: true });
+          
+          if (storageError) throw storageError;
+          if (!storageData?.path) throw new Error('Failed to get storage path');
+          
+          docUrls[doc.key] = storageData.path;
+        }
         
-        if (storageError) throw storageError;
-        
-        if (!storageData?.path) throw new Error('Failed to get storage path');
-        
-        docUrls[doc.key] = storageData.path; // Salvar o caminho do storage, não a URL pública
-        
+        // Inserir registro no banco para todos os tipos de documento
         const { error: insertError } = await supabase.from('student_documents').insert({
           user_id: user.id,
           type: doc.key,
-          file_url: storageData.path, // Salvar o caminho do storage
+          file_url: docUrls[doc.key], // Usar o caminho final (merged ou original)
           status: 'pending',
         });
         
         if (insertError) throw insertError;
         
         uploadedDocs.push({ 
-          name: file.name, 
-          url: storageData.path, // Salvar com 'url' para compatibilidade com SelectionProcess
+          name: doc.key === 'funds_proof' ? 
+            (Array.isArray(files.funds_proof) && files.funds_proof.length > 1 ? 
+              `funds_proof_merged.pdf` : 
+              (files.funds_proof as File[])[0]?.name) :
+            (fileToUpload as File)?.name,
+          url: docUrls[doc.key],
           type: doc.key, 
           uploaded_at: new Date().toISOString(),
           status: 'pending'
@@ -514,7 +700,13 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
   };
 
   // Verificar se todos os arquivos foram selecionados
-  const allFilesSelected = DOCUMENT_TYPES.every((doc) => files[doc.key]);
+  const allFilesSelected = DOCUMENT_TYPES.every((doc) => {
+    if (doc.key === 'funds_proof') {
+      const fundsFiles = Array.isArray(files.funds_proof) ? files.funds_proof : [];
+      return fundsFiles.length > 0;
+    }
+    return files[doc.key] !== null;
+  });
 
   // Função para detectar se o erro é sobre documentos não estarem em inglês
   const isLanguageError = (errorMessage: string): boolean => {
@@ -883,8 +1075,155 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
             <div className="space-y-3 sm:space-y-4 mb-6 sm:mb-8">
               {DOCUMENT_TYPES.map((doc) => {
                 const IconComponent = doc.icon;
-                const hasFile = files[doc.key];
                 const hasError = fieldErrors[doc.key];
+                
+                // Tratamento especial para funds_proof (múltiplos arquivos)
+                if (doc.key === 'funds_proof') {
+                  const fundsFiles = Array.isArray(files.funds_proof) ? files.funds_proof : [];
+                  const documentLimit = getDocumentLimit();
+                  const hasFiles = fundsFiles.length > 0;
+                  
+                  return (
+                    <div key={doc.key} className={`relative p-4 sm:p-6 rounded-xl sm:rounded-2xl border-2 transition-all duration-200 ${
+                      hasError ? 'border-red-300 bg-red-50' :
+                      hasFiles ? 'border-green-300 bg-green-50' : 
+                      'border-slate-200 bg-slate-50 hover:border-blue-300'
+                    }`}>
+                      <div className="flex flex-col sm:flex-row sm:items-start gap-4 sm:gap-6">
+                        <div className={`flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-full flex-shrink-0 ${
+                          hasError ? 'bg-yellow-100' :
+                          hasFiles ? 'bg-green-100' : 'bg-slate-100'
+                        }`}>
+                          <IconComponent className={`w-5 h-5 sm:w-6 sm:h-6 ${
+                            hasError ? 'text-yellow-600' :
+                            hasFiles ? 'text-green-600' : 'text-slate-600'
+                          }`} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-2">
+                            <h3 className="font-bold text-slate-800 text-sm sm:text-base">{doc.label}</h3>
+                            <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded-full">
+                              {fundsFiles.length}/{documentLimit} {t('studentDashboard.documentsAndScholarshipChoice.documents')}
+                            </span>
+                          </div>
+                          <p className="text-xs sm:text-sm text-slate-600 mb-3">{doc.description}</p>
+                          
+                          <div className="space-y-2 sm:space-y-3">
+                            {/* Área de drag and drop para múltiplos arquivos */}
+                            <div 
+                              className="border-2 border-dashed border-blue-300 rounded-lg p-4 text-center hover:border-blue-400 transition-colors cursor-pointer"
+                              onDrop={(e) => {
+                                e.preventDefault();
+                                const droppedFiles = Array.from(e.dataTransfer.files) as File[];
+                                handleFundsFileAdd(droppedFiles);
+                              }}
+                              onDragOver={(e) => e.preventDefault()}
+                              onDragEnter={(e) => e.preventDefault()}
+                            >
+                              <input
+                                type="file"
+                                accept="application/pdf"
+                                multiple
+                                onChange={(e) => {
+                                  const selectedFiles = Array.from(e.target.files || []) as File[];
+                                  handleFundsFileAdd(selectedFiles);
+                                  e.target.value = '';
+                                }}
+                                disabled={uploading || analyzing || mergingPdfs}
+                                className="hidden"
+                                id={`funds-upload-${doc.key}`}
+                              />
+                              <label htmlFor={`funds-upload-${doc.key}`} className="cursor-pointer">
+                                <Upload className="w-8 h-8 text-blue-500 mx-auto mb-2" />
+                                <p className="text-sm text-blue-600 font-medium">
+                                  {t('studentDashboard.documentsAndScholarshipChoice.dragDropFiles')}
+                                </p>
+                                <p className="text-xs text-slate-500 mt-1">
+                                  {t('studentDashboard.documentsAndScholarshipChoice.onlyPdfSupported')}
+                                </p>
+                              </label>
+                            </div>
+
+                            {/* Lista de arquivos selecionados */}
+                            {fundsFiles.length > 0 && (
+                              <div className="space-y-2">
+                                {fundsFiles.map((file, index) => (
+                                  <div key={index} className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-lg shadow-sm">
+                                    <div className="flex items-center space-x-3">
+                                      <FileText className="w-4 h-4 text-red-500" />
+                                      <div>
+                                        <p className="text-sm font-medium text-slate-800 truncate max-w-48">{file.name}</p>
+                                        <p className="text-xs text-slate-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                                      </div>
+                                    </div>
+                                    <button
+                                      onClick={() => handleFundsFileRemove(index)}
+                                      disabled={uploading || analyzing || mergingPdfs}
+                                      className="p-1 text-slate-400 hover:text-red-500 transition-colors disabled:opacity-50"
+                                    >
+                                      <X className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Botão para adicionar mais documentos */}
+                            {fundsFiles.length > 0 && fundsFiles.length < documentLimit && (
+                              <button
+                                onClick={() => document.getElementById(`funds-upload-${doc.key}`)?.click()}
+                                disabled={uploading || analyzing || mergingPdfs}
+                                className="w-full flex items-center justify-center px-4 py-2 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors font-medium text-sm disabled:opacity-50"
+                              >
+                                <Plus className="w-4 h-4 mr-2" />
+                                {t('studentDashboard.documentsAndScholarshipChoice.addMoreDocuments')}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Mensagem específica para comprovação de fundos */}
+                      <div className="mt-4">
+                        <div className="text-xs bg-amber-50 border border-amber-200 text-amber-800 flex items-center rounded-md p-2">
+                          <DollarSign className="w-3 h-3 mr-1.5 flex-shrink-0" />
+                          <span className="font-medium">Minimum balance required:</span> <span className="font-semibold">$22,000 USD</span>
+                        </div>
+                      </div>
+
+                      {/* Erro específico para funds_proof */}
+                      {hasError && (
+                        <div className={`mt-3 flex items-center text-xs sm:text-sm p-2 rounded-lg ${
+                          isLanguageError(hasError) 
+                            ? 'text-amber-700 bg-amber-50 border border-amber-200' 
+                            : isAccessError(hasError)
+                            ? 'text-blue-700 bg-blue-50 border border-blue-200'
+                            : isFundsDataError(hasError)
+                            ? 'text-green-700 bg-green-50 border border-green-200'
+                            : isCurrencyFieldError(hasError)
+                            ? 'text-purple-700 bg-purple-50 border border-purple-200'
+                            : 'text-red-600 bg-red-50 border border-red-200'
+                        }`}>
+                          <div className={`w-2 h-2 rounded-full mr-2 flex-shrink-0 ${
+                            isLanguageError(hasError) 
+                              ? 'bg-amber-500' 
+                              : isAccessError(hasError)
+                              ? 'bg-blue-500'
+                              : isFundsDataError(hasError)
+                              ? 'bg-green-500'
+                              : isCurrencyFieldError(hasError)
+                              ? 'bg-purple-500'
+                              : 'bg-red-500'
+                          }`}></div>
+                          <span className="break-words">{hasError}</span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+
+                // Documentos únicos (passport, diploma)
+                const hasFile = files[doc.key];
                 
                 return (
                   <div key={doc.key} className={`relative p-4 sm:p-6 rounded-xl sm:rounded-2xl border-2 transition-all duration-200 ${
@@ -916,23 +1255,23 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
                                 type="file"
                                 accept="application/pdf,image/*"
                                 onChange={(e) => handleFileChange(doc.key, e.target.files?.[0] || null)}
-                                disabled={uploading || analyzing}
+                                disabled={uploading || analyzing || mergingPdfs}
                                 className="hidden"
                               />
                             </label>
                             <span className="text-sm overflow-hidden text-ellipsis whitespace-nowrap text-slate-500">
-                              {hasFile ? hasFile.name : t('studentDashboard.documentsAndScholarshipChoice.noFileChosen')}
+                              {hasFile ? (hasFile as File).name : t('studentDashboard.documentsAndScholarshipChoice.noFileChosen')}
                             </span>
                           </div>
                           
                           {hasFile && (
                             <div className="flex items-center text-xs sm:text-sm text-green-600 bg-green-50 p-2 rounded-lg">
                               <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-2 flex-shrink-0" />
-                              <span className="truncate">{hasFile.name}</span>
+                              <span className="truncate">{(hasFile as File).name}</span>
                             </div>
                           )}
                           
-                          {hasError ? (
+                          {hasError && (
                             <div className={`flex items-center text-xs sm:text-sm p-2 rounded-lg ${
                               isLanguageError(hasError) 
                                 ? 'text-amber-700 bg-amber-50 border border-amber-200' 
@@ -968,21 +1307,6 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
                                 }
                               </span>
                             </div>
-                          ) : (
-                            <>
-                              {/* Mensagem específica para comprovação de fundos */}
-                              {doc.key === 'funds_proof' && (
-                                <div className="mb-2">
-                                  <div className="flex items-center">
-                                    
-                                    <div className="text-xs bg-amber-50 border border-amber-200 text-amber-800 flex items-center rounded-md p-2">
-                                    <DollarSign className="w-3 h-3 mr-1.5 flex-shrink-0" />
-                                      <span className="font-medium">Minimum balance required:</span> <span className="font-semibold">$22,000 USD</span>
-                                    </div>
-                                  </div>
-                                </div>
-                              )}
-                            </>
                           )}
                         </div>
                       </div>
@@ -992,16 +1316,14 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
               })}
             </div>
 
-
-
             {/* Upload Button */}
             <div className="text-center flex flex-col sm:flex-row justify-center items-center space-y-3 sm:space-y-0 sm:space-x-4">
               <button
                 onClick={handleUpload}
-                disabled={uploading || !allFilesSelected || analyzing}
+                disabled={uploading || !allFilesSelected || analyzing || mergingPdfs}
                 className="bg-blue-600 text-white px-8 sm:px-12 py-3 sm:py-4 rounded-xl sm:rounded-2xl font-bold text-sm sm:text-lg hover:bg-blue-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 w-full sm:w-auto"
               >
-                {uploading ? (
+                {(mergingPdfs || uploading) ? (
                   <span className="flex items-center justify-center">
                     <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full mr-2"></div>
                     {t('studentDashboard.documentsAndScholarshipChoice.uploadingDocuments')}
