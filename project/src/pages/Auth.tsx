@@ -229,6 +229,28 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
            setLoading(false);
            return;
          }
+         
+         // ✅ NOVA VALIDAÇÃO: Verificar se código de referência é válido (se fornecido)
+         if (formData.referralCode && formData.referralCode.trim()) {
+           // Se está carregando a validação, aguardar
+           if (referralCodeLoading) {
+             setError(t('authPage.register.referralCode.waitingValidation'));
+             setLoading(false);
+             return;
+           }
+           // Se a validação falhou, bloquear submissão
+           if (referralCodeValid === false) {
+             setError(t('authPage.register.referralCode.validationError'));
+             setLoading(false);
+             return;
+           }
+           // Se ainda não foi validado (null), aguardar validação
+           if (referralCodeValid === null) {
+             setError(t('authPage.register.referralCode.waitingValidation'));
+             setLoading(false);
+             return;
+           }
+         }
         
         console.log('✅ [AUTH] Validação de telefone passou:', formData.phone);
         
@@ -705,10 +727,10 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         {referralCodeValid === true && (
                           <p className="text-green-600 flex items-center">
                             <CheckCircle className="h-3 w-3 mr-1" />
-                            Detected: {referralCodeType === 'seller' ? 'Seller Code' : 'Matricula Rewards'}
+                            Detected: {referralCodeType === 'seller' ? t('authPage.register.sellerReferralCode.title') : t('authPage.register.referralCode.title')}
                             {isReferralCodeLocked && (
                               <span className="ml-2 text-blue-600">
-                                (from link)
+                                {t('authPage.register.referralCode.appliedFromLink')}
                               </span>
                             )}
                           </p>
@@ -716,7 +738,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         {referralCodeValid === false && (
                           <p className="text-red-600 flex items-center">
                             <X className="h-3 w-3 mr-1" />
-                            Código inválido
+                            {t('authPage.register.referralCode.invalid')}
                           </p>
                         )}
                       </div>
