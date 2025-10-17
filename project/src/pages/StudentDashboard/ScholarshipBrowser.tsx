@@ -504,12 +504,6 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
       return [];
     }
     
-    // Debounce para evitar filtros excessivos
-    const now = Date.now();
-    if (now - (window as any).lastFilterTime < 500) { // 500ms debounce
-      return [];
-    }
-    (window as any).lastFilterTime = now;
     
     // Busca por múltiplas palavras-chave (otimizada)
     const searchWords = appliedSearch.trim().toLowerCase().split(/\s+/).filter(Boolean);
@@ -563,7 +557,8 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
       
       // Filtro automático baseado na faixa de bolsa desejada do usuário
       // Mostrar apenas bolsas com valor >= valor selecionado pelo seller
-      const matchesDesiredRange = scholarshipValue >= desiredScholarshipRange;
+      // ✅ Se desiredScholarshipRange for null/undefined, mostrar TODAS as bolsas (sem filtro de valor)
+      const matchesDesiredRange = desiredScholarshipRange === null || desiredScholarshipRange === undefined || scholarshipValue >= desiredScholarshipRange;
       
   // Exclude scholarships from universities that are not approved (if we have an approved set)
   const universityId = scholarship.universities?.id ?? scholarship.university_id ?? null;
@@ -594,6 +589,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
           return 0;
       }
     });
+    
     
     return sorted;
   }, [
@@ -677,7 +673,8 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
 
       // Filtro automático baseado na faixa de bolsa desejada do usuário
       // Mostrar apenas bolsas com valor >= valor selecionado pelo seller
-      const matchesDesiredRange = scholarshipValue >= desiredScholarshipRange;
+      // ✅ Se desiredScholarshipRange for null/undefined, mostrar TODAS as bolsas (sem filtro de valor)
+      const matchesDesiredRange = desiredScholarshipRange === null || desiredScholarshipRange === undefined || scholarshipValue >= desiredScholarshipRange;
 
   const universityId = scholarship.universities?.id ?? scholarship.university_id ?? null;
   const universityName = scholarship.universities?.name ?? scholarship.university_name ?? '';
