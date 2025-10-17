@@ -98,6 +98,27 @@ export function getStripeEnvironmentVariables(envInfo: EnvironmentInfo) {
 }
 
 /**
+ * Obtém todos os webhook secrets disponíveis para tentativa de verificação
+ * Útil para webhooks do Stripe que não enviam headers de ambiente
+ */
+export function getAllWebhookSecrets(): { env: Environment; secret: string }[] {
+  const secrets = [];
+  
+  const prodSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET_PROD');
+  const stagingSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET_STAGING');
+  const testSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET_TEST');
+  
+  if (prodSecret) secrets.push({ env: 'production' as Environment, secret: prodSecret });
+  if (stagingSecret) secrets.push({ env: 'staging' as Environment, secret: stagingSecret });
+  if (testSecret) secrets.push({ env: 'test' as Environment, secret: testSecret });
+  
+  console.log(`[webhook-secrets] Encontrados ${secrets.length} webhook secrets disponíveis:`, 
+    secrets.map(s => `${s.env}: ${s.secret.substring(0, 20)}...`));
+  
+  return secrets;
+}
+
+/**
  * Valida se as variáveis de ambiente estão configuradas corretamente
  */
 export function validateStripeEnvironmentVariables(config: ReturnType<typeof getStripeEnvironmentVariables>, envInfo: EnvironmentInfo): string[] {
