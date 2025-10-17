@@ -2,6 +2,7 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import Stripe from 'npm:stripe@17.7.0';
 import { createClient } from 'npm:@supabase/supabase-js@2.49.1';
 import { getStripeConfig } from '../stripe-config.ts';
+import { getAllWebhookSecrets, getStripeEnvironmentVariables } from '../shared/environment-detector.ts';
 // Import jsPDF for Deno environment
 // @ts-ignore
 import jsPDF from "https://esm.sh/jspdf@2.5.1?target=deno";
@@ -369,32 +370,51 @@ async function verifyStripeSignature(body, signature, secret) {
 // Função principal do webhook
 Deno.serve(async (req)=>{
   try {
-    // Obter configuração do Stripe baseada no ambiente detectado
-    const config = getStripeConfig(req);
-    
-    // Criar instância do Stripe com a chave correta para o ambiente
-    const stripe = new Stripe(config.secretKey, {
-      appInfo: {
-        name: 'MatriculaUSA Integration',
-        version: '1.0.0'
-      }
-    });
-
-    console.log(`🔧 Using Stripe in ${config.environment.environment} mode`);
-
     const sig = req.headers.get('stripe-signature');
     const body = await req.text();
     
-    // Verificação manual da assinatura usando o webhook secret correto para o ambiente
-    const isValid = await verifyStripeSignature(body, sig, config.webhookSecret!);
-    if (!isValid) {
-      console.error(`❌ Webhook signature verification failed for ${config.environment.environment} environment`);
+    // Tentar verificar com todos os webhook secrets disponíveis
+    const allSecrets = getAllWebhookSecrets();
+    let validConfig = null;
+    let isValid = false;
+    
+    console.log(`[stripe-webhook] Tentando verificar assinatura com ${allSecrets.length} secrets disponíveis...`);
+    
+    for (const { env, secret } of allSecrets) {
+      isValid = await verifyStripeSignature(body, sig, secret);
+      if (isValid) {
+        console.log(`✅ Assinatura verificada com sucesso usando ambiente: ${env}`);
+        validConfig = { environment: env, secret };
+        break;
+      }
+    }
+    
+    if (!isValid || !validConfig) {
+      console.error('❌ Webhook signature verification failed with all available secrets');
       return new Response(JSON.stringify({
         error: 'Webhook signature verification failed.'
       }), {
         status: 400
       });
     }
+    
+    // Obter configuração completa do Stripe para o ambiente correto
+    const envInfo = {
+      environment: validConfig.environment,
+      isProduction: validConfig.environment === 'production',
+      isStaging: validConfig.environment === 'staging',
+      isTest: validConfig.environment === 'test'
+    };
+    
+    const stripeVars = getStripeEnvironmentVariables(envInfo);
+    const stripe = new Stripe(stripeVars.secretKey, {
+      appInfo: {
+        name: 'MatriculaUSA Integration',
+        version: '1.0.0'
+      }
+    });
+
+    console.log(`🔧 Using Stripe in ${validConfig.environment} mode`);
     // Parse o evento manualmente
     let event;
     try {
@@ -415,7 +435,7 @@ Deno.serve(async (req)=>{
     // Processar eventos de checkout para cartões e PIX
     if (event.type === 'checkout.session.completed') {
       console.log('[stripe-webhook] Processando checkout.session.completed...');
-      return await handleCheckoutSessionCompleted(event.data.object);
+      return await handleCheckoutSessionCompleted(event.data.object, stripe);
     } else if (event.type === 'checkout.session.async_payment_succeeded') {
       console.log('[stripe-webhook] Processando checkout.session.async_payment_succeeded (PIX)...');
       console.log('[PIX] 🎉 PIX pago com sucesso!');
@@ -425,18 +445,70 @@ Deno.serve(async (req)=>{
       console.log('[PIX] 🔗 Success URL:', event.data.object.success_url);
       console.log('[PIX] 📊 Payment Status:', event.data.object.payment_status);
       console.log('[PIX] 📊 Session Status:', event.data.object.status);
-      return await handleCheckoutSessionCompleted(event.data.object);
+      return await handleCheckoutSessionCompleted(event.data.object, stripe);
     } else if (event.type === 'checkout.session.async_payment_failed') {
       console.log('[stripe-webhook] Processando checkout.session.async_payment_failed (PIX falhou)...');
       return await handleCheckoutSessionFailed(event.data.object);
     } else if (event.type === 'payment_intent.succeeded') {
-      console.log('[stripe-webhook] Ignorando payment_intent.succeeded para evitar duplicação (já processado por checkout.session.completed)');
-      return new Response(JSON.stringify({
-        received: true,
-        message: 'payment_intent.succeeded ignorado para evitar duplicação'
-      }), {
-        status: 200
+      console.log('[stripe-webhook] Processando payment_intent.succeeded...');
+      
+      // Para PIX, payment_intent.succeeded é o evento principal de confirmação
+      const paymentIntent = event.data.object;
+      console.log('[stripe-webhook] Payment Intent details:', {
+        id: paymentIntent.id,
+        status: paymentIntent.status,
+        amount_received: paymentIntent.amount_received,
+        amount: paymentIntent.amount,
+        currency: paymentIntent.currency,
+        payment_method_types: paymentIntent.payment_method_types
       });
+      
+      // Verificar se é PIX
+      const isPixPayment = paymentIntent.payment_method_types?.includes('pix');
+      
+      if (isPixPayment && paymentIntent.status === 'succeeded' && paymentIntent.amount_received > 0) {
+        console.log('[stripe-webhook] 🎉 PIX pago com sucesso via payment_intent.succeeded!');
+        console.log('[stripe-webhook] 💰 Valor recebido:', paymentIntent.amount_received);
+        console.log('[stripe-webhook] 💱 Moeda:', paymentIntent.currency);
+        
+        // Buscar a sessão de checkout correspondente para processar o pagamento
+        try {
+          const sessions = await stripe.checkout.sessions.list({
+            payment_intent: paymentIntent.id,
+            limit: 1
+          });
+          
+          if (sessions.data.length > 0) {
+            const session = sessions.data[0];
+            console.log('[stripe-webhook] 🔗 Sessão encontrada:', session.id);
+            return await handleCheckoutSessionCompleted(session, stripe);
+          } else {
+            console.log('[stripe-webhook] ⚠️ Nenhuma sessão encontrada para o Payment Intent:', paymentIntent.id);
+            return new Response(JSON.stringify({
+              received: true,
+              message: 'Payment Intent processado mas sessão não encontrada'
+            }), {
+              status: 200
+            });
+          }
+        } catch (stripeError) {
+          console.error('[stripe-webhook] Erro ao buscar sessão:', stripeError);
+          return new Response(JSON.stringify({
+            received: true,
+            message: `Erro ao processar payment_intent.succeeded: ${stripeError.message}`
+          }), {
+            status: 200
+          });
+        }
+      } else {
+        console.log('[stripe-webhook] Ignorando payment_intent.succeeded (não é PIX ou não foi pago)');
+        return new Response(JSON.stringify({
+          received: true,
+          message: 'payment_intent.succeeded ignorado (não é PIX pago)'
+        }), {
+          status: 200
+        });
+      }
     } else {
       console.log(`[stripe-webhook] Evento não suportado: ${event.type}`);
       return new Response(JSON.stringify({
@@ -491,20 +563,69 @@ async function handleCheckoutSessionFailed(session) {
   });
 }
 // Função para processar checkout.session.completed
-async function handleCheckoutSessionCompleted(session) {
+async function handleCheckoutSessionCompleted(session, stripe) {
   console.log('[stripe-webhook] handleCheckoutSessionCompleted called with session:', JSON.stringify(session, null, 2));
   const stripeData = session;
   console.log('[stripe-webhook] stripeData:', JSON.stringify(stripeData, null, 2));
   
   // ✅ VERIFICAÇÃO CRÍTICA: Só processar se o pagamento foi realmente realizado
   if (session.payment_status !== 'paid') {
-    console.log(`[stripe-webhook] ⚠️ Pagamento não foi realizado (payment_status: ${session.payment_status}), ignorando processamento`);
-    return new Response(JSON.stringify({
-      received: true,
-      message: `Payment not completed (status: ${session.payment_status})`
-    }), {
-      status: 200
-    });
+    // Para PIX, verificar se o pagamento foi realmente realizado consultando o Stripe
+    const isPixPayment = session.payment_method_types?.includes('pix') || session.metadata?.payment_method === 'pix';
+    
+    if (isPixPayment && session.payment_intent) {
+      console.log(`[stripe-webhook] 🔍 PIX detectado com payment_status: ${session.payment_status}, verificando status real no Stripe...`);
+      
+      try {
+        // Consultar o Payment Intent diretamente no Stripe para verificar o status real
+        const paymentIntent = await stripe.paymentIntents.retrieve(session.payment_intent);
+        console.log(`[stripe-webhook] 📊 Payment Intent status:`, {
+          id: paymentIntent.id,
+          status: paymentIntent.status,
+          amount_received: paymentIntent.amount_received,
+          amount: paymentIntent.amount,
+          currency: paymentIntent.currency
+        });
+        
+        // Se o Payment Intent está pago, processar mesmo com payment_status unpaid
+        if (paymentIntent.status === 'succeeded' && paymentIntent.amount_received > 0) {
+          console.log(`[stripe-webhook] ✅ PIX realmente pago! Payment Intent status: ${paymentIntent.status}, amount_received: ${paymentIntent.amount_received}`);
+          // Continuar com o processamento
+        } else {
+          console.log(`[stripe-webhook] ❌ PIX não foi pago. Payment Intent status: ${paymentIntent.status}`);
+          return new Response(JSON.stringify({
+            received: true,
+            message: `PIX payment not completed (Payment Intent status: ${paymentIntent.status})`
+          }), {
+            status: 200
+          });
+        }
+      } catch (stripeError) {
+        console.error(`[stripe-webhook] Erro ao consultar Payment Intent:`, stripeError);
+        return new Response(JSON.stringify({
+          received: true,
+          message: `Error checking payment status: ${stripeError.message}`
+        }), {
+          status: 200
+        });
+      }
+    } else {
+      console.log(`[stripe-webhook] ⚠️ Pagamento não foi realizado (payment_status: ${session.payment_status}), ignorando processamento`);
+      console.log(`[stripe-webhook] 📊 Detalhes da sessão:`, {
+        id: session.id,
+        status: session.status,
+        payment_status: session.payment_status,
+        payment_method_types: session.payment_method_types,
+        payment_intent: session.payment_intent,
+        metadata: session.metadata
+      });
+      return new Response(JSON.stringify({
+        received: true,
+        message: `Payment not completed (status: ${session.payment_status})`
+      }), {
+        status: 200
+      });
+    }
   }
   
   // Verificar se já foi processado para evitar duplicação

@@ -171,7 +171,15 @@ Deno.serve(async (req) => {
     // 1) Se veio amount no payload/metadata, usa price_data com esse valor (centavos)
     // 2) Senão, se usuário tem pacote, usa o scholarship_fee do pacote
     // 3) Senão, fallback para price_id (mantém compatibilidade)
-    const explicitAmount = Number(metadata?.final_amount ?? amount);
+    const explicitAmount = Number(metadata?.final_amount ?? metadata?.scholarship_fee_amount ?? metadata?.amount ?? amount);
+    
+    console.log('[stripe-checkout-scholarship-fee] 🔍 Debug valores:', {
+      'metadata.final_amount': metadata?.final_amount,
+      'metadata.scholarship_fee_amount': metadata?.scholarship_fee_amount,
+      'metadata.amount': metadata?.amount,
+      'amount': amount,
+      'explicitAmount': explicitAmount
+    });
     
     // Garantir valor mínimo de $0.50 USD
     const minAmount = 0.50;
@@ -197,8 +205,17 @@ Deno.serve(async (req) => {
       ];
       console.log('[stripe-checkout-scholarship-fee] ✅ Usando amount explícito:', payment_method === 'pix' ? `BRL ${finalAmount * exchangeRate}` : `USD ${finalAmount}`);
     } else if (userPackageFees && typeof userPackageFees.scholarship_fee === 'number') {
-      // Garantir valor mínimo para pacote também
-      const packageAmount = userPackageFees.scholarship_fee < minAmount ? minAmount : userPackageFees.scholarship_fee;
+      // ⚠️ FALLBACK: Usando valor do pacote, mas priorizando $900 para scholarship fee
+      let packageAmount = userPackageFees.scholarship_fee;
+      
+      // Se o valor do pacote for $400 (legacy), usar $900 (valor correto da scholarship fee)
+      if (packageAmount === 400) {
+        packageAmount = 900;
+        console.log('[stripe-checkout-scholarship-fee] 🔧 CORREÇÃO: Valor do pacote era $400, ajustando para $900 (scholarship fee padrão)');
+      }
+      
+      packageAmount = packageAmount < minAmount ? minAmount : packageAmount;
+      console.log('[stripe-checkout-scholarship-fee] ⚠️ FALLBACK: Usando valor do pacote (ajustado):', packageAmount, 'USD');
       const dynamicAmount = Math.round(packageAmount * 100);
       sessionConfig.line_items = [
         {
@@ -221,7 +238,8 @@ Deno.serve(async (req) => {
           quantity: 1,
         },
       ];
-      console.log('[stripe-checkout-scholarship-fee] ⚠️ Fallback usando price_id:', price_id);
+      console.log('[stripe-checkout-scholarship-fee] ⚠️ ÚLTIMO FALLBACK: Usando price_id:', price_id);
+      console.log('[stripe-checkout-scholarship-fee] ⚠️ ATENÇÃO: Nenhum valor explícito encontrado, usando preço do Stripe');
     }
 
     const session = await stripe.checkout.sessions.create(sessionConfig);
