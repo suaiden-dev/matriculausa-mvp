@@ -1754,21 +1754,21 @@ const AdminStudentDetails: React.FC = () => {
         // Marcar scholarship fee como pago na scholarship_applications
         let targetApplicationId = applicationId;
         
-        // Se não foi fornecido applicationId, buscar a aplicação aprovada ou mais recente
+        // Se não foi fornecido applicationId, buscar a aplicação que tem application fee pago
         if (!targetApplicationId) {
           const { data: applications, error: fetchError } = await supabase
             .from('scholarship_applications')
-            .select('id, status')
+            .select('id, status, is_application_fee_paid')
             .eq('student_id', student.student_id)
             .order('created_at', { ascending: false });
 
           if (fetchError) throw fetchError;
 
-          // Se há uma aplicação aprovada, usar ela; senão usar a mais recente
-          const targetApplication = applications?.find(app => app.status === 'approved') || applications?.[0];
+          // Buscar especificamente a aplicação que tem application fee pago
+          const targetApplication = applications?.find(app => app.is_application_fee_paid === true);
           
           if (!targetApplication) {
-            throw new Error('No application found for this student');
+            throw new Error('No application with paid application fee found for this student');
           }
           
           targetApplicationId = targetApplication.id;
@@ -4438,11 +4438,11 @@ const AdminStudentDetails: React.FC = () => {
                           <span className="text-sm font-medium text-red-600">Not Paid</span>
                         </div>
                          {isPlatformAdmin && (() => {
-                           // Buscar aplicação aprovada para scholarship fee
-                           const approvedApp = student.all_applications?.find((app: any) => app.status === 'approved');
-                           return approvedApp && (
+                           // Buscar aplicação que tem application fee pago para scholarship fee
+                           const paidApplicationApp = student.all_applications?.find((app: any) => app.is_application_fee_paid === true);
+                           return paidApplicationApp && (
                              <button
-                               onClick={() => openPaymentModal('scholarship', approvedApp.id)}
+                               onClick={() => openPaymentModal('scholarship', paidApplicationApp.id)}
                                disabled={markingAsPaid[`${student.student_id}:scholarship`]}
                                className="px-4 py-2 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-sm rounded-lg flex items-center space-x-2 w-fit"
                              >
