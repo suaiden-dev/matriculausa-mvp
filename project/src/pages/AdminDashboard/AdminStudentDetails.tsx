@@ -689,14 +689,33 @@ const AdminStudentDetails: React.FC = () => {
         let lockedApplication = null;
         let activeApplication = null;
         if (s.scholarship_applications && s.scholarship_applications.length > 0) {
-          // Priorizar aplicação enrolled, depois approved
-          lockedApplication = s.scholarship_applications.find((app: any) => app.status === 'enrolled') ||
-                             s.scholarship_applications.find((app: any) => app.status === 'approved');
+          console.log('🔍 DEBUG scholarship_applications:', s.scholarship_applications.map((app: any) => ({
+            id: app.id,
+            status: app.status,
+            is_application_fee_paid: app.is_application_fee_paid,
+            is_scholarship_fee_paid: app.is_scholarship_fee_paid,
+            scholarship_title: app.scholarships?.title
+          })));
+          
+          // Priorizar aplicação enrolled, depois approved com application fee pago, depois approved
+          const enrolledApp = s.scholarship_applications.find((app: any) => app.status === 'enrolled');
+          const approvedWithFeeApp = s.scholarship_applications.find((app: any) => app.status === 'approved' && app.is_application_fee_paid);
+          const anyApprovedApp = s.scholarship_applications.find((app: any) => app.status === 'approved');
+          
+          lockedApplication = enrolledApp || approvedWithFeeApp || anyApprovedApp;
+          
+          console.log('🔍 DEBUG lockedApplication selection:', {
+            enrolledApp: enrolledApp?.id,
+            approvedWithFeeApp: approvedWithFeeApp?.id,
+            anyApprovedApp: anyApprovedApp?.id,
+            finalLockedApp: lockedApplication?.id
+          });
           
           // Se não há aplicação locked, buscar a aplicação mais recente para o student_process_type
           if (!lockedApplication) {
             activeApplication = s.scholarship_applications
               .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+            console.log('🔍 DEBUG activeApplication:', activeApplication?.id);
           }
         }
 
@@ -1754,21 +1773,21 @@ const AdminStudentDetails: React.FC = () => {
         // Marcar scholarship fee como pago na scholarship_applications
         let targetApplicationId = applicationId;
         
-        // Se não foi fornecido applicationId, buscar a aplicação que tem application fee pago
+        // Se não foi fornecido applicationId, buscar a aplicação aprovada ou mais recente
         if (!targetApplicationId) {
           const { data: applications, error: fetchError } = await supabase
             .from('scholarship_applications')
-            .select('id, status, is_application_fee_paid')
+            .select('id, status')
             .eq('student_id', student.student_id)
             .order('created_at', { ascending: false });
 
           if (fetchError) throw fetchError;
 
-          // Buscar especificamente a aplicação que tem application fee pago
-          const targetApplication = applications?.find(app => app.is_application_fee_paid === true);
+          // Se há uma aplicação aprovada, usar ela; senão usar a mais recente
+          const targetApplication = applications?.find(app => app.status === 'approved') || applications?.[0];
           
           if (!targetApplication) {
-            throw new Error('No application with paid application fee found for this student');
+            throw new Error('No application found for this student');
           }
           
           targetApplicationId = targetApplication.id;
@@ -4438,11 +4457,11 @@ const AdminStudentDetails: React.FC = () => {
                           <span className="text-sm font-medium text-red-600">Not Paid</span>
                         </div>
                          {isPlatformAdmin && (() => {
-                           // Buscar aplicação que tem application fee pago para scholarship fee
-                           const paidApplicationApp = student.all_applications?.find((app: any) => app.is_application_fee_paid === true);
-                           return paidApplicationApp && (
+                           // Buscar aplicação aprovada para scholarship fee
+                           const approvedApp = student.all_applications?.find((app: any) => app.status === 'approved');
+                           return approvedApp && (
                              <button
-                               onClick={() => openPaymentModal('scholarship', paidApplicationApp.id)}
+                               onClick={() => openPaymentModal('scholarship', approvedApp.id)}
                                disabled={markingAsPaid[`${student.student_id}:scholarship`]}
                                className="px-4 py-2 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-sm rounded-lg flex items-center space-x-2 w-fit"
                              >
