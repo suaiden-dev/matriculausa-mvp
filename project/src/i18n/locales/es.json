@@ -2589,6 +2589,15 @@
       }
     }
   },
+  "productNames": {
+    "selectionProcess": "Proceso de Selección",
+    "selectionProcessFee": "Tarifa de Proceso de Selección",
+    "applicationFee": "Tarifa de Aplicación",
+    "scholarshipFee": "Tarifa de Beca",
+    "enrollmentFee": "Tarifa de Matrícula",
+    "collegeEnrollmentFee": "Tarifa de Matrícula Universitaria",
+    "i20ControlFee": "Tarifa de Control I-20"
+  },
   "preCheckoutModal": {
     "securePayment": "Pago Seguro",
     "securePaymentProcess": "Proceso de Pago Seguro",

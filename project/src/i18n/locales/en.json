@@ -2338,6 +2338,15 @@
       "tryAgain": "Try Again"
     }
   },
+  "productNames": {
+    "selectionProcess": "Selection Process",
+    "selectionProcessFee": "Selection Process Fee",
+    "applicationFee": "Application Fee",
+    "scholarshipFee": "Scholarship Fee",
+    "enrollmentFee": "Enrollment Fee",
+    "collegeEnrollmentFee": "College Enrollment Fee",
+    "i20ControlFee": "I-20 Control Fee"
+  },
   "preCheckoutModal": {
     "securePayment": "Secure Payment",
     "securePaymentProcess": "Secure Payment Process",

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { 
   Search,
   Eye,
@@ -65,6 +66,7 @@ interface StudentRecord {
 }
 
 const StudentApplicationsView: React.FC = () => {
+  const { t } = useTranslation();
   const [students, setStudents] = useState<StudentRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -1756,7 +1758,7 @@ const StudentApplicationsView: React.FC = () => {
                         <div className="bg-slate-50 rounded-xl p-4">
                           <div className="flex items-center justify-between">
                             <div>
-                              <dt className="text-sm font-medium text-slate-600">Selection Process Fee</dt>
+                              <dt className="text-sm font-medium text-slate-600">{t('productNames.selectionProcessFee')}</dt>
                               <dd className="text-sm text-slate-500 mt-1">Required to start applications</dd>
                               <dd className="text-sm font-semibold text-slate-700 mt-1">
                                 {(() => {

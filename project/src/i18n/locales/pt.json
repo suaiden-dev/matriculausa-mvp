@@ -2470,6 +2470,15 @@
       }
     }
   },
+  "productNames": {
+    "selectionProcess": "Processo de Seleção",
+    "selectionProcessFee": "Taxa de Processo de Seleção",
+    "applicationFee": "Taxa de Aplicação",
+    "scholarshipFee": "Taxa de Bolsa",
+    "enrollmentFee": "Taxa de Matrícula",
+    "collegeEnrollmentFee": "Taxa de Matrícula Universitária",
+    "i20ControlFee": "Taxa de Controle I-20"
+  },
   "preCheckoutModal": {
     "securePayment": "Pagamento Seguro",
     "securePaymentProcess": "Processo de Pagamento Seguro",

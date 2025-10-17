@@ -6,6 +6,7 @@ import { usePaymentBlocked } from '../hooks/usePaymentBlocked';
 import { supabase } from '../lib/supabase';
 import { PreCheckoutModal } from './PreCheckoutModal';
 import { ZelleCheckout } from './ZelleCheckout';
+import { getTranslatedProductName } from '../lib/productNameUtils';
 
 interface ZellePaymentFlowProps {
   feeType: 'application_fee' | 'enrollment_fee' | 'scholarship_fee' | 'selection_process';
@@ -165,13 +166,7 @@ export const ZellePaymentFlow: React.FC<ZellePaymentFlowProps> = ({
   };
 
   const getProductName = () => {
-    const names = {
-      selection_process: 'Selection Process Fee',
-      application_fee: 'Application Fee',
-      enrollment_fee: 'College Enrollment Fee',
-      scholarship_fee: 'Scholarship Fee'
-    };
-    return names[feeType] || 'Fee';
+    return getTranslatedProductName(feeType, t);
   };
 
   return (
