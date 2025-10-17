@@ -779,6 +779,33 @@ async function handleCheckoutSessionCompleted(session, stripe) {
       } else {
         console.log('[stripe-webhook] User profile updated - application fee paid');
       }
+
+      // Registrar pagamento na tabela individual_fee_payments
+      try {
+        const paymentDate = new Date().toISOString();
+        const paymentAmount = session.amount_total ? session.amount_total / 100 : 0;
+        const paymentIntentId = session.payment_intent as string || '';
+        
+        console.log('[Individual Fee Payment] Recording application fee payment via PIX/Stripe...');
+        const { data: insertResult, error: insertError } = await supabase.rpc('insert_individual_fee_payment', {
+          p_user_id: userId,
+          p_fee_type: 'application',
+          p_amount: paymentAmount,
+          p_payment_date: paymentDate,
+          p_payment_method: 'stripe',
+          p_payment_intent_id: paymentIntentId,
+          p_stripe_charge_id: null,
+          p_zelle_payment_id: null
+        });
+        
+        if (insertError) {
+          console.warn('[Individual Fee Payment] Warning: Could not record fee payment:', insertError);
+        } else {
+          console.log('[Individual Fee Payment] Application fee recorded successfully:', insertResult);
+        }
+      } catch (recordError) {
+        console.warn('[Individual Fee Payment] Warning: Failed to record individual fee payment:', recordError);
+      }
       
       // Limpar carrinho
       const { error: cartError } = await supabase.from('user_cart').delete().eq('user_id', userId);
@@ -1536,6 +1563,33 @@ async function handleCheckoutSessionCompleted(session, stripe) {
       } else {
         console.log('Scholarship fee payment processed successfully for user:', userId);
         }
+
+        // Registrar pagamento na tabela individual_fee_payments
+        try {
+          const paymentDate = new Date().toISOString();
+          const paymentAmount = session.amount_total ? session.amount_total / 100 : 0;
+          const paymentIntentId = session.payment_intent as string || '';
+          
+          console.log('[Individual Fee Payment] Recording scholarship fee payment via PIX/Stripe...');
+          const { data: insertResult, error: insertError } = await supabase.rpc('insert_individual_fee_payment', {
+            p_user_id: userId,
+            p_fee_type: 'scholarship',
+            p_amount: paymentAmount,
+            p_payment_date: paymentDate,
+            p_payment_method: 'stripe',
+            p_payment_intent_id: paymentIntentId,
+            p_stripe_charge_id: null,
+            p_zelle_payment_id: null
+          });
+          
+          if (insertError) {
+            console.warn('[Individual Fee Payment] Warning: Could not record fee payment:', insertError);
+          } else {
+            console.log('[Individual Fee Payment] Scholarship fee recorded successfully:', insertResult);
+          }
+        } catch (recordError) {
+          console.warn('[Individual Fee Payment] Warning: Failed to record individual fee payment:', recordError);
+        }
       }
       // Registrar pagamento na tabela affiliate_referrals para faturamento
       try {
@@ -1860,6 +1914,33 @@ async function handleCheckoutSessionCompleted(session, stripe) {
         } else {
           console.log('I20 control fee payment processed successfully for user:', userId);
         }
+
+        // Registrar pagamento na tabela individual_fee_payments
+        try {
+          const paymentDate = new Date().toISOString();
+          const paymentAmount = session.amount_total ? session.amount_total / 100 : 0;
+          const paymentIntentId = session.payment_intent as string || '';
+          
+          console.log('[Individual Fee Payment] Recording i20_control fee payment via PIX/Stripe...');
+          const { data: insertResult, error: insertError } = await supabase.rpc('insert_individual_fee_payment', {
+            p_user_id: userId,
+            p_fee_type: 'i20_control',
+            p_amount: paymentAmount,
+            p_payment_date: paymentDate,
+            p_payment_method: 'stripe',
+            p_payment_intent_id: paymentIntentId,
+            p_stripe_charge_id: null,
+            p_zelle_payment_id: null
+          });
+          
+          if (insertError) {
+            console.warn('[Individual Fee Payment] Warning: Could not record fee payment:', insertError);
+          } else {
+            console.log('[Individual Fee Payment] I20 control fee recorded successfully:', insertResult);
+          }
+        } catch (recordError) {
+          console.warn('[Individual Fee Payment] Warning: Failed to record individual fee payment:', recordError);
+        }
       }
       
       // --- NOTIFICAÇÕES VIA WEBHOOK N8N ---
@@ -2125,6 +2206,33 @@ async function handleCheckoutSessionCompleted(session, stripe) {
         // Term acceptance notification removed to avoid duplication
         // Will be sent via verify-stripe-session-selection-process-fee
         console.log('[NOTIFICAÇÃO] Term acceptance notification removed from webhook to avoid duplication');
+      }
+
+      // Registrar pagamento na tabela individual_fee_payments
+      try {
+        const paymentDate = new Date().toISOString();
+        const paymentAmount = session.amount_total ? session.amount_total / 100 : 0;
+        const paymentIntentId = session.payment_intent as string || '';
+        
+        console.log('[Individual Fee Payment] Recording selection_process fee payment via PIX/Stripe...');
+        const { data: insertResult, error: insertError } = await supabase.rpc('insert_individual_fee_payment', {
+          p_user_id: userId,
+          p_fee_type: 'selection_process',
+          p_amount: paymentAmount,
+          p_payment_date: paymentDate,
+          p_payment_method: 'stripe',
+          p_payment_intent_id: paymentIntentId,
+          p_stripe_charge_id: null,
+          p_zelle_payment_id: null
+        });
+        
+        if (insertError) {
+          console.warn('[Individual Fee Payment] Warning: Could not record fee payment:', insertError);
+        } else {
+          console.log('[Individual Fee Payment] Selection process fee recorded successfully:', insertResult);
+        }
+      } catch (recordError) {
+        console.warn('[Individual Fee Payment] Warning: Failed to record individual fee payment:', recordError);
       }
       // --- NOTIFICAÇÕES REMOVIDAS PARA EVITAR DUPLICAÇÃO ---
       // As notificações para n8n foram movidas para verify-stripe-session-selection-process-fee

@@ -75,6 +75,35 @@ Deno.serve(async (req)=>{
       }).eq('user_id', userId);
       if (profileUpdateError) throw new Error(`Failed to update user_profiles: ${profileUpdateError.message}`);
       console.log('User profile updated - scholarship fee paid');
+
+      // Registrar pagamento na tabela individual_fee_payments
+      try {
+        const paymentDate = new Date().toISOString();
+        const paymentAmount = session.amount_total ? session.amount_total / 100 : 0;
+        const paymentIntentId = session.payment_intent as string || '';
+        
+        console.log('[Individual Fee Payment] Recording scholarship fee payment...');
+        const { data: insertResult, error: insertError } = await supabase.rpc('insert_individual_fee_payment', {
+          p_user_id: userId,
+          p_fee_type: 'scholarship',
+          p_amount: paymentAmount,
+          p_payment_date: paymentDate,
+          p_payment_method: 'stripe',
+          p_payment_intent_id: paymentIntentId,
+          p_stripe_charge_id: null,
+          p_zelle_payment_id: null
+        });
+        
+        if (insertError) {
+          console.warn('[Individual Fee Payment] Warning: Could not record fee payment:', insertError);
+        } else {
+          console.log('[Individual Fee Payment] Scholarship fee recorded successfully:', insertResult);
+        }
+      } catch (recordError) {
+        console.warn('[Individual Fee Payment] Warning: Failed to record individual fee payment:', recordError);
+        // Não quebra o fluxo - continua normalmente
+      }
+
       // Atualiza status das aplicações relacionadas para 'approved' (usando userProfile.id)
       const scholarshipIdsArray = scholarshipsIds.split(',').map((id)=>id.trim());
       console.log(`Updating applications for student_id: ${userProfile.id}, scholarship_ids: ${scholarshipIdsArray}`);

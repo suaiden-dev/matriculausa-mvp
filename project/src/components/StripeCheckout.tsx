@@ -10,6 +10,7 @@ import { supabase } from '../lib/supabase';
 import { PreCheckoutModal } from './PreCheckoutModal';
 import { PaymentMethodSelector } from './PaymentMethodSelector';
 import { PaymentMethodSelectorDrawer } from './PaymentMethodSelectorDrawer';
+import { getTranslatedProductNameByProductId } from '../lib/productNameUtils';
 
 interface StripeCheckoutProps {
   productId: keyof typeof STRIPE_PRODUCTS;
@@ -474,7 +475,7 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
           onClose={() => setShowPreCheckoutModal(false)}
           onProceedToCheckout={(amount) => handlePreCheckoutSuccess(amount)}
           feeType={feeType === 'i20_control_fee' ? 'application_fee' : feeType}
-          productName={product.name}
+          productName={getTranslatedProductNameByProductId(productId, t)}
           productPrice={(feeType === 'selection_process'
             ? (selectionProcessFee ? parseFloat(selectionProcessFee.replace('$', '')) : 0)
             : getFeeAmount('application_fee'))}

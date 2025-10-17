@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
+import { recordIndividualFeePayment, getIndividualPaymentDate } from '../../lib/paymentRecorder';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
 import { UniversityPaymentRequestService, type UniversityPaymentRequest } from '../../services/UniversityPaymentRequestService';
 import { AffiliatePaymentRequestService } from '../../services/AffiliatePaymentRequestService';
@@ -363,7 +364,7 @@ const PaymentManagement = (): React.JSX.Element => {
   const [itemsPerPage, setItemsPerPage] = useState(20); // 20 itens por página para melhor visualização
 
   // Estados para ordenação
-  const [sortBy, setSortBy] = useState<keyof PaymentRecord>('created_at');
+  const [sortBy, setSortBy] = useState<keyof PaymentRecord>('payment_date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   const hasLoadedPayments = useRef(false);
@@ -898,6 +899,37 @@ const PaymentManagement = (): React.JSX.Element => {
         } else {
           let correctAmount = payment.amount; // Valor padrão
           
+            // Registrar pagamento na tabela individual_fee_payments
+            try {
+              // Usar o horário de aprovação do Zelle, não o horário atual
+              const approvedAt = (payment as any).admin_approved_at || payment.created_at;
+              console.log('[Individual Fee Payment] Attempting to record selection_process fee:', {
+                userId: payment.user_id,
+                feeType: 'selection_process',
+                amount: correctAmount,
+                paymentDate: approvedAt,
+                paymentMethod: 'zelle',
+                zellePaymentId: paymentId
+              });
+            
+            const result = await recordIndividualFeePayment(supabase, {
+              userId: payment.user_id || '',
+              feeType: 'selection_process',
+              amount: correctAmount,
+              paymentDate: approvedAt,
+              paymentMethod: 'zelle',
+              zellePaymentId: paymentId
+            });
+            
+            if (result.success) {
+              console.log('[Individual Fee Payment] Selection process fee recorded successfully:', result);
+            } else {
+              console.error('[Individual Fee Payment] Failed to record selection_process fee:', result.error);
+            }
+          } catch (recordError) {
+            console.error('[Individual Fee Payment] Error recording selection_process fee:', recordError);
+          }
+          
           try {
             // Buscar taxas do pacote do usuário
             const { data: userPackageFees, error: packageError } = await supabase.rpc('get_user_package_fees', {
@@ -1071,6 +1103,37 @@ const PaymentManagement = (): React.JSX.Element => {
         } else {
           let correctAmount = payment.amount; // Valor padrão
           
+          // Registrar pagamento na tabela individual_fee_payments
+          try {
+            // Usar o horário de aprovação do Zelle, não o horário atual
+            const approvedAt = (payment as any).admin_approved_at || payment.created_at;
+            console.log('[Individual Fee Payment] Attempting to record i20_control fee:', {
+              userId: payment.user_id,
+              feeType: 'i20_control',
+              amount: correctAmount,
+              paymentDate: approvedAt,
+              paymentMethod: 'zelle',
+              zellePaymentId: paymentId
+            });
+            
+            const result = await recordIndividualFeePayment(supabase, {
+              userId: payment.user_id || '',
+              feeType: 'i20_control',
+              amount: correctAmount,
+              paymentDate: approvedAt,
+              paymentMethod: 'zelle',
+              zellePaymentId: paymentId
+            });
+            
+            if (result.success) {
+              console.log('[Individual Fee Payment] I20 control fee recorded successfully:', result);
+            } else {
+              console.error('[Individual Fee Payment] Failed to record i20_control fee:', result.error);
+            }
+          } catch (recordError) {
+            console.error('[Individual Fee Payment] Error recording i20_control fee:', recordError);
+          }
+          
           try {
             // Buscar taxas do pacote do usuário
             const { data: userPackageFees, error: packageError } = await supabase.rpc('get_user_package_fees', {
@@ -1192,6 +1255,38 @@ const PaymentManagement = (): React.JSX.Element => {
             console.error('❌ [approveZellePayment] Erro ao marcar scholarship_applications (fallback):', appError);
           } else {
             
+            // Registrar pagamento na tabela individual_fee_payments
+            try {
+              // Usar o horário de aprovação do Zelle, não o horário atual
+              const approvedAt = (payment as any).admin_approved_at || payment.created_at;
+              const feeType = payment.fee_type === 'application_fee' ? 'application' : 'scholarship';
+              console.log('[Individual Fee Payment] Attempting to record application/scholarship fee:', {
+                userId: payment.user_id,
+                feeType: feeType,
+                amount: payment.amount,
+                paymentDate: approvedAt,
+                paymentMethod: 'zelle',
+                zellePaymentId: paymentId
+              });
+              
+              const result = await recordIndividualFeePayment(supabase, {
+                userId: payment.user_id || '',
+                feeType: feeType as any,
+                amount: payment.amount,
+                paymentDate: approvedAt,
+                paymentMethod: 'zelle',
+                zellePaymentId: paymentId
+              });
+              
+              if (result.success) {
+                console.log(`[Individual Fee Payment] ${feeType} fee recorded successfully:`, result);
+              } else {
+                console.error(`[Individual Fee Payment] Failed to record ${feeType} fee:`, result.error);
+              }
+            } catch (recordError) {
+              console.error('[Individual Fee Payment] Error recording application/scholarship fee:', recordError);
+            }
+            
             // Log the payment action
             try {
               await supabase.rpc('log_student_action', {
@@ -1272,6 +1367,37 @@ const PaymentManagement = (): React.JSX.Element => {
           } else {
             console.log('✅ [approveZellePayment] is_application_fee_paid marcado como true no user_profiles');
             console.log('🔍 [approveZellePayment] Dados atualizados user_profiles:', profileUpdateData);
+            
+            // Registrar pagamento na tabela individual_fee_payments
+            try {
+              // Usar o horário de aprovação do Zelle, não o horário atual
+              const approvedAt = (payment as any).admin_approved_at || payment.created_at;
+              console.log('[Individual Fee Payment] Attempting to record application fee:', {
+                userId: payment.user_id,
+                feeType: 'application',
+                amount: payment.amount,
+                paymentDate: approvedAt,
+                paymentMethod: 'zelle',
+                zellePaymentId: paymentId
+              });
+              
+              const result = await recordIndividualFeePayment(supabase, {
+                userId: payment.user_id || '',
+                feeType: 'application',
+                amount: payment.amount,
+                paymentDate: approvedAt,
+                paymentMethod: 'zelle',
+                zellePaymentId: paymentId
+              });
+              
+              if (result.success) {
+                console.log('[Individual Fee Payment] Application fee recorded successfully:', result);
+              } else {
+                console.error('[Individual Fee Payment] Failed to record application fee:', result.error);
+              }
+            } catch (recordError) {
+              console.error('[Individual Fee Payment] Error recording application fee:', recordError);
+            }
             
             // Log the payment action for user_profiles update
             try {
@@ -1828,6 +1954,35 @@ const PaymentManagement = (): React.JSX.Element => {
     }
   };
 
+  // Função auxiliar para buscar datas de pagamento individuais
+  const getPaymentDatesForUsers = async (userIds: string[]) => {
+    const paymentDates = new Map<string, Map<string, string>>();
+    
+    for (const userId of userIds) {
+      const userPaymentDates = new Map<string, string>();
+      
+      // Buscar datas para cada tipo de taxa
+      const feeTypes = ['selection_process', 'application', 'scholarship', 'i20_control'] as const;
+      
+      for (const feeType of feeTypes) {
+        try {
+          const paymentDate = await getIndividualPaymentDate(supabase, userId, feeType);
+          if (paymentDate) {
+            userPaymentDates.set(feeType, paymentDate);
+          }
+        } catch (error) {
+          console.warn(`[Payment Dates] Error fetching ${feeType} date for user ${userId}:`, error);
+        }
+      }
+      
+      if (userPaymentDates.size > 0) {
+        paymentDates.set(userId, userPaymentDates);
+      }
+    }
+    
+    return paymentDates;
+  };
+
   const loadPaymentData = async () => {
     try {
       setLoading(true);
@@ -2068,6 +2223,11 @@ const PaymentManagement = (): React.JSX.Element => {
 
       console.log('🔍 [loadPaymentData] Valores reais encontrados:', realPaymentAmounts);
       console.log('🚨 DEBUG: First application user_profiles:', applications?.[0]?.user_profiles);
+
+      // Buscar datas de pagamento individuais da nova tabela
+      console.log('🔍 [loadPaymentData] Buscando datas de pagamento individuais...');
+      const individualPaymentDates = await getPaymentDatesForUsers(uniqueUserIds);
+      console.log('🔍 [loadPaymentData] Datas individuais encontradas:', individualPaymentDates);
       
       // Debug específico para jolie8862@uorak.com
       const jolieRealAmount = realPaymentAmounts.get(jolieUserId);
@@ -2206,39 +2366,23 @@ const PaymentManagement = (): React.JSX.Element => {
         if (realI20Amount !== undefined) {
           // Usar valor real pago (já em dólares, converter para centavos)
           i20ControlFee = Math.round(realI20Amount * 100);
-          console.log(`🔍 DEBUG: Using REAL payment amount for I-20 Control Fee: $${realI20Amount} (${i20ControlFee} cents)`);
         } else if (userOverrides.i20_control_fee !== undefined) {
           i20ControlFee = Math.round(userOverrides.i20_control_fee * 100);
-          console.log(`🔍 DEBUG: Using override for I-20 Control Fee: $${userOverrides.i20_control_fee} (${i20ControlFee} cents)`);
         } else {
           i20ControlFee = Math.round(getFeeAmount('i20_control_fee') * 100);
-          console.log(`🔍 DEBUG: Using default for I-20 Control Fee: $${getFeeAmount('i20_control_fee')} (${i20ControlFee} cents)`);
         }
         
         // Scholarship Fee - prioridade: override > padrão (pacotes não afetam mais as taxas)
         let scholarshipFee: number;
         if (userOverrides.scholarship_fee !== undefined) {
           scholarshipFee = Math.round(userOverrides.scholarship_fee * 100);
-          console.log(`🔍 DEBUG: Using override for Scholarship Fee: $${userOverrides.scholarship_fee} (${scholarshipFee} cents)`);
         } else {
           // Usar system_type para determinar valor
           const systemType = userSystemTypesMap.get(student.user_id) || 'legacy';
           const amount = systemType === 'simplified' ? 550 : 900;
           scholarshipFee = Math.round(amount * 100);
-          console.log(`🔍 DEBUG: Using system_type (${systemType}) for Scholarship Fee: $${amount} (${scholarshipFee} cents)`);
         }
         
-        // Debug: Log de todas as taxas calculadas
-        if (studentName === 'froilan8153@uorak.com') {
-          console.log('🔍 DEBUG All fees for froilan8153@uorak.com:', {
-            dependents,
-            dependentCost,
-            selectionProcessFee: selectionProcessFee / 100,
-            i20ControlFee: i20ControlFee / 100,
-            scholarshipFee: scholarshipFee / 100,
-            // packageData removido - não mais usado para taxas
-          });
-        }
         // Application Fee dinâmico baseado na bolsa específica
         let applicationFee: number;
         if (scholarship?.application_fee_amount) {
@@ -2251,17 +2395,10 @@ const PaymentManagement = (): React.JSX.Element => {
             // Valor está em dólares, converter para centavos
             applicationFee = Math.round(rawValue * 100);
           }
-          console.log('🔍 DEBUG Application Fee for', studentName, ':', {
-            rawValue: scholarship.application_fee_amount,
-            parsedValue: rawValue,
-            isAlreadyCents: rawValue > 1000,
-            finalCents: applicationFee,
-            finalDollars: applicationFee / 100
-          });
+
         } else {
           // Fallback para valor padrão do sistema (converter dólares para centavos)
           applicationFee = Math.round(getFeeAmount('application_fee') * 100);
-          console.log(`🔍 [PM] Application fee from getFeeAmount for ${student.full_name}: $${getFeeAmount('application_fee')} -> ${applicationFee} cents`);
         }
         
 
@@ -2280,7 +2417,7 @@ const PaymentManagement = (): React.JSX.Element => {
             fee_type: 'selection_process',
             amount: selectionProcessFee,
             status: 'paid',
-            payment_date: app.created_at,
+            payment_date: individualPaymentDates.get(student.user_id)?.get('selection_process') || student.last_payment_date || app.paid_at || app.created_at,
             created_at: app.created_at,
             payment_method: student.selection_process_fee_payment_method || 'manual',
             seller_referral_code: student.seller_referral_code,
@@ -2308,7 +2445,7 @@ const PaymentManagement = (): React.JSX.Element => {
             fee_type: 'application',
             amount: applicationFee,
             status: 'paid',
-            payment_date: app.created_at,
+            payment_date: individualPaymentDates.get(student.user_id)?.get('application') || student.last_payment_date || app.paid_at || app.created_at,
             created_at: app.created_at,
             payment_method: app.application_fee_payment_method || 'manual',
             seller_referral_code: student.seller_referral_code,
@@ -2336,14 +2473,13 @@ const PaymentManagement = (): React.JSX.Element => {
             fee_type: 'scholarship',
             amount: scholarshipFee,
             status: 'paid',
-            payment_date: app.created_at,
+            payment_date: individualPaymentDates.get(student.user_id)?.get('scholarship') || student.last_payment_date || app.paid_at || app.created_at,
             created_at: app.created_at,
             payment_method: app.scholarship_fee_payment_method || 'manual',
             seller_referral_code: student.seller_referral_code,
             scholarships_ids: scholarship.id ? [scholarship.id] : []
           });
         } else if (app.is_scholarship_fee_paid && scholarship.id === '31c9b8e6-af11-4462-8494-c79854f3f66e') {
-          console.log('🚫 Excluding Current Students Scholarship payment for:', studentName, '- $', (scholarshipFee / 100).toFixed(2));
         }
 
         // I-20 Control Fee - apenas uma vez por usuário (taxa global)
@@ -2360,7 +2496,7 @@ const PaymentManagement = (): React.JSX.Element => {
             fee_type: 'i20_control_fee',
             amount: i20ControlFee,
             status: 'paid',
-            payment_date: app.created_at,
+            payment_date: individualPaymentDates.get(student.user_id)?.get('i20_control') || student.last_payment_date || app.paid_at || app.created_at,
             created_at: app.created_at,
             payment_method: student.i20_control_fee_payment_method || 'manual',
             seller_referral_code: student.seller_referral_code,
@@ -2450,7 +2586,7 @@ const PaymentManagement = (): React.JSX.Element => {
             fee_type: 'selection_process',
             amount: Math.round(parseFloat(selectionPayment.amount) * 100),
             status: 'paid',
-            payment_date: selectionPayment.admin_approved_at || selectionPayment.created_at,
+            payment_date: individualPaymentDates.get(selectionPayment.user_id)?.get('selection_process') || selectionPayment.admin_approved_at || selectionPayment.created_at,
             created_at: selectionPayment.created_at,
             payment_proof_url: selectionPayment.screenshot_url,
             admin_notes: selectionPayment.admin_notes,
@@ -2479,7 +2615,7 @@ const PaymentManagement = (): React.JSX.Element => {
             fee_type: 'application',
             amount: applicationAmount, // Converter dólares para centavos
             status: 'paid',
-            payment_date: applicationPayment.admin_approved_at || applicationPayment.created_at,
+            payment_date: individualPaymentDates.get(applicationPayment.user_id)?.get('application') || applicationPayment.admin_approved_at || applicationPayment.created_at,
             created_at: applicationPayment.created_at,
             payment_proof_url: applicationPayment.screenshot_url,
             admin_notes: applicationPayment.admin_notes,
@@ -2506,7 +2642,7 @@ const PaymentManagement = (): React.JSX.Element => {
             fee_type: 'scholarship',
             amount: Math.round(parseFloat(scholarshipPayment.amount) * 100),
             status: 'paid',
-            payment_date: scholarshipPayment.admin_approved_at || scholarshipPayment.created_at,
+            payment_date: individualPaymentDates.get(scholarshipPayment.user_id)?.get('scholarship') || scholarshipPayment.admin_approved_at || scholarshipPayment.created_at,
             created_at: scholarshipPayment.created_at,
             payment_proof_url: scholarshipPayment.screenshot_url,
             admin_notes: scholarshipPayment.admin_notes,
@@ -2533,7 +2669,7 @@ const PaymentManagement = (): React.JSX.Element => {
             fee_type: 'i20_control_fee',
             amount: Math.round(parseFloat(i20Payment.amount) * 100),
             status: 'paid',
-            payment_date: i20Payment.admin_approved_at || i20Payment.created_at,
+            payment_date: individualPaymentDates.get(i20Payment.user_id)?.get('i20_control') || i20Payment.admin_approved_at || i20Payment.created_at,
             created_at: i20Payment.created_at,
             payment_proof_url: i20Payment.screenshot_url,
             admin_notes: i20Payment.admin_notes,
@@ -2668,7 +2804,7 @@ const PaymentManagement = (): React.JSX.Element => {
             fee_type: 'selection_process',
             amount: selectionProcessFee,
             status: 'paid',
-            payment_date: stripeUser.created_at,
+            payment_date: individualPaymentDates.get(stripeUser.user_id)?.get('selection_process') || stripeUser.last_payment_date || stripeUser.created_at,
             created_at: stripeUser.created_at,
             payment_method: stripeUser.selection_process_fee_payment_method || 'manual',
             seller_referral_code: stripeUser.seller_referral_code,
@@ -2690,7 +2826,7 @@ const PaymentManagement = (): React.JSX.Element => {
             fee_type: 'application',
             amount: applicationFee,
             status: 'paid',
-            payment_date: stripeUser.created_at,
+            payment_date: individualPaymentDates.get(stripeUser.user_id)?.get('application') || stripeUser.last_payment_date || stripeUser.created_at,
             created_at: stripeUser.created_at,
             payment_method: 'manual',
             seller_referral_code: stripeUser.seller_referral_code,
@@ -2712,7 +2848,7 @@ const PaymentManagement = (): React.JSX.Element => {
             fee_type: 'scholarship',
             amount: scholarshipFee,
             status: 'paid',
-            payment_date: stripeUser.created_at,
+            payment_date: individualPaymentDates.get(stripeUser.user_id)?.get('scholarship') || stripeUser.last_payment_date || stripeUser.created_at,
             created_at: stripeUser.created_at,
             payment_method: 'manual',
             seller_referral_code: stripeUser.seller_referral_code,
@@ -2734,7 +2870,7 @@ const PaymentManagement = (): React.JSX.Element => {
             fee_type: 'i20_control_fee',
             amount: i20ControlFee,
             status: 'paid',
-            payment_date: stripeUser.created_at,
+            payment_date: individualPaymentDates.get(stripeUser.user_id)?.get('i20_control') || stripeUser.last_payment_date || stripeUser.created_at,
             created_at: stripeUser.created_at,
             payment_method: stripeUser.i20_control_fee_payment_method || 'manual',
             seller_referral_code: stripeUser.seller_referral_code,
@@ -2922,15 +3058,21 @@ const PaymentManagement = (): React.JSX.Element => {
       aValue = Number(aValue) || 0;
       bValue = Number(bValue) || 0;
     } else if (sortBy === 'created_at' || sortBy === 'payment_date') {
-      aValue = new Date(aValue as string).getTime();
-      bValue = new Date(bValue as string).getTime();
+      // Tratar valores nulos/undefined para datas
+      const aDate = aValue ? new Date(aValue as string) : new Date(0);
+      const bDate = bValue ? new Date(bValue as string) : new Date(0);
+      aValue = aDate.getTime();
+      bValue = bDate.getTime();
     } else if (typeof aValue === 'string' && typeof bValue === 'string') {
       aValue = aValue.toLowerCase();
       bValue = bValue.toLowerCase();
     }
 
-    // Verificar se os valores são undefined
-    if (aValue === undefined || bValue === undefined) {
+    // Verificar se os valores são undefined ou null
+    if (aValue === undefined || aValue === null || bValue === undefined || bValue === null) {
+      // Se um valor é nulo/undefined, colocar no final
+      if (aValue === undefined || aValue === null) return 1;
+      if (bValue === undefined || bValue === null) return -1;
       return 0;
     }
 
@@ -3631,11 +3773,11 @@ const PaymentManagement = (): React.JSX.Element => {
                   </th>
                   <th 
                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
-                    onClick={() => handleSort('created_at')}
+                    onClick={() => handleSort('payment_date')}
                   >
                     <div className="flex items-center gap-1">
                       Date
-                      {sortBy === 'created_at' && (
+                      {sortBy === 'payment_date' && (
                         <span className="text-blue-600">
                           {sortOrder === 'asc' ? '↑' : '↓'}
                         </span>
@@ -3740,7 +3882,7 @@ const PaymentManagement = (): React.JSX.Element => {
                         <div className="flex items-center">
                           <Calendar className="h-4 w-4 mr-1" />
                           {payment.payment_date 
-                            ? new Date(payment.payment_date).toLocaleDateString()
+                          ? new Date(payment.payment_date).toLocaleString('en-US', { timeZone: 'America/Phoenix', hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
                             : 'N/A'
                           }
                         </div>
@@ -3784,7 +3926,7 @@ const PaymentManagement = (): React.JSX.Element => {
                 </div>
                 <div className="flex items-center gap-2 mb-1">
                   <Calendar className="h-4 w-4 text-gray-400" />
-                  <span className="text-gray-900">{payment.payment_date ? new Date(payment.payment_date).toLocaleDateString() : 'N/A'}</span>
+          <span className="text-gray-900">{payment.payment_date ? new Date(payment.payment_date).toLocaleString('en-US', { timeZone: 'America/Phoenix', hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : 'N/A'}</span>
                 </div>
                 <div className="flex items-center gap-2 mb-1">
                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${payment.status === 'paid' ? 'bg-green-100 text-green-800' : payment.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>{payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}</span>
@@ -5251,7 +5393,7 @@ const PaymentManagement = (): React.JSX.Element => {
                     <label className="block text-sm font-medium text-gray-500">Payment Date</label>
                     <p className="mt-1 text-sm text-gray-900">
                       {selectedPayment.payment_date 
-                        ? new Date(selectedPayment.payment_date).toLocaleString()
+                        ? new Date(selectedPayment.payment_date).toLocaleString('en-US', { timeZone: 'America/Phoenix', hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
                         : 'Not paid yet'
                       }
                     </p>
