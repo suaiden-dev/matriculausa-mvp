@@ -129,7 +129,7 @@
       "step1": "Complete Zelle transfer to the provided recipient",
       "step2": "Save the confirmation screenshot",
       "step3": "Upload your confirmation screenshot",
-      "step4": "Submit for manual verification"
+      "step4": "Wait for processing (may take up to 48 hours)"
     },
     "requirements": {
       "title": "Important: Your payment confirmation MUST include:",
@@ -147,9 +147,17 @@
       "step1": "Complete your Zelle transfer of the required amount",
       "step2": "Save the payment confirmation screenshot that shows all required information",
       "step3": "Upload your confirmation screenshot below",
-      "step4": "Submit for manual verification (completed within 24 hours)"
+      "step4": "Wait for processing (may take up to 48 hours)"
     },
-    "reviewDetails": "Review your payment details"
+    "reviewDetails": "Review your payment details",
+    "zellePaymentDetails": {
+      "title": "Zelle Payment Details",
+      "subtitle": "Send your payment to the following recipient",
+      "recipientEmail": "Recipient Email",
+      "paymentAmount": "Payment Amount",
+      "important": "Important:",
+      "importantMessage": "Make sure to send the exact amount of <strong>{{amount}} USD</strong> to <strong>info@thefutureofenglish.com</strong> via Zelle. Any discrepancy in amount or recipient will delay your payment processing."
+    }
   },
   "zelleWaiting": {
     "title": "Waiting for Verification",
@@ -2346,6 +2354,48 @@
     "enrollmentFee": "Enrollment Fee",
     "collegeEnrollmentFee": "College Enrollment Fee",
     "i20ControlFee": "I-20 Control Fee"
+  },
+  "feeValues": {
+    "asPerUniversity": "As per university"
+  },
+  "feeDescriptions": {
+    "selectionProcess": "Selection Process Fee - Complete your application process",
+    "applicationFee": "Application Fee - Apply for a specific scholarship",
+    "scholarshipFee": "Scholarship Fee - Confirm your scholarship application",
+    "i20ControlFee": "I-20 Control Fee - Document processing and validation"
+  },
+  "paymentSelector": {
+    "title": "Choose Payment Method",
+    "subtitle": "Select how you would like to pay your {{feeType}}",
+    "loading": {
+      "message": "Loading payment methods...",
+      "processing": "Processing..."
+    },
+    "methods": {
+      "stripe": {
+        "title": "Stripe",
+        "description": "Pay securely with credit or debit card via Stripe"
+      },
+      "pix": {
+        "title": "PIX",
+        "description": "Instant payment system for Brazilian users"
+      },
+      "zelle": {
+        "title": "Zelle",
+        "description": "Pay via Zelle and upload the receipt.",
+        "descriptionDetailed": "Pay via Zelle and upload the receipt."
+      }
+    },
+    "feeTypes": {
+      "selection_process": "selection process fee",
+      "application_fee": "application fee",
+      "scholarship_fee": "scholarship fee",
+      "enrollment_fee": "enrollment fee",
+      "i20_control_fee": "I-20 control fee"
+    },
+    "manualVerification": "Processing may take up to 48 hours",
+    "important": "Important:",
+    "zelleUploadNote": "After paying via Zelle, you will need to upload the receipt for manual verification."
   },
   "preCheckoutModal": {
     "securePayment": "Secure Payment",

@@ -165,7 +165,7 @@ const Overview: React.FC<OverviewProps> = ({
 
   const dynamicFeeValues = [
     isFeesLoading ? <FeeSkeleton /> : `$${selectionFeeWithDiscount}`, // Selection Process Fee (com desconto se aplicável)
-    'As per university', // Application Fee (variável - não mostra valor específico)
+    t('feeValues.asPerUniversity'), // Application Fee (variável - não mostra valor específico)
     isFeesLoading ? <FeeSkeleton /> : `$${scholarshipBase}`, // Scholarship Fee (sem dependentes)
     isFeesLoading ? <FeeSkeleton /> : `$${i20WithDependents}`, // I-20 Control Fee (inclui dependentes)
   ];

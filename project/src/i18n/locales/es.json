@@ -129,7 +129,7 @@
       "step1": "Completa la transferencia Zelle al destinatario proporcionado",
       "step2": "Guarda la captura de pantalla de confirmación",
       "step3": "Sube tu captura de pantalla de confirmación",
-      "step4": "Envía para verificación manual"
+      "step4": "Espera el procesamiento (puede tomar hasta 48 horas)"
     },
     "requirements": {
       "title": "Importante: Tu confirmación de pago DEBE incluir:",
@@ -147,9 +147,17 @@
       "step1": "Completa tu transferencia Zelle del monto requerido",
       "step2": "Guarda la captura de pantalla de confirmación de pago que muestre toda la información requerida",
       "step3": "Sube tu captura de pantalla de confirmación abajo",
-      "step4": "Envía para verificación manual (completada en 24 horas)"
+      "step4": "Espera el procesamiento (puede tomar hasta 48 horas)"
     },
-    "reviewDetails": "Revisa los detalles de tu pago"
+    "reviewDetails": "Revisa los detalles de tu pago",
+    "zellePaymentDetails": {
+      "title": "Detalles del Pago Zelle",
+      "subtitle": "Envía tu pago al siguiente destinatario",
+      "recipientEmail": "Email del Destinatario",
+      "paymentAmount": "Monto del Pago",
+      "important": "Importante:",
+      "importantMessage": "Asegúrate de enviar el monto exacto de <strong>{{amount}} USD</strong> a <strong>info@thefutureofenglish.com</strong> vía Zelle. Cualquier discrepancia en el monto o destinatario retrasará el procesamiento de tu pago."
+    }
   },
   "zelleWaiting": {
     "title": "Esperando Verificación",
@@ -2597,6 +2605,48 @@
     "enrollmentFee": "Tarifa de Matrícula",
     "collegeEnrollmentFee": "Tarifa de Matrícula Universitaria",
     "i20ControlFee": "Tarifa de Control I-20"
+  },
+  "feeValues": {
+    "asPerUniversity": "Según la universidad"
+  },
+  "feeDescriptions": {
+    "selectionProcess": "Tarifa de Proceso de Selección - Complete su proceso de aplicación",
+    "applicationFee": "Tarifa de Aplicación - Aplique para una beca específica",
+    "scholarshipFee": "Tarifa de Beca - Confirme su aplicación de beca",
+    "i20ControlFee": "Tarifa de Control I-20 - Procesamiento y validación de documentos"
+  },
+  "paymentSelector": {
+    "title": "Elegir Método de Pago",
+    "subtitle": "Selecciona cómo quieres pagar tu {{feeType}}",
+    "loading": {
+      "message": "Cargando métodos de pago...",
+      "processing": "Procesando..."
+    },
+    "methods": {
+      "stripe": {
+        "title": "Stripe",
+        "description": "Paga de forma segura con tarjeta de crédito o débito vía Stripe"
+      },
+      "pix": {
+        "title": "PIX",
+        "description": "Sistema de pago instantáneo para usuarios brasileños"
+      },
+      "zelle": {
+        "title": "Zelle",
+        "description": "Paga vía Zelle y sube el comprobante.",
+        "descriptionDetailed": "Paga vía Zelle y sube el comprobante."
+      }
+    },
+    "feeTypes": {
+      "selection_process": "tarifa de proceso de selección",
+      "application_fee": "tarifa de aplicación",
+      "scholarship_fee": "tarifa de beca",
+      "enrollment_fee": "tarifa de matrícula",
+      "i20_control_fee": "tarifa de control I-20"
+    },
+    "manualVerification": "El procesamiento puede tomar hasta 48 horas",
+    "important": "Importante:",
+    "zelleUploadNote": "Después de pagar vía Zelle, necesitarás subir el comprobante para verificación manual."
   },
   "preCheckoutModal": {
     "securePayment": "Pago Seguro",
