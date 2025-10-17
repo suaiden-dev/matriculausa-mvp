@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useStudentLogs, StudentActionLog } from '../../hooks/useStudentLogs';
+import ScholarshipInfoDisplay from './ScholarshipInfoDisplay';
 
 interface StudentLogsViewProps {
   studentId: string;
@@ -95,6 +96,33 @@ const StudentLogsView: React.FC<StudentLogsViewProps> = ({ studentId, studentNam
       return 'text-blue-600';
     }
     return 'text-slate-600';
+  };
+
+  const getScholarshipIdFromLog = (log: StudentActionLog): string | null => {
+    // Check if this is a scholarship-related log
+    if (!log.action_type.includes('scholarship') && !log.metadata?.scholarship_id) {
+      return null;
+    }
+
+    // Try to get scholarship_id from metadata
+    if (log.metadata?.scholarship_id) {
+      return log.metadata.scholarship_id;
+    }
+
+    // For checkout_session_created with scholarship_fee, check scholarships_ids
+    if (log.action_type === 'checkout_session_created' && 
+        log.metadata?.fee_type === 'scholarship_fee' && 
+        log.metadata?.scholarships_ids && 
+        Array.isArray(log.metadata.scholarships_ids) && 
+        log.metadata.scholarships_ids.length > 0) {
+      return log.metadata.scholarships_ids[0]; // Return first scholarship ID
+    }
+
+    return null;
+  };
+
+  const isScholarshipRelatedLog = (log: StudentActionLog): boolean => {
+    return getScholarshipIdFromLog(log) !== null;
   };
 
   return (
@@ -222,35 +250,48 @@ const StudentLogsView: React.FC<StudentLogsViewProps> = ({ studentId, studentNam
             <p className="text-sm text-slate-600">No actions have been recorded for this student.</p>
           </div>
         ) : (
-          logs.map((log) => (
-            <div key={log.id} className="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-sm transition-shadow">
-              <div className="flex items-start justify-between gap-4">
-                {/* Left: Type badge, Action type, Description */}
-                <div className="flex-1">
-                  <div className="flex items-center space-x-3 mb-2">
-                    <span className={`px-2 py-1 text-xs font-medium rounded-full border ${getPerformerTypeColor(log.performed_by_type)}`}>
-                      {getPerformerTypeLabel(log.performed_by_type)}
-                    </span>
-                    <span className={`text-sm font-medium ${getActionTypeColor(log.action_type)}`}>
-                      {getActionTypeLabel(log.action_type)}
-                    </span>
+          logs.map((log) => {
+            const scholarshipId = getScholarshipIdFromLog(log);
+            const isScholarshipLog = isScholarshipRelatedLog(log);
+            
+            return (
+              <div key={log.id} className="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-sm transition-shadow">
+                <div className="flex items-start justify-between gap-4">
+                  {/* Left: Type badge, Action type, Description */}
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-3 mb-2">
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full border ${getPerformerTypeColor(log.performed_by_type)}`}>
+                        {getPerformerTypeLabel(log.performed_by_type)}
+                      </span>
+                      <span className={`text-sm font-medium ${getActionTypeColor(log.action_type)}`}>
+                        {getActionTypeLabel(log.action_type)}
+                      </span>
+                    </div>
+                    <p className="text-sm text-slate-900">
+                      {log.action_description}
+                    </p>
+                    
+                    {/* Scholarship Information Display */}
+                    {isScholarshipLog && scholarshipId && (
+                      <ScholarshipInfoDisplay 
+                        scholarshipId={scholarshipId} 
+                        metadata={log.metadata}
+                      />
+                    )}
                   </div>
-                  <p className="text-sm text-slate-900">
-                    {log.action_description}
-                  </p>
-                </div>
 
-                {/* Right: By, Date, IP */}
-                <div className="flex flex-col items-end text-xs space-y-2 text-slate-600 whitespace-nowrap">
-                  <span>By: {getPerformerDisplayName(log)}</span>
-                  <span>{formatDate(log.created_at)}</span>
-                  {log.metadata && (log.metadata.ip || log.metadata.client_ip || log.metadata.request_ip) && (
-                    <span>IP: {log.metadata.ip || log.metadata.client_ip || log.metadata.request_ip}</span>
-                  )}
+                  {/* Right: By, Date, IP */}
+                  <div className="flex flex-col items-end text-xs space-y-2 text-slate-600 whitespace-nowrap">
+                    <span>By: {getPerformerDisplayName(log)}</span>
+                    <span>{formatDate(log.created_at)}</span>
+                    {log.metadata && (log.metadata.ip || log.metadata.client_ip || log.metadata.request_ip) && (
+                      <span>IP: {log.metadata.ip || log.metadata.client_ip || log.metadata.request_ip}</span>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
 
