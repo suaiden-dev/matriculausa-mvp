@@ -144,6 +144,9 @@ export const useStudentDetails = () => {
           .from('scholarship_applications')
           .select(`
             *,
+            transfer_form_url,
+            transfer_form_status,
+            transfer_form_sent_at,
             scholarships (
               id,
               title,
@@ -287,6 +290,9 @@ export const useStudentDetails = () => {
             acceptance_letter_status,
             acceptance_letter_url,
             acceptance_letter_sent_at,
+            transfer_form_url,
+            transfer_form_status,
+            transfer_form_sent_at,
             status,
             scholarships (
               id,
@@ -716,6 +722,10 @@ export const useStudentDetails = () => {
             acceptance_letter_status: applicationData.acceptance_letter_status || 'pending',
             acceptance_letter_url: applicationData.acceptance_letter_url || '',
             acceptance_letter_sent_at: applicationData.acceptance_letter_sent_at || null,
+            // ✅ CORREÇÃO: Incluir campos de transfer form
+            transfer_form_url: applicationData.transfer_form_url || null,
+            transfer_form_status: applicationData.transfer_form_status || null,
+            transfer_form_sent_at: applicationData.transfer_form_sent_at || null,
             // ✅ CORREÇÃO: Usar flags de QUALQUER aplicação paga
             is_application_fee_paid: hasAnyApplicationPaid,
             is_scholarship_fee_paid: hasAnyScholarshipPaid,
@@ -731,6 +741,12 @@ export const useStudentDetails = () => {
           console.log('🔍 [AFFILIATE_DEBUG] Scholarship app scholarships:', scholarshipApp.scholarships);
           console.log('🔍 [AFFILIATE_DEBUG] Scholarship app is_application_fee_paid:', scholarshipApp.is_application_fee_paid);
           console.log('🔍 [AFFILIATE_DEBUG] Scholarship app is_scholarship_fee_paid:', scholarshipApp.is_scholarship_fee_paid);
+          console.log('🔍 [TRANSFER_FORM_DEBUG] Transfer form data:', {
+            transfer_form_url: scholarshipApp.transfer_form_url,
+            transfer_form_status: scholarshipApp.transfer_form_status,
+            transfer_form_sent_at: scholarshipApp.transfer_form_sent_at,
+            student_process_type: scholarshipApp.student_process_type
+          });
           setScholarshipApplication(scholarshipApp);
         } else {
           console.log('🔍 [AFFILIATE_DEBUG] No applicationData found, scholarshipApplication will remain null');

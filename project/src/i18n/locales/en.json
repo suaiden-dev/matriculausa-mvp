@@ -1541,6 +1541,15 @@
       "diplomaDescription": "Official high school diploma or certificate",
       "fundsProof": "Proof of Funds",
       "fundsProofDescription": "Bank statement or financial documentation",
+      "documents": "documents",
+      "dragDropFiles": "Drag and drop PDF files here or click to select",
+      "onlyPdfSupported": "Only PDF files are supported for multiple documents",
+      "addMoreDocuments": "Add more documents",
+      "documentLimitExceeded": "Limit of {{limit}} documents exceeded",
+      "fileSizeExceeded": "File {{fileName}} exceeds 10MB limit",
+      "onlyPdfAllowed": "Only PDF files are allowed for proof of funds",
+      "totalSizeExceeded": "Total file size exceeds 10MB",
+      "mergingDocuments": "Merging documents...",
       "chooseFile": "Choose file",
       "noFileChosen": "No file chosen",
       "continueToManualReview": "Continue to Manual Review",
@@ -1854,8 +1863,8 @@
           "helpTooltip": "How does the chat work?"
         },
         "guide": {
-          "title": "Chat with Administration",
-          "subtitle": "This chat connects you directly with the Administration. Use it for questions about scholarships, documents, and your application progress. Avoid sharing sensitive data (passwords or card numbers).",
+          "title": "Chat with the support team",
+          "subtitle": "This chat connects you directly with the support team. Use it for questions about scholarships, documents, and your application progress. Avoid sharing sensitive data (passwords or card numbers).",
           "supportsAttachments": "Send messages and attachments",
           "businessHours": "Replies during business hours",
           "historySaved": "Conversation history is saved",
@@ -1867,7 +1876,7 @@
         },
         "recipientLabel": {
           "student": "Student",
-          "support": "Administration"
+          "support": "Support Team"
         }
       },
       "details": {

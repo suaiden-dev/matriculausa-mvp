@@ -23,6 +23,8 @@ export interface AffiliatePaymentRequest {
   paid_by?: string | null;
   paid_at?: string | null;
   payment_reference?: string | null;
+  user_full_name?: string | null;
+  user_email?: string | null;
   user?: { full_name?: string | null; email?: string | null };
 }
 

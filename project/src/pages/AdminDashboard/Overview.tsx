@@ -430,28 +430,6 @@ const Overview: React.FC<OverviewProps> = ({ stats, universities, users, applica
               )}
             </div>
           </div>
-
-          {/* Admin Tools */}
-          <div className="bg-gradient-to-br from-[#05294E] to-blue-700 rounded-2xl shadow-lg text-white p-6">
-            <h3 className="text-lg font-bold mb-4 flex items-center">
-              <Crown className="h-5 w-5 mr-2" />
-              Admin Tools
-            </h3>
-            <div className="space-y-3">
-              <Link
-                to="/admin/dashboard/settings"
-                className="block w-full bg-white/20 backdrop-blur-sm border border-white/30 text-white py-2 px-4 rounded-xl hover:bg-white/30 transition-all duration-300 font-medium text-sm text-center"
-              >
-                System Settings
-              </Link>
-              <Link
-                to="/admin/logs"
-                className="block w-full bg-white/20 backdrop-blur-sm border border-white/30 text-white py-2 px-4 rounded-xl hover:bg-white/30 transition-all duration-300 font-medium text-sm text-center"
-              >
-                Activity Logs
-              </Link>
-            </div>
-          </div>
         </div>
       </div>
     </div>

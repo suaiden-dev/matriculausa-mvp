@@ -12,7 +12,7 @@ import DocumentRequestsCard from '../../components/DocumentRequestsCard';
 import { supabase } from '../../lib/supabase';
 import DocumentViewerModal from '../../components/DocumentViewerModal';
 import ApplicationChat from '../../components/ApplicationChat';
-import { useApplicationChat } from '../../hooks/useApplicationChat';
+import { useAdminStudentChat } from '../../hooks/useAdminStudentChat';
 import { STRIPE_PRODUCTS } from '../../stripe-config';
 import { FileText, UserCircle, GraduationCap, CheckCircle, Building, Award, Home, Info, FileCheck, FolderOpen } from 'lucide-react';
 import { I20ControlFeeModal } from '../../components/I20ControlFeeModal';
@@ -335,8 +335,8 @@ const ApplicationChatPage: React.FC = () => {
     return <div className="text-center text-gray-500 py-10">Authenticating...</div>;
   }
 
-  // Hook do chat da aplicação (mensagens em tempo real)
-  const chat = useApplicationChat(applicationId);
+  // Chat Admin-Student: estudante deve ver mensagens de qualquer conversa existente
+  const adminStudentChat = useAdminStudentChat(undefined, undefined);
 
   // Array de informações dos documentos
   const DOCUMENTS_INFO: DocumentInfo[] = [
@@ -484,12 +484,15 @@ const ApplicationChatPage: React.FC = () => {
             </div>
             <div className="p-0 h-96">
               <ApplicationChat
-                messages={chat.messages}
-                onSend={chat.sendMessage as any}
-                loading={chat.loading}
-                isSending={chat.isSending}
-                error={chat.error}
+                messages={adminStudentChat.messages}
+                onSend={adminStudentChat.sendMessage as any}
+                onEditMessage={adminStudentChat.editMessage}
+                onDeleteMessage={adminStudentChat.deleteMessage}
+                loading={adminStudentChat.loading}
+                isSending={adminStudentChat.isSending}
+                error={adminStudentChat.error}
                 currentUserId={user?.id || ''}
+                onMarkAllAsRead={adminStudentChat.markAllAsRead}
                 messageContainerClassName="gap-6 py-4"
                 className="h-full"
               />

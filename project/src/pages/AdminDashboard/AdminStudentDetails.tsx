@@ -42,7 +42,8 @@ import {
   Calendar,
   Globe,
   Users,
-  MessageCircle
+  MessageCircle,
+  ExternalLink
 } from 'lucide-react';
 
 interface StudentRecord {
@@ -214,6 +215,7 @@ const AdminStudentDetails: React.FC = () => {
   const [transferFormFile, setTransferFormFile] = useState<File | null>(null);
   const [uploadingTransferForm, setUploadingTransferForm] = useState(false);
   const [transferFormUploads, setTransferFormUploads] = useState<any[]>([]);
+  const [pendingZellePayments, setPendingZellePayments] = useState<any[]>([]);
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [pendingRejectUploadId, setPendingRejectUploadId] = useState<string | null>(null);
   const [rejectNotes, setRejectNotes] = useState('');
@@ -669,6 +671,8 @@ const AdminStudentDetails: React.FC = () => {
               scholarships (
                 title,
                 university_id,
+                field_of_study,
+                annual_value_with_scholarship,
                 application_fee_amount,
                 universities (
                   name
@@ -854,6 +858,33 @@ const AdminStudentDetails: React.FC = () => {
     };
     
     fetchTransferFormUploads();
+  }, [student]);
+
+  // Buscar pagamentos Zelle pendentes
+  useEffect(() => {
+    const fetchPendingZellePayments = async () => {
+      if (!student?.user_id) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('zelle_payments')
+          .select('*')
+          .eq('user_id', student.user_id)
+          .eq('status', 'pending_verification')
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          console.error('Error fetching pending Zelle payments:', error);
+          return;
+        }
+
+        setPendingZellePayments(data || []);
+      } catch (error) {
+        console.error('Error fetching pending Zelle payments:', error);
+      }
+    };
+    
+    fetchPendingZellePayments();
   }, [student]);
 
   const getStepStatus = (st: StudentRecord, step: string) => {
@@ -2697,6 +2728,8 @@ const AdminStudentDetails: React.FC = () => {
               scholarships (
                 title,
                 university_id,
+                field_of_study,
+                annual_value_with_scholarship,
                 application_fee_amount,
                 universities (
                   name
@@ -2841,6 +2874,10 @@ const AdminStudentDetails: React.FC = () => {
         navigate(`/admin/dashboard/users?tab=messages&recipient_id=${student.user_id}`);
       }
     }
+  };
+
+  const handleGoToZellePayments = () => {
+    navigate('/admin/dashboard/payments?tab=zelle');
   };
 
   const handleApproveTransferFormUpload = async (uploadId: string) => {
@@ -2999,6 +3036,36 @@ const AdminStudentDetails: React.FC = () => {
           </nav>
         </div>
       </div>
+
+      {/* Zelle Payments Pending Alert */}
+      {pendingZellePayments.length > 0 && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="flex-shrink-0">
+                <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
+                  <Clock className="w-4 h-4 text-yellow-600" />
+                </div>
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-yellow-800">
+                  Pending Zelle Payment Approvals
+                </h3>
+                <p className="text-sm text-yellow-700">
+                  This student has a Zelle payment awaiting administrative approval.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={handleGoToZellePayments}
+              className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white text-sm font-medium rounded-lg transition-colors duration-200 flex items-center space-x-2"
+            >
+              <span>Review Payments</span>
+              <ExternalLink className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {activeTab === 'overview' && (
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -3524,6 +3591,31 @@ const AdminStudentDetails: React.FC = () => {
                   <dt className="text-sm font-medium text-slate-600">University</dt>
                   <dd className="text-lg font-semibold text-slate-900 flex items-center"><Building className="w-4 h-4 mr-1" />{student.university_name}</dd>
                 </div>
+                <div>
+                  <dt className="text-sm font-medium text-slate-600">Course</dt>
+                  <dd className="text-base font-semibold text-slate-900">
+                    {(() => {
+                      const paidApplication = (student.all_applications || []).find((app: any) => app.is_application_fee_paid);
+                      const scholarship = paidApplication?.scholarships
+                        ? (Array.isArray(paidApplication.scholarships) ? paidApplication.scholarships[0] : paidApplication.scholarships)
+                        : null;
+                      return scholarship?.field_of_study || 'N/A';
+                    })()}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-sm font-medium text-slate-600">Annual Value (with Scholarship)</dt>
+                  <dd className="text-base font-semibold text-slate-900">
+                    {(() => {
+                      const paidApplication = (student.all_applications || []).find((app: any) => app.is_application_fee_paid);
+                      const scholarship = paidApplication?.scholarships
+                        ? (Array.isArray(paidApplication.scholarships) ? paidApplication.scholarships[0] : paidApplication.scholarships)
+                        : null;
+                      const v = scholarship?.annual_value_with_scholarship;
+                      return typeof v === 'number' ? `$${v.toLocaleString()}` : (v ? `$${Number(v).toLocaleString()}` : 'N/A');
+                    })()}
+                  </dd>
+                </div>
               </div>
             </div>
           ) : null}
@@ -3586,6 +3678,23 @@ const AdminStudentDetails: React.FC = () => {
                                   )}
                                 </h4>
                               <p className="text-sm text-slate-600">{app.scholarships?.universities?.name || 'University'} • {app.documents ? app.documents.length : 0} documents</p>
+                              <div className="mt-1 text-xs text-slate-700">
+                                <div>
+                                  <span className="text-slate-500">Course:</span>{' '}
+                                  <span className="font-medium">{(() => {
+                                    const scholarship = app.scholarships ? (Array.isArray(app.scholarships) ? app.scholarships[0] : app.scholarships) : null;
+                                    return scholarship?.field_of_study || 'N/A';
+                                  })()}</span>
+                                </div>
+                                <div>
+                                  <span className="text-slate-500">Annual Value:</span>{' '}
+                                  <span className="font-medium">{(() => {
+                                    const scholarship = app.scholarships ? (Array.isArray(app.scholarships) ? app.scholarships[0] : app.scholarships) : null;
+                                    const v = scholarship?.annual_value_with_scholarship;
+                                    return typeof v === 'number' ? `$${v.toLocaleString()}` : (v ? `$${Number(v).toLocaleString()}` : 'N/A');
+                                  })()}</span>
+                                </div>
+                              </div>
                               </div>
                             </div>
                             <svg className={`w-5 h-5 text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>

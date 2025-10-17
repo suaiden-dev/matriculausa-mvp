@@ -1228,8 +1228,8 @@
           "helpTooltip": "¿Cómo funciona el chat?"
         },
         "guide": {
-          "title": "Chat con la Administración",
-          "subtitle": "Este chat te conecta directamente con la Administración. Úsalo para preguntas sobre becas, documentos y el progreso de tu aplicación. Evita compartir datos sensibles (contraseñas o números de tarjeta).",
+          "title": "Chat con el equipo de soporte",
+          "subtitle": "Este chat te conecta directamente con el equipo de soporte. Úsalo para preguntas sobre becas, documentos y el progreso de tu aplicación. Evita compartir datos sensibles (contraseñas o números de tarjeta).",
           "supportsAttachments": "Envía mensajes y archivos adjuntos",
           "businessHours": "Respuestas durante horario comercial",
           "historySaved": "El historial de conversación se guarda",
@@ -1241,7 +1241,7 @@
         },
         "recipientLabel": {
           "student": "Estudiante",
-          "support": "Administración"
+          "support": "Equipo de Soporte"
         }
       },
       "details": {
@@ -1817,6 +1817,15 @@
       "diplomaDescription": "Diploma oficial de secundaria o certificado",
       "fundsProof": "Comprobante de Fondos",
       "fundsProofDescription": "Estado de cuenta bancario o documentación financiera",
+      "documents": "documentos",
+      "dragDropFiles": "Arrastra y suelta archivos PDF aquí o haz clic para seleccionar",
+      "onlyPdfSupported": "Solo se admiten archivos PDF para múltiples documentos",
+      "addMoreDocuments": "Agregar más documentos",
+      "documentLimitExceeded": "Límite de {{limit}} documentos excedido",
+      "fileSizeExceeded": "El archivo {{fileName}} excede el límite de 10MB",
+      "onlyPdfAllowed": "Solo se permiten archivos PDF para comprobante de fondos",
+      "totalSizeExceeded": "El tamaño total de archivos excede 10MB",
+      "mergingDocuments": "Fusionando documentos...",
       "chooseFile": "Elegir archivo",
       "noFileChosen": "Ningún archivo elegido",
       "continueToManualReview": "Continuar a Revisión Manual",

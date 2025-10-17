@@ -112,7 +112,24 @@ export const useAdminStudentChat = (conversationId?: string, recipientId?: strin
 
     let targetRecipientId = recipientId;
 
-    // If student and no recipientId provided, find a default admin
+    // If student, first try to reuse ANY existing conversation with any admin
+    if (userProfile.role === 'student') {
+      try {
+        const { data: existingByStudent } = await supabase
+          .from('admin_student_conversations')
+          .select('id')
+          .eq('student_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(1);
+        if (existingByStudent && existingByStudent.length > 0) {
+          return existingByStudent[0].id;
+        }
+      } catch (e) {
+        // fallthrough to default admin creation
+      }
+    }
+
+    // If student and no recipientId provided, find a default admin to start a new conversation
     if (userProfile.role === 'student' && !targetRecipientId) {
       targetRecipientId = await findDefaultAdmin();
       if (!targetRecipientId) {
