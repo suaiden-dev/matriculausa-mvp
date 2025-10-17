@@ -305,6 +305,34 @@ Deno.serve(async (req)=>{
       }).eq('user_id', userId);
       if (profileError) throw new Error(`Failed to update user_profiles: ${profileError.message}`);
 
+      // Registrar pagamento na tabela individual_fee_payments
+      try {
+        const paymentDate = new Date().toISOString();
+        const paymentAmount = session.amount_total ? session.amount_total / 100 : 0;
+        const paymentIntentId = session.payment_intent as string || '';
+        
+        console.log('[Individual Fee Payment] Recording selection_process fee payment...');
+        const { data: insertResult, error: insertError } = await supabase.rpc('insert_individual_fee_payment', {
+          p_user_id: userId,
+          p_fee_type: 'selection_process',
+          p_amount: paymentAmount,
+          p_payment_date: paymentDate,
+          p_payment_method: 'stripe',
+          p_payment_intent_id: paymentIntentId,
+          p_stripe_charge_id: null,
+          p_zelle_payment_id: null
+        });
+        
+        if (insertError) {
+          console.warn('[Individual Fee Payment] Warning: Could not record fee payment:', insertError);
+        } else {
+          console.log('[Individual Fee Payment] Selection process fee recorded successfully:', insertResult);
+        }
+      } catch (recordError) {
+        console.warn('[Individual Fee Payment] Warning: Failed to record individual fee payment:', recordError);
+        // Não quebra o fluxo - continua normalmente
+      }
+
       // Log the payment action
       try {
         const { data: userProfile } = await supabase.from('user_profiles').select('id, full_name').eq('user_id', userId).single();
