@@ -758,7 +758,9 @@
         "applied": "Referral code applied",
         "valid": "Valid referral code! You'll get $50 off your selection process fee.",
         "appliedFromLink": "(Applied from referral link)",
-        "invalid": "Invalid referral code. Please check and try again."
+        "invalid": "Invalid referral code. Please check and try again.",
+        "validationError": "Invalid referral code. Please verify the code or leave the field empty.",
+        "waitingValidation": "Please wait for referral code validation..."
       },
       "sellerReferralCode": {
         "title": "Seller Referral Code (Optional)",
@@ -766,7 +768,9 @@
         "applied": "Seller code applied",
         "valid": "Valid seller code! You'll be connected to a professional seller.",
         "appliedFromLink": "(Applied from referral link)",
-        "invalid": "Invalid seller referral code. Please check and try again."
+        "invalid": "Invalid seller referral code. Please check and try again.",
+        "validationError": "Invalid referral code. Please verify the code or leave the field empty.",
+        "waitingValidation": "Please wait for referral code validation..."
       },
       "termsAndConditions": {
         "title": "I have read and agree to the",

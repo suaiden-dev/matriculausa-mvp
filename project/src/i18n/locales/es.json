@@ -758,7 +758,9 @@
         "applied": "Código de referencia aplicado",
         "valid": "¡Código de referencia válido! Obtendrás $50 de descuento en la tasa del proceso de seleção.",
         "appliedFromLink": "(Aplicado del enlace de referencia)",
-        "invalid": "Código de referencia inválido. Verifica e inténtalo de nuevo."
+        "invalid": "Código de referencia inválido. Verifica e inténtalo de nuevo.",
+        "validationError": "Código de referencia inválido. Por favor, verifica el código o deja el campo vacío.",
+        "waitingValidation": "Espera la validación del código de referencia..."
       },
       "sellerReferralCode": {
         "title": "Código de Referência del Vendedor (Opcional)",
@@ -766,7 +768,9 @@
         "applied": "Código de vendedor aplicado",
         "valid": "¡Código de vendedor válido! Serás conectado a un vendedor profesional.",
         "appliedFromLink": "(Aplicado del enlace de referencia)",
-        "invalid": "Código de referencia del vendedor inválido. Verifica e inténtalo de nuevo."
+        "invalid": "Código de referencia del vendedor inválido. Verifica e inténtalo de nuevo.",
+        "validationError": "Código de referencia inválido. Por favor, verifica el código o deja el campo vacío.",
+        "waitingValidation": "Espera la validación del código de referencia..."
       },
       "termsAndConditions": {
         "title": "He leído y acepto los",
