@@ -1051,7 +1051,6 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
                 </div>
               </div>
 
-
             </div>
           </div>
         </div>
