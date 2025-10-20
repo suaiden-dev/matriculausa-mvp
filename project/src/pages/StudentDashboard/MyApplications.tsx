@@ -78,6 +78,15 @@ const MyApplications: React.FC = () => {
   // Estado para controlar abertura/fechamento individual dos documents checklist
   const [openChecklists, setOpenChecklists] = useState<Record<string, boolean>>({});
 
+  // Mobile: controlar expansão/colapso dos detalhes de cada aplicação
+  const [mobileExpandedApps, setMobileExpandedApps] = useState<Record<string, boolean>>({});
+  const toggleMobileExpanded = (applicationId: string) => {
+    setMobileExpandedApps(prev => ({
+      ...prev,
+      [applicationId]: !prev[applicationId]
+    }));
+  };
+
   // Função para alternar o estado de um checklist específico
   const toggleChecklist = (applicationId: string) => {
     setOpenChecklists(prev => ({
@@ -1093,48 +1102,83 @@ const getLevelColor = (level: any) => {
         {/* Header */}
         <div className="flex items-center justify-between mb-6 sm:mb-8">
           <div>
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-slate-900 mb-1 sm:mb-2">{t('studentDashboard.myApplications.title')}</h2>
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-slate-900 mb-1 sm:mb-2">{t('studentDashboard.sidebar.myApplications')}</h2>
             <p className="text-base sm:text-lg text-slate-600">{t('studentDashboard.myApplications.subtitle')}</p>
           </div>
         </div>
 
         {/* Aviso removido conforme solicitação */}
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-8">
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-lg p-6 sm:p-8 min-h-[120px] sm:min-h-[140px] flex items-center hover:shadow-xl transition-all duration-300">
+        {/* Stats - Mobile: Single compact summary card with 3 columns */}
+        <div className="sm:hidden mb-6">
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-sm">
+            <div className="grid grid-cols-3 divide-x divide-slate-200">
+              <div className="p-3 text-center">
+                <div className="flex items-center justify-center gap-1.5 text-xs text-slate-500 mb-1 leading-none">
+                  <span className="inline-flex items-center justify-center w-4.5 h-4.5 min-w-[18px] min-h-[18px] rounded-full bg-blue-50 border border-blue-200">
+                    <FileText className="h-3 w-3 text-blue-600" aria-hidden="true" />
+                  </span>
+                  <span>{t('studentDashboard.myApplications.totalApplications')}</span>
+                </div>
+                <div className="text-2xl font-extrabold text-slate-900 leading-none">{stats.total}</div>
+              </div>
+              <div className="p-3 text-center">
+                <div className="flex items-center justify-center gap-1.5 text-xs text-slate-500 mb-1 leading-none">
+                  <span className="inline-flex items-center justify-center w-4.5 h-4.5 min-w-[18px] min-h-[18px] rounded-full bg-green-50 border border-green-200">
+                    <CheckCircle className="h-3 w-3 text-green-600" aria-hidden="true" />
+                  </span>
+                  <span>{t('studentDashboard.myApplications.approved')}</span>
+                </div>
+                <div className="text-2xl font-extrabold text-green-600 leading-none">{stats.approved}</div>
+              </div>
+              <div className="p-3 text-center">
+                <div className="flex items-center justify-center gap-1.5 text-xs text-slate-500 mb-1 leading-none">
+                  <span className="inline-flex items-center justify-center w-4.5 h-4.5 min-w-[18px] min-h-[18px] rounded-full bg-slate-50 border border-slate-200">
+                    <Clock className="h-3 w-3 text-gray-600" aria-hidden="true" />
+                  </span>
+                  <span>{t('studentDashboard.myApplications.pending')}</span>
+                </div>
+                <div className="text-2xl font-extrabold text-gray-700 leading-none">{stats.pending}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Stats - Desktop Cards */}
+        <div className="hidden sm:grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-lg p-8 min-h-[140px] flex items-center hover:shadow-xl transition-all duration-300">
             <div className="flex items-center justify-between w-full">
-            <div>
-              <p className="text-sm font-semibold text-slate-500 mb-2">{t('studentDashboard.myApplications.totalApplications')}</p>
-              <p className="text-3xl sm:text-4xl font-bold text-slate-900">{stats.total}</p>
-            </div>
-            <div className="w-12 h-12 sm:w-14 sm:h-14 bg-blue-50 border border-blue-100 rounded-2xl flex items-center justify-center">
-              <FileText className="h-6 w-6 sm:h-7 sm:w-7 text-blue-600" />
-            </div>
+              <div>
+                <p className="text-sm font-semibold text-slate-500 mb-2">{t('studentDashboard.myApplications.totalApplications')}</p>
+                <p className="text-4xl font-bold text-slate-900">{stats.total}</p>
+              </div>
+              <div className="w-14 h-14 bg-blue-50 border border-blue-100 rounded-2xl flex items-center justify-center">
+                <FileText className="h-7 w-7 text-blue-600" />
+              </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-lg p-6 sm:p-8 min-h-[120px] sm:min-h-[140px] flex items-center hover:shadow-xl transition-all duration-300">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-lg p-8 min-h-[140px] flex items-center hover:shadow-xl transition-all duration-300">
             <div className="flex items-center justify-between w-full">
-            <div>
-              <p className="text-sm font-semibold text-slate-500 mb-2">{t('studentDashboard.myApplications.approved')}</p>
-              <p className="text-3xl sm:text-4xl font-bold text-green-600">{stats.approved}</p>
-            </div>
-            <div className="w-12 h-12 sm:w-14 sm:h-14 bg-green-50 border border-green-100 rounded-2xl flex items-center justify-center">
-              <CheckCircle className="h-6 w-6 sm:h-7 sm:w-7 text-green-600" />
-            </div>
+              <div>
+                <p className="text-sm font-semibold text-slate-500 mb-2">{t('studentDashboard.myApplications.approved')}</p>
+                <p className="text-4xl font-bold text-green-600">{stats.approved}</p>
+              </div>
+              <div className="w-14 h-14 bg-green-50 border border-green-100 rounded-2xl flex items-center justify-center">
+                <CheckCircle className="h-7 w-7 text-green-600" />
+              </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-lg p-6 sm:p-8 min-h-[120px] sm:min-h-[140px] flex items-center hover:shadow-xl transition-all duration-300">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-lg p-8 min-h-[140px] flex items-center hover:shadow-xl transition-all duration-300">
             <div className="flex items-center justify-between w-full">
-            <div>
-              <p className="text-sm font-semibold text-slate-500 mb-2">{t('studentDashboard.myApplications.pending')}</p>
-              <p className="text-3xl sm:text-4xl font-bold text-gray-600">{stats.pending}</p>
-            </div>
-            <div className="w-12 h-12 sm:w-14 sm:h-14 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-center">
-              <Clock className="h-6 w-6 sm:h-7 sm:w-7 text-gray-600" />
-            </div>
+              <div>
+                <p className="text-sm font-semibold text-slate-500 mb-2">{t('studentDashboard.myApplications.pending')}</p>
+                <p className="text-4xl font-bold text-gray-600">{stats.pending}</p>
+              </div>
+              <div className="w-14 h-14 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-center">
+                <Clock className="h-7 w-7 text-gray-600" />
+              </div>
             </div>
           </div>
         </div>
@@ -1221,7 +1265,7 @@ const getLevelColor = (level: any) => {
         </div>
 
       {applications.length === 0 ? (
-        <div className="bg-white rounded-3xl shadow-lg border border-slate-200 p-8 sm:p-16 text-center">
+        <div className="bg-white rounded-3xl shadow-lg border border-slate-200 p-8 sm:p-12 text-center">
           <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-blue-100 to-blue-200 rounded-3xl flex items-center justify-center mx-auto mb-6 sm:mb-8">
             <FileText className="h-10 w-10 sm:h-12 sm:w-12 text-blue-600" />
           </div>
@@ -1229,25 +1273,6 @@ const getLevelColor = (level: any) => {
           <p className="text-slate-500 mb-6 sm:mb-8 max-w-lg mx-auto text-base sm:text-lg leading-relaxed px-4">
             {t('studentDashboard.myApplications.noApplications.description')}
           </p>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8 max-w-4xl mx-auto">
-            <div className="p-4 sm:p-6 bg-gradient-to-br from-slate-50 to-blue-50 rounded-2xl border border-slate-200">
-              <Award className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600 mx-auto mb-2 sm:mb-3" />
-              <h4 className="font-bold text-slate-900 mb-1 sm:mb-2 text-sm sm:text-base">{t('studentDashboard.myApplications.noApplications.findScholarships')}</h4>
-              <p className="text-xs sm:text-sm text-slate-600">{t('studentDashboard.myApplications.noApplications.browseOpportunities')}</p>
-            </div>
-            <div className="p-4 sm:p-6 bg-gradient-to-br from-slate-50 to-blue-50 rounded-2xl border border-slate-200">
-              <FileText className="h-6 w-6 sm:h-8 sm:w-8 text-green-600 mx-auto mb-2 sm:mb-3" />
-              <h4 className="font-bold text-slate-900 mb-1 sm:mb-2 text-sm sm:text-base">{t('studentDashboard.myApplications.noApplications.applyEasily')}</h4>
-              <p className="text-xs sm:text-sm text-slate-600">{t('studentDashboard.myApplications.noApplications.simpleProcess')}</p>
-            </div>
-            <div className="p-4 sm:p-6 bg-gradient-to-br from-slate-50 to-blue-50 rounded-2xl border border-slate-200 sm:col-span-2 lg:col-span-1">
-              <CheckCircle className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600 mx-auto mb-2 sm:mb-3" />
-              <h4 className="font-bold text-slate-900 mb-1 sm:mb-2 text-sm sm:text-base">{t('studentDashboard.myApplications.noApplications.trackProgress')}</h4>
-              <p className="text-xs sm:text-sm text-slate-600">{t('studentDashboard.myApplications.noApplications.monitorRealTime')}</p>
-            </div>
-          </div>
-          
           <Link
             to="/student/dashboard/scholarships"
             className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-8 sm:px-10 py-4 sm:py-5 rounded-2xl hover:from-blue-700 hover:to-blue-800 transition-all duration-300 font-bold shadow-lg hover:shadow-xl transform hover:scale-105 inline-flex items-center text-sm sm:text-base"
@@ -1256,7 +1281,7 @@ const getLevelColor = (level: any) => {
             <ArrowRight className="ml-2 h-5 w-5 sm:h-6 sm:w-6" />
           </Link>
         </div>
-              ) : (
+      ) : (
           <>
             {/* Applications List - two sections */}
           <div className="space-y-10">
@@ -1324,34 +1349,36 @@ const getLevelColor = (level: any) => {
                     </div>
                     
                     {/* Linha 3: Data de aplicação + Valor */}
-                    <div className="flex items-center justify-between text-sm bg-gray-50 rounded-lg p-2">
-                      <div className="flex items-center">
-                        <Calendar className="h-3 w-3 mr-1.5 text-gray-500" />
-                        <span className="text-gray-700 font-medium mr-1">
-                          {new Date(application.applied_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                        </span>
-                        <span className="text-gray-500 text-xs">Applied</span>
-                      </div>
-                      <div className="flex items-center">
-                        <span className="text-green-700 font-bold mr-1">
-                          {formatAmount(scholarship.annual_value_with_scholarship ?? 0)}
-                        </span>
-                        <span className="text-gray-500 text-xs">Annual</span>
-                      </div>
-                    </div>
+                        <div className="flex flex-wrap items-center gap-2 text-xs">
+                          <span className={`inline-flex items-center px-2 py-1 rounded-md border ${getStatusColor(application.status)} whitespace-nowrap`}>
+                            <Icon className="h-3 w-3 mr-1" />
+                            {getStatusLabel(application.status)}
+                          </span>
+                          <span className="inline-flex items-center px-2 py-1 rounded-md bg-gray-50 text-gray-700 border border-gray-200 whitespace-nowrap">
+                            <Calendar className="h-3 w-3 mr-1.5 text-gray-500" />
+                            {new Date(application.applied_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          </span>
+                          <span className="inline-flex items-center px-2 py-1 rounded-md bg-green-50 text-green-700 border border-green-200 whitespace-nowrap">
+                            <DollarSign className="h-3 w-3 mr-1 text-green-600" />
+                            {formatAmount(scholarship.annual_value_with_scholarship ?? 0)}
+                          </span>
+                        </div>
                   </div>
 
-                  {/* Status Details Dropdown */}
-                  <details className="group/details mb-4">
-                    <summary className="cursor-pointer bg-slate-50 hover:bg-slate-100 rounded-lg p-3 transition-colors flex items-center justify-between border border-gray-200">
+                  {/* Status Details - Mobile: botão colapsável; Desktop: sempre visível */}
+                  <div className="mb-4">
+                    <button
+                      className="w-full sm:hidden cursor-pointer bg-slate-50 hover:bg-slate-100 rounded-lg p-3 transition-colors flex items-center justify-between border border-gray-200"
+                      onClick={() => toggleMobileExpanded(application.id)}
+                    >
                       <div className="flex items-center">
                         <FileText className="h-4 w-4 mr-2 text-blue-600" />
                         <span className="text-sm font-medium text-gray-700">Status Details</span>
                       </div>
-                      <ChevronDown className="w-4 h-4 text-gray-500 transition-transform duration-300 ease-in-out group-open/details:rotate-180" />
-                    </summary>
-                    <div className="overflow-hidden transition-all duration-300 ease-in-out group-open/details:max-h-96 max-h-0">
-                      <div className={`mt-2 rounded-lg p-3 border ${statusInfo.bgColor} ${statusInfo.borderColor}`}>
+                      <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform duration-300 ${mobileExpandedApps[application.id] ? 'rotate-180' : ''}`} />
+                    </button>
+                    <div className={`${mobileExpandedApps[application.id] ? 'max-h-96' : 'max-h-0'} sm:max-h-none overflow-hidden transition-all duration-300 ease-in-out sm:block`}>
+                      <div className={`mt-2 sm:mt-0 rounded-lg p-3 border ${statusInfo.bgColor} ${statusInfo.borderColor}`}> 
                         <h3 className={`font-bold text-sm ${statusInfo.color} mb-2`}>
                           {statusInfo.title}
                         </h3>
@@ -1377,7 +1404,7 @@ const getLevelColor = (level: any) => {
                         )}
                       </div>
                     </div>
-                  </details>
+                  </div>
   
                   {/* Details Section */}
                   <div className="bg-gradient-to-br from-slate-50 to-blue-50 rounded-2xl p-3 sm:p-4 mb-4 sm:mb-6 border border-slate-200">
@@ -1545,34 +1572,37 @@ const getLevelColor = (level: any) => {
                                 </span>
                               </div>
                               
-                              {/* Line 3: Application Date + Annual Value */}
-                              <div className="flex items-center justify-between bg-gray-50 rounded-lg p-2 text-sm">
-                                <div className="flex items-center text-slate-600">
-                                  <Calendar className="h-4 w-4 mr-2 text-slate-500" />
-                                  <span className="font-medium">
-                                    {new Date(application.applied_at).toLocaleDateString()}
-                                  </span>
-                                </div>
-                                <div className="flex items-center text-green-600">
-                                  <DollarSign className="h-4 w-4 mr-1 text-green-600" />
-                                  <span className="font-semibold">
-                                    {formatAmount(scholarship.annual_value_with_scholarship ?? 0)}
-                                  </span>
-                                </div>
+                              {/* Line 3: Compact chips row for mobile */}
+                              <div className="flex flex-wrap items-center gap-2 text-xs">
+                                <span className={`inline-flex items-center px-2 py-1 rounded-md border ${getStatusColor(application.status)} whitespace-nowrap`}>
+                                  <Icon className="h-3 w-3 mr-1" />
+                                  {getStatusLabel(application.status)}
+                                </span>
+                                <span className="inline-flex items-center px-2 py-1 rounded-md bg-gray-50 text-gray-700 border border-gray-200 whitespace-nowrap">
+                                  <Calendar className="h-3 w-3 mr-1.5 text-gray-500" />
+                                  {new Date(application.applied_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                </span>
+                                <span className="inline-flex items-center px-2 py-1 rounded-md bg-green-50 text-green-700 border border-green-200 whitespace-nowrap">
+                                  <DollarSign className="h-3 w-3 mr-1 text-green-600" />
+                                  {formatAmount(scholarship.annual_value_with_scholarship ?? 0)}
+                                </span>
                               </div>
                             </div>
 
-                            {/* Status Details Dropdown */}
-                            <details className="group/details mb-4">
-                              <summary className="cursor-pointer bg-slate-50 hover:bg-slate-100 rounded-lg p-3 transition-colors flex items-center justify-between border border-gray-200">
+                            {/* Status Details - Mobile collapsible, desktop always visible */}
+                            <div className="mb-4">
+                              <button
+                                className="w-full sm:hidden cursor-pointer bg-slate-50 hover:bg-slate-100 rounded-lg p-3 transition-colors flex items-center justify-between border border-gray-200"
+                                onClick={() => toggleMobileExpanded(application.id)}
+                              >
                                 <div className="flex items-center">
                                   <FileText className="h-4 w-4 mr-2 text-blue-600" />
                                   <span className="text-sm font-medium text-gray-700">Status Details</span>
                                 </div>
-                                <ChevronDown className="w-4 h-4 text-gray-500 transition-transform duration-300 ease-in-out group-open/details:rotate-180" />
-                              </summary>
-                              <div className="overflow-hidden transition-all duration-300 ease-in-out group-open/details:max-h-96 max-h-0">
-                                <div className={`mt-2 rounded-lg p-3 border ${statusInfo.bgColor} ${statusInfo.borderColor}`}>
+                                <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform duration-300 ${mobileExpandedApps[application.id] ? 'rotate-180' : ''}`} />
+                              </button>
+                              <div className={`${mobileExpandedApps[application.id] ? 'max-h-96' : 'max-h-0'} sm:max-h-none overflow-hidden transition-all duration-300 ease-in-out sm:block`}>
+                                <div className={`mt-2 sm:mt-0 rounded-lg p-3 border ${statusInfo.bgColor} ${statusInfo.borderColor}`}>
                                   <h3 className={`font-bold text-sm ${statusInfo.color} mb-2`}>
                                     {statusInfo.title}
                                   </h3>
@@ -1598,7 +1628,7 @@ const getLevelColor = (level: any) => {
                                   )}
                                 </div>
                               </div>
-                            </details>
+                            </div>
 
 
                             {/* Not selected reason for rejected applications */}
