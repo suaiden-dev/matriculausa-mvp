@@ -370,6 +370,16 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
   const scholarshipRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const buttonRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
 
+  // Controle de imagens quebradas para exibir placeholder
+  const [brokenImageIds, setBrokenImageIds] = useState<Set<string | number>>(new Set());
+  const markImageAsBroken = (id: string | number) => {
+    setBrokenImageIds(prev => {
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+  };
+
   // Remover reload automático após pagamento
   // useEffect(() => {
   //   if (!localStorage.getItem('scholarship_browser_refreshed')) {
@@ -486,6 +496,12 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
     const diffTime = deadlineDate.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return diffDays;
+  };
+
+  // Versão para EXIBIÇÃO: nunca mostra valores negativos nos cards
+  const getDaysUntilDeadlineDisplay = (deadline: string) => {
+    const days = getDaysUntilDeadline(deadline);
+    return Math.max(days, 0);
   };
 
   // Função para obter status e cor do deadline
@@ -1380,15 +1396,16 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
 
                   {/* Scholarship Image */}
                   <div className="relative h-40 sm:h-48 overflow-hidden flex-shrink-0">
-                    {scholarship.image_url && userProfile?.has_paid_selection_process_fee ? (
+                    {scholarship.image_url && userProfile?.has_paid_selection_process_fee && !brokenImageIds.has(scholarship.id) ? (
                       <img
                         src={scholarship.image_url}
                         alt={scholarship.title}
+                        onError={() => markImageAsBroken(scholarship.id)}
                         className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500"
                       />
                     ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
-                        <GraduationCap className="h-12 w-12 sm:h-16 sm:w-16 text-slate-400" />
+                      <div className="flex items-center justify-center w-full h-full text-slate-400 bg-gradient-to-br from-[#05294E]/5 to-slate-100">
+                        <Building className="h-16 w-16 text-[#05294E]/30" />
                       </div>
                     )}
                     {scholarship.is_exclusive && (
@@ -1529,33 +1546,33 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                                                       <span className="text-xs font-medium text-slate-600 ml-2">{t('studentDashboard.findScholarships.scholarshipCard.deadline')}</span>
                         </div>
                         <span className="text-xs font-semibold text-slate-700">
-                          {getDaysUntilDeadline(scholarship.deadline)} {t('studentDashboard.findScholarships.scholarshipCard.daysLeft')}
+                          {getDaysUntilDeadlineDisplay(scholarship.deadline)} {t('studentDashboard.findScholarships.scholarshipCard.daysLeft')}
                         </span>
                       </div>
                     </div>
                       
                                          {/* Action Buttons */}
                      <div className="mt-auto">
-                       <div className="flex gap-3">
+                       <div className="flex gap-3 items-stretch">
                          {/* Show Details Button */}
                          <div className="flex-shrink-0" onMouseEnter={(e) => e.stopPropagation()}>
-                         <button
-                           type="button"
-                           onClick={() => openScholarshipModal(scholarship)}
-                           className="w-full py-4 sm:py-4 px-3 sm:px-4 rounded-2xl font-bold text-xs sm:text-sm flex items-center justify-center bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-2"
-                           title="View scholarship details"
-                           aria-label="View scholarship details"
-                         >
-                                                     <span className="hidden sm:inline">{t('studentDashboard.findScholarships.scholarshipCard.show')}</span>
-                          <span className="sm:hidden">{t('studentDashboard.findScholarships.scholarshipCard.view')}</span>
-                          <span className="hidden sm:inline ml-1">{t('studentDashboard.findScholarships.scholarshipCard.details')}</span>
-                         </button>
-                       </div>
+                           <button
+                             type="button"
+                             onClick={() => openScholarshipModal(scholarship)}
+                             className="w-full py-4 sm:py-4 px-3 sm:px-4 rounded-2xl font-bold text-xs sm:text-sm flex items-center justify-center bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-2"
+                             title="View scholarship details"
+                             aria-label="View scholarship details"
+                           >
+                             <span className="hidden sm:inline">{t('studentDashboard.findScholarships.scholarshipCard.show')}</span>
+                             <span className="sm:hidden">{t('studentDashboard.findScholarships.scholarshipCard.view')}</span>
+                             <span className="hidden sm:inline ml-1">{t('studentDashboard.findScholarships.scholarshipCard.details')}</span>
+                           </button>
+                         </div>
                          
                          {alreadyApplied ? (
                            <button
                              disabled
-                             className="flex-1 bg-green-100 text-green-700 py-3 px-4 rounded-2xl font-semibold cursor-not-allowed flex items-center justify-center"
+                             className="flex-1 bg-green-100 text-green-700 py-4 sm:py-4 px-4 rounded-2xl font-semibold cursor-not-allowed flex items-center justify-center"
                            >
                              <CheckCircle className="h-4 w-4 mr-2" />
                              {t('studentDashboard.findScholarships.scholarshipCard.alreadyApplied')}
@@ -1564,24 +1581,24 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                            <button
                              type="button"
                              onClick={() => removeFromCart(scholarship.id, user?.id || '')}
-                             className="flex-1 bg-red-100 text-red-700 py-3 px-4 rounded-2xl font-semibold hover:bg-red-200 transition-colors flex items-center justify-center"
+                             className="flex-1 bg-red-100 text-red-700 py-4 sm:py-4 px-4 rounded-2xl font-semibold hover:bg-red-200 transition-colors flex items-center justify-center"
                            >
                              <Trash2 className="h-4 w-4 mr-2" />
                              {t('studentDashboard.findScholarships.scholarshipCard.deselect')}
                            </button>
                          ) : (
                            <button
-                    type="button"
-                    onClick={async () => {
-                      if (alreadyApplied) return;
-                      
-                      if (inCart) {
-                        if (user) removeFromCart(scholarship.id, user.id);
-                      } else {
-                        // ANIMAÇÃO: voar para o chapéu (apenas se já pagou a taxa)
-                        if (userProfile?.has_paid_selection_process_fee) {
-                          const hat = document.getElementById('floating-cart-hat');
-                          const cardElement = scholarshipRefs.current.get(scholarship.id);
+                             type="button"
+                             onClick={async () => {
+                               if (alreadyApplied) return;
+                               
+                               if (inCart) {
+                                 if (user) removeFromCart(scholarship.id, user.id);
+                               } else {
+                                 // ANIMAÇÃO: voar para o chapéu (apenas se já pagou a taxa)
+                                 if (userProfile?.has_paid_selection_process_fee) {
+                                   const hat = document.getElementById('floating-cart-hat');
+                                   const cardElement = scholarshipRefs.current.get(scholarship.id);
                           if (cardElement && hat) {
                             const from = cardElement.getBoundingClientRect();
                             const to = hat.getBoundingClientRect();
@@ -1600,7 +1617,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                              ref={(el) => {
                                if (el) buttonRefs.current.set(scholarship.id, el);
                              }}
-                             className={`py-3 sm:py-4 px-4 sm:px-6 w-5/6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2 ${
+                             className={`flex-1 py-4 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2 ${
                                 inCart 
                                   ? 'bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700' 
                                   : 'bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white hover:from-[#041f3a] hover:to-slate-600'
@@ -1660,15 +1677,16 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
             >
               {/* Scholarship Image */}
               <div className="relative h-40 sm:h-48 overflow-hidden flex-shrink-0">
-                {scholarship.image_url && userProfile?.has_paid_selection_process_fee? (
+                {scholarship.image_url && userProfile?.has_paid_selection_process_fee && !brokenImageIds.has(scholarship.id)? (
                   <img
                     src={scholarship.image_url}
                     alt={scholarship.title}
+                    onError={() => markImageAsBroken(scholarship.id)}
                     className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500"
                   />
                 ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
-                    <GraduationCap className="h-12 w-12 sm:h-16 sm:w-16 text-slate-400" />
+                  <div className="flex items-center justify-center w-full h-full text-slate-400 bg-gradient-to-br from-[#05294E]/5 to-slate-100">
+                    <Building className="h-16 w-16 text-[#05294E]/30" />
                   </div>
                 )}
                 {scholarship.is_exclusive && (
@@ -1811,7 +1829,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                     <span className="text-slate-500">{t('studentDashboard.findScholarships.scholarshipCard.deadline')}</span>
                     <div className="flex items-center">
                       <Clock className={`h-3 w-3 mr-1 ${getDeadlineStatus(scholarship.deadline).color}`} />
-                      <span className="text-slate-700 text-xs sm:text-sm">{getDaysUntilDeadline(scholarship.deadline)} {t('studentDashboard.findScholarships.scholarshipCard.daysLeft')}</span>
+                      <span className="text-slate-700 text-xs sm:text-sm">{getDaysUntilDeadlineDisplay(scholarship.deadline)} {t('studentDashboard.findScholarships.scholarshipCard.daysLeft')}</span>
                     </div>
                   </div>
                   {scholarship.delivery_mode && (
@@ -1826,21 +1844,21 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                 </div>
                 {/* Action Buttons */}
                 <div className="mt-6 pt-4 border-t border-slate-100">
-                  <div className="flex gap-3">
-                                                                                   {/* View Details Button */}
-                       <div className="flex-shrink-0" onMouseEnter={(e) => e.stopPropagation()}>
-                         <button
-                           type="button"
-                           onClick={() => openScholarshipModal(scholarship)}
-                           className="w-full py-3 sm:py-4 px-3 sm:px-4 rounded-2xl font-bold text-xs sm:text-sm flex items-center justify-center bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-2"
-                           title="View scholarship details"
-                           aria-label="View scholarship details"
-                         >
-                                                     <span className="hidden sm:inline">{t('studentDashboard.findScholarships.scholarshipCard.show')}</span>
-                          <span className="sm:hidden">{t('studentDashboard.findScholarships.scholarshipCard.view')}</span>
-                          <span className="hidden sm:inline ml-1">{t('studentDashboard.findScholarships.scholarshipCard.details')}</span>
-                         </button>
-                       </div>
+                  <div className="flex gap-3 items-stretch">
+                    {/* View Details Button */}
+                    <div className="flex-shrink-0" onMouseEnter={(e) => e.stopPropagation()}>
+                      <button
+                        type="button"
+                        onClick={() => openScholarshipModal(scholarship)}
+                        className="w-full py-3 sm:py-4 px-3 sm:px-4 rounded-2xl font-bold text-xs sm:text-sm flex items-center justify-center bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-2"
+                        title="View scholarship details"
+                        aria-label="View scholarship details"
+                      >
+                        <span className="hidden sm:inline">{t('studentDashboard.findScholarships.scholarshipCard.show')}</span>
+                        <span className="sm:hidden">{t('studentDashboard.findScholarships.scholarshipCard.view')}</span>
+                        <span className="hidden sm:inline ml-1">{t('studentDashboard.findScholarships.scholarshipCard.details')}</span>
+                      </button>
+                    </div>
                     
                     {/* Select/Deselect Button */}
                     <button
@@ -1848,7 +1866,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                       ref={(el) => {
                         if (el) buttonRefs.current.set(scholarship.id, el);
                       }}
-                                             className={`flex-1 py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2 ${
+                      className={`flex-1 py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2 ${
                          inCart 
                            ? 'bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700' 
                            : 'bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white hover:from-[#041f3a] hover:to-slate-600'

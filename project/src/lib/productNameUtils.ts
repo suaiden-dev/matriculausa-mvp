@@ -28,3 +28,4 @@ export const getTranslatedProductNameByProductId = (productId: string, t: TFunct
 
   return productIdMap[productId] || t('productNames.applicationFee');
 };
+
