@@ -129,7 +129,7 @@
       "step1": "Complete a transferência Zelle para o destinatário fornecido",
       "step2": "Salve a captura de tela de confirmação",
       "step3": "Envie sua captura de tela de confirmação",
-      "step4": "Envie para verificação manual"
+      "step4": "Aguarde o processamento (pode levar até 48 horas)"
     },
     "requirements": {
       "title": "Importante: Seu comprovante de pagamento DEVE incluir:",
@@ -147,9 +147,17 @@
       "step1": "Complete sua transferência Zelle do valor necessário",
       "step2": "Salve a captura de tela de confirmação do pagamento que mostra todas as informações necessárias",
       "step3": "Envie sua captura de tela de confirmação abaixo",
-      "step4": "Envie para verificação manual (concluída em até 24 horas)"
+      "step4": "Aguarde o processamento (pode levar até 48 horas)"
     },
-    "reviewDetails": "Revise os detalhes do seu pagamento"
+    "reviewDetails": "Revise os detalhes do seu pagamento",
+    "zellePaymentDetails": {
+      "title": "Detalhes do Pagamento Zelle",
+      "subtitle": "Envie seu pagamento para o destinatário abaixo",
+      "recipientEmail": "Email do Destinatário",
+      "paymentAmount": "Valor do Pagamento",
+      "important": "Importante:",
+      "importantMessage": "Certifique-se de enviar o valor exato de <strong>{{amount}} USD</strong> para <strong>info@thefutureofenglish.com</strong> via Zelle. Qualquer discrepância no valor ou destinatário atrasará o processamento do seu pagamento."
+    }
   },
   "zelleWaiting": {
     "title": "Aguardando Verificação",
@@ -2469,6 +2477,57 @@
         }
       }
     }
+  },
+  "productNames": {
+    "selectionProcess": "Processo de Seleção",
+    "selectionProcessFee": "Taxa de Processo de Seleção",
+    "applicationFee": "Taxa de Aplicação",
+    "scholarshipFee": "Taxa de Bolsa",
+    "enrollmentFee": "Taxa de Matrícula",
+    "collegeEnrollmentFee": "Taxa de Matrícula Universitária",
+    "i20ControlFee": "Taxa de Controle I-20"
+  },
+  "feeValues": {
+    "asPerUniversity": "Conforme a universidade"
+  },
+  "feeDescriptions": {
+    "selectionProcess": "Taxa de Processo de Seleção - Complete seu processo de aplicação",
+    "applicationFee": "Taxa de Aplicação - Candidate-se a uma bolsa específica",
+    "scholarshipFee": "Taxa de Bolsa - Confirme sua candidatura de bolsa",
+    "i20ControlFee": "Taxa de Controle I-20 - Processamento e validação de documentos"
+  },
+  "paymentSelector": {
+    "title": "Escolher Método de Pagamento",
+    "subtitle": "Selecione como deseja pagar sua {{feeType}}",
+    "loading": {
+      "message": "Carregando métodos de pagamento...",
+      "processing": "Processando..."
+    },
+    "methods": {
+      "stripe": {
+        "title": "Stripe",
+        "description": "Pague com segurança usando cartão de crédito ou débito via Stripe"
+      },
+      "pix": {
+        "title": "PIX",
+        "description": "Sistema de pagamento instantâneo para usuários brasileiros"
+      },
+      "zelle": {
+        "title": "Zelle",
+        "description": "Pague via Zelle e envie o comprovante.",
+        "descriptionDetailed": "Pague via Zelle e envie o comprovante."
+      }
+    },
+    "feeTypes": {
+      "selection_process": "taxa de processo de seleção",
+      "application_fee": "taxa de aplicação",
+      "scholarship_fee": "taxa de bolsa",
+      "enrollment_fee": "taxa de matrícula",
+      "i20_control_fee": "taxa de controle I-20"
+    },
+    "manualVerification": "Processamento pode levar até 48 horas",
+    "important": "Importante:",
+    "zelleUploadNote": "Após o pagamento via Zelle, você precisará enviar o comprovante para verificação manual."
   },
   "preCheckoutModal": {
     "securePayment": "Pagamento Seguro",

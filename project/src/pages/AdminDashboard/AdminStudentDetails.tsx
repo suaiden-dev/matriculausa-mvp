@@ -689,14 +689,33 @@ const AdminStudentDetails: React.FC = () => {
         let lockedApplication = null;
         let activeApplication = null;
         if (s.scholarship_applications && s.scholarship_applications.length > 0) {
-          // Priorizar aplicação enrolled, depois approved
-          lockedApplication = s.scholarship_applications.find((app: any) => app.status === 'enrolled') ||
-                             s.scholarship_applications.find((app: any) => app.status === 'approved');
+          console.log('🔍 DEBUG scholarship_applications:', s.scholarship_applications.map((app: any) => ({
+            id: app.id,
+            status: app.status,
+            is_application_fee_paid: app.is_application_fee_paid,
+            is_scholarship_fee_paid: app.is_scholarship_fee_paid,
+            scholarship_title: app.scholarships?.title
+          })));
+          
+          // Priorizar aplicação enrolled, depois approved com application fee pago, depois approved
+          const enrolledApp = s.scholarship_applications.find((app: any) => app.status === 'enrolled');
+          const approvedWithFeeApp = s.scholarship_applications.find((app: any) => app.status === 'approved' && app.is_application_fee_paid);
+          const anyApprovedApp = s.scholarship_applications.find((app: any) => app.status === 'approved');
+          
+          lockedApplication = enrolledApp || approvedWithFeeApp || anyApprovedApp;
+          
+          console.log('🔍 DEBUG lockedApplication selection:', {
+            enrolledApp: enrolledApp?.id,
+            approvedWithFeeApp: approvedWithFeeApp?.id,
+            anyApprovedApp: anyApprovedApp?.id,
+            finalLockedApp: lockedApplication?.id
+          });
           
           // Se não há aplicação locked, buscar a aplicação mais recente para o student_process_type
           if (!lockedApplication) {
             activeApplication = s.scholarship_applications
               .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+            console.log('🔍 DEBUG activeApplication:', activeApplication?.id);
           }
         }
 

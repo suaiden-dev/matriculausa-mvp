@@ -111,27 +111,27 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
         const discount = (activeDiscount && feeType === 'selection_process') ? (activeDiscount.discount_amount || 0) : 0;
         return Math.max(0, base - discount);
       })(),
-      description: `Selection Process Fee - Complete your application process${hasSellerPackage ? ` (${packageName})` : ''}${activeDiscount && feeType === 'selection_process' ? ` ($${activeDiscount.discount_amount || 0} discount applied)` : ''}`,
+      description: `${t('feeDescriptions.selectionProcess')}${hasSellerPackage ? ` (${packageName})` : ''}${activeDiscount && feeType === 'selection_process' ? ` ($${activeDiscount.discount_amount || 0} discount applied)` : ''}`,
       icon: <CreditCard className="w-6 h-6" />
     },
     {
       type: 'application_fee',
       amount: applicationFeeAmount || getFeeAmount('application_fee'), // Application Fee sempre usa valor da universidade
-      description: 'Application Fee - Apply for a specific scholarship',
+      description: t('feeDescriptions.applicationFee'),
       icon: <CreditCard className="w-6 h-6" />
     },
     {
       type: 'scholarship_fee',
       // ✅ CORREÇÃO: Usar sempre useDynamicFees que já considera system_type
       amount: scholarshipFee ? parseFloat(scholarshipFee.replace('$', '')) : 0, // Aguardar carregamento
-      description: `Scholarship Fee - Confirm your scholarship application${hasSellerPackage ? ` (${packageName})` : ''}`,
+      description: `${t('feeDescriptions.scholarshipFee')}${hasSellerPackage ? ` (${packageName})` : ''}`,
       icon: <CreditCard className="w-6 h-6" />
     },
     {
       type: 'i20_control',
       // ✅ CORREÇÃO: Usar sempre useDynamicFees que já considera system_type
       amount: i20ControlFee ? parseFloat(i20ControlFee.replace('$', '')) : 0, // Aguardar carregamento
-      description: `I-20 Control Fee - Document processing and validation${hasSellerPackage ? ` (${packageName})` : ''}`,
+      description: `${t('feeDescriptions.i20ControlFee')}${hasSellerPackage ? ` (${packageName})` : ''}`,
       icon: <CreditCard className="w-6 h-6" />
     }
   ];
@@ -803,8 +803,8 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
                   <CreditCard className="w-5 h-5 text-gray-600" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-semibold text-gray-900">Zelle Payment Details</h2>
-                  <p className="text-gray-600">Send your payment to the following recipient</p>
+                  <h2 className="text-lg font-semibold text-gray-900">{t('zelleCheckout.zellePaymentDetails.title')}</h2>
+                  <p className="text-gray-600">{t('zelleCheckout.zellePaymentDetails.subtitle')}</p>
                 </div>
               </div>
 
@@ -812,7 +812,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Recipient Email
+                      {t('zelleCheckout.zellePaymentDetails.recipientEmail')}
                     </label>
                     <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
                       <code className="text-sm font-mono text-gray-900">info@thefutureofenglish.com</code>
@@ -821,7 +821,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
                   
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Payment Amount
+                      {t('zelleCheckout.zellePaymentDetails.paymentAmount')}
                     </label>
                     <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
                       {feesLoading ? (
@@ -839,11 +839,10 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
                       <span className="text-gray-600 text-xs font-bold">!</span>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-800 font-medium">Important:</p>
-                      <p className="text-sm text-gray-700">
-                        Make sure to send the exact amount of <strong>${currentFee.amount} USD</strong> to <strong>info@thefutureofenglish.com</strong> via Zelle. 
-                        Any discrepancy in amount or recipient will delay your payment processing.
-                      </p>
+                      <p className="text-sm text-gray-800 font-medium">{t('zelleCheckout.zellePaymentDetails.important')}</p>
+                      <p className="text-sm text-gray-700" dangerouslySetInnerHTML={{
+                        __html: t('zelleCheckout.zellePaymentDetails.importantMessage', { amount: currentFee.amount })
+                      }} />
                     </div>
                   </div>
                 </div>
@@ -1052,15 +1051,6 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
                 </div>
               </div>
 
-              <div className="mt-6 p-4 bg-white rounded-lg border border-gray-200">
-                <h4 className="font-medium text-gray-900 mb-2">{t('zelleCheckout.importantInfo.paymentInstructions')}</h4>
-                <ol className="text-sm text-gray-600 space-y-1 list-decimal list-inside">
-                  <li>{t('zelleCheckout.importantInfo.step1')}</li>
-                  <li>{t('zelleCheckout.importantInfo.step2')}</li>
-                  <li>{t('zelleCheckout.importantInfo.step3')}</li>
-                  <li>{t('zelleCheckout.importantInfo.step4')}</li>
-                </ol>
-              </div>
             </div>
           </div>
         </div>
