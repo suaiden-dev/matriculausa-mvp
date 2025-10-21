@@ -2036,24 +2036,36 @@ const AdminStudentDetails: React.FC = () => {
   };
 
   const fetchDocumentRequests = async () => {
-    if (!student) return;
+    if (!student) {
+      console.log('🚫 [ADMIN] No student data available');
+      return;
+    }
+    
+    console.log('🔍 [ADMIN] Starting fetchDocumentRequests for student:', student.user_id);
+    console.log('🔍 [ADMIN] Student applications:', student.all_applications);
     
     setLoadingDocuments(true);
     try {
       // Buscar document requests específicos para as aplicações do estudante
       const applicationIds = student.all_applications?.map(app => app.id) || [];
+      console.log('🔍 [ADMIN] Application IDs:', applicationIds);
       
       let allRequests: any[] = [];
       
       // Buscar requests específicos para cada aplicação
       if (applicationIds.length > 0) {
+        console.log('🔍 [ADMIN] Fetching specific requests for applications...');
         const { data: specificRequests, error: specificError } = await supabase
           .from('document_requests')
           .select('*')
           .in('scholarship_application_id', applicationIds)
           .order('created_at', { ascending: false });
 
-        if (specificError) throw specificError;
+        if (specificError) {
+          console.error('❌ [ADMIN] Error fetching specific requests:', specificError);
+          throw specificError;
+        }
+        console.log('✅ [ADMIN] Specific requests found:', specificRequests);
         allRequests = [...allRequests, ...(specificRequests || [])];
       }
       
@@ -2061,10 +2073,11 @@ const AdminStudentDetails: React.FC = () => {
       const universityIds = student.all_applications?.map(app => app.scholarships?.university_id).filter(Boolean) || [];
       const uniqueUniversityIds = [...new Set(universityIds)];
       
-      console.log('University IDs found:', uniqueUniversityIds);
+      console.log('🔍 [ADMIN] University IDs found:', uniqueUniversityIds);
       
       // Buscar requests globais das universidades específicas
       if (uniqueUniversityIds.length > 0) {
+        console.log('🔍 [ADMIN] Fetching global requests for universities...');
         const { data: globalRequests, error: globalError } = await supabase
           .from('document_requests')
           .select('*')
@@ -2072,18 +2085,24 @@ const AdminStudentDetails: React.FC = () => {
           .in('university_id', uniqueUniversityIds)
           .order('created_at', { ascending: false });
 
-        if (globalError) throw globalError;
-        console.log('Global requests found for specific universities:', globalRequests);
+        if (globalError) {
+          console.error('❌ [ADMIN] Error fetching global requests:', globalError);
+          throw globalError;
+        }
+        console.log('✅ [ADMIN] Global requests found for specific universities:', globalRequests);
         allRequests = [...allRequests, ...(globalRequests || [])];
       }
+      
+      console.log('🔍 [ADMIN] Total requests found:', allRequests.length);
+      console.log('🔍 [ADMIN] All requests:', allRequests);
       
       // ✅ CORREÇÃO: Buscar uploads separadamente e filtrar por estudante
       if (allRequests.length > 0) {
         const requestIds = allRequests.map(req => req.id);
-        const studentUserId = student.student_id; // user_id do estudante
+        const studentUserId = student.user_id; // user_id do estudante
         
-        console.log('🔍 [ADMIN] Buscando uploads para requests:', requestIds);
-        console.log('🔍 [ADMIN] Filtrando por estudante:', studentUserId);
+        console.log('🔍 [ADMIN] Request IDs to search uploads for:', requestIds);
+        console.log('🔍 [ADMIN] Filtering uploads by student user ID:', studentUserId);
         
         const { data: uploads, error: uploadsError } = await supabase
           .from('document_request_uploads')
@@ -2097,26 +2116,46 @@ const AdminStudentDetails: React.FC = () => {
         
         if (uploadsError) {
           console.error('❌ [ADMIN] Error fetching uploads:', uploadsError);
+          console.error('❌ [ADMIN] Uploads error details:', {
+            message: uploadsError.message,
+            details: uploadsError.details,
+            hint: uploadsError.hint,
+            code: uploadsError.code
+          });
         } else {
-          console.log('✅ [ADMIN] Uploads encontrados para este estudante:', uploads);
+          console.log('✅ [ADMIN] Uploads found for this student:', uploads);
+          console.log('✅ [ADMIN] Number of uploads found:', uploads?.length || 0);
           
           // Estruturar os requests com seus uploads
-          const requestsWithUploads = allRequests.map(request => ({
+          const requestsWithUploads = allRequests.map(request => {
+            const requestUploads = uploads?.filter(upload => upload.document_request_id === request.id) || [];
+            console.log(`🔍 [ADMIN] Request ${request.id} (${request.title}) has ${requestUploads.length} uploads`);
+            return {
             ...request,
-            document_request_uploads: uploads?.filter(upload => upload.document_request_id === request.id) || []
-          }));
+              document_request_uploads: requestUploads
+            };
+          });
           
+          console.log('✅ [ADMIN] Final requests with uploads:', requestsWithUploads);
           setDocumentRequests(requestsWithUploads);
           return; // Sair da função aqui
         }
+      } else {
+        console.log('⚠️ [ADMIN] No document requests found for this student');
       }
       
       // Se não há requests ou uploads, definir como array vazio
+      console.log('🔍 [ADMIN] Setting empty document requests');
       setDocumentRequests(allRequests);
     } catch (error) {
-      console.error('Error fetching document requests:', error);
+      console.error('❌ [ADMIN] Error fetching document requests:', error);
+      console.error('❌ [ADMIN] Error details:', {
+        message: error.message,
+        stack: error.stack
+      });
     } finally {
       setLoadingDocuments(false);
+      console.log('🔍 [ADMIN] fetchDocumentRequests completed');
     }
   };
 
