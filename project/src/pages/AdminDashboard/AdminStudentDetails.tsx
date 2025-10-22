@@ -689,13 +689,14 @@ const AdminStudentDetails: React.FC = () => {
         let lockedApplication = null;
         let activeApplication = null;
         if (s.scholarship_applications && s.scholarship_applications.length > 0) {
-          console.log('🔍 DEBUG scholarship_applications:', s.scholarship_applications.map((app: any) => ({
+          console.log('🔍 [ADMIN STUDENT DETAILS] scholarship_applications:', s.scholarship_applications.map((app: any) => ({
             id: app.id,
             status: app.status,
             is_application_fee_paid: app.is_application_fee_paid,
             is_scholarship_fee_paid: app.is_scholarship_fee_paid,
             scholarship_title: app.scholarships?.title
           })));
+          console.log('🔍 [ADMIN STUDENT DETAILS] Full scholarship_applications data:', JSON.stringify(s.scholarship_applications, null, 2));
           
           // Priorizar aplicação enrolled, depois approved com application fee pago, depois approved
           const enrolledApp = s.scholarship_applications.find((app: any) => app.status === 'enrolled');
@@ -787,6 +788,30 @@ const AdminStudentDetails: React.FC = () => {
           all_applications: s.scholarship_applications || []
         };
 
+        console.log('🔍 [ADMIN STUDENT DETAILS] Setting student state with formatted data:', {
+          student_id: formatted.student_id,
+          student_name: formatted.student_name,
+          total_applications: formatted.total_applications,
+          application_statuses: formatted.all_applications.map((app: any) => ({
+            id: app.id,
+            status: app.status,
+            scholarship_title: app.scholarships?.title
+          })),
+          timestamp: new Date().toISOString()
+        });
+        
+        // Verificar se há aplicações rejeitadas
+        const rejectedApps = formatted.all_applications.filter((app: any) => app.status === 'rejected');
+        if (rejectedApps.length > 0) {
+          console.log('⚠️ [ADMIN STUDENT DETAILS] Aplicações REJEITADAS encontradas:', rejectedApps.map((app: any) => ({
+            id: app.id,
+            status: app.status,
+            scholarship_title: app.scholarships?.title
+          })));
+        } else {
+          console.log('ℹ️ [ADMIN STUDENT DETAILS] Nenhuma aplicação rejeitada encontrada');
+        }
+        
         setStudent(formatted);
         setDependents(Number(s.dependents || 0));
         
@@ -1992,15 +2017,38 @@ const AdminStudentDetails: React.FC = () => {
   };
 
   const rejectApplication = async (applicationId: string) => {
-    if (!student || !isPlatformAdmin) return;
+    console.log('🚨 [REJECT APPLICATION] Iniciando rejeição da aplicação:', {
+      applicationId,
+      studentName: student?.student_name,
+      reason: rejectStudentReason,
+      timestamp: new Date().toISOString()
+    });
+    
+    if (!student || !isPlatformAdmin) {
+      console.log('❌ [REJECT APPLICATION] Rejeição bloqueada:', {
+        hasStudent: !!student,
+        isPlatformAdmin,
+        userRole: user?.role
+      });
+      return;
+    }
     
     try {
       setRejectingStudent(true);
+      console.log('🔄 [REJECT APPLICATION] Atualizando status no banco de dados...');
       
-      await supabase
+      const { data: updateData, error: updateError } = await supabase
         .from('scholarship_applications')
         .update({ status: 'rejected', notes: rejectStudentReason || null })
-        .eq('id', applicationId);
+        .eq('id', applicationId)
+        .select();
+      
+      if (updateError) {
+        console.error('❌ [REJECT APPLICATION] Erro ao atualizar banco de dados:', updateError);
+        throw updateError;
+      }
+      
+      console.log('✅ [REJECT APPLICATION] Status atualizado com sucesso:', updateData);
       
       setShowRejectStudentModal(false);
       setRejectStudentReason('');
@@ -2008,6 +2056,7 @@ const AdminStudentDetails: React.FC = () => {
       
       // Log the action
       try {
+        console.log('📝 [REJECT APPLICATION] Registrando log da ação...');
         await logAction(
           'application_rejection',
           `Scholarship application rejected by admin${rejectStudentReason ? `: ${rejectStudentReason}` : ''}`,
@@ -2020,17 +2069,26 @@ const AdminStudentDetails: React.FC = () => {
             rejected_by: user?.email || 'Admin'
           }
         );
+        console.log('✅ [REJECT APPLICATION] Log registrado com sucesso');
       } catch (logError) {
-        console.error('Failed to log action:', logError);
+        console.error('⚠️ [REJECT APPLICATION] Falha ao registrar log (não crítico):', logError);
       }
 
+      console.log('🔄 [REJECT APPLICATION] Recarregando página para atualizar dados...');
       window.location.reload();
       
       showToast('Application rejected successfully.', 'success');
     } catch (error: any) {
-      console.error('Error rejecting application:', error);
+      console.error('❌ [REJECT APPLICATION] Erro crítico ao rejeitar aplicação:', error);
+      console.error('❌ [REJECT APPLICATION] Detalhes do erro:', {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint
+      });
       showToast(`Failed to reject application: ${error.message}`, 'error');
     } finally {
+      console.log('🏁 [REJECT APPLICATION] Finalizando processo de rejeição');
       setRejectingStudent(false);
     }
   };
@@ -3711,20 +3769,35 @@ const AdminStudentDetails: React.FC = () => {
                       .map((app: any, i: number) => {
                       const appKey = app.id || `app-${i}`;
                       const isExpanded = expandedApps[appKey] || false;
+                      
+                      console.log('🎨 [RENDER APPLICATION CARD]', {
+                        appId: app.id,
+                        status: app.status,
+                        scholarship: app.scholarships?.title,
+                        isExpanded
+                      });
+                      
                       return (
                         <div key={appKey} className={`border rounded-xl overflow-hidden ${
                           app.status === 'approved' 
                             ? 'border-green-200 bg-green-50' 
+                            : app.status === 'rejected'
+                            ? 'border-red-200 bg-red-50'
                             : 'border-slate-200'
                         }`}>
                           <button onClick={() => setExpandedApps(p => ({ ...p, [appKey]: !isExpanded }))} className={`w-full px-4 py-3 transition-colors text-left flex items-center justify-between ${
                             app.status === 'approved' 
                               ? 'bg-green-50 hover:bg-green-100' 
+                              : app.status === 'rejected'
+                              ? 'bg-red-50 hover:bg-red-100'
                               : 'bg-slate-50 hover:bg-slate-100'
                           }`}>
                             <div className="flex items-center space-x-3">
                               {app.status === 'approved' && (
                                 <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></div>
+                              )}
+                              {app.status === 'rejected' && (
+                                <div className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0"></div>
                               )}
                             <div>
                                 <h4 className="font-semibold text-slate-900 flex items-center space-x-2">
@@ -3908,17 +3981,21 @@ const AdminStudentDetails: React.FC = () => {
                                         setPendingRejectAppId(app.id);
                                         setShowRejectStudentModal(true);
                                       }}
-                                      disabled={approvingStudent || rejectingStudent || app.status === 'approved'}
-                                      className="px-4 py-2 rounded-lg font-medium text-red-600 border border-red-200 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-center text-sm"
+                                      disabled={approvingStudent || rejectingStudent || app.status === 'approved' || app.status === 'rejected'}
+                                      className={`px-4 py-2 rounded-lg font-medium border transition-colors text-center text-sm ${
+                                        app.status === 'rejected' 
+                                          ? 'bg-red-100 text-red-700 border-red-300 cursor-not-allowed' 
+                                          : 'text-red-600 border-red-200 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed'
+                                      }`}
                                     >
-                                      {app.status === 'approved' ? 'Application Approved' : 'Reject Application'}
+                                      {app.status === 'approved' ? 'Application Approved' : app.status === 'rejected' ? 'Application Rejected' : 'Reject Application'}
                                     </button>
                                     <button
-                                      disabled={approvingStudent || rejectingStudent || app.status === 'approved'}
+                                      disabled={approvingStudent || rejectingStudent || app.status === 'approved' || app.status === 'rejected'}
                                       onClick={() => approveApplication(app.id)}
                                       className="px-4 py-2 rounded-lg font-medium bg-[#05294E] text-white hover:bg-[#041f38] disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-center text-sm"
                                     >
-                                      {app.status === 'approved' ? 'Approved' : (approvingStudent ? 'Approving...' : 'Approve Application')}
+                                      {app.status === 'approved' ? 'Approved' : app.status === 'rejected' ? 'Rejected' : (approvingStudent ? 'Approving...' : 'Approve Application')}
                                     </button>
                                   </div>
                                 </div>
