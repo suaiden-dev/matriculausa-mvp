@@ -28,6 +28,7 @@ interface ModalContentProps {
 
 export const ModalContent: React.FC<ModalContentProps> = ({
   productName,
+  computedBasePrice,
   hasUsedReferralCode,
   hasSellerReferralCode,
   activeDiscount,
@@ -54,6 +55,12 @@ export const ModalContent: React.FC<ModalContentProps> = ({
     <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-4 sm:p-6 border-0">
       <div className="text-center">
         <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2 sm:mb-3">{productName}</h3>
+        <div className="mb-3">
+          <div className="text-3xl font-bold text-blue-700">
+            ${computedBasePrice.toFixed(2)}
+          </div>
+          <p className="text-xs text-gray-600 mt-1">{t('preCheckoutModal.totalAmount')}</p>
+        </div>
         <div className="inline-flex items-center space-x-2 bg-blue-100 px-3 py-1 rounded-full">
           <Lock className="w-4 h-4 text-blue-600" />
           <span className="text-sm font-medium text-blue-700">{t('preCheckoutModal.securePaymentGateway')}</span>

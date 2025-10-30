@@ -50,6 +50,15 @@ export const useSystemType = (): {
           return;
         }
 
+        // Se veio via seller (tem seller_referral_code), forçar legacy para todo o fluxo
+        if (userProfile.seller_referral_code) {
+          console.log('✅ [useSystemType] seller_referral_code presente -> forçando legacy');
+          setSystemType('legacy');
+          setLoading(false);
+          setHasChecked(true);
+          return;
+        }
+
         // Para todos os usuários, usar a coluna system_type da tabela user_profiles
         console.log('🔍 [useSystemType] userProfile.system_type:', userProfile.system_type);
         

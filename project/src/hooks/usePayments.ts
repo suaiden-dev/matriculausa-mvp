@@ -203,7 +203,7 @@ export const usePayments = (universityId: string | undefined) => {
         // Buscar dados dos usuários em lote
         const { data: userProfiles } = await supabase
           .from('user_profiles')
-          .select('id, full_name, email, phone, country')
+          .select('id, full_name, email, phone, country, dependents, system_type')
           .in('id', studentIds);
 
         // Buscar dados das bolsas em lote
@@ -234,6 +234,11 @@ export const usePayments = (universityId: string | undefined) => {
           if (scholarship) {
             const applicationFeeAmount = scholarship?.application_fee_amount || 0;
             const scholarshipAmount = scholarship?.amount || 0;
+            const deps = Number((userProfile as any)?.dependents) || 0;
+            const systemType = ((userProfile as any)?.system_type as any) || 'legacy';
+            const finalApplicationFee = systemType === 'legacy' && deps > 0
+              ? applicationFeeAmount + deps * 100
+              : applicationFeeAmount;
             
             transformedPayments.push({
               id: application.id,
@@ -257,7 +262,7 @@ export const usePayments = (universityId: string | undefined) => {
               scholarship_level: scholarship?.level || 'Not specified',
               // Informações do pagamento (simuladas para application fees)
               payment_type: 'application_fee',
-              amount_charged: applicationFeeAmount,
+              amount_charged: finalApplicationFee,
               currency: 'USD',
               status: application.is_application_fee_paid ? 'succeeded' : 'pending',
               created_at: application.applied_at,
@@ -267,7 +272,7 @@ export const usePayments = (universityId: string | undefined) => {
               // Campos específicos para application fees
               is_application_fee_paid: application.is_application_fee_paid || false,
               is_scholarship_fee_paid: application.is_scholarship_fee_paid || false,
-              application_fee_amount: applicationFeeAmount,
+              application_fee_amount: finalApplicationFee,
               scholarship_fee_amount: scholarshipAmount,
             });
           }
@@ -309,8 +314,8 @@ export const usePayments = (universityId: string | undefined) => {
         for (const payment of finalPayments) {
           if (payment.is_application_fee_paid) {
             recalculatedStats.paid_application_fees++;
-            // Converter de centavos para dólares
-            recalculatedStats.total_revenue += payment.amount_charged / 100;
+            // Valores já estão em USD
+            recalculatedStats.total_revenue += payment.amount_charged;
           } else {
             recalculatedStats.pending_application_fees++;
           }

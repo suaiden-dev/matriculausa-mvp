@@ -823,18 +823,30 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                           <span className={`text-sm font-medium ${scholarshipApplication?.is_application_fee_paid ? 'text-green-700' : 'text-red-700'}`}>
                             {scholarshipApplication?.is_application_fee_paid ? 'Paid' : 'Pending'}
                           </span>
-                           <span className="text-xs text-slate-500">
-                             {(() => {
-                               // ✅ CORREÇÃO: Mostrar valor da bolsa aplicada (scholarship amount)
-                               if (scholarshipApplication?.scholarships?.application_fee_amount) {
-                                 const amount = Number(scholarshipApplication.scholarships.application_fee_amount);
-                                 return formatFeeAmount(amount);
-                               } else {
-                                 const fallbackAmount = getFeeAmount('application_fee');
-                                 return formatFeeAmount(fallbackAmount);
-                               }
-                             })()}
-                           </span>
+                           {scholarshipApplication?.is_application_fee_paid ? (
+                             <span className="text-xs text-slate-500">
+                               {(() => {
+                                 let baseAmount = 0;
+                                 if (scholarshipApplication?.scholarships?.application_fee_amount) {
+                                   baseAmount = Number(scholarshipApplication.scholarships.application_fee_amount);
+                                 } else {
+                                   baseAmount = getFeeAmount('application_fee');
+                                 }
+                                 const systemType = studentDetails?.system_type || 'legacy';
+                                 const dependents = studentDependents || 0;
+                                 if (systemType === 'legacy' && dependents > 0) {
+                                   const dependentsCost = dependents * 100;
+                                   return formatFeeAmount(baseAmount + dependentsCost);
+                                 }
+                                 return formatFeeAmount(baseAmount);
+                               })()}
+                             </span>
+                           ) : (
+                             <div className="text-right">
+                               <div className="text-xs text-slate-700 font-medium">Varies by scholarship</div>
+                               <div className="text-[11px] text-slate-500">+ $100 per dependent (applied at checkout)</div>
+                             </div>
+                           )}
                         </div>
                       </div>
                     </div>

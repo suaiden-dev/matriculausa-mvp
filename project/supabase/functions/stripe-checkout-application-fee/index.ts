@@ -63,10 +63,10 @@ Deno.serve(async (req) => {
     // Lógica para PIX (conversão USD -> BRL)
     let exchangeRate = 1;
 
-    // Busca o perfil do usuário para obter o user_profiles.id correto
+    // Busca o perfil do usuário para obter o user_profiles.id correto e informações de dependentes
     const { data: userProfile, error: profileError } = await supabase
       .from('user_profiles')
-      .select('id, user_id')
+      .select('id, user_id, system_type, dependents')
       .eq('user_id', user.id)
       .single();
 
@@ -213,6 +213,24 @@ Deno.serve(async (req) => {
       }
     } else {
       console.log('[stripe-checkout-application-fee] Nenhum scholarship_id encontrado na aplicação');
+    }
+
+    // Adicionar custo por dependente apenas para sistema legacy
+    const systemType = userProfile.system_type || 'legacy';
+    const dependents = Number(userProfile.dependents) || 0;
+    
+    console.log('[stripe-checkout-application-fee] Informações do estudante:', {
+      systemType,
+      dependents,
+      baseApplicationFee: applicationFeeAmount
+    });
+    
+    if (systemType === 'legacy' && dependents > 0) {
+      const dependentsCost = dependents * 100; // $100 por dependente
+      applicationFeeAmount += dependentsCost;
+      console.log(`[stripe-checkout-application-fee] ✅ Adicionado $${dependentsCost} por ${dependents} dependente(s). Novo valor: $${applicationFeeAmount}`);
+    } else {
+      console.log('[stripe-checkout-application-fee] Sem custo adicional de dependentes (sistema:', systemType, ', dependentes:', dependents, ')');
     }
 
     // Garantir valor mínimo de $0.50 USD
