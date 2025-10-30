@@ -68,6 +68,15 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
   
   // Obter dados do usuário primeiro
   const { userProfile, user, refetchUserProfile } = useAuth();
+
+  // Helper: calcular Application Fee exibida considerando dependentes (legacy)
+  const getApplicationFeeWithDependents = (sch: any): string => {
+    const base = sch?.application_fee_amount ? Number(sch.application_fee_amount) : 350;
+    const systemType = userProfile?.system_type || 'legacy';
+    const deps = Number(userProfile?.dependents) || 0;
+    const finalAmount = systemType === 'legacy' && deps > 0 ? base + deps * 100 : base;
+    return finalAmount.toFixed(2);
+  };
   
   // Obter faixa de bolsa desejada do perfil do usuário
   // ✅ Se for null/undefined, aluno verá TODAS as bolsas (sem filtro de valor)
@@ -1493,7 +1502,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                             <div className="flex justify-between items-center">
                               <span className="text-xs text-slate-600">{t('scholarshipsPage.scholarshipCard.applicationFee')}</span>
                               <span className="text-sm font-bold text-purple-600">
-                                ${scholarship.application_fee_amount ? Number(scholarship.application_fee_amount).toFixed(2) : '350.00'}
+                                ${getApplicationFeeWithDependents(scholarship)}
                               </span>
                             </div>
                             <div className="text-xs text-slate-400 text-center mt-1">
@@ -1794,7 +1803,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                         <div className="flex items-center justify-between text-xs text-slate-500">
                           <span>{t('scholarshipsPage.scholarshipCard.applicationFee')}</span>
                           <span className="font-semibold text-purple-600">
-                            ${scholarship.application_fee_amount ? Number(scholarship.application_fee_amount).toFixed(2) : '350.00'}
+                            ${getApplicationFeeWithDependents(scholarship)}
                           </span>
                         </div>
                         <div className="text-xs text-slate-400 text-center mt-1">

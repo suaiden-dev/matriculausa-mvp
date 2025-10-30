@@ -13,6 +13,7 @@ import { useNavigate } from 'react-router-dom';
 import { CreditCard, CheckCircle, X } from 'lucide-react';
 import { Scholarship } from '../types';
 import { useFeeConfig } from '../hooks/useFeeConfig';
+import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from 'react-i18next';
 
 // Componente SVG para o logo do PIX
@@ -57,6 +58,7 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
 }) => {
   const navigate = useNavigate();
   const { getFeeAmount: getFeeAmountFromConfig } = useFeeConfig();
+  const { userProfile } = useAuth();
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'stripe' | 'zelle' | 'pix' | null>(null);
   const { t } = useTranslation();
   const [submitting, setSubmitting] = useState<boolean>(false);
@@ -118,8 +120,14 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
     if (applicationFeeAmount > 1000) {
       applicationFeeAmount = applicationFeeAmount / 100;
     }
-    
-    return applicationFeeAmount;
+    // Aplicar +$100 por dependente quando sistema legacy
+    const deps = Number(userProfile?.dependents) || 0;
+    const systemType = userProfile?.system_type || 'legacy';
+    const final = systemType === 'legacy' && deps > 0
+      ? applicationFeeAmount + deps * 100
+      : applicationFeeAmount;
+
+    return final;
   };
 
   const feeAmount = getFeeAmount();

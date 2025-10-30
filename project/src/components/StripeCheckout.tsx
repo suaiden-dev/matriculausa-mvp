@@ -75,6 +75,15 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
   const { isBlocked, pendingPayment, loading: paymentBlockedLoading } = usePaymentBlocked();
 
   const product = STRIPE_PRODUCTS[productId as keyof typeof STRIPE_PRODUCTS];
+
+  // Helper: Application Fee final (base + $100 por dependente se legacy)
+  const getFinalApplicationFee = (): number => {
+    const base = Number(getFeeAmount('application_fee'));
+    const deps = Number(userProfile?.dependents) || 0;
+    const systemType = userProfile?.system_type || 'legacy';
+    const final = systemType === 'legacy' && deps > 0 ? base + deps * 100 : base;
+    return final;
+  };
   
   if (!product) {
     console.error(`Product '${productId}' não encontrado em stripe-config.ts. Verifique se o nome está correto e padronizado.`);
@@ -209,7 +218,7 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
           }
           return selectionProcessFee.replace('$', '');
         } else if (feeType === 'application_fee') {
-          return getFeeAmount('application_fee').toString(); // Application Fee sempre usa valor da universidade
+          return getFinalApplicationFee().toString();
         } else if (feeType === 'scholarship_fee') {
           // ✅ CORREÇÃO: Usar sempre os valores do useDynamicFees que já consideram o system_type
           if (!scholarshipFee) {
@@ -331,7 +340,7 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
             systemType: userProfile?.system_type
           });
         } else {
-          finalAmount = getFeeAmount('application_fee');
+          finalAmount = getFinalApplicationFee();
         }
       }
 
@@ -478,7 +487,7 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
           productName={getTranslatedProductNameByProductId(productId, t)}
           productPrice={(feeType === 'selection_process'
             ? (selectionProcessFee ? parseFloat(selectionProcessFee.replace('$', '')) : 0)
-            : getFeeAmount('application_fee'))}
+            : getFinalApplicationFee())}
         />
       )}
 
@@ -556,7 +565,7 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
             ? (scholarshipFee ? parseFloat(scholarshipFee.replace('$', '')) : 0)
             : feeType === 'i20_control_fee'
             ? (i20ControlFee ? parseFloat(i20ControlFee.replace('$', '')) : 0)
-            : getFeeAmount('application_fee'))}
+            : getFinalApplicationFee())}
         />
       )}
 

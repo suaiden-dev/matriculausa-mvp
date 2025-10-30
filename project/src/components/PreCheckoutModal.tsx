@@ -197,8 +197,13 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
         // ✅ CORREÇÃO: Usar useDynamicFees que já considera system_type e dependentes
         if (!selectionProcessFee) return 0; // Aguardar carregamento
         return parseFloat(selectionProcessFee.replace('$', ''));
-      case 'application_fee':
-        return Number(getFeeAmount('application_fee'));
+      case 'application_fee': {
+        const base = Number(getFeeAmount('application_fee'));
+        const deps = Number(userProfile?.dependents) || 0;
+        const systemType = userProfile?.system_type || 'legacy';
+        const final = systemType === 'legacy' && deps > 0 ? base + deps * 100 : base;
+        return final;
+      }
       case 'scholarship_fee':
         // ✅ CORREÇÃO: Usar useDynamicFees que já considera system_type
         if (!scholarshipFee) return 0; // Aguardar carregamento

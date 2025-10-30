@@ -73,7 +73,8 @@ export const useDynamicFees = (): DynamicFeeValues => {
 
     // Verificar se há override para Selection Process Fee
     const hasSelectionOverride = hasOverride('selection_process');
-    const baseSelectionFee = Number(getFeeAmount('selection_process'));
+    // Para legacy, a base deve ser 400 independentemente do valor global (350 é do simplificado)
+    const baseSelectionFee = 400;
     
     let finalSelectionFee = baseSelectionFee;
     
