@@ -246,10 +246,11 @@ const PaymentManagement: React.FC = () => {
         .reduce((sum: number, r: any) => sum + r.amount_usd, 0);
       
              // Calcular receita baseada APENAS em application fees pagas (TODAS as aplicações, não apenas 90 dias)
-       const { data: paidApplications, error: paidError } = await supabase
+      const { data: paidApplications, error: paidError } = await supabase
          .from('scholarship_applications')
          .select(`
-           scholarship_id,
+          scholarship_id,
+          student_id,
            created_at,
            is_application_fee_paid,
            scholarships!inner(
@@ -264,22 +265,41 @@ const PaymentManagement: React.FC = () => {
          console.error('Error fetching paid applications:', paidError);
        }
        
-       // Calcular receita total APENAS de application fees - converter de centavos para dólares
-       const totalApplicationFeeRevenue = paidApplications?.reduce((sum: number, app: any) => {
-         const feeAmount = app.scholarships?.application_fee_amount || 0;
-         return sum + (feeAmount / 100); // Converter de centavos para dólares
-       }, 0) || 0;
+      // Buscar dependentes/system_type dos estudantes dessas aplicações
+      const studentIds = Array.from(new Set((paidApplications || []).map((a: any) => a.student_id).filter(Boolean)));
+      let studentsMap: Record<string, any> = {};
+      if (studentIds.length > 0) {
+        const { data: students } = await supabase
+          .from('user_profiles')
+          .select('id, dependents, system_type')
+          .in('id', studentIds);
+        (students || []).forEach((s: any) => { studentsMap[s.id] = s; });
+      }
+
+      // Calcular receita total APENAS de application fees (em dólares) incluindo dependentes
+      const totalApplicationFeeRevenue = paidApplications?.reduce((sum: number, app: any) => {
+        const feeAmount = Number(app.scholarships?.application_fee_amount || 0);
+        const s = studentsMap[app.student_id];
+        const deps = Number(s?.dependents) || 0;
+        const systemType = (s?.system_type as any) || 'legacy';
+        const withDeps = systemType === 'legacy' && deps > 0 ? feeAmount + deps * 100 : feeAmount;
+        return sum + withDeps;
+      }, 0) || 0;
        
        // Calcular receita de application fees dos últimos 7 dias
        const sevenDaysAgo = new Date();
        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
        
-       const last7DaysApplicationFeeRevenue = paidApplications?.filter((app: any) => {
+      const last7DaysApplicationFeeRevenue = paidApplications?.filter((app: any) => {
          const appDate = new Date(app.created_at);
          return appDate >= sevenDaysAgo;
        }).reduce((sum: number, app: any) => {
-         const feeAmount = app.scholarships?.application_fee_amount || 0;
-         return sum + (feeAmount / 100);
+        const feeAmount = Number(app.scholarships?.application_fee_amount || 0);
+        const s = studentsMap[app.student_id];
+        const deps = Number(s?.dependents) || 0;
+        const systemType = (s?.system_type as any) || 'legacy';
+        const withDeps = systemType === 'legacy' && deps > 0 ? feeAmount + deps * 100 : feeAmount;
+        return sum + withDeps;
        }, 0) || 0;
       
              // Calcular saldo disponível: Application fees - Payment requests (pending + approved + paid) + rejeitados voltam ao saldo
@@ -322,12 +342,13 @@ const PaymentManagement: React.FC = () => {
        const ninetyDaysAgo = new Date();
        ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
        
-       const { data: applications, error: appsError } = await supabase
+      const { data: applications, error: appsError } = await supabase
          .from('scholarship_applications')
          .select(`
            id,
            created_at,
            is_application_fee_paid,
+          student_id,
            scholarships!inner(
              university_id,
              application_fee_amount
@@ -342,7 +363,18 @@ const PaymentManagement: React.FC = () => {
         return;
       }
 
-             // Calcular receita diária de application fees dos últimos 30 dias
+      // Montar mapa de estudantes para dependentes/system_type
+      const appStudentIds = Array.from(new Set((applications || []).map((a: any) => a.student_id).filter(Boolean)));
+      let analyticsStudentsMap: Record<string, any> = {};
+      if (appStudentIds.length > 0) {
+        const { data: students } = await supabase
+          .from('user_profiles')
+          .select('id, dependents, system_type')
+          .in('id', appStudentIds);
+        (students || []).forEach((s: any) => { analyticsStudentsMap[s.id] = s; });
+      }
+
+      // Calcular receita diária de application fees dos últimos 30 dias
        const dailyRevenue = [];
        for (let i = 29; i >= 0; i--) {
          const date = new Date();
@@ -352,9 +384,14 @@ const PaymentManagement: React.FC = () => {
          const dayApplicationFeeRevenue = applications?.filter(app => {
            const appDate = new Date(app.created_at).toISOString().split('T')[0];
            return appDate === dateStr && app.is_application_fee_paid;
-         }).reduce((sum, app) => {
-           const scholarship = Array.isArray(app.scholarships) ? app.scholarships[0] : app.scholarships;
-           return sum + ((scholarship?.application_fee_amount || 0) / 100);
+        }).reduce((sum, app) => {
+          const scholarship = Array.isArray(app.scholarships) ? app.scholarships[0] : app.scholarships;
+          const base = Number(scholarship?.application_fee_amount || 0);
+          const s = analyticsStudentsMap[app.student_id];
+          const deps = Number(s?.dependents) || 0;
+          const systemType = (s?.system_type as any) || 'legacy';
+          const withDeps = systemType === 'legacy' && deps > 0 ? base + deps * 100 : base;
+          return sum + withDeps;
          }, 0) || 0;
          
          dailyRevenue.push({ date: dateStr, amount: dayApplicationFeeRevenue });
@@ -372,9 +409,14 @@ const PaymentManagement: React.FC = () => {
            return appDate.getMonth() === date.getMonth() && 
                   appDate.getFullYear() === date.getFullYear() && 
                   app.is_application_fee_paid;
-         }).reduce((sum, app) => {
-           const scholarship = Array.isArray(app.scholarships) ? app.scholarships[0] : app.scholarships;
-           return sum + ((scholarship?.application_fee_amount || 0) / 100);
+        }).reduce((sum, app) => {
+          const scholarship = Array.isArray(app.scholarships) ? app.scholarships[0] : app.scholarships;
+          const base = Number(scholarship?.application_fee_amount || 0);
+          const s = analyticsStudentsMap[app.student_id];
+          const deps = Number(s?.dependents) || 0;
+          const systemType = (s?.system_type as any) || 'legacy';
+          const withDeps = systemType === 'legacy' && deps > 0 ? base + deps * 100 : base;
+          return sum + withDeps;
          }, 0) || 0;
          
          monthlyRevenue.push({ month: monthStr, amount: monthApplicationFeeRevenue });
@@ -384,12 +426,17 @@ const PaymentManagement: React.FC = () => {
        const totalApplications = applications?.length || 0;
        const paidApplications = applications?.filter(app => app.is_application_fee_paid).length || 0;
        const conversionRate = totalApplications > 0 ? (paidApplications / totalApplications) * 100 : 0;
-       const averageApplicationFee = paidApplications > 0 ? 
-         applications?.filter(app => app.is_application_fee_paid)
-           .reduce((sum, app) => {
-             const scholarship = Array.isArray(app.scholarships) ? app.scholarships[0] : app.scholarships;
-             return sum + ((scholarship?.application_fee_amount || 0) / 100);
-           }, 0) / paidApplications : 0;
+      const averageApplicationFee = paidApplications > 0 ? 
+        applications?.filter(app => app.is_application_fee_paid)
+          .reduce((sum, app) => {
+            const scholarship = Array.isArray(app.scholarships) ? app.scholarships[0] : app.scholarships;
+            const base = Number(scholarship?.application_fee_amount || 0);
+            const s = analyticsStudentsMap[app.student_id];
+            const deps = Number(s?.dependents) || 0;
+            const systemType = (s?.system_type as any) || 'legacy';
+            const withDeps = systemType === 'legacy' && deps > 0 ? base + deps * 100 : base;
+            return sum + withDeps;
+          }, 0) / paidApplications : 0;
 
       // Calcular breakdown por método de pagamento (porcentagens)
       const totalPaymentRequests = universityPaymentRequests.length;
@@ -407,13 +454,18 @@ const PaymentManagement: React.FC = () => {
        const recentActivity: Array<{date: string, type: string, amount: number, description: string}> = [];
        
        // Adicionar application fees pagas recentes
-       applications?.slice(0, 5).forEach(app => {
+      applications?.slice(0, 5).forEach(app => {
          if (app.is_application_fee_paid) {
            const scholarship = Array.isArray(app.scholarships) ? app.scholarships[0] : app.scholarships;
-           recentActivity.push({
+          const base = Number(scholarship?.application_fee_amount || 0);
+          const s = analyticsStudentsMap[app.student_id];
+          const deps = Number(s?.dependents) || 0;
+          const systemType = (s?.system_type as any) || 'legacy';
+          const withDeps = systemType === 'legacy' && deps > 0 ? base + deps * 100 : base;
+          recentActivity.push({
              date: app.created_at,
              type: 'revenue',
-             amount: (scholarship?.application_fee_amount || 0) / 100,
+            amount: withDeps,
              description: 'Application fee received'
            });
          }

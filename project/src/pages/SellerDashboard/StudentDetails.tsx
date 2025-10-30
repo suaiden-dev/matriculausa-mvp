@@ -1757,31 +1757,44 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                        </div>
                      </div>
 
-                     {/* Application Fee Status */}
-                     <div className="w-full flex items-center justify-between p-3 rounded-lg border border-slate-200">
-                       <div className="flex items-center space-x-3">
-                         <div className={`w-3 h-3 rounded-full ${studentInfo?.is_application_fee_paid ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                         <span className="text-sm font-medium text-slate-900">Application Fee</span>
-                       </div>
-                       <div className="flex flex-col items-end">
-                         <span className={`text-sm font-medium ${studentInfo?.is_application_fee_paid ? 'text-green-700' : 'text-red-700'}`}>
-                           {studentInfo?.is_application_fee_paid ? 'Paid' : 'Pending'}
-                         </span>
-                         <span className="text-xs text-slate-500">
-                           {(() => {
-                             if (studentInfo?.scholarship?.application_fee_amount) {
-                               const amount = Number(studentInfo.scholarship.application_fee_amount);
-                               return formatFeeAmount(amount);
-                             } else if ((studentInfo as any)?.application_fee_amount) {
-                               const amount = Number((studentInfo as any).application_fee_amount);
-                               return formatFeeAmount(amount);
-                             } else {
-                               return formatFeeAmount(getFeeAmount('application_fee'));
-                             }
-                           })()}
-                         </span>
-                       </div>
-                     </div>
+                    {/* Application Fee Status */}
+                    <div className="w-full flex items-center justify-between p-3 rounded-lg border border-slate-200">
+                      <div className="flex items-center space-x-3">
+                        <div className={`w-3 h-3 rounded-full ${studentInfo?.is_application_fee_paid ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                        <span className="text-sm font-medium text-slate-900">Application Fee</span>
+                      </div>
+                      <div className="flex flex-col items-end">
+                        <span className={`text-sm font-medium ${studentInfo?.is_application_fee_paid ? 'text-green-700' : 'text-red-700'}`}>
+                          {studentInfo?.is_application_fee_paid ? 'Paid' : 'Pending'}
+                        </span>
+            {studentInfo?.is_application_fee_paid ? (
+              <span className="text-xs text-slate-500">
+                {(() => {
+                  // Base da scholarship se disponível; fallback para configuração padrão
+                  let baseAmount = 0;
+                  if (studentInfo?.scholarship?.application_fee_amount) {
+                    baseAmount = Number(studentInfo.scholarship.application_fee_amount);
+                  } else if ((studentInfo as any)?.application_fee_amount) {
+                    baseAmount = Number((studentInfo as any).application_fee_amount);
+                  } else {
+                    baseAmount = getFeeAmount('application_fee');
+                  }
+                  const systemType = studentInfo?.system_type || 'legacy';
+                  const deps = Number(dependents || 0);
+                  if (systemType === 'legacy' && deps > 0) {
+                    return formatFeeAmount(baseAmount + deps * 100);
+                  }
+                  return formatFeeAmount(baseAmount);
+                })()}
+              </span>
+            ) : (
+              <div className="text-right">
+                <div className="text-xs text-slate-700 font-medium">Varies by scholarship</div>
+                <div className="text-[11px] text-slate-500">+ $100 per dependent (applied at checkout)</div>
+              </div>
+            )}
+                      </div>
+                    </div>
 
                      {/* Scholarship Fee Status */}
                      <div className="w-full flex items-center justify-between p-3 rounded-lg border border-slate-200">

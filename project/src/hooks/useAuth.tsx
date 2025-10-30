@@ -241,6 +241,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               ) {
                 updates.dependents = mdDependentsVal;
               }
+              // Persist system_type from metadata if provided and different
+              const mdSystemType = session.user.user_metadata?.system_type as 'legacy' | 'simplified' | undefined;
+              if (mdSystemType && profile?.system_type !== mdSystemType) {
+                updates.system_type = mdSystemType;
+              }
               
               // Aplicar atualizações se houver alguma
               if (Object.keys(updates).length > 0) {
@@ -351,6 +356,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               dependents: typeof session.user.user_metadata?.dependents !== 'undefined'
                 ? Number(session.user.user_metadata?.dependents) || 0
                 : 0,
+              // Persist system_type if provided during sign up
+              system_type: (session.user.user_metadata?.system_type as 'legacy' | 'simplified' | undefined) || null,
               // Add desired_scholarship_range if provided
               desired_scholarship_range: session.user.user_metadata?.desired_scholarship_range 
                 ? Number(session.user.user_metadata?.desired_scholarship_range) 

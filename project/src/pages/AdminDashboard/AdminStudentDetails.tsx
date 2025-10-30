@@ -4399,19 +4399,31 @@ const AdminStudentDetails: React.FC = () => {
                     {student.is_application_fee_paid ? (
                       <dd className="text-sm font-semibold text-slate-700 mt-1">
                         {(() => {
-                          // Buscar a aplicação que teve Application Fee pago para mostrar o valor correto
                           const paidApplication = student.all_applications?.find((app: any) => app.is_application_fee_paid);
                           if (paidApplication?.scholarships) {
-                            const scholarship = Array.isArray(paidApplication.scholarships) 
-                              ? paidApplication.scholarships[0] 
+                            const scholarship = Array.isArray(paidApplication.scholarships)
+                              ? paidApplication.scholarships[0]
                               : paidApplication.scholarships;
-                            return scholarship?.application_fee_amount ? `$${scholarship.application_fee_amount.toFixed(2)}` : 'Fee paid';
+                            
+                            let baseAmount = scholarship?.application_fee_amount ? Number(scholarship.application_fee_amount) : getFeeAmount('application_fee');
+                            const systemType = userSystemType || 'legacy';
+                            const studentDependents = dependents || Number(student.dependents || 0);
+                            
+                            // Adicionar $100 por dependente apenas para sistema legacy
+                            if (systemType === 'legacy' && studentDependents > 0) {
+                              baseAmount += studentDependents * 100;
+                            }
+                            
+                            return formatFeeAmount(baseAmount);
                           }
                           return 'Fee paid';
                         })()}
                       </dd>
                     ) : (
-                      <dd className="text-sm text-slate-500 mt-1">Amount varies by scholarship</dd>
+                      <div className="mt-1">
+                        <dd className="text-sm font-semibold text-slate-700">Varies by scholarship</dd>
+                        <div className="text-xs text-slate-500">+ $100 per dependent (applied at checkout)</div>
+                      </div>
                     )}
                   </div>
                   <div className="flex flex-col gap-3">

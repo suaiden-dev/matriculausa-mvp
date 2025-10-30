@@ -10,6 +10,7 @@ import {
   Info
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { useFeeConfig } from '../../hooks/useFeeConfig';
 
 interface Student {
   id: string;
@@ -19,6 +20,7 @@ interface Student {
   dependents?: number;
   has_paid_selection_process_fee: boolean;
   has_paid_i20_control_fee: boolean;
+  is_application_fee_paid?: boolean;
   seller_referral_code?: string | null;
   system_type?: string;
 }
@@ -52,6 +54,7 @@ const FeeManagement: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(20);
+  const { getFeeAmount } = useFeeConfig();
   
 
   useEffect(() => {
@@ -66,7 +69,7 @@ const FeeManagement: React.FC = () => {
       // Buscar todos os estudantes
       const { data: studentsData, error: studentsError } = await supabase
         .from('user_profiles')
-        .select('id, user_id, full_name, email, dependents, has_paid_selection_process_fee, has_paid_i20_control_fee, seller_referral_code, system_type, created_at')
+        .select('id, user_id, full_name, email, dependents, has_paid_selection_process_fee, has_paid_i20_control_fee, is_application_fee_paid, seller_referral_code, system_type, created_at')
         .eq('role', 'student')
         .order('created_at', { ascending: false });
 
@@ -92,13 +95,15 @@ const FeeManagement: React.FC = () => {
         const baseSelectionFee = systemType === 'simplified' ? 350 : 400;
         const baseScholarshipFee = systemType === 'simplified' ? 550 : 900;
         const baseI20Fee = 900; // Sempre 900 para ambos os sistemas
+        const baseApplicationFee = Number(getFeeAmount('application_fee')) || 0;
+        const applicationDependentsExtra = systemType === 'legacy' && dependents > 0 ? dependents * 100 : 0;
 
         return {
           ...student,
           feeOverrides: override || undefined,
           calculatedFees: {
             selection_process: override?.selection_process_fee || (baseSelectionFee + dependentsExtra),
-            application: 0, // Application fee é variável por universidade
+            application: baseApplicationFee + applicationDependentsExtra,
             scholarship: override?.scholarship_fee || baseScholarshipFee,
             i20_control: override?.i20_control_fee || baseI20Fee
           }
@@ -336,7 +341,9 @@ const FeeManagement: React.FC = () => {
           <Info className="h-5 w-5 text-blue-600 mr-3" />
           <div className="text-sm text-blue-800">
             <p className="font-medium">Fee Override System</p>
-            <p>You can customize fees for individual students. Default values include $150 per dependent for Selection Process Fee only.</p>
+            <p>
+              You can customize fees for individual students. Default values include $150 per dependent for Selection Process Fee and an additional $100 per dependent in Application Fee (display only).
+            </p>
           </div>
         </div>
       </div>
@@ -387,6 +394,9 @@ const FeeManagement: React.FC = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Selection Process
                 </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Application Fee
+              </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Scholarship Fee
                 </th>
@@ -418,6 +428,7 @@ const FeeManagement: React.FC = () => {
                         {(student.dependents || 0) > 0 && (
                           <div className="text-xs text-blue-600">
                             {student.dependents} dependent{(student.dependents || 0) > 1 ? 's' : ''}
+                            <span className="ml-1 text-[11px] text-slate-500">(+$150 Selection, +$100 Application)</span>
                           </div>
                         )}
                       </div>
@@ -454,6 +465,19 @@ const FeeManagement: React.FC = () => {
                       </div>
                     )}
                   </td>
+
+                {/* Application Fee (somente referência; varia por bolsa) */}
+                <td className="px-6 py-4">
+                  <div className="flex flex-col">
+                    <div className="flex items-center">
+                      <span className="text-sm font-medium text-gray-900">Varies by scholarship</span>
+                      {student.is_application_fee_paid && (
+                        <CheckCircle className="ml-2 h-4 w-4 text-green-500" />
+                      )}
+                    </div>
+                    <span className="text-xs text-slate-500">+ $100 per dependent (applied at checkout)</span>
+                  </div>
+                </td>
 
 
 

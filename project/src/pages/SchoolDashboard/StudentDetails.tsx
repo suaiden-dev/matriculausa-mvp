@@ -1942,32 +1942,21 @@ const StudentDetails: React.FC = () => {
                                 })()}
                               </div>
                               <div className="text-right">
-                                <span className="text-lg font-bold text-slate-900">
-                                  {(() => {
-                                    console.log('🔍 [STUDENT_DETAILS] Application Fee Debug:', {
-                                      hasScholarship: !!application?.scholarships,
-                                      applicationFeeAmount: application?.scholarships?.application_fee_amount,
-                                      isApplicationFeePaid: application?.is_application_fee_paid,
-                                      defaultFee: getFeeAmount('application_fee')
-                                    });
-                                    
-                                    // Usar valor dinâmico da bolsa se disponível, senão usar valor padrão do sistema
-                                    // Verificar se scholarships é array ou objeto
-                                    const scholarship = Array.isArray(application?.scholarships) 
-                                      ? application.scholarships[0] 
-                                      : application?.scholarships;
-                                    
-                                    if (scholarship?.application_fee_amount) {
-                                      const amount = Number(scholarship.application_fee_amount);
-                                      console.log('🔍 [STUDENT_DETAILS] Using dynamic amount from scholarship (already in dollars):', amount);
-                                      return formatFeeAmount(amount);
-                                    } else {
-                                      console.log('🔍 [STUDENT_DETAILS] Using default amount:', getFeeAmount('application_fee'));
-                                      return formatFeeAmount(getFeeAmount('application_fee'));
-                                    }
-                                  })()}
-                                </span>
-                                <div className="text-xs text-slate-500">USD</div>
+                {(() => {
+                  const paid = (application as any)?.is_application_fee_paid ?? application?.user_profiles?.is_application_fee_paid;
+                  if (paid) {
+                    return (
+                      <span className="text-sm font-semibold text-slate-700"></span>
+                    );
+                  }
+                  return (
+                    <div className="text-right">
+                      <span className="text-sm font-semibold text-slate-700">Varies by scholarship</span>
+                      <div className="text-[11px] text-slate-500">+ $100 per dependent (applied at checkout)</div>
+                    </div>
+                  );
+                })()}
+                {/* Removed amount/USD display as requested */}
                               </div>
                             </div>
                           </dd>

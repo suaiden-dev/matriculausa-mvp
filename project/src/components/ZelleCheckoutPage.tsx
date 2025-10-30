@@ -116,7 +116,26 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
     },
     {
       type: 'application_fee',
-      amount: applicationFeeAmount || getFeeAmount('application_fee'), // Application Fee sempre usa valor da universidade
+      amount: (() => {
+        // Se veio pela URL (modal já calculou), respeitar o valor final sem recomputar
+        if (normalizedFeeType === 'application_fee') {
+          if (typeof applicationFeeAmount === 'number' && !Number.isNaN(applicationFeeAmount)) {
+            return applicationFeeAmount;
+          }
+          const amountFromUrl = parseFloat(amount);
+          if (!Number.isNaN(amountFromUrl)) {
+            return amountFromUrl;
+          }
+        }
+
+        // Fallback: calcular localmente (base + $100 por dependente para legacy)
+        const baseAmount = getFeeAmount('application_fee');
+        const systemType = userProfile?.system_type || 'legacy';
+        const dependents = Number(userProfile?.dependents) || 0;
+        return systemType === 'legacy' && dependents > 0
+          ? baseAmount + dependents * 100
+          : baseAmount;
+      })(),
       description: t('feeDescriptions.applicationFee'),
       icon: <CreditCard className="w-6 h-6" />
     },

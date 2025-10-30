@@ -204,7 +204,7 @@ export const useUniversityFinancialData = (): UseUniversityFinancialDataReturn =
       if (studentIds.length > 0) {
         const { data: students, error: studentsError } = await supabase
           .from('user_profiles')
-          .select('id, email, full_name, created_at')
+          .select('id, email, full_name, created_at, dependents, system_type')
           .in('id', studentIds.slice(0, 100)); // Limitar para performance
 
         if (studentsError) {
@@ -297,9 +297,12 @@ export const useUniversityFinancialData = (): UseUniversityFinancialDataReturn =
             const scholarship = app.scholarship || app.scholarships;
             const feeAmount = scholarship?.application_fee_amount;
             if (feeAmount) {
-              // Se o valor for string (como "350.00"), converter para number
               const numericFee = typeof feeAmount === 'string' ? parseFloat(feeAmount) : feeAmount;
-              return sum + numericFee;
+              const student = studentsMap[app.student_id];
+              const deps = Number(student?.dependents) || 0;
+              const systemType = (student?.system_type as any) || 'legacy';
+              const withDeps = systemType === 'legacy' && deps > 0 ? numericFee + deps * 100 : numericFee;
+              return sum + withDeps;
             }
             return sum;
           }, 0);
@@ -330,7 +333,11 @@ export const useUniversityFinancialData = (): UseUniversityFinancialDataReturn =
             const feeAmount = scholarship?.application_fee_amount;
             if (feeAmount) {
               const numericFee = typeof feeAmount === 'string' ? parseFloat(feeAmount) : feeAmount;
-              return sum + numericFee;
+              const student = studentsMap[app.student_id];
+              const deps = Number(student?.dependents) || 0;
+              const systemType = (student?.system_type as any) || 'legacy';
+              const withDeps = systemType === 'legacy' && deps > 0 ? numericFee + deps * 100 : numericFee;
+              return sum + withDeps;
             }
             return sum;
           }, 0);
@@ -340,7 +347,11 @@ export const useUniversityFinancialData = (): UseUniversityFinancialDataReturn =
             const feeAmount = scholarship?.application_fee_amount;
             if (feeAmount) {
               const numericFee = typeof feeAmount === 'string' ? parseFloat(feeAmount) : feeAmount;
-              return sum + numericFee;
+              const student = studentsMap[app.student_id];
+              const deps = Number(student?.dependents) || 0;
+              const systemType = (student?.system_type as any) || 'legacy';
+              const withDeps = systemType === 'legacy' && deps > 0 ? numericFee + deps * 100 : numericFee;
+              return sum + withDeps;
             }
             return sum;
           }, 0);
@@ -350,7 +361,11 @@ export const useUniversityFinancialData = (): UseUniversityFinancialDataReturn =
             const feeAmount = scholarship?.application_fee_amount;
             if (feeAmount) {
               const numericFee = typeof feeAmount === 'string' ? parseFloat(feeAmount) : feeAmount;
-              return sum + numericFee;
+              const student = studentsMap[app.student_id];
+              const deps = Number(student?.dependents) || 0;
+              const systemType = (student?.system_type as any) || 'legacy';
+              const withDeps = systemType === 'legacy' && deps > 0 ? numericFee + deps * 100 : numericFee;
+              return sum + withDeps;
             }
             return sum;
           }, 0);

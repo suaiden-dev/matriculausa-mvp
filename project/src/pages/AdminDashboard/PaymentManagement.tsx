@@ -2401,6 +2401,13 @@ const PaymentManagement = (): React.JSX.Element => {
           applicationFee = Math.round(getFeeAmount('application_fee') * 100);
         }
         
+        // Adicionar custo por dependente apenas para sistema legacy na application fee
+        const systemType = userSystemTypesMap.get(student.user_id) || 'legacy';
+        if (systemType === 'legacy' && dependents > 0) {
+          const dependentsCostInCents = dependents * 10000; // $100 por dependente = 10000 centavos
+          applicationFee += dependentsCostInCents;
+        }
+        
 
         // Criar registros apenas para taxas que foram pagas
         // Selection Process Fee - apenas uma vez por usuário (taxa global)

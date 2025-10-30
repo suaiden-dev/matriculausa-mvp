@@ -844,7 +844,13 @@ const FinancialAnalytics: React.FC = () => {
         scholarshipFee = Math.round(amount * 100);
       }
 
-      const applicationFee = Math.round(getFeeAmount('application_fee') * 100);
+      // Application Fee - adicionar custo de dependentes apenas para sistema legacy
+      let applicationFee = Math.round(getFeeAmount('application_fee') * 100);
+      const systemType = userSystemTypesMap.get(stripeUser.user_id) || 'legacy';
+      if (systemType === 'legacy' && dependents > 0) {
+        const dependentsCostInCents = dependents * 10000; // $100 por dependente = 10000 centavos
+        applicationFee += dependentsCostInCents;
+      }
 
       // Criar registros apenas para taxas que foram pagas
       // Selection Process Fee - apenas uma vez por usuário (taxa global)

@@ -191,6 +191,13 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
           <p className="text-sm text-gray-600">
             {t('paymentSelector.subtitle', { feeType: t(`paymentSelector.feeTypes.${feeType}`) })}
           </p>
+          {/* Display amount */}
+          <div className="mt-3 mb-2">
+            <div className="inline-block bg-blue-100 text-blue-800 px-4 py-2 rounded-lg">
+              <span className="text-sm font-medium">{t('paymentSelector.amount')}: </span>
+              <span className="text-lg font-bold">${_amount.toFixed(2)}</span>
+            </div>
+          </div>
         </div>
 
         <div className="grid gap-4">

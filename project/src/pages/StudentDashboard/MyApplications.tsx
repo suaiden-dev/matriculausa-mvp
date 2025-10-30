@@ -37,6 +37,12 @@ const MyApplications: React.FC = () => {
   const { t } = useTranslation();
   const { user, userProfile, refetchUserProfile } = useAuth();
   const { getFeeAmount, formatFeeAmount } = useFeeConfig(user?.id);
+  // Helper: calcular Application Fee exibida considerando dependentes (legacy)
+  const getApplicationFeeWithDependents = (base: number): number => {
+    const systemType = (userProfile?.system_type as any) || 'legacy';
+    const deps = Number(userProfile?.dependents) || 0;
+    return systemType === 'legacy' && deps > 0 ? base + deps * 100 : base;
+  };
   const [userProfileId, setUserProfileId] = useState<string | null>(null);
   
   // Labels amigáveis para os documentos principais
@@ -757,8 +763,8 @@ const getLevelColor = (level: any) => {
             application_id: pendingApplication.id,
             selected_scholarship_id: pendingApplication.scholarship_id,
             fee_type: 'application_fee',
-            amount: pendingApplication.scholarships?.application_fee_amount || 350,
-            application_fee_amount: pendingApplication.scholarships?.application_fee_amount || 350
+            amount: getApplicationFeeWithDependents(pendingApplication.scholarships?.application_fee_amount || 350),
+            application_fee_amount: getApplicationFeeWithDependents(pendingApplication.scholarships?.application_fee_amount || 350)
           },
           scholarships_ids: [pendingApplication.scholarship_id],
         }),
@@ -823,8 +829,8 @@ const getLevelColor = (level: any) => {
             application_id: pendingApplication.id,
             selected_scholarship_id: pendingApplication.scholarship_id,
             fee_type: 'application_fee',
-            amount: pendingApplication.scholarships?.application_fee_amount || 350,
-            application_fee_amount: pendingApplication.scholarships?.application_fee_amount || 350
+            amount: getApplicationFeeWithDependents(pendingApplication.scholarships?.application_fee_amount || 350),
+            application_fee_amount: getApplicationFeeWithDependents(pendingApplication.scholarships?.application_fee_amount || 350)
           },
           scholarships_ids: [pendingApplication.scholarship_id],
         }),
@@ -855,7 +861,7 @@ const getLevelColor = (level: any) => {
     if (!pendingApplication) return;
     
     try {
-      const applicationFeeAmount = pendingApplication.scholarships?.application_fee_amount || 350;
+      const applicationFeeAmount = getApplicationFeeWithDependents(pendingApplication.scholarships?.application_fee_amount || 350);
       
       const params = new URLSearchParams({
         feeType: 'application_fee',
@@ -1447,7 +1453,7 @@ const getLevelColor = (level: any) => {
                         <div className="flex items-center justify-between mb-3">
                           <span className="font-semibold text-gray-900 text-sm">{t('studentDashboard.myApplications.paymentStatus.applicationFee')}</span>
                           <span className="text-base font-bold text-gray-700">
-                            ${scholarship.application_fee_amount ? formatCentsToDollars(scholarship.application_fee_amount) : '350.00'}
+                            {formatAmount(getApplicationFeeWithDependents(Number(scholarship.application_fee_amount || 350)))}
                           </span>
                         </div>
                         {applicationFeePaid ? (
@@ -1469,7 +1475,7 @@ const getLevelColor = (level: any) => {
                       <div className="bg-white border-2 border-slate-200 rounded-xl p-3 shadow-sm">
                         <div className="flex items-center justify-between mb-3">
                           <span className="font-semibold text-gray-900 text-sm">{t('studentDashboard.myApplications.paymentStatus.scholarshipFee')}</span>
-                          <span className="text-base font-bold text-gray-700">${getFeeAmount('scholarship_fee')}</span>
+                          <span className="text-base font-bold text-gray-700">{formatAmount(Number(getFeeAmount('scholarship_fee')))}</span>
                         </div>
                         {scholarshipFeePaid ? (
                           <div className="inline-flex items-center px-3 py-2 rounded-lg text-xs font-semibold bg-green-100 text-green-700 border border-green-200">
