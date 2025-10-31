@@ -44,8 +44,8 @@ import Tabs from './PaymentManagement/components/Tabs';
 import { useAdminPaymentsState } from './PaymentManagement/state/useAdminPaymentsState';
 import type { PaymentRecord, PaymentStats } from './PaymentManagement/data/types';
 import { UniversityRequests } from './PaymentManagement/components/UniversityRequests';
-import { loadPaymentsBaseData } from './PaymentManagement/data/loaders/paymentsLoader';
-import { getPaymentDatesForUsersLoader } from './PaymentManagement/data/loaders/paymentDatesLoader';
+import { loadPaymentsBaseDataOptimized } from './PaymentManagement/data/loaders/paymentsLoaderOptimized';
+import { getPaymentDatesForUsersLoaderOptimized } from './PaymentManagement/data/loaders/paymentDatesLoaderOptimized';
 import { transformPaymentsToRecordsAndStats } from './PaymentManagement/utils/transformPayments';
 import { usePaymentsBackendPagination } from './PaymentManagement/hooks/usePaymentsBackendPagination';
 import { createAffiliateUIHandlers } from './PaymentManagement/handlers/affiliateHandlers';
@@ -54,7 +54,7 @@ import { createZelleUIHandlers } from './PaymentManagement/handlers/zelleHandler
 import { exportPaymentsToCsvViaEdge, downloadCsvFromPayments } from './PaymentManagement/utils/export';
 import { RequestTrackerPanel } from '../../components/RequestTrackerPanel';
 
- 
+
 const FEE_TYPES = [
   { value: 'selection_process', label: 'Selection Process Fee', color: 'bg-blue-100 text-blue-800' },
   { value: 'application', label: 'Application Fee', color: 'bg-green-100 text-green-800' },
@@ -95,9 +95,9 @@ const PaymentManagement = (): React.JSX.Element => {
     if (!filters || Object.keys(filters).length === 0) {
       setFilters((prev: any) => ({
         ...prev,
-        search: '',
-        university: 'all',
-        feeType: 'all',
+    search: '',
+    university: 'all',
+    feeType: 'all',
         status: 'paid',
         dateFrom: undefined,
         dateTo: undefined,
@@ -308,7 +308,7 @@ const PaymentManagement = (): React.JSX.Element => {
       const token = ++universityReqLoadToken.current;
       const data = await UniversityPaymentRequestService.listAllPaymentRequests();
       if (token === universityReqLoadToken.current) {
-        setUniversityRequests(data);
+      setUniversityRequests(data);
       }
     } catch (error: any) {
       console.error('Error loading university payment requests:', error);
@@ -325,7 +325,7 @@ const PaymentManagement = (): React.JSX.Element => {
       const token = ++affiliateReqLoadToken.current;
       const data = await AffiliatePaymentRequestService.listAllPaymentRequests();
       if (token === affiliateReqLoadToken.current) {
-        setAffiliateRequests(data);
+      setAffiliateRequests(data);
       }
     } catch (error: any) {
       console.error('Error loading affiliate payment requests (admin):', error);
@@ -557,7 +557,7 @@ const PaymentManagement = (): React.JSX.Element => {
       const { approveZelleStatusService } = await import('./PaymentManagement/data/services/zellePaymentsService');
       const { error } = await approveZelleStatusService({ paymentId, adminUserId: user!.id });
       if (error) throw error;
-
+      
       const { approveZelleFlow } = await import('./PaymentManagement/data/services/zelleOrchestrator');
       await approveZelleFlow({ supabase, adminUserId: user!.id, payment: {
         id: payment.id,
@@ -565,9 +565,9 @@ const PaymentManagement = (): React.JSX.Element => {
         student_id: payment.student_id,
         student_email: payment.student_email,
         student_name: payment.student_name,
-        fee_type: payment.fee_type,
+          fee_type: payment.fee_type,
         fee_type_global: payment.fee_type_global,
-        amount: payment.amount,
+          amount: payment.amount,
         admin_approved_at: payment.admin_approved_at,
         created_at: payment.created_at,
         scholarships_ids: payment.scholarships_ids,
@@ -600,9 +600,9 @@ const PaymentManagement = (): React.JSX.Element => {
         student_id: payment.student_id,
         student_email: payment.student_email,
         student_name: payment.student_name,
-        fee_type: payment.fee_type,
+          fee_type: payment.fee_type,
         fee_type_global: payment.fee_type_global,
-        amount: payment.amount,
+          amount: payment.amount,
         admin_approved_at: payment.admin_approved_at,
         created_at: payment.created_at,
         scholarships_ids: payment.scholarships_ids,
@@ -649,9 +649,6 @@ const PaymentManagement = (): React.JSX.Element => {
     setShowAffiliateNotesModal,
   });
 
-  // Função auxiliar para buscar datas de pagamento individuais
-  const getPaymentDatesForUsers = (userIds: string[]) => getPaymentDatesForUsersLoader(supabase as any, userIds);
-
   const loadPaymentData = async () => {
     if (activeTab !== 'payments') {
       return;
@@ -660,7 +657,8 @@ const PaymentManagement = (): React.JSX.Element => {
       setLoading(true);
       console.time('[payments] loadPaymentData');
 
-      const { applications, zellePayments, stripeUsers, overridesMap, userSystemTypesMap } = await loadPaymentsBaseData(supabase as any);
+      // ✅ OTIMIZADO: Usar versão batch otimizada
+      const { applications, zellePayments, stripeUsers, overridesMap, userSystemTypesMap } = await loadPaymentsBaseDataOptimized(supabase as any);
 
       // NOTA: Pacotes não são mais usados para calcular taxas. Mantemos apenas overrides por usuário.
       const allUserIds = [
@@ -670,30 +668,22 @@ const PaymentManagement = (): React.JSX.Element => {
       ];
       const uniqueUserIds = [...new Set(allUserIds)];
 
-      // Buscar valores reais de pagamento da tabela affiliate_referrals
-      
-      
-      // Processar em lotes de 50 para evitar limite do Supabase
+      // Buscar valores reais de pagamento da tabela affiliate_referrals (já em batch via IN)
       const batchSize = 50;
       let allAffiliateReferrals: any[] = [];
       
       for (let i = 0; i < uniqueUserIds.length; i += batchSize) {
         const batch = uniqueUserIds.slice(i, i + batchSize);
         
-        
         const { data: batchData, error: batchError } = await supabase
           .from('affiliate_referrals')
           .select('referred_id, payment_amount')
           .in('referred_id', batch);
 
-        if (!batchError) {
-          if (batchData) {
-            allAffiliateReferrals = allAffiliateReferrals.concat(batchData);
-          }
+        if (!batchError && batchData) {
+          allAffiliateReferrals = allAffiliateReferrals.concat(batchData);
         }
       }
-
-      
 
       // Criar mapa de valores reais por user_id
       const realPaymentAmounts = new Map<string, number>();
@@ -701,13 +691,11 @@ const PaymentManagement = (): React.JSX.Element => {
         realPaymentAmounts.set(ar.referred_id, ar.payment_amount);
       });
 
-      
+      // ✅ OTIMIZADO: Usar versão batch otimizada para payment dates
+      const individualPaymentDates = await getPaymentDatesForUsersLoaderOptimized(supabase as any, uniqueUserIds);
+ 
 
-      // Buscar datas de pagamento individuais da nova tabela
-      const individualPaymentDates = await getPaymentDatesForUsers(uniqueUserIds);
- 
- 
-       // Converter aplicações e pagamentos Zelle em registros de pagamento
+      // Converter aplicações e pagamentos Zelle em registros de pagamento
       const base = transformPaymentsToRecordsAndStats({
         applications,
         zellePayments,
@@ -720,10 +708,10 @@ const PaymentManagement = (): React.JSX.Element => {
       });
       const paymentRecords: PaymentRecord[] = [...base.paymentRecords];
  
- 
+
       // Se não há dados reais, vamos criar alguns dados de exemplo para testar
       setPayments(paymentRecords);
- 
+
       // Calcular estatísticas
       setStats(base.stats);
 
@@ -1120,4 +1108,4 @@ const PaymentManagement = (): React.JSX.Element => {
   );
 };
 
-export default PaymentManagement;
+export default PaymentManagement; 

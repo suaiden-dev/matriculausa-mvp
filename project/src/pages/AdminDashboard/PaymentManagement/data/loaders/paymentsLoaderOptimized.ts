@@ -17,10 +17,8 @@ export interface PaymentsBaseData {
 }
 
 /**
- * Versão otimizada: busca overrides em batch
- * 
- * SOLUÇÃO ALTERNATIVA: Se não existir RPC batch no banco,
- * fazemos uma única query à tabela de overrides com IN
+ * Versão otimizada: busca overrides em batch usando RPC batch
+ * Reduz N requisições (uma por usuário) para 1 requisição batch
  */
 async function getOverridesBatch(
   supabase: SupabaseClient,
@@ -28,64 +26,17 @@ async function getOverridesBatch(
 ): Promise<{ [key: string]: any }> {
   if (userIds.length === 0) return {};
 
-  // Tentar buscar diretamente da tabela (mais eficiente)
-  // Assumindo que existe uma tabela fee_overrides ou similar
+  // Usar RPC batch - sempre, nunca fallback individual
+  const { batchGetFeeOverrides } = await import('../../../../lib/batchRequestUtils');
+  
   try {
-    // Se a função RPC suportar batch, usar aqui
-    // Caso contrário, fazer query direta na tabela
-    const { data, error } = await supabase
-      .from('fee_overrides')
-      .select('user_id, selection_process_fee, application_fee, scholarship_fee, i20_control_fee')
-      .in('user_id', userIds);
-
-    if (!error && data) {
-      const overridesMap: { [key: string]: any } = {};
-      data.forEach((override: any) => {
-        overridesMap[override.user_id] = {
-          selection_process_fee: override.selection_process_fee != null ? Number(override.selection_process_fee) : undefined,
-          application_fee: override.application_fee != null ? Number(override.application_fee) : undefined,
-          scholarship_fee: override.scholarship_fee != null ? Number(override.scholarship_fee) : undefined,
-          i20_control_fee: override.i20_control_fee != null ? Number(override.i20_control_fee) : undefined,
-        };
-      });
-      return overridesMap;
-    }
-  } catch (_) {
-    // Fallback: se não existir tabela direta, continuar com método antigo
+    return await batchGetFeeOverrides(supabase, userIds);
+  } catch (err) {
+    console.error('❌ [paymentsLoader] Erro fatal ao buscar overrides em batch:', err);
+    // Retorna objeto vazio em caso de erro crítico
+    // NÃO faz fallback individual para evitar N+1
+    return {};
   }
-
-  // FALLBACK: Se não houver tabela direta, usar chunks menores e Promise.allSettled
-  // Dividir em chunks de 50 para evitar limite do Supabase
-  const chunkSize = 50;
-  const overridesMap: { [key: string]: any } = {};
-
-  for (let i = 0; i < userIds.length; i += chunkSize) {
-    const chunk = userIds.slice(i, i + chunkSize);
-    
-    // Ainda fazemos chamadas individuais, mas em chunks paralelos
-    const overrideEntries = await Promise.allSettled(
-      chunk.map(async (userId) => {
-        const { data, error } = await supabase.rpc('get_user_fee_overrides', { target_user_id: userId });
-        return { userId, data: error ? null : data };
-      })
-    );
-
-    overrideEntries.forEach((res) => {
-      if (res.status === 'fulfilled') {
-        const { userId, data } = res.value as any;
-        if (data) {
-          overridesMap[userId] = {
-            selection_process_fee: data.selection_process_fee != null ? Number(data.selection_process_fee) : undefined,
-            application_fee: data.application_fee != null ? Number(data.application_fee) : undefined,
-            scholarship_fee: data.scholarship_fee != null ? Number(data.scholarship_fee) : undefined,
-            i20_control_fee: data.i20_control_fee != null ? Number(data.i20_control_fee) : undefined,
-          };
-        }
-      }
-    });
-  }
-
-  return overridesMap;
 }
 
 export async function loadPaymentsBaseDataOptimized(supabase: SupabaseClient): Promise<PaymentsBaseData> {

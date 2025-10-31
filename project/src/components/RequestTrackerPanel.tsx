@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { requestTracker } from '../lib/requestTracker';
-import { activateSupabaseInterceptor, deactivateSupabaseInterceptor } from '../lib/supabaseRequestInterceptor';
+import { readAllSupabaseRequests, startMonitoringNewRequests } from '../lib/performanceNetworkReader';
 
 // Debug: garantir que o componente seja importado
 console.log('🔍 [RequestTrackerPanel] Módulo carregado');
@@ -16,14 +16,40 @@ export function RequestTrackerPanel() {
 
   useEffect(() => {
     if (isEnabled) {
-      // Ativar interceptor global que captura desde o início
-      activateSupabaseInterceptor();
       // Habilitar tracker
       requestTracker.enable();
-      // Salvar preferência para auto-ativar na próxima vez
+      
+      // Ler TODAS as requisições que já aconteceram do histórico do navegador
+      console.log('🔍 [RequestTracker] Lendo histórico de requisições do navegador...');
+      const allRequests = readAllSupabaseRequests();
+      console.log(`✅ [RequestTracker] Encontradas ${allRequests.length} requisições no histórico`);
+      
+      // Adicionar todas ao tracker
+      allRequests.forEach(req => {
+        requestTracker.trackRequest({
+          method: req.method,
+          table: req.table,
+          function: req.function,
+          operation: req.operation as any,
+          status: req.status >= 200 && req.status < 300 ? 'success' : 'error',
+          duration: req.duration,
+        });
+      });
+      
+      // Começar a monitorar novas requisições
+      const stopMonitoring = startMonitoringNewRequests();
+      
+      // Salvar preferência
       localStorage.setItem('requestTracker:autoActivate', 'true');
+      
+      // Atualizar relatório imediatamente
+      setTimeout(updateReport, 100);
+      
+      // Cleanup
+      return () => {
+        stopMonitoring();
+      };
     } else {
-      // Desabilitar tracker, mas manter interceptor ativo para não perder dados
       requestTracker.disable();
       localStorage.setItem('requestTracker:autoActivate', 'false');
     }
@@ -53,8 +79,32 @@ export function RequestTrackerPanel() {
   const handleReloadAndCapture = () => {
     // Salvar preferência para auto-ativar após reload
     localStorage.setItem('requestTracker:autoActivate', 'true');
+    // Habilitar antes de recarregar
+    requestTracker.enable();
     // Recarregar a página
     window.location.reload();
+  };
+  
+  const handleCaptureNow = () => {
+    // Forçar leitura do histórico agora
+    console.log('🔍 [RequestTracker] Capturando requisições agora...');
+    const allRequests = readAllSupabaseRequests();
+    console.log(`✅ [RequestTracker] Capturadas ${allRequests.length} requisições`);
+    
+    // Limpar e adicionar todas
+    requestTracker.clear();
+    allRequests.forEach(req => {
+      requestTracker.trackRequest({
+        method: req.method,
+        table: req.table,
+        function: req.function,
+        operation: req.operation as any,
+        status: req.status >= 200 && req.status < 300 ? 'success' : 'error',
+        duration: req.duration,
+      });
+    });
+    
+    updateReport();
   };
 
   // Sempre mostrar o painel, mesmo quando desabilitado
@@ -90,11 +140,18 @@ export function RequestTrackerPanel() {
                 Exportar
               </button>
               <button
+                onClick={handleCaptureNow}
+                className="px-3 py-1 text-sm bg-purple-600 text-white hover:bg-purple-700 rounded"
+                title="Captura todas as requisições do histórico do navegador agora"
+              >
+                📥 Capturar Agora
+              </button>
+              <button
                 onClick={handleReloadAndCapture}
                 className="px-3 py-1 text-sm bg-green-600 text-white hover:bg-green-700 rounded"
                 title="Recarrega a página e captura todas as requisições desde o início"
               >
-                🔄 Recarregar e Capturar
+                🔄 Recarregar
               </button>
             </>
           )}

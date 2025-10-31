@@ -1,13 +1,26 @@
 import { SupabaseClient } from '@supabase/supabase-js';
+import { requestCache } from '../../../../lib/requestCache';
 
 export async function loadUniversitiesLoader(supabase: SupabaseClient) {
+  // Verificar cache primeiro (universities mudam raramente)
+  const cached = requestCache.get<any[]>('loadUniversitiesLoader');
+  if (cached) {
+    return cached;
+  }
+
   const { data, error } = await supabase
     .from('universities')
     .select('id, name')
     .eq('is_approved', true)
     .order('name');
   if (error) throw error;
-  return data || [];
+  
+  const result = data || [];
+  
+  // Armazenar no cache (TTL longo porque universities mudam raramente)
+  requestCache.set('loadUniversitiesLoader', result, undefined, 10 * 60 * 1000);
+  
+  return result;
 }
 
 export async function loadAffiliatesLoader(supabase: SupabaseClient) {
