@@ -234,6 +234,14 @@ const AdminStudentDetails: React.FC = () => {
 
   const { getFeeAmount, formatFeeAmount, hasOverride, userSystemType } = useFeeConfig(student?.user_id);
   const { logAction } = useStudentLogs(student?.student_id || '');
+  
+  // Estado para valores reais pagos (para mostrar ao invés de valores esperados quando já pagos)
+  const [realPaidAmounts, setRealPaidAmounts] = useState<{
+    selection_process?: number;
+    application?: number;
+    scholarship?: number;
+    i20_control?: number;
+  }>({});
 
   // Função para buscar informações de referência
   // Função para buscar termos aceitos pelo estudante
@@ -564,6 +572,31 @@ const AdminStudentDetails: React.FC = () => {
     }
   };
 
+  // Função para buscar valores reais pagos de individual_fee_payments
+  const fetchRealPaidAmounts = async (userId: string) => {
+    try {
+      const { data: payments, error } = await supabase
+        .from('individual_fee_payments')
+        .select('fee_type, amount')
+        .eq('user_id', userId);
+      
+      if (error) throw error;
+      
+      const amounts: typeof realPaidAmounts = {};
+      payments?.forEach(payment => {
+        const feeType = payment.fee_type as keyof typeof amounts;
+        if (feeType === 'selection_process') amounts.selection_process = Number(payment.amount);
+        else if (feeType === 'application') amounts.application = Number(payment.amount);
+        else if (feeType === 'scholarship') amounts.scholarship = Number(payment.amount);
+        else if (feeType === 'i20_control') amounts.i20_control = Number(payment.amount);
+      });
+      
+      setRealPaidAmounts(amounts);
+    } catch (error) {
+      console.error('Error fetching real paid amounts:', error);
+    }
+  };
+
   // Função para calcular o deadline do I-20
   const calculateI20Deadline = (studentData: StudentRecord) => {
     try {
@@ -837,6 +870,11 @@ const AdminStudentDetails: React.FC = () => {
         // Buscar informações de referência
         if (formatted.seller_referral_code) {
           fetchReferralInfo(formatted.seller_referral_code);
+        }
+        
+        // Buscar valores reais pagos de individual_fee_payments
+        if (s.user_id) {
+          fetchRealPaidAmounts(s.user_id);
         }
       } catch (e) {
         // noop
@@ -4216,6 +4254,12 @@ const AdminStudentDetails: React.FC = () => {
                     ) : (
                       <dd className="text-sm font-semibold text-slate-700 mt-1 flex items-center">
                         {(() => {
+                      // Se o pagamento já foi feito, mostrar o valor REAL pago ao invés do esperado
+                      if (student?.has_paid_selection_process_fee && realPaidAmounts.selection_process) {
+                        return formatFeeAmount(realPaidAmounts.selection_process);
+                      }
+                      
+                      // Caso contrário, calcular valor esperado (para exibição antes do pagamento)
                       const hasCustomOverride = hasOverride('selection_process');
                       const base = Number(getFeeAmount('selection_process'));
                       const finalAmount = hasCustomOverride ? getFeeAmount('selection_process') : base + dependents * 150;

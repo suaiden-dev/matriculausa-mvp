@@ -48,11 +48,12 @@ serve(async (req) => {
     console.log('📝 [approve-zelle-payment-automatic] Buscando pagamento existente...')
     
     let paymentId: string;
+    let paymentAmount: number = 0;
     
     // Primeiro, tentar buscar um pagamento pendente do usuário
     const { data: existingPayment, error: searchError } = await supabaseClient
       .from('zelle_payments')
-      .select('id, status')
+      .select('id, status, amount')
       .eq('user_id', user_id)
       .eq('fee_type_global', normalizedFeeTypeGlobal)
       .eq('status', 'pending')
@@ -68,7 +69,8 @@ serve(async (req) => {
     if (existingPayment) {
       // Pagamento existente encontrado
       paymentId = existingPayment.id;
-      console.log('✅ [approve-zelle-payment-automatic] Pagamento existente encontrado:', paymentId)
+      paymentAmount = existingPayment.amount || 0;
+      console.log('✅ [approve-zelle-payment-automatic] Pagamento existente encontrado:', paymentId, 'Amount:', paymentAmount)
       
       // Atualizar o status do pagamento para aprovado
       const { error: paymentError } = await supabaseClient
@@ -99,7 +101,7 @@ serve(async (req) => {
           amount: 0, // Valor será preenchido se necessário
           created_at: new Date().toISOString()
         })
-        .select('id')
+        .select('id, amount')
         .single()
 
       if (createError) {
@@ -108,7 +110,8 @@ serve(async (req) => {
       }
 
       paymentId = newPayment.id;
-      console.log('✅ [approve-zelle-payment-automatic] Novo pagamento criado:', paymentId)
+      paymentAmount = newPayment.amount || 0;
+      console.log('✅ [approve-zelle-payment-automatic] Novo pagamento criado:', paymentId, 'Amount:', paymentAmount)
     }
 
     console.log('✅ [approve-zelle-payment-automatic] Status do pagamento atualizado para approved')
@@ -284,7 +287,36 @@ serve(async (req) => {
           console.log(`⚠️ [approve-zelle-payment-automatic] Nenhuma scholarship_application encontrada para scholarship_id: ${scholarshipId} e user_id: ${user_id}`)
           console.log(`🔧 [approve-zelle-payment-automatic] Criando nova scholarship_application...`)
           
-          // Criar nova scholarship_application se não existir
+          // CRÍTICO: Criar individual_fee_payments ANTES de criar a aplicação marcando como pago
+          const normalizedFeeType = normalizedFeeTypeGlobal === 'application_fee' ? 'application' : 'scholarship';
+          
+          console.log(`📝 [approve-zelle-payment-automatic] Criando individual_fee_payments ANTES de criar scholarship_application...`)
+          console.log(`🔍 [approve-zelle-payment-automatic] fee_type normalizado: ${normalizedFeeType}, amount: ${paymentAmount}`)
+          
+          try {
+            const { data: feePaymentData, error: feePaymentError } = await supabaseClient.rpc('insert_individual_fee_payment', {
+              p_user_id: user_id,
+              p_fee_type: normalizedFeeType,
+              p_amount: paymentAmount,
+              p_payment_date: new Date().toISOString(),
+              p_payment_method: 'zelle',
+              p_payment_intent_id: null,
+              p_stripe_charge_id: null,
+              p_zelle_payment_id: paymentId
+            });
+
+            if (feePaymentError) {
+              console.error(`❌ [approve-zelle-payment-automatic] Erro ao criar individual_fee_payments:`, feePaymentError)
+              throw new Error(`Failed to create individual_fee_payment: ${feePaymentError.message}`)
+            }
+
+            console.log(`✅ [approve-zelle-payment-automatic] individual_fee_payments criado com sucesso:`, feePaymentData)
+          } catch (feePaymentException) {
+            console.error(`❌ [approve-zelle-payment-automatic] Exceção ao criar individual_fee_payments:`, feePaymentException)
+            throw feePaymentException // Não criar aplicação como paga se o registro individual falhar
+          }
+
+          // APENAS DEPOIS de criar o registro individual, criar a aplicação marcando como pago
           const { data: newApp, error: createError } = await supabaseClient
             .from('scholarship_applications')
             .insert({
@@ -338,7 +370,37 @@ serve(async (req) => {
             console.error(`❌ [approve-zelle-payment-automatic] Erro ao notificar universidade sobre ${normalizedFeeTypeGlobal}:`, notificationError);
           }
         } else {
-          // Atualizar scholarship_application existente usando o student_id correto
+          // CRÍTICO: Criar individual_fee_payments ANTES de marcar como pago
+          // Isso garante que se o insert falhar, a aplicação não fica marcada como paga
+          const normalizedFeeType = normalizedFeeTypeGlobal === 'application_fee' ? 'application' : 'scholarship';
+          
+          console.log(`📝 [approve-zelle-payment-automatic] Criando individual_fee_payments ANTES de marcar como pago...`)
+          console.log(`🔍 [approve-zelle-payment-automatic] fee_type normalizado: ${normalizedFeeType}, amount: ${paymentAmount}`)
+          
+          try {
+            const { data: feePaymentData, error: feePaymentError } = await supabaseClient.rpc('insert_individual_fee_payment', {
+              p_user_id: user_id,
+              p_fee_type: normalizedFeeType,
+              p_amount: paymentAmount,
+              p_payment_date: new Date().toISOString(),
+              p_payment_method: 'zelle',
+              p_payment_intent_id: null,
+              p_stripe_charge_id: null,
+              p_zelle_payment_id: paymentId
+            });
+
+            if (feePaymentError) {
+              console.error(`❌ [approve-zelle-payment-automatic] Erro ao criar individual_fee_payments:`, feePaymentError)
+              throw new Error(`Failed to create individual_fee_payment: ${feePaymentError.message}`)
+            }
+
+            console.log(`✅ [approve-zelle-payment-automatic] individual_fee_payments criado com sucesso:`, feePaymentData)
+          } catch (feePaymentException) {
+            console.error(`❌ [approve-zelle-payment-automatic] Exceção ao criar individual_fee_payments:`, feePaymentException)
+            throw feePaymentException // Não marcar como pago se o registro individual falhar
+          }
+
+          // APENAS DEPOIS de criar o registro individual, marcar como pago
           const { data: updateData, error: appError } = await supabaseClient
             .from('scholarship_applications')
             .update({ 

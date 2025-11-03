@@ -817,8 +817,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
     
     // Filtrar valores undefined/null do userData
+    // EXCEÇÃO: Manter dependents (mesmo se 0) e desired_scholarship_range quando há seller_referral_code ou affiliate_code
+    // Via seller/affiliate admin: desired_scholarship_range é OBRIGATÓRIO
+    // Registro direto: desired_scholarship_range pode ser null
+    const hasReferralCode = userData.seller_referral_code || userData.affiliate_code;
+    const fieldsToKeepEvenIfNull = ['dependents'];
+    
     const cleanUserData = Object.fromEntries(
-      Object.entries(userData).filter(([/*k*/ _k, value]) => value !== undefined && value !== null)
+      Object.entries(userData).filter(([key, value]) => {
+        // Sempre manter dependents (mesmo se 0)
+        if (fieldsToKeepEvenIfNull.includes(key)) {
+          return true;
+        }
+        
+        // Se há referral code (seller ou affiliate), desired_scholarship_range é obrigatório
+        // Não pode ser null - se estiver null, já foi tratado no componente de origem
+        if (key === 'desired_scholarship_range') {
+          // Se tem referral code mas desired_scholarship_range é null, isso é um erro
+          if (hasReferralCode && value === null) {
+            console.warn('⚠️ [USEAUTH] desired_scholarship_range é null mas há referral code. Isso não deveria acontecer.');
+          }
+          // Manter o valor (null para registro direto, número para via seller/affiliate)
+          return true;
+        }
+        
+        // Filtrar outros valores null/undefined
+        return value !== undefined && value !== null;
+      })
     );
     
     console.log('🔍 [USEAUTH] userData original:', userData);
