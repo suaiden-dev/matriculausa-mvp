@@ -30,7 +30,8 @@ const SellerStudentRegistration: React.FC = () => {
     sellerReferralCode: sellerCode,
     // Selecionar por padrão o pacote principal fixo
     selectedPackage: '1',
-    desiredScholarshipRange: null, // ✅ Null por padrão - aluno verá todas as bolsas
+    // ✅ Definir desiredScholarshipRange correspondente ao pacote padrão (3800 para pacote 1)
+    desiredScholarshipRange: 3800, // Valor padrão quando pacote 1 é selecionado
     dependents: 0
   });
   
@@ -207,6 +208,17 @@ const SellerStudentRegistration: React.FC = () => {
       
       // Usar o hook useAuth para registrar o usuário
       // Simplificar os dados para evitar conflitos
+      // ✅ Garantir que desired_scholarship_range seja definido mesmo se o usuário não selecionou explicitamente
+      const packageNumber = parseInt(formData.selectedPackage);
+      const rangeMapping: { [key: number]: number } = {
+        1: 3800,
+        2: 4200,
+        3: 4500,
+        4: 5000,
+        5: 5500
+      };
+      const finalDesiredRange = formData.desiredScholarshipRange || rangeMapping[packageNumber] || 3800;
+      
       const registerData = {
         full_name: formData.full_name,
         phone: formData.phone,
@@ -227,8 +239,14 @@ const SellerStudentRegistration: React.FC = () => {
         throw new Error('Dados obrigatórios não fornecidos');
       }
       
+      // ✅ VALIDAÇÃO: Via seller, o pacote é OBRIGATÓRIO (não pode ser null)
       if (!registerData.seller_referral_code) {
         console.warn('⚠️ [SellerStudentRegistration] seller_referral_code está vazio!');
+      }
+      
+      // Garantir que via seller sempre tenha desired_scholarship_range definido
+      if (registerData.seller_referral_code && !finalDesiredRange) {
+        throw new Error('É obrigatório selecionar um pacote de bolsa quando você se registra via vendedor');
       }
       
       await register(formData.email, formData.password, registerData);
