@@ -93,6 +93,13 @@ const AdminScholarshipSelection: React.FC<AdminScholarshipSelectionProps> = ({ s
         .eq('student_id', studentProfileId)
         .order('created_at', { ascending: false });
       if (appsErr) throw appsErr;
+      
+      console.log('🔍 [ADMIN SCHOLARSHIP SELECTION] Applications loaded:', {
+        studentProfileId,
+        apps_count: apps?.length || 0,
+        apps_data: apps?.map(app => ({ id: app.id, status: app.status, scholarship_title: (app as any).scholarships?.title }))
+      });
+      
       setApplications(apps || []);
 
       // Process type sugerido a partir da aplicação mais recente
@@ -466,13 +473,28 @@ const AdminScholarshipSelection: React.FC<AdminScholarshipSelectionProps> = ({ s
               {(applications || []).length === 0 && (
                 <div className="p-4 text-sm text-slate-500">No applications yet.</div>
               )}
-              {(applications || []).map((a: any) => (
-                <div key={a.id} className="p-3">
-                  <div className="text-sm font-semibold text-slate-900">{a.scholarships?.title || a.scholarship_id}</div>
-                  <div className="text-xs text-slate-600">{a.scholarships?.universities?.name || 'University'}</div>
-                  <div className="mt-1 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">
-                    {String(a.status || 'pending').replace('_',' ')}
-                  </div>
+              {(() => {
+                console.log('🎨 [ADMIN SCHOLARSHIP SELECTION] Renderizando aplicações:', {
+                  total: applications.length,
+                  applications: applications.map((a: any) => ({
+                    id: a.id,
+                    status: a.status,
+                    scholarship_title: a.scholarships?.title
+                  }))
+                });
+                return (applications || []).map((a: any) => {
+                  console.log('🎨 [ADMIN SCHOLARSHIP SELECTION] Renderizando aplicação individual:', {
+                    id: a.id,
+                    status: a.status,
+                    statusDisplay: String(a.status || 'pending').replace('_',' ')
+                  });
+                  return (
+                    <div key={a.id} className="p-3">
+                      <div className="text-sm font-semibold text-slate-900">{a.scholarships?.title || a.scholarship_id}</div>
+                      <div className="text-xs text-slate-600">{a.scholarships?.universities?.name || 'University'}</div>
+                      <div className="mt-1 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">
+                        {String(a.status || 'pending').replace('_',' ')}
+                      </div>
 
                   <div className="mt-3 p-3 bg-slate-50 border border-slate-200 rounded-lg">
                     <div className="text-xs font-semibold text-slate-700 mb-2">Submit required documents</div>
@@ -508,7 +530,9 @@ const AdminScholarshipSelection: React.FC<AdminScholarshipSelectionProps> = ({ s
                     </div>
                   </div>
                 </div>
-              ))}
+                  );
+                });
+              })()}
             </div>
           </div>
         </div>

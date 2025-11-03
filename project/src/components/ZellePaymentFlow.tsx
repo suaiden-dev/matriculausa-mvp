@@ -162,7 +162,22 @@ export const ZellePaymentFlow: React.FC<ZellePaymentFlowProps> = ({
         return getFeeAmount('selection_process') + dependentsCost;
       }
     }
-    return getFeeAmount('application_fee');
+    
+    if (feeType === 'application_fee') {
+      const baseAmount = getFeeAmount('application_fee');
+      const systemType = userProfile?.system_type || 'legacy';
+      const dependents = Number(userProfile?.dependents) || 0;
+      
+      // Adicionar $100 por dependente apenas para sistema legacy
+      if (systemType === 'legacy' && dependents > 0) {
+        const dependentsCost = dependents * 100; // $100 por dependente na Application Fee
+        return baseAmount + dependentsCost;
+      }
+      
+      return baseAmount;
+    }
+    
+    return getFeeAmount(feeType as any);
   };
 
   const getProductName = () => {

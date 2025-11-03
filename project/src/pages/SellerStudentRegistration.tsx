@@ -224,9 +224,11 @@ const SellerStudentRegistration: React.FC = () => {
         phone: formData.phone,
         role: 'student' as const,
         seller_referral_code: finalSellerCode,
-        dependents: formData.dependents || 0, // Garantir que seja número
-        scholarship_package_number: packageNumber,
-        desired_scholarship_range: finalDesiredRange // Sempre definir um valor
+        dependents: formData.dependents,
+        scholarship_package_number: parseInt(formData.selectedPackage),
+        desired_scholarship_range: formData.desiredScholarshipRange,
+        // Como esta página é exclusiva do fluxo legacy, persistimos o system_type
+        system_type: 'legacy'
       };
 
       console.log('🔍 [SellerStudentRegistration] Final registerData:', registerData);
@@ -474,7 +476,7 @@ const SellerStudentRegistration: React.FC = () => {
                       <option value={5}>5 Dependents</option>
                     </select>
                     <p className="text-xs text-gray-500 mt-1">
-                      $150 per dependent will be added to the Selection Process Fee.
+                      $150 per dependent will be added to the Selection Process Fee and +$100 per dependent will be added to the Application Fee.
                     </p>
                     {errors.dependents && (
                       <p className="mt-1 text-sm text-red-600">{errors.dependents}</p>
