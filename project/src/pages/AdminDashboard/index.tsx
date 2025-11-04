@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import React, { useState, useEffect, lazy, Suspense, useMemo } from 'react';
+import { Routes, Route, useLocation } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { University, Scholarship } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
@@ -10,7 +10,9 @@ import UniversityDetails from './UniversityDetails';
 import UniversityFinancialManagement from './UniversityFinancialManagement';
 import UsersHub from './UsersHub';
 import ScholarshipManagement from './ScholarshipManagement';
-import PaymentManagement from './PaymentManagement';
+// ✅ Lazy loading do PaymentManagement para carregar apenas quando acessado
+const PaymentManagement = lazy(() => import('./PaymentManagement'));
+import PaymentManagementSkeleton from '../../components/PaymentManagementSkeleton';
 import ApplicationMonitoring from './ApplicationMonitoring';
 import AdminApplicationView from './AdminApplicationView';
 import MatriculaRewardsAdmin from './MatriculaRewardsAdmin';
@@ -69,6 +71,7 @@ interface Application {
 }
 
 const AdminDashboard: React.FC = () => {
+  const location = useLocation();
   const [universities, setUniversities] = useState<University[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [scholarships, setScholarships] = useState<Scholarship[]>([]);
@@ -79,6 +82,21 @@ const AdminDashboard: React.FC = () => {
 
   // Track se já carregamos dados uma vez para cache inteligente
   const [hasLoadedData, setHasLoadedData] = useState(false);
+  
+  // ✅ Detectar rota atual para carregar apenas dados necessários (memoizado)
+  const routeInfo = useMemo(() => {
+    const currentPath = location.pathname;
+    return {
+      isPaymentsRoute: currentPath.includes('/payments'),
+      isOverviewRoute: currentPath.endsWith('/admin/dashboard') || currentPath.endsWith('/admin/dashboard/'),
+      isUniversitiesRoute: currentPath.includes('/universities'),
+      isScholarshipsRoute: currentPath.includes('/scholarships'),
+      isUsersRoute: currentPath.includes('/users'),
+      isSettingsRoute: currentPath.includes('/settings'),
+    };
+  }, [location.pathname]);
+  
+  const { isPaymentsRoute, isOverviewRoute, isUniversitiesRoute, isScholarshipsRoute, isUsersRoute, isSettingsRoute } = routeInfo;
   
   // Estados para modais de confirmação
   const [confirmationModal, setConfirmationModal] = useState<{
@@ -112,9 +130,23 @@ const AdminDashboard: React.FC = () => {
 
   useEffect(() => {
     if (user && user.role === 'admin') {
-      loadAdminData();
+      // ✅ OTIMIZADO: Carregar apenas dados necessários para a rota atual
+      if (isPaymentsRoute) {
+        // Rota de payments: não precisa carregar dados do dashboard
+        // PaymentManagement carrega seus próprios dados de forma independente
+        setLoading(false);
+        return;
+      }
+      
+      // Para outras rotas, carregar dados conforme necessário
+      if (isOverviewRoute || isUniversitiesRoute || isScholarshipsRoute || isUsersRoute || isSettingsRoute) {
+        loadAdminData();
+      } else {
+        // Para rotas que não precisam de dados gerais, apenas desabilitar loading
+        setLoading(false);
+      }
     }
-  }, [user]);
+  }, [user, isPaymentsRoute, isOverviewRoute, isUniversitiesRoute, isScholarshipsRoute, isUsersRoute, isSettingsRoute]);
 
   const showConfirmationModal = (
     title: string,
@@ -563,7 +595,11 @@ const AdminDashboard: React.FC = () => {
         />
         <Route 
           path="payments" 
-          element={<PaymentManagement />} 
+          element={
+            <Suspense fallback={<PaymentManagementSkeleton />}>
+              <PaymentManagement />
+            </Suspense>
+          } 
         />
         <Route 
           path="settings" 

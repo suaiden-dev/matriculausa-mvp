@@ -7,7 +7,7 @@
     "dev": "vite",
     "dev:full": "node start-dev.js",
     "api": "node server-email-api.js",
-    "build": "node --max_old_space_size=4096 node_modules/.bin/vite build",
+    "build": "cross-env NODE_OPTIONS=--max_old_space_size=4096 vite build",
     "build:netlify": "cross-env NODE_OPTIONS=--max_old_space_size=4096 vite build",
     "lint": "eslint .",
     "preview": "vite preview",
