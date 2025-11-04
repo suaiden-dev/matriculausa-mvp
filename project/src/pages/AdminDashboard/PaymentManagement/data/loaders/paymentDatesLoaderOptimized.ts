@@ -5,7 +5,7 @@
  */
 
 import { SupabaseClient } from '@supabase/supabase-js';
-import { batchGetPaymentDates } from '../../../../lib/batchRequestUtils';
+import { batchGetPaymentDates } from '../../../../../lib/batchRequestUtils';
 
 export type FeeTypeKey = 'selection_process' | 'application' | 'scholarship' | 'i20_control';
 

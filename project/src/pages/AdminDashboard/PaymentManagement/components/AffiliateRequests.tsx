@@ -1,5 +1,6 @@
 import React from 'react';
 import { CreditCard, Clock, CheckCircle2, DollarSign, Shield, Grid3X3, List, Eye, CheckCircle, XCircle, User } from 'lucide-react';
+import AffiliateRequestsSkeleton from '../../../../components/AffiliateRequestsSkeleton';
 
 export interface AffiliateRequestsProps {
 	affiliateRequests: any[];
@@ -121,9 +122,7 @@ function AffiliateRequestsBase(props: AffiliateRequestsProps) {
 				</div>
 
 				{loadingAffiliateRequests ? (
-					<div className="flex items-center justify-center h-64">
-						<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-					</div>
+					<AffiliateRequestsSkeleton />
 				) : affiliateRequests.length === 0 ? (
 					<div className="text-center py-16">
 						<div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">

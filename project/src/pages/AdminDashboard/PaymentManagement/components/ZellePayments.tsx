@@ -1,7 +1,8 @@
 import React from 'react';
-import { CreditCard, Clock, CheckCircle2, XCircle, Grid3X3, List, Eye, CheckCircle, User } from 'lucide-react';
+import { CreditCard, Clock, CheckCircle2, XCircle, Grid3X3, List, Eye, CheckCircle, User, MessageSquare } from 'lucide-react';
 import { PaginationBar } from './PaginationBar';
 import { formatCentsToDollars } from '../../../../utils/currency';
+import ZellePaymentsSkeleton from '../../../../components/ZellePaymentsSkeleton';
 
 export interface ZellePaymentsProps {
 	zellePayments: any[];
@@ -94,9 +95,7 @@ function ZellePaymentsBase(props: ZellePaymentsProps) {
 				</div>
 
 				{loadingZellePayments ? (
-					<div className="flex justify-center items-center h-32">
-						<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-					</div>
+					<ZellePaymentsSkeleton />
 				) : zellePayments.length === 0 ? (
 					<div className="text-center py-12">
 						<CreditCard className="mx-auto h-12 w-12 text-gray-400 mb-4" />
@@ -129,7 +128,7 @@ function ZellePaymentsBase(props: ZellePaymentsProps) {
 										</div>
 
 										<div className="mb-4">
-											<div className="text-2xl font-bold text-gray-900 mb-2">${`$${formatCentsToDollars(payment.amount)}`}</div>
+											<div className="text-2xl font-bold text-gray-900 mb-2">${formatCentsToDollars(payment.amount)}</div>
 											<p className="text-sm text-gray-600 capitalize">{payment.fee_type.replace('_', ' ')}</p>
 										</div>
 
@@ -190,7 +189,7 @@ function ZellePaymentsBase(props: ZellePaymentsProps) {
 														</div>
 													</td>
 													<td className="px-6 py-4 whitespace-nowrap"><div className="text-sm text-gray-900 capitalize">{payment.fee_type.replace('_', ' ')}</div></td>
-													<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">${`$${formatCentsToDollars(payment.amount)}`}</td>
+													<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">${formatCentsToDollars(payment.amount)}</td>
 													<td className="px-6 py-4 whitespace-nowrap">
 														<span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
 															payment.zelle_status === 'pending_verification' ? 'bg-yellow-100 text-yellow-800' :
@@ -206,7 +205,7 @@ function ZellePaymentsBase(props: ZellePaymentsProps) {
 														<div className="flex items-center justify-end space-x-2">
 															{payment.payment_proof_url && (<button onClick={() => openZelleProofModal(payment.id)} className="text-blue-600 hover:text-blue-900 flex items-center gap-1"><Eye size={16} />Proof</button>)}
 															{payment.zelle_status === 'pending_verification' && (<button onClick={() => openZelleReviewModal(payment.id)} className="text-blue-600 hover:text-blue-900 flex items-center gap-1"><CheckCircle size={16} />Review</button>)}
-															<button onClick={() => openZelleNotesModal(payment.id)} className="text-blue-600 hover:text-blue-900 flex items-center gap-1">Notes</button>
+															<button onClick={() => openZelleNotesModal(payment.id)} className="text-gray-600 hover:text-gray-900 flex items-center gap-1"><MessageSquare size={16} />Notes</button>
 														</div>
 													</td>
 												</tr>

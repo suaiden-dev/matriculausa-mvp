@@ -52,7 +52,7 @@ import { createAffiliateUIHandlers } from './PaymentManagement/handlers/affiliat
 import { createUniversityUIHandlers } from './PaymentManagement/handlers/universityHandlers';
 import { createZelleUIHandlers } from './PaymentManagement/handlers/zelleHandlers';
 import { exportPaymentsToCsvViaEdge, downloadCsvFromPayments } from './PaymentManagement/utils/export';
-import { RequestTrackerPanel } from '../../components/RequestTrackerPanel';
+import PaymentManagementSkeleton from '../../components/PaymentManagementSkeleton';
 
 
 const FEE_TYPES = [
@@ -197,6 +197,18 @@ const PaymentManagement = (): React.JSX.Element => {
   const universityReqLoadToken = useRef(0);
   const affiliateReqLoadToken = useRef(0);
   const zelleLoadController = useRef<AbortController | null>(null);
+  
+  // ✅ Cache de dados para evitar skeleton quando voltar à aba
+  const cachedPayments = useRef<PaymentRecord[]>([]);
+  const cachedStats = useRef<PaymentStats | null>(null);
+  const cacheTimestamp = useRef<number>(0);
+  const cachedUniversityRequests = useRef<UniversityPaymentRequest[]>([]);
+  const universityRequestsCacheTimestamp = useRef<number>(0);
+  const cachedAffiliateRequests = useRef<any[]>([]);
+  const affiliateRequestsCacheTimestamp = useRef<number>(0);
+  const cachedZellePayments = useRef<PaymentRecord[]>([]);
+  const zellePaymentsCacheTimestamp = useRef<number>(0);
+  const CACHE_TTL = 2 * 60 * 1000; // Cache válido por 2 minutos
 
   // Backend pagination for Payments tab (supports specific university or all)
   usePaymentsBackendPagination({
@@ -213,34 +225,144 @@ const PaymentManagement = (): React.JSX.Element => {
   useEffect(() => {
     if (activeTab === 'payments' && (!filters?.university || filters.university === 'all')) {
       setBackendTotalCount(null);
-      loadPaymentData();
+      
+      // ✅ Se temos dados em cache válidos, mostrar imediatamente
+      const now = Date.now();
+      const isCacheValid = cachedPayments.current.length > 0 && 
+                          cachedStats.current !== null && 
+                          (now - cacheTimestamp.current) < CACHE_TTL;
+      
+      if (isCacheValid) {
+        // Mostrar dados em cache imediatamente (sem skeleton)
+        setPayments(cachedPayments.current);
+        if (cachedStats.current) {
+          setStats(cachedStats.current);
+        }
+        setLoading(false);
+        
+        // Recarregar em background para atualizar dados
+        loadPaymentData(true); // true = background refresh
+      } else {
+        // Não há cache válido, carregar normalmente (mostra skeleton)
+        loadPaymentData(false);
+      }
     }
   }, [activeTab, filters.university]);
 
+  // ✅ OTIMIZADO: Começar a carregar dados imediatamente, sem esperar user completo do useAuth
+  // Busca a sessão diretamente e valida role de forma não-bloqueante
   useEffect(() => {
-    if (user && user.role === 'admin') {
-      if (!hasLoadedPayments.current) {
-        loadPaymentData();
-        hasLoadedPayments.current = true;
+    if (hasLoadedPayments.current) return;
+    
+    const startLoading = async () => {
+      try {
+        // Buscar sessão diretamente (mais rápido que esperar useAuth)
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError || !session) {
+          console.warn('[PaymentManagement] Sem sessão, aguardando...');
+          return;
+        }
+        
+        // Validar role diretamente do perfil (mais rápido)
+        const { data: profile, error: profileError } = await supabase
+          .from('user_profiles')
+          .select('role')
+          .eq('user_id', session.user.id)
+          .single();
+        
+        if (profileError || profile?.role !== 'admin') {
+          console.warn('[PaymentManagement] Usuário não é admin');
+          return;
+        }
+        
+        // ✅ Carregar dados em paralelo - não esperar user do useAuth
+        if (!hasLoadedPayments.current) {
+          hasLoadedPayments.current = true;
+          
+          // Verificar cache antes de carregar
+          const now = Date.now();
+          const isCacheValid = cachedPayments.current.length > 0 && 
+                              cachedStats.current !== null && 
+                              (now - cacheTimestamp.current) < CACHE_TTL;
+          
+          if (isCacheValid) {
+            // Mostrar cache imediatamente
+            setPayments(cachedPayments.current);
+            if (cachedStats.current) {
+              setStats(cachedStats.current);
+            }
+            setLoading(false);
+            // Recarregar em background
+            loadPaymentData(true);
+          } else {
+            // Não há cache, carregar normalmente
+            loadPaymentData(false);
+          }
+        }
+        if (!hasLoadedUniversities.current) {
+          hasLoadedUniversities.current = true;
+          loadUniversities(); // Em paralelo
+          loadAffiliates(); // Em paralelo
+        }
+      } catch (err) {
+        console.error('[PaymentManagement] Erro ao iniciar carregamento:', err);
       }
-      if (!hasLoadedUniversities.current) {
-        loadUniversities();
-        loadAffiliates();
-        hasLoadedUniversities.current = true;
-      }
-    }
-  }, [user]);
+    };
+    
+    // Iniciar imediatamente na montagem
+    startLoading();
+  }, []); // Executar apenas uma vez na montagem
 
   useEffect(() => {
-    if (activeTab === 'university-requests' && !hasLoadedUniversityRequests.current) {
-      loadUniversityPaymentRequests();
-      hasLoadedUniversityRequests.current = true;
-    } else if (activeTab === 'affiliate-requests' && !hasLoadedAffiliateRequests.current) {
-      loadAffiliateRequests();
-      hasLoadedAffiliateRequests.current = true;
-    } else if (activeTab === 'zelle-payments' && !hasLoadedZellePayments.current) {
-      loadZellePayments();
-      hasLoadedZellePayments.current = true;
+    if (activeTab === 'university-requests') {
+      const now = Date.now();
+      const isCacheValid = cachedUniversityRequests.current.length > 0 && 
+                          (now - universityRequestsCacheTimestamp.current) < CACHE_TTL;
+      
+      if (isCacheValid && !hasLoadedUniversityRequests.current) {
+        // Mostrar cache imediatamente
+        setUniversityRequests(cachedUniversityRequests.current);
+        setLoadingUniversityRequests(false);
+        // Recarregar em background
+        loadUniversityPaymentRequests(true);
+        hasLoadedUniversityRequests.current = true;
+      } else if (!hasLoadedUniversityRequests.current) {
+        loadUniversityPaymentRequests(false);
+        hasLoadedUniversityRequests.current = true;
+      }
+    } else if (activeTab === 'affiliate-requests') {
+      const now = Date.now();
+      const isCacheValid = cachedAffiliateRequests.current.length > 0 && 
+                          (now - affiliateRequestsCacheTimestamp.current) < CACHE_TTL;
+      
+      if (isCacheValid && !hasLoadedAffiliateRequests.current) {
+        // Mostrar cache imediatamente
+        setAffiliateRequests(cachedAffiliateRequests.current);
+        setLoadingAffiliateRequests(false);
+        // Recarregar em background
+        loadAffiliateRequests(true);
+        hasLoadedAffiliateRequests.current = true;
+      } else if (!hasLoadedAffiliateRequests.current) {
+        loadAffiliateRequests(false);
+        hasLoadedAffiliateRequests.current = true;
+      }
+    } else if (activeTab === 'zelle-payments') {
+      const now = Date.now();
+      const isCacheValid = cachedZellePayments.current.length > 0 && 
+                          (now - zellePaymentsCacheTimestamp.current) < CACHE_TTL;
+      
+      if (isCacheValid && !hasLoadedZellePayments.current) {
+        // Mostrar cache imediatamente
+        setZellePayments(cachedZellePayments.current);
+        setLoadingZellePayments(false);
+        // Recarregar em background
+        loadZellePayments(true);
+        hasLoadedZellePayments.current = true;
+      } else if (!hasLoadedZellePayments.current) {
+        loadZellePayments(false);
+        hasLoadedZellePayments.current = true;
+      }
     }
   }, [activeTab]);
 
@@ -301,14 +423,20 @@ const PaymentManagement = (): React.JSX.Element => {
     }
   };
 
-  const loadUniversityPaymentRequests = async () => {
+  const loadUniversityPaymentRequests = async (backgroundRefresh: boolean = false) => {
     try {
-      setLoadingUniversityRequests(true);
+      if (!backgroundRefresh) {
+        setLoadingUniversityRequests(true);
+      }
       console.time('[requests] loadUniversityPaymentRequests');
       const token = ++universityReqLoadToken.current;
       const data = await UniversityPaymentRequestService.listAllPaymentRequests();
       if (token === universityReqLoadToken.current) {
-      setUniversityRequests(data);
+        // ✅ Salvar no cache
+        cachedUniversityRequests.current = data;
+        universityRequestsCacheTimestamp.current = Date.now();
+        
+        setUniversityRequests(data);
       }
     } catch (error: any) {
       console.error('Error loading university payment requests:', error);
@@ -318,14 +446,20 @@ const PaymentManagement = (): React.JSX.Element => {
     }
   };
 
-  const loadAffiliateRequests = async () => {
+  const loadAffiliateRequests = async (backgroundRefresh: boolean = false) => {
     try {
-      setLoadingAffiliateRequests(true);
+      if (!backgroundRefresh) {
+        setLoadingAffiliateRequests(true);
+      }
       console.time('[requests] loadAffiliateRequests');
       const token = ++affiliateReqLoadToken.current;
       const data = await AffiliatePaymentRequestService.listAllPaymentRequests();
       if (token === affiliateReqLoadToken.current) {
-      setAffiliateRequests(data);
+        // ✅ Salvar no cache
+        cachedAffiliateRequests.current = data;
+        affiliateRequestsCacheTimestamp.current = Date.now();
+        
+        setAffiliateRequests(data);
       }
     } catch (error: any) {
       console.error('Error loading affiliate payment requests (admin):', error);
@@ -338,9 +472,13 @@ const PaymentManagement = (): React.JSX.Element => {
 
   // Admin actions for Affiliate Requests
   const approveAffiliateRequest = async (id: string) => {
+    if (!user?.id) {
+      console.error('User not available for approveAffiliateRequest');
+      return;
+    }
     try {
       setAffiliateActionLoading(true);
-      await AffiliatePaymentRequestService.adminApprove(id, user!.id);
+      await AffiliatePaymentRequestService.adminApprove(id, user.id);
       await loadAffiliateRequests();
     } catch (error) {
       console.error('Error approving affiliate request:', error);
@@ -350,9 +488,13 @@ const PaymentManagement = (): React.JSX.Element => {
   };
 
   const rejectAffiliateRequest = async (id: string, reason?: string) => {
+    if (!user?.id) {
+      console.error('User not available for rejectAffiliateRequest');
+      return;
+    }
     try {
       setAffiliateActionLoading(true);
-      await AffiliatePaymentRequestService.adminReject(id, user!.id, reason || affiliateRejectReason);
+      await AffiliatePaymentRequestService.adminReject(id, user.id, reason || affiliateRejectReason);
       await loadAffiliateRequests();
       setShowAffiliateRejectModal(false);
       setAffiliateRejectReason('');
@@ -364,9 +506,13 @@ const PaymentManagement = (): React.JSX.Element => {
   };
 
   const markAffiliateRequestPaid = async (id: string, reference?: string) => {
+    if (!user?.id) {
+      console.error('User not available for markAffiliateRequestPaid');
+      return;
+    }
     try {
       setAffiliateActionLoading(true);
-      await AffiliatePaymentRequestService.adminMarkPaid(id, user!.id, reference || affiliatePaymentReference);
+      await AffiliatePaymentRequestService.adminMarkPaid(id, user.id, reference || affiliatePaymentReference);
       await loadAffiliateRequests();
       setShowAffiliateMarkPaidModal(false);
       setAffiliatePaymentReference('');
@@ -410,9 +556,11 @@ const PaymentManagement = (): React.JSX.Element => {
     }
   };
 
-  const loadZellePayments = async () => {
+  const loadZellePayments = async (backgroundRefresh: boolean = false) => {
     try {
-      setLoadingZellePayments(true);
+      if (!backgroundRefresh) {
+        setLoadingZellePayments(true);
+      }
       console.time('[zelle] loadZellePayments');
       if (zelleLoadController.current) {
         try { zelleLoadController.current.abort(); } catch (_) {}
@@ -425,6 +573,11 @@ const PaymentManagement = (): React.JSX.Element => {
         itemsPerPage,
         zelleLoadController.current.signal
       );
+      
+      // ✅ Salvar no cache
+      cachedZellePayments.current = records as any;
+      zellePaymentsCacheTimestamp.current = Date.now();
+      
       setZellePayments(records as any);
       setZelleTotalCount(count || 0);
     } catch (error) {
@@ -462,8 +615,12 @@ const PaymentManagement = (): React.JSX.Element => {
   };
 
   const approveUniversityRequest = async (id: string) => {
+    if (!user?.id) {
+      console.error('User not available for approveUniversityRequest');
+      return;
+    }
     try {
-      await UniversityPaymentRequestService.adminApprove(id, user!.id);
+      await UniversityPaymentRequestService.adminApprove(id, user.id);
       await loadUniversityPaymentRequests();
       // Recarregar saldo do admin também
       await loadAdminBalance();
@@ -473,9 +630,13 @@ const PaymentManagement = (): React.JSX.Element => {
   };
 
   const rejectUniversityRequest = async (id: string) => {
+    if (!user?.id) {
+      console.error('User not available for rejectUniversityRequest');
+      return;
+    }
     try {
       setActionLoading(true);
-      await UniversityPaymentRequestService.adminReject(id, user!.id, rejectReason);
+      await UniversityPaymentRequestService.adminReject(id, user.id, rejectReason);
       await loadUniversityPaymentRequests();
       // Recarregar saldo do admin também
       await loadAdminBalance();
@@ -489,9 +650,13 @@ const PaymentManagement = (): React.JSX.Element => {
   };
 
   const markUniversityRequestAsPaid = async (id: string) => {
+    if (!user?.id) {
+      console.error('User not available for markUniversityRequestAsPaid');
+      return;
+    }
     try {
       setActionLoading(true);
-      await UniversityPaymentRequestService.adminMarkPaid(id, user!.id, paymentReference);
+      await UniversityPaymentRequestService.adminMarkPaid(id, user.id, paymentReference);
       await loadUniversityPaymentRequests();
       await loadAdminBalance();
       setShowMarkPaidModal(false);
@@ -520,6 +685,10 @@ const PaymentManagement = (): React.JSX.Element => {
   
 
   const addZelleAdminNotes = async (paymentId: string) => {
+    if (!user?.id) {
+      console.error('User not available for addZelleAdminNotes');
+      return;
+    }
     try {
       setZelleActionLoading(true);
       
@@ -530,7 +699,7 @@ const PaymentManagement = (): React.JSX.Element => {
       const { error } = await (await import('./PaymentManagement/data/services/zellePaymentsService')).addZelleAdminNotesService({
         paymentId,
         notes: zelleAdminNotes,
-        adminUserId: user!.id,
+        adminUserId: user.id,
       });
 
       if (error) throw error;
@@ -549,17 +718,21 @@ const PaymentManagement = (): React.JSX.Element => {
 
 
   const approveZellePayment = async (paymentId: string) => {
+    if (!user?.id) {
+      console.error('User not available for approveZellePayment');
+      return;
+    }
     try {
       setZelleActionLoading(true);
       const payment = zellePayments.find(p => p.id === paymentId);
       if (!payment) throw new Error('Payment not found');
 
       const { approveZelleStatusService } = await import('./PaymentManagement/data/services/zellePaymentsService');
-      const { error } = await approveZelleStatusService({ paymentId, adminUserId: user!.id });
+      const { error } = await approveZelleStatusService({ paymentId, adminUserId: user.id });
       if (error) throw error;
       
       const { approveZelleFlow } = await import('./PaymentManagement/data/services/zelleOrchestrator');
-      await approveZelleFlow({ supabase, adminUserId: user!.id, payment: {
+      await approveZelleFlow({ supabase, adminUserId: user.id, payment: {
         id: payment.id,
         user_id: payment.user_id || '',
         student_id: payment.student_id,
@@ -584,6 +757,10 @@ const PaymentManagement = (): React.JSX.Element => {
   };
 
   const rejectZellePayment = async (paymentId: string, reason?: string) => {
+    if (!user?.id) {
+      console.error('User not available for rejectZellePayment');
+      return;
+    }
     try {
       setZelleActionLoading(true);
       const payment = zellePayments.find(p => p.id === paymentId);
@@ -594,7 +771,7 @@ const PaymentManagement = (): React.JSX.Element => {
       if (error) throw error;
 
       const { rejectZelleFlow } = await import('./PaymentManagement/data/services/zelleOrchestrator');
-      await rejectZelleFlow({ supabase, adminUserId: user!.id, payment: {
+      await rejectZelleFlow({ supabase, adminUserId: user.id, payment: {
         id: payment.id,
         user_id: payment.user_id || '',
         student_id: payment.student_id,
@@ -649,12 +826,15 @@ const PaymentManagement = (): React.JSX.Element => {
     setShowAffiliateNotesModal,
   });
 
-  const loadPaymentData = async () => {
+  const loadPaymentData = async (backgroundRefresh: boolean = false) => {
     if (activeTab !== 'payments') {
       return;
     }
     try {
-      setLoading(true);
+      // ✅ Se não for background refresh, mostrar skeleton
+      if (!backgroundRefresh) {
+        setLoading(true);
+      }
       console.time('[payments] loadPaymentData');
 
       // ✅ OTIMIZADO: Usar versão batch otimizada
@@ -668,22 +848,27 @@ const PaymentManagement = (): React.JSX.Element => {
       ];
       const uniqueUserIds = [...new Set(allUserIds)];
 
-      // Buscar valores reais de pagamento da tabela affiliate_referrals (já em batch via IN)
+      // ✅ OTIMIZADO: Buscar valores reais de pagamento em batch paralelo
       const batchSize = 50;
-      let allAffiliateReferrals: any[] = [];
-      
+      const batches: string[][] = [];
       for (let i = 0; i < uniqueUserIds.length; i += batchSize) {
-        const batch = uniqueUserIds.slice(i, i + batchSize);
-        
-        const { data: batchData, error: batchError } = await supabase
+        batches.push(uniqueUserIds.slice(i, i + batchSize));
+      }
+      
+      // Executar todas as queries em paralelo
+      const batchPromises = batches.map(batch =>
+        supabase
           .from('affiliate_referrals')
           .select('referred_id, payment_amount')
-          .in('referred_id', batch);
-
-        if (!batchError && batchData) {
-          allAffiliateReferrals = allAffiliateReferrals.concat(batchData);
-        }
-      }
+          .in('referred_id', batch)
+      );
+      
+      const batchResults = await Promise.allSettled(batchPromises);
+      const allAffiliateReferrals = batchResults
+        .filter((result): result is PromiseFulfilledResult<any> => result.status === 'fulfilled')
+        .map(result => result.value.data || [])
+        .flat()
+        .filter(Boolean);
 
       // Criar mapa de valores reais por user_id
       const realPaymentAmounts = new Map<string, number>();
@@ -709,10 +894,13 @@ const PaymentManagement = (): React.JSX.Element => {
       const paymentRecords: PaymentRecord[] = [...base.paymentRecords];
  
 
-      // Se não há dados reais, vamos criar alguns dados de exemplo para testar
-      setPayments(paymentRecords);
+      // ✅ Salvar no cache
+      cachedPayments.current = paymentRecords;
+      cachedStats.current = base.stats;
+      cacheTimestamp.current = Date.now();
 
-      // Calcular estatísticas
+      // Atualizar estado
+      setPayments(paymentRecords);
       setStats(base.stats);
 
     } catch (error) {
@@ -836,15 +1024,9 @@ const PaymentManagement = (): React.JSX.Element => {
 
   // clearSelection incorporado no PaymentsTab
 
-  if (loading) {
-    return (
-      <div className="p-4 md:p-6">
-        <div className="text-center py-20">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading payment data...</p>
-        </div>
-      </div>
-    );
+  // ✅ Só mostrar skeleton se não há dados em cache (primeira vez ou cache expirado)
+  if (loading && payments.length === 0 && cachedPayments.current.length === 0) {
+    return <PaymentManagementSkeleton />;
   }
 
   return (
@@ -1101,9 +1283,6 @@ const PaymentManagement = (): React.JSX.Element => {
         }}
         FEE_TYPES={FEE_TYPES}
       />
-
-      {/* Request Tracker Panel - Desenvolvimento */}
-      <RequestTrackerPanel />
     </div>
   );
 };

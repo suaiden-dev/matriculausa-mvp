@@ -4,8 +4,6 @@ import App from './App.tsx';
 import './index.css';
 import { GlobalErrorBoundary } from './components/GlobalErrorBoundary';
 import './i18n'; // Importar i18n para inicializar
-// DEV: captura automática de requisições sem interação do usuário
-import './lib/autoRequestCapture';
 
 // Inicialização simplificada para evitar problemas no mobile
 const rootElement = document.getElementById('root');

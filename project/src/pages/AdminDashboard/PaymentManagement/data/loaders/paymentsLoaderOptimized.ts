@@ -27,7 +27,7 @@ async function getOverridesBatch(
   if (userIds.length === 0) return {};
 
   // Usar RPC batch - sempre, nunca fallback individual
-  const { batchGetFeeOverrides } = await import('../../../../lib/batchRequestUtils');
+  const { batchGetFeeOverrides } = await import('../../../../../lib/batchRequestUtils');
   
   try {
     return await batchGetFeeOverrides(supabase, userIds);
