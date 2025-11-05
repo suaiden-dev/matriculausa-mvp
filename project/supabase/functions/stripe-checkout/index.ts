@@ -100,6 +100,10 @@ Deno.serve(async (req) => {
         return corsResponse({ error: 'Erro ao buscar aplicação existente' }, 500);
       }
       if (!existingApp) {
+        // NOTA: Não validamos deadline aqui porque se o aluno chegou até aqui,
+        // significa que já passou pelas validações iniciais e pode ter sido aprovado.
+        // A validação de deadline deve acontecer apenas no momento de selecionar/adicionar ao carrinho.
+        
         // Cria nova aplicação
         const { data: newApp, error: insertError } = await supabase
           .from('scholarship_applications')

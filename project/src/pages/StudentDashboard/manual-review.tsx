@@ -284,6 +284,22 @@ const ManualReview: React.FC = () => {
           if (profile?.id) {
             if (scholarshipIds.length > 0) {
               for (const scholarshipId of scholarshipIds) {
+                // Validar se a bolsa de $3800 está bloqueada antes de criar aplicação
+                const { data: scholarship } = await supabase
+                  .from('scholarships')
+                  .select('id, annual_value_with_scholarship')
+                  .eq('id', scholarshipId)
+                  .single();
+                
+                if (scholarship) {
+                  const { is3800ScholarshipBlocked } = await import('../../utils/scholarshipDeadlineValidation');
+                  if (is3800ScholarshipBlocked(scholarship as any)) {
+                    console.warn('🔍 [manual-review] Cannot create application for expired $3800 scholarship:', scholarshipId);
+                    alert('Esta bolsa não está mais aceitando candidaturas. O prazo para se candidatar expirou.');
+                    continue; // Pular esta bolsa e continuar com as outras
+                  }
+                }
+                
                 const { data: existingApp } = await supabase
                   .from('scholarship_applications')
                   .select('id, documents')

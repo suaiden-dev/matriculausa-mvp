@@ -1,13 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useCartStore } from '../../stores/applicationStore';
 import { useNavigate } from 'react-router-dom';
-import { GraduationCap, Loader2 } from 'lucide-react';
+import { GraduationCap, Loader2, AlertTriangle, X } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import DocumentUploadModal from '../../components/DocumentUploadModal';
 import StudentTypeModal from '../../components/StudentTypeModal';
 import { supabase } from '../../lib/supabase';
 import { useTranslation } from 'react-i18next';
 import NotificationService from '../../services/NotificationService';
+import { is3800ScholarshipBlocked, is3800Scholarship } from '../../utils/scholarshipDeadlineValidation';
 
 const CartPage: React.FC = () => {
   const { t } = useTranslation();
@@ -18,6 +19,7 @@ const CartPage: React.FC = () => {
   const [showStudentTypeModal, setShowStudentTypeModal] = useState(false);
   const [studentType, setStudentType] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [removingScholarshipId, setRemovingScholarshipId] = useState<string | null>(null);
 
   useEffect(() => {
     if (user?.id) {
@@ -34,8 +36,41 @@ const CartPage: React.FC = () => {
   }, []);
 
 
+  // Verificar se há bolsas bloqueadas no carrinho
+  const hasBlockedScholarships = useMemo(() => {
+    return cart.some(item => {
+      const scholarship = item.scholarships;
+      // Verificar se está inativa ou se é bolsa de $3800 bloqueada
+      return !scholarship.is_active || is3800ScholarshipBlocked(scholarship);
+    });
+  }, [cart]);
+
   const handleNextStep = () => {
+    // Validar se há bolsas bloqueadas antes de prosseguir
+    const blockedScholarship = cart.find(item => {
+      const scholarship = item.scholarships;
+      return !scholarship.is_active || is3800ScholarshipBlocked(scholarship);
+    });
+
+    if (blockedScholarship) {
+      // Não mostrar alert do navegador - o botão já está desabilitado e a mensagem visual já aparece
+      return;
+    }
+
     setShowStudentTypeModal(true);
+  };
+
+  const handleRemoveScholarship = async (scholarshipId: string) => {
+    if (!user?.id || removingScholarshipId) return;
+    
+    setRemovingScholarshipId(scholarshipId);
+    try {
+      await useCartStore.getState().removeFromCart(scholarshipId, user.id);
+    } catch (error) {
+      console.error('Error removing scholarship from cart:', error);
+    } finally {
+      setRemovingScholarshipId(null);
+    }
   };
 
   const handleStudentTypeConfirm = async (type: string) => {
@@ -183,22 +218,72 @@ const CartPage: React.FC = () => {
     return (
       <div>
         <ul className="divide-y divide-slate-200 mb-8">
-          {cart.map((item) => (
-            <li key={item.scholarships.id} className="flex items-center justify-between py-4">
-              <div className="flex items-center gap-4 w-full">
-                <div>
-                  <div className="font-bold text-slate-900">{item.scholarships.title}</div>
-                  <div className="text-slate-600 text-sm">{item.scholarships.universities?.name || item.scholarships.university_name || 'Unknown University'}</div>
+          {cart.map((item) => {
+            const scholarship = item.scholarships;
+            const isBlocked = !scholarship.is_active || is3800ScholarshipBlocked(scholarship);
+            const is3800 = is3800Scholarship(scholarship);
+            const isRemoving = removingScholarshipId === scholarship.id;
+            
+            return (
+              <li key={scholarship.id} className={`py-4 ${isBlocked ? 'bg-red-50 rounded-lg px-4 -mx-4' : ''}`}>
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start gap-3 mb-2">
+                      <div className="flex-1">
+                        <div className="font-bold text-slate-900 mb-1">{scholarship.title}</div>
+                        <div className="text-slate-600 text-sm">{scholarship.universities?.name || scholarship.university_name || 'Unknown University'}</div>
+                      </div>
+                      {!isRemoving && (
+                        <button
+                          onClick={() => handleRemoveScholarship(scholarship.id)}
+                          className="flex-shrink-0 p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+                          title={t('studentDashboard.cartPage.removeFromCart')}
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+                    {isBlocked && (
+                      <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                        <div className="flex items-start gap-2">
+                          <AlertTriangle className="h-4 w-4 text-red-600 flex-shrink-0 mt-0.5" />
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-red-800">
+                              {is3800 ? t('scholarshipDeadline.3800Expired') : t('scholarshipsPage.scholarshipCard.notAvailable')}
+                            </p>
+                            <p className="text-xs text-red-700 mt-1">
+                              {t('studentDashboard.cartPage.removeToProceed')}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </li>
-          ))}
+              </li>
+            );
+          })}
         </ul>
+        {hasBlockedScholarships && (
+          <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-amber-800 mb-1">
+                  {t('studentDashboard.cartPage.cannotProceed')}
+                </p>
+                <p className="text-xs text-amber-700">
+                  {t('studentDashboard.cartPage.removeBlockedScholarships')}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
         <div className="flex items-center justify-between mb-6">
           <button
             onClick={handleNextStep}
-            disabled={isProcessing}
-            className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-all duration-300 mb-4 disabled:bg-slate-300 next-step-button"
+            disabled={isProcessing || hasBlockedScholarships}
+            className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-all duration-300 mb-4 disabled:bg-slate-300 disabled:cursor-not-allowed next-step-button"
             data-testid="next-step-button"
           >
             {isProcessing ? t('studentDashboard.cartPage.processing') : t('studentDashboard.cartPage.nextStep')}

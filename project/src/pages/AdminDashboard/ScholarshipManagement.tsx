@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Dialog } from '@headlessui/react';
 import { 
   Award, 
   DollarSign, 
@@ -25,8 +27,11 @@ import {
   FileText,
   AlertCircle,
   BookOpen,
-  AlertTriangle
+  AlertTriangle,
+  Edit,
+  Power
 } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
 
 interface ScholarshipManagementProps {
   scholarships: any[];
@@ -35,21 +40,35 @@ interface ScholarshipManagementProps {
     active: number;
     totalFunding: number;
   };
+  onRefresh?: () => void;
 }
 
 const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
   scholarships,
-  stats
+  stats,
+  onRefresh
 }) => {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [levelFilter, setLevelFilter] = useState('all');
   const [universityFilter, setUniversityFilter] = useState('all');
   const [courseFilter, setCourseFilter] = useState('all');
+  const [deliveryModeFilter, setDeliveryModeFilter] = useState('all');
+  const [minAmount, setMinAmount] = useState('');
+  const [maxAmount, setMaxAmount] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [sortBy, setSortBy] = useState<'recent' | 'applicants' | 'views'>('recent');
   // Estados do modal de detalhes
   const [selectedScholarship, setSelectedScholarship] = useState<any | null>(null);
   const [showModal, setShowModal] = useState(false);
+  // Estados para ativar/desativar
+  const [statusConfirmationModal, setStatusConfirmationModal] = useState<{
+    isOpen: boolean;
+    scholarship: any;
+    newStatus: boolean;
+  } | null>(null);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
   // Estados da paginação
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(12);
@@ -59,6 +78,48 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
   const closeModal = () => {
     setShowModal(false);
     setSelectedScholarship(null);
+  };
+
+  const handleEdit = (scholarshipId: string) => {
+    navigate(`/admin/dashboard/scholarships/edit/${scholarshipId}`);
+  };
+
+  const handleToggleStatus = (scholarship: any) => {
+    setStatusConfirmationModal({
+      isOpen: true,
+      scholarship,
+      newStatus: !scholarship.is_active
+    });
+  };
+
+  const confirmToggleStatus = async () => {
+    if (!statusConfirmationModal) return;
+
+    setUpdatingStatus(true);
+    try {
+      const { error } = await supabase
+        .from('scholarships')
+        .update({ is_active: statusConfirmationModal.newStatus })
+        .eq('id', statusConfirmationModal.scholarship.id);
+
+      if (error) throw error;
+
+      // Recarregar dados
+      if (onRefresh) {
+        onRefresh();
+      }
+
+      setStatusConfirmationModal(null);
+    } catch (error: any) {
+      console.error('Error updating scholarship status:', error);
+      alert(`Erro ao atualizar status: ${error.message}`);
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
+  const closeStatusModal = () => {
+    setStatusConfirmationModal(null);
   };
 
   React.useEffect(() => {
@@ -112,7 +173,37 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
     const matchesCourse = courseFilter === 'all' || 
       scholarship.field_of_study === courseFilter;
     
-    return matchesSearch && matchesStatus && matchesLevel && matchesUniversity && matchesCourse;
+    const matchesDeliveryMode = deliveryModeFilter === 'all' || 
+      scholarship.delivery_mode === deliveryModeFilter;
+    
+    // Filtrar por valor mínimo e máximo - usar annual_value_with_scholarship
+    const scholarshipValue = scholarship.annual_value_with_scholarship || scholarship.amount || scholarship.scholarshipvalue || 0;
+    
+    // Converter valores de string para número, validando se são números válidos
+    const minAmountValue = minAmount && minAmount.trim() !== '' ? parseFloat(minAmount) : null;
+    const maxAmountValue = maxAmount && maxAmount.trim() !== '' ? parseFloat(maxAmount) : null;
+    
+    // Validar se os valores são números válidos (não NaN)
+    const validMinAmount = minAmountValue !== null && !isNaN(minAmountValue) ? minAmountValue : null;
+    const validMaxAmount = maxAmountValue !== null && !isNaN(maxAmountValue) ? maxAmountValue : null;
+    
+    const matchesMinAmount = validMinAmount === null || scholarshipValue >= validMinAmount;
+    const matchesMaxAmount = validMaxAmount === null || scholarshipValue <= validMaxAmount;
+    
+    return matchesSearch && matchesStatus && matchesLevel && matchesUniversity && matchesCourse && 
+           matchesDeliveryMode && matchesMinAmount && matchesMaxAmount;
+  }).sort((a, b) => {
+    // Ordenação baseada no filtro selecionado
+    switch (sortBy) {
+      case 'applicants':
+        return (b.application_count || 0) - (a.application_count || 0);
+      case 'views':
+        return (b.cart_count || 0) - (a.cart_count || 0);
+      case 'recent':
+      default:
+        // Ordenar por data de criação (mais recente primeiro)
+        return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+    }
   });
 
   // Lógica de paginação
@@ -122,9 +213,9 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
   const currentScholarships = filteredScholarships.slice(startIndex, endIndex);
 
   // Reset para primeira página quando filtros mudarem
-  React.useEffect(() => {
+  useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, statusFilter, levelFilter, universityFilter, courseFilter]);
+  }, [searchTerm, statusFilter, levelFilter, universityFilter, courseFilter, deliveryModeFilter, minAmount, maxAmount, sortBy]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -135,8 +226,16 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
   };
 
   const getDaysUntilDeadline = (deadline: string) => {
+    // Criar data atual sem hora (apenas dia)
     const today = new Date();
-    const deadlineDate = new Date(deadline);
+    today.setHours(0, 0, 0, 0);
+    
+    // Criar deadline como data local (não UTC) para evitar problemas de timezone
+    // Parse da data no formato YYYY-MM-DD como local
+    const [year, month, day] = deadline.split('-').map(Number);
+    const deadlineDate = new Date(year, month - 1, day); // month - 1 porque Date usa 0-11
+    deadlineDate.setHours(23, 59, 59, 999); // Fim do dia
+    
     const diffTime = deadlineDate.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return diffDays;
@@ -257,6 +356,66 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
                     </option>
                   ))}
                 </select>
+              </div>
+
+              <div className="min-w-[160px]">
+                <label className="block text-xs font-medium text-slate-600 mb-1">Sort By</label>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as 'recent' | 'applicants' | 'views')}
+                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200 text-sm"
+                  title="Sort scholarships"
+                >
+                  <option value="recent">Most Recent</option>
+                  <option value="applicants">Most Applicants</option>
+                  <option value="views">Most Views</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Delivery Mode and Amount Filters */}
+            <div className="flex flex-wrap gap-3 mt-4">
+              <div className="min-w-[160px]">
+                <label className="block text-xs font-medium text-slate-600 mb-1">Modality</label>
+                <select
+                  value={deliveryModeFilter}
+                  onChange={(e) => setDeliveryModeFilter(e.target.value)}
+                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200 text-sm"
+                  title="Filter by course modality"
+                >
+                  <option value="all">All Modalities</option>
+                  <option value="in_person">In-Person</option>
+                  <option value="hybrid">Hybrid</option>
+                  <option value="online">Online</option>
+                </select>
+              </div>
+
+              <div className="min-w-[140px]">
+                <label className="block text-xs font-medium text-slate-600 mb-1">Min Amount ($)</label>
+                <input
+                  type="number"
+                  placeholder="0"
+                  value={minAmount}
+                  onChange={(e) => setMinAmount(e.target.value)}
+                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200 text-sm"
+                  title="Minimum scholarship amount"
+                  min="0"
+                  step="100"
+                />
+              </div>
+
+              <div className="min-w-[140px]">
+                <label className="block text-xs font-medium text-slate-600 mb-1">Max Amount ($)</label>
+                <input
+                  type="number"
+                  placeholder="No limit"
+                  value={maxAmount}
+                  onChange={(e) => setMaxAmount(e.target.value)}
+                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200 text-sm"
+                  title="Maximum scholarship amount"
+                  min="0"
+                  step="100"
+                />
               </div>
             </div>
 
@@ -421,28 +580,45 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
                   <div className="grid grid-cols-2 gap-4">
                     <div className="bg-slate-50 p-3 rounded-xl text-center">
                       <Users className="h-5 w-5 mx-auto mb-2 text-slate-500" />
-                      <p className="text-lg font-bold text-slate-900">0</p>
+                      <p className="text-lg font-bold text-slate-900">{scholarship.application_count || 0}</p>
                       <p className="text-xs text-slate-500">Applicants</p>
                     </div>
                     <div className="bg-slate-50 p-3 rounded-xl text-center">
                       <Eye className="h-5 w-5 mx-auto mb-2 text-slate-500" />
-                      <p className="text-lg font-bold text-slate-900">0</p>
+                      <p className="text-lg font-bold text-slate-900">{scholarship.cart_count || 0}</p>
                       <p className="text-xs text-slate-500">Views</p>
                     </div>
                   </div>
                 </div>
 
                 {/* Actions */}
-                <div className="px-6 pb-6">
+                <div className="px-6 pb-6 space-y-2">
                   <button
-                    className="w-full bg-slate-100 text-slate-700 py-2.5 px-4 rounded-xl hover:bg-slate-200 transition-colors font-medium text-sm"
+                    className="w-full bg-slate-100 text-slate-700 py-2.5 px-4 rounded-xl hover:bg-slate-200 transition-colors font-medium text-sm flex items-center justify-center"
                     onClick={() => {
                       setSelectedScholarship(scholarship);
                       setShowModal(true);
                     }}
                   >
+                    <Eye className="h-4 w-4 mr-2" />
                     View Details
                   </button>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      className="bg-[#05294E] text-white py-2.5 px-4 rounded-xl hover:bg-[#05294E]/90 transition-colors font-medium text-sm flex items-center justify-center"
+                      onClick={() => handleEdit(scholarship.id)}
+                    >
+                      <Edit className="h-4 w-4 mr-1" />
+                      Edit
+                    </button>
+                    <button
+                      className={`${scholarship.is_active ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-green-100 text-green-700 hover:bg-green-200'} py-2.5 px-4 rounded-xl transition-colors font-medium text-sm flex items-center justify-center`}
+                      onClick={() => handleToggleStatus(scholarship)}
+                    >
+                      <Power className="h-4 w-4 mr-1" />
+                      {scholarship.is_active ? 'Deactivate' : 'Activate'}
+                    </button>
+                  </div>
                 </div>
               </div>
             );
@@ -476,16 +652,35 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
                   </td>
                   <td className="px-4 py-2 text-slate-600">{new Date(scholarship.deadline).toLocaleDateString()}</td>
                   <td className="px-4 py-2">
-                    <button 
-                      className="bg-slate-100 text-slate-700 py-1 px-3 rounded-lg hover:bg-slate-200 transition-colors text-xs font-medium" 
-                      title="View details"
-                      onClick={() => {
-                        setSelectedScholarship(scholarship);
-                        setShowModal(true);
-                      }}
-                    >
-                      View
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button 
+                        className="bg-slate-100 text-slate-700 py-1 px-3 rounded-lg hover:bg-slate-200 transition-colors text-xs font-medium flex items-center" 
+                        title="View details"
+                        onClick={() => {
+                          setSelectedScholarship(scholarship);
+                          setShowModal(true);
+                        }}
+                      >
+                        <Eye className="h-3 w-3 mr-1" />
+                        View
+                      </button>
+                      <button 
+                        className="bg-[#05294E] text-white py-1 px-3 rounded-lg hover:bg-[#05294E]/90 transition-colors text-xs font-medium flex items-center" 
+                        title="Edit scholarship"
+                        onClick={() => handleEdit(scholarship.id)}
+                      >
+                        <Edit className="h-3 w-3 mr-1" />
+                        Edit
+                      </button>
+                      <button 
+                        className={`${scholarship.is_active ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-green-100 text-green-700 hover:bg-green-200'} py-1 px-3 rounded-lg transition-colors text-xs font-medium flex items-center`}
+                        title={scholarship.is_active ? 'Deactivate scholarship' : 'Activate scholarship'}
+                        onClick={() => handleToggleStatus(scholarship)}
+                      >
+                        <Power className="h-3 w-3 mr-1" />
+                        {scholarship.is_active ? 'Off' : 'On'}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -565,6 +760,183 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Details Modal */}
+      {showModal && selectedScholarship && (
+        <Dialog open={showModal} onClose={closeModal} className="fixed z-50 inset-0 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen px-4">
+            <div className="fixed inset-0 bg-black opacity-30" />
+            <div className="relative bg-white rounded-xl shadow-xl max-w-2xl w-full mx-auto p-6 z-50 max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between mb-6">
+                <Dialog.Title className="text-2xl font-bold text-gray-900">
+                  {selectedScholarship.title}
+                </Dialog.Title>
+                <button
+                  onClick={closeModal}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+              
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-sm font-medium text-gray-500 mb-2">Description</h3>
+                  <p className="text-gray-900">{selectedScholarship.description || 'No description provided'}</p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500 mb-2">University</h3>
+                    <p className="text-gray-900">{selectedScholarship.universities?.name || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500 mb-2">Level</h3>
+                    <p className="text-gray-900 capitalize">{selectedScholarship.level}</p>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500 mb-2">Field of Study</h3>
+                    <p className="text-gray-900">{selectedScholarship.field_of_study || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500 mb-2">Deadline</h3>
+                    <p className="text-gray-900">{(() => {
+                      // Parse da data como local para evitar problemas de timezone
+                      const [year, month, day] = selectedScholarship.deadline.split('-').map(Number);
+                      const deadlineDate = new Date(year, month - 1, day);
+                      return deadlineDate.toLocaleDateString();
+                    })()}</p>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500 mb-2">Annual Value</h3>
+                    <p className="text-gray-900 font-semibold text-green-600">
+                      {formatCurrency(Number(selectedScholarship.annual_value_with_scholarship ?? 0))}
+                    </p>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500 mb-2">Status</h3>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${selectedScholarship.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                      {selectedScholarship.is_active ? 'Active' : 'Inactive'}
+                    </span>
+                  </div>
+                </div>
+
+                {selectedScholarship.requirements && selectedScholarship.requirements.length > 0 && (
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500 mb-2">Requirements</h3>
+                    <ul className="list-disc list-inside space-y-1 text-gray-900">
+                      {selectedScholarship.requirements.map((req: string, index: number) => (
+                        <li key={index}>{req}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {selectedScholarship.eligibility && selectedScholarship.eligibility.length > 0 && (
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500 mb-2">Eligibility</h3>
+                    <ul className="list-disc list-inside space-y-1 text-gray-900">
+                      {selectedScholarship.eligibility.map((item: string, index: number) => (
+                        <li key={index}>{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {selectedScholarship.benefits && selectedScholarship.benefits.length > 0 && (
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500 mb-2">Benefits</h3>
+                    <ul className="list-disc list-inside space-y-1 text-gray-900">
+                      {selectedScholarship.benefits.map((benefit: string, index: number) => (
+                        <li key={index}>{benefit}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                <div className="flex space-x-3 pt-4 border-t">
+                  <button
+                    onClick={() => {
+                      closeModal();
+                      handleEdit(selectedScholarship.id);
+                    }}
+                    className="flex-1 bg-[#05294E] text-white py-2 px-4 rounded-lg hover:bg-[#05294E]/90 transition-colors font-medium"
+                  >
+                    <Edit className="h-4 w-4 inline-block mr-2" />
+                    Edit Scholarship
+                  </button>
+                  <button
+                    onClick={closeModal}
+                    className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Dialog>
+      )}
+
+      {/* Status Confirmation Modal */}
+      {statusConfirmationModal && (
+        <Dialog open={statusConfirmationModal.isOpen} onClose={closeStatusModal} className="fixed z-50 inset-0 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen px-4">
+            <div className="fixed inset-0 bg-black opacity-30" />
+            <div className="relative bg-white rounded-xl shadow-xl max-w-md w-full mx-auto p-6 z-50">
+              <div className="flex items-center mb-4">
+                <div className={`p-2 rounded-lg ${
+                  statusConfirmationModal.newStatus ? 'bg-green-100' : 'bg-red-100'
+                }`}>
+                  {statusConfirmationModal.newStatus ? (
+                    <CheckCircle className="h-6 w-6 text-green-600" />
+                  ) : (
+                    <AlertTriangle className="h-6 w-6 text-red-600" />
+                  )}
+                </div>
+                <Dialog.Title className="text-xl font-bold ml-3 text-gray-900">
+                  {statusConfirmationModal.newStatus ? 'Activate Scholarship' : 'Deactivate Scholarship'}
+                </Dialog.Title>
+              </div>
+              
+              <p className="text-gray-600 mb-6">
+                {statusConfirmationModal.newStatus 
+                  ? `Are you sure you want to activate "${statusConfirmationModal.scholarship.title}"? This will make it visible to students.`
+                  : `Are you sure you want to deactivate "${statusConfirmationModal.scholarship.title}"? This will hide it from students.`
+                }
+              </p>
+
+              <div className="flex space-x-3 justify-end">
+                <button
+                  onClick={closeStatusModal}
+                  disabled={updatingStatus}
+                  className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmToggleStatus}
+                  disabled={updatingStatus}
+                  className={`px-4 py-2 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                    statusConfirmationModal.newStatus 
+                      ? 'bg-green-600 hover:bg-green-700' 
+                      : 'bg-red-600 hover:bg-red-700'
+                  }`}
+                >
+                  {updatingStatus ? (
+                    <>
+                      <Clock className="animate-spin h-4 w-4 inline-block mr-2" />
+                      Updating...
+                    </>
+                  ) : (
+                    statusConfirmationModal.newStatus ? 'Activate' : 'Deactivate'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </Dialog>
       )}
     </div>
   );
