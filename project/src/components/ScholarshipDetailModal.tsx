@@ -19,10 +19,13 @@ import {
   FileText,
   CheckCircle,
   AlertCircle,
+  AlertTriangle,
   BookOpen,
   TrendingUp
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { is3800Scholarship, is3800ScholarshipBlocked } from '../utils/scholarshipDeadlineValidation';
+import { ScholarshipCountdownTimer } from './ScholarshipCountdownTimer';
 
 interface ScholarshipDetailModalProps {
   scholarship: any;
@@ -117,8 +120,16 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
   };
 
   const getDaysUntilDeadline = (deadline: string) => {
+    // Criar data atual sem hora (apenas dia)
     const today = new Date();
-    const deadlineDate = new Date(deadline);
+    today.setHours(0, 0, 0, 0);
+    
+    // Criar deadline como data local (não UTC) para evitar problemas de timezone
+    // Parse da data no formato YYYY-MM-DD como local
+    const [year, month, day] = deadline.split('-').map(Number);
+    const deadlineDate = new Date(year, month - 1, day); // month - 1 porque Date usa 0-11
+    deadlineDate.setHours(23, 59, 59, 999); // Fim do dia
+    
     const diffTime = deadlineDate.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return diffDays;
@@ -196,10 +207,10 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
                 )}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
                 
-                {/* Close Button */}
+                {/* Close Button - Sempre no topo direito */}
                 <button
                   onClick={onClose}
-                  className="absolute top-4 right-4 bg-white text-black p-2 rounded-full border border-gray-300 shadow-md hover:bg-gray-100 transition-all duration-200"
+                  className="absolute top-4 right-4 bg-white text-black p-2 rounded-full border border-gray-300 shadow-md hover:bg-gray-100 transition-all duration-200 z-10"
                 >
                   <X className="h-6 w-6" />
                 </button>
@@ -210,6 +221,16 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
                     <span className="bg-[#D0151C] text-white px-4 py-2 rounded-xl text-sm font-bold shadow-lg flex items-center gap-2">
                       <Star className="h-4 w-4" />
                       {t('scholarshipsPage.modal.exclusiveScholarship')}
+                    </span>
+                  </div>
+                )}
+
+                {/* Inactive/Expired Badge - Posicionado abaixo do botão de fechar */}
+                {(!scholarship.is_active || is3800ScholarshipBlocked(scholarship)) && (
+                  <div className="absolute top-16 right-4">
+                    <span className="bg-red-500 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-lg flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4" />
+                      {t('scholarshipsPage.modal.expired')}
                     </span>
                   </div>
                 )}
@@ -411,28 +432,65 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
 
                 {/* Sidebar */}
                 <div className="space-y-6">
+                  {/* Inactive Scholarship Warning */}
+                  {(!scholarship.is_active || is3800ScholarshipBlocked(scholarship)) && (
+                    <div className="p-6 rounded-2xl border-2 border-red-200 bg-red-50">
+                      <div className="flex items-center gap-3 mb-3">
+                        <AlertTriangle className="h-6 w-6 text-red-600" />
+                        <span className="font-bold text-lg text-red-600">
+                          {t('scholarshipsPage.modal.scholarshipExpired')}
+                        </span>
+                      </div>
+                      <div className="space-y-2">
+                        <p className="text-red-700 font-semibold">
+                          {t('scholarshipsPage.modal.noLongerAccepting')}
+                        </p>
+                        <p className="text-red-600 text-sm">
+                          {t('scholarshipsPage.modal.canStillView')}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Deadline Status */}
-                  <div className={`p-6 rounded-2xl border-2 ${deadlineInfo.bg}`}>
-                    <div className="flex items-center gap-3 mb-3">
-                      <DeadlineIcon className={`h-6 w-6 ${deadlineInfo.color}`} />
-                      <span className={`font-bold text-lg ${deadlineInfo.color}`}>
-                        {t('scholarshipsPage.modal.applicationDeadline')}
-                      </span>
+                  {scholarship.is_active && (
+                    <div className={`p-6 rounded-2xl border-2 ${deadlineInfo.bg}`}>
+                      <div className="flex items-center gap-3 mb-3">
+                        <DeadlineIcon className={`h-6 w-6 ${deadlineInfo.color}`} />
+                        <span className={`font-bold text-lg ${deadlineInfo.color}`}>
+                          {t('scholarshipsPage.modal.applicationDeadline')}
+                        </span>
+                      </div>
+                      <div className="space-y-2">
+                        {/* Timer para bolsas de $3800, ou dias restantes para outras */}
+                        {is3800Scholarship(scholarship) ? (
+                          <div className="flex items-center gap-2">
+                            <ScholarshipCountdownTimer 
+                              scholarship={scholarship} 
+                              className="text-sm px-4 py-2"
+                            />
+                          </div>
+                        ) : (
+                          <p className="text-2xl font-bold text-slate-900">
+                            {getDaysUntilDeadline(scholarship.deadline)} {t('scholarshipsPage.modal.daysLeft')}
+                          </p>
+                        )}
+                        <p className="text-slate-700">
+                          {t('scholarshipsPage.modal.deadline')} {(() => {
+                            // Parse da data como local para evitar problemas de timezone
+                            const [year, month, day] = scholarship.deadline.split('-').map(Number);
+                            const deadlineDate = new Date(year, month - 1, day);
+                            return deadlineDate.toLocaleDateString('en-US', {
+                              weekday: 'long',
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric'
+                            });
+                          })()}
+                        </p>
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <p className="text-2xl font-bold text-slate-900">
-                        {getDaysUntilDeadline(scholarship.deadline)} {t('scholarshipsPage.modal.daysLeft')}
-                      </p>
-                      <p className="text-slate-700">
-                        {t('scholarshipsPage.modal.deadline')} {new Date(scholarship.deadline).toLocaleDateString('en-US', {
-                          weekday: 'long',
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric'
-                        })}
-                      </p>
-                    </div>
-                  </div>
+                  )}
 
                   {/* University Info */}
                   <div className={`bg-white rounded-2xl p-6 border border-slate-200 shadow-sm relative ${

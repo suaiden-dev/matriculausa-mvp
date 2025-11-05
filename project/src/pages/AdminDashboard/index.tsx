@@ -10,6 +10,7 @@ import UniversityDetails from './UniversityDetails';
 import UniversityFinancialManagement from './UniversityFinancialManagement';
 import UsersHub from './UsersHub';
 import ScholarshipManagement from './ScholarshipManagement';
+import AdminScholarshipEdit from './AdminScholarshipEdit';
 // ✅ Lazy loading do PaymentManagement para carregar apenas quando acessado
 const PaymentManagement = lazy(() => import('./PaymentManagement'));
 import PaymentManagementSkeleton from '../../components/PaymentManagementSkeleton';
@@ -294,6 +295,63 @@ const AdminDashboard: React.FC = () => {
         console.error('Error loading scholarships:', scholarshipsError);
       }
 
+      // Load application counts and cart counts (views) for scholarships
+      let applicationCounts: Record<string, number> = {};
+      let cartCounts: Record<string, number> = {};
+      
+      if (scholarshipsData && scholarshipsData.length > 0) {
+        const scholarshipIds = scholarshipsData.map(s => s.id);
+        
+        // Count applications per scholarship - apenas com documentos aprovados
+        // Buscar aplicações com user_profiles para verificar documents_status
+        const { data: applicationCountsData } = await supabase
+          .from('scholarship_applications')
+          .select(`
+            scholarship_id,
+            documents,
+            student_id,
+            user_profiles!student_id (
+              documents_status
+            )
+          `)
+          .in('scholarship_id', scholarshipIds);
+        
+        if (applicationCountsData) {
+          applicationCountsData.forEach(app => {
+            const profile = Array.isArray((app as any).user_profiles) 
+              ? (app as any).user_profiles[0] 
+              : (app as any).user_profiles;
+            const documents = app.documents || [];
+            
+            // Verificar se documents_status está aprovado OU se todos os documentos estão aprovados
+            const isDocumentsApproved = profile?.documents_status === 'approved' ||
+              // Verificar se todos os documentos requeridos estão aprovados
+              (Array.isArray(documents) && 
+               ['passport', 'diploma', 'funds_proof'].every((docType) => {
+                 const doc = documents.find((d: any) => d?.type === docType);
+                 return doc && (doc.status || '').toLowerCase() === 'approved';
+               }));
+            
+            if (isDocumentsApproved) {
+              applicationCounts[app.scholarship_id] = (applicationCounts[app.scholarship_id] || 0) + 1;
+            }
+          });
+        }
+        
+        // Count cart entries (views/interests) per scholarship
+        // Cart representa estudantes que selecionaram a bolsa antes de pagar application fee
+        const { data: cartData } = await supabase
+          .from('user_cart')
+          .select('scholarship_id')
+          .in('scholarship_id', scholarshipIds);
+        
+        if (cartData) {
+          cartData.forEach(cart => {
+            cartCounts[cart.scholarship_id] = (cartCounts[cart.scholarship_id] || 0) + 1;
+          });
+        }
+      }
+
       // Load applications
       const { data: applicationsData, error: applicationsError } = await supabase
         .from('scholarship_applications')
@@ -319,7 +377,11 @@ const AdminDashboard: React.FC = () => {
         user_email: userEmails[university.user_id] || null,
         user_profile: userProfiles[university.user_id] || null
       }));
-      const processedScholarships = scholarshipsData || [];
+      const processedScholarships = (scholarshipsData || []).map((scholarship: any) => ({
+        ...scholarship,
+        application_count: applicationCounts[scholarship.id] || 0,
+        cart_count: cartCounts[scholarship.id] || 0
+      }));
       const processedApplications = (applicationsData || []).map((app: any) => ({
         id: app.id,
         student_name: 'Student User',
@@ -590,8 +652,13 @@ const AdminDashboard: React.FC = () => {
             <ScholarshipManagement 
               scholarships={scholarships}
               stats={componentStats.scholarships}
+              onRefresh={loadAdminData}
             />
           } 
+        />
+        <Route 
+          path="scholarships/edit/:id" 
+          element={<AdminScholarshipEdit />} 
         />
         <Route 
           path="payments" 

@@ -17,7 +17,8 @@ import {
   Monitor,
   Globe,
   Briefcase,
-  Trash2
+  Trash2,
+  AlertTriangle
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
@@ -34,6 +35,9 @@ import FavoriteButton from '../../components/FavoriteButton';
 import FavoritesFilter from '../../components/FavoritesFilter';
 import { ApplicationFeeBlockedMessage } from '../../components/ApplicationFeeBlockedMessage';
 import { useApplicationFeeStatus } from '../../hooks/useApplicationFeeStatus';
+import { is3800ScholarshipBlocked, is3800Scholarship } from '../../utils/scholarshipDeadlineValidation';
+import { ScholarshipExpiryWarning } from '../../components/ScholarshipExpiryWarning';
+import { ScholarshipCountdownTimer } from '../../components/ScholarshipCountdownTimer';
 
 interface ScholarshipBrowserProps {
   scholarships: any[];
@@ -500,8 +504,16 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
 
   // Função para calcular dias até o deadline
   const getDaysUntilDeadline = (deadline: string) => {
+    // Criar data atual sem hora (apenas dia)
     const today = new Date();
-    const deadlineDate = new Date(deadline);
+    today.setHours(0, 0, 0, 0);
+    
+    // Criar deadline como data local (não UTC) para evitar problemas de timezone
+    // Parse da data no formato YYYY-MM-DD como local
+    const [year, month, day] = deadline.split('-').map(Number);
+    const deadlineDate = new Date(year, month - 1, day); // month - 1 porque Date usa 0-11
+    deadlineDate.setHours(23, 59, 59, 999); // Fim do dia
+    
     const diffTime = deadlineDate.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return diffDays;
@@ -762,7 +774,19 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
       return;
     }
 
-    // PRIMEIRO: Verificar se já pagou a selection process fee
+    // PRIMEIRO: Verificar se a bolsa está ativa
+    if (!scholarship.is_active) {
+      alert('Esta bolsa não está mais aceitando aplicações.');
+      return;
+    }
+
+    // PRIMEIRO.5: Verificar se a bolsa de $3800 está bloqueada
+    if (is3800ScholarshipBlocked(scholarship)) {
+      alert(t('scholarshipDeadline.3800Expired'));
+      return;
+    }
+
+    // SEGUNDO: Verificar se já pagou a selection process fee
     if (!userProfile?.has_paid_selection_process_fee) {
       // User has not paid selection process fee, checking for active discount
       
@@ -822,6 +846,13 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
   // Função para ir direto para checkout (quando já tem desconto)
   const proceedToCheckout = (scholarship: any) => {
     if (!user) return;
+    
+    // Validar se a bolsa de $3800 está bloqueada
+    if (is3800ScholarshipBlocked(scholarship)) {
+      alert(t('scholarshipDeadline.3800Expired'));
+      return;
+    }
+    
     // Adicionar ao carrinho SEM redirecionar - usuário pode continuar selecionando
     addToCart(scholarship, user.id);
     // NÃO redirecionar para o carrinho - deixar usuário continuar selecionando
@@ -1388,6 +1419,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
               const alreadyApplied = appliedScholarshipIds.has(scholarship.id);
               const inCart = cartScholarshipIds.has(scholarship.id);
               const layoutId = `featured-scholarship-${scholarship.id}`;
+              const isBlocked = is3800ScholarshipBlocked(scholarship);
               
               return (
                 <motion.div
@@ -1448,6 +1480,9 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
 
                   {/* Card Content */}
                   <div className="p-4 sm:p-6 flex-1 flex flex-col">
+                    {/* Warning for $3800 scholarships */}
+                    <ScholarshipExpiryWarning scholarship={scholarship} variant="badge" className="mb-3" />
+                    
                     {/* Title and University */}
                     <div className="mb-4">
                       <h3 className="text-xl font-bold text-slate-900 mb-3 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors">
@@ -1557,9 +1592,13 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                           <Clock className="h-3 w-3 text-red-500" />
                                                       <span className="text-xs font-medium text-slate-600 ml-2">{t('studentDashboard.findScholarships.scholarshipCard.deadline')}</span>
                         </div>
-                        <span className="text-xs font-semibold text-slate-700">
-                          {getDaysUntilDeadlineDisplay(scholarship.deadline)} {t('studentDashboard.findScholarships.scholarshipCard.daysLeft')}
-                        </span>
+                        {is3800Scholarship(scholarship) ? (
+                          <ScholarshipCountdownTimer scholarship={scholarship} />
+                        ) : (
+                          <span className="text-xs font-semibold text-slate-700">
+                            {getDaysUntilDeadlineDisplay(scholarship.deadline)} {t('studentDashboard.findScholarships.scholarshipCard.daysLeft')}
+                          </span>
+                        )}
                       </div>
                     </div>
                       
@@ -1581,13 +1620,24 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                            </button>
                          </div>
                          
-                         {alreadyApplied ? (
+                         {alreadyApplied || isBlocked ? (
                            <button
                              disabled
-                             className="flex-1 h-12 px-4 rounded-2xl font-semibold cursor-not-allowed flex items-center justify-center bg-green-100 text-green-700"
+                             className={`flex-1 h-12 px-4 rounded-2xl font-semibold cursor-not-allowed flex items-center justify-center ${
+                               isBlocked ? 'bg-slate-300 text-slate-500' : 'bg-green-100 text-green-700'
+                             }`}
                            >
-                             <CheckCircle className="h-4 w-4 mr-2" />
-                             {t('studentDashboard.findScholarships.scholarshipCard.alreadyApplied')}
+                             {isBlocked ? (
+                               <>
+                                 <AlertTriangle className="h-4 w-4 mr-2" />
+                                 {t('scholarshipDeadline.3800Expired')}
+                               </>
+                             ) : (
+                               <>
+                                 <CheckCircle className="h-4 w-4 mr-2" />
+                                 {t('studentDashboard.findScholarships.scholarshipCard.alreadyApplied')}
+                               </>
+                             )}
                            </button>
                          ) : inCart ? (
                            <button
@@ -1602,7 +1652,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                            <button
                              type="button"
                              onClick={async () => {
-                               if (alreadyApplied) return;
+                               if (alreadyApplied || isBlocked) return;
                                
                                if (inCart) {
                                  if (user) removeFromCart(scholarship.id, user.id);
@@ -1633,8 +1683,8 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                                 inCart 
                                   ? 'bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700' 
                                   : 'bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white hover:from-[#041f3a] hover:to-slate-600'
-                              } ${alreadyApplied ? 'bg-slate-300 text-slate-500 cursor-not-allowed hover:scale-100' : ''}`}
-                             disabled={alreadyApplied || isCheckingDiscount}
+                              } ${alreadyApplied || isBlocked ? 'bg-slate-300 text-slate-500 cursor-not-allowed hover:scale-100' : ''}`}
+                             disabled={alreadyApplied || isBlocked || isCheckingDiscount}
                            >
                              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
                              <Award className="h-5 w-5 sm:h-6 sm:w-6 mr-2 relative z-10 group-hover:scale-110 transition-transform text-white" aria-hidden="true" />
@@ -1666,6 +1716,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
           const alreadyApplied = appliedScholarshipIds.has(scholarship.id);
           const inCart = cartScholarshipIds.has(scholarship.id);
           const layoutId = `scholarship-card-${scholarship.id}`;
+          const isBlocked = is3800ScholarshipBlocked(scholarship);
           
           return (
             <motion.div
@@ -1713,6 +1764,9 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
               
               {/* Card Content */}
               <div className="p-4 sm:p-6 flex-1 flex flex-col">
+                {/* Warning for $3800 scholarships */}
+                <ScholarshipExpiryWarning scholarship={scholarship} variant="badge" className="mb-3" />
+                
                 {/* Title and University */}
                 <div className="mb-3 sm:mb-4">
                   <h3 className="text-lg sm:text-xl font-bold text-slate-900 mb-2 sm:mb-3 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors">
@@ -1829,8 +1883,14 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                   <div className="flex items-center justify-between text-xs sm:text-sm">
                     <span className="text-slate-500">{t('studentDashboard.findScholarships.scholarshipCard.deadline')}</span>
                     <div className="flex items-center">
-                      <Clock className={`h-3 w-3 mr-1 ${getDeadlineStatus(scholarship.deadline).color}`} />
-                      <span className="text-slate-700 text-xs sm:text-sm">{getDaysUntilDeadlineDisplay(scholarship.deadline)} {t('studentDashboard.findScholarships.scholarshipCard.daysLeft')}</span>
+                      {is3800Scholarship(scholarship) ? (
+                        <ScholarshipCountdownTimer scholarship={scholarship} />
+                      ) : (
+                        <>
+                          <Clock className={`h-3 w-3 mr-1 ${getDeadlineStatus(scholarship.deadline).color}`} />
+                          <span className="text-slate-700 text-xs sm:text-sm">{getDaysUntilDeadlineDisplay(scholarship.deadline)} {t('studentDashboard.findScholarships.scholarshipCard.daysLeft')}</span>
+                        </>
+                      )}
                     </div>
                   </div>
                   {scholarship.delivery_mode && (
@@ -1862,43 +1922,52 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                     </div>
                     
                     {/* Select/Deselect Button */}
-                    <button
-                      type="button"
-                      ref={(el) => {
-                        if (el) buttonRefs.current.set(scholarship.id, el);
-                      }}
-                      className={`flex-1 h-12 px-4 sm:px-6 rounded-2xl font-bold text-xs lg:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2 ${
-                         inCart 
-                           ? 'bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700' 
-                           : 'bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white hover:from-[#041f3a] hover:to-slate-600'
-                       } ${alreadyApplied ? 'bg-slate-300 text-slate-500 cursor-not-allowed hover:scale-100' : ''}`}
-                    onClick={async () => {
-                      if (alreadyApplied) return;
-                      
-                      if (inCart) {
-                        if (user) removeFromCart(scholarship.id, user.id);
-                      } else {
-                        // ANIMAÇÃO: voar para o chapéu (apenas se já pagou a taxa)
-                        if (userProfile?.has_paid_selection_process_fee) {
-                          const hat = document.getElementById('floating-cart-hat');
-                          const cardElement = scholarshipRefs.current.get(scholarship.id);
-                          if (cardElement && hat) {
-                            const from = cardElement.getBoundingClientRect();
-                            const to = hat.getBoundingClientRect();
-                            setFlyingCard({ card: scholarship, from, to });
-                            setAnimating(true);
-                            setTimeout(() => {
-                              setAnimating(false);
-                              setFlyingCard(null);
-                            }, 1100);
+                    {!scholarship.is_active || isBlocked ? (
+                      <button
+                        disabled
+                        className="flex-1 h-12 px-4 sm:px-6 rounded-2xl font-semibold cursor-not-allowed flex items-center justify-center bg-slate-300 text-slate-500 opacity-60"
+                      >
+                        <AlertTriangle className="h-4 w-4 mr-2" />
+                        {isBlocked ? t('scholarshipDeadline.3800Expired') : t('scholarshipsPage.scholarshipCard.notAvailable')}
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        ref={(el) => {
+                          if (el) buttonRefs.current.set(scholarship.id, el);
+                        }}
+                        className={`flex-1 h-12 px-4 sm:px-6 rounded-2xl font-bold text-xs lg:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2 ${
+                           inCart 
+                             ? 'bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700' 
+                             : 'bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white hover:from-[#041f3a] hover:to-slate-600'
+                         } ${alreadyApplied ? 'bg-slate-300 text-slate-500 cursor-not-allowed hover:scale-100' : ''}`}
+                        onClick={async () => {
+                          if (alreadyApplied || isBlocked) return;
+                          
+                          if (inCart) {
+                            if (user) removeFromCart(scholarship.id, user.id);
+                          } else {
+                            // ANIMAÇÃO: voar para o chapéu (apenas se já pagou a taxa)
+                            if (userProfile?.has_paid_selection_process_fee) {
+                              const hat = document.getElementById('floating-cart-hat');
+                              const cardElement = scholarshipRefs.current.get(scholarship.id);
+                              if (cardElement && hat) {
+                                const from = cardElement.getBoundingClientRect();
+                                const to = hat.getBoundingClientRect();
+                                setFlyingCard({ card: scholarship, from, to });
+                                setAnimating(true);
+                                setTimeout(() => {
+                                  setAnimating(false);
+                                  setFlyingCard(null);
+                                }, 1100);
+                              }
+                            }
+                            // Usar a nova função que verifica desconto antes de adicionar ao carrinho
+                            checkDiscountAndProceed(scholarship);
                           }
-                        }
-                        // Usar a nova função que verifica desconto antes de adicionar ao carrinho
-                        checkDiscountAndProceed(scholarship);
-                      }
-                    }}
-                    disabled={alreadyApplied || isCheckingDiscount}
-                  >
+                        }}
+                        disabled={alreadyApplied || isCheckingDiscount}
+                      >
                                          <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
                        <Award className="h-5 w-5 sm:h-6 sm:w-6 mr-2 relative z-10 group-hover:scale-110 transition-transform text-white" aria-hidden="true" />
                        <span className="relative z-10">
@@ -1910,7 +1979,8 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                        {!alreadyApplied && isCheckingDiscount && (
                          <div className="w-3 h-3 sm:w-4 sm:h-4 ml-2 border-2 border-white border-t-transparent rounded-full animate-spin relative z-10"></div>
                        )}
-                    </button>
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
