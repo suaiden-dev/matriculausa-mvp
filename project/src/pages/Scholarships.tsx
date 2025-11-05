@@ -13,6 +13,9 @@ import PaymentRequiredBlocker from '../components/PaymentRequiredBlocker';
 import { ApplicationFeeBlockedMessage } from '../components/ApplicationFeeBlockedMessage';
 import { useApplicationFeeStatus } from '../hooks/useApplicationFeeStatus';
 import { usePackageScholarshipFilter } from '../hooks/usePackageScholarshipFilter';
+import { is3800ScholarshipBlocked, is3800Scholarship } from '../utils/scholarshipDeadlineValidation';
+import { ScholarshipExpiryWarning } from '../components/ScholarshipExpiryWarning';
+import { ScholarshipCountdownTimer } from '../components/ScholarshipCountdownTimer';
 
 const Scholarships: React.FC = () => {
   const { t } = useTranslation();
@@ -119,8 +122,8 @@ const Scholarships: React.FC = () => {
             *,
             universities (id, name, location, logo_url)
           `)
-          .eq('is_active', true)
           .eq('is_highlighted', true)
+          // Removido filtro is_active=true - estudantes podem ver bolsas inativas mas não podem aplicar
           .order('featured_order', { ascending: true });
         
         if (!scholarshipsError && scholarshipsData) {
@@ -358,8 +361,16 @@ const Scholarships: React.FC = () => {
   };
 
   const getDaysUntilDeadline = (deadline: string) => {
+    // Criar data atual sem hora (apenas dia)
     const today = new Date();
-    const deadlineDate = new Date(deadline);
+    today.setHours(0, 0, 0, 0);
+    
+    // Criar deadline como data local (não UTC) para evitar problemas de timezone
+    // Parse da data no formato YYYY-MM-DD como local
+    const [year, month, day] = deadline.split('-').map(Number);
+    const deadlineDate = new Date(year, month - 1, day); // month - 1 porque Date usa 0-11
+    deadlineDate.setHours(23, 59, 59, 999); // Fim do dia
+    
     const diffTime = deadlineDate.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return diffDays;
@@ -629,6 +640,7 @@ const Scholarships: React.FC = () => {
                 const scholarshipValue = scholarship.annual_value_with_scholarship ?? 0;
                 const savings = originalValue - scholarshipValue;
                 const savingsPercentage = originalValue > 0 ? Math.round((savings / originalValue) * 100) : 0;
+                const isBlocked = is3800ScholarshipBlocked(scholarship);
                 
                 return (
                   <article key={scholarship.id} className="group relative bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200 hover:-translate-y-3 hover:border-[#05294E]/20 focus-within:ring-2 focus-within:ring-[#05294E]/50 flex flex-col h-full" role="article" aria-labelledby={`featured-scholarship-title-${scholarship.id}`}>
@@ -669,6 +681,15 @@ const Scholarships: React.FC = () => {
                       
                         {/* Top Left Badges */}
                        <div className="absolute top-4 left-4 flex flex-col gap-2 z-20">
+                         {/* Timer para bolsas de $3800 ou Deadline Badge */}
+                         {is3800Scholarship(scholarship) ? (
+                           <ScholarshipCountdownTimer scholarship={scholarship} />
+                         ) : daysLeft > 0 && (
+                           <div className={`px-3 py-1.5 rounded-xl text-xs font-bold shadow-lg backdrop-blur-sm border border-white/20 flex items-center gap-1 ${deadlineStatus.bg} ${deadlineStatus.color}`}>
+                             <Clock className="h-3 w-3" />
+                             {daysLeft <= 0 ? t('scholarshipsPage.scholarshipCard.expired') : `${daysLeft} ${t('scholarshipsPage.scholarshipCard.days')}`}
+                           </div>
+                         )}
                          {/* Exclusive Badge */}
                          {scholarship.is_exclusive && (
                            <div className="bg-gradient-to-r from-[#D0151C] to-red-600 text-white px-3 py-1.5 rounded-xl text-xs font-bold shadow-lg backdrop-blur-sm border border-white/20 flex items-center gap-1">
@@ -683,6 +704,9 @@ const Scholarships: React.FC = () => {
                     <div className="p-6 flex-1 flex flex-col">
                       {/* Header Section */}
                       <div className="mb-4 flex-1">
+                        {/* Warning for $3800 scholarships - inline version */}
+                        <ScholarshipExpiryWarning scholarship={scholarship} variant="badge" className="mb-3" />
+                        
                         <h3 id={`featured-scholarship-title-${scholarship.id}`} className={`text-xl font-bold text-slate-900 mb-3 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors duration-300`}>
                           {scholarship.title}
                         </h3>
@@ -817,7 +841,16 @@ const Scholarships: React.FC = () => {
                         </button>
                         
                         {/* Apply Now Button - Maior */}
-                        {(!isAuthenticated) ? (
+                        {isBlocked ? (
+                          <button
+                            disabled
+                            className="flex-1 bg-slate-400 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center cursor-not-allowed opacity-60 relative overflow-hidden"
+                            aria-label={`Scholarship ${scholarship.title} is no longer accepting applications`}
+                          >
+                            <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4 mr-2 relative z-10" aria-hidden="true" />
+                            <span className="relative z-10">{t('scholarshipDeadline.3800Expired')}</span>
+                          </button>
+                        ) : (!isAuthenticated) ? (
                           <button
                             className="flex-1 bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 hover:from-[#041f3a] hover:to-slate-600 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2"
                             onClick={() => navigate('/login')}
@@ -918,6 +951,8 @@ const Scholarships: React.FC = () => {
                  const savings = originalValue - scholarshipValue;
                  const savingsPercentage = originalValue > 0 ? Math.round((savings / originalValue) * 100) : 0;
                  
+                 const isBlocked = is3800ScholarshipBlocked(scholarship);
+                 
                  return (
                    <article key={scholarship.id} className="group relative bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden hover:-translate-y-3 hover:border-[#05294E]/20 focus-within:ring-2 focus-within:ring-[#05294E]/50 flex flex-col h-full" role="article" aria-labelledby={`scholarship-title-${scholarship.id}`}>
                      {/* Overlay de blur quando não autenticado */}
@@ -980,20 +1015,27 @@ const Scholarships: React.FC = () => {
 
                        {/* Deadline Badge - Top Left */}
                        <div className="absolute top-4 left-4">
-                                                    <div className={`px-3 py-1.5 rounded-xl text-xs font-bold shadow-lg backdrop-blur-sm border border-white/20 flex items-center gap-1 ${deadlineStatus.bg} ${deadlineStatus.color}`}>
+                         {is3800Scholarship(scholarship) ? (
+                           <ScholarshipCountdownTimer scholarship={scholarship} />
+                         ) : (
+                           <div className={`px-3 py-1.5 rounded-xl text-xs font-bold shadow-lg backdrop-blur-sm border border-white/20 flex items-center gap-1 ${deadlineStatus.bg} ${deadlineStatus.color}`}>
                              <Clock className="h-3 w-3" />
                              {daysLeft <= 0 ? t('scholarshipsPage.scholarshipCard.expired') : `${daysLeft} ${t('scholarshipsPage.scholarshipCard.days')}`}
                            </div>
+                         )}
                        </div>
                      </div>
                      
                      {/* Card Content */}
                      <div className="p-6 flex-1 flex flex-col">
-                       {/* Header Section */}
-                       <div className="mb-4 flex-1">
-                         <h3 id={`scholarship-title-${scholarship.id}`} className={`text-xl font-bold text-slate-900 mb-3 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors duration-300`}>
-                           {scholarship.title}
-                         </h3>
+                        {/* Header Section */}
+                        <div className="mb-4 flex-1">
+                          {/* Warning for $3800 scholarships - inline version */}
+                          <ScholarshipExpiryWarning scholarship={scholarship} variant="badge" className="mb-3" />
+                          
+                          <h3 id={`scholarship-title-${scholarship.id}`} className={`text-xl font-bold text-slate-900 mb-3 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors duration-300`}>
+                            {scholarship.title}
+                          </h3>
                          
                          {/* Field and Level Badges */}
                         <div className={`flex flex-wrap items-center gap-2 mb-3`}>
@@ -1127,8 +1169,27 @@ const Scholarships: React.FC = () => {
                            <span>{t('scholarshipsPage.scholarshipCard.details')}</span>
                          </button>
                          
+                         {/* Badge de bolsa inativa/expirada */}
+                         {!scholarship.is_active && (
+                           <div className="absolute top-4 right-4 bg-red-500 text-white px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 shadow-lg z-10">
+                             <AlertTriangle className="h-3 w-3" />
+                             Expirada
+                           </div>
+                         )}
+
                          {/* Apply Now Button - Maior */}
-                         {(!isAuthenticated) ? (
+                         {!scholarship.is_active || isBlocked ? (
+                           <button
+                             disabled
+                             className="flex-1 bg-slate-400 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center cursor-not-allowed opacity-60 relative overflow-hidden"
+                             aria-label={`Scholarship ${scholarship.title} is no longer accepting applications`}
+                           >
+                             <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4 mr-2 relative z-10" aria-hidden="true" />
+                             <span className="relative z-10">
+                               {isBlocked ? t('scholarshipDeadline.3800Expired') : t('scholarshipsPage.scholarshipCard.notAvailable')}
+                             </span>
+                           </button>
+                         ) : (!isAuthenticated) ? (
                            <button
                              className="flex-1 bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 hover:from-[#041f3a] hover:to-slate-600 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2"
                              onClick={() => navigate('/login')}
@@ -1137,6 +1198,15 @@ const Scholarships: React.FC = () => {
                              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
                              <Award className="h-3 w-3 sm:h-4 sm:w-4 mr-2 relative z-10 group-hover:scale-110 transition-transform" aria-hidden="true" />
                              <span className="relative z-10">{t('scholarshipsPage.scholarshipCard.applyNow')}</span>
+                           </button>
+                         ) : isBlocked ? (
+                           <button
+                             disabled
+                             className="flex-1 bg-slate-400 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center cursor-not-allowed opacity-60 relative overflow-hidden"
+                             aria-label={`Scholarship ${scholarship.title} is no longer accepting applications`}
+                           >
+                             <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4 mr-2 relative z-10" aria-hidden="true" />
+                             <span className="relative z-10">{t('scholarshipDeadline.3800Expired')}</span>
                            </button>
                          ) : (
                            <button

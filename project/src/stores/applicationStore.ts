@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import { Scholarship } from '../types';
 import { supabase } from '../lib/supabase';
 import NotificationService from '../services/NotificationService';
+import { is3800ScholarshipBlocked } from '../utils/scholarshipDeadlineValidation';
 
 interface ApplicationStore {
   selectedScholarships: Scholarship[];
@@ -90,6 +91,12 @@ export const useApplicationStore = create<ApplicationStore>()(
       selectedScholarships: [],
       
       addScholarship: (scholarship) => {
+        // Validar se a bolsa de $3800 está bloqueada
+        if (is3800ScholarshipBlocked(scholarship)) {
+          console.warn('Cannot add expired $3800 scholarship:', scholarship.id);
+          return;
+        }
+        
         const { selectedScholarships } = get();
         const isAlreadySelected = selectedScholarships.some(s => s.id === scholarship.id);
         
@@ -158,6 +165,18 @@ export const useCartStore = create<CartState>((set, get) => ({
     const { cart } = get();
     if (cart.some(item => item.scholarships.id === scholarship.id)) {
       console.log('Scholarship already in cart:', scholarship.id);
+      return;
+    }
+
+    // Verificar se a bolsa está ativa antes de adicionar ao carrinho
+    if (!scholarship.is_active) {
+      alert('Esta bolsa não está mais aceitando aplicações.');
+      return;
+    }
+
+    // Validar se a bolsa de $3800 está bloqueada
+    if (is3800ScholarshipBlocked(scholarship)) {
+      alert('Esta bolsa não está mais aceitando candidaturas. O prazo para se candidatar expirou.');
       return;
     }
 

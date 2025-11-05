@@ -546,7 +546,8 @@
       "expired": "Expirada",
       "days": "días",
       "details": "Detalles",
-      "applyNow": "Aplicar Ahora"
+      "applyNow": "Aplicar Ahora",
+      "notAvailable": "No Disponible para Aplicación"
     },
     "noResults": {
       "title": "No se encontraron becas",
@@ -599,7 +600,11 @@
       "ranking": "Clasificación:",
       "universityDetailsLocked": "🔒 Detalles de la universidad disponibles después del pago del Proceso de Selección.",
       "requirements": "Requisitos",
-      "additionalBenefits": "Beneficios Adicionales"
+      "additionalBenefits": "Beneficios Adicionales",
+      "expired": "Expirada",
+      "scholarshipExpired": "Beca Expirada",
+      "noLongerAccepting": "Esta beca ya no está aceptando nuevas solicitudes.",
+      "canStillView": "Aún puede ver la información, pero no será posible aplicar para esta beca."
     }
   },
   "universitiesPage": {
@@ -1767,6 +1772,10 @@
       "title": "Becas Seleccionadas",
       "welcomeMessage": "¡Bienvenido a tu carrito de becas!",
       "description": "Aquí puedes gestionar tus becas seleccionadas y proceder con el proceso de aplicación.",
+      "cannotProceed": "No se puede proceder con becas bloqueadas",
+      "removeFromCart": "Eliminar del carrito",
+      "removeToProceed": "Elimine esta beca para continuar",
+      "removeBlockedScholarships": "Elimine las becas bloqueadas arriba para continuar",
       "noScholarshipsSelected": "No hay becas seleccionadas",
       "notSelectedYet": "Aún no has seleccionado ninguna beca para aplicar.",
       "browseScholarships": "Explorar Becas",
@@ -3321,5 +3330,10 @@
       "errorDetails": "Detalles del error:"
     }
   }
-}
+},
+  "scholarshipDeadline": {
+    "3800Expired": "Esta beca ya no está aceptando solicitudes",
+    "3800Expiring": "¡Últimas horas para aplicar! El plazo expira mañana (6 de noviembre)",
+    "3800ExpiringShort": "El plazo expira mañana"
+  }
 }

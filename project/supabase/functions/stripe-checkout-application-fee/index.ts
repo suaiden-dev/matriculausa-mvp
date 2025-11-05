@@ -89,6 +89,10 @@ Deno.serve(async (req) => {
       .eq('student_id', userProfile.id)
       .single();
 
+    // NOTA: Não validamos deadline aqui porque se o aluno chegou até aqui para pagar,
+    // significa que já foi aprovado e a bolsa já foi reservada para ele.
+    // A validação de deadline deve acontecer apenas no momento de selecionar/adicionar ao carrinho.
+
     // Se a aplicação não existe, tenta criar uma nova
     if (appError || !application) {
       console.log('[stripe-checkout-application-fee] Application not found, attempting to create new one');

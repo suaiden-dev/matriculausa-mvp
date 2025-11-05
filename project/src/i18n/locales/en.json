@@ -546,7 +546,8 @@
       "expired": "Expired",
       "days": "days",
       "details": "Details",
-      "applyNow": "Apply Now"
+      "applyNow": "Apply Now",
+      "notAvailable": "Not Available for Application"
     },
     "noResults": {
       "title": "No scholarships found",
@@ -599,7 +600,11 @@
       "ranking": "Ranking:",
       "universityDetailsLocked": "🔒 University details available after Selection Process payment.",
       "requirements": "Requirements",
-      "additionalBenefits": "Additional Benefits"
+      "additionalBenefits": "Additional Benefits",
+      "expired": "Expired",
+      "scholarshipExpired": "Scholarship Expired",
+      "noLongerAccepting": "This scholarship is no longer accepting new applications.",
+      "canStillView": "You can still view the information, but it will not be possible to apply for this scholarship."
     }
   },
   "universitiesPage": {
@@ -1491,6 +1496,10 @@
       "title": "Selected Scholarships",
       "welcomeMessage": "Welcome to your scholarship cart!",
       "description": "Here you can manage your selected scholarships and proceed with the application process.",
+      "cannotProceed": "Cannot proceed with blocked scholarships",
+      "removeFromCart": "Remove from cart",
+      "removeToProceed": "Remove this scholarship to proceed",
+      "removeBlockedScholarships": "Remove the blocked scholarships above to continue",
       "noScholarshipsSelected": "No scholarships selected",
       "notSelectedYet": "You haven't selected any scholarships to apply for yet.",
       "browseScholarships": "Browse Scholarships",
@@ -3338,5 +3347,10 @@
     "email": "Email: info@matriculausa.com",
     "whatsapp": "WhatsApp: +1 (213) 676-2544"
   }
-}
+},
+  "scholarshipDeadline": {
+    "3800Expired": "This scholarship is no longer accepting applications",
+    "3800Expiring": "Last hours to apply! Deadline expires tomorrow (November 6th)",
+    "3800ExpiringShort": "Deadline expires tomorrow"
+  }
 }

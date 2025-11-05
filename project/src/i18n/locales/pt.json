@@ -546,7 +546,8 @@
       "expired": "Expirada",
       "days": "dias",
       "details": "Detalhes",
-      "applyNow": "Candidatar-se Agora"
+      "applyNow": "Candidatar-se Agora",
+      "notAvailable": "Não Disponível para Aplicação"
     },
     "noResults": {
       "title": "Nenhuma bolsa encontrada",
@@ -599,7 +600,11 @@
       "ranking": "Classificação:",
       "universityDetailsLocked": "🔒 Detalhes da universidade disponíveis após pagamento do Processo de Seleção.",
       "requirements": "Requisitos",
-      "additionalBenefits": "Benefícios Adicionais"
+      "additionalBenefits": "Benefícios Adicionais",
+      "expired": "Expirada",
+      "scholarshipExpired": "Bolsa Expirada",
+      "noLongerAccepting": "Esta bolsa não está mais aceitando novas aplicações.",
+      "canStillView": "Você ainda pode visualizar as informações, mas não será possível aplicar para esta bolsa."
     }
   },
   "universitiesPage": {
@@ -1587,6 +1592,10 @@
       "title": "Bolsas Selecionadas",
       "welcomeMessage": "Bem-vindo ao seu carrinho de bolsas!",
       "description": "Aqui você pode gerenciar suas bolsas selecionadas e prosseguir com o processo de aplicação.",
+      "cannotProceed": "Não é possível prosseguir com bolsas bloqueadas",
+      "removeFromCart": "Remover do carrinho",
+      "removeToProceed": "Remova esta bolsa para prosseguir",
+      "removeBlockedScholarships": "Remova as bolsas bloqueadas acima para continuar",
       "noScholarshipsSelected": "Nenhuma bolsa selecionada",
       "notSelectedYet": "Você ainda não selecionou nenhuma bolsa para aplicar.",
       "browseScholarships": "Procurar Bolsas",
@@ -3432,5 +3441,10 @@
       "email": "Email: info@matriculausa.com",
       "whatsapp": "WhatsApp: +1 (213) 676-2544"
     }
+  },
+  "scholarshipDeadline": {
+    "3800Expired": "Esta bolsa não está mais aceitando candidaturas",
+    "3800Expiring": "Últimas horas para se candidatar! Prazo expira amanhã (6 de novembro)",
+    "3800ExpiringShort": "Prazo expira amanhã"
   }
 }

@@ -64,8 +64,16 @@ const ScholarshipManagement: React.FC = () => {
   };
 
   const getDaysUntilDeadline = (deadline: string) => {
+    // Criar data atual sem hora (apenas dia)
     const today = new Date();
-    const deadlineDate = new Date(deadline);
+    today.setHours(0, 0, 0, 0);
+    
+    // Criar deadline como data local (não UTC) para evitar problemas de timezone
+    // Parse da data no formato YYYY-MM-DD como local
+    const [year, month, day] = deadline.split('-').map(Number);
+    const deadlineDate = new Date(year, month - 1, day); // month - 1 porque Date usa 0-11
+    deadlineDate.setHours(23, 59, 59, 999); // Fim do dia
+    
     const diffTime = deadlineDate.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return diffDays;
@@ -727,12 +735,17 @@ const ScholarshipManagement: React.FC = () => {
                          {getDaysUntilDeadline(selectedScholarship.deadline)} days left
                        </p>
                        <p className="text-slate-700">
-                         {new Date(selectedScholarship.deadline).toLocaleDateString('en-US', {
-                           weekday: 'long',
-                           year: 'numeric',
-                           month: 'long',
-                           day: 'numeric'
-                         })}
+                         {(() => {
+                           // Parse da data como local para evitar problemas de timezone
+                           const [year, month, day] = selectedScholarship.deadline.split('-').map(Number);
+                           const deadlineDate = new Date(year, month - 1, day);
+                           return deadlineDate.toLocaleDateString('en-US', {
+                             weekday: 'long',
+                             year: 'numeric',
+                             month: 'long',
+                             day: 'numeric'
+                           });
+                         })()}
                        </p>
                      </div>
                    </div>

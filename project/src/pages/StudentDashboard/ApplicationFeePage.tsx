@@ -9,6 +9,7 @@ import { supabase } from '../../lib/supabase';
 import { Scholarship } from '../../types';
 import { formatCentsToDollars } from '../../utils/currency';
 import NotificationService from '../../services/NotificationService';
+import { is3800ScholarshipBlocked } from '../../utils/scholarshipDeadlineValidation';
 
 const ApplicationFeePage: React.FC = () => {
   const { cart, clearCart } = useCartStore();
@@ -135,6 +136,19 @@ const ApplicationFeePage: React.FC = () => {
       if (fetchError) {
         console.error('Error fetching existing application:', fetchError);
         throw fetchError;
+      }
+
+      // Validar se a bolsa de $3800 está bloqueada (mesmo se aplicação já existe)
+      const { data: scholarship } = await supabase
+        .from('scholarships')
+        .select('id, annual_value_with_scholarship')
+        .eq('id', selectedScholarshipId)
+        .single();
+      
+      if (scholarship && is3800ScholarshipBlocked(scholarship as any)) {
+        console.error('Cannot process payment for expired $3800 scholarship:', selectedScholarshipId);
+        alert('Esta bolsa não está mais aceitando candidaturas. O prazo para se candidatar expirou.');
+        return undefined;
       }
 
       if (existing) {
