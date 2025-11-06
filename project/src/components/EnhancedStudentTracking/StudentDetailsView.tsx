@@ -30,38 +30,8 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
   onDownloadDocument
 }) => {
   // Hook para configurações dinâmicas de taxas (usando student_id para ver overrides do estudante)
-  const { getFeeAmount, formatFeeAmount, userFeeOverrides, hasOverride } = useFeeConfig(studentDetails?.student_id);
+  const { getFeeAmount, formatFeeAmount } = useFeeConfig(studentDetails?.student_id);
 
-  // Função para obter valores corretos baseados no sistema do estudante
-  const getStudentFees = () => {
-    // Se o email é do sistema simplificado, usar valores fixos
-    if (studentDetails?.email === 'nemesio922@uorak.com') {
-      return {
-        selectionProcessFee: 350,
-        scholarshipFee: 550,
-        i20ControlFee: 900,
-        isSimplified: true
-      };
-    }
-    
-    // Para outros usuários, usar valores legacy
-    return {
-      selectionProcessFee: Number(getFeeAmount('selection_process')) || 400,
-      scholarshipFee: Number(getFeeAmount('scholarship_fee')) || 900,
-      i20ControlFee: Number(getFeeAmount('i20_control_fee')) || 900,
-      isSimplified: false
-    };
-  };
-
-  const studentFees = getStudentFees();
-
-  // Debug: Verificar se os overrides estão sendo carregados
-  useEffect(() => {
-    if (studentDetails?.student_id) {
-    }
-  }, [studentDetails?.student_id, studentDetails?.email, userFeeOverrides, getFeeAmount, scholarshipApplication]);
-  
-  
   // Estado para armazenar as taxas do pacote do estudante
   const [studentPackageFees, setStudentPackageFees] = useState<any>(null);
   
@@ -79,26 +49,6 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
   const [isEditingPackage, setIsEditingPackage] = useState(false);
   const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
   const [isUpdatingPackage, setIsUpdatingPackage] = useState(false);
-  
-  // ✅ CORREÇÃO: Função para calcular valor com dependentes priorizando overrides
-  // - Se há override: usar exatamente o valor do override (já inclui dependentes se foi configurado assim)
-  // - Se não há override: aplicar regra de dependentes (Selection Process: +150 por dependente, I-20: sem adicionais)
-  const calculateFeeWithDependents = (baseFee: number, dependents: number = 0, feeType: 'selection_process' | 'i20_control_fee') => {
-    // ✅ Se há override para este tipo de taxa, usar exatamente o valor do override (não adicionar dependentes)
-    if (hasOverride && hasOverride(feeType)) {
-      return baseFee; // baseFee já vem com o valor do override através do getFeeAmount
-    }
-    
-    // ✅ Sem override: aplicar regra de dependentes
-    if (feeType === 'selection_process') {
-      const dependentCost = dependents * 150;
-      return baseFee + dependentCost;
-    }
-    if (feeType === 'i20_control_fee') {
-      return baseFee; // I-20 nunca tem dependentes
-    }
-    return baseFee;
-  };
   
   // Função para buscar o desired_scholarship_range do estudante
   const loadStudentPackageFees = async (profileId: string) => {
@@ -127,26 +77,21 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
         return;
       }
 
-      // ✅ CORREÇÃO: Calcular selection process fee priorizando overrides
+      // ✅ CORREÇÃO: Usar mesma lógica simples do EnhancedStudentTrackingRefactored
       const dependents = Number(profileData.dependents) || 0;
-      let selectionProcessFee;
+      const systemType = (studentDetails as any)?.system_type || 'legacy';
+      const isSimplified = systemType === 'simplified';
       
-      // Verificar se há override para este estudante
-      if (hasOverride && hasOverride('selection_process')) {
-        // Se há override, usar o valor do override (já inclui dependentes se configurado)
-        selectionProcessFee = getFeeAmount('selection_process');
-      } else {
-        // Sem override: usar valor padrão + dependentes
-        const baseFee = getFeeAmount('selection_process');
-        selectionProcessFee = baseFee + (dependents * 150);
-      }
+      // Selection Process Fee
+      const baseSelectionFee = isSimplified ? 350 : 400;
+      const selectionProcessFee = baseSelectionFee + (dependents * 150);
       
       // Criar dados do pacote baseado no desired_scholarship_range
       const desiredRange = Number(profileData.desired_scholarship_range);
       
-      // ✅ CORREÇÃO: Calcular outras fees considerando overrides também
-      const i20ControlFee = getFeeAmount('i20_control_fee'); // já considera override se existir
-      const scholarshipFee = getFeeAmount('scholarship_fee'); // já considera override se existir
+      // Scholarship Fee e I-20 Control Fee
+      const scholarshipFee = isSimplified ? 550 : 900;
+      const i20ControlFee = 900; // Sempre 900 para ambos os sistemas
       
       const packageFees = {
         id: `range-${desiredRange}`, // ID baseado no range
@@ -796,15 +741,11 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                           </span>
                           <span className="text-xs text-slate-500">
                             {(() => {
-                              // Para sistema simplificado, usar valores fixos
-                              if (studentFees.isSimplified) {
-                                const finalAmount = studentFees.selectionProcessFee + (studentDependents * 150);
-                                return formatFeeAmount(finalAmount);
-                              }
-                              
-                              // Para sistema legacy, usar lógica de overrides
-                              const baseFee = getFeeAmount('selection_process'); // já considera overrides
-                              const finalAmount = calculateFeeWithDependents(baseFee, studentDependents, 'selection_process');
+                              // ✅ CORREÇÃO: Usar mesma lógica simples do EnhancedStudentTrackingRefactored
+                              const systemType = (studentDetails as any)?.system_type || 'legacy';
+                              const isSimplified = systemType === 'simplified';
+                              const baseSelectionFee = isSimplified ? 350 : 400;
+                              const finalAmount = baseSelectionFee + (studentDependents * 150);
                               return formatFeeAmount(finalAmount);
                             })()}
                           </span>
@@ -832,7 +773,7 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                                  } else {
                                    baseAmount = getFeeAmount('application_fee');
                                  }
-                                 const systemType = studentDetails?.system_type || 'legacy';
+                                 const systemType = (studentDetails as any)?.system_type || 'legacy';
                                  const dependents = studentDependents || 0;
                                  if (systemType === 'legacy' && dependents > 0) {
                                    const dependentsCost = dependents * 100;
@@ -864,19 +805,11 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                           </span>
                            <span className="text-xs text-slate-500">
                              {(() => {
-                               // Para sistema simplificado, usar valores fixos
-                               if (studentFees.isSimplified) {
-                                 return formatFeeAmount(studentFees.scholarshipFee);
-                               }
-                               
-                               // Para sistema legacy, usar lógica de overrides
-                               if (scholarshipApplication?.scholarships?.scholarship_fee_amount) {
-                                 const amount = Number(scholarshipApplication.scholarships.scholarship_fee_amount);
-                                 return formatFeeAmount(amount);
-                               } else {
-                                 const fallbackAmount = getFeeAmount('scholarship_fee');
-                                 return formatFeeAmount(fallbackAmount);
-                               }
+                               // ✅ CORREÇÃO: Usar mesma lógica simples do EnhancedStudentTrackingRefactored
+                               const systemType = (studentDetails as any)?.system_type || 'legacy';
+                               const isSimplified = systemType === 'simplified';
+                               const scholarshipFee = isSimplified ? 550 : 900;
+                               return formatFeeAmount(scholarshipFee);
                              })()}
                            </span>
                         </div>
@@ -896,15 +829,9 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                           </span>
                           <span className="text-xs text-slate-500">
                             {(() => {
-                              // Para sistema simplificado, usar valores fixos
-                              if (studentFees.isSimplified) {
-                                return formatFeeAmount(studentFees.i20ControlFee);
-                              }
-                              
-                              // Para sistema legacy, usar lógica de overrides
-                              const baseFee = getFeeAmount('i20_control_fee'); // já considera overrides
-                              const finalAmount = calculateFeeWithDependents(baseFee, studentDependents, 'i20_control_fee');
-                              return formatFeeAmount(finalAmount);
+                              // ✅ CORREÇÃO: Usar mesma lógica simples do EnhancedStudentTrackingRefactored
+                              // I-20 Control Fee - sempre 900 para ambos os sistemas (sem dependentes)
+                              return formatFeeAmount(900);
                             })()}
                           </span>
                         </div>
