@@ -12,9 +12,11 @@ function StatsHeaderBase({ stats, payments }: StatsHeaderProps) {
 	const totalsByMethod = allPaid.reduce(
 		(acc: Record<string, { count: number; amount: number }>, p: any) => {
 			const method = (p.payment_method || 'manual').toLowerCase();
-			if (!acc[method]) acc[method] = { count: 0, amount: 0 };
-			acc[method].count += 1;
-			acc[method].amount += p.amount || 0;
+			// ✅ CORREÇÃO: Mapear 'pix' para 'stripe' (Pix é processado via Stripe)
+			const normalizedMethod = method === 'pix' ? 'stripe' : method;
+			if (!acc[normalizedMethod]) acc[normalizedMethod] = { count: 0, amount: 0 };
+			acc[normalizedMethod].count += 1;
+			acc[normalizedMethod].amount += p.amount || 0;
 			return acc;
 		},
 		{}
