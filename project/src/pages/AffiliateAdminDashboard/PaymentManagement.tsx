@@ -130,6 +130,15 @@ const PaymentManagement: React.FC = () => {
         return;
       }
 
+      console.group('🔍 [PaymentManagement] Dados Iniciais');
+      console.log('userId:', uid);
+      console.log('affiliateAdminId:', affiliateAdminId);
+      console.log('sellers count:', sellers.length);
+      console.log('sellerCodes:', sellerCodes);
+      console.log('userProfilesData count:', userProfilesData.length);
+      console.log('sample profile:', userProfilesData[0]);
+      console.groupEnd();
+
       // Transformar para o formato esperado (similar ao que a RPC retornava)
       const profiles = userProfilesData.map((profile: any) => ({
         user_id: profile.user_id,
@@ -178,6 +187,7 @@ const PaymentManagement: React.FC = () => {
       }, {});
 
       // 4. Calcular total ajustado considerando dependentes quando não houver override
+      const totalRevenueBreakdown: Array<{profile_id: string, selection: number, scholarship: number, i20: number, total: number}> = [];
       const totalRevenue = (profiles || []).reduce((sum: number, p: any) => {
         const deps = Number(p?.dependents || 0);
         const ov = overridesMap[p?.user_id] || {};
@@ -212,10 +222,29 @@ const PaymentManagement: React.FC = () => {
           i20Paid = i20 || 0;
         }
 
-        return sum + selPaid + schPaid + i20Paid;
+        const studentTotal = selPaid + schPaid + i20Paid;
+        if (studentTotal > 0) {
+          totalRevenueBreakdown.push({
+            profile_id: p.profile_id,
+            selection: selPaid,
+            scholarship: schPaid,
+            i20: i20Paid,
+            total: studentTotal
+          });
+        }
+
+        return sum + studentTotal;
       }, 0);
 
+      console.group('🔍 [PaymentManagement] Total Revenue Calculation');
+      console.log('Total Revenue:', totalRevenue);
+      console.log('Students with revenue:', totalRevenueBreakdown.length);
+      console.log('Breakdown by student:', totalRevenueBreakdown.slice(0, 10)); // Primeiros 10
+      console.log('Total students:', profiles.length);
+      console.groupEnd();
+
       // 5. Calcular receita manual (pagamentos por fora) - apenas pagamentos com payment_method = 'manual'
+      const manualRevenueBreakdown: Array<{profile_id: string, selection: number, scholarship: number, i20: number, total: number}> = [];
       const manualRevenue = (profiles || []).reduce((sum: number, p: any) => {
         const deps = Number(p?.dependents || 0);
         const ov = overridesMap[p?.user_id] || {};
@@ -254,25 +283,45 @@ const PaymentManagement: React.FC = () => {
           i20Manual = i20 || 0;
         }
 
-        return sum + selManual + schManual + i20Manual;
+        const studentManualTotal = selManual + schManual + i20Manual;
+        if (studentManualTotal > 0) {
+          manualRevenueBreakdown.push({
+            profile_id: p.profile_id,
+            selection: selManual,
+            scholarship: schManual,
+            i20: i20Manual,
+            total: studentManualTotal
+          });
+        }
+
+        return sum + studentManualTotal;
       }, 0);
 
-      console.log('🔍 [PAYMENT] Total calculado:', totalRevenue);
-      console.log('🔍 [PAYMENT] Manual revenue:', manualRevenue);
-
-      console.groupCollapsed('🔎 [PaymentManagement][AdjustedRevenue] calculated');
-      console.log('userId:', uid);
-      console.log('profiles.length:', profiles?.length || 0);
-      console.log('totalRevenue (adjusted):', totalRevenue);
+      console.group('🔍 [PaymentManagement] Manual Revenue Calculation');
+      console.log('Manual Revenue (Outside Payments):', manualRevenue);
+      console.log('Students with manual payments:', manualRevenueBreakdown.length);
+      console.log('Breakdown by student:', manualRevenueBreakdown);
       console.groupEnd();
 
       // 2) Requests do afiliado para calcular Available Balance
       const affiliateRequests = await AffiliatePaymentRequestService.listAffiliatePaymentRequests(uid);
-      console.groupCollapsed('🔎 [Affiliate][Requests] affiliate_payment_requests');
-      console.log('userId:', uid);
-      console.log('requests.length:', affiliateRequests.length);
-      console.log('sampleRequest:', affiliateRequests[0]);
+      
+      console.group('🔍 [PaymentManagement] Payment Requests');
+      console.log('Total requests:', affiliateRequests.length);
+      console.log('Requests by status:', {
+        paid: affiliateRequests.filter((r: any) => r.status === 'paid').length,
+        approved: affiliateRequests.filter((r: any) => r.status === 'approved').length,
+        pending: affiliateRequests.filter((r: any) => r.status === 'pending').length,
+        rejected: affiliateRequests.filter((r: any) => r.status === 'rejected').length
+      });
+      console.log('All requests:', affiliateRequests.map((r: any) => ({
+        id: r.id,
+        amount: r.amount_usd,
+        status: r.status,
+        created_at: r.created_at
+      })));
       console.groupEnd();
+
       const totalPaidOut = affiliateRequests
         .filter((r: any) => r.status === 'paid')
         .reduce((sum: number, r: any) => sum + (Number(r.amount_usd) || 0), 0);
@@ -285,7 +334,19 @@ const PaymentManagement: React.FC = () => {
 
       const availableBalance = Math.max(0, (totalRevenue - manualRevenue) - totalPaidOut - totalApproved - totalPending);
 
-      console.log('✅ [Affiliate] AvailableBalance:', availableBalance, 'TotalRevenue:', totalRevenue, 'ManualRevenueExcluded:', manualRevenue);
+      console.group('🔍 [PaymentManagement] Available Balance Final Calculation');
+      console.log('Total Revenue:', totalRevenue);
+      console.log('Manual Revenue (Outside):', manualRevenue);
+      console.log('Net Revenue (Total - Manual):', totalRevenue - manualRevenue);
+      console.log('Payment Requests:', {
+        paid: totalPaidOut,
+        approved: totalApproved,
+        pending: totalPending,
+        total: totalPaidOut + totalApproved + totalPending
+      });
+      console.log('Available Balance:', availableBalance);
+      console.log('Formula: (', totalRevenue, '-', manualRevenue, ') - (', totalPaidOut, '+', totalApproved, '+', totalPending, ') =', availableBalance);
+      console.groupEnd();
       setAffiliateBalance(availableBalance); // Available Balance
       setTotalEarned(totalRevenue); // Total Revenue
       // keep pending credits disabled in UI for now
@@ -308,15 +369,29 @@ const PaymentManagement: React.FC = () => {
       isLoadingRequestsRef.current = true;
       setLoadingRequests(true);
       const requests = await AffiliatePaymentRequestService.listAffiliatePaymentRequests(uid);
-      console.groupCollapsed('🔎 [Affiliate][Requests][Loader] fetch result');
+      
+      console.group('🔍 [PaymentManagement] Payment Requests Loader');
       console.log('userId:', uid);
-      console.log('fetched.length:', requests.length);
-      console.log('first:', requests[0]);
+      console.log('Total requests fetched:', requests.length);
+      console.log('Requests by status:', {
+        paid: requests.filter((r: any) => r.status === 'paid').length,
+        approved: requests.filter((r: any) => r.status === 'approved').length,
+        pending: requests.filter((r: any) => r.status === 'pending').length,
+        rejected: requests.filter((r: any) => r.status === 'rejected').length
+      });
+      console.log('All requests:', requests.map((r: any) => ({
+        id: r.id,
+        amount: r.amount_usd,
+        status: r.status,
+        created_at: r.created_at,
+        updated_at: r.updated_at
+      })));
       console.groupEnd();
+      
       setAffiliatePaymentRequests(requests);
       hasLoadedRequestsForUser.current = null; // disable cache to always refresh on demand
     } catch (error: any) {
-      console.error('Error loading affiliate payment requests:', error);
+      console.error('❌ [PaymentManagement] Error loading affiliate payment requests:', error);
     } finally {
       setLoadingRequests(false);
       isLoadingRequestsRef.current = false;
