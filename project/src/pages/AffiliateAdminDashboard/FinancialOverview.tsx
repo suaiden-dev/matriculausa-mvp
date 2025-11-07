@@ -198,6 +198,14 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
         return;
       }
 
+      console.group('🔍 [FinancialOverview] Dados Iniciais');
+      console.log('userId:', userId);
+      console.log('affiliateAdminId:', affiliateAdminId);
+      console.log('sellers count:', sellers.length);
+      console.log('profiles count (RPC):', profiles.length);
+      console.log('sample profile:', profiles[0]);
+      console.groupEnd();
+
       // 3.1 Buscar payment methods, scholarship applications e created_at para cálculo de manual revenue e last7Days
       const profileIds = profiles.map((p: any) => p.profile_id).filter(Boolean);
       const { data: userProfilesData, error: userProfilesError } = await supabase
@@ -259,6 +267,7 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
       }, {});
 
       // 5. Calcular total ajustado considerando dependentes quando não houver override
+      const totalRevenueBreakdown: Array<{profile_id: string, selection: number, scholarship: number, i20: number, total: number}> = [];
       const totalRevenue = (profiles || []).reduce((sum, p) => {
         const deps = Number(p?.dependents || 0);
         const ov = overridesMap[p?.user_id] || {};
@@ -285,10 +294,29 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
         const i20Base = ov.i20_control_fee != null ? Number(ov.i20_control_fee) : 900;
         const i20Paid = (hasAnyScholarshipPaid && p?.has_paid_i20_control_fee) ? i20Base : 0;
 
-        return sum + selPaid + schPaid + i20Paid;
+        const studentTotal = selPaid + schPaid + i20Paid;
+        if (studentTotal > 0) {
+          totalRevenueBreakdown.push({
+            profile_id: p.profile_id,
+            selection: selPaid,
+            scholarship: schPaid,
+            i20: i20Paid,
+            total: studentTotal
+          });
+        }
+
+        return sum + studentTotal;
       }, 0);
 
+      console.group('🔍 [FinancialOverview] Total Revenue Calculation');
+      console.log('Total Revenue:', totalRevenue);
+      console.log('Students with revenue:', totalRevenueBreakdown.length);
+      console.log('Breakdown by student:', totalRevenueBreakdown.slice(0, 10)); // Primeiros 10 para não poluir
+      console.log('Total students:', profiles.length);
+      console.groupEnd();
+
       // 5.1 Calcular receita manual (pagamentos por fora)
+      const manualRevenueBreakdown: Array<{profile_id: string, selection: number, scholarship: number, i20: number, total: number}> = [];
       const manualRevenue = (profiles || []).reduce((sum, p) => {
         const deps = Number(p?.dependents || 0);
         const ov = overridesMap[p?.user_id] || {};
@@ -327,8 +355,25 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
           i20Manual = i20 || 0;
         }
 
-        return sum + selManual + schManual + i20Manual;
+        const studentManualTotal = selManual + schManual + i20Manual;
+        if (studentManualTotal > 0) {
+          manualRevenueBreakdown.push({
+            profile_id: p.profile_id,
+            selection: selManual,
+            scholarship: schManual,
+            i20: i20Manual,
+            total: studentManualTotal
+          });
+        }
+
+        return sum + studentManualTotal;
       }, 0);
+
+      console.group('🔍 [FinancialOverview] Manual Revenue Calculation');
+      console.log('Manual Revenue (Outside Payments):', manualRevenue);
+      console.log('Students with manual payments:', manualRevenueBreakdown.length);
+      console.log('Breakdown by student:', manualRevenueBreakdown);
+      console.groupEnd();
 
       const rows = profiles || []; // Usar profiles em vez de studentsAnalytics
       const totalReferrals = rows.length || 0;
@@ -403,7 +448,35 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
           .filter((r: any) => r.status === 'pending')
           .reduce((sum: number, r: any) => sum + (Number(r.amount_usd) || 0), 0);
 
+        console.group('🔍 [FinancialOverview] Payment Requests');
+        console.log('Total requests:', affiliateRequests.length);
+        console.log('Requests by status:', {
+          paid: affiliateRequests.filter((r: any) => r.status === 'paid').length,
+          approved: affiliateRequests.filter((r: any) => r.status === 'approved').length,
+          pending: affiliateRequests.filter((r: any) => r.status === 'pending').length,
+          rejected: affiliateRequests.filter((r: any) => r.status === 'rejected').length
+        });
+        console.log('Total Paid Out:', totalPaidOut);
+        console.log('Total Approved:', totalApproved);
+        console.log('Total Pending:', totalPending);
+        console.log('All requests:', affiliateRequests.map((r: any) => ({
+          id: r.id,
+          amount: r.amount_usd,
+          status: r.status,
+          created_at: r.created_at
+        })));
+        console.groupEnd();
+
         availableBalance = Math.max(0, (totalRevenue - manualRevenue) - totalPaidOut - totalApproved - totalPending);
+
+        console.group('🔍 [FinancialOverview] Available Balance Final Calculation');
+        console.log('Total Revenue:', totalRevenue);
+        console.log('Manual Revenue (Outside):', manualRevenue);
+        console.log('Net Revenue (Total - Manual):', totalRevenue - manualRevenue);
+        console.log('Payment Requests Total:', totalPaidOut + totalApproved + totalPending);
+        console.log('Available Balance:', availableBalance);
+        console.log('Formula: (', totalRevenue, '-', manualRevenue, ') - (', totalPaidOut, '+', totalApproved, '+', totalPending, ') =', availableBalance);
+        console.groupEnd();
       } catch (err) {
         console.error('Error loading affiliate payment requests for balance:', err);
       }
