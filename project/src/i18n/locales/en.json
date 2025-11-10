@@ -2376,6 +2376,7 @@
   "paymentSelector": {
     "title": "Choose Payment Method",
     "subtitle": "Select how you would like to pay your {{feeType}}",
+    "amount": "Amount",
     "loading": {
       "message": "Loading payment methods...",
       "processing": "Processing..."
@@ -2411,6 +2412,7 @@
     "securePaymentProcess": "Secure Payment Process",
     "closeModal": "Close modal",
     "securePaymentGateway": "Secure Payment Gateway",
+    "totalAmount": "Total Amount",
     "referralCode": "Referral Code",
     "yourReferralCode": "Your Referral Code",
     "enterReferralCode": "Enter your referral code to get a discount",

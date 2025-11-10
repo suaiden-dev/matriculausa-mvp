@@ -2508,6 +2508,7 @@
   "paymentSelector": {
     "title": "Escolher Método de Pagamento",
     "subtitle": "Selecione como deseja pagar sua {{feeType}}",
+    "amount": "Valor",
     "loading": {
       "message": "Carregando métodos de pagamento...",
       "processing": "Processando..."
@@ -2543,6 +2544,7 @@
     "securePaymentProcess": "Processo de Pagamento Seguro",
     "closeModal": "Fechar modal",
     "securePaymentGateway": "Gateway de Pagamento Seguro",
+    "totalAmount": "Valor Total",
     "referralCode": "Código de Referência",
     "yourReferralCode": "Seu Código de Referência",
     "enterReferralCode": "Digite seu código de referência para obter desconto",
