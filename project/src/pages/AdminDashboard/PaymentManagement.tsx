@@ -36,6 +36,7 @@ import { PaymentDetailsModal } from './PaymentManagement/components/PaymentDetai
 import RejectUniversityModal from './PaymentManagement/components/Modals/RejectUniversityModal';
 import MarkUniversityPaidModal from './PaymentManagement/components/Modals/MarkUniversityPaidModal';
 import UniversityAddNotesModal from './PaymentManagement/components/Modals/UniversityAddNotesModal';
+import CreateUniversityPaymentModal from './PaymentManagement/components/Modals/CreateUniversityPaymentModal';
 import ZelleAddNotesModal from './PaymentManagement/components/Modals/ZelleAddNotesModal';
 import AffiliateRejectModal from './PaymentManagement/components/Modals/AffiliateRejectModal';
 import AffiliateMarkPaidModal from './PaymentManagement/components/Modals/AffiliateMarkPaidModal';
@@ -161,6 +162,8 @@ const PaymentManagement = (): React.JSX.Element => {
   const [paymentReference, setPaymentReference] = useState('');
   const [adminNotes, setAdminNotes] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+  const [showCreatePaymentModal, setShowCreatePaymentModal] = useState(false);
+  const [creatingPayment, setCreatingPayment] = useState(false);
 
   // Estados para modais de Zelle
   const [showZelleNotesModal, setShowZelleNotesModal] = useState(false);
@@ -682,6 +685,36 @@ const PaymentManagement = (): React.JSX.Element => {
     }
   };
 
+  const handleCreatePayment = async (data: {
+    universityId: string;
+    amount: number;
+    payoutMethod: 'zelle' | 'bank_transfer' | 'stripe';
+    payoutDetails: Record<string, any>;
+  }) => {
+    if (!user?.id) {
+      console.error('User not available for createPayment');
+      return;
+    }
+    try {
+      setCreatingPayment(true);
+      await UniversityPaymentRequestService.adminCreatePaymentRequest({
+        universityId: data.universityId,
+        adminId: user.id,
+        amount: data.amount,
+        payoutMethod: data.payoutMethod,
+        payoutDetails: data.payoutDetails,
+      });
+      await loadUniversityPaymentRequests();
+      await loadAdminBalance();
+      setShowCreatePaymentModal(false);
+    } catch (error: any) {
+      console.error('Error creating payment request:', error);
+      throw error;
+    } finally {
+      setCreatingPayment(false);
+    }
+  };
+
   
 
   const addZelleAdminNotes = async (paymentId: string) => {
@@ -1102,6 +1135,7 @@ const PaymentManagement = (): React.JSX.Element => {
           approveUniversityRequest={approveUniversityRequest}
           openRejectModal={openRejectModal}
           openMarkPaidModal={openMarkPaidModal}
+          onCreatePayment={() => setShowCreatePaymentModal(true)}
         />
       )}
 
@@ -1178,6 +1212,15 @@ const PaymentManagement = (): React.JSX.Element => {
         onClose={() => setShowAddNotesModal(false)}
         onConfirm={() => selectedRequest && addAdminNotes(selectedRequest.id)}
         loading={actionLoading}
+      />
+
+      {/* Create University Payment Modal */}
+      <CreateUniversityPaymentModal
+        isOpen={showCreatePaymentModal}
+        universities={universities}
+        onClose={() => setShowCreatePaymentModal(false)}
+        onSubmit={handleCreatePayment}
+        loading={creatingPayment}
       />
 
       {/* Zelle Payment Review Modal */}

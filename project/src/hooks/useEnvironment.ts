@@ -1,12 +1,30 @@
 export const useEnvironment = () => {
-  const isProduction = window.location.hostname === 'matriculausa.com' ||
-                       window.location.hostname.includes('matriculausa.com');
-  const isStaging = window.location.hostname === 'staging-matriculausa.netlify.app' ||
-                    window.location.hostname.includes('staging-matriculausa.netlify.app');
-  const isDevelopment = window.location.hostname === 'localhost' || 
-                       window.location.hostname === '127.0.0.1' ||
-                       window.location.hostname.includes('localhost') ||
-                       window.location.hostname.includes('dev');
+  const hostname = window.location.hostname;
+  const href = window.location.href;
+  
+  console.log('🌍 [useEnvironment] Detectando ambiente:', {
+    hostname,
+    href,
+    fullLocation: window.location
+  });
+  
+  // Verificações mais robustas
+  const isProduction = hostname === 'matriculausa.com' ||
+                       hostname.includes('matriculausa.com') ||
+                       href.includes('matriculausa.com');
+  
+  const isStaging = hostname === 'staging-matriculausa.netlify.app' ||
+                    hostname.includes('staging-matriculausa.netlify.app') ||
+                    hostname.includes('staging-matriculausa') ||
+                    href.includes('staging-matriculausa.netlify.app') ||
+                    href.includes('staging-matriculausa');
+  
+  const isDevelopment = hostname === 'localhost' || 
+                       hostname === '127.0.0.1' ||
+                       hostname.includes('localhost') ||
+                       hostname.includes('dev');
+  
+  console.log('🌍 [useEnvironment] Resultado:', { isProduction, isStaging, isDevelopment });
   
   return { isProduction, isStaging, isDevelopment };
 };

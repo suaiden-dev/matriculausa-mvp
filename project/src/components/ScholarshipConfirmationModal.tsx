@@ -15,6 +15,7 @@ import { Scholarship } from '../types';
 import { useFeeConfig } from '../hooks/useFeeConfig';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from 'react-i18next';
+import { convertCentsToDollars } from '../utils/currency';
 
 // Componente SVG para o logo do PIX
 const PixIcon = ({ className }: { className?: string }) => (
@@ -110,16 +111,17 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
       return scholarship.scholarship_fee_amount || getFeeAmountFromConfig('scholarship_fee');
     }
     
-    let applicationFeeAmount = scholarship.application_fee_amount;
+    // Application Fee: o valor vem em centavos do banco
+    let applicationFeeAmountInCents = scholarship.application_fee_amount;
     
-    if (!applicationFeeAmount) {
-      applicationFeeAmount = 350; // $350.00 (valor padrão)
+    if (!applicationFeeAmountInCents) {
+      // Valor padrão em centavos: $350.00 = 35000 centavos
+      applicationFeeAmountInCents = 35000;
     }
     
-    // Se o valor estiver em centavos (ex: 35000), converter para dólares
-    if (applicationFeeAmount > 1000) {
-      applicationFeeAmount = applicationFeeAmount / 100;
-    }
+    // Converter centavos para dólares usando a função utilitária
+    let applicationFeeAmount = convertCentsToDollars(applicationFeeAmountInCents);
+    
     // Aplicar +$100 por dependente quando sistema legacy
     const deps = Number(userProfile?.dependents) || 0;
     const systemType = userProfile?.system_type || 'legacy';

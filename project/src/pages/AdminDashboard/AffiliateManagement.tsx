@@ -23,9 +23,9 @@ import { useAffiliateData } from '../../hooks/useAffiliateData';
 import { supabase } from '../../lib/supabase';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
 import { AffiliatePaymentRequestService } from '../../services/AffiliatePaymentRequestService';
+import { useEnvironment } from '../../hooks/useEnvironment';
 // import removido: useDynamicFeeCalculation não é usado aqui
 // import removido: useUserSpecificFees não é usado aqui
-
 interface FilterState {
   search: string;
   status: 'all' | 'active' | 'inactive' | 'pending';
@@ -34,18 +34,79 @@ interface FilterState {
 }
 
 const AffiliateManagement: React.FC = () => {
+  console.log('🚀 [AffiliateManagement] Componente renderizado');
+  
   const { affiliates, allSellers, allStudents, loading, error, refetch } = useAffiliateData();
   const navigate = useNavigate();
+  const { isDevelopment } = useEnvironment();
   
-  // Debug: Log dos dados recebidos
-  console.log('🔍 [AffiliateManagement] Dados recebidos:', {
+  console.log('🚀 [AffiliateManagement] Dados recebidos:', {
     affiliates: affiliates.length,
     allSellers: allSellers.length,
     allStudents: allStudents.length,
     loading,
-    error,
-    affiliatesData: affiliates
+    isDevelopment
   });
+  
+  // Filtrar affiliates com email @uorak.com
+  const filteredAffiliates = useMemo(() => {
+    const shouldFilter = !isDevelopment; // Filtrar em produção e staging
+    
+    console.log('🔍 [AffiliateManagement] Filtro affiliates:', {
+      shouldFilter,
+      totalAffiliates: affiliates.length
+    });
+    
+    if (!shouldFilter) {
+      return affiliates;
+    }
+    
+    const filtered = affiliates.filter((aff: any) => {
+      const email = aff.email?.toLowerCase() || '';
+      const shouldExclude = email.includes('@uorak.com');
+      if (shouldExclude) {
+        console.log('🔍 [AffiliateManagement] Excluindo affiliate:', email);
+      }
+      return !shouldExclude;
+    });
+    
+    console.log('🔍 [AffiliateManagement] Affiliates filtrados:', {
+      antes: affiliates.length,
+      depois: filtered.length
+    });
+    
+    return filtered;
+  }, [affiliates, isDevelopment]);
+  
+  // Filtrar sellers com email @uorak.com
+  const filteredSellers = useMemo(() => {
+    const shouldFilter = !isDevelopment; // Filtrar em produção e staging
+    
+    console.log('🔍 [AffiliateManagement] Filtro sellers:', {
+      shouldFilter,
+      totalSellers: allSellers.length
+    });
+    
+    if (!shouldFilter) {
+      return allSellers;
+    }
+    
+    const filtered = allSellers.filter((seller: any) => {
+      const email = seller.email?.toLowerCase() || '';
+      const shouldExclude = email.includes('@uorak.com');
+      if (shouldExclude) {
+        console.log('🔍 [AffiliateManagement] Excluindo seller:', email);
+      }
+      return !shouldExclude;
+    });
+    
+    console.log('🔍 [AffiliateManagement] Sellers filtrados:', {
+      antes: allSellers.length,
+      depois: filtered.length
+    });
+    
+    return filtered;
+  }, [allSellers, isDevelopment]);
   
   const [filters, setFilters] = useState<FilterState>({
     search: '',
@@ -138,8 +199,18 @@ const AffiliateManagement: React.FC = () => {
           continue;
         }
 
-        // 4. Preparar overrides por user_id
-        const uniqueUserIds = Array.from(new Set((profiles || []).map((p) => p.user_id).filter(Boolean)));
+        // Filtrar estudantes com email @uorak.com
+        const shouldFilter = !isDevelopment; // Filtrar em produção e staging
+        
+        const filteredProfiles = shouldFilter 
+          ? (profiles || []).filter((p: any) => {
+              const email = p.email?.toLowerCase() || '';
+              return !email.includes('@uorak.com');
+            })
+          : (profiles || []);
+
+        // 4. Preparar overrides por user_id (usar filteredProfiles)
+        const uniqueUserIds = Array.from(new Set((filteredProfiles || []).map((p) => p.user_id).filter(Boolean)));
         const overrideEntries = await Promise.allSettled(uniqueUserIds.map(async (uid) => {
           const { data, error } = await supabase.rpc('get_user_fee_overrides', { target_user_id: uid });
           return [uid, error ? null : data];
@@ -159,7 +230,7 @@ const AffiliateManagement: React.FC = () => {
         }, {});
 
         // 5. Calcular receita manual (pagamentos por fora) com a mesma lógica do FinancialOverview
-        const manualRevenue = (profiles || []).reduce((sum, p) => {
+        const manualRevenue = filteredProfiles.reduce((sum, p) => {
           const deps = Number(p?.dependents || 0);
           const ov = overridesMap[p?.user_id] || {};
           const systemType = p?.system_type || 'legacy';
@@ -204,10 +275,46 @@ const AffiliateManagement: React.FC = () => {
     }
   };
 
+  // Filtrar estudantes com email @uorak.com
+  const filteredStudents = useMemo(() => {
+    const allStudentsArray = allStudents || [];
+    const shouldFilter = !isDevelopment; // Filtrar em produção e staging
+    
+    // Debug temporário
+    console.log('🔍 [AffiliateManagement] Filtro debug:', {
+      hostname: window.location.hostname,
+      isDevelopment,
+      shouldFilter,
+      totalStudents: allStudentsArray.length
+    });
+    
+    if (!shouldFilter) {
+      console.log('🔍 [AffiliateManagement] Não filtrando - ambiente de desenvolvimento');
+      return allStudentsArray;
+    }
+    
+    const filtered = allStudentsArray.filter((s: any) => {
+      const email = s.email?.toLowerCase() || '';
+      const shouldExclude = email.includes('@uorak.com');
+      if (shouldExclude) {
+        console.log('🔍 [AffiliateManagement] Excluindo estudante:', email);
+      }
+      return !shouldExclude;
+    });
+    
+    console.log('🔍 [AffiliateManagement] Resultado do filtro:', {
+      antes: allStudentsArray.length,
+      depois: filtered.length,
+      excluidos: allStudentsArray.length - filtered.length
+    });
+    
+    return filtered;
+  }, [allStudents, isDevelopment]);
+
   useEffect(() => {
     const loadOverrides = async () => {
       try {
-        const uniqueIds = Array.from(new Set((allStudents || []).map((s: any) => s.user_id).filter(Boolean)));
+        const uniqueIds = Array.from(new Set((filteredStudents || []).map((s: any) => s.user_id).filter(Boolean)));
         if (uniqueIds.length === 0) {
           setOverridesMap({});
           return;
@@ -243,7 +350,7 @@ const AffiliateManagement: React.FC = () => {
       }
     };
     loadOverrides();
-  }, [allStudents]);
+  }, [filteredStudents]);
 
   // Carregar informações de pagamento dos affiliate admins
   useEffect(() => {
@@ -260,7 +367,7 @@ const AffiliateManagement: React.FC = () => {
   useEffect(() => {
     const loadDependents = async () => {
       try {
-        const profileIds = Array.from(new Set((allStudents || []).map((s: any) => s.profile_id).filter(Boolean)));
+        const profileIds = Array.from(new Set((filteredStudents || []).map((s: any) => s.profile_id).filter(Boolean)));
         if (profileIds.length === 0) {
           setDependentsMap({});
           return;
@@ -286,13 +393,13 @@ const AffiliateManagement: React.FC = () => {
       }
     };
     loadDependents();
-  }, [allStudents]);
+  }, [filteredStudents]);
 
   // Removido: calculateUserFees não é usado neste componente
 
   // Students com valores ajustados
   const adjustedStudents = useMemo(() => {
-    const result = (allStudents || []).map((s: any) => {
+    const result = (filteredStudents || []).map((s: any) => {
       const o = overridesMap[s.user_id] || {};
       const dependents = Number(dependentsMap[s.profile_id]) || 0;
       let total = 0;
@@ -323,24 +430,10 @@ const AffiliateManagement: React.FC = () => {
         total += i20 || 0;
       }
       
-      // Debug para marjorie1454@uorak.com
-      if (s.email === 'marjorie1454@uorak.com') {
-        console.log('🔍 [AffiliateManagement] marjorie1454@uorak.com calculado:', {
-          systemType,
-          totalCalculated: total,
-          breakdown: {
-            selectionPaid: s.has_paid_selection_process_fee,
-            scholarshipPaid: s.is_scholarship_fee_paid,
-            i20Paid: s.has_paid_i20_control_fee,
-            i20ShouldCount: s.is_scholarship_fee_paid && s.has_paid_i20_control_fee
-          }
-        });
-      }
-      
       return { ...s, total_paid_adjusted: total };
     });
     return result;
-  }, [allStudents, overridesMap, dependentsMap, feeConfig]);
+  }, [filteredStudents, overridesMap, dependentsMap, feeConfig]);
 
   const adjustedStudentsBySellerId = useMemo(() => {
     const map: Record<string, any[]> = {};
@@ -355,8 +448,17 @@ const AffiliateManagement: React.FC = () => {
 
   const adjustedAffiliates = useMemo(() => {
     // Monta versão ajustada dos afiliados, recalculando revenue por seller e por afiliado
-    return affiliates.map((aff: any) => {
-      const sellersAdjusted = (aff.sellers || []).map((seller: any) => {
+    // Filtrar affiliates e sellers com email @uorak.com
+    return filteredAffiliates.map((aff: any) => {
+      // Filtrar sellers com email @uorak.com dentro de cada affiliate (exceto em localhost)
+      const sellersFiltered = isDevelopment
+        ? (aff.sellers || [])
+        : (aff.sellers || []).filter((seller: any) => {
+            const email = seller.email?.toLowerCase() || '';
+            return !email.includes('@uorak.com');
+          });
+      
+      const sellersAdjusted = sellersFiltered.map((seller: any) => {
         const studentsForSeller = adjustedStudentsBySellerId[seller.id] || [];
         const totalRevenueAdjusted = studentsForSeller.reduce((sum, st) => sum + (st.total_paid_adjusted || 0), 0);
         return {
@@ -372,7 +474,7 @@ const AffiliateManagement: React.FC = () => {
         total_revenue: affiliateRevenueAdjusted // sobrescreve para UI usar o ajustado
       };
     });
-  }, [affiliates, adjustedStudentsBySellerId]);
+  }, [filteredAffiliates, adjustedStudentsBySellerId]);
 
   // Aplicar filtros e ordenação sobre dados ajustados
   const filteredAndSortedAffiliates = useMemo(() => {
@@ -441,12 +543,12 @@ const AffiliateManagement: React.FC = () => {
     return {
       totalAffiliates: adjustedAffiliates.length,
       activeAffiliates: adjustedAffiliates.filter((a: any) => a.status === 'active').length,
-      totalSellers: allSellers.length,
-      activeSellers: allSellers.filter((s: any) => s.is_active).length,
-      totalStudents: allStudents.length,
+      totalSellers: filteredSellers.length,
+      activeSellers: filteredSellers.filter((s: any) => s.is_active).length,
+      totalStudents: filteredStudents.length,
       totalRevenue: adjustedAffiliates.reduce((sum: number, a: any) => sum + (a.total_revenue || 0), 0)
     };
-  }, [adjustedAffiliates, allSellers, allStudents]);
+  }, [adjustedAffiliates, filteredSellers, filteredStudents]);
 
   const toggleAffiliateExpansion = (affiliateId: string) => {
     setExpandedAffiliates(prev => {

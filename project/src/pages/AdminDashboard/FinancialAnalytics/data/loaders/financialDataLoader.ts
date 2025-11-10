@@ -3,6 +3,49 @@ import type { DateRange, LoadedFinancialData } from '../types';
 import { getPreviousPeriodRange } from '../../utils/dateRange';
 
 /**
+ * Verifica se está em produção ou staging
+ */
+function shouldFilter(): boolean {
+  if (typeof window === 'undefined') return false;
+  const hostname = window.location.hostname;
+  const href = window.location.href;
+  
+  // Verificações mais robustas
+  const isProduction = hostname === 'matriculausa.com' || 
+                       hostname.includes('matriculausa.com') ||
+                       href.includes('matriculausa.com');
+  
+  const isStaging = hostname === 'staging-matriculausa.netlify.app' || 
+                    hostname.includes('staging-matriculausa.netlify.app') ||
+                    hostname.includes('staging-matriculausa') ||
+                    href.includes('staging-matriculausa.netlify.app') ||
+                    href.includes('staging-matriculausa');
+  
+  const result = isProduction || isStaging;
+  
+  // Debug temporário
+  console.log('🔍 [FinancialAnalytics] shouldFilter debug:', {
+    hostname,
+    href,
+    isProduction,
+    isStaging,
+    result,
+    windowLocation: window.location
+  });
+  
+  return result;
+}
+
+/**
+ * Verifica se deve excluir estudante com email @uorak.com
+ */
+function shouldExcludeStudent(email: string | null | undefined): boolean {
+  if (!shouldFilter()) return false; // Em localhost, não excluir
+  if (!email) return false; // Se não tem email, não excluir
+  return email.toLowerCase().includes('@uorak.com');
+}
+
+/**
  * Busca aplicações de bolsas (período atual)
  */
 async function loadApplications(): Promise<any[]> {
@@ -128,7 +171,7 @@ async function loadZellePaymentsPrev(prevRange: DateRange): Promise<any[]> {
 async function loadAllStudents(): Promise<any[]> {
   const { data, error } = await supabase
     .from('user_profiles')
-    .select('id')
+    .select('id, email')
     .eq('role', 'student');
   
   if (error) throw error;
@@ -357,24 +400,65 @@ async function loadAffiliateRequests(currentRange: DateRange): Promise<any[]> {
 export async function loadFinancialData(
   currentRange: DateRange
 ): Promise<LoadedFinancialData> {
+  console.log('🚀 [FinancialAnalytics] loadFinancialData iniciado');
+  
   // Calcular período anterior
   const prevRange = getPreviousPeriodRange(currentRange);
 
   // Carregar dados em paralelo quando possível
-  const [applications, zellePayments, allStudents] = await Promise.all([
+  const [applicationsRaw, zellePaymentsRaw, allStudentsRaw] = await Promise.all([
     loadApplications(),
     loadZellePayments(currentRange),
     loadAllStudents()
   ]);
 
+  // Filtrar dados em produção/staging: excluir usuários com email @uorak.com
+  const filterActive = shouldFilter();
+  console.log('🔍 [FinancialAnalytics] Filtro ativo:', filterActive);
+  console.log('🔍 [FinancialAnalytics] Dados antes do filtro:', {
+    applications: applicationsRaw.length,
+    zellePayments: zellePaymentsRaw.length,
+    allStudents: allStudentsRaw.length
+  });
+  
+  const applications = filterActive
+    ? applicationsRaw.filter((app: any) => !shouldExcludeStudent(app.user_profiles?.email))
+    : applicationsRaw;
+
+  const zellePayments = filterActive
+    ? zellePaymentsRaw.filter((payment: any) => !shouldExcludeStudent(payment.user_profiles?.email))
+    : zellePaymentsRaw;
+
+  const allStudents = filterActive
+    ? allStudentsRaw.filter((student: any) => !shouldExcludeStudent(student.email))
+    : allStudentsRaw;
+    
+  console.log('🔍 [FinancialAnalytics] Dados depois do filtro:', {
+    applications: applications.length,
+    zellePayments: zellePayments.length,
+    allStudents: allStudents.length
+  });
+
   // Carregar dados do período anterior
-  const [applicationsPrev, zellePaymentsPrev] = await Promise.all([
+  const [applicationsPrevRaw, zellePaymentsPrevRaw] = await Promise.all([
     loadApplicationsPrev(prevRange),
     loadZellePaymentsPrev(prevRange)
   ]);
 
-  // Carregar usuários Stripe (depende de applications)
-  const stripeUsers = await loadStripeUsers(applications);
+  // Filtrar dados do período anterior também
+  const applicationsPrev = shouldFilter()
+    ? applicationsPrevRaw.filter((app: any) => !shouldExcludeStudent(app.user_profiles?.email))
+    : applicationsPrevRaw;
+
+  const zellePaymentsPrev = zellePaymentsPrevRaw; // Zelle payments do período anterior não têm user_profiles carregado
+
+  // Carregar usuários Stripe (depende de applications já filtradas)
+  const stripeUsersRaw = await loadStripeUsers(applications);
+  
+  // Filtrar stripeUsers também
+  const stripeUsers = shouldFilter()
+    ? stripeUsersRaw.filter((user: any) => !shouldExcludeStudent(user.email))
+    : stripeUsersRaw;
 
   // Coletar todos os user_ids únicos
   const allUserIds = [

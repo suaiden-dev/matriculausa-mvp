@@ -21,7 +21,7 @@ import { supabase } from '../../lib/supabase';
 import { Application, Scholarship } from '../../types';
 import { useCartStore } from '../../stores/applicationStore';
 import { ScholarshipConfirmationModal } from '../../components/ScholarshipConfirmationModal';
-import { formatCentsToDollars } from '../../utils/currency';
+import { formatCentsToDollars, convertCentsToDollars } from '../../utils/currency';
 import TruncatedText from '../../components/TruncatedText';
 // import StudentDashboardLayout from "./StudentDashboardLayout";
 // import CustomLoading from '../../components/CustomLoading';
@@ -38,10 +38,13 @@ const MyApplications: React.FC = () => {
   const { user, userProfile, refetchUserProfile } = useAuth();
   const { getFeeAmount, formatFeeAmount } = useFeeConfig(user?.id);
   // Helper: calcular Application Fee exibida considerando dependentes (legacy)
-  const getApplicationFeeWithDependents = (base: number): number => {
+  // O valor vem em centavos do banco, precisa converter para dólares primeiro
+  const getApplicationFeeWithDependents = (baseInCents: number): number => {
+    // Converter centavos para dólares
+    const baseInDollars = convertCentsToDollars(baseInCents);
     const systemType = (userProfile?.system_type as any) || 'legacy';
     const deps = Number(userProfile?.dependents) || 0;
-    return systemType === 'legacy' && deps > 0 ? base + deps * 100 : base;
+    return systemType === 'legacy' && deps > 0 ? baseInDollars + deps * 100 : baseInDollars;
   };
   const [userProfileId, setUserProfileId] = useState<string | null>(null);
   
@@ -763,8 +766,8 @@ const getLevelColor = (level: any) => {
             application_id: pendingApplication.id,
             selected_scholarship_id: pendingApplication.scholarship_id,
             fee_type: 'application_fee',
-            amount: getApplicationFeeWithDependents(pendingApplication.scholarships?.application_fee_amount || 350),
-            application_fee_amount: getApplicationFeeWithDependents(pendingApplication.scholarships?.application_fee_amount || 350)
+            amount: getApplicationFeeWithDependents(pendingApplication.scholarships?.application_fee_amount || 35000),
+            application_fee_amount: getApplicationFeeWithDependents(pendingApplication.scholarships?.application_fee_amount || 35000)
           },
           scholarships_ids: [pendingApplication.scholarship_id],
         }),
@@ -829,8 +832,8 @@ const getLevelColor = (level: any) => {
             application_id: pendingApplication.id,
             selected_scholarship_id: pendingApplication.scholarship_id,
             fee_type: 'application_fee',
-            amount: getApplicationFeeWithDependents(pendingApplication.scholarships?.application_fee_amount || 350),
-            application_fee_amount: getApplicationFeeWithDependents(pendingApplication.scholarships?.application_fee_amount || 350)
+            amount: getApplicationFeeWithDependents(pendingApplication.scholarships?.application_fee_amount || 35000),
+            application_fee_amount: getApplicationFeeWithDependents(pendingApplication.scholarships?.application_fee_amount || 35000)
           },
           scholarships_ids: [pendingApplication.scholarship_id],
         }),
@@ -861,7 +864,7 @@ const getLevelColor = (level: any) => {
     if (!pendingApplication) return;
     
     try {
-      const applicationFeeAmount = getApplicationFeeWithDependents(pendingApplication.scholarships?.application_fee_amount || 350);
+      const applicationFeeAmount = getApplicationFeeWithDependents(pendingApplication.scholarships?.application_fee_amount || 35000);
       
       const params = new URLSearchParams({
         feeType: 'application_fee',
@@ -1453,7 +1456,7 @@ const getLevelColor = (level: any) => {
                         <div className="flex items-center justify-between mb-3">
                           <span className="font-semibold text-gray-900 text-sm">{t('studentDashboard.myApplications.paymentStatus.applicationFee')}</span>
                           <span className="text-base font-bold text-gray-700">
-                            {formatAmount(getApplicationFeeWithDependents(Number(scholarship.application_fee_amount || 350)))}
+                            {formatAmount(getApplicationFeeWithDependents(Number(scholarship.application_fee_amount || 35000)))}
                           </span>
                         </div>
                         {applicationFeePaid ? (
