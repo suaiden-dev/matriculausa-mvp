@@ -1,6 +1,8 @@
-import React from 'react';
-import { Building2, Clock, CheckCircle2, DollarSign, Shield, Grid3X3, List, Eye, CheckCircle, XCircle } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Building2, Clock, CheckCircle2, DollarSign, Grid3X3, List, Eye, CheckCircle, XCircle, Plus } from 'lucide-react';
 import UniversityRequestsSkeleton from '../../../../components/UniversityRequestsSkeleton';
+import { PaginationBar } from './PaginationBar';
+import { getPageNumbers as getPageNumbersUtil, pagingGoTo, pagingNext, pagingPrev, pagingFirst, pagingLast } from '../utils/pagination';
 
 type UniversityRequest = any;
 
@@ -16,6 +18,7 @@ export interface UniversityRequestsProps {
   approveUniversityRequest: (id: string) => void;
   openRejectModal: (id: string) => void;
   openMarkPaidModal: (id: string) => void;
+  onCreatePayment?: () => void;
 }
 
 function UniversityRequestsBase(props: UniversityRequestsProps) {
@@ -31,12 +34,64 @@ function UniversityRequestsBase(props: UniversityRequestsProps) {
     openRejectModal,
     openMarkPaidModal,
     loadingBalance,
+    onCreatePayment,
   } = props;
+
+  // Estados de paginação
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(() => {
+    const saved = localStorage.getItem('university-requests-items-per-page');
+    return saved ? parseInt(saved, 10) : 20;
+  });
+
+  // Calcular paginação
+  const totalPages = useMemo(() => Math.ceil(universityRequests.length / itemsPerPage), [universityRequests.length, itemsPerPage]);
+  const startIndex = useMemo(() => (currentPage - 1) * itemsPerPage, [currentPage, itemsPerPage]);
+  const endIndex = useMemo(() => startIndex + itemsPerPage, [startIndex, itemsPerPage]);
+  const paginatedRequests = useMemo(() => {
+    return universityRequests.slice(startIndex, endIndex);
+  }, [universityRequests, startIndex, endIndex]);
+
+  // Resetar para primeira página quando a lista mudar
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [universityRequests.length]);
+
+  // Salvar preferência de itens por página
+  const handleItemsPerPageChange = (newItemsPerPage: number) => {
+    setItemsPerPage(newItemsPerPage);
+    setCurrentPage(1);
+    localStorage.setItem('university-requests-items-per-page', newItemsPerPage.toString());
+  };
+
+  // Funções de navegação
+  const goToPage = (page: number) => {
+    setCurrentPage(pagingGoTo(page, totalPages));
+  };
+
+  const goToNextPage = () => {
+    setCurrentPage(pagingNext(currentPage, totalPages));
+  };
+
+  const goToPreviousPage = () => {
+    setCurrentPage(pagingPrev(currentPage));
+  };
+
+  const goToFirstPage = () => {
+    setCurrentPage(pagingFirst());
+  };
+
+  const goToLastPage = () => {
+    setCurrentPage(pagingLast(totalPages));
+  };
+
+  // Gerar array de páginas para exibição
+  const pageNumbers = useMemo(() => getPageNumbersUtil(totalPages, currentPage, 5), [totalPages, currentPage]);
 
   return (
     <div className="space-y-6">
       {/* Stats Cards for University Requests */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <div className="bg-white p-6 rounded-xl shadow border">
           <div className="flex items-center">
             <div className="p-2 bg-blue-100 rounded-lg">
@@ -76,38 +131,6 @@ function UniversityRequestsBase(props: UniversityRequestsProps) {
             </div>
           </div>
         </div>
-
-        <div className="bg-white p-6 rounded-xl shadow border">
-          <div className="flex items-center">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <DollarSign className="w-6 h-6 text-green-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Total Revenue</p>
-              <p className="text-2xl font-bold text-gray-900">
-                ${universityRequests.reduce((sum, r) => sum + r.amount_usd, 0).toLocaleString()}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-xl shadow border">
-          <div className="flex items-center">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <Shield className="w-6 h-6 text-purple-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Available Balance</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {loadingBalance ? (
-                  <span className="inline-block animate-pulse bg-gray-200 h-6 w-20 rounded" />
-                ) : (
-                  `$${adminBalance.toLocaleString()}`
-                )}
-              </p>
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* University Requests List */}
@@ -118,9 +141,20 @@ function UniversityRequestsBase(props: UniversityRequestsProps) {
               <h2 className="text-lg font-semibold text-gray-900">University Payment Requests</h2>
               <p className="text-gray-600 mt-1">Manage payment requests from universities</p>
             </div>
-            <div className="flex bg-gray-100 border border-gray-200 rounded-xl p-1">
-              <button onClick={() => setUniversityRequestsViewMode('grid')} className={`flex items-center px-3 py-2 rounded-lg transition-all duration-200 ${universityRequestsViewMode === 'grid' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`} title="Grid view"><Grid3X3 className="h-4 w-4" /></button>
-              <button onClick={() => setUniversityRequestsViewMode('list')} className={`flex items-center px-3 py-2 rounded-lg transition-all duration-200 ${universityRequestsViewMode === 'list' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`} title="List view"><List className="h-4 w-4" /></button>
+            <div className="flex items-center gap-3">
+              {onCreatePayment && (
+                <button
+                  onClick={onCreatePayment}
+                  className="flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Register Payment
+                </button>
+              )}
+              <div className="flex bg-gray-100 border border-gray-200 rounded-xl p-1">
+                <button onClick={() => setUniversityRequestsViewMode('grid')} className={`flex items-center px-3 py-2 rounded-lg transition-all duration-200 ${universityRequestsViewMode === 'grid' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`} title="Grid view"><Grid3X3 className="h-4 w-4" /></button>
+                <button onClick={() => setUniversityRequestsViewMode('list')} className={`flex items-center px-3 py-2 rounded-lg transition-all duration-200 ${universityRequestsViewMode === 'list' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`} title="List view"><List className="h-4 w-4" /></button>
+              </div>
             </div>
           </div>
         </div>
@@ -139,7 +173,7 @@ function UniversityRequestsBase(props: UniversityRequestsProps) {
           <div className="p-6">
             {universityRequestsViewMode === 'grid' ? (
               <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                {universityRequests.map((request) => (
+                {paginatedRequests.map((request) => (
                   <div
                     key={request.id}
                     className="bg-gray-50 rounded-xl p-6 hover:bg-gray-100 transition-colors cursor-pointer border"
@@ -226,7 +260,7 @@ function UniversityRequestsBase(props: UniversityRequestsProps) {
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {universityRequests.map((request) => (
+                      {paginatedRequests.map((request) => (
                         <tr key={request.id} className="hover:bg-gray-50 transition-colors">
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center">
@@ -272,6 +306,27 @@ function UniversityRequestsBase(props: UniversityRequestsProps) {
                     </tbody>
                   </table>
                 </div>
+              </div>
+            )}
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="mt-6">
+                <PaginationBar
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  startIndex={startIndex}
+                  endIndex={Math.min(endIndex, universityRequests.length)}
+                  totalItems={universityRequests.length}
+                  itemsPerPage={itemsPerPage}
+                  onFirst={goToFirstPage}
+                  onPrev={goToPreviousPage}
+                  onNext={goToNextPage}
+                  onLast={goToLastPage}
+                  onGoTo={goToPage}
+                  onItemsPerPageChange={handleItemsPerPageChange}
+                  pageNumbers={pageNumbers}
+                />
               </div>
             )}
           </div>

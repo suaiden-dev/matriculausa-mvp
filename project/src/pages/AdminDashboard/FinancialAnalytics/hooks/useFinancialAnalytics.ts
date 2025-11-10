@@ -15,10 +15,14 @@ import type {
 } from '../data/types';
 
 export function useFinancialAnalytics() {
+  console.log('🚀 [useFinancialAnalytics] Hook iniciado');
+  
   const { user } = useAuth();
   const { getFeeAmount } = useFeeConfig();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  
+  console.log('🚀 [useFinancialAnalytics] User:', user?.email, 'Role:', user?.role);
   
   // Refs para rastrear se já foi carregado e valores anteriores dos filtros
   const hasLoadedRef = useRef(false);
@@ -60,12 +64,20 @@ export function useFinancialAnalytics() {
 
   const loadData = useCallback(async () => {
     try {
+      console.log('🚀 [useFinancialAnalytics] loadData iniciado');
       setLoading(true);
 
       const currentRange = getDateRange(timeFilter, customDateFrom, customDateTo, showCustomDate);
+      console.log('🚀 [useFinancialAnalytics] DateRange:', currentRange);
       
       // Carregar dados
+      console.log('🚀 [useFinancialAnalytics] Chamando loadFinancialData...');
       const loadedData = await loadFinancialData(currentRange);
+      console.log('🚀 [useFinancialAnalytics] loadFinancialData retornou:', {
+        applications: loadedData.applications?.length,
+        zellePayments: loadedData.zellePayments?.length,
+        allStudents: loadedData.allStudents?.length
+      });
 
       // Transformar dados
       const processedData = await transformFinancialData({
@@ -105,7 +117,14 @@ export function useFinancialAnalytics() {
   }, [timeFilter, customDateFrom, customDateTo, showCustomDate, getFeeAmount]);
 
   useEffect(() => {
+    console.log('🚀 [useFinancialAnalytics] useEffect executado', {
+      hasUser: !!user,
+      userRole: user?.role,
+      isAdmin: user?.role === 'admin'
+    });
+    
     if (!user || user.role !== 'admin') {
+      console.log('🚀 [useFinancialAnalytics] Retornando - usuário não é admin');
       return;
     }
 

@@ -8,6 +8,49 @@
 
 import { SupabaseClient } from '@supabase/supabase-js';
 
+/**
+ * Verifica se está em produção ou staging
+ */
+function shouldFilter(): boolean {
+  if (typeof window === 'undefined') return false;
+  const hostname = window.location.hostname;
+  const href = window.location.href;
+  
+  // Verificações mais robustas
+  const isProduction = hostname === 'matriculausa.com' || 
+                       hostname.includes('matriculausa.com') ||
+                       href.includes('matriculausa.com');
+  
+  const isStaging = hostname === 'staging-matriculausa.netlify.app' || 
+                    hostname.includes('staging-matriculausa.netlify.app') ||
+                    hostname.includes('staging-matriculausa') ||
+                    href.includes('staging-matriculausa.netlify.app') ||
+                    href.includes('staging-matriculausa');
+  
+  const result = isProduction || isStaging;
+  
+  // Debug temporário
+  console.log('🔍 [PaymentManagement] shouldFilter debug:', {
+    hostname,
+    href,
+    isProduction,
+    isStaging,
+    result,
+    windowLocation: window.location
+  });
+  
+  return result;
+}
+
+/**
+ * Verifica se deve excluir estudante com email @uorak.com
+ */
+function shouldExcludeStudent(email: string | null | undefined): boolean {
+  if (!shouldFilter()) return false; // Em localhost, não excluir
+  if (!email) return false; // Se não tem email, não excluir
+  return email.toLowerCase().includes('@uorak.com');
+}
+
 export interface PaymentsBaseData {
   applications: any[];
   zellePayments: any[];
@@ -40,6 +83,7 @@ async function getOverridesBatch(
 }
 
 export async function loadPaymentsBaseDataOptimized(supabase: SupabaseClient): Promise<PaymentsBaseData> {
+  console.log('🚀 [PaymentManagement] loadPaymentsBaseDataOptimized iniciado');
   console.time('[payments] baseDataOptimized');
   try {
     const { data: applications, error: appsError } = await supabase
@@ -84,6 +128,20 @@ export async function loadPaymentsBaseDataOptimized(supabase: SupabaseClient): P
       `);
     if (appsError) throw appsError;
 
+    // Filtrar aplicações de estudantes com email @uorak.com (exceto em localhost)
+    const filterActive = shouldFilter();
+    console.log('🔍 [PaymentManagement] Filtro ativo:', filterActive);
+    console.log('🔍 [PaymentManagement] Applications antes do filtro:', (applications || []).length);
+    
+    const filteredApplications = filterActive
+      ? (applications || []).filter((app: any) => {
+          const email = app.user_profiles?.email?.toLowerCase() || '';
+          return !shouldExcludeStudent(email);
+        })
+      : (applications || []);
+      
+    console.log('🔍 [PaymentManagement] Applications depois do filtro:', filteredApplications.length);
+
     const { data: zellePaymentsRaw, error: zelleError } = await supabase
       .from('zelle_payments')
       .select('*')
@@ -106,6 +164,14 @@ export async function loadPaymentsBaseDataOptimized(supabase: SupabaseClient): P
           ...payment,
           user_profiles: userProfiles?.find((profile) => profile.user_id === payment.user_id),
         }));
+        
+        // Filtrar pagamentos Zelle de estudantes com email @uorak.com (exceto em localhost)
+        if (shouldFilter()) {
+          zellePayments = zellePayments.filter((payment: any) => {
+            const email = payment.user_profiles?.email?.toLowerCase() || '';
+            return !shouldExcludeStudent(email);
+          });
+        }
       }
     }
 
@@ -134,12 +200,20 @@ export async function loadPaymentsBaseDataOptimized(supabase: SupabaseClient): P
 
     let stripeUsers: any[] = [];
     if (stripeUsersRaw && stripeUsersRaw.length > 0) {
-      const applicationUserIds = applications?.map((app: any) => app.user_profiles?.user_id).filter(Boolean) || [];
+      const applicationUserIds = filteredApplications?.map((app: any) => app.user_profiles?.user_id).filter(Boolean) || [];
       stripeUsers = stripeUsersRaw.filter((user: any) => !applicationUserIds.includes(user.user_id));
+      
+      // Filtrar usuários Stripe com email @uorak.com (exceto em localhost)
+      if (shouldFilter()) {
+        stripeUsers = stripeUsers.filter((user: any) => {
+          const email = user.email?.toLowerCase() || '';
+          return !shouldExcludeStudent(email);
+        });
+      }
     }
 
     const allUserIds = [
-      ...(applications?.map((app: any) => app.user_profiles?.user_id).filter(Boolean) || []),
+      ...(filteredApplications?.map((app: any) => app.user_profiles?.user_id).filter(Boolean) || []),
       ...(zellePayments?.map((payment: any) => payment.user_profiles?.user_id).filter(Boolean) || []),
       ...(stripeUsers?.map((user: any) => user.user_id).filter(Boolean) || []),
     ];
@@ -164,7 +238,7 @@ export async function loadPaymentsBaseDataOptimized(supabase: SupabaseClient): P
       }
     }
 
-    return { applications: applications || [], zellePayments, stripeUsers, overridesMap, userSystemTypesMap };
+    return { applications: filteredApplications || [], zellePayments, stripeUsers, overridesMap, userSystemTypesMap };
   } finally {
     console.timeEnd('[payments] baseDataOptimized');
   }

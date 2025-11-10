@@ -21,8 +21,6 @@ import {
   BarChart3,
   PieChart,
   Calendar,
-  Users,
-  Target,
   ArrowUpRight,
   ArrowDownRight
 } from 'lucide-react';
@@ -221,27 +219,119 @@ const PaymentManagement: React.FC = () => {
   };
 
   const loadUniversityPaymentRequests = async () => {
-    if (!university?.id) return;
+    if (!university?.id || !user?.id) return;
     
     try {
       setLoadingUniversityRequests(true);
-      const requests = await UniversityPaymentRequestService.listUniversityPaymentRequests(university.id);
-      setUniversityPaymentRequests(requests);
+      
+      // Buscar todas as universidades do usuário para garantir que todos os payment requests sejam exibidos
+      const { data: userUniversities, error: universitiesError } = await supabase
+        .from('universities')
+        .select('id')
+        .eq('user_id', user.id);
+      
+      if (universitiesError) {
+        console.error('Error fetching user universities:', universitiesError);
+        // Fallback: usar apenas a universidade do contexto
+        const requests = await UniversityPaymentRequestService.listUniversityPaymentRequests(university.id);
+        setUniversityPaymentRequests(requests);
+        return;
+      }
+      
+      // Buscar payment requests de todas as universidades do usuário
+      const universityIds = (userUniversities || []).map(u => u.id);
+      if (universityIds.length === 0) {
+        setUniversityPaymentRequests([]);
+        return;
+      }
+      
+      const { data: allRequests, error: requestsError } = await supabase
+        .from('university_payout_requests')
+        .select(`
+          *,
+          university:universities(name, location),
+          payout_invoices(invoice_number, status)
+        `)
+        .in('university_id', universityIds)
+        .eq('request_type', 'university_payment')
+        .order('created_at', { ascending: false });
+
+      if (requestsError) {
+        console.error('Error fetching payment requests:', requestsError);
+        // Fallback: usar apenas a universidade do contexto
+        const requests = await UniversityPaymentRequestService.listUniversityPaymentRequests(university.id);
+        setUniversityPaymentRequests(requests);
+        return;
+      }
+
+      // Buscar dados dos usuários para cada request (mesma lógica do service)
+      const requestsWithUsers = await Promise.all(
+        (allRequests || []).map(async (request: any) => {
+          try {
+            let userData = null;
+            
+            try {
+              const { data: authUserData } = await supabase
+                .from('auth.users')
+                .select('email, raw_user_meta_data')
+                .eq('id', request.requested_by)
+                .single();
+              
+              if (authUserData) {
+                userData = {
+                  full_name: authUserData.raw_user_meta_data?.full_name || authUserData.email,
+                  email: authUserData.email
+                };
+              }
+            } catch (authError) {
+              console.warn('⚠️ Failed to fetch from auth.users:', authError);
+            }
+            
+            if (!userData) {
+              try {
+                const { data: profileUserData } = await supabase
+                  .from('user_profiles')
+                  .select('full_name, email')
+                  .eq('user_id', request.requested_by)
+                  .single();
+                
+                if (profileUserData) {
+                  userData = profileUserData;
+                }
+              } catch (profileError) {
+                console.warn('⚠️ Failed to fetch from user_profiles:', profileError);
+              }
+            }
+
+            return {
+              ...request,
+              user: userData || { full_name: 'Unknown', email: 'Unknown' }
+            };
+          } catch (userError) {
+            return {
+              ...request,
+              user: { full_name: 'Unknown', email: 'Unknown' }
+            };
+          }
+        })
+      );
+      
+      setUniversityPaymentRequests(requestsWithUsers);
       
       // Calcular total de payment requests (pending, approved e paid) - rejeitados NÃO são subtraídos do saldo
-      const totalPaidOut = requests
+      const totalPaidOut = requestsWithUsers
         .filter((r: any) => r.status === 'paid')
         .reduce((sum: number, r: any) => sum + r.amount_usd, 0);
       
-      const totalApproved = requests
+      const totalApproved = requestsWithUsers
         .filter((r: any) => r.status === 'approved')
         .reduce((sum: number, r: any) => sum + r.amount_usd, 0);
       
-      const totalPending = requests
+      const totalPending = requestsWithUsers
         .filter((r: any) => r.status === 'pending')
         .reduce((sum: number, r: any) => sum + r.amount_usd, 0);
       
-      const totalRejected = requests
+      const totalRejected = requestsWithUsers
         .filter((r: any) => r.status === 'rejected')
         .reduce((sum: number, r: any) => sum + r.amount_usd, 0);
       
@@ -312,7 +402,7 @@ const PaymentManagement: React.FC = () => {
          last7DaysRevenue: last7DaysApplicationFeeRevenue,
          totalPaidOut,
          totalApproved,
-         pendingRequests: requests.filter((r: any) => r.status === 'pending').length,
+         pendingRequests: requestsWithUsers.filter((r: any) => r.status === 'pending').length,
          paidApplicationsCount: paidApplications?.length || 0
        });
        

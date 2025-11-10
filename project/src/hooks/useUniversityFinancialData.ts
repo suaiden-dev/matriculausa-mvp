@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { useEnvironment } from './useEnvironment';
 
 export interface UniversityFinancialData {
   id: string;
@@ -42,9 +43,11 @@ export const useUniversityFinancialData = (): UseUniversityFinancialDataReturn =
   const [universities, setUniversities] = useState<UniversityFinancialData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { isProduction, isStaging } = useEnvironment();
 
   const fetchUniversityFinancialData = async () => {
     try {
+      console.log('🚀 [UniversityFinancialData] fetchUniversityFinancialData iniciado');
       setLoading(true);
       setError(null);
 
@@ -157,6 +160,7 @@ export const useUniversityFinancialData = (): UseUniversityFinancialDataReturn =
       }
 
       // 2.4. Buscar todas as aplicações para taxa de conversão (excluindo Current Students Scholarship)
+      // Ordenar por is_application_fee_paid DESC para priorizar aplicações com fee pago
       let allApplications: any[] = [];
       if (scholarshipIds.length > 0) {
         const { data: allAppsData, error: allApplicationsError } = await supabase
@@ -175,7 +179,8 @@ export const useUniversityFinancialData = (): UseUniversityFinancialDataReturn =
             )
           `)
           .in('scholarship_id', scholarshipIds)
-          .neq('scholarships.title', 'Current Students Scholarship');
+          .neq('scholarships.title', 'Current Students Scholarship')
+          .order('is_application_fee_paid', { ascending: false }); // Priorizar aplicações com fee pago
 
         if (allApplicationsError) {
           console.error('Error fetching all applications:', allApplicationsError);
@@ -225,8 +230,31 @@ export const useUniversityFinancialData = (): UseUniversityFinancialDataReturn =
         studentsMap[student.id] = student;
       });
 
+      // Função helper para verificar se deve excluir estudante (exceto em localhost)
+      const shouldExcludeStudent = (studentEmail: string | null | undefined): boolean => {
+        const shouldFilter = isProduction || isStaging;
+        
+        // Debug temporário
+        console.log('🔍 [UniversityFinancialData] shouldExcludeStudent debug:', {
+          isProduction,
+          isStaging,
+          shouldFilter,
+          studentEmail,
+          hostname: window.location.hostname
+        });
+        
+        if (!shouldFilter) return false; // Em localhost, não excluir
+        if (!studentEmail) return false; // Se não tem email, não excluir
+        return studentEmail.toLowerCase().includes('@uorak.com');
+      };
+
       const paidAppsMap: Record<string, any[]> = {};
       allPaidApplications?.forEach(app => {
+        const student = studentsMap[app.student_id];
+        // Excluir aplicações de estudantes com email @uorak.com (exceto em localhost)
+        if ((isProduction || isStaging) && shouldExcludeStudent(student?.email)) {
+          return; // Pular esta aplicação
+        }
         const scholarship = app.scholarships || scholarshipsMap[app.scholarship_id];
         const universityId = scholarship?.university_id || scholarshipsMap[app.scholarship_id]?.university_id;
         if (universityId) {
@@ -240,6 +268,11 @@ export const useUniversityFinancialData = (): UseUniversityFinancialDataReturn =
 
       const allAppsMap: Record<string, any[]> = {};
       allApplications?.forEach(app => {
+        const student = studentsMap[app.student_id];
+        // Excluir aplicações de estudantes com email @uorak.com (exceto em localhost)
+        if ((isProduction || isStaging) && shouldExcludeStudent(student?.email)) {
+          return; // Pular esta aplicação
+        }
         const scholarship = app.scholarships || scholarshipsMap[app.scholarship_id];
         const universityId = scholarship?.university_id || scholarshipsMap[app.scholarship_id]?.university_id;
         if (universityId) {
@@ -256,11 +289,13 @@ export const useUniversityFinancialData = (): UseUniversityFinancialDataReturn =
         const scholarship = app.scholarships || scholarshipsMap[app.scholarship_id];
         const universityId = scholarship?.university_id || scholarshipsMap[app.scholarship_id]?.university_id;
         const student = studentsMap[app.student_id];
-        if (universityId && student) {
+        // Excluir estudantes com email @uorak.com (exceto em localhost)
+        if (universityId && student && !shouldExcludeStudent(student?.email)) {
           if (!studentsPerUniversityMap[universityId]) studentsPerUniversityMap[universityId] = [];
-          // Evitar duplicatas
-          const exists = studentsPerUniversityMap[universityId].find(s => s.id === student.id);
-          if (!exists) {
+          // Evitar duplicatas - mas atualizar se encontrar uma aplicação com fee pago
+          const existingIndex = studentsPerUniversityMap[universityId].findIndex(s => s.id === student.id);
+          if (existingIndex === -1) {
+            // Primeira vez que vemos este estudante para esta universidade
             studentsPerUniversityMap[universityId].push({
               ...student,
               id: student.id,
@@ -279,12 +314,38 @@ export const useUniversityFinancialData = (): UseUniversityFinancialDataReturn =
                 application_fee_amount: scholarship?.application_fee_amount || 0
               }
             });
+          } else {
+            // Estudante já existe - atualizar se esta aplicação tem fee pago e a anterior não
+            const existing = studentsPerUniversityMap[universityId][existingIndex];
+            if (app.is_application_fee_paid && !existing.is_application_fee_paid) {
+              // Atualizar para usar a aplicação com fee pago
+              studentsPerUniversityMap[universityId][existingIndex] = {
+                ...existing,
+                application_id: app.id,
+                is_application_fee_paid: true,
+                application_fee_payment_method: app.application_fee_payment_method,
+                scholarship_title: scholarship?.title || existing.scholarship_title,
+                scholarships: {
+                  title: scholarship?.title || existing.scholarships?.title || 'N/A',
+                  application_fee_amount: scholarship?.application_fee_amount || existing.scholarships?.application_fee_amount || 0
+                }
+              };
+            }
           }
         }
       });
 
       // 4. Processar cada universidade com dados já carregados
-      const universitiesWithFinancialData = universitiesData.map(university => {
+      // Filtrar universidades de teste (com email @uorak.com) - exceto em localhost
+      const universitiesWithFinancialData = universitiesData
+        .filter(university => {
+          // Em localhost, não filtrar
+          if (!isProduction && !isStaging) return true;
+          const userData = usersMap[university.user_id] || null;
+          const userEmail = userData?.email?.toLowerCase() || '';
+          return !userEmail.includes('@uorak.com');
+        })
+        .map(university => {
         try {
           const userData = usersMap[university.user_id] || null;
           const balance = balancesMap[university.id] || null;
@@ -310,24 +371,8 @@ export const useUniversityFinancialData = (): UseUniversityFinancialDataReturn =
           const totalPaidOut = balance?.total_paid_out || 0;
           const totalPending = balance?.total_reserved || 0;
           
-          // Calcular available balance: Total Revenue - (Requisições pendentes + Pagamentos manuais já feitos)
-          // Não usar o valor da tabela university_balance_accounts pois pode estar incorreto
-          const availableBalance = Math.max(0, totalRevenue - totalPaidOut - totalPending);
-
-          const paidApplicationsCount = paidApps.length;
-          const totalApplicationsCount = allApps.length;
-          const conversionRate = totalApplicationsCount > 0 
-            ? (paidApplicationsCount / totalApplicationsCount) * 100 
-            : 0;
-          const averageFee = paidApplicationsCount > 0 
-            ? totalRevenue / paidApplicationsCount 
-            : 0;
-
-          // Separar pagamentos por método
+          // Separar pagamentos por método (precisamos calcular manualPaymentsRevenue antes do availableBalance)
           const manualPayments = paidApps.filter(app => app.application_fee_payment_method === 'manual');
-          const stripePayments = paidApps.filter(app => app.application_fee_payment_method === 'stripe');
-          const zellePayments = paidApps.filter(app => app.application_fee_payment_method === 'zelle');
-          
           const manualPaymentsRevenue = manualPayments.reduce((sum, app) => {
             const scholarship = app.scholarship || app.scholarships;
             const feeAmount = scholarship?.application_fee_amount;
@@ -341,6 +386,24 @@ export const useUniversityFinancialData = (): UseUniversityFinancialDataReturn =
             }
             return sum;
           }, 0);
+          
+          // Calcular available balance: (Total Revenue - Outside Payments) - (Requisições pendentes + Pagamentos manuais já feitos)
+          // Outside payments (manual payments) não devem contar no available balance
+          // Não usar o valor da tabela university_balance_accounts pois pode estar incorreto
+          const availableBalance = Math.max(0, (totalRevenue - manualPaymentsRevenue) - totalPaidOut - totalPending);
+
+          const paidApplicationsCount = paidApps.length;
+          const totalApplicationsCount = allApps.length;
+          const conversionRate = totalApplicationsCount > 0 
+            ? (paidApplicationsCount / totalApplicationsCount) * 100 
+            : 0;
+          const averageFee = paidApplicationsCount > 0 
+            ? totalRevenue / paidApplicationsCount 
+            : 0;
+
+          // Separar pagamentos por método (já calculamos manualPayments e manualPaymentsRevenue acima)
+          const stripePayments = paidApps.filter(app => app.application_fee_payment_method === 'stripe');
+          const zellePayments = paidApps.filter(app => app.application_fee_payment_method === 'zelle');
 
           const stripePaymentsRevenue = stripePayments.reduce((sum, app) => {
             const scholarship = app.scholarship || app.scholarships;
