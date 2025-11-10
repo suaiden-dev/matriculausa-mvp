@@ -388,17 +388,17 @@ export async function loadFinancialData(
   ]);
 
   // Filtrar dados em produção: excluir usuários com email @uorak.com
-  const applications = isProduction() 
-    ? applicationsRaw.filter((app: any) => !shouldExcludeStudent(app.user_profiles?.email))
-    : applicationsRaw;
+  const applications = isDevelopment() 
+    ? applicationsRaw
+    : applicationsRaw.filter((app: any) => !shouldExcludeStudent(app.user_profiles?.email));
 
-  const zellePayments = isProduction()
-    ? zellePaymentsRaw.filter((payment: any) => !shouldExcludeStudent(payment.user_profiles?.email))
-    : zellePaymentsRaw;
+  const zellePayments = isDevelopment()
+    ? zellePaymentsRaw
+    : zellePaymentsRaw.filter((payment: any) => !shouldExcludeStudent(payment.user_profiles?.email));
 
-  const allStudents = isProduction()
-    ? allStudentsRaw.filter((student: any) => !shouldExcludeStudent(student.email))
-    : allStudentsRaw;
+  const allStudents = isDevelopment()
+    ? allStudentsRaw
+    : allStudentsRaw.filter((student: any) => !shouldExcludeStudent(student.email));
 
   // Carregar dados do período anterior
   const [applicationsPrevRaw, zellePaymentsPrevRaw] = await Promise.all([
@@ -407,9 +407,9 @@ export async function loadFinancialData(
   ]);
 
   // Filtrar dados do período anterior também
-  const applicationsPrev = isProduction()
-    ? applicationsPrevRaw.filter((app: any) => !shouldExcludeStudent(app.user_profiles?.email))
-    : applicationsPrevRaw;
+  const applicationsPrev = isDevelopment()
+    ? applicationsPrevRaw
+    : applicationsPrevRaw.filter((app: any) => !shouldExcludeStudent(app.user_profiles?.email));
 
   const zellePaymentsPrev = zellePaymentsPrevRaw; // Zelle payments do período anterior não têm user_profiles carregado
 
@@ -417,9 +417,9 @@ export async function loadFinancialData(
   const stripeUsersRaw = await loadStripeUsers(applications);
   
   // Filtrar stripeUsers também
-  const stripeUsers = isProduction()
-    ? stripeUsersRaw.filter((user: any) => !shouldExcludeStudent(user.email))
-    : stripeUsersRaw;
+  const stripeUsers = isDevelopment()
+    ? stripeUsersRaw
+    : stripeUsersRaw.filter((user: any) => !shouldExcludeStudent(user.email));
 
   // Coletar todos os user_ids únicos
   const allUserIds = [

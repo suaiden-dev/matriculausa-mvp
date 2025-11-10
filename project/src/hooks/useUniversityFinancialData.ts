@@ -324,7 +324,16 @@ export const useUniversityFinancialData = (): UseUniversityFinancialDataReturn =
       });
 
       // 4. Processar cada universidade com dados já carregados
-      const universitiesWithFinancialData = universitiesData.map(university => {
+      // Filtrar universidades de teste (com email @uorak.com) - exceto em localhost
+      const universitiesWithFinancialData = universitiesData
+        .filter(university => {
+          // Em localhost, não filtrar
+          if (!isProduction && !isStaging) return true;
+          const userData = usersMap[university.user_id] || null;
+          const userEmail = userData?.email?.toLowerCase() || '';
+          return !userEmail.includes('@uorak.com');
+        })
+        .map(university => {
         try {
           const userData = usersMap[university.user_id] || null;
           const balance = balancesMap[university.id] || null;

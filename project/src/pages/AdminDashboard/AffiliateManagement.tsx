@@ -38,15 +38,33 @@ const AffiliateManagement: React.FC = () => {
   const navigate = useNavigate();
   const { isDevelopment } = useEnvironment();
   
-  // Debug: Log dos dados recebidos
-  console.log('🔍 [AffiliateManagement] Dados recebidos:', {
-    affiliates: affiliates.length,
-    allSellers: allSellers.length,
-    allStudents: allStudents.length,
-    loading,
-    error,
-    affiliatesData: affiliates
-  });
+  // Filtrar affiliates com email @uorak.com
+  const filteredAffiliates = useMemo(() => {
+    const shouldFilter = !isDevelopment; // Filtrar em produção e staging
+    
+    if (!shouldFilter) {
+      return affiliates;
+    }
+    
+    return affiliates.filter((aff: any) => {
+      const email = aff.email?.toLowerCase() || '';
+      return !email.includes('@uorak.com');
+    });
+  }, [affiliates, isDevelopment]);
+  
+  // Filtrar sellers com email @uorak.com
+  const filteredSellers = useMemo(() => {
+    const shouldFilter = !isDevelopment; // Filtrar em produção e staging
+    
+    if (!shouldFilter) {
+      return allSellers;
+    }
+    
+    return allSellers.filter((seller: any) => {
+      const email = seller.email?.toLowerCase() || '';
+      return !email.includes('@uorak.com');
+    });
+  }, [allSellers, isDevelopment]);
   
   const [filters, setFilters] = useState<FilterState>({
     search: '',
@@ -139,13 +157,15 @@ const AffiliateManagement: React.FC = () => {
           continue;
         }
 
-        // Filtrar estudantes com email @uorak.com (exceto em localhost)
-        const filteredProfiles = isDevelopment
-          ? (profiles || [])
-          : (profiles || []).filter((p: any) => {
+        // Filtrar estudantes com email @uorak.com
+        const shouldFilter = !isDevelopment; // Filtrar em produção e staging
+        
+        const filteredProfiles = shouldFilter 
+          ? (profiles || []).filter((p: any) => {
               const email = p.email?.toLowerCase() || '';
               return !email.includes('@uorak.com');
-            });
+            })
+          : (profiles || []);
 
         // 4. Preparar overrides por user_id (usar filteredProfiles)
         const uniqueUserIds = Array.from(new Set((filteredProfiles || []).map((p) => p.user_id).filter(Boolean)));
@@ -213,12 +233,16 @@ const AffiliateManagement: React.FC = () => {
     }
   };
 
-  // Filtrar estudantes com email @uorak.com (exceto em localhost)
+  // Filtrar estudantes com email @uorak.com
   const filteredStudents = useMemo(() => {
-    if (isDevelopment) {
-      return allStudents || [];
+    const allStudentsArray = allStudents || [];
+    const shouldFilter = !isDevelopment; // Filtrar em produção e staging
+    
+    if (!shouldFilter) {
+      return allStudentsArray;
     }
-    return (allStudents || []).filter((s: any) => {
+    
+    return allStudentsArray.filter((s: any) => {
       const email = s.email?.toLowerCase() || '';
       return !email.includes('@uorak.com');
     });
@@ -343,20 +367,6 @@ const AffiliateManagement: React.FC = () => {
         total += i20 || 0;
       }
       
-      // Debug para marjorie1454@uorak.com
-      if (s.email === 'marjorie1454@uorak.com') {
-        console.log('🔍 [AffiliateManagement] marjorie1454@uorak.com calculado:', {
-          systemType,
-          totalCalculated: total,
-          breakdown: {
-            selectionPaid: s.has_paid_selection_process_fee,
-            scholarshipPaid: s.is_scholarship_fee_paid,
-            i20Paid: s.has_paid_i20_control_fee,
-            i20ShouldCount: s.is_scholarship_fee_paid && s.has_paid_i20_control_fee
-          }
-        });
-      }
-      
       return { ...s, total_paid_adjusted: total };
     });
     return result;
@@ -375,8 +385,17 @@ const AffiliateManagement: React.FC = () => {
 
   const adjustedAffiliates = useMemo(() => {
     // Monta versão ajustada dos afiliados, recalculando revenue por seller e por afiliado
-    return affiliates.map((aff: any) => {
-      const sellersAdjusted = (aff.sellers || []).map((seller: any) => {
+    // Filtrar affiliates e sellers com email @uorak.com
+    return filteredAffiliates.map((aff: any) => {
+      // Filtrar sellers com email @uorak.com dentro de cada affiliate (exceto em localhost)
+      const sellersFiltered = isDevelopment
+        ? (aff.sellers || [])
+        : (aff.sellers || []).filter((seller: any) => {
+            const email = seller.email?.toLowerCase() || '';
+            return !email.includes('@uorak.com');
+          });
+      
+      const sellersAdjusted = sellersFiltered.map((seller: any) => {
         const studentsForSeller = adjustedStudentsBySellerId[seller.id] || [];
         const totalRevenueAdjusted = studentsForSeller.reduce((sum, st) => sum + (st.total_paid_adjusted || 0), 0);
         return {
@@ -392,7 +411,7 @@ const AffiliateManagement: React.FC = () => {
         total_revenue: affiliateRevenueAdjusted // sobrescreve para UI usar o ajustado
       };
     });
-  }, [affiliates, adjustedStudentsBySellerId]);
+  }, [filteredAffiliates, adjustedStudentsBySellerId]);
 
   // Aplicar filtros e ordenação sobre dados ajustados
   const filteredAndSortedAffiliates = useMemo(() => {
@@ -461,12 +480,12 @@ const AffiliateManagement: React.FC = () => {
     return {
       totalAffiliates: adjustedAffiliates.length,
       activeAffiliates: adjustedAffiliates.filter((a: any) => a.status === 'active').length,
-      totalSellers: allSellers.length,
-      activeSellers: allSellers.filter((s: any) => s.is_active).length,
+      totalSellers: filteredSellers.length,
+      activeSellers: filteredSellers.filter((s: any) => s.is_active).length,
       totalStudents: filteredStudents.length,
       totalRevenue: adjustedAffiliates.reduce((sum: number, a: any) => sum + (a.total_revenue || 0), 0)
     };
-  }, [adjustedAffiliates, allSellers, filteredStudents]);
+  }, [adjustedAffiliates, filteredSellers, filteredStudents]);
 
   const toggleAffiliateExpansion = (affiliateId: string) => {
     setExpandedAffiliates(prev => {

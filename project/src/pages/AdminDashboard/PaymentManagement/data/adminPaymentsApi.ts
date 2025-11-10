@@ -2,6 +2,26 @@ import { supabase } from '../../../../lib/supabase';
 
 type AnyRecord = Record<string, any>;
 
+/**
+ * Verifica se está em desenvolvimento (localhost)
+ */
+function isDevelopment(): boolean {
+  if (typeof window === 'undefined') return false;
+  return window.location.hostname === 'localhost' || 
+         window.location.hostname === '127.0.0.1' ||
+         window.location.hostname.includes('localhost') ||
+         window.location.hostname.includes('dev');
+}
+
+/**
+ * Verifica se deve excluir estudante com email @uorak.com
+ */
+function shouldExcludeStudent(email: string | null | undefined): boolean {
+  if (isDevelopment()) return false; // Em localhost, não excluir
+  if (!email) return false; // Se não tem email, não excluir
+  return email.toLowerCase().includes('@uorak.com');
+}
+
 export interface FetchPaymentsParams extends AnyRecord {
 	universityId?: string;
 	page?: number;
@@ -122,18 +142,26 @@ export async function fetchPayments(params: FetchPaymentsParams) {
             };
         });
 
+        // Filtrar estudantes com email @uorak.com (exceto em localhost)
+        const recordsFiltered = isDevelopment()
+          ? records
+          : records.filter((p: any) => {
+              const email = p.student_email?.toLowerCase() || '';
+              return !shouldExcludeStudent(email);
+            });
+
         // Filtro de busca em memória (até migrar para FTS)
         const search = (filters.search_query || '').toString().toLowerCase().trim();
         const filtered = search
-            ? records.filter((p: any) =>
+            ? recordsFiltered.filter((p: any) =>
                   (p.student_name || '').toLowerCase().includes(search) ||
                   (p.student_email || '').toLowerCase().includes(search) ||
                   (p.scholarship_title || '').toLowerCase().includes(search)
               )
-            : records;
+            : recordsFiltered;
 
-        // Se houve busca, o count deve refletir o total filtrado para a UI
-        const effectiveCount = search ? filtered.length : (count ?? filtered.length);
+        // Se houve busca ou filtro de ambiente, o count deve refletir o total filtrado para a UI
+        const effectiveCount = (search || !isDevelopment()) ? filtered.length : (count ?? filtered.length);
         return { data: filtered, count: effectiveCount, error: null };
     } catch (error: any) {
         return { data: [], count: 0, error };
