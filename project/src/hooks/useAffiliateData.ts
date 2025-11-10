@@ -1,6 +1,26 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 
+/**
+ * Verifica se está em desenvolvimento (localhost)
+ */
+function isDevelopment(): boolean {
+  if (typeof window === 'undefined') return false;
+  return window.location.hostname === 'localhost' || 
+         window.location.hostname === '127.0.0.1' ||
+         window.location.hostname.includes('localhost') ||
+         window.location.hostname.includes('dev');
+}
+
+/**
+ * Verifica se deve excluir estudante com email @uorak.com
+ */
+function shouldExcludeStudent(email: string | null | undefined): boolean {
+  if (isDevelopment()) return false; // Em localhost, não excluir
+  if (!email) return false; // Se não tem email, não excluir
+  return email.toLowerCase().includes('@uorak.com');
+}
+
 export interface Affiliate {
   id: string;
   user_id: string;
@@ -200,7 +220,12 @@ export const useAffiliateData = () => {
                 .abortSignal(AbortSignal.timeout(30000));
 
               if (!userProfilesError && userProfilesData) {
-                studentsData = userProfilesData.map((profile: any) => {
+                // Filtrar estudantes com email @uorak.com (exceto em localhost)
+                const filteredProfiles = isDevelopment()
+                  ? userProfilesData
+                  : userProfilesData.filter((profile: any) => !shouldExcludeStudent(profile.email));
+
+                studentsData = filteredProfiles.map((profile: any) => {
                   // Encontrar o seller que referenciou este estudante
                   const sellerCode = profile.seller_referral_code;
                   const referringSeller = sellers.find((s: any) => s.referral_code === sellerCode);

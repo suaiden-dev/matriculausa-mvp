@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { CreditCard, Clock, CheckCircle2, XCircle, Grid3X3, List, Eye, CheckCircle, User, MessageSquare } from 'lucide-react';
 import { PaginationBar } from './PaginationBar';
 import { formatCentsToDollars } from '../../../../utils/currency';
 import ZellePaymentsSkeleton from '../../../../components/ZellePaymentsSkeleton';
+import { useEnvironment } from '../../../../hooks/useEnvironment';
 
 export interface ZellePaymentsProps {
 	zellePayments: any[];
@@ -31,6 +32,21 @@ function ZellePaymentsBase(props: ZellePaymentsProps) {
     onPageChange,
 	} = props;
 
+  const { isDevelopment } = useEnvironment();
+
+	// Filtrar pagamentos Zelle: excluir usuários com email @uorak.com (exceto em localhost)
+	const filteredZellePayments = useMemo(() => {
+		if (isDevelopment) {
+			// Em localhost, mostrar todos
+			return zellePayments;
+		}
+		// Em produção/staging, excluir pagamentos de estudantes com email @uorak.com
+		return zellePayments.filter((payment: any) => {
+			const email = payment.student_email?.toLowerCase() || '';
+			return !email.includes('@uorak.com');
+		});
+	}, [zellePayments, isDevelopment]);
+
 	return (
 		<div className="space-y-6">
 			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -41,7 +57,7 @@ function ZellePaymentsBase(props: ZellePaymentsProps) {
 						</div>
 						<div className="ml-4">
 							<p className="text-sm font-medium text-gray-600">Total Zelle Payments</p>
-							<p className="text-2xl font-bold text-gray-900">{zellePayments.length}</p>
+							<p className="text-2xl font-bold text-gray-900">{filteredZellePayments.length}</p>
 						</div>
 					</div>
 				</div>
@@ -52,7 +68,7 @@ function ZellePaymentsBase(props: ZellePaymentsProps) {
 						</div>
 						<div className="ml-4">
 							<p className="text-sm font-medium text-gray-600">Pending Review</p>
-							<p className="text-2xl font-bold text-gray-900">{zellePayments.filter(p => p.zelle_status === 'pending_verification').length}</p>
+							<p className="text-2xl font-bold text-gray-900">{filteredZellePayments.filter(p => p.zelle_status === 'pending_verification').length}</p>
 						</div>
 					</div>
 				</div>
@@ -63,7 +79,7 @@ function ZellePaymentsBase(props: ZellePaymentsProps) {
 						</div>
 						<div className="ml-4">
 							<p className="text-sm font-medium text-gray-600">Approved</p>
-							<p className="text-2xl font-bold text-gray-900">{zellePayments.filter(p => p.zelle_status === 'approved').length}</p>
+							<p className="text-2xl font-bold text-gray-900">{filteredZellePayments.filter(p => p.zelle_status === 'approved').length}</p>
 						</div>
 					</div>
 				</div>
@@ -74,7 +90,7 @@ function ZellePaymentsBase(props: ZellePaymentsProps) {
 						</div>
 						<div className="ml-4">
 							<p className="text-sm font-medium text-gray-600">Rejected</p>
-							<p className="text-2xl font-bold text-gray-900">{zellePayments.filter(p => p.zelle_status === 'rejected').length}</p>
+							<p className="text-2xl font-bold text-gray-900">{filteredZellePayments.filter(p => p.zelle_status === 'rejected').length}</p>
 						</div>
 					</div>
 				</div>
@@ -96,7 +112,7 @@ function ZellePaymentsBase(props: ZellePaymentsProps) {
 
 				{loadingZellePayments ? (
 					<ZellePaymentsSkeleton />
-				) : zellePayments.length === 0 ? (
+				) : filteredZellePayments.length === 0 ? (
 					<div className="text-center py-12">
 						<CreditCard className="mx-auto h-12 w-12 text-gray-400 mb-4" />
 						<h3 className="text-lg font-medium text-gray-900 mb-2">No Zelle Payments</h3>
@@ -106,7 +122,7 @@ function ZellePaymentsBase(props: ZellePaymentsProps) {
 					<div className="p-6">
 						{zelleViewMode === 'grid' ? (
 							<div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-								{zellePayments.map((payment: any) => (
+								{filteredZellePayments.map((payment: any) => (
 									<div key={payment.id} className="bg-gray-50 rounded-xl p-6 hover:bg-gray-100 transition-colors cursor-pointer border">
 										<div className="flex items-start justify-between mb-4">
 											<div className="flex-1">
@@ -173,7 +189,7 @@ function ZellePaymentsBase(props: ZellePaymentsProps) {
 											</tr>
 										</thead>
 										<tbody className="bg-white divide-y divide-gray-200">
-											{zellePayments.map((payment: any) => (
+											{filteredZellePayments.map((payment: any) => (
 												<tr key={payment.id} className="hover:bg-gray-50 transition-colors">
 													<td className="px-6 py-4 whitespace-nowrap">
 														<div className="flex items-center">
@@ -223,7 +239,7 @@ function ZellePaymentsBase(props: ZellePaymentsProps) {
                   totalPages={totalPages}
                   startIndex={(currentPage - 1) * 1}
                   endIndex={(currentPage - 1) * 1}
-                  totalItems={zellePayments.length}
+                  totalItems={filteredZellePayments.length}
                   itemsPerPage={1}
                   onFirst={() => onPageChange && onPageChange(1)}
                   onPrev={() => onPageChange && onPageChange(currentPage - 1)}

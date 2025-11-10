@@ -41,6 +41,14 @@ export interface CreatePaymentRequestData {
   payoutDetails: Record<string, any>;
 }
 
+export interface AdminCreatePaymentRequestData {
+  universityId: string;
+  adminId: string;
+  amount: number;
+  payoutMethod: 'zelle' | 'bank_transfer' | 'stripe';
+  payoutDetails: Record<string, any>;
+}
+
 export class UniversityPaymentRequestService {
   /**
    * Cria uma nova solicitação de pagamento
@@ -73,6 +81,42 @@ export class UniversityPaymentRequestService {
       return result;
     } catch (error: any) {
       console.error('❌ [Service] Error creating payment request:', error);
+      throw new Error(error.message || 'Failed to create payment request');
+    }
+  }
+
+  /**
+   * Admin cria uma nova solicitação de pagamento para uma universidade
+   * (sem validação de ownership - admin pode criar para qualquer universidade)
+   */
+  static async adminCreatePaymentRequest(data: AdminCreatePaymentRequestData): Promise<UniversityPaymentRequest> {
+    try {
+      console.log('🔍 [Service] Admin creating payment request with:', {
+        function: 'admin_create_university_payment_request',
+        universityId: data.universityId,
+        adminId: data.adminId,
+        amount: data.amount,
+        method: data.payoutMethod
+      });
+
+      const { data: result, error } = await supabase
+        .rpc('admin_create_university_payment_request', {
+          university_id_param: data.universityId,
+          admin_user_id_param: data.adminId,
+          amount_usd_param: data.amount,
+          payout_method_param: data.payoutMethod,
+          payout_details_param: data.payoutDetails
+        });
+
+      if (error) {
+        console.error('❌ [Service] RPC error:', error);
+        throw error;
+      }
+
+      console.log('✅ [Service] Admin payment request created successfully:', result);
+      return result;
+    } catch (error: any) {
+      console.error('❌ [Service] Error creating admin payment request:', error);
       throw new Error(error.message || 'Failed to create payment request');
     }
   }
@@ -315,7 +359,7 @@ export class UniversityPaymentRequestService {
   /**
    * Admin rejeita uma solicitação
    */
-  static async adminReject(requestId: string, adminId: string, reason: string): Promise<void> {
+  static async adminReject(requestId: string, _adminId: string, reason: string): Promise<void> {
     try {
       const { error } = await supabase
         .from('university_payout_requests')
