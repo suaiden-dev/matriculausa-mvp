@@ -9,6 +9,8 @@ import { FeeTypesChart } from './FinancialAnalytics/components/FeeTypesChart';
 import FinancialAnalyticsSkeleton from '../../components/FinancialAnalyticsSkeleton';
 
 const FinancialAnalytics: React.FC = () => {
+  console.log('🚀 [FinancialAnalytics] Componente renderizado');
+  
   const {
     loading,
     refreshing,
@@ -27,6 +29,8 @@ const FinancialAnalytics: React.FC = () => {
     setCustomDateFrom,
     setCustomDateTo
   } = useFinancialAnalytics();
+  
+  console.log('🚀 [FinancialAnalytics] Estado do hook:', { loading, refreshing });
 
   if (loading) {
     return <FinancialAnalyticsSkeleton />;

@@ -47,6 +47,7 @@ export const useUniversityFinancialData = (): UseUniversityFinancialDataReturn =
 
   const fetchUniversityFinancialData = async () => {
     try {
+      console.log('🚀 [UniversityFinancialData] fetchUniversityFinancialData iniciado');
       setLoading(true);
       setError(null);
 
@@ -231,7 +232,18 @@ export const useUniversityFinancialData = (): UseUniversityFinancialDataReturn =
 
       // Função helper para verificar se deve excluir estudante (exceto em localhost)
       const shouldExcludeStudent = (studentEmail: string | null | undefined): boolean => {
-        if (!isProduction && !isStaging) return false; // Em localhost, não excluir
+        const shouldFilter = isProduction || isStaging;
+        
+        // Debug temporário
+        console.log('🔍 [UniversityFinancialData] shouldExcludeStudent debug:', {
+          isProduction,
+          isStaging,
+          shouldFilter,
+          studentEmail,
+          hostname: window.location.hostname
+        });
+        
+        if (!shouldFilter) return false; // Em localhost, não excluir
         if (!studentEmail) return false; // Se não tem email, não excluir
         return studentEmail.toLowerCase().includes('@uorak.com');
       };

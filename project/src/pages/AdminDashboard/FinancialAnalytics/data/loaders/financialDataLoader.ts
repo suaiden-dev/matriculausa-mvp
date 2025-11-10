@@ -8,9 +8,32 @@ import { getPreviousPeriodRange } from '../../utils/dateRange';
 function shouldFilter(): boolean {
   if (typeof window === 'undefined') return false;
   const hostname = window.location.hostname;
-  const isProduction = hostname === 'matriculausa.com' || hostname.includes('matriculausa.com');
-  const isStaging = hostname === 'staging-matriculausa.netlify.app' || hostname.includes('staging-matriculausa.netlify.app');
-  return isProduction || isStaging;
+  const href = window.location.href;
+  
+  // Verificações mais robustas
+  const isProduction = hostname === 'matriculausa.com' || 
+                       hostname.includes('matriculausa.com') ||
+                       href.includes('matriculausa.com');
+  
+  const isStaging = hostname === 'staging-matriculausa.netlify.app' || 
+                    hostname.includes('staging-matriculausa.netlify.app') ||
+                    hostname.includes('staging-matriculausa') ||
+                    href.includes('staging-matriculausa.netlify.app') ||
+                    href.includes('staging-matriculausa');
+  
+  const result = isProduction || isStaging;
+  
+  // Debug temporário
+  console.log('🔍 [FinancialAnalytics] shouldFilter debug:', {
+    hostname,
+    href,
+    isProduction,
+    isStaging,
+    result,
+    windowLocation: window.location
+  });
+  
+  return result;
 }
 
 /**
@@ -377,6 +400,8 @@ async function loadAffiliateRequests(currentRange: DateRange): Promise<any[]> {
 export async function loadFinancialData(
   currentRange: DateRange
 ): Promise<LoadedFinancialData> {
+  console.log('🚀 [FinancialAnalytics] loadFinancialData iniciado');
+  
   // Calcular período anterior
   const prevRange = getPreviousPeriodRange(currentRange);
 
@@ -388,17 +413,31 @@ export async function loadFinancialData(
   ]);
 
   // Filtrar dados em produção/staging: excluir usuários com email @uorak.com
-  const applications = shouldFilter()
+  const filterActive = shouldFilter();
+  console.log('🔍 [FinancialAnalytics] Filtro ativo:', filterActive);
+  console.log('🔍 [FinancialAnalytics] Dados antes do filtro:', {
+    applications: applicationsRaw.length,
+    zellePayments: zellePaymentsRaw.length,
+    allStudents: allStudentsRaw.length
+  });
+  
+  const applications = filterActive
     ? applicationsRaw.filter((app: any) => !shouldExcludeStudent(app.user_profiles?.email))
     : applicationsRaw;
 
-  const zellePayments = shouldFilter()
+  const zellePayments = filterActive
     ? zellePaymentsRaw.filter((payment: any) => !shouldExcludeStudent(payment.user_profiles?.email))
     : zellePaymentsRaw;
 
-  const allStudents = shouldFilter()
+  const allStudents = filterActive
     ? allStudentsRaw.filter((student: any) => !shouldExcludeStudent(student.email))
     : allStudentsRaw;
+    
+  console.log('🔍 [FinancialAnalytics] Dados depois do filtro:', {
+    applications: applications.length,
+    zellePayments: zellePayments.length,
+    allStudents: allStudents.length
+  });
 
   // Carregar dados do período anterior
   const [applicationsPrevRaw, zellePaymentsPrevRaw] = await Promise.all([

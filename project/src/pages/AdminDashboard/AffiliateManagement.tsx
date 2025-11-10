@@ -34,36 +34,78 @@ interface FilterState {
 }
 
 const AffiliateManagement: React.FC = () => {
+  console.log('🚀 [AffiliateManagement] Componente renderizado');
+  
   const { affiliates, allSellers, allStudents, loading, error, refetch } = useAffiliateData();
   const navigate = useNavigate();
   const { isDevelopment } = useEnvironment();
+  
+  console.log('🚀 [AffiliateManagement] Dados recebidos:', {
+    affiliates: affiliates.length,
+    allSellers: allSellers.length,
+    allStudents: allStudents.length,
+    loading,
+    isDevelopment
+  });
   
   // Filtrar affiliates com email @uorak.com
   const filteredAffiliates = useMemo(() => {
     const shouldFilter = !isDevelopment; // Filtrar em produção e staging
     
+    console.log('🔍 [AffiliateManagement] Filtro affiliates:', {
+      shouldFilter,
+      totalAffiliates: affiliates.length
+    });
+    
     if (!shouldFilter) {
       return affiliates;
     }
     
-    return affiliates.filter((aff: any) => {
+    const filtered = affiliates.filter((aff: any) => {
       const email = aff.email?.toLowerCase() || '';
-      return !email.includes('@uorak.com');
+      const shouldExclude = email.includes('@uorak.com');
+      if (shouldExclude) {
+        console.log('🔍 [AffiliateManagement] Excluindo affiliate:', email);
+      }
+      return !shouldExclude;
     });
+    
+    console.log('🔍 [AffiliateManagement] Affiliates filtrados:', {
+      antes: affiliates.length,
+      depois: filtered.length
+    });
+    
+    return filtered;
   }, [affiliates, isDevelopment]);
   
   // Filtrar sellers com email @uorak.com
   const filteredSellers = useMemo(() => {
     const shouldFilter = !isDevelopment; // Filtrar em produção e staging
     
+    console.log('🔍 [AffiliateManagement] Filtro sellers:', {
+      shouldFilter,
+      totalSellers: allSellers.length
+    });
+    
     if (!shouldFilter) {
       return allSellers;
     }
     
-    return allSellers.filter((seller: any) => {
+    const filtered = allSellers.filter((seller: any) => {
       const email = seller.email?.toLowerCase() || '';
-      return !email.includes('@uorak.com');
+      const shouldExclude = email.includes('@uorak.com');
+      if (shouldExclude) {
+        console.log('🔍 [AffiliateManagement] Excluindo seller:', email);
+      }
+      return !shouldExclude;
     });
+    
+    console.log('🔍 [AffiliateManagement] Sellers filtrados:', {
+      antes: allSellers.length,
+      depois: filtered.length
+    });
+    
+    return filtered;
   }, [allSellers, isDevelopment]);
   
   const [filters, setFilters] = useState<FilterState>({
@@ -238,14 +280,35 @@ const AffiliateManagement: React.FC = () => {
     const allStudentsArray = allStudents || [];
     const shouldFilter = !isDevelopment; // Filtrar em produção e staging
     
+    // Debug temporário
+    console.log('🔍 [AffiliateManagement] Filtro debug:', {
+      hostname: window.location.hostname,
+      isDevelopment,
+      shouldFilter,
+      totalStudents: allStudentsArray.length
+    });
+    
     if (!shouldFilter) {
+      console.log('🔍 [AffiliateManagement] Não filtrando - ambiente de desenvolvimento');
       return allStudentsArray;
     }
     
-    return allStudentsArray.filter((s: any) => {
+    const filtered = allStudentsArray.filter((s: any) => {
       const email = s.email?.toLowerCase() || '';
-      return !email.includes('@uorak.com');
+      const shouldExclude = email.includes('@uorak.com');
+      if (shouldExclude) {
+        console.log('🔍 [AffiliateManagement] Excluindo estudante:', email);
+      }
+      return !shouldExclude;
     });
+    
+    console.log('🔍 [AffiliateManagement] Resultado do filtro:', {
+      antes: allStudentsArray.length,
+      depois: filtered.length,
+      excluidos: allStudentsArray.length - filtered.length
+    });
+    
+    return filtered;
   }, [allStudents, isDevelopment]);
 
   useEffect(() => {
