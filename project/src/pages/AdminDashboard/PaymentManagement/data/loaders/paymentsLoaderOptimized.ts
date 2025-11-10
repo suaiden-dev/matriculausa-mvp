@@ -9,21 +9,21 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 
 /**
- * Verifica se está em desenvolvimento (localhost)
+ * Verifica se está em produção ou staging
  */
-function isDevelopment(): boolean {
+function shouldFilter(): boolean {
   if (typeof window === 'undefined') return false;
-  return window.location.hostname === 'localhost' || 
-         window.location.hostname === '127.0.0.1' ||
-         window.location.hostname.includes('localhost') ||
-         window.location.hostname.includes('dev');
+  const hostname = window.location.hostname;
+  const isProduction = hostname === 'matriculausa.com' || hostname.includes('matriculausa.com');
+  const isStaging = hostname === 'staging-matriculausa.netlify.app' || hostname.includes('staging-matriculausa.netlify.app');
+  return isProduction || isStaging;
 }
 
 /**
  * Verifica se deve excluir estudante com email @uorak.com
  */
 function shouldExcludeStudent(email: string | null | undefined): boolean {
-  if (isDevelopment()) return false; // Em localhost, não excluir
+  if (!shouldFilter()) return false; // Em localhost, não excluir
   if (!email) return false; // Se não tem email, não excluir
   return email.toLowerCase().includes('@uorak.com');
 }
@@ -105,12 +105,12 @@ export async function loadPaymentsBaseDataOptimized(supabase: SupabaseClient): P
     if (appsError) throw appsError;
 
     // Filtrar aplicações de estudantes com email @uorak.com (exceto em localhost)
-    const filteredApplications = isDevelopment()
-      ? (applications || [])
-      : (applications || []).filter((app: any) => {
+    const filteredApplications = shouldFilter()
+      ? (applications || []).filter((app: any) => {
           const email = app.user_profiles?.email?.toLowerCase() || '';
           return !shouldExcludeStudent(email);
-        });
+        })
+      : (applications || []);
 
     const { data: zellePaymentsRaw, error: zelleError } = await supabase
       .from('zelle_payments')
@@ -136,7 +136,7 @@ export async function loadPaymentsBaseDataOptimized(supabase: SupabaseClient): P
         }));
         
         // Filtrar pagamentos Zelle de estudantes com email @uorak.com (exceto em localhost)
-        if (!isDevelopment()) {
+        if (shouldFilter()) {
           zellePayments = zellePayments.filter((payment: any) => {
             const email = payment.user_profiles?.email?.toLowerCase() || '';
             return !shouldExcludeStudent(email);
@@ -174,7 +174,7 @@ export async function loadPaymentsBaseDataOptimized(supabase: SupabaseClient): P
       stripeUsers = stripeUsersRaw.filter((user: any) => !applicationUserIds.includes(user.user_id));
       
       // Filtrar usuários Stripe com email @uorak.com (exceto em localhost)
-      if (!isDevelopment()) {
+      if (shouldFilter()) {
         stripeUsers = stripeUsers.filter((user: any) => {
           const email = user.email?.toLowerCase() || '';
           return !shouldExcludeStudent(email);
