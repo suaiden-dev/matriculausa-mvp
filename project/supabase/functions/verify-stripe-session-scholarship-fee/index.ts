@@ -4,6 +4,35 @@ import { createClient } from 'npm:@supabase/supabase-js@2.49.1';
 import { getStripeConfig } from '../stripe-config.ts';
 
 const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
+
+// Função auxiliar para determinar moeda e símbolo baseado na session do Stripe
+function getCurrencyInfo(session) {
+  const currency = session.currency?.toLowerCase() || 'usd';
+  const isPix = session.payment_method_types?.includes('pix') || session.metadata?.payment_method === 'pix';
+  
+  // Se for PIX ou currency for BRL, usar Real
+  if (currency === 'brl' || isPix) {
+    return {
+      currency: 'BRL',
+      symbol: 'R$',
+      code: 'brl'
+    };
+  }
+  
+  // Caso contrário, usar Dólar
+  return {
+    currency: 'USD',
+    symbol: '$',
+    code: 'usd'
+  };
+}
+
+// Função auxiliar para formatar valor com moeda
+function formatAmountWithCurrency(amount, session) {
+  const currencyInfo = getCurrencyInfo(session);
+  return `${currencyInfo.symbol}${amount.toFixed(2)}`;
+}
+
 function corsResponse(body, status = 200) {
   const headers = {
     'Access-Control-Allow-Origin': '*',
@@ -47,6 +76,23 @@ Deno.serve(async (req)=>{
       error: 'Session ID is required'
     }, 400);
     console.log(`Verifying session ID: ${sessionId}`);
+    
+    // Verificar se esta sessão já foi processada para evitar duplicação
+    const { data: existingLog } = await supabase
+      .from('student_action_logs')
+      .select('id')
+      .eq('action_type', 'fee_payment')
+      .eq('metadata->>session_id', sessionId)
+      .single();
+    
+    if (existingLog) {
+      console.log(`[DUPLICAÇÃO] Session ${sessionId} já foi processada, retornando sucesso sem reprocessar.`);
+      return corsResponse({
+        status: 'complete',
+        message: 'Session already processed successfully.'
+      }, 200);
+    }
+    
     const session = await stripe.checkout.sessions.retrieve(sessionId);
     console.log(`Session status: ${session.status}, Payment status: ${session.payment_status}`);
     if (session.payment_status === 'paid' && session.status === 'complete') {
@@ -69,6 +115,43 @@ Deno.serve(async (req)=>{
         }, 404);
       }
       console.log(`User profile found: ${userProfile.id} for auth user: ${userId}`);
+      
+      // Criar log ANTES de processar para evitar duplicação em chamadas simultâneas
+      try {
+        await supabase.rpc('log_student_action', {
+          p_student_id: userProfile.id,
+          p_action_type: 'fee_payment',
+          p_action_description: `Scholarship Fee payment processing started (${sessionId})`,
+          p_performed_by: userId,
+          p_performed_by_type: 'student',
+          p_metadata: {
+            fee_type: 'scholarship',
+            payment_method: 'stripe',
+            amount: session.amount_total ? session.amount_total / 100 : 0,
+            session_id: sessionId,
+            scholarships_ids: scholarshipsIds,
+            processing_started: true
+          }
+        });
+        console.log('[DUPLICAÇÃO] Log de processamento criado para evitar duplicação');
+      } catch (logError) {
+        // Se falhar ao criar log, verificar novamente se já existe (race condition)
+        const { data: recheckLog } = await supabase
+          .from('student_action_logs')
+          .select('id')
+          .eq('action_type', 'fee_payment')
+          .eq('metadata->>session_id', sessionId)
+          .single();
+        
+        if (recheckLog) {
+          console.log(`[DUPLICAÇÃO] Session ${sessionId} já está sendo processada, retornando sucesso.`);
+          return corsResponse({
+            status: 'complete',
+            message: 'Session already being processed.'
+          }, 200);
+        }
+        console.error('[DUPLICAÇÃO] Erro ao criar log, mas continuando processamento:', logError);
+      }
       // Atualiza perfil do usuário para marcar que pagou a scholarship fee (usando userId para user_profiles)
       const { error: profileUpdateError } = await supabase.from('user_profiles').update({
         is_scholarship_fee_paid: true
@@ -135,9 +218,20 @@ Deno.serve(async (req)=>{
       } catch (logError) {
         console.error('Failed to log payment action:', logError);
       }
-      // --- NOTIFICAÇÕES VIA WEBHOOK N8N ---
+      
+      // Verificar se é PIX - se for, não enviar notificações (já foram enviadas pelo webhook)
+      const isPixPayment = session.payment_method_types?.includes('pix') || session.metadata?.payment_method === 'pix';
+      if (isPixPayment) {
+        console.log(`[NOTIFICAÇÃO] Pagamento via PIX detectado. Notificações já foram enviadas pelo webhook. Pulando envio de notificações para evitar duplicação.`);
+        return corsResponse({
+          status: 'complete',
+          message: 'Session verified and processed successfully. Notifications sent via webhook (PIX payment).'
+        }, 200);
+      }
+      
+      // --- NOTIFICAÇÕES VIA WEBHOOK N8N (apenas para pagamentos via cartão) ---
       try {
-        console.log(`📤 [verify-stripe-session-scholarship-fee] Iniciando notificações...`);
+        console.log(`📤 [verify-stripe-session-scholarship-fee] Iniciando notificações para pagamento via cartão...`);
         // Buscar dados do aluno (incluindo seller_referral_code e phone)
         const { data: alunoData, error: alunoError } = await supabase.from('user_profiles').select('full_name, email, phone, seller_referral_code').eq('user_id', userId).single();
         // Buscar telefone do admin
@@ -161,6 +255,12 @@ Deno.serve(async (req)=>{
             if (univError || !universidade) continue;
             const contact = universidade.contact || {};
             const emailUniversidade = contact.admissionsEmail || contact.email || '';
+            
+            // Preparar informações de moeda
+            const currencyInfo = getCurrencyInfo(session);
+            const amountValue = session.amount_total ? session.amount_total / 100 : 0;
+            const formattedAmount = formatAmountWithCurrency(amountValue, session);
+            
             // 1. NOTIFICAÇÃO PARA O ALUNO
             const mensagemAluno = `Parabéns! Você pagou a taxa de bolsa para "${scholarship.title}" da universidade ${universidade.name} e foi aprovado. Agora você pode prosseguir com a matrícula.`;
             const alunoNotificationPayload = {
@@ -172,7 +272,11 @@ Deno.serve(async (req)=>{
               nome_universidade: universidade.name,
               email_universidade: emailUniversidade,
               o_que_enviar: mensagemAluno,
-              payment_amount: session.amount_total / 100,
+              payment_amount: amountValue,
+              amount: amountValue,
+              currency: currencyInfo.currency,
+              currency_symbol: currencyInfo.symbol,
+              formatted_amount: formattedAmount,
               payment_method: 'stripe',
               payment_id: sessionId,
               fee_type: 'scholarship',
@@ -189,33 +293,11 @@ Deno.serve(async (req)=>{
             });
             const alunoResult = await alunoNotificationResponse.text();
             console.log('[NOTIFICAÇÃO ALUNO] Resposta do n8n (aluno):', alunoNotificationResponse.status, alunoResult);
-            // 2. NOTIFICAÇÃO PARA A UNIVERSIDADE
-            const mensagemUniversidade = `O aluno ${alunoData.full_name} pagou a taxa de bolsa para "${scholarship.title}" da universidade ${universidade.name}. O aluno foi aprovado e pode prosseguir com a matrícula.`;
-            const universidadeNotificationPayload = {
-              tipo_notf: 'Pagamento de taxa de bolsa - Universidade',
-              email_aluno: alunoData.email,
-              nome_aluno: alunoData.full_name,
-              nome_bolsa: scholarship.title,
-              nome_universidade: universidade.name,
-              email_universidade: emailUniversidade,
-              o_que_enviar: mensagemUniversidade,
-              payment_amount: session.amount_total / 100,
-              payment_method: 'stripe',
-              payment_id: sessionId,
-              fee_type: 'scholarship',
-              notification_target: 'university'
-            };
-            console.log('[NOTIFICAÇÃO UNIVERSIDADE] Enviando notificação para universidade:', universidadeNotificationPayload);
-            const universidadeNotificationResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'User-Agent': 'PostmanRuntime/7.36.3'
-              },
-              body: JSON.stringify(universidadeNotificationPayload)
-            });
-            const universidadeResult = await universidadeNotificationResponse.text();
-            console.log('[NOTIFICAÇÃO UNIVERSIDADE] Resposta do n8n (universidade):', universidadeNotificationResponse.status, universidadeResult);
+            
+            // 2. NOTIFICAÇÃO PARA A UNIVERSIDADE - REMOVIDA
+            // Scholarship fee NÃO envia notificação para universidade (apenas application fee faz isso)
+            console.log('[NOTIFICAÇÃO UNIVERSIDADE] Scholarship fee não envia notificação para universidade');
+            
             // 3. NOTIFICAÇÃO PARA SELLER/ADMIN/AFFILIATE (se houver código de seller)
             console.log(`📤 [verify-stripe-session-scholarship-fee] DEBUG - alunoData.seller_referral_code:`, alunoData.seller_referral_code);
             if (alunoData.seller_referral_code) {
@@ -271,10 +353,13 @@ Deno.serve(async (req)=>{
                   phone_aluno: alunoData.phone || "",
                   nome_bolsa: scholarship.title,
                   nome_universidade: universidade.name,
-                  o_que_enviar: `Pagamento Stripe de scholarship fee no valor de $${(session.amount_total / 100).toFixed(2)} do aluno ${alunoData.full_name} foi processado com sucesso para a bolsa "${scholarship.title}" da universidade ${universidade.name}. Seu código de referência: ${sellerData.referral_code}`,
+                  o_que_enviar: `Pagamento Stripe de scholarship fee no valor de ${formattedAmount} do aluno ${alunoData.full_name} foi processado com sucesso para a bolsa "${scholarship.title}" da universidade ${universidade.name}. Seu código de referência: ${sellerData.referral_code}`,
                   payment_id: sessionId,
                   fee_type: 'scholarship',
-                  amount: session.amount_total / 100,
+                  amount: amountValue,
+                  currency: currencyInfo.currency,
+                  currency_symbol: currencyInfo.symbol,
+                  formatted_amount: formattedAmount,
                   seller_id: sellerData.user_id,
                   referral_code: sellerData.referral_code,
                   commission_rate: sellerData.commission_rate,
@@ -312,10 +397,13 @@ Deno.serve(async (req)=>{
                     phone_seller: sellerPhone,
                     nome_bolsa: scholarship.title,
                     nome_universidade: universidade.name,
-                    o_que_enviar: `Pagamento Stripe de scholarship fee no valor de $${(session.amount_total / 100).toFixed(2)} do aluno ${alunoData.full_name} foi processado com sucesso para a bolsa "${scholarship.title}" da universidade ${universidade.name}. Seller responsável: ${sellerData.name} (${sellerData.referral_code})`,
+                    o_que_enviar: `Pagamento Stripe de scholarship fee no valor de ${formattedAmount} do aluno ${alunoData.full_name} foi processado com sucesso para a bolsa "${scholarship.title}" da universidade ${universidade.name}. Seller responsável: ${sellerData.name} (${sellerData.referral_code})`,
                     payment_id: sessionId,
                     fee_type: 'scholarship',
-                    amount: session.amount_total / 100,
+                    amount: amountValue,
+                    currency: currencyInfo.currency,
+                    currency_symbol: currencyInfo.symbol,
+                    formatted_amount: formattedAmount,
                     seller_id: sellerData.user_id,
                     referral_code: sellerData.referral_code,
                     commission_rate: sellerData.commission_rate,
@@ -356,10 +444,13 @@ Deno.serve(async (req)=>{
                   phone_affiliate_admin: affiliateAdminData.phone,
                   nome_bolsa: scholarship.title,
                   nome_universidade: universidade.name,
-                  o_que_enviar: `Pagamento Stripe de scholarship fee no valor de $${(session.amount_total / 100).toFixed(2)} do aluno ${alunoData.full_name} foi processado com sucesso para a bolsa "${scholarship.title}" da universidade ${universidade.name}. Seller responsável: ${sellerData.name} (${sellerData.referral_code})`,
+                  o_que_enviar: `Pagamento Stripe de scholarship fee no valor de ${formattedAmount} do aluno ${alunoData.full_name} foi processado com sucesso para a bolsa "${scholarship.title}" da universidade ${universidade.name}. Seller responsável: ${sellerData.name} (${sellerData.referral_code})`,
                   payment_id: sessionId,
                   fee_type: 'scholarship',
-                  amount: session.amount_total / 100,
+                  amount: amountValue,
+                  currency: currencyInfo.currency,
+                  currency_symbol: currencyInfo.symbol,
+                  formatted_amount: formattedAmount,
                   seller_id: sellerData.user_id,
                   referral_code: sellerData.referral_code,
                   commission_rate: sellerData.commission_rate,

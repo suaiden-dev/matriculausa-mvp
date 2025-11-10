@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import CustomLoading from '../../components/CustomLoading';
 import { CheckCircle } from 'lucide-react';
@@ -14,6 +14,9 @@ const SelectionProcessFeeSuccess: React.FC = () => {
   const isPixPayment = params.get('pix_payment') === 'true';
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [hasVerified, setHasVerified] = useState(false);
+  const hasRunRef = useRef(false);
   const { selectionProcessFeeAmount } = useDynamicFees();
   const { t } = useTranslation();
 
@@ -23,6 +26,12 @@ const SelectionProcessFeeSuccess: React.FC = () => {
     let attempts = 0;
     
     const poll = async () => {
+      // Se já foi verificado, parar polling
+      if (hasVerified) {
+        console.log('[PIX] Já foi verificado, parando polling');
+        return;
+      }
+      
       attempts++;
       console.log(`[PIX] Tentativa ${attempts}/${maxAttempts} - Verificando se webhook processou PIX...`);
       
@@ -64,6 +73,7 @@ const SelectionProcessFeeSuccess: React.FC = () => {
         // Se for PIX e estiver completo, redirecionar imediatamente
         if (data.payment_method === 'pix' && data.status === 'complete') {
           console.log('[PIX] ✅ Webhook processou PIX! Redirecionando...');
+          setHasVerified(true);
           localStorage.removeItem('last_payment_method');
           navigate('/student/dashboard/scholarships');
           return;
@@ -104,6 +114,20 @@ const SelectionProcessFeeSuccess: React.FC = () => {
   };
 
   useEffect(() => {
+    // Prevenir múltiplas execuções (React Strict Mode executa useEffect duas vezes em desenvolvimento)
+    if (hasRunRef.current) {
+      console.log('[PIX] Verificação já foi executada, ignorando chamada duplicada do React Strict Mode');
+      return;
+    }
+    
+    // Prevenir múltiplas execuções simultâneas
+    if (isVerifying) {
+      console.log('[PIX] Verificação já em andamento, ignorando chamada duplicada');
+      return;
+    }
+    
+    hasRunRef.current = true;
+    
     const verifySession = async () => {
       if (!sessionId) {
         setError('Session ID not found in URL.');
@@ -111,11 +135,14 @@ const SelectionProcessFeeSuccess: React.FC = () => {
         return;
       }
 
+      setIsVerifying(true);
+
       // Verificar se é pagamento PIX
       if (isPixPayment) {
         console.log('[PIX] Pagamento PIX detectado - iniciando polling para webhook...');
         // Iniciar polling para verificar se webhook já processou
         await pollPixPaymentStatus();
+        setIsVerifying(false);
         return;
       }
 
@@ -158,6 +185,7 @@ const SelectionProcessFeeSuccess: React.FC = () => {
         // Se PIX já foi pago, redirecionar imediatamente
         if (data.payment_method === 'pix' && data.status === 'complete') {
           console.log('[PIX] PIX já foi pago! Redirecionando imediatamente...');
+          setHasVerified(true);
           localStorage.removeItem('last_payment_method');
           const redirectUrl = data.redirect_url || '/student/dashboard/scholarships';
           console.log('[PIX] Redirecionando para:', redirectUrl);
@@ -168,6 +196,7 @@ const SelectionProcessFeeSuccess: React.FC = () => {
         // Se não for PIX, processar normalmente
         if (data.payment_method !== 'pix' && data.status === 'complete') {
           console.log('[PIX] Pagamento não-PIX confirmado, processando normalmente...');
+          setHasVerified(true);
           setLoading(false);
           return;
         }
@@ -180,10 +209,12 @@ const SelectionProcessFeeSuccess: React.FC = () => {
         console.error('[PIX] Erro na verificação inicial:', error);
         // Em caso de erro, iniciar polling mesmo assim
         await pollPixPaymentStatus();
+      } finally {
+        setIsVerifying(false);
       }
     };
     verifySession();
-  }, [sessionId]);
+  }, [sessionId, isPixPayment]);
 
   if (loading) {
     return (

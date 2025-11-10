@@ -6,7 +6,6 @@ import type { FinancialDataInputs, ProcessedFinancialData } from '../data/types'
  */
 function processApplications(
   applications: any[],
-  stripeUsers: any[],
   overridesMap: { [key: string]: any },
   userSystemTypesMap: Map<string, string>,
   realPaymentAmounts: Map<string, number>,
@@ -391,7 +390,6 @@ export async function transformFinancialData(
   // Processar applications
   processApplications(
     applications,
-    stripeUsers,
     overridesMap,
     userSystemTypesMap,
     realPaymentAmounts,
