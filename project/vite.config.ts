@@ -29,7 +29,10 @@ export default defineConfig({
     minify: 'terser',
     terserOptions: {
       compress: {
-        drop_console: true,
+        // Remover console.log apenas se REMOVE_CONSOLE_LOGS=true estiver definido
+        // Por padrão, manter logs para staging e desenvolvimento
+        // Configure REMOVE_CONSOLE_LOGS=true apenas no deploy de produção (matriculausa.com)
+        drop_console: process.env.REMOVE_CONSOLE_LOGS === 'true',
         drop_debugger: true,
       },
     },
