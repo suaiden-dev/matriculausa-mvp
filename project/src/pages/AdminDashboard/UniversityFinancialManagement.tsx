@@ -602,7 +602,17 @@ const UniversityFinancialManagement: React.FC = () => {
                                 const user = Array.isArray(student.users) ? student.users[0] : student.users;
                                 const scholarship = Array.isArray(student.scholarships) ? student.scholarships[0] : student.scholarships;
                                 const feePaid = !!student.is_application_fee_paid;
-                                const feeAmount = scholarship?.application_fee_amount;
+                                
+                                // Calcular fee amount incluindo dependentes (mesma lógica do AdminStudentDetails e useUniversityFinancialData)
+                                let feeAmount = scholarship?.application_fee_amount;
+                                if (feeAmount && feePaid) {
+                                  const numericFee = typeof feeAmount === 'string' ? parseFloat(feeAmount) : feeAmount;
+                                  // Os dados do student vêm do hook useUniversityFinancialData que já inclui dependents e system_type
+                                  const deps = Number(student.dependents) || 0;
+                                  const systemType = (student.system_type as any) || 'legacy';
+                                  // Adicionar $100 por dependente apenas para sistema legacy (mesma lógica do AdminStudentDetails)
+                                  feeAmount = systemType === 'legacy' && deps > 0 ? numericFee + deps * 100 : numericFee;
+                                }
                                   return (
                                   <tr key={student.id} className="hover:bg-slate-50 transition-colors">
                                     <td className="px-6 py-4 whitespace-nowrap">
