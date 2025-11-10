@@ -14,9 +14,32 @@ import { SupabaseClient } from '@supabase/supabase-js';
 function shouldFilter(): boolean {
   if (typeof window === 'undefined') return false;
   const hostname = window.location.hostname;
-  const isProduction = hostname === 'matriculausa.com' || hostname.includes('matriculausa.com');
-  const isStaging = hostname === 'staging-matriculausa.netlify.app' || hostname.includes('staging-matriculausa.netlify.app');
-  return isProduction || isStaging;
+  const href = window.location.href;
+  
+  // Verificações mais robustas
+  const isProduction = hostname === 'matriculausa.com' || 
+                       hostname.includes('matriculausa.com') ||
+                       href.includes('matriculausa.com');
+  
+  const isStaging = hostname === 'staging-matriculausa.netlify.app' || 
+                    hostname.includes('staging-matriculausa.netlify.app') ||
+                    hostname.includes('staging-matriculausa') ||
+                    href.includes('staging-matriculausa.netlify.app') ||
+                    href.includes('staging-matriculausa');
+  
+  const result = isProduction || isStaging;
+  
+  // Debug temporário
+  console.log('🔍 [PaymentManagement] shouldFilter debug:', {
+    hostname,
+    href,
+    isProduction,
+    isStaging,
+    result,
+    windowLocation: window.location
+  });
+  
+  return result;
 }
 
 /**
@@ -60,6 +83,7 @@ async function getOverridesBatch(
 }
 
 export async function loadPaymentsBaseDataOptimized(supabase: SupabaseClient): Promise<PaymentsBaseData> {
+  console.log('🚀 [PaymentManagement] loadPaymentsBaseDataOptimized iniciado');
   console.time('[payments] baseDataOptimized');
   try {
     const { data: applications, error: appsError } = await supabase
@@ -105,12 +129,18 @@ export async function loadPaymentsBaseDataOptimized(supabase: SupabaseClient): P
     if (appsError) throw appsError;
 
     // Filtrar aplicações de estudantes com email @uorak.com (exceto em localhost)
-    const filteredApplications = shouldFilter()
+    const filterActive = shouldFilter();
+    console.log('🔍 [PaymentManagement] Filtro ativo:', filterActive);
+    console.log('🔍 [PaymentManagement] Applications antes do filtro:', (applications || []).length);
+    
+    const filteredApplications = filterActive
       ? (applications || []).filter((app: any) => {
           const email = app.user_profiles?.email?.toLowerCase() || '';
           return !shouldExcludeStudent(email);
         })
       : (applications || []);
+      
+    console.log('🔍 [PaymentManagement] Applications depois do filtro:', filteredApplications.length);
 
     const { data: zellePaymentsRaw, error: zelleError } = await supabase
       .from('zelle_payments')
