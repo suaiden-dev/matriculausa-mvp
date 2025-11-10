@@ -7,17 +7,29 @@ type AnyRecord = Record<string, any>;
  */
 function isDevelopment(): boolean {
   if (typeof window === 'undefined') return false;
-  return window.location.hostname === 'localhost' || 
-         window.location.hostname === '127.0.0.1' ||
-         window.location.hostname.includes('localhost') ||
-         window.location.hostname.includes('dev');
+  const hostname = window.location.hostname;
+  return hostname === 'localhost' || 
+         hostname === '127.0.0.1' ||
+         hostname.includes('localhost') ||
+         hostname.includes('dev');
+}
+
+/**
+ * Verifica se está em produção ou staging
+ */
+function shouldFilter(): boolean {
+  if (typeof window === 'undefined') return false;
+  const hostname = window.location.hostname;
+  const isProduction = hostname === 'matriculausa.com' || hostname.includes('matriculausa.com');
+  const isStaging = hostname === 'staging-matriculausa.netlify.app' || hostname.includes('staging-matriculausa.netlify.app');
+  return isProduction || isStaging;
 }
 
 /**
  * Verifica se deve excluir estudante com email @uorak.com
  */
 function shouldExcludeStudent(email: string | null | undefined): boolean {
-  if (isDevelopment()) return false; // Em localhost, não excluir
+  if (!shouldFilter()) return false; // Em localhost, não excluir
   if (!email) return false; // Se não tem email, não excluir
   return email.toLowerCase().includes('@uorak.com');
 }
@@ -143,12 +155,12 @@ export async function fetchPayments(params: FetchPaymentsParams) {
         });
 
         // Filtrar estudantes com email @uorak.com (exceto em localhost)
-        const recordsFiltered = isDevelopment()
-          ? records
-          : records.filter((p: any) => {
+        const recordsFiltered = shouldFilter()
+          ? records.filter((p: any) => {
               const email = p.student_email?.toLowerCase() || '';
               return !shouldExcludeStudent(email);
-            });
+            })
+          : records;
 
         // Filtro de busca em memória (até migrar para FTS)
         const search = (filters.search_query || '').toString().toLowerCase().trim();
@@ -161,7 +173,7 @@ export async function fetchPayments(params: FetchPaymentsParams) {
             : recordsFiltered;
 
         // Se houve busca ou filtro de ambiente, o count deve refletir o total filtrado para a UI
-        const effectiveCount = (search || !isDevelopment()) ? filtered.length : (count ?? filtered.length);
+        const effectiveCount = (search || shouldFilter()) ? filtered.length : (count ?? filtered.length);
         return { data: filtered, count: effectiveCount, error: null };
     } catch (error: any) {
         return { data: [], count: 0, error };

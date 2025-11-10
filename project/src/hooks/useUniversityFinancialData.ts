@@ -240,7 +240,7 @@ export const useUniversityFinancialData = (): UseUniversityFinancialDataReturn =
       allPaidApplications?.forEach(app => {
         const student = studentsMap[app.student_id];
         // Excluir aplicações de estudantes com email @uorak.com (exceto em localhost)
-        if (isProduction && shouldExcludeStudent(student?.email)) {
+        if ((isProduction || isStaging) && shouldExcludeStudent(student?.email)) {
           return; // Pular esta aplicação
         }
         const scholarship = app.scholarships || scholarshipsMap[app.scholarship_id];
@@ -258,7 +258,7 @@ export const useUniversityFinancialData = (): UseUniversityFinancialDataReturn =
       allApplications?.forEach(app => {
         const student = studentsMap[app.student_id];
         // Excluir aplicações de estudantes com email @uorak.com (exceto em localhost)
-        if (isProduction && shouldExcludeStudent(student?.email)) {
+        if ((isProduction || isStaging) && shouldExcludeStudent(student?.email)) {
           return; // Pular esta aplicação
         }
         const scholarship = app.scholarships || scholarshipsMap[app.scholarship_id];
