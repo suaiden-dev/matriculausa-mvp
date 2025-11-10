@@ -24,6 +24,7 @@ import {
   ExternalLink
 } from 'lucide-react';
 import { useUniversityFinancialData } from '../../hooks/useUniversityFinancialData';
+import { useEnvironment } from '../../hooks/useEnvironment';
 
 interface FilterState {
   search: string;
@@ -36,6 +37,7 @@ const UniversityFinancialManagement: React.FC = () => {
   const { universities, loading, error, refetch } = useUniversityFinancialData();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { isDevelopment } = useEnvironment();
   
   const [filters, setFilters] = useState<FilterState>({
     search: '',
@@ -565,150 +567,170 @@ const UniversityFinancialManagement: React.FC = () => {
                     <div className="flex items-center justify-between mb-4">
                       <h4 className="text-lg font-semibold text-slate-900 flex items-center">
                         <Users className="w-5 h-5 mr-2" />
-                        Students ({university.students.length})
+                        Students ({(() => {
+                          // Filtrar estudantes com email @uorak.com (exceto em localhost)
+                          const filteredStudents = isDevelopment
+                            ? university.students
+                            : university.students.filter((student: any) => {
+                                const user = Array.isArray(student.users) ? student.users[0] : student.users;
+                                const email = user?.email?.toLowerCase() || '';
+                                return !email.includes('@uorak.com');
+                              });
+                          return filteredStudents.length;
+                        })()})
                       </h4>
                     </div>
 
-                    {university.students.length === 0 ? (
-                      <div className="text-center py-8">
-                        <Users className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-                        <p className="text-slate-600">No students found for this university</p>
-                      </div>
-                    ) : (
-                      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-                        <div className="overflow-x-auto">
-                          <table className="min-w-full divide-y divide-slate-200">
-                            <thead className="bg-slate-50">
-                              <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">Student</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">Scholarship</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">Fee Status</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">Applied</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">Fee Amount</th>
-                                <th className="px-6 py-3 text-right text-xs font-medium text-slate-600 uppercase tracking-wider">Actions</th>
-                              </tr>
-                            </thead>
-                            <tbody className="bg-white divide-y divide-slate-200">
-                              {(() => {
-                                const total = university.students.length;
-                                const currentPage = studentsPageByUniversity[university.id] || 1;
-                                const totalPages = Math.ceil(total / STUDENTS_PER_PAGE) || 1;
-                                const startIndex = (currentPage - 1) * STUDENTS_PER_PAGE;
-                                const pageStudents = university.students.slice(startIndex, startIndex + STUDENTS_PER_PAGE);
-                                const setPage = (page: number) =>
-                                  setStudentsPageByUniversity(prev => ({ ...prev, [university.id]: Math.max(1, Math.min(page, totalPages)) }));
+                    {(() => {
+                      // Filtrar estudantes com email @uorak.com (exceto em localhost)
+                      const filteredStudents = isDevelopment
+                        ? university.students
+                        : university.students.filter((student: any) => {
+                            const user = Array.isArray(student.users) ? student.users[0] : student.users;
+                            const email = user?.email?.toLowerCase() || '';
+                            return !email.includes('@uorak.com');
+                          });
+                      
+                      if (filteredStudents.length === 0) {
+                        return (
+                          <div className="text-center py-8">
+                            <Users className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+                            <p className="text-slate-600">No students found for this university</p>
+                          </div>
+                        );
+                      }
+                      
+                      const total = filteredStudents.length;
+                      const currentPage = studentsPageByUniversity[university.id] || 1;
+                      const totalPages = Math.ceil(total / STUDENTS_PER_PAGE) || 1;
+                      const startIndex = (currentPage - 1) * STUDENTS_PER_PAGE;
+                      const pageStudents = filteredStudents.slice(startIndex, startIndex + STUDENTS_PER_PAGE);
+                      const setPage = (page: number) =>
+                        setStudentsPageByUniversity(prev => ({ ...prev, [university.id]: Math.max(1, Math.min(page, totalPages)) }));
 
-                                const rows = pageStudents.map((student) => {
-                                const user = Array.isArray(student.users) ? student.users[0] : student.users;
-                                const scholarship = Array.isArray(student.scholarships) ? student.scholarships[0] : student.scholarships;
-                                const feePaid = !!student.is_application_fee_paid;
-                                
-                                // Calcular fee amount incluindo dependentes (mesma lógica do AdminStudentDetails e useUniversityFinancialData)
-                                let feeAmount = scholarship?.application_fee_amount;
-                                if (feeAmount && feePaid) {
-                                  const numericFee = typeof feeAmount === 'string' ? parseFloat(feeAmount) : feeAmount;
-                                  // Os dados do student vêm do hook useUniversityFinancialData que já inclui dependents e system_type
-                                  const deps = Number(student.dependents) || 0;
-                                  const systemType = (student.system_type as any) || 'legacy';
-                                  // Adicionar $100 por dependente apenas para sistema legacy (mesma lógica do AdminStudentDetails)
-                                  feeAmount = systemType === 'legacy' && deps > 0 ? numericFee + deps * 100 : numericFee;
-                                }
-                                  return (
-                                  <tr key={student.id} className="hover:bg-slate-50 transition-colors">
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                      <div className="flex items-center">
-                                        <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-lg flex items-center justify-center mr-3">
-                                          <span className="text-white font-bold text-xs">{(user?.name || 'U').charAt(0).toUpperCase()}</span>
-                                        </div>
-                                        <div>
-                                          <div className="text-sm font-medium text-slate-900">{user?.name || 'Unknown Student'}</div>
-                                          <div className="text-xs text-slate-600">{user?.email}</div>
-                                        </div>
+                      const rows = pageStudents.map((student) => {
+                        const user = Array.isArray(student.users) ? student.users[0] : student.users;
+                        const scholarship = Array.isArray(student.scholarships) ? student.scholarships[0] : student.scholarships;
+                        const feePaid = !!student.is_application_fee_paid;
+                        
+                        // Calcular fee amount incluindo dependentes (mesma lógica do AdminStudentDetails e useUniversityFinancialData)
+                        let feeAmount = scholarship?.application_fee_amount;
+                        if (feeAmount && feePaid) {
+                          const numericFee = typeof feeAmount === 'string' ? parseFloat(feeAmount) : feeAmount;
+                          // Os dados do student vêm do hook useUniversityFinancialData que já inclui dependents e system_type
+                          const deps = Number(student.dependents) || 0;
+                          const systemType = (student.system_type as any) || 'legacy';
+                          // Adicionar $100 por dependente apenas para sistema legacy (mesma lógica do AdminStudentDetails)
+                          feeAmount = systemType === 'legacy' && deps > 0 ? numericFee + deps * 100 : numericFee;
+                        }
+                        
+                        return (
+                          <tr key={student.id} className="hover:bg-slate-50 transition-colors">
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex items-center">
+                                <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-lg flex items-center justify-center mr-3">
+                                  <span className="text-white font-bold text-xs">{(user?.name || 'U').charAt(0).toUpperCase()}</span>
+                                </div>
+                                <div>
+                                  <div className="text-sm font-medium text-slate-900">{user?.name || 'Unknown Student'}</div>
+                                  <div className="text-xs text-slate-600">{user?.email}</div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-slate-900 truncate max-w-[240px]" title={scholarship?.title}>{scholarship?.title || 'N/A'}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${feePaid ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                {feePaid ? 'Paid' : 'Unpaid'}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">{formatDate(student.created_at)}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
+                              {feePaid && feeAmount ? formatCurrency(feeAmount) : '-'}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                              <button
+                                onClick={() => handleStudentClick(user?.id)}
+                                className="text-blue-600 hover:text-blue-800 inline-flex items-center gap-1"
+                                title="View Details"
+                              >
+                                <Eye className="w-4 h-4" />
+                                View
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      });
+
+                      return (
+                        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                          <div className="overflow-x-auto">
+                            <table className="min-w-full divide-y divide-slate-200">
+                              <thead className="bg-slate-50">
+                                <tr>
+                                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">Student</th>
+                                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">Scholarship</th>
+                                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">Fee Status</th>
+                                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">Applied</th>
+                                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">Fee Amount</th>
+                                  <th className="px-6 py-3 text-right text-xs font-medium text-slate-600 uppercase tracking-wider">Actions</th>
+                                </tr>
+                              </thead>
+                              <tbody className="bg-white divide-y divide-slate-200">
+                                {rows}
+                                <tr>
+                                  <td colSpan={6} className="px-6 py-4">
+                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-sm text-slate-600">
+                                      <div>
+                                        Showing {total === 0 ? 0 : startIndex + 1}-{Math.min(startIndex + STUDENTS_PER_PAGE, total)} of {total} students
                                       </div>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                      <div className="text-sm text-slate-900 truncate max-w-[240px]" title={scholarship?.title}>{scholarship?.title || 'N/A'}</div>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${feePaid ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                                        {feePaid ? 'Paid' : 'Unpaid'}
-                                      </span>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">{formatDate(student.created_at)}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
-                                      {feePaid && feeAmount ? formatCurrency(feeAmount) : '-'}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                      <button
-                                        onClick={() => handleStudentClick(user?.id)}
-                                        className="text-blue-600 hover:text-blue-800 inline-flex items-center gap-1"
-                                        title="View Details"
-                                      >
-                                        <Eye className="w-4 h-4" />
-                                        View
-                                      </button>
-                                    </td>
-                                  </tr>
-                                  );
-                                });
-
-                                return (
-                                  <>
-                                    {rows}
-                                    <tr>
-                                      <td colSpan={6} className="px-6 py-4">
-                                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-sm text-slate-600">
-                                          <div>
-                                            Showing {total === 0 ? 0 : startIndex + 1}-{Math.min(startIndex + STUDENTS_PER_PAGE, total)} of {total} students
-                                          </div>
-                                          <div className="flex items-center gap-2">
-                                            <button
-                                              onClick={() => setPage(1)}
-                                              disabled={currentPage === 1}
-                                              className="p-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                                              title="First Page"
-                                            >
-                                              «
-                                            </button>
-                                            <button
-                                              onClick={() => setPage(currentPage - 1)}
-                                              disabled={currentPage === 1}
-                                              className="p-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                                              title="Previous Page"
-                                            >
-                                              <ChevronRight className="w-4 h-4 rotate-180" />
-                                            </button>
-                                            <span className="px-3 py-1 rounded-md bg-slate-100 text-slate-700">
-                                              Page {currentPage} of {totalPages}
-                                            </span>
-                                            <button
-                                              onClick={() => setPage(currentPage + 1)}
-                                              disabled={currentPage === totalPages}
-                                              className="p-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                                              title="Next Page"
-                                            >
-                                              <ChevronRight className="w-4 h-4" />
-                                            </button>
-                                            <button
-                                              onClick={() => setPage(totalPages)}
-                                              disabled={currentPage === totalPages}
-                                              className="p-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                                              title="Last Page"
-                                            >
-                                              »
-                                            </button>
-                                          </div>
-                                        </div>
-                                      </td>
-                                    </tr>
-                                  </>
-                                );
-                              })()}
-                            </tbody>
-                          </table>
+                                      <div className="flex items-center gap-2">
+                                        <button
+                                          onClick={() => setPage(1)}
+                                          disabled={currentPage === 1}
+                                          className="p-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                          title="First Page"
+                                        >
+                                          «
+                                        </button>
+                                        <button
+                                          onClick={() => setPage(currentPage - 1)}
+                                          disabled={currentPage === 1}
+                                          className="p-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                          title="Previous Page"
+                                        >
+                                          <ChevronRight className="w-4 h-4 rotate-180" />
+                                        </button>
+                                        <span className="px-3 py-1 rounded-md bg-slate-100 text-slate-700">
+                                          Page {currentPage} of {totalPages}
+                                        </span>
+                                        <button
+                                          onClick={() => setPage(currentPage + 1)}
+                                          disabled={currentPage === totalPages}
+                                          className="p-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                          title="Next Page"
+                                        >
+                                          <ChevronRight className="w-4 h-4" />
+                                        </button>
+                                        <button
+                                          onClick={() => setPage(totalPages)}
+                                          disabled={currentPage === totalPages}
+                                          className="p-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                          title="Last Page"
+                                        >
+                                          »
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      );
+                    })()}
                   </div>
                 </div>
               )}

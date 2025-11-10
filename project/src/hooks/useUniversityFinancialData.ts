@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { useEnvironment } from './useEnvironment';
 
 export interface UniversityFinancialData {
   id: string;
@@ -42,6 +43,7 @@ export const useUniversityFinancialData = (): UseUniversityFinancialDataReturn =
   const [universities, setUniversities] = useState<UniversityFinancialData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { isProduction, isStaging } = useEnvironment();
 
   const fetchUniversityFinancialData = async () => {
     try {
@@ -227,8 +229,20 @@ export const useUniversityFinancialData = (): UseUniversityFinancialDataReturn =
         studentsMap[student.id] = student;
       });
 
+      // Função helper para verificar se deve excluir estudante (exceto em localhost)
+      const shouldExcludeStudent = (studentEmail: string | null | undefined): boolean => {
+        if (!isProduction && !isStaging) return false; // Em localhost, não excluir
+        if (!studentEmail) return false; // Se não tem email, não excluir
+        return studentEmail.toLowerCase().includes('@uorak.com');
+      };
+
       const paidAppsMap: Record<string, any[]> = {};
       allPaidApplications?.forEach(app => {
+        const student = studentsMap[app.student_id];
+        // Excluir aplicações de estudantes com email @uorak.com (exceto em localhost)
+        if (isProduction && shouldExcludeStudent(student?.email)) {
+          return; // Pular esta aplicação
+        }
         const scholarship = app.scholarships || scholarshipsMap[app.scholarship_id];
         const universityId = scholarship?.university_id || scholarshipsMap[app.scholarship_id]?.university_id;
         if (universityId) {
@@ -242,6 +256,11 @@ export const useUniversityFinancialData = (): UseUniversityFinancialDataReturn =
 
       const allAppsMap: Record<string, any[]> = {};
       allApplications?.forEach(app => {
+        const student = studentsMap[app.student_id];
+        // Excluir aplicações de estudantes com email @uorak.com (exceto em localhost)
+        if (isProduction && shouldExcludeStudent(student?.email)) {
+          return; // Pular esta aplicação
+        }
         const scholarship = app.scholarships || scholarshipsMap[app.scholarship_id];
         const universityId = scholarship?.university_id || scholarshipsMap[app.scholarship_id]?.university_id;
         if (universityId) {
@@ -258,7 +277,8 @@ export const useUniversityFinancialData = (): UseUniversityFinancialDataReturn =
         const scholarship = app.scholarships || scholarshipsMap[app.scholarship_id];
         const universityId = scholarship?.university_id || scholarshipsMap[app.scholarship_id]?.university_id;
         const student = studentsMap[app.student_id];
-        if (universityId && student) {
+        // Excluir estudantes com email @uorak.com (exceto em localhost)
+        if (universityId && student && !shouldExcludeStudent(student?.email)) {
           if (!studentsPerUniversityMap[universityId]) studentsPerUniversityMap[universityId] = [];
           // Evitar duplicatas - mas atualizar se encontrar uma aplicação com fee pago
           const existingIndex = studentsPerUniversityMap[universityId].findIndex(s => s.id === student.id);

@@ -23,9 +23,9 @@ import { useAffiliateData } from '../../hooks/useAffiliateData';
 import { supabase } from '../../lib/supabase';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
 import { AffiliatePaymentRequestService } from '../../services/AffiliatePaymentRequestService';
+import { useEnvironment } from '../../hooks/useEnvironment';
 // import removido: useDynamicFeeCalculation não é usado aqui
 // import removido: useUserSpecificFees não é usado aqui
-
 interface FilterState {
   search: string;
   status: 'all' | 'active' | 'inactive' | 'pending';
@@ -36,6 +36,7 @@ interface FilterState {
 const AffiliateManagement: React.FC = () => {
   const { affiliates, allSellers, allStudents, loading, error, refetch } = useAffiliateData();
   const navigate = useNavigate();
+  const { isDevelopment } = useEnvironment();
   
   // Debug: Log dos dados recebidos
   console.log('🔍 [AffiliateManagement] Dados recebidos:', {
@@ -138,8 +139,16 @@ const AffiliateManagement: React.FC = () => {
           continue;
         }
 
-        // 4. Preparar overrides por user_id
-        const uniqueUserIds = Array.from(new Set((profiles || []).map((p) => p.user_id).filter(Boolean)));
+        // Filtrar estudantes com email @uorak.com (exceto em localhost)
+        const filteredProfiles = isDevelopment
+          ? (profiles || [])
+          : (profiles || []).filter((p: any) => {
+              const email = p.email?.toLowerCase() || '';
+              return !email.includes('@uorak.com');
+            });
+
+        // 4. Preparar overrides por user_id (usar filteredProfiles)
+        const uniqueUserIds = Array.from(new Set((filteredProfiles || []).map((p) => p.user_id).filter(Boolean)));
         const overrideEntries = await Promise.allSettled(uniqueUserIds.map(async (uid) => {
           const { data, error } = await supabase.rpc('get_user_fee_overrides', { target_user_id: uid });
           return [uid, error ? null : data];
@@ -159,7 +168,7 @@ const AffiliateManagement: React.FC = () => {
         }, {});
 
         // 5. Calcular receita manual (pagamentos por fora) com a mesma lógica do FinancialOverview
-        const manualRevenue = (profiles || []).reduce((sum, p) => {
+        const manualRevenue = filteredProfiles.reduce((sum, p) => {
           const deps = Number(p?.dependents || 0);
           const ov = overridesMap[p?.user_id] || {};
           const systemType = p?.system_type || 'legacy';
@@ -204,10 +213,21 @@ const AffiliateManagement: React.FC = () => {
     }
   };
 
+  // Filtrar estudantes com email @uorak.com (exceto em localhost)
+  const filteredStudents = useMemo(() => {
+    if (isDevelopment) {
+      return allStudents || [];
+    }
+    return (allStudents || []).filter((s: any) => {
+      const email = s.email?.toLowerCase() || '';
+      return !email.includes('@uorak.com');
+    });
+  }, [allStudents, isDevelopment]);
+
   useEffect(() => {
     const loadOverrides = async () => {
       try {
-        const uniqueIds = Array.from(new Set((allStudents || []).map((s: any) => s.user_id).filter(Boolean)));
+        const uniqueIds = Array.from(new Set((filteredStudents || []).map((s: any) => s.user_id).filter(Boolean)));
         if (uniqueIds.length === 0) {
           setOverridesMap({});
           return;
@@ -243,7 +263,7 @@ const AffiliateManagement: React.FC = () => {
       }
     };
     loadOverrides();
-  }, [allStudents]);
+  }, [filteredStudents]);
 
   // Carregar informações de pagamento dos affiliate admins
   useEffect(() => {
@@ -260,7 +280,7 @@ const AffiliateManagement: React.FC = () => {
   useEffect(() => {
     const loadDependents = async () => {
       try {
-        const profileIds = Array.from(new Set((allStudents || []).map((s: any) => s.profile_id).filter(Boolean)));
+        const profileIds = Array.from(new Set((filteredStudents || []).map((s: any) => s.profile_id).filter(Boolean)));
         if (profileIds.length === 0) {
           setDependentsMap({});
           return;
@@ -286,13 +306,13 @@ const AffiliateManagement: React.FC = () => {
       }
     };
     loadDependents();
-  }, [allStudents]);
+  }, [filteredStudents]);
 
   // Removido: calculateUserFees não é usado neste componente
 
   // Students com valores ajustados
   const adjustedStudents = useMemo(() => {
-    const result = (allStudents || []).map((s: any) => {
+    const result = (filteredStudents || []).map((s: any) => {
       const o = overridesMap[s.user_id] || {};
       const dependents = Number(dependentsMap[s.profile_id]) || 0;
       let total = 0;
@@ -340,7 +360,7 @@ const AffiliateManagement: React.FC = () => {
       return { ...s, total_paid_adjusted: total };
     });
     return result;
-  }, [allStudents, overridesMap, dependentsMap, feeConfig]);
+  }, [filteredStudents, overridesMap, dependentsMap, feeConfig]);
 
   const adjustedStudentsBySellerId = useMemo(() => {
     const map: Record<string, any[]> = {};
@@ -443,10 +463,10 @@ const AffiliateManagement: React.FC = () => {
       activeAffiliates: adjustedAffiliates.filter((a: any) => a.status === 'active').length,
       totalSellers: allSellers.length,
       activeSellers: allSellers.filter((s: any) => s.is_active).length,
-      totalStudents: allStudents.length,
+      totalStudents: filteredStudents.length,
       totalRevenue: adjustedAffiliates.reduce((sum: number, a: any) => sum + (a.total_revenue || 0), 0)
     };
-  }, [adjustedAffiliates, allSellers, allStudents]);
+  }, [adjustedAffiliates, allSellers, filteredStudents]);
 
   const toggleAffiliateExpansion = (affiliateId: string) => {
     setExpandedAffiliates(prev => {
