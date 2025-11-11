@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { CheckCircle } from 'lucide-react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
-import { supabase } from '../../lib/supabase';
+import PaymentSuccessOverlay from '../../components/PaymentSuccessOverlay';
+
 
 const I20ControlFeeSuccess: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showAnimation, setShowAnimation] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const params = new URLSearchParams(location.search);
@@ -57,6 +58,12 @@ const I20ControlFeeSuccess: React.FC = () => {
 
         console.log('✅ [I20ControlFeeSuccess] Sessão verificada com sucesso:', data);
         setLoading(false);
+        setShowAnimation(true);
+        
+        // Aguardar animação e redirecionar
+        setTimeout(() => {
+          navigate('/student/dashboard/applications');
+        }, 6000);
 
         // Log Stripe payment success
         // try {
@@ -141,18 +148,45 @@ const I20ControlFeeSuccess: React.FC = () => {
     );
   }
 
+  // Se deve mostrar animação, usar o overlay
+  if (showAnimation && !loading && !error) {
+    return (
+      <div className="min-h-screen bg-green-50 flex flex-col items-center justify-center px-4 relative">
+        <PaymentSuccessOverlay
+          isSuccess={true}
+          title="I-20 Control Fee Payment Successful!"
+          message={`Your payment of ${formatFeeAmount(getFeeAmount('i20_control_fee'))} has been processed successfully! Your I-20 document will be processed and sent to you soon.`}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-green-50 flex flex-col items-center justify-center px-4">
       <div className="bg-white rounded-2xl shadow-lg p-10 max-w-md w-full flex flex-col items-center">
-        <CheckCircle className="h-16 w-16 text-green-600 mb-4" />
-        <h1 className="text-3xl font-bold text-green-700 mb-2">I-20 Control Fee Payment Successful!</h1>
-        <p className="text-slate-700 mb-6 text-center">
-          Your payment of <span className="font-bold">{formatFeeAmount(getFeeAmount('i20_control_fee'))}</span> has been processed successfully.<br/>
-          Your I-20 document will be processed and sent to you soon.
-        </p>
-        <Link to="/student/dashboard/applications" className="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-700 transition-all duration-300">
-          Back to My Applications
-        </Link>
+        {loading ? (
+          <>
+            <svg className="h-16 w-16 text-green-600 mb-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+            </svg>
+            <h1 className="text-3xl font-bold text-green-700 mb-2">Verifying Payment...</h1>
+            <p className="text-slate-700 mb-6 text-center">Please wait while we confirm your payment.</p>
+          </>
+        ) : error ? (
+          <>
+            <svg className="h-16 w-16 text-red-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01" />
+            </svg>
+            <h1 className="text-3xl font-bold text-red-700 mb-2">I-20 Control Fee Payment Error</h1>
+            <p className="text-slate-700 mb-6 text-center">There was a problem processing your payment.<br/>Please try again. If the error persists, contact support.</p>
+            <button 
+              className="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-700 transition-all duration-300"
+              onClick={() => navigate('/student/dashboard/applications')}
+            >
+              Back to My Applications
+            </button>
+          </>
+        ) : null}
       </div>
     </div>
   );

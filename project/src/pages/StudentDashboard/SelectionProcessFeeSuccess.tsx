@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import CustomLoading from '../../components/CustomLoading';
-import { CheckCircle } from 'lucide-react';
+import PaymentSuccessOverlay from '../../components/PaymentSuccessOverlay';
 import { useDynamicFees } from '../../hooks/useDynamicFees';
 import { useTranslation } from 'react-i18next';
-import { supabase } from '../../lib/supabase';
 
 const SelectionProcessFeeSuccess: React.FC = () => {
   const navigate = useNavigate();
@@ -14,6 +13,8 @@ const SelectionProcessFeeSuccess: React.FC = () => {
   const isPixPayment = params.get('pix_payment') === 'true';
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showAnimation, setShowAnimation] = useState(false);
+  const [animationSuccess, setAnimationSuccess] = useState(true);
   const { selectionProcessFeeAmount } = useDynamicFees();
   const { t } = useTranslation();
 
@@ -61,11 +62,18 @@ const SelectionProcessFeeSuccess: React.FC = () => {
           return;
         }
         
-        // Se for PIX e estiver completo, redirecionar imediatamente
+        // Se for PIX e estiver completo, mostrar animação de sucesso
         if (data.payment_method === 'pix' && data.status === 'complete') {
-          console.log('[PIX] ✅ Webhook processou PIX! Redirecionando...');
-          localStorage.removeItem('last_payment_method');
-          navigate('/student/dashboard/scholarships');
+          console.log('[PIX] ✅ Webhook processou PIX! Mostrando animação...');
+          setLoading(false);
+          setAnimationSuccess(true);
+          setShowAnimation(true);
+          
+          // Aguardar 6 segundos e então redirecionar
+          setTimeout(() => {
+            localStorage.removeItem('last_payment_method');
+            navigate('/student/dashboard/scholarships');
+          }, 6000);
           return;
         }
         
@@ -73,13 +81,27 @@ const SelectionProcessFeeSuccess: React.FC = () => {
         if (data.payment_method !== 'pix' && data.status === 'complete') {
           console.log('[PIX] Pagamento não-PIX confirmado, processando normalmente...');
           setLoading(false);
+          setAnimationSuccess(true);
+          setShowAnimation(true);
+          
+          // Aguardar 6 segundos e então redirecionar
+          setTimeout(() => {
+            navigate('/student/dashboard/scholarships');
+          }, 6000);
           return;
         }
         
         if (attempts >= maxAttempts) {
-          console.log('[PIX] ⏰ Timeout após 5 minutos - Redirecionando mesmo assim...');
-          localStorage.removeItem('last_payment_method');
-          navigate('/student/dashboard/scholarships');
+          console.log('[PIX] ⏰ Timeout após 5 minutos - Mostrando erro...');
+          setLoading(false);
+          setAnimationSuccess(false);
+          setShowAnimation(true);
+          
+          // Aguardar 6 segundos antes de redirecionar
+          setTimeout(() => {
+            localStorage.removeItem('last_payment_method');
+            navigate('/student/dashboard/scholarships');
+          }, 6000);
           return;
         }
         
@@ -90,9 +112,15 @@ const SelectionProcessFeeSuccess: React.FC = () => {
       } catch (error) {
         console.error('[PIX] ❌ Erro no polling:', error);
         if (attempts >= maxAttempts) {
-          console.log('[PIX] ❌ Erro persistente - Redirecionando para dashboard...');
-          localStorage.removeItem('last_payment_method');
-          navigate('/student/dashboard/scholarships');
+          console.log('[PIX] ❌ Erro persistente - Mostrando erro...');
+          setLoading(false);
+          setAnimationSuccess(false);
+          setShowAnimation(true);
+          
+          setTimeout(() => {
+            localStorage.removeItem('last_payment_method');
+            navigate('/student/dashboard/scholarships');
+          }, 6000);
         } else {
           console.log(`[PIX] ⏳ Tentando novamente em 10s... (${attempts}/${maxAttempts})`);
           setTimeout(poll, 10000);
@@ -150,18 +178,30 @@ const SelectionProcessFeeSuccess: React.FC = () => {
         // Verificar se há erro de sessão não encontrada
         if (data.error && data.error.includes('Session not found')) {
           console.log('[PIX] ⚠️ Sessão não encontrada na verificação inicial - assumindo sucesso');
-          localStorage.removeItem('last_payment_method');
-          navigate('/student/dashboard/scholarships');
+          setLoading(false);
+          setAnimationSuccess(true);
+          setShowAnimation(true);
+          
+          setTimeout(() => {
+            localStorage.removeItem('last_payment_method');
+            navigate('/student/dashboard/scholarships');
+          }, 6000);
           return;
         }
         
-        // Se PIX já foi pago, redirecionar imediatamente
+        // Se PIX já foi pago, mostrar animação de sucesso
         if (data.payment_method === 'pix' && data.status === 'complete') {
-          console.log('[PIX] PIX já foi pago! Redirecionando imediatamente...');
-          localStorage.removeItem('last_payment_method');
-          const redirectUrl = data.redirect_url || '/student/dashboard/scholarships';
-          console.log('[PIX] Redirecionando para:', redirectUrl);
-          navigate(redirectUrl);
+          console.log('[PIX] PIX já foi pago! Mostrando animação...');
+          setLoading(false);
+          setAnimationSuccess(true);
+          setShowAnimation(true);
+          
+          setTimeout(() => {
+            localStorage.removeItem('last_payment_method');
+            const redirectUrl = data.redirect_url || '/student/dashboard/scholarships';
+            console.log('[PIX] Redirecionando para:', redirectUrl);
+            navigate(redirectUrl);
+          }, 6000);
           return;
         }
         
@@ -169,6 +209,12 @@ const SelectionProcessFeeSuccess: React.FC = () => {
         if (data.payment_method !== 'pix' && data.status === 'complete') {
           console.log('[PIX] Pagamento não-PIX confirmado, processando normalmente...');
           setLoading(false);
+          setAnimationSuccess(true);
+          setShowAnimation(true);
+          
+          setTimeout(() => {
+            navigate('/student/dashboard/scholarships');
+          }, 6000);
           return;
         }
         
@@ -185,9 +231,15 @@ const SelectionProcessFeeSuccess: React.FC = () => {
     verifySession();
   }, [sessionId]);
 
-  if (loading) {
-    return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center bg-white px-4">
+  // Debug: Log das mudanças de estado
+  useEffect(() => {
+    console.log('🔄 Estado mudou:', { loading, showAnimation, animationSuccess });
+  }, [loading, showAnimation, animationSuccess]);
+
+  return (
+    <div className="min-h-[60vh] flex flex-col items-center justify-center bg-white px-4 relative">
+      {/* Conteúdo principal - só mostra se ainda está carregando */}
+      {loading ? (
         <div className="bg-white rounded-2xl shadow-lg p-10 max-w-md w-full flex flex-col items-center">
           <CustomLoading 
             color="green" 
@@ -195,13 +247,7 @@ const SelectionProcessFeeSuccess: React.FC = () => {
             message={t('successPages.selectionProcessFee.pleaseWait')} 
           />
         </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center bg-red-50 px-4">
+      ) : error ? (
         <div className="bg-white rounded-2xl shadow-lg p-10 max-w-md w-full flex flex-col items-center">
           <svg className="h-16 w-16 text-red-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01" />
@@ -218,28 +264,22 @@ const SelectionProcessFeeSuccess: React.FC = () => {
             {t('successPages.selectionProcessFee.button')}
           </button>
         </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-[60vh] flex flex-col items-center justify-center bg-white px-4">
-      <div className="bg-white rounded-2xl shadow-lg p-10 max-w-md w-full flex flex-col items-center">
-        <CheckCircle className="h-16 w-16 text-green-600 mb-4" />
-        <h1 className="text-3xl font-bold text-green-700 mb-2 text-center">{t('successPages.selectionProcessFee.title')}</h1>
-        <p className="text-slate-700 mb-6 text-center">
-          Seu pagamento de ${selectionProcessFeeAmount?.toFixed(2) || '400.00'} foi processado com sucesso.<br/>
-          {t('successPages.selectionProcessFee.message')}
-        </p>
-        <button
-          className="bg-green-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-green-700 transition-all duration-300"
-          onClick={() => navigate('/student/dashboard/scholarships')}
-        >
-          {t('successPages.selectionProcessFee.button')}
-        </button>
-      </div>
+      ) : (
+        /* Overlay com animação */
+        <PaymentSuccessOverlay
+          isSuccess={animationSuccess}
+          title={animationSuccess 
+            ? t('successPages.selectionProcessFee.title')
+            : t('successPages.selectionProcessFee.errorTitle')
+          }
+          message={animationSuccess
+            ? `Seu pagamento de $${selectionProcessFeeAmount?.toFixed(2) || '400.00'} foi processado com sucesso!`
+            : 'Houve um problema ao processar seu pagamento.'
+          }
+        />
+      )}
     </div>
   );
 };
 
-export default SelectionProcessFeeSuccess; 
+export default SelectionProcessFeeSuccess;
