@@ -1174,34 +1174,46 @@ const AdminStudentDetails: React.FC = () => {
       console.log('📤 [handleRejectDocument] Enviando notificação in-app para o aluno...');
       
       try {
+        // Obter labels amigáveis para os documentos
+        const docLabels: Record<string, string> = {
+          passport: 'Passport',
+          diploma: 'High School Diploma',
+          funds_proof: 'Proof of Funds',
+        };
+        const docLabel = docLabels[docType] || docType;
+        
+        // Usar Edge Function que tem service role para criar notificação
         const { data: { session } } = await supabase.auth.getSession();
         const accessToken = session?.access_token;
         
-        if (accessToken) {
-          const notificationPayload = {
-            user_id: student.user_id,
-            title: 'Document Rejected',
-            message: `Your ${docType} document has been rejected by platform admin. Reason: ${reason}`,
-            type: 'document_rejected',
-            link: '/student/dashboard/applications',
-          };
-          
-          const response = await fetch(`${import.meta.env.VITE_SUPABASE_FUNCTIONS_URL}/create-student-notification`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${accessToken}`,
-            },
-            body: JSON.stringify(notificationPayload),
-          });
-          
-          if (response.ok) {
-            console.log('✅ [handleRejectDocument] Notificação in-app enviada com sucesso!');
-          } else {
-            console.warn('⚠️ [handleRejectDocument] Erro ao enviar notificação in-app:', response.status);
-          }
+        if (!accessToken) {
+          console.error('❌ [handleRejectDocument] Access token não encontrado');
+          return;
+        }
+        
+        // Preparar payload - usar user_id (UUID) que a Edge Function vai converter para student_id
+        // A Edge Function busca o student_id (user_profiles.id) a partir do user_id
+        const notificationPayload = {
+          user_id: student.user_id, // UUID que referencia auth.users.id
+          title: 'Document Rejected',
+          message: `Your ${docLabel} document has been rejected. Reason: ${reason}. Please review and upload a corrected version.`,
+          link: '/student/dashboard/applications',
+        };
+        
+        const response = await fetch(`${import.meta.env.VITE_SUPABASE_FUNCTIONS_URL}/create-student-notification`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify(notificationPayload),
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('❌ [handleRejectDocument] Erro ao criar notificação:', response.status, errorText);
         } else {
-          console.error('❌ [handleRejectDocument] Access token não encontrado para notificação in-app');
+          const result = await response.json();
         }
       } catch (notificationError) {
         console.error('❌ [handleRejectDocument] Erro ao enviar notificação in-app:', notificationError);
