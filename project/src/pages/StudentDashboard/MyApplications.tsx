@@ -394,6 +394,10 @@ const MyApplications: React.FC = () => {
   const getStatusLabel = (status: string) => {
     if (status === 'approved') return t('studentDashboard.myApplications.statusLabels.approvedByUniversity');
     if (status === 'rejected') return t('studentDashboard.myApplications.statusLabels.notSelectedForScholarship');
+    if (status === 'pending') return t('studentDashboard.myApplications.statusLabels.pending');
+    if (status === 'under_review') return t('studentDashboard.myApplications.statusLabels.underReview');
+    if (status === 'pending_scholarship_fee') return t('studentDashboard.myApplications.statusLabels.pendingScholarshipFee');
+    // Fallback para outros status
     return status.replace('_', ' ').toUpperCase();
   };
 
@@ -700,18 +704,33 @@ const MyApplications: React.FC = () => {
 
   const hasSelectedScholarship = false;
 
-const getLevelColor = (level: any) => {
-  switch (level.toLowerCase()) {
-    case 'undergraduate':
-      return 'bg-blue-50 text-blue-700 border-blue-200';
-    case 'graduate':
-      return 'bg-slate-100 text-slate-700 border-slate-200';
-    case 'doctoral':
-      return 'bg-indigo-50 text-indigo-700 border-indigo-200';
-    default:
-      return 'bg-gray-100 text-gray-800 border-gray-200';
-  }
-};
+  const getLevelColor = (level: any) => {
+    switch (level.toLowerCase()) {
+      case 'undergraduate':
+        return 'bg-blue-50 text-blue-700 border-blue-200';
+      case 'graduate':
+        return 'bg-slate-100 text-slate-700 border-slate-200';
+      case 'doctoral':
+        return 'bg-indigo-50 text-indigo-700 border-indigo-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  const getLevelLabel = (level: string) => {
+    if (!level) return '';
+    const levelKey = level.toLowerCase().trim();
+    // Mapear "doctoral" para "doctorate" se necessário
+    const mappedKey = levelKey === 'doctoral' ? 'doctorate' : levelKey;
+    const translationKey = `scholarshipsPage.filters.levels.${mappedKey}`;
+    const translated = t(translationKey);
+    // Se a tradução não existir (retorna a própria chave), tenta fallback
+    if (!translated || translated === translationKey || translated.includes('scholarshipsPage.filters.levels')) {
+      // Fallback: capitaliza a primeira letra
+      return level.charAt(0).toUpperCase() + level.slice(1).toLowerCase();
+    }
+    return translated;
+  };
 
   if (error) {
     return <div className="text-red-500">{t('studentDashboard.myApplications.error', { message: error })}</div>;
@@ -1346,14 +1365,14 @@ const getLevelColor = (level: any) => {
                     </div>
                     
                     {/* Linha 2: Universidade + Level */}
-                    <div className="flex items-center justify-between text-sm mb-3">
-                      <div className="flex items-center text-gray-600">
+                    <div className="flex items-center gap-2 text-sm mb-3">
+                      <div className="flex items-center text-gray-600 flex-1 min-w-0 max-w-[calc(100%-80px)] overflow-hidden">
                         <Building className="h-3 w-3 mr-1.5 text-gray-500 flex-shrink-0" />
-                        <span className="font-medium">{scholarship.universities?.name}</span>
+                        <span className="font-medium truncate">{scholarship.universities?.name}</span>
                       </div>
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold ${getLevelColor(scholarship.level)}`}>
-                        <GraduationCap className="h-3 w-3 mr-1" />
-                        {scholarship.level.charAt(0).toUpperCase() + scholarship.level.slice(1)}
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold ${getLevelColor(scholarship.level)} flex-shrink-0 whitespace-nowrap`}>
+                        <GraduationCap className="h-3 w-3 mr-1 flex-shrink-0" />
+                        <span className="whitespace-nowrap">{getLevelLabel(scholarship.level)}</span>
                       </span>
                     </div>
                     
@@ -1382,7 +1401,7 @@ const getLevelColor = (level: any) => {
                     >
                       <div className="flex items-center">
                         <FileText className="h-4 w-4 mr-2 text-blue-600" />
-                        <span className="text-sm font-medium text-gray-700">Status Details</span>
+                        <span className="text-sm font-medium text-gray-700">{t('studentDashboard.myApplications.statusDetails.title')}</span>
                       </div>
                       <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform duration-300 ${mobileExpandedApps[application.id] ? 'rotate-180' : ''}`} />
                     </button>
@@ -1570,14 +1589,14 @@ const getLevelColor = (level: any) => {
                               </div>
                               
                               {/* Line 2: University + Level */}
-                              <div className="flex items-center justify-between mb-2">
-                                <div className="flex items-center text-slate-600 flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                <div className="flex items-center text-slate-600 flex-1 min-w-0 max-w-[calc(100%-80px)] overflow-hidden">
                                   <Building className="h-4 w-4 mr-2 text-slate-500 flex-shrink-0" />
                                   <span className="font-medium text-sm truncate">{scholarship.universities?.name}</span>
                                 </div>
-                                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${getLevelColor(scholarship.level)} ml-2 flex-shrink-0`}>
-                                  <GraduationCap className="h-3 w-3 mr-1" />
-                                  {scholarship.level.charAt(0).toUpperCase() + scholarship.level.slice(1)}
+                                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${getLevelColor(scholarship.level)} flex-shrink-0 whitespace-nowrap`}>
+                                  <GraduationCap className="h-3 w-3 mr-1 flex-shrink-0" />
+                                  <span className="whitespace-nowrap">{getLevelLabel(scholarship.level)}</span>
                                 </span>
                               </div>
                               
@@ -1606,7 +1625,7 @@ const getLevelColor = (level: any) => {
                               >
                                 <div className="flex items-center">
                                   <FileText className="h-4 w-4 mr-2 text-blue-600" />
-                                  <span className="text-sm font-medium text-gray-700">Status Details</span>
+                                  <span className="text-sm font-medium text-gray-700">{t('studentDashboard.myApplications.statusDetails.title')}</span>
                                 </div>
                                 <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform duration-300 ${mobileExpandedApps[application.id] ? 'rotate-180' : ''}`} />
                               </button>
