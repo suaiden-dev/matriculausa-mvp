@@ -3,7 +3,7 @@
     "title": "Guia Passo a Passo",
     "subtitle": "Como funciona o processo de candidatura",
     "closeButton": "Fechar guia passo a passo",
-    "progress": "Passo {current} de {total}",
+    "progress": "{current} de {total}",
     "previous": "Anterior",
     "next": "Próximo",
     "startNow": "Começar Agora!",
@@ -1294,7 +1294,8 @@
     "stepByStepTour": {
       "title": "Tour Passo a Passo",
       "description": "Veja toda a jornada de candidatura em detalhes.",
-      "button": "Como funciona?"
+      "button": "Como funciona?",
+      "startTour": "Iniciar Tour"
     },
     "selectionProcess": {
       "title": "Processo de Seleção",

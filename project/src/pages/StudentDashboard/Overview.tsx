@@ -24,6 +24,8 @@ import { useAuth } from '../../hooks/useAuth';
 import { useReferralCode } from '../../hooks/useReferralCode';
 import { ProgressBar } from '../../components/ProgressBar';
 import StepByStepButton from '../../components/OnboardingTour/StepByStepButton';
+import StepByStepGuide from '../../components/OnboardingTour/StepByStepGuide';
+import { useStepByStepGuide } from '../../hooks/useStepByStepGuide';
 import './Overview.css'; // Adicionar um arquivo de estilos dedicado para padronização visual
 
 // Componente de skeleton para valores de taxa
@@ -56,6 +58,7 @@ const Overview: React.FC<OverviewProps> = ({
   const { activeDiscount } = useReferralCode();
   const { getFeeAmount, userFeeOverrides } = useFeeConfig(user?.id);
   const { selectionProcessFee, scholarshipFee, i20ControlFee, selectionProcessFeeAmount, scholarshipFeeAmount, i20ControlFeeAmount } = useDynamicFees();
+  const { isGuideOpen, openGuide, closeGuide } = useStepByStepGuide();
   const [visibleApplications, setVisibleApplications] = useState(5); // Mostrar 5 inicialmente
   const [feesLoading, setFeesLoading] = useState(true);
   
@@ -417,16 +420,35 @@ const Overview: React.FC<OverviewProps> = ({
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
-              <Route className="h-7 w-7 text-white" />
+        <div 
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            openGuide();
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              openGuide();
+            }
+          }}
+          role="button"
+          tabIndex={0}
+          className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-2xl shadow-md border-2 border-blue-300 hover:border-blue-400 hover:shadow-lg transition-all duration-300 flex flex-col justify-between cursor-pointer group relative overflow-hidden"
+        >
+          <div className="relative z-10 pointer-events-none">
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+                <Route className="h-7 w-7 text-white" />
+              </div>
             </div>
-          </div>
-          <h3 className="font-bold text-slate-900 mb-2">{t('studentDashboard.stepByStepTour.title')}</h3>
-          <p className="text-slate-600 text-sm mb-4">{t('studentDashboard.stepByStepTour.description')}</p>
-          <div className="flex justify-end">
-            <StepByStepButton />
+            <h3 className="font-bold text-slate-900 mb-2 group-hover:text-blue-700 transition-colors">{t('studentDashboard.stepByStepTour.title')}</h3>
+            <p className="text-slate-600 text-sm mb-4">{t('studentDashboard.stepByStepTour.description')}</p>
+            <div className="flex justify-end">
+              <div className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold text-sm shadow-md hover:shadow-lg transition-all duration-200 transform hover:scale-105">
+                {t('studentDashboard.stepByStepTour.startTour')}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -768,6 +790,9 @@ const Overview: React.FC<OverviewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Step By Step Guide Modal */}
+      <StepByStepGuide isOpen={isGuideOpen} onClose={closeGuide} />
 
     </div>
   );

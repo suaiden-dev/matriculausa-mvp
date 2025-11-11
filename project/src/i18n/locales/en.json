@@ -3,7 +3,7 @@
     "title": "Step-by-Step Guide",
     "subtitle": "How the application process works",
     "closeButton": "Close step-by-step guide",
-    "progress": "Step {current} of {total}",
+    "progress": "{current} of {total}",
     "previous": "Previous",
     "next": "Next",
     "startNow": "Start Now!",
@@ -1295,7 +1295,8 @@
     "stepByStepTour": {
       "title": "Step-by-Step Tour",
       "description": "See the full application journey in detail.",
-      "button": "How it works?"
+      "button": "How it works?",
+      "startTour": "Start Tour"
     },
     "selectionProcess": {
       "title": "Selection Process",
