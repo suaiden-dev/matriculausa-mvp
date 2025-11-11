@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import CustomLoading from '../../components/CustomLoading';
 import PaymentSuccessOverlay from '../../components/PaymentSuccessOverlay';
@@ -15,6 +15,9 @@ const SelectionProcessFeeSuccess: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [showAnimation, setShowAnimation] = useState(false);
   const [animationSuccess, setAnimationSuccess] = useState(true);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [hasVerified, setHasVerified] = useState(false);
+  const hasRunRef = useRef(false);
   const { selectionProcessFeeAmount } = useDynamicFees();
   const { t } = useTranslation();
 
@@ -24,6 +27,12 @@ const SelectionProcessFeeSuccess: React.FC = () => {
     let attempts = 0;
     
     const poll = async () => {
+      // Se já foi verificado, parar polling
+      if (hasVerified) {
+        console.log('[PIX] Já foi verificado, parando polling');
+        return;
+      }
+      
       attempts++;
       console.log(`[PIX] Tentativa ${attempts}/${maxAttempts} - Verificando se webhook processou PIX...`);
       
@@ -68,7 +77,7 @@ const SelectionProcessFeeSuccess: React.FC = () => {
           setLoading(false);
           setAnimationSuccess(true);
           setShowAnimation(true);
-          
+          setHasVerified(true);
           // Aguardar 6 segundos e então redirecionar
           setTimeout(() => {
             localStorage.removeItem('last_payment_method');
@@ -132,6 +141,20 @@ const SelectionProcessFeeSuccess: React.FC = () => {
   };
 
   useEffect(() => {
+    // Prevenir múltiplas execuções (React Strict Mode executa useEffect duas vezes em desenvolvimento)
+    if (hasRunRef.current) {
+      console.log('[PIX] Verificação já foi executada, ignorando chamada duplicada do React Strict Mode');
+      return;
+    }
+    
+    // Prevenir múltiplas execuções simultâneas
+    if (isVerifying) {
+      console.log('[PIX] Verificação já em andamento, ignorando chamada duplicada');
+      return;
+    }
+    
+    hasRunRef.current = true;
+    
     const verifySession = async () => {
       if (!sessionId) {
         setError('Session ID not found in URL.');
@@ -139,11 +162,14 @@ const SelectionProcessFeeSuccess: React.FC = () => {
         return;
       }
 
+      setIsVerifying(true);
+
       // Verificar se é pagamento PIX
       if (isPixPayment) {
         console.log('[PIX] Pagamento PIX detectado - iniciando polling para webhook...');
         // Iniciar polling para verificar se webhook já processou
         await pollPixPaymentStatus();
+        setIsVerifying(false);
         return;
       }
 
@@ -195,6 +221,7 @@ const SelectionProcessFeeSuccess: React.FC = () => {
           setLoading(false);
           setAnimationSuccess(true);
           setShowAnimation(true);
+          setHasVerified(true);
           
           setTimeout(() => {
             localStorage.removeItem('last_payment_method');
@@ -208,6 +235,7 @@ const SelectionProcessFeeSuccess: React.FC = () => {
         // Se não for PIX, processar normalmente
         if (data.payment_method !== 'pix' && data.status === 'complete') {
           console.log('[PIX] Pagamento não-PIX confirmado, processando normalmente...');
+          setHasVerified(true);
           setLoading(false);
           setAnimationSuccess(true);
           setShowAnimation(true);
@@ -226,10 +254,12 @@ const SelectionProcessFeeSuccess: React.FC = () => {
         console.error('[PIX] Erro na verificação inicial:', error);
         // Em caso de erro, iniciar polling mesmo assim
         await pollPixPaymentStatus();
+      } finally {
+        setIsVerifying(false);
       }
     };
     verifySession();
-  }, [sessionId]);
+  }, [sessionId, isPixPayment]);
 
   // Debug: Log das mudanças de estado
   useEffect(() => {

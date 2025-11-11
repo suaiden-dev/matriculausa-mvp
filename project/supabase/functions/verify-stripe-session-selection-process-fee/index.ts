@@ -239,6 +239,34 @@ function corsResponse(body, status = 200) {
     }
   });
 }
+
+// Função auxiliar para determinar moeda e símbolo baseado na session do Stripe
+function getCurrencyInfo(session) {
+  const currency = session.currency?.toLowerCase() || 'usd';
+  const isPix = session.payment_method_types?.includes('pix') || session.metadata?.payment_method === 'pix';
+  
+  // Se for PIX ou currency for BRL, usar Real
+  if (currency === 'brl' || isPix) {
+    return {
+      currency: 'BRL',
+      symbol: 'R$',
+      code: 'brl'
+    };
+  }
+  
+  // Caso contrário, usar Dólar
+  return {
+    currency: 'USD',
+    symbol: '$',
+    code: 'usd'
+  };
+}
+
+// Função auxiliar para formatar valor com moeda
+function formatAmountWithCurrency(amount, session) {
+  const currencyInfo = getCurrencyInfo(session);
+  return `${currencyInfo.symbol}${amount.toFixed(2)}`;
+}
 Deno.serve(async (req)=>{
   console.log('--- verify-stripe-session-selection-process-fee: Request received ---');
   try {
@@ -266,6 +294,60 @@ Deno.serve(async (req)=>{
       error: 'Session ID is required'
     }, 400);
     console.log(`Verifying session ID: ${sessionId}`);
+    
+    // Verificar se esta sessão já foi processada para evitar duplicação
+    // Verificar se há qualquer log de fee_payment para esta sessão
+    const { data: allExistingLogs } = await supabase
+      .from('student_action_logs')
+      .select('id, metadata, created_at')
+      .eq('action_type', 'fee_payment')
+      .eq('metadata->>session_id', sessionId)
+      .order('created_at', { ascending: false });
+    
+    if (allExistingLogs && allExistingLogs.length > 0) {
+      // Verificar se há um log que indica que as notificações já foram enviadas ou estão sendo enviadas
+      const hasNotificationLog = allExistingLogs.some(log => {
+        const metadata = log.metadata || {};
+        return metadata.notifications_sending === true || metadata.notifications_sent === true;
+      });
+      
+      if (hasNotificationLog) {
+        console.log(`[DUPLICAÇÃO] Session ${sessionId} já está processando ou processou notificações, retornando sucesso sem reprocessar.`);
+        return corsResponse({
+          status: 'complete',
+          message: 'Session already processing or processed notifications.'
+        }, 200);
+      }
+      
+      // Verificar se há múltiplos logs de processing_started (indicando chamadas simultâneas)
+      const processingLogs = allExistingLogs.filter(log => {
+        const metadata = log.metadata || {};
+        return metadata.processing_started === true;
+      });
+      
+      if (processingLogs.length > 1) {
+        // Se há múltiplos logs de processamento, verificar se algum foi criado há mais de 2 segundos
+        // Isso indica que o processamento já está em andamento
+        const now = new Date();
+        const recentProcessingLogs = processingLogs.filter(log => {
+          const logTime = new Date(log.created_at);
+          const secondsDiff = (now.getTime() - logTime.getTime()) / 1000;
+          return secondsDiff < 2; // Log criado há menos de 2 segundos
+        });
+        
+        if (recentProcessingLogs.length > 1) {
+          console.log(`[DUPLICAÇÃO] Múltiplos logs de processamento detectados para session ${sessionId}, retornando sucesso para evitar duplicação.`);
+          return corsResponse({
+            status: 'complete',
+            message: 'Multiple processing logs detected, avoiding duplication.'
+          }, 200);
+        }
+      }
+      
+      // Se há logs mas nenhum indica notificações, ainda pode processar (pode ser apenas o log de processing_started)
+      console.log(`[DUPLICAÇÃO] Session ${sessionId} tem logs mas notificações ainda não foram enviadas, continuando processamento.`);
+    }
+    
     let session;
     try {
       session = await stripe.checkout.sessions.retrieve(sessionId);
@@ -298,6 +380,54 @@ Deno.serve(async (req)=>{
       if (!userId) return corsResponse({
         error: 'User ID (client_reference_id) missing in session.'
       }, 400);
+      
+      // Buscar userProfile para criar log e processar
+      const { data: userProfile, error: profileFetchError } = await supabase.from('user_profiles').select('id').eq('user_id', userId).single();
+      
+      if (profileFetchError || !userProfile) {
+        console.error('User profile not found:', profileFetchError);
+        return corsResponse({
+          error: 'User profile not found'
+        }, 404);
+      }
+      
+      // Criar log ANTES de processar para evitar duplicação em chamadas simultâneas
+      try {
+        await supabase.rpc('log_student_action', {
+            p_student_id: userProfile.id,
+            p_action_type: 'fee_payment',
+            p_action_description: `Selection Process Fee payment processing started (${sessionId})`,
+            p_performed_by: userId,
+            p_performed_by_type: 'student',
+            p_metadata: {
+              fee_type: 'selection_process',
+              payment_method: 'stripe',
+              amount: session.amount_total ? session.amount_total / 100 : 0,
+              session_id: sessionId,
+              application_id: applicationId,
+              processing_started: true
+            }
+          });
+          console.log('[DUPLICAÇÃO] Log de processamento criado para evitar duplicação');
+        } catch (logError) {
+          // Se falhar ao criar log, verificar novamente se já existe (race condition)
+          const { data: recheckLog } = await supabase
+            .from('student_action_logs')
+            .select('id')
+            .eq('action_type', 'fee_payment')
+            .eq('metadata->>session_id', sessionId)
+            .single();
+          
+          if (recheckLog) {
+            console.log(`[DUPLICAÇÃO] Session ${sessionId} já está sendo processada, retornando sucesso.`);
+            return corsResponse({
+              status: 'complete',
+              message: 'Session already being processed.'
+            }, 200);
+          }
+          console.error('[DUPLICAÇÃO] Erro ao criar log, mas continuando processamento:', logError);
+        }
+      
       // Atualiza perfil do usuário
       const { error: profileError } = await supabase.from('user_profiles').update({
         has_paid_selection_process_fee: true,
@@ -420,11 +550,132 @@ Deno.serve(async (req)=>{
       // Limpa carrinho
       const { error: cartError } = await supabase.from('user_cart').delete().eq('user_id', userId);
       if (cartError) throw new Error(`Failed to clear user_cart: ${cartError.message}`);
-      // --- NOTIFICAÇÕES VIA WEBHOOK N8N ---
+      
+      // Verificar novamente ANTES de criar o log de notificações (proteção contra race condition)
+      const { data: preCheckLogs } = await supabase
+        .from('student_action_logs')
+        .select('id, metadata')
+        .eq('action_type', 'fee_payment')
+        .eq('metadata->>session_id', sessionId);
+      
+      if (preCheckLogs && preCheckLogs.length > 0) {
+        const hasNotificationLog = preCheckLogs.some(log => {
+          const metadata = log.metadata || {};
+          return metadata.notifications_sending === true || metadata.notifications_sent === true;
+        });
+        
+        if (hasNotificationLog) {
+          console.log(`[DUPLICAÇÃO] Notificações já estão sendo enviadas ou foram enviadas para session ${sessionId}, retornando sucesso.`);
+          return corsResponse({
+            status: 'complete',
+            message: 'Notifications already being sent or sent'
+          }, 200);
+        }
+      }
+      
+      // Criar log de "notificações sendo enviadas" ANTES de enviar para evitar duplicação
+      // Isso marca que o processamento de notificações está em andamento
+      try {
+        const { data: userProfile } = await supabase.from('user_profiles').select('id, full_name').eq('user_id', userId).single();
+        if (userProfile) {
+          const { error: notificationLogError } = await supabase.rpc('log_student_action', {
+            p_student_id: userProfile.id,
+            p_action_type: 'fee_payment',
+            p_action_description: `Selection Process Fee notifications sending started (${sessionId})`,
+            p_performed_by: userId,
+            p_performed_by_type: 'student',
+            p_metadata: {
+              fee_type: 'selection_process',
+              payment_method: 'stripe',
+              amount: session.amount_total ? session.amount_total / 100 : 0,
+              session_id: sessionId,
+              notifications_sending: true
+            }
+          });
+          
+          if (notificationLogError) {
+            // Se falhar ao criar log, verificar novamente se já existe (race condition)
+            const { data: recheckLogs } = await supabase
+              .from('student_action_logs')
+              .select('id, metadata')
+              .eq('action_type', 'fee_payment')
+              .eq('metadata->>session_id', sessionId);
+            
+            if (recheckLogs && recheckLogs.length > 0) {
+              const hasNotificationLog = recheckLogs.some(log => {
+                const metadata = log.metadata || {};
+                return metadata.notifications_sending === true || metadata.notifications_sent === true;
+              });
+              
+              if (hasNotificationLog) {
+                console.log(`[DUPLICAÇÃO] Notificações já estão sendo enviadas ou foram enviadas para session ${sessionId}, retornando sucesso.`);
+                return corsResponse({
+                  status: 'complete',
+                  message: 'Notifications already being sent or sent'
+                }, 200);
+              }
+            }
+            console.error('[DUPLICAÇÃO] Erro ao criar log de notificações, mas continuando:', notificationLogError);
+          } else {
+            console.log('[DUPLICAÇÃO] Log de envio de notificações criado para evitar duplicação');
+            
+            // Verificar novamente após criar o log para garantir que não há duplicação
+            // (em caso de race condition onde dois eventos criaram o log simultaneamente)
+            const { data: verifyLogs } = await supabase
+              .from('student_action_logs')
+              .select('id, metadata')
+              .eq('action_type', 'fee_payment')
+              .eq('metadata->>session_id', sessionId);
+            
+            if (verifyLogs && verifyLogs.length > 0) {
+              const notificationLogs = verifyLogs.filter(log => {
+                const metadata = log.metadata || {};
+                return metadata.notifications_sending === true || metadata.notifications_sent === true;
+              });
+              
+              if (notificationLogs.length > 1) {
+                console.log(`[DUPLICAÇÃO] Múltiplos logs de notificações detectados para session ${sessionId}, retornando sucesso para evitar duplicação.`);
+                return corsResponse({
+                  status: 'complete',
+                  message: 'Multiple notification logs detected, avoiding duplication'
+                }, 200);
+              }
+            }
+          }
+        }
+      } catch (logError) {
+        console.error('[DUPLICAÇÃO] Erro ao criar log de notificações:', logError);
+        // Verificar se já existe um log antes de continuar
+        const { data: allLogs } = await supabase
+          .from('student_action_logs')
+          .select('id, metadata')
+          .eq('action_type', 'fee_payment')
+          .eq('metadata->>session_id', sessionId);
+        
+        if (allLogs && allLogs.length > 0) {
+          const hasNotificationLog = allLogs.some(log => {
+            const metadata = log.metadata || {};
+            return metadata.notifications_sending === true || metadata.notifications_sent === true;
+          });
+          
+          if (hasNotificationLog) {
+            console.log(`[DUPLICAÇÃO] Notificações já estão sendo enviadas ou foram enviadas para session ${sessionId}, retornando sucesso.`);
+            return corsResponse({
+              status: 'complete',
+              message: 'Notifications already being sent or sent'
+            }, 200);
+          }
+        }
+      }
+      
+      // --- NOTIFICAÇÕES VIA WEBHOOK N8N (para PIX e cartão) ---
       try {
         console.log(`📤 [verify-stripe-session-selection-process-fee] Iniciando notificações...`);
         // Buscar dados do aluno (incluindo seller_referral_code)
         const { data: alunoData, error: alunoError } = await supabase.from('user_profiles').select('full_name, email, seller_referral_code').eq('user_id', userId).single();
+        // Buscar telefone do admin
+        const { data: adminProfile, error: adminProfileError } = await supabase.from('user_profiles').select('phone').eq('email', 'admin@matriculausa.com').single();
+        const adminPhone = adminProfile?.phone || "";
         if (alunoError || !alunoData) {
           console.error('[NOTIFICAÇÃO] Erro ao buscar dados do aluno:', alunoError);
           return corsResponse({
@@ -442,6 +693,10 @@ Deno.serve(async (req)=>{
         // Continue with other notifications even if term acceptance fails
         }
         // 1. NOTIFICAÇÃO PARA O ALUNO
+        const currencyInfo = getCurrencyInfo(session);
+        const amountValue = session.amount_total / 100;
+        const formattedAmount = formatAmountWithCurrency(amountValue, session);
+        
         const alunoNotificationPayload = {
           tipo_notf: 'Pagamento de selection process confirmado',
           email_aluno: alunoData.email,
@@ -449,7 +704,10 @@ Deno.serve(async (req)=>{
           o_que_enviar: `O pagamento da taxa de processo seletivo foi confirmado para ${alunoData.full_name}. Agora você pode selecionar as escolas para aplicar.`,
           payment_id: sessionId,
           fee_type: 'selection_process',
-          amount: session.amount_total / 100,
+          amount: amountValue,
+          currency: currencyInfo.currency,
+          currency_symbol: currencyInfo.symbol,
+          formatted_amount: formattedAmount,
           payment_method: "stripe"
         };
         console.log('[NOTIFICAÇÃO ALUNO] Enviando notificação para aluno:', alunoNotificationPayload);
@@ -519,10 +777,13 @@ Deno.serve(async (req)=>{
               phone_admin: adminPhone,
               email_aluno: alunoData.email,
               nome_aluno: alunoData.full_name,
-              o_que_enviar: `Pagamento Stripe de selection process no valor de $${(session.amount_total / 100).toFixed(2)} do aluno ${alunoData.full_name} foi processado com sucesso. Seller responsável: ${sellerData.name} (${sellerData.referral_code}). Affiliate: ${affiliateAdminData.name}`,
+              o_que_enviar: `Pagamento Stripe de selection process no valor de ${formattedAmount} do aluno ${alunoData.full_name} foi processado com sucesso. Seller responsável: ${sellerData.name} (${sellerData.referral_code}). Affiliate: ${affiliateAdminData.name}`,
               payment_id: sessionId,
               fee_type: 'selection_process',
-              amount: session.amount_total / 100,
+              amount: amountValue,
+              currency: currencyInfo.currency,
+              currency_symbol: currencyInfo.symbol,
+              formatted_amount: formattedAmount,
               seller_id: sellerData.user_id,
               referral_code: sellerData.referral_code,
               commission_rate: sellerData.commission_rate,
@@ -556,10 +817,13 @@ Deno.serve(async (req)=>{
               phone_seller: sellerPhone,
               email_aluno: alunoData.email,
               nome_aluno: alunoData.full_name,
-              o_que_enviar: `Parabéns! Seu aluno ${alunoData.full_name} pagou a taxa de selection process no valor de $${(session.amount_total / 100).toFixed(2)}. Sua comissão será calculada em breve.`,
+              o_que_enviar: `Parabéns! Seu aluno ${alunoData.full_name} pagou a taxa de selection process no valor de ${formattedAmount}. Sua comissão será calculada em breve.`,
               payment_id: sessionId,
               fee_type: 'selection_process',
-              amount: session.amount_total / 100,
+              amount: amountValue,
+              currency: currencyInfo.currency,
+              currency_symbol: currencyInfo.symbol,
+              formatted_amount: formattedAmount,
               seller_id: sellerData.user_id,
               referral_code: sellerData.referral_code,
               commission_rate: sellerData.commission_rate,
@@ -593,10 +857,13 @@ Deno.serve(async (req)=>{
                 nome_aluno: alunoData.full_name,
                 email_seller: sellerData.email,
                 nome_seller: sellerData.name,
-                o_que_enviar: `O seller ${sellerData.name} (${sellerData.referral_code}) do seu afiliado teve um pagamento de selection process no valor de $${(session.amount_total / 100).toFixed(2)} do aluno ${alunoData.full_name}.`,
+                o_que_enviar: `O seller ${sellerData.name} (${sellerData.referral_code}) do seu afiliado teve um pagamento de selection process no valor de ${formattedAmount} do aluno ${alunoData.full_name}.`,
                 payment_id: sessionId,
                 fee_type: 'selection_process',
-                amount: session.amount_total / 100,
+                amount: amountValue,
+                currency: currencyInfo.currency,
+                currency_symbol: currencyInfo.symbol,
+                formatted_amount: formattedAmount,
                 seller_id: sellerData.user_id,
                 referral_code: sellerData.referral_code,
                 commission_rate: sellerData.commission_rate,
@@ -625,12 +892,114 @@ Deno.serve(async (req)=>{
           } else {
             console.log(`📤 [verify-stripe-session-selection-process-fee] ❌ SELLER NÃO ENCONTRADO para seller_referral_code: ${alunoData.seller_referral_code}`);
             console.log(`📤 [verify-stripe-session-selection-process-fee] ❌ ERRO na busca do seller:`, sellerError);
+            
+            // Notificação para admin quando NÃO há seller
+            const currencyInfo = getCurrencyInfo(session);
+            const amountValue = session.amount_total / 100;
+            const formattedAmount = formatAmountWithCurrency(amountValue, session);
+            
+            const adminNotificationPayload = {
+              tipo_notf: "Pagamento Stripe de selection process confirmado - Admin",
+              email_admin: "admin@matriculausa.com",
+              nome_admin: "Admin MatriculaUSA",
+              phone_admin: adminPhone,
+              email_aluno: alunoData.email,
+              nome_aluno: alunoData.full_name,
+              o_que_enviar: `Pagamento Stripe de selection process no valor de ${formattedAmount} do aluno ${alunoData.full_name} foi processado com sucesso.`,
+              payment_id: sessionId,
+              fee_type: 'selection_process',
+              amount: amountValue,
+              currency: currencyInfo.currency,
+              currency_symbol: currencyInfo.symbol,
+              formatted_amount: formattedAmount,
+              payment_method: 'stripe',
+              notification_type: 'admin'
+            };
+            console.log('📧 [verify-stripe-session-selection-process-fee] Enviando notificação para admin da plataforma (sem seller):', adminNotificationPayload);
+            const adminNotificationResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'User-Agent': 'PostmanRuntime/7.36.3'
+              },
+              body: JSON.stringify(adminNotificationPayload)
+            });
+            if (adminNotificationResponse.ok) {
+              const adminResult = await adminNotificationResponse.text();
+              console.log('📧 [verify-stripe-session-selection-process-fee] Notificação para admin enviada com sucesso:', adminResult);
+            } else {
+              const adminError = await adminNotificationResponse.text();
+              console.error('📧 [verify-stripe-session-selection-process-fee] Erro ao enviar notificação para admin:', adminError);
+            }
           }
         } else {
           console.log(`📤 [verify-stripe-session-selection-process-fee] ❌ NENHUM SELLER_REFERRAL_CODE encontrado, não há seller para notificar`);
+          
+          // Notificação para admin quando NÃO há seller_referral_code
+          const currencyInfo = getCurrencyInfo(session);
+          const amountValue = session.amount_total / 100;
+          const formattedAmount = formatAmountWithCurrency(amountValue, session);
+          
+          const adminNotificationPayload = {
+            tipo_notf: "Pagamento Stripe de selection process confirmado - Admin",
+            email_admin: "admin@matriculausa.com",
+            nome_admin: "Admin MatriculaUSA",
+            phone_admin: adminPhone,
+            email_aluno: alunoData.email,
+            nome_aluno: alunoData.full_name,
+            o_que_enviar: `Pagamento Stripe de selection process no valor de ${formattedAmount} do aluno ${alunoData.full_name} foi processado com sucesso.`,
+            payment_id: sessionId,
+            fee_type: 'selection_process',
+            amount: amountValue,
+            currency: currencyInfo.currency,
+            currency_symbol: currencyInfo.symbol,
+            formatted_amount: formattedAmount,
+            payment_method: 'stripe',
+            notification_type: 'admin'
+          };
+          console.log('📧 [verify-stripe-session-selection-process-fee] Enviando notificação para admin da plataforma (sem seller):', adminNotificationPayload);
+          const adminNotificationResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'User-Agent': 'PostmanRuntime/7.36.3'
+            },
+            body: JSON.stringify(adminNotificationPayload)
+          });
+          if (adminNotificationResponse.ok) {
+            const adminResult = await adminNotificationResponse.text();
+            console.log('📧 [verify-stripe-session-selection-process-fee] Notificação para admin enviada com sucesso:', adminResult);
+          } else {
+            const adminError = await adminNotificationResponse.text();
+            console.error('📧 [verify-stripe-session-selection-process-fee] Erro ao enviar notificação para admin:', adminError);
+          }
         }
       } catch (notifErr) {
         console.error('[NOTIFICAÇÃO] Erro ao notificar selection process via n8n:', notifErr);
+      }
+      
+      // Atualizar log para marcar que as notificações foram enviadas
+      try {
+        const { data: userProfile } = await supabase.from('user_profiles').select('id, full_name').eq('user_id', userId).single();
+        if (userProfile) {
+          await supabase.rpc('log_student_action', {
+            p_student_id: userProfile.id,
+            p_action_type: 'fee_payment',
+            p_action_description: `Selection Process Fee paid via Stripe (${sessionId}) - Notifications sent`,
+            p_performed_by: userId,
+            p_performed_by_type: 'student',
+            p_metadata: {
+              fee_type: 'selection_process',
+              payment_method: 'stripe',
+              amount: session.amount_total ? session.amount_total / 100 : 0,
+              session_id: sessionId,
+              notifications_sent: true
+            }
+          });
+          console.log('[DUPLICAÇÃO] Log de conclusão criado após envio de notificações');
+        }
+      } catch (logError) {
+        console.error('Failed to log payment completion:', logError);
       }
       // --- FIM DAS NOTIFICAÇÕES ---
       // Para PIX, retornar resposta especial que força redirecionamento
@@ -649,13 +1018,14 @@ Deno.serve(async (req)=>{
         status: 'complete',
         message: 'Session verified and processed successfully.'
       }, 200);
-    } else {
-      console.log('Session not paid or complete.');
-      return corsResponse({
-        message: 'Session not ready.',
-        status: session.status
-      }, 202);
     }
+    
+    // Se chegou aqui, a sessão não está paga ou completa
+    console.log('Session not paid or complete.');
+    return corsResponse({
+      message: 'Session not ready.',
+      status: session.status
+    }, 202);
   } catch (error) {
     console.error(`--- CRITICAL ERROR in verify-stripe-session-selection-process-fee ---:`, error.message);
     return corsResponse({

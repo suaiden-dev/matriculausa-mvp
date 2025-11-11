@@ -5,6 +5,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2.49.1';
 import { getStripeConfig } from '../stripe-config.ts';
 
 const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
+
 function corsResponse(body, status = 200) {
   const headers = {
     'Access-Control-Allow-Origin': '*',
@@ -25,7 +26,36 @@ function corsResponse(body, status = 200) {
     }
   });
 }
+
+// Função auxiliar para determinar moeda e símbolo baseado na session do Stripe
+function getCurrencyInfo(session) {
+  const currency = session.currency?.toLowerCase() || 'usd';
+  const isPix = session.payment_method_types?.includes('pix') || session.metadata?.payment_method === 'pix';
+  
+  // Se for PIX ou currency for BRL, usar Real
+  if (currency === 'brl' || isPix) {
+    return {
+      currency: 'BRL',
+      symbol: 'R$',
+      code: 'brl'
+    };
+  }
+  
+  // Caso contrário, usar Dólar
+  return {
+    currency: 'USD',
+    symbol: '$',
+    code: 'usd'
+  };
+}
+
+// Função auxiliar para formatar valor com moeda
+function formatAmountWithCurrency(amount, session) {
+  const currencyInfo = getCurrencyInfo(session);
+  return `${currencyInfo.symbol}${amount.toFixed(2)}`;
+}
 Deno.serve(async (req)=>{
+  console.log('--- verify-stripe-session-i20-control-fee: Request received ---');
   try {
     if (req.method === 'OPTIONS') return corsResponse(null, 204);
     if (req.method !== 'POST') return corsResponse({
@@ -35,25 +65,88 @@ Deno.serve(async (req)=>{
     // Obter configuração do Stripe baseada no ambiente detectado
     const config = getStripeConfig(req);
     const stripe = new Stripe(config.secretKey, {
-      apiVersion: '2024-04-10',
+      apiVersion: '2025-07-30.preview',
       appInfo: {
         name: 'MatriculaUSA Integration',
         version: '1.0.0'
       }
     });
     
+    console.log(`🔧 Using Stripe in ${config.environment.environment} mode`);
+    
     const { sessionId } = await req.json();
     if (!sessionId) return corsResponse({
       error: 'Session ID is required'
     }, 400);
+    console.log(`Verifying session ID: ${sessionId}`);
+    
+    // Verificar se esta sessão já foi processada para evitar duplicação
+    const { data: allExistingLogs } = await supabase
+      .from('student_action_logs')
+      .select('id, metadata, created_at')
+      .eq('action_type', 'fee_payment')
+      .eq('metadata->>session_id', sessionId)
+      .order('created_at', { ascending: false });
+    
+    if (allExistingLogs && allExistingLogs.length > 0) {
+      // Verificar se há um log que indica que as notificações já foram enviadas ou estão sendo enviadas
+      const hasNotificationLog = allExistingLogs.some(log => {
+        const metadata = log.metadata || {};
+        return metadata.notifications_sending === true || metadata.notifications_sent === true;
+      });
+      
+      if (hasNotificationLog) {
+        console.log(`[DUPLICAÇÃO] Session ${sessionId} já está processando ou processou notificações, retornando sucesso sem reprocessar.`);
+        return corsResponse({
+          status: 'complete',
+          message: 'Session already processing or processed notifications.'
+        }, 200);
+      }
+      
+      // Verificar se há múltiplos logs de processing_started (indicando chamadas simultâneas)
+      const processingLogs = allExistingLogs.filter(log => {
+        const metadata = log.metadata || {};
+        return metadata.processing_started === true;
+      });
+      
+      if (processingLogs.length > 1) {
+        const now = new Date();
+        const recentProcessingLogs = processingLogs.filter(log => {
+          const logTime = new Date(log.created_at);
+          const secondsDiff = (now.getTime() - logTime.getTime()) / 1000;
+          return secondsDiff < 2; // Log criado há menos de 2 segundos
+        });
+        
+        if (recentProcessingLogs.length > 1) {
+          console.log(`[DUPLICAÇÃO] Múltiplos logs de processamento detectados para session ${sessionId}, retornando sucesso para evitar duplicação.`);
+          return corsResponse({
+            status: 'complete',
+            message: 'Multiple processing logs detected, avoiding duplication.'
+          }, 200);
+        }
+      }
+      
+      console.log(`[DUPLICAÇÃO] Session ${sessionId} tem logs mas notificações ainda não foram enviadas, continuando processamento.`);
+    }
+    
     const session = await stripe.checkout.sessions.retrieve(sessionId);
     if (session.payment_status === 'paid' && session.status === 'complete') {
       const userId = session.client_reference_id;
       const paymentIntentId = session.payment_intent;
       const paymentMethod = session.metadata?.payment_method || 'stripe';
-      if (!userId) return corsResponse({
-        error: 'User ID (client_reference_id) missing in session.'
-      }, 400);
+      
+      if (!userId) {
+        return corsResponse({
+          error: 'User ID (client_reference_id) missing in session.'
+        }, 400);
+      }
+      
+      // Obter informações de moeda
+      const currencyInfo = getCurrencyInfo(session);
+      const amountValue = session.amount_total ? session.amount_total / 100 : 0;
+      const formattedAmount = formatAmountWithCurrency(amountValue, session);
+      
+      console.log(`[I20 Control Fee] Currency: ${currencyInfo.currency}, Amount: ${formattedAmount}`);
       // Atualiza user_profiles para marcar o pagamento do I-20 Control Fee
       const { error: profileError } = await supabase.from('user_profiles').update({
         has_paid_i20_control_fee: true,
@@ -90,30 +183,50 @@ Deno.serve(async (req)=>{
         // Não quebra o fluxo - continua normalmente
       }
 
-      // Log the payment action
+      // Criar log ANTES de processar para evitar duplicação em chamadas simultâneas
+      const { data: userProfile } = await supabase.from('user_profiles').select('id, full_name').eq('user_id', userId).single();
+      if (!userProfile) {
+        return corsResponse({
+          error: 'User profile not found'
+        }, 404);
+      }
+      
       try {
-        const { data: userProfile } = await supabase.from('user_profiles').select('id, full_name').eq('user_id', userId).single();
-        if (userProfile) {
-          await supabase.rpc('log_student_action', {
-            p_student_id: userProfile.id,
-            p_action_type: 'fee_payment',
-            p_action_description: `I-20 Control Fee paid via Stripe (${sessionId})`,
-            p_performed_by: userId,
-            p_performed_by_type: 'student',
-            p_metadata: {
-              fee_type: 'i20_control',
-              payment_method: paymentMethod,
-              amount: session.amount_total / 100,
-              session_id: sessionId,
-              payment_intent_id: paymentIntentId
-            }
-          });
-        }
+        await supabase.rpc('log_student_action', {
+          p_student_id: userProfile.id,
+          p_action_type: 'fee_payment',
+          p_action_description: `I-20 Control Fee payment processing started (${sessionId})`,
+          p_performed_by: userId,
+          p_performed_by_type: 'student',
+          p_metadata: {
+            fee_type: 'i20_control',
+            payment_method: paymentMethod,
+            amount: amountValue,
+            session_id: sessionId,
+            payment_intent_id: paymentIntentId,
+            processing_started: true
+          }
+        });
+        console.log('[DUPLICAÇÃO] Log de processamento criado para evitar duplicação');
       } catch (logError) {
-        console.error('Failed to log payment action:', logError);
+        // Se falhar ao criar log, verificar novamente se já existe (race condition)
+        const { data: recheckLog } = await supabase
+          .from('student_action_logs')
+          .select('id')
+          .eq('action_type', 'fee_payment')
+          .eq('metadata->>session_id', sessionId)
+          .single();
+        
+        if (recheckLog) {
+          console.log(`[DUPLICAÇÃO] Session ${sessionId} já está sendo processada, retornando sucesso.`);
+          return corsResponse({
+            status: 'complete',
+            message: 'Session already being processed.'
+          }, 200);
+        }
+        console.error('[DUPLICAÇÃO] Erro ao criar log de processamento:', logError);
       }
       // Buscar o application_id mais recente do usuário
-      const { data: userProfile } = await supabase.from('user_profiles').select('id').eq('user_id', userId).single();
       console.log('[I20ControlFee] userId do Stripe:', userId);
       console.log('[I20ControlFee] userProfile encontrado:', userProfile);
       let applicationId = null;
@@ -126,8 +239,99 @@ Deno.serve(async (req)=>{
           applicationId = applications[0].id;
         }
       }
+      
       // --- NOTIFICAÇÕES VIA WEBHOOK N8N ---
       try {
+        // Criar log de "notificações sendo enviadas" ANTES de enviar para evitar duplicação
+        try {
+          const { error: notificationLogError } = await supabase.rpc('log_student_action', {
+            p_student_id: userProfile.id,
+            p_action_type: 'fee_payment',
+            p_action_description: `I-20 Control Fee notifications sending started (${sessionId})`,
+            p_performed_by: userId,
+            p_performed_by_type: 'student',
+            p_metadata: {
+              fee_type: 'i20_control',
+              payment_method: paymentMethod,
+              amount: amountValue,
+              session_id: sessionId,
+              notifications_sending: true
+            }
+          });
+          
+          if (notificationLogError) {
+            // Se falhar ao criar log, verificar novamente se já existe (race condition)
+            const { data: recheckLogs } = await supabase
+              .from('student_action_logs')
+              .select('id, metadata')
+              .eq('action_type', 'fee_payment')
+              .eq('metadata->>session_id', sessionId);
+            
+            if (recheckLogs && recheckLogs.length > 0) {
+              const hasNotificationLog = recheckLogs.some(log => {
+                const metadata = log.metadata || {};
+                return metadata.notifications_sending === true || metadata.notifications_sent === true;
+              });
+              
+              if (hasNotificationLog) {
+                console.log(`[DUPLICAÇÃO] Notificações já estão sendo enviadas ou foram enviadas para session ${sessionId}, retornando sucesso.`);
+                return corsResponse({
+                  status: 'complete',
+                  message: 'Notifications already being sent or sent'
+                }, 200);
+              }
+            }
+            console.error('[DUPLICAÇÃO] Erro ao criar log de notificações, mas continuando:', notificationLogError);
+          } else {
+            console.log('[DUPLICAÇÃO] Log de envio de notificações criado para evitar duplicação');
+            
+            // Verificar novamente após criar o log para garantir que não há duplicação
+            const { data: verifyLogs } = await supabase
+              .from('student_action_logs')
+              .select('id, metadata')
+              .eq('action_type', 'fee_payment')
+              .eq('metadata->>session_id', sessionId);
+            
+            if (verifyLogs && verifyLogs.length > 0) {
+              const notificationLogs = verifyLogs.filter(log => {
+                const metadata = log.metadata || {};
+                return metadata.notifications_sending === true || metadata.notifications_sent === true;
+              });
+              
+              if (notificationLogs.length > 1) {
+                console.log(`[DUPLICAÇÃO] Múltiplos logs de notificações detectados para session ${sessionId}, retornando sucesso para evitar duplicação.`);
+                return corsResponse({
+                  status: 'complete',
+                  message: 'Multiple notification logs detected, avoiding duplication'
+                }, 200);
+              }
+            }
+          }
+        } catch (logError) {
+          console.error('[DUPLICAÇÃO] Erro ao criar log de notificações:', logError);
+          // Verificar se já existe um log antes de continuar
+          const { data: allLogs } = await supabase
+            .from('student_action_logs')
+            .select('id, metadata')
+            .eq('action_type', 'fee_payment')
+            .eq('metadata->>session_id', sessionId);
+          
+          if (allLogs && allLogs.length > 0) {
+            const hasNotificationLog = allLogs.some(log => {
+              const metadata = log.metadata || {};
+              return metadata.notifications_sending === true || metadata.notifications_sent === true;
+            });
+            
+            if (hasNotificationLog) {
+              console.log(`[DUPLICAÇÃO] Notificações já estão sendo enviadas ou foram enviadas para session ${sessionId}, retornando sucesso.`);
+              return corsResponse({
+                status: 'complete',
+                message: 'Notifications already being sent or sent'
+              }, 200);
+            }
+          }
+        }
+        
         console.log(`📤 [verify-stripe-session-i20-control-fee] Iniciando notificações...`);
         // Buscar dados do aluno (incluindo seller_referral_code)
         const { data: alunoData, error: alunoError } = await supabase.from('user_profiles').select('full_name, email, phone, seller_referral_code').eq('user_id', userId).single();
@@ -148,10 +352,13 @@ Deno.serve(async (req)=>{
           email_aluno: alunoData.email,
           nome_aluno: alunoData.full_name,
           phone_aluno: alunoData.phone || "",
-          o_que_enviar: `O pagamento da taxa de controle I-20 foi confirmado para ${alunoData.full_name}. Seu documento I-20 será processado e enviado em breve.`,
+          o_que_enviar: `O pagamento da taxa de controle I-20 no valor de ${formattedAmount} foi confirmado para ${alunoData.full_name}. Seu documento I-20 será processado e enviado em breve.`,
           payment_id: sessionId,
           fee_type: 'i20_control_fee',
-          amount: session.amount_total / 100,
+          amount: amountValue,
+          currency: currencyInfo.currency,
+          currency_symbol: currencyInfo.symbol,
+          formatted_amount: formattedAmount,
           payment_method: paymentMethod
         };
         console.log('[NOTIFICAÇÃO ALUNO] Enviando notificação para aluno:', alunoNotificationPayload);
@@ -226,10 +433,13 @@ Deno.serve(async (req)=>{
               email_affiliate_admin: affiliateAdminData.email,
               nome_affiliate_admin: affiliateAdminData.name,
               phone_affiliate_admin: (await (async ()=>{ try { const { data: a, error: e } = await supabase.from('user_profiles').select('phone').eq('email', affiliateAdminData.email).single(); return a?.phone || "" } catch { return "" } })()),
-              o_que_enviar: `Pagamento Stripe de I-20 control fee no valor de ${(session.amount_total / 100).toFixed(2)} do aluno ${alunoData.full_name} foi processado com sucesso. Seller responsável: ${sellerData.name} (${sellerData.referral_code}). Affiliate: ${affiliateAdminData.name}`,
+              o_que_enviar: `Pagamento Stripe de I-20 control fee no valor de ${formattedAmount} do aluno ${alunoData.full_name} foi processado com sucesso. Seller responsável: ${sellerData.name} (${sellerData.referral_code}). Affiliate: ${affiliateAdminData.name}`,
               payment_id: sessionId,
               fee_type: 'i20_control_fee',
-              amount: session.amount_total / 100,
+              amount: amountValue,
+              currency: currencyInfo.currency,
+              currency_symbol: currencyInfo.symbol,
+              formatted_amount: formattedAmount,
               seller_id: sellerData.user_id,
               referral_code: sellerData.referral_code,
               commission_rate: sellerData.commission_rate,
@@ -261,10 +471,13 @@ Deno.serve(async (req)=>{
               email_aluno: alunoData.email,
               nome_aluno: alunoData.full_name,
               phone_aluno: alunoData.phone || "",
-              o_que_enviar: `Parabéns! Seu aluno ${alunoData.full_name} pagou a taxa de I-20 control fee no valor de ${(session.amount_total / 100).toFixed(2)}. O documento I-20 será processado em breve.`,
+              o_que_enviar: `Parabéns! Seu aluno ${alunoData.full_name} pagou a taxa de I-20 control fee no valor de ${formattedAmount}. O documento I-20 será processado em breve.`,
               payment_id: sessionId,
               fee_type: 'i20_control_fee',
-              amount: session.amount_total / 100,
+              amount: amountValue,
+              currency: currencyInfo.currency,
+              currency_symbol: currencyInfo.symbol,
+              formatted_amount: formattedAmount,
               seller_id: sellerData.user_id,
               referral_code: sellerData.referral_code,
               commission_rate: sellerData.commission_rate,
@@ -300,10 +513,13 @@ Deno.serve(async (req)=>{
                 email_seller: sellerData.email,
                 nome_seller: sellerData.name,
                 phone_seller: sellerPhone || "",
-                o_que_enviar: `O seller ${sellerData.name} (${sellerData.referral_code}) do seu afiliado teve um pagamento de I-20 control fee no valor de ${(session.amount_total / 100).toFixed(2)} do aluno ${alunoData.full_name}.`,
+                o_que_enviar: `O seller ${sellerData.name} (${sellerData.referral_code}) do seu afiliado teve um pagamento de I-20 control fee no valor de ${formattedAmount} do aluno ${alunoData.full_name}.`,
                 payment_id: sessionId,
                 fee_type: 'i20_control_fee',
-                amount: session.amount_total / 100,
+                amount: amountValue,
+                currency: currencyInfo.currency,
+                currency_symbol: currencyInfo.symbol,
+                formatted_amount: formattedAmount,
                 seller_id: sellerData.user_id,
                 referral_code: sellerData.referral_code,
                 commission_rate: sellerData.commission_rate,
@@ -332,13 +548,108 @@ Deno.serve(async (req)=>{
           } else {
             console.log(`📤 [verify-stripe-session-i20-control-fee] ❌ SELLER NÃO ENCONTRADO para seller_referral_code: ${alunoData.seller_referral_code}`);
             console.log(`📤 [verify-stripe-session-i20-control-fee] ❌ ERRO na busca do seller:`, sellerError);
+            
+            // Notificar admin quando seller não é encontrado
+            const adminNotificationPayload = {
+              tipo_notf: "Pagamento Stripe de I-20 control fee confirmado - Admin",
+              email_admin: "admin@matriculausa.com",
+              nome_admin: "Admin MatriculaUSA",
+              phone_admin: adminPhone,
+              email_aluno: alunoData.email,
+              nome_aluno: alunoData.full_name,
+              phone_aluno: alunoData.phone || "",
+              o_que_enviar: `Pagamento Stripe de I-20 control fee no valor de ${formattedAmount} do aluno ${alunoData.full_name} foi processado com sucesso. Seller não encontrado para código: ${alunoData.seller_referral_code}`,
+              payment_id: sessionId,
+              fee_type: 'i20_control_fee',
+              amount: amountValue,
+              currency: currencyInfo.currency,
+              currency_symbol: currencyInfo.symbol,
+              formatted_amount: formattedAmount,
+              payment_method: paymentMethod,
+              notification_type: 'admin'
+            };
+            console.log('📧 [verify-stripe-session-i20-control-fee] Enviando notificação para admin (seller não encontrado):', adminNotificationPayload);
+            const adminNotificationResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'User-Agent': 'PostmanRuntime/7.36.3'
+              },
+              body: JSON.stringify(adminNotificationPayload)
+            });
+            if (adminNotificationResponse.ok) {
+              const adminResult = await adminNotificationResponse.text();
+              console.log('📧 [verify-stripe-session-i20-control-fee] Notificação para admin enviada com sucesso:', adminResult);
+            } else {
+              const adminError = await adminNotificationResponse.text();
+              console.error('📧 [verify-stripe-session-i20-control-fee] Erro ao enviar notificação para admin:', adminError);
+            }
           }
         } else {
           console.log(`📤 [verify-stripe-session-i20-control-fee] ❌ NENHUM SELLER_REFERRAL_CODE encontrado, não há seller para notificar`);
+          
+          // Notificar admin quando não há seller
+          const adminNotificationPayload = {
+            tipo_notf: "Pagamento Stripe de I-20 control fee confirmado - Admin",
+            email_admin: "admin@matriculausa.com",
+            nome_admin: "Admin MatriculaUSA",
+            phone_admin: adminPhone,
+            email_aluno: alunoData.email,
+            nome_aluno: alunoData.full_name,
+            phone_aluno: alunoData.phone || "",
+            o_que_enviar: `Pagamento Stripe de I-20 control fee no valor de ${formattedAmount} do aluno ${alunoData.full_name} foi processado com sucesso.`,
+            payment_id: sessionId,
+            fee_type: 'i20_control_fee',
+            amount: amountValue,
+            currency: currencyInfo.currency,
+            currency_symbol: currencyInfo.symbol,
+            formatted_amount: formattedAmount,
+            payment_method: paymentMethod,
+            notification_type: 'admin'
+          };
+          console.log('📧 [verify-stripe-session-i20-control-fee] Enviando notificação para admin da plataforma (sem seller):', adminNotificationPayload);
+          const adminNotificationResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'User-Agent': 'PostmanRuntime/7.36.3'
+            },
+            body: JSON.stringify(adminNotificationPayload)
+          });
+          if (adminNotificationResponse.ok) {
+            const adminResult = await adminNotificationResponse.text();
+            console.log('📧 [verify-stripe-session-i20-control-fee] Notificação para admin enviada com sucesso:', adminResult);
+          } else {
+            const adminError = await adminNotificationResponse.text();
+            console.error('📧 [verify-stripe-session-i20-control-fee] Erro ao enviar notificação para admin:', adminError);
+          }
         }
       } catch (notifErr) {
         console.error('[NOTIFICAÇÃO] Erro ao notificar I-20 control fee via n8n:', notifErr);
       }
+      
+      // Atualizar log para marcar que as notificações foram enviadas
+      try {
+        await supabase.rpc('log_student_action', {
+          p_student_id: userProfile.id,
+          p_action_type: 'fee_payment',
+          p_action_description: `I-20 Control Fee paid via Stripe (${sessionId}) - Notifications sent`,
+          p_performed_by: userId,
+          p_performed_by_type: 'student',
+          p_metadata: {
+            fee_type: 'i20_control',
+            payment_method: paymentMethod,
+            amount: amountValue,
+            session_id: sessionId,
+            payment_intent_id: paymentIntentId,
+            notifications_sent: true
+          }
+        });
+        console.log('[DUPLICAÇÃO] Log de conclusão criado após envio de notificações');
+      } catch (logError) {
+        console.error('Failed to log payment completion:', logError);
+      }
+      
       // --- FIM DAS NOTIFICAÇÕES ---
       return corsResponse({
         status: 'complete',
