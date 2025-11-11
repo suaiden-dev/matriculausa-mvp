@@ -1881,7 +1881,10 @@
       },
       "statusLabels": {
         "approvedByUniversity": "APROVADA PELA UNIVERSIDADE",
-        "notSelectedForScholarship": "NÃO SELECIONADA PARA A BOLSA"
+        "notSelectedForScholarship": "NÃO SELECIONADA PARA A BOLSA",
+        "pending": "PENDENTE",
+        "underReview": "EM REVISÃO",
+        "pendingScholarshipFee": "PENDENTE TAXA DA BOLSA"
       },
       "nextSteps": "Próximos Passos:",
       "scholarshipDetails": {

@@ -1785,7 +1785,10 @@
       },
       "statusLabels": {
         "approvedByUniversity": "APPROVED BY THE UNIVERSITY",
-        "notSelectedForScholarship": "NOT SELECTED FOR THE SCHOLARSHIP"
+        "notSelectedForScholarship": "NOT SELECTED FOR THE SCHOLARSHIP",
+        "pending": "PENDING",
+        "underReview": "UNDER REVIEW",
+        "pendingScholarshipFee": "PENDING SCHOLARSHIP FEE"
       },
       "nextSteps": "Next Steps:",
       "scholarshipDetails": {
