@@ -1375,22 +1375,6 @@ const MyApplications: React.FC = () => {
                         <span className="whitespace-nowrap">{getLevelLabel(scholarship.level)}</span>
                       </span>
                     </div>
-                    
-                    {/* Linha 4: Data de aplicação + Valor */}
-                        <div className="flex flex-wrap items-center gap-2 text-xs">
-                          <span className={`inline-flex items-center px-2 py-1 rounded-md border ${getStatusColor(application.status)} whitespace-nowrap`}>
-                            <Icon className="h-3 w-3 mr-1" />
-                            {getStatusLabel(application.status)}
-                          </span>
-                          <span className="inline-flex items-center px-2 py-1 rounded-md bg-gray-50 text-gray-700 border border-gray-200 whitespace-nowrap">
-                            <Calendar className="h-3 w-3 mr-1.5 text-gray-500" />
-                            {new Date(application.applied_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                          </span>
-                          <span className="inline-flex items-center px-2 py-1 rounded-md bg-green-50 text-green-700 border border-green-200 whitespace-nowrap">
-                            <DollarSign className="h-3 w-3 mr-1 text-green-600" />
-                            {formatAmount(scholarship.annual_value_with_scholarship ?? 0)}
-                          </span>
-                        </div>
                   </div>
 
                   {/* Status Details - Mobile: botão colapsável; Desktop: sempre visível */}
