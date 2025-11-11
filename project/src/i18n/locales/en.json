@@ -1632,7 +1632,8 @@
         "step3Title": "Pay Application Fee",
         "step3Description": "Secure your approved scholarship spot",
         "step4Title": "Pay Scholarship Fee",
-        "step4Description": "Complete enrollment and start your program"
+        "step4Description": "Complete enrollment and start your program",
+        "processSteps": "Process Steps"
       },
       "noApplications": {
         "title": "No applications yet",

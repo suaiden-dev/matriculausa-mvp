@@ -1232,7 +1232,7 @@ const MyApplications: React.FC = () => {
               <summary className="flex items-center justify-between cursor-pointer p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl border border-blue-200">
                 <div className="flex items-center">
                   <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold mr-3">4</div>
-                  <span className="font-bold text-slate-900">{t('studentDashboard.myApplications.steps.step1Title')} Process Steps</span>
+                  <span className="font-bold text-slate-900">{t('studentDashboard.myApplications.steps.processSteps')}</span>
                 </div>
                 <svg className="w-5 h-5 text-blue-600 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />

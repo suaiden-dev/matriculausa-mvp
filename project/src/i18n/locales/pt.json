@@ -1728,7 +1728,8 @@
         "step3Title": "Pagar Taxa de Aplicação",
         "step3Description": "Garanta sua vaga na bolsa aprovada",
         "step4Title": "Pagar Taxa da Bolsa",
-        "step4Description": "Complete a matrícula e comece seu programa"
+        "step4Description": "Complete a matrícula e comece seu programa",
+        "processSteps": "Passos do Processo"
       },
       "noApplications": {
         "title": "Nenhuma aplicação ainda",
