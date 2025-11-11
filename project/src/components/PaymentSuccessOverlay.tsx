@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import TransactionAnimation from './TransactionAnimation';
 
 interface PaymentSuccessOverlayProps {
@@ -12,6 +13,7 @@ const PaymentSuccessOverlay: React.FC<PaymentSuccessOverlayProps> = ({
   title,
   message
 }) => {
+  const { t } = useTranslation();
   return (
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center p-4">
       {/* Blur overlay */}
@@ -30,7 +32,7 @@ const PaymentSuccessOverlay: React.FC<PaymentSuccessOverlayProps> = ({
             {message}
           </p>
           <p className="text-slate-500 text-sm animate-redirectSlide">
-            Redirecionando em instantes...
+            {t('successPages.common.redirecting')}
           </p>
         </div>
 

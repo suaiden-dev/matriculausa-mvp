@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
 import PaymentSuccessOverlay from '../../components/PaymentSuccessOverlay';
@@ -13,8 +14,9 @@ const I20ControlFeeSuccess: React.FC = () => {
   const location = useLocation();
   const params = new URLSearchParams(location.search);
   const { user } = useAuth();
-  const { formatFeeAmount, getFeeAmount } = useFeeConfig(user?.id);
+  const { getFeeAmount } = useFeeConfig(user?.id);
   const sessionId = params.get('session_id');
+  const { t } = useTranslation();
 
   console.log('🔍 [I20ControlFeeSuccess] Componente renderizado com sessionId:', sessionId);
 
@@ -121,8 +123,8 @@ const I20ControlFeeSuccess: React.FC = () => {
           <svg className="h-16 w-16 text-green-600 mb-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
           </svg>
-          <h1 className="text-3xl font-bold text-green-700 mb-2">Verifying Payment...</h1>
-          <p className="text-slate-700 mb-6 text-center">Please wait while we confirm your payment.</p>
+            <h1 className="text-3xl font-bold text-green-700 mb-2">{t('successPages.i20ControlFee.verifying')}</h1>
+            <p className="text-slate-700 mb-6 text-center">{t('successPages.i20ControlFee.pleaseWait')}</p>
         </div>
       </div>
     );
@@ -154,8 +156,8 @@ const I20ControlFeeSuccess: React.FC = () => {
       <div className="min-h-screen bg-green-50 flex flex-col items-center justify-center px-4 relative">
         <PaymentSuccessOverlay
           isSuccess={true}
-          title="I-20 Control Fee Payment Successful!"
-          message={`Your payment of ${formatFeeAmount(getFeeAmount('i20_control_fee'))} has been processed successfully! Your I-20 document will be processed and sent to you soon.`}
+          title={t('successPages.i20ControlFee.title')}
+          message={`${t('successPages.common.paymentProcessedAmount', { amount: '900.00' })} ${t('successPages.i20ControlFee.message')}`}
         />
       </div>
     );
@@ -169,21 +171,21 @@ const I20ControlFeeSuccess: React.FC = () => {
             <svg className="h-16 w-16 text-green-600 mb-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
             </svg>
-            <h1 className="text-3xl font-bold text-green-700 mb-2">Verifying Payment...</h1>
-            <p className="text-slate-700 mb-6 text-center">Please wait while we confirm your payment.</p>
+            <h1 className="text-3xl text-center font-bold text-green-700 mb-2">{t('successPages.i20ControlFee.verifying')}</h1>
+            <p className="text-slate-700 mb-6 text-center">{t('successPages.i20ControlFee.pleaseWait')}</p>
           </>
         ) : error ? (
           <>
             <svg className="h-16 w-16 text-red-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01" />
             </svg>
-            <h1 className="text-3xl font-bold text-red-700 mb-2">I-20 Control Fee Payment Error</h1>
-            <p className="text-slate-700 mb-6 text-center">There was a problem processing your payment.<br/>Please try again. If the error persists, contact support.</p>
+            <h1 className="text-3xl font-bold text-red-700 mb-2">{t('successPages.i20ControlFee.errorTitle')}</h1>
+            <p className="text-slate-700 mb-6 text-center">{t('successPages.i20ControlFee.errorMessage')}<br/>{t('successPages.i20ControlFee.errorRetry')}</p>
             <button 
               className="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-700 transition-all duration-300"
               onClick={() => navigate('/student/dashboard/applications')}
             >
-              Back to My Applications
+              {t('successPages.i20ControlFee.button')}
             </button>
           </>
         ) : null}

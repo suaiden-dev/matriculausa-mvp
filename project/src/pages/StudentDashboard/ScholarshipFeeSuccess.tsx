@@ -184,7 +184,7 @@ const ScholarshipFeeSuccess: React.FC = () => {
         <PaymentSuccessOverlay
           isSuccess={true}
           title={t('successPages.scholarshipFee.title')}
-          message={t('successPages.scholarshipFee.message')}
+          message={`${t('successPages.common.paymentProcessedAmount', { amount: '900.00' })} ${t('successPages.scholarshipFee.message')}`}
         />
       </div>
     );

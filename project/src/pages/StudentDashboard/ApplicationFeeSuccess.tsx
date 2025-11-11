@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabase';
 import CustomLoading from '../../components/CustomLoading';
 import PaymentSuccessOverlay from '../../components/PaymentSuccessOverlay';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '../../hooks/useAuth';
 
 type VerificationStatus = 'loading' | 'success' | 'error';
 
@@ -13,9 +14,17 @@ const ApplicationFeeSuccess: React.FC = () => {
   const [searchParams] = useSearchParams();
   const [status, setStatus] = useState<VerificationStatus>('loading');
   const [error, setError] = useState<string | null>(null);
-
+  const [applicationFeeAmount, setApplicationFeeAmount] = useState<number>(0);
   const [showAnimation, setShowAnimation] = useState(false);
   const { t } = useTranslation();
+  const { userProfile } = useAuth();
+
+  // Helper: calcular Application Fee exibida considerando dependentes (legacy) - mesma lógica do MyApplications
+  const getApplicationFeeWithDependents = (base: number): number => {
+    const systemType = (userProfile?.system_type as any) || 'legacy';
+    const deps = Number(userProfile?.dependents) || 0;
+    return systemType === 'legacy' && deps > 0 ? base + deps * 100 : base;
+  };
 
   useEffect(() => {
     const verifySession = async () => {
@@ -28,12 +37,55 @@ const ApplicationFeeSuccess: React.FC = () => {
 
       try {
         // Chamar a Edge Function para verificar o pagamento e enviar notificação
-        const { error: sessionError } = await supabase.functions.invoke('verify-stripe-session-application-fee', {
+        const { data: sessionData, error: sessionError } = await supabase.functions.invoke('verify-stripe-session-application-fee', {
           body: { sessionId },
         });
 
         if (sessionError) {
           throw new Error(`Verification failed: ${sessionError.message}`);
+        }
+
+        // Se a verificação foi bem-sucedida, buscar o valor da taxa da bolsa
+        if (sessionData?.applicationId) {
+          try {
+            const { data: application, error: appError } = await supabase
+              .from('scholarship_applications')
+              .select(`
+                scholarship_id,
+                scholarships (
+                  application_fee_amount
+                )
+              `)
+              .eq('id', sessionData.applicationId)
+              .single();
+
+            if (appError) {
+              // Usar fallback 350 se houver erro
+              setApplicationFeeAmount(350);
+            } else if (application?.scholarships) {
+              // Verifica se é array ou objeto
+              let scholarship = null;
+              if (Array.isArray(application.scholarships)) {
+                scholarship = application.scholarships[0];
+              } else {
+                scholarship = application.scholarships;
+              }
+
+              if (scholarship?.application_fee_amount) {
+                const feeAmount = Number(scholarship.application_fee_amount) || 0;
+                const finalAmount = getApplicationFeeWithDependents(feeAmount);
+                setApplicationFeeAmount(finalAmount);
+              } else {
+                setApplicationFeeAmount(350);
+              }
+            } else {
+              setApplicationFeeAmount(350);
+            }
+          } catch (fetchError) {
+            setApplicationFeeAmount(350);
+          }
+        } else {
+          setApplicationFeeAmount(350);
         }
 
 
@@ -141,7 +193,7 @@ const ApplicationFeeSuccess: React.FC = () => {
         <PaymentSuccessOverlay
           isSuccess={true}
           title={t('successPages.applicationFee.title')}
-          message={t('successPages.applicationFee.message')}
+          message={`${t('successPages.common.paymentProcessedAmount', { amount: applicationFeeAmount.toFixed(2) })} ${t('successPages.applicationFee.message')}`}
         />
       </div>
     );

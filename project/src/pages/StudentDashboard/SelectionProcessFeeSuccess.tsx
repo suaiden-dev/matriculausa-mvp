@@ -273,8 +273,8 @@ const SelectionProcessFeeSuccess: React.FC = () => {
             : t('successPages.selectionProcessFee.errorTitle')
           }
           message={animationSuccess
-            ? `Seu pagamento de $${selectionProcessFeeAmount?.toFixed(2) || '400.00'} foi processado com sucesso!`
-            : 'Houve um problema ao processar seu pagamento.'
+            ? t('successPages.common.paymentProcessedAmount', { amount: selectionProcessFeeAmount?.toFixed(2) || '400.00' })
+            : t('successPages.common.paymentError')
           }
         />
       )}

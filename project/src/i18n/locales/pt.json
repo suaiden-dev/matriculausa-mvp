@@ -3209,6 +3209,21 @@
       "errorTitle": "Falha na Verificação",
       "errorMessage": "Houve um problema ao verificar seu pagamento. Entre em contato com o suporte.",
       "errorDetails": "Detalhes do erro:"
+    },
+    "common": {
+      "redirecting": "Redirecionando em instantes...",
+      "paymentProcessedAmount": "Seu pagamento de ${{amount}} foi processado com sucesso!",
+      "paymentError": "Houve um problema ao processar seu pagamento."
+    },
+    "i20ControlFee": {
+      "title": "Pagamento da Taxa de Controle I-20 Realizado com Sucesso!",
+      "message": "Seu documento I-20 será processado e enviado em breve.",
+      "button": "Voltar para Minhas Candidaturas",
+      "verifying": "Verificando Pagamento...",
+      "pleaseWait": "Aguarde enquanto confirmamos seu pagamento.",
+      "errorTitle": "Erro no Pagamento da Taxa de Controle I-20",
+      "errorMessage": "Houve um problema ao processar seu pagamento.",
+      "errorRetry": "Tente novamente. Se o erro persistir, entre em contato com o suporte."
     }
   },
   "eb3Jobs": {

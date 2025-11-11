@@ -3328,6 +3328,21 @@
       "errorTitle": "Verificación Fallida",
       "errorMessage": "Hubo un problema al verificar tu pago. Por favor contacta al soporte.",
       "errorDetails": "Detalles del error:"
+    },
+    "common": {
+      "redirecting": "Redirigiendo en instantes...",
+      "paymentProcessedAmount": "¡Su pago de ${{amount}} fue procesado exitosamente!",
+      "paymentError": "Hubo un problema al procesar su pago."
+    },
+    "i20ControlFee": {
+      "title": "¡Pago de Tarifa de Control I-20 Exitoso!",
+      "message": "Su documento I-20 será procesado y enviado pronto.",
+      "button": "Volver a Mis Solicitudes",
+      "verifying": "Verificando Pago...",
+      "pleaseWait": "Por favor espere mientras confirmamos su pago.",
+      "errorTitle": "Error en el Pago de Tarifa de Control I-20",
+      "errorMessage": "Hubo un problema al procesar su pago.",
+      "errorRetry": "Intente nuevamente. Si el error persiste, contacte soporte."
     }
   }
 },
