@@ -85,6 +85,11 @@ const StudentLogsView: React.FC<StudentLogsViewProps> = ({ studentId, studentNam
     }
   };
 
+  const formatActionDescription = (description: string) => {
+    // Substituir "manual payment" por "Outside payment" na exibição
+    return description.replace(/manual payment/gi, 'Outside payment');
+  };
+
   const getActionTypeColor = (actionType: string) => {
     if (actionType.includes('approval') || actionType.includes('payment')) {
       return 'text-green-600';
@@ -268,7 +273,7 @@ const StudentLogsView: React.FC<StudentLogsViewProps> = ({ studentId, studentNam
                       </span>
                     </div>
                     <p className="text-sm text-slate-900">
-                      {log.action_description}
+                      {formatActionDescription(log.action_description)}
                     </p>
                     
                     {/* Scholarship Information Display */}
