@@ -1882,6 +1882,7 @@
       },
       "statusLabels": {
         "approvedByUniversity": "APROVADA PELA UNIVERSIDADE",
+        "approved": "APROVADA",
         "notSelectedForScholarship": "NÃO SELECIONADA PARA A BOLSA",
         "pending": "PENDENTE",
         "underReview": "EM REVISÃO",

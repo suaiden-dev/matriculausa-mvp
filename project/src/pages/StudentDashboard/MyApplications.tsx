@@ -1354,17 +1354,17 @@ const MyApplications: React.FC = () => {
                   {/* Header Section Compacto */}
                   <div className="mb-4">
                     {/* Linha 1: Título e Status Badge */}
-                    <div className="flex justify-between items-start mb-2">
+                    <div className="flex justify-between items-start gap-2 mb-2">
                       <h2 className="font-bold text-gray-900 text-base leading-tight flex-1 pr-3">
                         {scholarship.title}
                       </h2>
-                      <span className={`inline-flex items-center px-2 py-1 rounded-lg text-xs font-bold border ${getStatusColor(application.status === 'enrolled' ? 'approved' : application.status)}`}>
-                        <Icon className="h-3 w-3 mr-1" />
-                        {getStatusLabel(application.status === 'enrolled' ? 'approved' : application.status)}
+                      <span className={`inline-flex items-center px-2 py-1 rounded-lg text-xs font-bold border flex-shrink-0 ${getStatusColor(application.status === 'enrolled' ? 'approved' : application.status)}`}>
+                        <Icon className="h-3 w-3 mr-1 flex-shrink-0" />
+                        <span className="whitespace-nowrap">{application.status === 'approved' || application.status === 'enrolled' ? t('studentDashboard.myApplications.statusLabels.approved') : getStatusLabel(application.status)}</span>
                       </span>
                     </div>
                     
-                    {/* Linha 2: Universidade + Level */}
+                    {/* Linha 3: Universidade + Level */}
                     <div className="flex items-center gap-2 text-sm mb-3">
                       <div className="flex items-center text-gray-600 flex-1 min-w-0 max-w-[calc(100%-80px)] overflow-hidden">
                         <Building className="h-3 w-3 mr-1.5 text-gray-500 flex-shrink-0" />
@@ -1376,7 +1376,7 @@ const MyApplications: React.FC = () => {
                       </span>
                     </div>
                     
-                    {/* Linha 3: Data de aplicação + Valor */}
+                    {/* Linha 4: Data de aplicação + Valor */}
                         <div className="flex flex-wrap items-center gap-2 text-xs">
                           <span className={`inline-flex items-center px-2 py-1 rounded-md border ${getStatusColor(application.status)} whitespace-nowrap`}>
                             <Icon className="h-3 w-3 mr-1" />

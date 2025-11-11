@@ -1786,6 +1786,7 @@
       },
       "statusLabels": {
         "approvedByUniversity": "APPROVED BY THE UNIVERSITY",
+        "approved": "APPROVED",
         "notSelectedForScholarship": "NOT SELECTED FOR THE SCHOLARSHIP",
         "pending": "PENDING",
         "underReview": "UNDER REVIEW",
