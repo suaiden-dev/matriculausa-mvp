@@ -1583,22 +1583,6 @@ const MyApplications: React.FC = () => {
                                   <span className="whitespace-nowrap">{getLevelLabel(scholarship.level)}</span>
                                 </span>
                               </div>
-                              
-                              {/* Line 3: Compact chips row for mobile */}
-                              <div className="flex flex-wrap items-center gap-2 text-xs">
-                                <span className={`inline-flex items-center px-2 py-1 rounded-md border ${getStatusColor(application.status)} whitespace-nowrap`}>
-                                  <Icon className="h-3 w-3 mr-1" />
-                                  {getStatusLabel(application.status)}
-                                </span>
-                                <span className="inline-flex items-center px-2 py-1 rounded-md bg-gray-50 text-gray-700 border border-gray-200 whitespace-nowrap">
-                                  <Calendar className="h-3 w-3 mr-1.5 text-gray-500" />
-                                  {new Date(application.applied_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                                </span>
-                                <span className="inline-flex items-center px-2 py-1 rounded-md bg-green-50 text-green-700 border border-green-200 whitespace-nowrap">
-                                  <DollarSign className="h-3 w-3 mr-1 text-green-600" />
-                                  {formatAmount(scholarship.annual_value_with_scholarship ?? 0)}
-                                </span>
-                              </div>
                             </div>
 
                             {/* Status Details - Mobile collapsible, desktop always visible */}
@@ -1784,8 +1768,8 @@ const MyApplications: React.FC = () => {
                                                    {isRejected && (
                                                      <div className="mt-3 space-y-2">
                                                        <div className="flex flex-col sm:flex-row gap-2">
-                                                         <label className="cursor-pointer bg-gradient-to-r from-blue-50 to-blue-100 text-blue-700 border-2 border-blue-200 hover:from-blue-100 hover:to-blue-200 px-3 py-2 rounded-lg font-semibold transition-all duration-200 flex-1 block text-center text-xs hover:shadow-md">
-                                                           <span>
+                                                         <label className="cursor-pointer bg-gradient-to-r from-blue-50 to-blue-100 text-blue-700 border-2 border-blue-200 hover:from-blue-100 hover:to-blue-200 px-3 py-2 rounded-lg font-semibold transition-all duration-200 flex-1 text-center text-xs hover:shadow-md">
+                                                           <span className="block">
                                                              <TruncatedText
                                                                text={`${t('studentDashboard.myApplications.documents.sendNew')} ${doc.label}`}
                                                                maxLength={40}
@@ -1802,20 +1786,22 @@ const MyApplications: React.FC = () => {
                                                            />
                                                          </label>
                                                          <button
-                                                           className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 text-white px-3 py-2 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:from-blue-700 hover:to-blue-800 text-xs"
+                                                           className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 text-white px-3 py-2 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:from-blue-700 hover:to-blue-800 text-xs whitespace-nowrap"
                                                            disabled={!selectedFiles[docKey(application.id, doc.type)] || uploading[docKey(application.id, doc.type)]}
                                                            onClick={() => handleUploadDoc(application.id, doc.type)}
                                                          >
                                                          {uploading[docKey(application.id, doc.type)] ? (
                                                            <div className="flex items-center justify-center">
                                                              <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-2"></div>
-                                                             {t('studentDashboard.myApplications.paymentStatus.uploading')}
+                                                             <span className="whitespace-nowrap">{t('studentDashboard.myApplications.paymentStatus.uploading')}</span>
                                                            </div>
-                                                         ) : t('studentDashboard.myApplications.paymentStatus.uploadDocument')}
+                                                         ) : (
+                                                           <span className="whitespace-nowrap">{t('studentDashboard.myApplications.paymentStatus.uploadDocument')}</span>
+                                                         )}
                                                        </button>
                                                        </div>
                                                        {selectedFiles[docKey(application.id, doc.type)] && (
-                                                         <div className="text-xs text-slate-700 bg-slate-50 border border-slate-200 rounded-lg p-2">
+                                                         <div className="text-xs text-slate-700 bg-slate-50 border border-slate-200 rounded-lg p-2 break-words">
                                                            <span className="font-medium">{t('studentDashboard.myApplications.paymentStatus.selected')}: </span>
                                                            <TruncatedText
                                                              text={selectedFiles[docKey(application.id, doc.type)]?.name || ''}
