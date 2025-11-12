@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { CheckCircle, XCircle } from 'lucide-react';
+import { XCircle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import CustomLoading from '../../components/CustomLoading';
+import PaymentSuccessOverlay from '../../components/PaymentSuccessOverlay';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '../../hooks/useAuth';
 
 type VerificationStatus = 'loading' | 'success' | 'error';
 
@@ -12,8 +14,17 @@ const ApplicationFeeSuccess: React.FC = () => {
   const [searchParams] = useSearchParams();
   const [status, setStatus] = useState<VerificationStatus>('loading');
   const [error, setError] = useState<string | null>(null);
-  const [paymentAmount, setPaymentAmount] = useState<number>(350.00);
+  const [applicationFeeAmount, setApplicationFeeAmount] = useState<number>(0);
+  const [showAnimation, setShowAnimation] = useState(false);
   const { t } = useTranslation();
+  const { userProfile } = useAuth();
+
+  // Helper: calcular Application Fee exibida considerando dependentes (legacy) - mesma lógica do MyApplications
+  const getApplicationFeeWithDependents = (base: number): number => {
+    const systemType = (userProfile?.system_type as any) || 'legacy';
+    const deps = Number(userProfile?.dependents) || 0;
+    return systemType === 'legacy' && deps > 0 ? base + deps * 100 : base;
+  };
 
   useEffect(() => {
     const verifySession = async () => {
@@ -48,15 +59,44 @@ const ApplicationFeeSuccess: React.FC = () => {
               .eq('id', sessionData.applicationId)
               .single();
 
-            if (!appError && application?.scholarships && Array.isArray(application.scholarships) && application.scholarships[0]?.application_fee_amount) {
-              setPaymentAmount(application.scholarships[0].application_fee_amount);
+            if (appError) {
+              // Usar fallback 350 se houver erro
+              setApplicationFeeAmount(350);
+            } else if (application?.scholarships) {
+              // Verifica se é array ou objeto
+              let scholarship = null;
+              if (Array.isArray(application.scholarships)) {
+                scholarship = application.scholarships[0];
+              } else {
+                scholarship = application.scholarships;
+              }
+
+              if (scholarship?.application_fee_amount) {
+                const feeAmount = Number(scholarship.application_fee_amount) || 0;
+                const finalAmount = getApplicationFeeWithDependents(feeAmount);
+                setApplicationFeeAmount(finalAmount);
+              } else {
+                setApplicationFeeAmount(350);
+              }
+            } else {
+              setApplicationFeeAmount(350);
             }
           } catch (fetchError) {
-            console.log('Could not fetch scholarship fee amount, using default:', fetchError);
+            setApplicationFeeAmount(350);
           }
+        } else {
+          setApplicationFeeAmount(350);
         }
+
+
         
         setStatus('success');
+        setShowAnimation(true);
+        
+        // Aguardar animação e redirecionar
+        setTimeout(() => {
+          navigate('/student/dashboard/applications');
+        }, 6000);
 
         // Log Stripe payment success
         // try {
@@ -129,22 +169,7 @@ const ApplicationFeeSuccess: React.FC = () => {
           />
         );
       case 'success':
-        return (
-          <>
-            <CheckCircle className="h-16 w-16 text-green-600 mb-4 mx-auto" />
-            <h1 className="text-3xl font-bold text-green-700 mb-2 text-center">{t('successPages.applicationFee.title')}</h1>
-            <p className="text-slate-700 mb-6 text-center">
-              {/* Seu pagamento de ${paymentAmount.toFixed(2)} foi processado com sucesso.<br/> */}
-              {t('successPages.applicationFee.message')}
-            </p>
-            <button
-              onClick={() => navigate('/student/dashboard/applications')}
-              className="bg-green-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-green-700 transition-all duration-300"
-            >
-              {t('successPages.applicationFee.button')}
-            </button>
-          </>
-        );
+        return null; // Sucesso será tratado pelo overlay
       case 'error':
         return (
            <>
@@ -160,6 +185,19 @@ const ApplicationFeeSuccess: React.FC = () => {
         );
     }
   };
+
+  // Se deve mostrar animação, usar o overlay
+  if (showAnimation && status === 'success') {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center bg-white px-4 relative">
+        <PaymentSuccessOverlay
+          isSuccess={true}
+          title={t('successPages.applicationFee.title')}
+          message={`${t('successPages.common.paymentProcessedAmount', { amount: applicationFeeAmount.toFixed(2) })} ${t('successPages.applicationFee.message')}`}
+        />
+      </div>
+    );
+  }
 
   return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center bg-white px-4">

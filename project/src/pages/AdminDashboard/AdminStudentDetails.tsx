@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
 import { useAuth } from '../../hooks/useAuth';
 import { useStudentLogs } from '../../hooks/useStudentLogs';
+import { recordIndividualFeePayment } from '../../lib/paymentRecorder';
 import DocumentsView from '../../components/EnhancedStudentTracking/DocumentsView';
 import AdminScholarshipSelection from '../../components/AdminDashboard/AdminScholarshipSelection';
 import StudentLogsView from '../../components/AdminDashboard/StudentLogsView';
@@ -1695,6 +1696,29 @@ const AdminStudentDetails: React.FC = () => {
 
     try {
       if (feeType === 'selection_process') {
+        // Calcular o valor do pagamento
+        const base = Number(getFeeAmount('selection_process'));
+        const paymentAmount = base + (student?.dependents || 0) * 150;
+        const paymentDate = new Date().toISOString();
+        const paymentMethod = (method || 'manual') as 'stripe' | 'zelle' | 'manual';
+
+        // Registrar pagamento na tabela individual_fee_payments ANTES de marcar como pago
+        try {
+          await recordIndividualFeePayment(supabase, {
+            userId: student.user_id,
+            feeType: 'selection_process',
+            amount: paymentAmount,
+            paymentDate: paymentDate,
+            paymentMethod: paymentMethod,
+            paymentIntentId: null,
+            stripeChargeId: null,
+            zellePaymentId: null
+          });
+        } catch (recordError) {
+          console.error('Failed to record individual fee payment:', recordError);
+          // Não quebra o fluxo, mas loga o erro
+        }
+
         // Marcar selection process fee como pago
         const { error } = await supabase
           .from('user_profiles')
@@ -1719,10 +1743,7 @@ const AdminStudentDetails: React.FC = () => {
             {
               fee_type: 'selection_process',
               payment_method: method || 'manual',
-              amount: (() => {
-                const base = Number(getFeeAmount('selection_process'));
-                return base + (student?.dependents || 0) * 150;
-              })()
+              amount: paymentAmount
             }
           );
         } catch (logError) {
@@ -1756,6 +1777,65 @@ const AdminStudentDetails: React.FC = () => {
           }
           
           targetApplicationId = targetApplication.id;
+        }
+
+        // Buscar dados da aplicação para calcular o valor correto da application fee
+        const { data: applicationData, error: fetchAppDataError } = await supabase
+          .from('scholarship_applications')
+          .select(`
+            id,
+            scholarships (
+              application_fee_amount
+            )
+          `)
+          .eq('id', targetApplicationId)
+          .single();
+
+        if (fetchAppDataError) {
+          console.error('Error fetching application data for fee calculation:', fetchAppDataError);
+        }
+
+        // Calcular o valor do pagamento
+        let paymentAmount: number;
+        if (applicationData?.scholarships) {
+          const scholarship = Array.isArray(applicationData.scholarships) 
+            ? applicationData.scholarships[0] 
+            : applicationData.scholarships;
+          
+          if (scholarship?.application_fee_amount) {
+            paymentAmount = Number(scholarship.application_fee_amount);
+          } else {
+            paymentAmount = getFeeAmount('application_fee');
+          }
+        } else {
+          paymentAmount = getFeeAmount('application_fee');
+        }
+
+        // Adicionar $100 por dependente apenas para sistema legacy
+        const systemType = userSystemType || 'legacy';
+        const studentDependents = dependents || Number(student.dependents || 0);
+        if (systemType === 'legacy' && studentDependents > 0) {
+          paymentAmount += studentDependents * 100;
+        }
+
+        const paymentDate = new Date().toISOString();
+        const paymentMethod = (method || 'manual') as 'stripe' | 'zelle' | 'manual';
+
+        // Registrar pagamento na tabela individual_fee_payments ANTES de marcar como pago
+        try {
+          await recordIndividualFeePayment(supabase, {
+            userId: student.user_id,
+            feeType: 'application',
+            amount: paymentAmount,
+            paymentDate: paymentDate,
+            paymentMethod: paymentMethod,
+            paymentIntentId: null,
+            stripeChargeId: null,
+            zellePaymentId: null
+          });
+        } catch (recordError) {
+          console.error('Failed to record individual fee payment:', recordError);
+          // Não quebra o fluxo, mas loga o erro
         }
 
         const { error } = await supabase
@@ -1825,7 +1905,7 @@ const AdminStudentDetails: React.FC = () => {
             {
               fee_type: 'application',
               payment_method: method || 'manual',
-              amount: 400,
+              amount: paymentAmount,
               application_id: targetApplicationId
             }
           );
@@ -1856,6 +1936,28 @@ const AdminStudentDetails: React.FC = () => {
           targetApplicationId = targetApplication.id;
         }
 
+        // Calcular o valor do pagamento
+        const paymentAmount = Number(getFeeAmount('scholarship_fee'));
+        const paymentDate = new Date().toISOString();
+        const paymentMethod = (method || 'manual') as 'stripe' | 'zelle' | 'manual';
+
+        // Registrar pagamento na tabela individual_fee_payments ANTES de marcar como pago
+        try {
+          await recordIndividualFeePayment(supabase, {
+            userId: student.user_id,
+            feeType: 'scholarship',
+            amount: paymentAmount,
+            paymentDate: paymentDate,
+            paymentMethod: paymentMethod,
+            paymentIntentId: null,
+            stripeChargeId: null,
+            zellePaymentId: null
+          });
+        } catch (recordError) {
+          console.error('Failed to record individual fee payment:', recordError);
+          // Não quebra o fluxo, mas loga o erro
+        }
+
         const { error } = await supabase
           .from('scholarship_applications')
           .update({
@@ -1879,7 +1981,7 @@ const AdminStudentDetails: React.FC = () => {
             {
               fee_type: 'scholarship',
               payment_method: method || 'manual',
-              amount: getFeeAmount('scholarship_fee'),
+              amount: paymentAmount,
               application_id: targetApplicationId
             }
           );
@@ -1887,6 +1989,28 @@ const AdminStudentDetails: React.FC = () => {
           console.error('Failed to log action:', logError);
         }
       } else if (feeType === 'i20_control') {
+        // Calcular o valor do pagamento
+        const paymentAmount = Number(getFeeAmount('i20_control_fee'));
+        const paymentDate = new Date().toISOString();
+        const paymentMethod = (method || 'manual') as 'stripe' | 'zelle' | 'manual';
+
+        // Registrar pagamento na tabela individual_fee_payments ANTES de marcar como pago
+        try {
+          await recordIndividualFeePayment(supabase, {
+            userId: student.user_id,
+            feeType: 'i20_control',
+            amount: paymentAmount,
+            paymentDate: paymentDate,
+            paymentMethod: paymentMethod,
+            paymentIntentId: null,
+            stripeChargeId: null,
+            zellePaymentId: null
+          });
+        } catch (recordError) {
+          console.error('Failed to record individual fee payment:', recordError);
+          // Não quebra o fluxo, mas loga o erro
+        }
+
         // Marcar I-20 control fee como pago
         const { error } = await supabase
           .from('user_profiles')
@@ -1911,7 +2035,7 @@ const AdminStudentDetails: React.FC = () => {
             {
               fee_type: 'i20_control',
               payment_method: method || 'manual',
-              amount: getFeeAmount('i20_control_fee')
+              amount: paymentAmount
             }
           );
         } catch (logError) {
@@ -2246,8 +2370,8 @@ const AdminStudentDetails: React.FC = () => {
     } catch (error) {
       console.error('❌ [ADMIN] Error fetching document requests:', error);
       console.error('❌ [ADMIN] Error details:', {
-        message: error.message,
-        stack: error.stack
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
       });
     } finally {
       setLoadingDocuments(false);
@@ -4377,7 +4501,7 @@ const AdminStudentDetails: React.FC = () => {
                                   className="text-sm px-3 py-2 border border-slate-300 rounded-lg w-full max-w-[150px]"
                                   disabled={savingPaymentMethod}
                                 >
-                                  <option value="manual">Manual</option>
+                                  <option value="manual">Outside</option>
                                   <option value="stripe">Stripe</option>
                                   <option value="zelle">Zelle</option>
                                 </select>
@@ -4487,7 +4611,7 @@ const AdminStudentDetails: React.FC = () => {
                                   className="text-sm px-3 py-2 border border-slate-300 rounded-lg w-full max-w-[150px]"
                                   disabled={savingPaymentMethod}
                                 >
-                                  <option value="manual">Manual</option>
+                                  <option value="manual">Outside</option>
                                   <option value="stripe">Stripe</option>
                                   <option value="zelle">Zelle</option>
                                 </select>
@@ -4588,7 +4712,7 @@ const AdminStudentDetails: React.FC = () => {
                                   className="text-sm px-3 py-2 border border-slate-300 rounded-lg w-full max-w-[150px]"
                                   disabled={savingPaymentMethod}
                                 >
-                                  <option value="manual">Manual</option>
+                                  <option value="manual">Outside</option>
                                   <option value="stripe">Stripe</option>
                                   <option value="zelle">Zelle</option>
                                 </select>
@@ -4689,7 +4813,7 @@ const AdminStudentDetails: React.FC = () => {
                                   className="text-sm px-3 py-2 border border-slate-300 rounded-lg w-full max-w-[150px]"
                                   disabled={savingPaymentMethod}
                                 >
-                                  <option value="manual">Manual</option>
+                                  <option value="manual">Outside</option>
                                   <option value="stripe">Stripe</option>
                                   <option value="zelle">Zelle</option>
                                 </select>
@@ -5746,7 +5870,7 @@ const AdminStudentDetails: React.FC = () => {
               >
                 <option value="stripe">Stripe</option>
                 <option value="zelle">Zelle</option>
-                <option value="manual">Manual</option>
+                <option value="manual">Outside</option>
               </select>
             </div>
             
