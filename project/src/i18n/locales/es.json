@@ -1455,10 +1455,6 @@
     "deadline": "Fecha límite",
     "amount": "Monto"
   },
-  "studentDashboard": {
-    "title": "Panel del Estudiante",
-    "subtitle": "Gestiona tus solicitudes de beca",
-    "welcome": "Bienvenido de vuelta",
     "progressBar": {
       "title": "Esta es tu barra de progreso de tasas de solicitud. Completa cada paso para avanzar.",
       "selectionProcessFee": "Tarifa de Proceso de Selección",
@@ -2344,14 +2340,6 @@
       }
     }
   },
-  "profileManagement": {
-    "title": "Perfil del Estudiante",
-    "subtitle": "Gestiona tu perfil académico y preferencias",
-    "editProfile": "Editar Perfil",
-    "profileCompleteness": {
-      "title": "Completitud del Perfil",
-      "subtitle": "Completa tu perfil para desbloquear más oportunidades de becas",
-      "complete": "Completo",
       "improveMatching": "Completa tu perfil para mejorar la coincidencia de becas"
     },
     "form": {
@@ -3346,11 +3334,385 @@
       "errorMessage": "Hubo un problema al procesar su pago.",
       "errorRetry": "Intente nuevamente. Si el error persiste, contacte soporte."
     }
-  }
-},
+  },
+  "studentDashboard": {
+    "title": "Panel del Estudiante",
+    "welcome": "Bienvenido de vuelta",
+    "stepByStepTour": {
+      "title": "Tour Paso a Paso",
+      "description": "Ve todo el viaje de solicitud en detalle.",
+      "startTour": "Iniciar Tour"
+    },
+    "selectionProcess": {
+      "title": "Proceso de Selección",
+      "description": "Comienza tu viaje a la educación americana completando nuestro proceso de selección integral.",
+      "completeApplicationProcess": "Completa tu proceso de solicitud",
+      "discountApplied": "✨ ¡Tienes un cupón de descuento aplicado!",
+      "startButton": "Iniciar Proceso de Selección"
+    },
+    "stats": {
+      "myApplications": "Mis Solicitudes",
+      "totalSubmitted": "Total enviadas",
+      "approved": "Aprobadas",
+      "successful": "Exitosas",
+      "pending": "Pendientes",
+      "underReview": "En revisión"
+    },
+    "quickActions": {
+      "findScholarships": "Encontrar Becas",
+      "findDescription": "Descubre nuevas oportunidades de beca",
+      "myApplications": "Mis Solicitudes",
+      "myApplicationsDescription": "Rastrea el estado de tu solicitud",
+      "updateProfile": "Actualizar Perfil",
+      "updateDescription": "Mantén tu perfil actualizado"
+    },
+    "profileStatus": {
+      "title": "Estado del Perfil",
+      "basicInformation": "Información básica",
+      "academicDetails": "Detalles académicos",
+      "documentsUploaded": "Documentos subidos",
+      "completeProfile": "Completa tu perfil para desbloquear más oportunidades",
+      "completeNow": "Completar ahora",
+      "profileComplete": "¡Perfil Completo!",
+      "viewProfile": "Ver Perfil"
+    },
+    "successTips": {
+      "title": "Consejos de Éxito",
+      "tip1": "Aplica temprano para aumentar tus posibilidades de éxito",
+      "tip2": "Adapta tus solicitudes a cada beca",
+      "tip3": "Mantén tu perfil actualizado con tus últimos logros"
+    },
+    "recentApplications": {
+      "title": "Solicitudes Recientes",
+      "subtitle": "Rastrea tus últimas solicitudes de beca",
+      "noApplications": "Aún no hay solicitudes",
+      "startJourneyMessage": "Comienza tu viaje navegando y aplicando a becas",
+      "browseScholarships": "Explorar Becas",
+      "totalApplications": "Total de Solicitudes",
+      "showingApplications": "Mostrando {count} de {total} solicitudes",
+      "loadMoreApplications": "Cargar Más Solicitudes",
+      "viewAllApplications": "Ver Todas las Solicitudes",
+      "scholarshipApplication": "Solicitud de Beca",
+      "university": "Universidad",
+      "applied": "Aplicado:",
+      "deadline": "Fecha límite:",
+      "couponApplied": "Cupón aplicado:",
+      "shown": "mostradas",
+      "status": {
+        "approved": "Aprobada",
+        "under_review": "Revisión",
+        "pending": "Pendiente"
+      }
+    },
+    "progressBar": {
+      "title": "Esta es tu barra de progreso de tasas de solicitud. Completa cada paso para avanzar.",
+      "allStepsCompleted": "¡Todos los Pasos Completados! 🎉",
+      "selectionProcessFee": "Tarifa de Proceso de Selección",
+      "applicationFee": "Tarifa de Solicitud",
+      "scholarshipFee": "Tarifa de Beca",
+      "i20ControlFee": "Tarifa de Control I-20",
+      "completed": "¡Completado!",
+      "payApplicationFee": "Paga la Tarifa de Solicitud para aplicar a una beca específica.",
+      "payScholarshipFee": "Paga la Tarifa de Beca para confirmar tu solicitud de beca.",
+      "payI20Fee": "Paga la Tarifa de Control I-20 para iniciar tu proceso de validación I-20 y documentos.",
+      "daysRemaining": "Tienes 10 días después de la tarifa de beca."
+    },
+    "sidebar": {
+      "overview": "Resumen",
+      "browseScholarships": "Explorar Becas",
+      "selectedScholarships": "Becas Seleccionadas",
+      "myApplications": "Mis Solicitudes",
+      "supportChat": "Chat de Soporte",
+      "matriculaRewards": "Recompensas Matrícula",
+      "profile": "Perfil"
+    },
+    "subtitle": "Gestiona tus solicitudes de beca",
+    "myApplications": {
+      "loading": "Cargando...",
+      "error": "Error: {{message}}",
+      "subtitle": "Rastrea el progreso de tus solicitudes de beca y gestiona tu proceso de admisión",
+      "totalApplications": "Total de Solicitudes",
+      "documents": {
+        "passport": "Pasaporte",
+        "highSchoolDiploma": "Diploma de Bachillerato",
+        "proofOfFunds": "Comprobante de Fondos"
+      },
+      "statusLabels": {
+        "approvedByUniversity": "Aprobado por la Universidad",
+        "notSelectedForScholarship": "No Seleccionado para Beca",
+        "pending": "Pendiente",
+        "underReview": "En Revisión",
+        "pendingScholarshipFee": "Tarifa de Beca Pendiente"
+      },
+      "statusDescriptions": {
+        "documentsApprovedByUniversity": {
+          "title": "Documentos Aprobados por la Universidad",
+          "description": "¡Felicidades! Tus documentos han sido aprobados por la universidad.",
+          "nextSteps": [
+            "Paga la tarifa de matrícula para confirmar tu lugar",
+            "Prepárate para el siguiente paso en tu proceso de admisión"
+          ]
+        },
+        "applicationApprovedPaymentRequired": {
+          "title": "Solicitud Aprobada - Pago Requerido",
+          "description": "Tu solicitud ha sido aprobada. Procede con el pago de la tarifa.",
+          "nextSteps": [
+            "Completa el pago de la tarifa de matrícula",
+            "Espera la confirmación de la universidad"
+          ]
+        },
+        "applicationFeePaidScholarshipFeeRequired": {
+          "title": "Tarifa de Solicitud Pagada - Tarifa de Beca Requerida",
+          "description": "Has pagado la tarifa de solicitud. Ahora necesitas pagar la tarifa de beca.",
+          "nextSteps": [
+            "Paga la tarifa de beca para continuar",
+            "Accede al chat directo con la universidad"
+          ]
+        },
+        "fullyEnrolled": {
+          "title": "Completamente Matriculado",
+          "description": "¡Felicidades! Estás completamente matriculado en tu programa.",
+          "nextSteps": [
+            "Prepárate para tu experiencia académica",
+            "Revisa los materiales de orientación"
+          ]
+        },
+        "applicationNotSelected": {
+          "title": "Solicitud No Seleccionada",
+          "description": "Lamentablemente, tu solicitud no fue seleccionada esta vez.",
+          "nextSteps": [
+            "Considera aplicar a otras becas",
+            "Revisa tu perfil y mejora tus calificaciones"
+          ]
+        },
+        "applicationUnderReview": {
+          "title": "Solicitud En Revisión",
+          "description": "Tu solicitud está siendo revisada por la universidad.",
+          "nextSteps": [
+            "Espera la decisión de la universidad",
+            "Asegúrate de que todos los documentos estén completos"
+          ]
+        },
+        "applicationFeeConfirmed": {
+          "title": "Tarifa de Solicitud Confirmada",
+          "description": "Tu tarifa de solicitud ha sido confirmada y procesada.",
+          "nextSteps": [
+            "Espera la revisión de la universidad",
+            "Prepárate para los siguientes pasos"
+          ]
+        },
+        "documentsUnderUniversityReview": {
+          "title": "Documentos en Revisión por la Universidad",
+          "description": "Tus documentos están siendo revisados por la universidad.",
+          "nextSteps": [
+            "Espera la decisión de la universidad",
+            "Mantén tus documentos actualizados"
+          ]
+        },
+        "applicationSubmitted": {
+          "title": "Solicitud Enviada",
+          "description": "Tu solicitud ha sido enviada exitosamente.",
+          "nextSteps": [
+            "Espera la confirmación de recepción",
+            "Prepárate para posibles documentos adicionales"
+          ]
+        }
+      }
+    },
+    "documentsAndScholarshipChoice": {
+      "title": "Documentos y Elección de Beca",
+      "subtitle": "Sube tus documentos y elige tu beca preferida",
+      "step1Title": "Paso 1: Sube tus Documentos",
+      "step1Description": "Por favor, sube los documentos requeridos para continuar con tu solicitud",
+      "passport": "Pasaporte",
+      "diploma": "Diploma",
+      "fundsProof": "Comprobante de Fondos",
+      "passportDescription": "Copia clara de tu pasaporte válido",
+      "diplomaDescription": "Diploma o certificado de bachillerato",
+      "fundsProofDescription": "Comprobante de capacidad financiera",
+      "firstTimeF1": "Primera Vez Estudiante F1",
+      "firstTimeF1Description": "Estudiante internacional que solicita visa F1 por primera vez",
+      "schoolTransfer": "Transferencia Escolar",
+      "schoolTransferDescription": "Estudiante transfiriendo de otra institución",
+      "documentLimitExceeded": "Límite de documentos excedido ({limit} máximo)",
+      "fileSizeExceeded": "Tamaño de archivo excedido para {fileName}",
+      "onlyPdfAllowed": "Solo se permiten archivos PDF",
+      "totalSizeExceeded": "Tamaño total de archivos excedido",
+      "languageError": "Error de idioma en el documento {documentType}",
+      "accessError": "Error de acceso al documento {documentType}",
+      "fundsDataError": "Error en los datos de fondos del documento {documentType}",
+      "currencyFieldError": "Error en el campo de moneda del documento {documentType}",
+      "passportFormatError": "Error de formato en el pasaporte",
+      "passportMRZError": "Error en la zona de lectura mecánica del pasaporte",
+      "bankStatementNotReadableError": "El estado de cuenta bancario no es legible",
+      "diplomaNotReadableError": "El diploma no es legible",
+      "diplomaProcessError": "Error al procesar el diploma",
+      "fundsValidationError": "Error en la validación de fondos"
+    },
+    "findScholarships": {
+      "title": "Encontrar Becas",
+      "subtitle": "Descubre oportunidades adaptadas a tu perfil académico",
+      "searchPlaceholder": "Buscar becas...",
+      "allLevels": "Todos los Niveles",
+      "allFields": "Todos los Campos",
+      "allModes": "Todos los Modos",
+      "allPermissions": "Todas las Autorizaciones",
+      "allUniversities": "Todas las Universidades",
+      "minValue": "Valor mínimo",
+      "maxValue": "Valor máximo",
+      "scholarshipsFound": "becas encontradas",
+      "filters": {
+        "active": "activo",
+        "academicLevel": "Nivel Académico",
+        "fieldOfStudy": "Campo de Estudio",
+        "studyMode": "Modalidad de Estudio",
+        "workAuthorization": "Autorización de Trabajo",
+        "minValue": "Valor Mín",
+        "maxValue": "Valor Máx",
+        "anyField": "Cualquier Campo",
+        "online": "En Línea",
+        "hybrid": "Híbrido",
+        "applying": "Aplicando",
+        "loading": "Cargando",
+        "applied": "Aplicado",
+        "clearAllFilters": "Limpiar Todos los Filtros",
+        "clear": "Limpiar",
+        "search": "Búsqueda:",
+        "level": "Nivel:",
+        "field": "Campo:",
+        "mode": "Modo:",
+        "work": "Trabajo:",
+        "min": "Mín:",
+        "max": "Máx:",
+        "deadline": "Fecha límite:",
+        "days": "días",
+        "deadlineDays": "Fecha límite (días)"
+      },
+      "scholarshipCard": {
+        "inPerson": "Presencial",
+        "mixed": "Mixto",
+        "university": "Universidad",
+        "featured": "Destacado",
+        "exclusive": "Exclusiva",
+        "financialOverview": "Resumen Financiero",
+        "originalPrice": "Precio Original",
+        "withScholarship": "Con Beca",
+        "perCredit": "Por Crédito",
+        "studyMode": "Modalidad de Estudio",
+        "workAuthorization": "Autorización de Trabajo",
+        "level": "Nivel",
+        "deadline": "Fecha Límite",
+        "daysLeft": "días restantes",
+        "show": "Mostrar",
+        "view": "Ver",
+        "details": "Detalles",
+        "alreadyApplied": "Ya Solicitado",
+        "deselect": "Deseleccionar",
+        "selectScholarship": "Seleccionar Beca",
+        "checking": "Verificando...",
+        "more": "más"
+      },
+      "featuredScholarships": {
+        "title": "Becas Destacadas",
+        "subtitle": "Estas becas se muestran de forma prominente y pueden tener beneficios especiales",
+        "featured": "Destacado",
+        "loading": "Cargando becas destacadas..."
+      },
+      "pagination": {
+        "previous": "Anterior",
+        "next": "Siguiente",
+        "pageOf": "(Página {{current}} de {{total}})",
+        "showing": "Mostrando {{start}}-{{end}} de {{total}}"
+      },
+      "applyFilters": "Aplicar Filtros",
+      "deadline": "Fecha límite (días)",
+      "noResults": {
+        "title": "No se encontraron becas",
+        "description": "Intenta ajustar tus criterios de búsqueda para descubrir más oportunidades.",
+        "clearAllFilters": "Limpiar Todos los Filtros"
+      }
+    }
+  },
+  "profileManagement": {
+    "title": "Gestión de Perfil",
+    "subtitle": "Gestiona tu información personal y preferencias académicas",
+    "editProfile": "Editar Perfil",
+    "profileCompleteness": {
+      "title": "Completitud del Perfil",
+      "subtitle": "Completa tu perfil para mejorar las coincidencias de becas",
+      "complete": "completo",
+      "improveMatching": "Mejora las coincidencias completando tu perfil"
+    },
+    "form": {
+      "editProfile": "Editar Perfil",
+      "saving": "Guardando...",
+      "saveChanges": "Guardar Cambios",
+      "cancel": "Cancelar",
+      "fullName": "Nombre Completo",
+      "placeholders": {
+        "enterFullName": "Ingresa tu nombre completo"
+      }
+    },
+    "messages": {
+      "invalidImageFile": "Archivo de imagen inválido",
+      "fileTooLarge": "El archivo es demasiado grande",
+      "imageUrlError": "Error en la URL de la imagen",
+      "avatarUpdateError": "Error al actualizar el avatar",
+      "uploadError": "Error al subir el archivo",
+      "profileUpdated": "Perfil actualizado exitosamente",
+      "saveError": "Error al guardar el perfil"
+    }
+  },
+  "successPages": {
+    "common": {
+      "paymentProcessedAmount": "Tu pago de ${{amount}} ha sido procesado exitosamente."
+    },
+    "applicationFee": {
+      "verifying": "Verificando Pago",
+      "pleaseWait": "Por favor espera mientras verificamos tu pago...",
+      "title": "¡Tarifa de Solicitud Pagada Exitosamente!",
+      "message": "Ya puedes proceder con tu solicitud de beca.",
+      "errorTitle": "Error de Verificación de Pago",
+      "errorMessage": "Hubo un problema al verificar tu pago.",
+      "errorDetails": "Detalles del error:"
+    },
+    "selectedScholarships": {
+      "title": "Becas Seleccionadas",
+      "welcomeMessage": "¡Bienvenido a tu selección de becas!",
+      "description": "Aquí puedes ver todas las becas que has seleccionado para el proceso de solicitud. Estos son los programas en los que estás interesado en aplicar. Sigue los pasos a continuación para completar tu solicitud y comenzar tu viaje hacia estudiar en el extranjero.",
+      "noScholarshipsSelected": "No hay becas seleccionadas",
+      "notSelectedYet": "Aún no has seleccionado ninguna beca. Explora nuestros programas disponibles y agrégalos a tu selección.",
+      "browseScholarships": "Explorar Becas"
+    }
+  },
+  "cartPage": {
+    "removeFromCart": "Eliminar del carrito",
+    "removeToProceed": "Elimina esta beca para proceder",
+    "cannotProceed": "No se puede proceder con becas bloqueadas",
+    "removeBlockedScholarships": "Elimina las becas bloqueadas de arriba para continuar",
+    "processing": "Procesando...",
+    "nextStep": "Siguiente Paso",
+    "clearCart": "Limpiar Carrito"
+  },
+
   "scholarshipDeadline": {
     "3800Expired": "Esta beca ya no está aceptando solicitudes",
     "3800Expiring": "¡Últimas horas para aplicar! El plazo expira mañana (6 de noviembre)",
     "3800ExpiringShort": "El plazo expira mañana"
+  },
+  "applicationCart": {
+    "title": "Carrito de Solicitud",
+    "emptyTitle": "Tu carrito está vacío",
+    "emptyDescription": "Agrega becas a tu carrito para comenzar",
+    "scholarshipSingular": "beca",
+    "scholarshipPlural": "becas",
+    "unknownUniversity": "Universidad Desconocida",
+    "proceedToCheckout": "Proceder al Pago",
+    "daysLeft": "días restantes",
+    "expired": "Vencido"
+  },
+  "alerts": {
+    "scholarshipDeadlineExpired": "Esta beca ya no está aceptando solicitudes. El plazo para aplicar ha expirado.",
+    "failedToSaveStudentType": "Error al guardar el tipo de estudiante. Por favor, inténtalo de nuevo."
   }
 }

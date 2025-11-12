@@ -1282,6 +1282,7 @@
     "welcome": "Welcome back",
     "progressBar": {
       "title": "This is your application fee progress bar. Complete each step to move forward.",
+      "allStepsCompleted": "All Steps Completed! 🎉",
       "selectionProcessFee": "Selection Process Fee",
       "applicationFee": "Application Fee", 
       "scholarshipFee": "Scholarship Fee",
@@ -1343,7 +1344,9 @@
       "academicDetails": "Academic details", 
       "documentsUploaded": "Documents uploaded",
       "completeProfile": "Complete your profile to unlock more opportunities",
-      "completeNow": "Complete now"
+      "completeNow": "Complete now",
+      "profileComplete": "Profile Complete!",
+      "viewProfile": "View Profile"
     },
     "successTips": {
       "title": "Success Tips",

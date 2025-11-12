@@ -26,6 +26,7 @@ import { ProgressBar } from '../../components/ProgressBar';
 import StepByStepButton from '../../components/OnboardingTour/StepByStepButton';
 import StepByStepGuide from '../../components/OnboardingTour/StepByStepGuide';
 import { useStepByStepGuide } from '../../hooks/useStepByStepGuide';
+import { supabase } from '../../lib/supabase';
 import './Overview.css'; // Adicionar um arquivo de estilos dedicado para padronização visual
 
 // Componente de skeleton para valores de taxa
@@ -54,13 +55,17 @@ const Overview: React.FC<OverviewProps> = ({
   recentApplications = []
 }) => {
   const { t } = useTranslation();
-  const { user, userProfile } = useAuth();
+  
+
+  const { user, userProfile, refetchUserProfile } = useAuth();
   const { activeDiscount } = useReferralCode();
   const { getFeeAmount, userFeeOverrides } = useFeeConfig(user?.id);
   const { selectionProcessFee, scholarshipFee, i20ControlFee, selectionProcessFeeAmount, scholarshipFeeAmount, i20ControlFeeAmount } = useDynamicFees();
   const { isGuideOpen, openGuide, closeGuide } = useStepByStepGuide();
   const [visibleApplications, setVisibleApplications] = useState(5); // Mostrar 5 inicialmente
   const [feesLoading, setFeesLoading] = useState(true);
+  const [studentDocuments, setStudentDocuments] = useState<any[]>([]);
+  const [documentsLoading, setDocumentsLoading] = useState(true);
   
   const hasMoreApplications = recentApplications.length > visibleApplications;
   const displayedApplications = recentApplications.slice(0, visibleApplications);
@@ -68,6 +73,85 @@ const Overview: React.FC<OverviewProps> = ({
   const handleLoadMore = () => {
     setVisibleApplications(prev => Math.min(prev + 5, recentApplications.length));
   };
+
+  // Função para buscar documentos do estudante
+  const fetchStudentDocuments = React.useCallback(async () => {
+    if (!user?.id) {
+      setDocumentsLoading(false);
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('student_documents')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('uploaded_at', { ascending: false });
+
+      if (error) {
+        console.error('Erro ao buscar documentos:', error);
+        setStudentDocuments([]);
+      } else {
+        setStudentDocuments(data || []);
+      }
+    } catch (error) {
+      console.error('Erro ao buscar documentos:', error);
+      setStudentDocuments([]);
+    } finally {
+      setDocumentsLoading(false);
+    }
+  }, [user?.id]);
+
+  // Buscar documentos do estudante
+  useEffect(() => {
+    fetchStudentDocuments();
+  }, [fetchStudentDocuments]);
+
+  // Configurar real-time subscription para atualizações de documentos
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const channel = supabase
+      .channel(`student-documents-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'student_documents',
+          filter: `user_id=eq.${user.id}`
+        },
+        () => {
+          // Refetch documentos quando houver mudanças
+          fetchStudentDocuments();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, fetchStudentDocuments]);
+
+  // Refetch perfil quando necessário (ex: após atualização)
+  useEffect(() => {
+    if (user?.id) {
+      refetchUserProfile();
+    }
+  }, [user?.id, refetchUserProfile]);
+
+  // Atualizar documentos quando o componente receber foco (ex: ao voltar da página de perfil)
+  useEffect(() => {
+    const handleFocus = () => {
+      if (user?.id && !documentsLoading) {
+        fetchStudentDocuments();
+        refetchUserProfile();
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [user?.id, documentsLoading, refetchUserProfile, fetchStudentDocuments]);
 
   // Exibir skeleton até os dados de perfil e taxas estarem prontos para evitar flicker
   useEffect(() => {
@@ -107,6 +191,45 @@ const Overview: React.FC<OverviewProps> = ({
       default: return Clock;
     }
   };
+
+  // Funções para verificar o status de cada seção do perfil
+  const checkBasicInformationComplete = (): boolean => {
+    if (!userProfile) return false;
+    return !!(
+      userProfile.full_name &&
+      userProfile.phone &&
+      userProfile.country
+    );
+  };
+
+  const checkAcademicDetailsComplete = (): boolean => {
+    if (!userProfile) return false;
+    return !!(
+      userProfile.field_of_interest &&
+      userProfile.academic_level &&
+      userProfile.gpa !== null &&
+      userProfile.gpa !== undefined &&
+      userProfile.english_proficiency
+    );
+  };
+
+  const checkDocumentsUploaded = (): boolean => {
+    if (documentsLoading) return false;
+    
+    const requiredDocTypes = ['passport', 'diploma', 'funds_proof'];
+    const uploadedDocTypes = new Set(
+      studentDocuments
+        .filter(doc => doc.file_url && doc.status !== 'rejected')
+        .map(doc => doc.type)
+    );
+    
+    return requiredDocTypes.every(type => uploadedDocTypes.has(type));
+  };
+
+  // Status de cada seção
+  const basicInfoComplete = checkBasicInformationComplete();
+  const academicDetailsComplete = checkAcademicDetailsComplete();
+  const documentsComplete = checkDocumentsUploaded();
 
   const quickActions = [
     {
@@ -344,7 +467,7 @@ const Overview: React.FC<OverviewProps> = ({
 
           {/* Progress Bar dentro do bloco azul */}
           <div className="text-center text-white/90 text-sm md:text-base font-medium mb-1">
-            {allCompleted ? 'All Steps Completed! 🎉' : t('studentDashboard.progressBar.title')}
+            {allCompleted ? t('studentDashboard.progressBar.allStepsCompleted') : t('studentDashboard.progressBar.title')}
           </div>
           <div className="mb-2 md:mb-4">
             <ProgressBar steps={steps} feeValues={dynamicFeeValues} />
@@ -690,7 +813,10 @@ const Overview: React.FC<OverviewProps> = ({
                   <div className="text-center space-y-3 sm:space-y-4">
                     {/* Contador de Applications */}
                     <div className="text-xs sm:text-sm text-slate-600">
-                      {`Showing ${displayedApplications.length} of ${recentApplications.length} applications`}
+                      {t('studentDashboard.recentApplications.showingApplications', { 
+                        count: displayedApplications.length, 
+                        total: recentApplications.length 
+                      })}
                     </div>
                     
                     {/* Load More Button */}
@@ -734,31 +860,58 @@ const Overview: React.FC<OverviewProps> = ({
             <div className="space-y-3 sm:space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-slate-700">{t('studentDashboard.profileStatus.basicInformation')}</span>
-                <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-500" />
+                {basicInfoComplete ? (
+                  <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-500" />
+                ) : (
+                  <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500" />
+                )}
               </div>
               
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-slate-700">{t('studentDashboard.profileStatus.academicDetails')}</span>
-                <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500" />
+                {academicDetailsComplete ? (
+                  <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-500" />
+                ) : (
+                  <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500" />
+                )}
               </div>
               
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-slate-700">{t('studentDashboard.profileStatus.documentsUploaded')}</span>
-                <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500" />
+                {documentsComplete ? (
+                  <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-500" />
+                ) : (
+                  <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500" />
+                )}
               </div>
             </div>
 
-            <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl border border-blue-200">
-              <p className="text-sm font-medium text-blue-800 mb-2">
-                {t('studentDashboard.profileStatus.completeProfile')}
-              </p>
-              <Link
-                to="/student/dashboard/profile"
-                className="text-sm font-bold text-blue-700 hover:text-blue-800 transition-colors"
-              >
-                {t('studentDashboard.profileStatus.completeNow')} →
-              </Link>
-            </div>
+            {(basicInfoComplete && academicDetailsComplete && documentsComplete) ? (
+              <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-xl border border-green-200">
+                <p className="text-sm font-medium text-green-800 mb-2 flex items-center">
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  {t('studentDashboard.profileStatus.profileComplete')}
+                </p>
+                <Link
+                  to="/student/dashboard/profile"
+                  className="text-sm font-bold text-green-700 hover:text-green-800 transition-colors"
+                >
+                  {t('studentDashboard.profileStatus.viewProfile')} →
+                </Link>
+              </div>
+            ) : (
+              <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl border border-blue-200">
+                <p className="text-sm font-medium text-blue-800 mb-2">
+                  {t('studentDashboard.profileStatus.completeProfile')}
+                </p>
+                <Link
+                  to="/student/dashboard/profile"
+                  className="text-sm font-bold text-blue-700 hover:text-blue-800 transition-colors"
+                >
+                  {t('studentDashboard.profileStatus.completeNow')} →
+                </Link>
+              </div>
+            )}
           </div>
 
           {/* Study Tips */}

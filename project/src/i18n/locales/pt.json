@@ -1281,6 +1281,7 @@
     "welcome": "Bem-vindo de volta",
     "progressBar": {
       "title": "Esta é sua barra de progresso de taxas de candidatura. Complete cada etapa para avançar.",
+      "allStepsCompleted": "Todos os Passos Completados! 🎉",
       "selectionProcessFee": "Taxa de Processo de Seleção",
       "applicationFee": "Taxa de Matrícula", 
       "scholarshipFee": "Taxa de Bolsa",
@@ -1339,7 +1340,9 @@
       "academicDetails": "Detalhes acadêmicos", 
       "documentsUploaded": "Documentos enviados",
       "completeProfile": "Complete seu perfil para desbloquear mais oportunidades",
-      "completeNow": "Completar agora"
+      "completeNow": "Completar agora",
+      "profileComplete": "Perfil Completo!",
+      "viewProfile": "Ver Perfil"
     },
     "successTips": {
       "title": "Dicas de Sucesso",
