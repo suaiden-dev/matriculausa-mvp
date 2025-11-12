@@ -3121,6 +3121,21 @@
       "errorTitle": "Verification Failed",
       "errorMessage": "There was a problem verifying your payment. Please contact support.",
       "errorDetails": "Error details:"
+    },
+    "common": {
+      "redirecting": "Redirecting in a moment...",
+      "paymentProcessedAmount": "Your payment of ${{amount}} was processed successfully!",
+      "paymentError": "There was a problem processing your payment."
+    },
+    "i20ControlFee": {
+      "title": "I-20 Control Fee Payment Successful!",
+      "message": "Your I-20 document will be processed and sent to you soon.",
+      "button": "Back to My Applications",
+      "verifying": "Verifying Payment...",
+      "pleaseWait": "Please wait while we confirm your payment.",
+      "errorTitle": "I-20 Control Fee Payment Error",
+      "errorMessage": "There was a problem processing your payment.",
+      "errorRetry": "Please try again. If the error persists, contact support."
     }
   },
 "eb3Jobs": {

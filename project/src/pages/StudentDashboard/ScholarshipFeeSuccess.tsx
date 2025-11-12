@@ -3,17 +3,18 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import CustomLoading from '../../components/CustomLoading';
-import { CheckCircle } from 'lucide-react';
-import { useDynamicFees } from '../../hooks/useDynamicFees';
+import PaymentSuccessOverlay from '../../components/PaymentSuccessOverlay';
+
 import { useTranslation } from 'react-i18next';
 
 const ScholarshipFeeSuccess: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [applicationId, setApplicationId] = useState<string | null>(null);
+  const [showAnimation, setShowAnimation] = useState<boolean>(false);
   const navigate = useNavigate();
   const { userProfile } = useAuth();
-  const { scholarshipFeeAmount } = useDynamicFees();
+
   const { t } = useTranslation();
 
   useEffect(() => {
@@ -71,6 +72,16 @@ const ScholarshipFeeSuccess: React.FC = () => {
           }
         } catch {}
         setLoading(false);
+        setShowAnimation(true);
+        
+        // Aguardar animação e redirecionar
+        setTimeout(() => {
+          if (applicationId) {
+            navigate(`/student/dashboard/application/${applicationId}/chat`);
+          } else {
+            navigate('/student/dashboard/applications');
+          }
+        }, 6000);
 
         // Log Stripe payment success
         // try {
@@ -166,24 +177,47 @@ const ScholarshipFeeSuccess: React.FC = () => {
     );
   }
 
+  // Se deve mostrar animação, usar o overlay
+  if (showAnimation && !loading && !error) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center bg-white px-4 relative">
+        <PaymentSuccessOverlay
+          isSuccess={true}
+          title={t('successPages.scholarshipFee.title')}
+          message={`${t('successPages.common.paymentProcessedAmount', { amount: '900.00' })} ${t('successPages.scholarshipFee.message')}`}
+        />
+      </div>
+    );
+  }
+
   return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center bg-white px-4">
         <div className="bg-white rounded-2xl shadow-lg p-10 max-w-md w-full flex flex-col items-center">
-          <CheckCircle className="h-16 w-16 text-green-600 mb-4" />
-          <h1 className="text-3xl font-bold text-green-700 mb-2 text-center">{t('successPages.scholarshipFee.title')}</h1>
-          <p className="text-slate-700 mb-6 text-center">
-            {/* Seu pagamento de ${scholarshipFeeAmount?.toFixed(2) || '900.00'} foi processado com sucesso.<br/> */}
-            {t('successPages.scholarshipFee.message')}
-          </p>
-          <button
-            className="bg-green-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-green-700 transition-all duration-300"
-            disabled={!applicationId}
-            onClick={() => {
-              if (applicationId) navigate(`/student/dashboard/application/${applicationId}/chat`);
-            }}
-          >
-            {t('successPages.scholarshipFee.button')}
-          </button>
+          {/* Conteúdo de carregamento ou erro */}
+          {loading ? (
+            <CustomLoading 
+              color="green" 
+              title={t('successPages.scholarshipFee.verifying')} 
+              message={t('successPages.scholarshipFee.pleaseWait')} 
+            />
+          ) : error ? (
+            <>
+              <svg className="h-16 w-16 text-red-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01" />
+              </svg>
+              <h1 className="text-3xl font-bold text-red-700 mb-2">{t('successPages.scholarshipFee.errorTitle')}</h1>
+              <p className="text-slate-700 mb-6 text-center">
+                {t('successPages.scholarshipFee.errorMessage')}<br/>
+                {t('successPages.scholarshipFee.errorRetry')}
+              </p>
+              <button 
+                onClick={handleGoToChat} 
+                className="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-700 transition-all duration-300"
+              >
+                {t('successPages.scholarshipFee.button')}
+              </button>
+            </>
+          ) : null}
         </div>
       </div>
   );
