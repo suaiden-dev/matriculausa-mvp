@@ -3,6 +3,7 @@ import { X, GraduationCap, DollarSign, Calendar, Building } from 'lucide-react';
 import { useApplicationStore } from '../stores/applicationStore';
 import { StripeCheckout } from './StripeCheckout';
 import { useModal } from '../contexts/ModalContext';
+import { useTranslation } from 'react-i18next';
 
 interface ApplicationCartProps {
   isOpen: boolean;
@@ -13,6 +14,7 @@ const ApplicationCart: React.FC<ApplicationCartProps> = ({ isOpen, onClose }) =>
   const { selectedScholarships, removeScholarship, clearScholarships, getSelectedCount } = useApplicationStore();
   const [showCheckout, setShowCheckout] = useState(false);
   const { openModal, closeModal } = useModal();
+  const { t } = useTranslation();
 
   // Gerenciar estado do modal no contexto global
   useEffect(() => {
@@ -68,9 +70,9 @@ const ApplicationCart: React.FC<ApplicationCartProps> = ({ isOpen, onClose }) =>
         <div className="flex items-center justify-between p-6 border-b border-slate-200">
                   <div className="flex items-center space-x-3">
           <GraduationCap className="h-6 w-6 text-blue-600" />
-          <h2 className="text-2xl font-bold text-slate-900">Application Cart</h2>
+          <h2 className="text-2xl font-bold text-slate-900">{t('applicationCart.title')}</h2>
           <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm font-medium" data-testid="cart-icon">
-            {getSelectedCount()} {getSelectedCount() === 1 ? 'scholarship' : 'scholarships'}
+            {getSelectedCount()} {getSelectedCount() === 1 ? t('applicationCart.scholarshipSingular') : t('applicationCart.scholarshipPlural')}
           </span>
         </div>
           <button
@@ -88,8 +90,8 @@ const ApplicationCart: React.FC<ApplicationCartProps> = ({ isOpen, onClose }) =>
           {selectedScholarships.length === 0 ? (
             <div className="text-center py-12">
               <GraduationCap className="h-16 w-16 text-slate-300 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-slate-600 mb-2">Your cart is empty</h3>
-              <p className="text-slate-500">Add scholarships to your cart to get started</p>
+              <h3 className="text-xl font-semibold text-slate-600 mb-2">{t('applicationCart.emptyTitle')}</h3>
+              <p className="text-slate-500">{t('applicationCart.emptyDescription')}</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -116,7 +118,7 @@ const ApplicationCart: React.FC<ApplicationCartProps> = ({ isOpen, onClose }) =>
                         
                         <div className="flex items-center text-sm text-slate-600 mb-2">
                           <Building className="h-4 w-4 mr-2" />
-                          {scholarship.universities?.name || scholarship.university_name || 'Unknown University'}
+                          {scholarship.universities?.name || scholarship.university_name || t('applicationCart.unknownUniversity')}
                         </div>
 
                         <div className="flex items-center space-x-4 text-sm">
@@ -126,7 +128,7 @@ const ApplicationCart: React.FC<ApplicationCartProps> = ({ isOpen, onClose }) =>
                           </div>
                           <div className="flex items-center text-slate-600">
                             <Calendar className="h-4 w-4 mr-1" />
-                            <span>{daysLeft > 0 ? `${daysLeft} days left` : 'Expired'}</span>
+                            <span>{daysLeft > 0 ? `${daysLeft} ${t('applicationCart.daysLeft')}` : t('applicationCart.expired')}</span>
                           </div>
                         </div>
                       </div>
@@ -154,7 +156,7 @@ const ApplicationCart: React.FC<ApplicationCartProps> = ({ isOpen, onClose }) =>
               onClick={() => setShowCheckout(true)}
               className="w-full bg-blue-600 text-white py-3 rounded-full text-sm font-medium"
             >
-              Proceed to Checkout
+              {t('applicationCart.proceedToCheckout')}
             </button>
           </div>
         )}
@@ -162,7 +164,7 @@ const ApplicationCart: React.FC<ApplicationCartProps> = ({ isOpen, onClose }) =>
 
       {showCheckout && (
         <StripeCheckout
-          productId="SELECTION_PROCESS"
+          productId="selectionProcess"
           buttonText="Pay Selection Process Fee"
           className="flex-1 py-3 px-4"
           paymentType="selection_process"

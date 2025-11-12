@@ -6,13 +6,10 @@ import { useAuth } from '../../hooks/useAuth';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
 import { useDynamicFees } from '../../hooks/useDynamicFees';
 import { useStudentLogs } from '../../hooks/useStudentLogs';
-import { useUnreadMessages } from '../../contexts/UnreadMessagesContext';
-import { useStudentChatUnreadCount } from '../../hooks/useStudentChatUnreadCount';
+
 import DocumentRequestsCard from '../../components/DocumentRequestsCard';
 import { supabase } from '../../lib/supabase';
 import DocumentViewerModal from '../../components/DocumentViewerModal';
-import ApplicationChat from '../../components/ApplicationChat';
-import { useAdminStudentChat } from '../../hooks/useAdminStudentChat';
 import { STRIPE_PRODUCTS } from '../../stripe-config';
 import { FileText, UserCircle, GraduationCap, CheckCircle, Building, Award, Home, Info, FileCheck, FolderOpen } from 'lucide-react';
 import { I20ControlFeeModal } from '../../components/I20ControlFeeModal';
@@ -47,8 +44,6 @@ const ApplicationChatPage: React.FC = () => {
   const { formatFeeAmount, getFeeAmount } = useFeeConfig(user?.id);
   const { i20ControlFee } = useDynamicFees();
   const { logAction } = useStudentLogs(userProfile?.id || '');
-  const { resetUnreadCount } = useUnreadMessages();
-  const { markStudentMessagesAsRead } = useStudentChatUnreadCount();
 
   // Todos os hooks devem vir ANTES de qualquer return condicional
   const [i20Loading, setI20Loading] = useState(false);
@@ -59,8 +54,8 @@ const ApplicationChatPage: React.FC = () => {
   const [scholarshipFeeDeadline, setScholarshipFeeDeadline] = useState<Date | null>(null);
   const [showI20ControlFeeModal, setShowI20ControlFeeModal] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'stripe' | 'zelle' | 'pix' | null>(null);
-  // Ajustar tipo de activeTab para incluir 'welcome'
-  const [activeTab, setActiveTab] = useState<'welcome' | 'details' | 'i20' | 'documents' | 'chat'>('welcome');
+  // Ajustar tipo de activeTab para remover 'chat'
+  const [activeTab, setActiveTab] = useState<'welcome' | 'details' | 'i20' | 'documents'>('welcome');
   
   // Estados para controlar document requests (removidos - não mais utilizados)
 
@@ -83,18 +78,12 @@ const ApplicationChatPage: React.FC = () => {
   // useEffect para detectar parâmetro de URL e definir aba ativa
   useEffect(() => {
     const tabParam = searchParams.get('tab');
-    if (tabParam && ['welcome', 'details', 'i20', 'documents', 'chat'].includes(tabParam)) {
+    if (tabParam && ['welcome', 'details', 'i20', 'documents'].includes(tabParam)) {
       setActiveTab(tabParam as typeof activeTab);
     }
   }, [searchParams]);
 
-  // Resetar contador de mensagens não lidas quando acessar o chat
-  useEffect(() => {
-    if (activeTab === 'chat') {
-      markStudentMessagesAsRead();
-      resetUnreadCount();
-    }
-  }, [activeTab, resetUnreadCount, markStudentMessagesAsRead]);
+  // Chat functionality removed
 
   // Polling para atualizar o perfil do usuário a cada 2 minutos (modo conservador)
   useEffect(() => {
@@ -336,9 +325,6 @@ const ApplicationChatPage: React.FC = () => {
     return <div className="text-center text-gray-500 py-10">Authenticating...</div>;
   }
 
-  // Chat Admin-Student: estudante deve ver mensagens de qualquer conversa existente
-  const adminStudentChat = useAdminStudentChat(undefined, undefined);
-
   // Array de informações dos documentos
   const DOCUMENTS_INFO: DocumentInfo[] = [
     { key: 'passport', label: t('studentDashboard.applicationChatPage.documentTypes.passport.label'), description: t('studentDashboard.applicationChatPage.documentTypes.passport.description') },
@@ -370,10 +356,9 @@ const ApplicationChatPage: React.FC = () => {
   const tabItems: Array<{ title: string; icon: any }> = [
     { title: t('studentDashboard.applicationChatPage.tabs.welcome'), icon: Home },
     { title: t('studentDashboard.applicationChatPage.tabs.details'), icon: Info },
-    { title: t('studentDashboard.applicationChatPage.tabs.chat') || 'Chat', icon: FileText },
   ];
   
-  const tabIds: (typeof activeTab)[] = ['welcome', 'details', 'chat'];
+  const tabIds: (typeof activeTab)[] = ['welcome', 'details'];
   
   // I-20 agora aparece após scholarship fee ser paga
   if (applicationDetails && applicationDetails.is_scholarship_fee_paid) {
@@ -434,7 +419,7 @@ const ApplicationChatPage: React.FC = () => {
           <ExpandableTabs
             tabs={tabItems}
             activeColor="text-[#05294E]"
-            className="border-[#05294E]/20"
+            className="border-[#05294E]/20 gap-3"
             onChange={(index) => {
               setSelectedTabIndex(index);
               handleTabChange(index);
@@ -512,33 +497,6 @@ const ApplicationChatPage: React.FC = () => {
                   </div>
                 </div>
               )}
-            </div>
-          </div>
-        )}
-        {activeTab === 'chat' && (
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-            <div className="bg-gradient-to-r from-[#05294E] to-[#0a4a7a] px-6 py-4">
-              <h2 className="text-xl font-semibold text-white flex items-center">
-                <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.86 9.86 0 01-4-.8l-4 1 1.1-3.7A7.82 7.82 0 013 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                </svg>
-                {t('studentDashboard.applicationChatPage.chat.title') || 'Application Chat'}
-              </h2>
-            </div>
-            <div className="p-0 h-96">
-              <ApplicationChat
-                messages={adminStudentChat.messages}
-                onSend={adminStudentChat.sendMessage as any}
-                onEditMessage={adminStudentChat.editMessage}
-                onDeleteMessage={adminStudentChat.deleteMessage}
-                loading={adminStudentChat.loading}
-                isSending={adminStudentChat.isSending}
-                error={adminStudentChat.error}
-                currentUserId={user?.id || ''}
-                onMarkAllAsRead={adminStudentChat.markAllAsRead}
-                messageContainerClassName="gap-6 py-4"
-                className="h-full"
-              />
             </div>
           </div>
         )}

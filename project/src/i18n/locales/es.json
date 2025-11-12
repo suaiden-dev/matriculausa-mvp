@@ -1790,6 +1790,143 @@
         "description": "Prueba ajustando tus criterios de búsqueda o limpia los filtros para descubrir más oportunidades.",
         "clearAllFilters": "Limpiar Todos los Filtros"
       }
+    },
+    "applicationChatPage": {
+      "title": "Chat de Solicitud",
+      "tabs": {
+        "welcome": "Bienvenida",
+        "details": "Detalles",
+        "i20": "Control Fee I-20",
+        "documents": "Documentos"
+      },
+      "welcome": {
+        "welcomeMessage": "¡Hola {{firstName}}! 👋",
+        "applicationInProgress": "Tu solicitud de admisión para {{universityName}} está en progreso.",
+        "scholarship": "Beca:",
+        "howToProceed": "Cómo Proceder",
+        "documentRequests": {
+          "title": "Solicitudes de Documentos",
+          "description": "Sube todos los documentos requeridos para completar tu solicitud.",
+          "button": "Ver Documentos"
+        },
+        "applicationDetails": {
+          "title": "Detalles de la Solicitud",
+          "description": "Revisa la información de tu solicitud y el estado de tus documentos.",
+          "button": "Ver Detalles"
+        },
+        "i20ControlFee": {
+          "title": "Tarifa de Control I-20",
+          "description": "Paga la tarifa de control I-20 para procesar tu documento I-20.",
+          "button": "Pagar Tarifa"
+        }
+      },
+      "details": {
+        "studentInformation": {
+          "title": "Información del Estudiante",
+          "personalDetails": "Datos Personales",
+          "academicProfile": "Perfil Académico",
+          "applicationStatus": "Estado de la Solicitud",
+          "fullName": "Nombre Completo",
+          "email": "Correo Electrónico",
+          "phone": "Teléfono",
+          "country": "País",
+          "fieldOfInterest": "Campo de Interés",
+          "academicLevel": "Nivel Académico",
+          "gpa": "GPA",
+          "englishProficiency": "Competencia en Inglés",
+          "documentsStatus": "Estado de Documentos",
+          "approved": "aprobados"
+        },
+        "universityInformation": {
+          "title": "Información de la Universidad",
+          "universityName": "Nombre de la Universidad",
+          "location": "Ubicación",
+          "contactInformation": "Información de Contacto",
+          "website": "Sitio web:",
+          "email": "Correo:",
+          "phone": "Teléfono:"
+        },
+        "scholarshipDetails": {
+          "title": "Detalles de la Beca",
+          "scholarshipName": "Nombre de la Beca",
+          "course": "Curso",
+          "description": "Descripción"
+        },
+        "studentDocuments": {
+          "title": "Documentos del Estudiante"
+        },
+        "applicationUpdated": "Solicitud actualizada",
+        "quickActions": "Acciones Rápidas",
+        "manageDocuments": "Gestionar Documentos",
+        "contactUniversity": "Contactar Universidad"
+      },
+      "i20ControlFee": {
+        "title": "Control Fee I-20",
+        "description": "Esta tarifa es esencial para el procesamiento y emisión de tu documento I-20, requerido para tu visa de estudiante F-1.",
+        "processing": "Procesando pago...",
+        "payButton": "Pagar Tarifa I-20",
+        "status": "Estado:",
+        "completed": "Completado",
+        "pending": "Pendiente",
+        "paymentSuccess": {
+          "title": "¡Tarifa de Control I-20 Pagada Exitosamente!",
+          "description": "Tu pago de la Tarifa de Control I-20 ha sido procesado exitosamente. La universidad ahora procesará tu carta de aceptación.",
+          "nextSteps": "Próximos pasos:",
+          "nextStepsList": [
+            "Espera a que la universidad procese tu carta de aceptación",
+            "Tu carta de aceptación aparecerá en la pestaña Documentos cuando esté lista",
+            "Contacta con la universidad si tienes alguna pregunta sobre el proceso"
+          ]
+        },
+        "paymentInformation": "Información del Pago",
+        "amountPaid": "Cantidad Pagada:",
+        "paymentDate": "Fecha de Pago:",
+        "paymentError": "Error en el pago. Por favor, inténtalo de nuevo."
+      },
+      "documents": {
+        "title": "Gestión de Documentos",
+        "subtitle": "Sube y gestiona tus documentos de solicitud",
+        "acceptanceLetter": {
+          "title": "Carta de Aceptación",
+          "description": "Tu carta de aceptación oficial de la universidad.",
+          "status": "Esperando que la universidad envíe la carta de aceptación oficial",
+          "received": "¡Carta de Aceptación Recibida!",
+          "readyForDownload": "Tu carta de aceptación oficial está lista para descargar",
+          "downloadButton": "Descargar Carta de Aceptación",
+          "viewButton": "Ver",
+          "pendingI20Title": "Carta de Aceptación - Pendiente Pago I-20",
+          "pendingI20Description": "Tu carta de aceptación estará disponible después de que completes el pago de la Tarifa de Control I-20. Una vez que el pago sea confirmado y la universidad procese tu carta de aceptación, aparecerá aquí para descargar.",
+          "payI20Button": "Pagar Tarifa de Control I-20 Ahora",
+          "waitingForUniversityTitle": "Carta de Aceptación - Esperando Universidad",
+          "waitingForUniversityDescription": "Tu Tarifa de Control I-20 ha sido pagada exitosamente. La universidad está procesando tu carta de aceptación. Aparecerá aquí una vez que la universidad la envíe."
+        },
+        "documentStatus": {
+          "title": "Estado de los Documentos",
+          "description": "Continúa enviando los documentos solicitados por la universidad. La carta de aceptación estará disponible solo después de que todos los documentos sean aprobados.",
+          "progress": "Progreso:",
+          "approved": "documentos aprobados"
+        },
+        "noDocumentRequests": "No se encontraron solicitudes de documentos."
+      },
+      "documentTypes": {
+        "passport": {
+          "label": "Pasaporte",
+          "description": "Copia de tu pasaporte válido"
+        },
+        "diploma": {
+          "label": "Diploma",
+          "description": "Certificado de tu título académico"
+        },
+        "funds_proof": {
+          "label": "Comprobante de Fondos",
+          "description": "Estado de cuenta bancario o comprobante de fondos"
+        }
+      },
+      "errors": {
+        "paymentSessionError": "Error al crear sesión de pago",
+        "paymentRedirectError": "Error al redirigir al pago",
+        "downloadFailed": "Error al descargar el archivo"
+      }
     }
   },
   "profileManagement": {
