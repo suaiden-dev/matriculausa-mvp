@@ -1507,12 +1507,12 @@
       }
     },
     "selectedScholarships": {
-      "title": "Selected Scholarships",
-      "welcomeMessage": "Welcome to your scholarship selection!",
-      "description": "Here you can see all the scholarships you have selected for the application process. These are the programs you are interested in applying to. Follow the steps below to complete your application and start your journey toward studying abroad.",
-      "noScholarshipsSelected": "No scholarships selected",
-      "notSelectedYet": "You haven't selected any scholarships yet. Browse our available programs and add them to your selection.",
-      "browseScholarships": "Browse Scholarships"
+      "title": "Becas Seleccionadas",
+      "welcomeMessage": "¡Bienvenido a tu selección de becas!",
+      "description": "Aquí puedes ver todas las becas que has seleccionado para el proceso de solicitud. Estos son los programas en los que estás interesado en aplicar. Sigue los pasos a continuación para completar tu solicitud y comenzar tu viaje hacia estudiar en el extranjero.",
+      "noScholarshipsSelected": "No hay becas seleccionadas",
+      "notSelectedYet": "Aún no has seleccionado ninguna beca. Explora nuestros programas disponibles y agrégalos a tu selección.",
+      "browseScholarships": "Explorar Becas"
     },
     "favorites": {
       "showFavoritesOnly": "Show Favorites Only",

@@ -7,6 +7,15 @@ import enTranslations from './locales/en.json';
 import ptTranslations from './locales/pt.json';
 import esTranslations from './locales/es.json';
 
+// Debug: Verificar se as traduções foram carregadas
+if (process.env.NODE_ENV === 'development') {
+  console.log('📦 Translations loaded:', {
+    en: !!enTranslations,
+    pt: !!ptTranslations,
+    es: !!esTranslations
+  });
+}
+
 const resources = {
   en: {
     translation: enTranslations
@@ -71,6 +80,7 @@ const initI18n = async () => {
       resources,
       lng: preferredLang, // Usar idioma detectado automaticamente
       fallbackLng: 'en',
+      debug: process.env.NODE_ENV === 'development', // Habilitar debug em desenvolvimento
       
       interpolation: {
         escapeValue: false // react já faz escape

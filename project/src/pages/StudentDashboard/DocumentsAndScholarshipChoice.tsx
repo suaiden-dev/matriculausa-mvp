@@ -569,7 +569,7 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
             if (is3800ScholarshipBlocked(scholarship as any)) {
               console.warn('Cannot create application for expired $3800 scholarship:', scholarshipId);
               // Mostrar erro ao usuário (t já está disponível no escopo do componente)
-              alert('Esta bolsa não está mais aceitando candidaturas. O prazo para se candidatar expirou.');
+              alert(t('alerts.scholarshipDeadlineExpired'));
               continue; // Pular esta bolsa e continuar com as outras
             }
           }
@@ -703,7 +703,7 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
       
     } catch (e) {
       console.error('Error in saveStudentType:', e);
-      alert('Failed to save student type. Please try again.');
+      alert(t('alerts.failedToSaveStudentType'));
     } finally {
       setIsSavingType(false);
     }

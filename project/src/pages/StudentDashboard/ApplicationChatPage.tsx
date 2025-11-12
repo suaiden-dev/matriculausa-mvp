@@ -17,6 +17,7 @@ import { STRIPE_PRODUCTS } from '../../stripe-config';
 import { FileText, UserCircle, GraduationCap, CheckCircle, Building, Award, Home, Info, FileCheck, FolderOpen } from 'lucide-react';
 import { I20ControlFeeModal } from '../../components/I20ControlFeeModal';
 import TruncatedText from '../../components/TruncatedText';
+import { ExpandableTabs } from '../../components/ui/expandable-tabs';
 // Remover os imports das imagens
 // import WelcomeImg from '../../assets/page 7.png';
 // import SupportImg from '../../assets/page 8.png';
@@ -364,18 +365,63 @@ const ApplicationChatPage: React.FC = () => {
 
   // (removido) ensureCompleteUrl não utilizado
 
-  // Montar as abas dinamicamente com ícones distintos
-  const tabs = [
-    { id: 'welcome', label: t('studentDashboard.applicationChatPage.tabs.welcome'), icon: Home },
-    { id: 'details', label: t('studentDashboard.applicationChatPage.tabs.details'), icon: Info },
-    { id: 'chat', label: t('studentDashboard.applicationChatPage.tabs.chat') || 'Chat', icon: FileText },
-    // I-20 agora aparece após scholarship fee ser paga
-    ...(applicationDetails && applicationDetails.is_scholarship_fee_paid ? [
-      { id: 'i20', label: t('studentDashboard.applicationChatPage.tabs.i20'), icon: FileCheck }
-    ] : []),
-    
-    { id: 'documents', label: t('studentDashboard.applicationChatPage.tabs.documents'), icon: FolderOpen },
+  // Montar as abas dinamicamente com ícones distintos para ExpandableTabs
+  // Garantir que tabItems e tabIds estejam sempre sincronizados
+  const tabItems: Array<{ title: string; icon: any }> = [
+    { title: t('studentDashboard.applicationChatPage.tabs.welcome'), icon: Home },
+    { title: t('studentDashboard.applicationChatPage.tabs.details'), icon: Info },
+    { title: t('studentDashboard.applicationChatPage.tabs.chat') || 'Chat', icon: FileText },
   ];
+  
+  const tabIds: (typeof activeTab)[] = ['welcome', 'details', 'chat'];
+  
+  // I-20 agora aparece após scholarship fee ser paga
+  if (applicationDetails && applicationDetails.is_scholarship_fee_paid) {
+    tabItems.push({ title: t('studentDashboard.applicationChatPage.tabs.i20'), icon: FileCheck });
+    tabIds.push('i20');
+  }
+  
+  tabItems.push({ title: t('studentDashboard.applicationChatPage.tabs.documents'), icon: FolderOpen });
+  tabIds.push('documents');
+
+  // Mapear índice da tab para o id da tab
+  const getTabIdFromIndex = (index: number | null): typeof activeTab => {
+    if (index === null) return activeTab;
+    // Garantir que tabItems e tabIds têm o mesmo tamanho
+    if (tabItems.length !== tabIds.length) {
+      return 'welcome';
+    }
+    // Garantir que o índice corresponde ao mesmo índice em tabIds
+    if (index >= 0 && index < tabItems.length && index < tabIds.length) {
+      return tabIds[index] || 'welcome';
+    }
+    return 'welcome';
+  };
+
+  // Obter índice da tab ativa (sem contar separadores)
+  const getActiveTabIndex = (): number | null => {
+    const activeIndex = tabIds.indexOf(activeTab);
+    return activeIndex !== -1 ? activeIndex : null;
+  };
+
+  // Handler para mudança de tab
+  const handleTabChange = (index: number | null) => {
+    if (index === null) return;
+    const tabId = getTabIdFromIndex(index);
+    setActiveTab(tabId);
+  };
+
+  // Estado para controlar a tab selecionada no ExpandableTabs
+  const [selectedTabIndex, setSelectedTabIndex] = React.useState<number | null>(0); // Iniciar com welcome (índice 0)
+
+  // Sincronizar selectedTabIndex quando activeTab mudar externamente
+  React.useEffect(() => {
+    const newIndex = getActiveTabIndex();
+    if (newIndex !== null && newIndex !== selectedTabIndex) {
+      setSelectedTabIndex(newIndex);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, applicationDetails?.is_scholarship_fee_paid]);
 
   return (
     <div className="p-6 md:p-12 flex flex-col items-center min-h-screen h-full">
@@ -383,21 +429,18 @@ const ApplicationChatPage: React.FC = () => {
         <h2 className="text-2xl font-bold text-gray-800 mb-4 text-center">
           {t('studentDashboard.applicationChatPage.title')}
         </h2>
-        {/* Tabs */}
-        <div className="flex gap-2 mb-6 border-b border-slate-200 overflow-x-auto flex-nowrap scrollbar-hide" role="tablist">
-          {tabs.map(tab => (
-            <button
-              key={tab.id}
-              className={`flex flex-col items-center gap-1 px-3 py-1 md:px-5 md:py-2 text-sm md:text-base font-semibold rounded-t-lg border-b-2 transition-colors duration-200 focus:outline-none whitespace-nowrap ${activeTab === tab.id ? 'border-[#05294E] text-[#05294E] bg-white' : 'border-transparent text-slate-500 bg-slate-50 hover:text-[#05294E]'}`}
-              onClick={() => setActiveTab(tab.id as typeof activeTab)}
-              type="button"
-              aria-selected={activeTab === tab.id ? 'true' : 'false'}
-              role="tab"
-            >
-              <tab.icon className="w-5 h-5 md:w-5 md:h-5" />
-              <span className="text-xs md:text-base mt-0.5 md:mt-0">{tab.label}</span>
-            </button>
-          ))}
+        {/* Expandable Tabs */}
+        <div className="mb-6 flex justify-center">
+          <ExpandableTabs
+            tabs={tabItems}
+            activeColor="text-[#05294E]"
+            className="border-[#05294E]/20"
+            onChange={(index) => {
+              setSelectedTabIndex(index);
+              handleTabChange(index);
+            }}
+            defaultSelected={selectedTabIndex}
+          />
         </div>
         {/* Conteúdo das abas */}
         {activeTab === 'welcome' && applicationDetails && (
