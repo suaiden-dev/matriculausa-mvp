@@ -60,16 +60,10 @@ export const ScholarshipCountdownTimer: React.FC<ScholarshipCountdownTimerProps>
     return null;
   }
 
-  // Se expirou, mostrar badge de expirado
+  // Se expirou, não mostrar nada (retornar null)
+  // O badge vermelho foi removido conforme solicitado
   if (isExpired || !timeRemaining) {
-    return (
-      <div
-        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold shadow-lg backdrop-blur-sm border border-white/20 bg-gradient-to-r from-red-500 to-red-600 text-white ${className}`}
-      >
-        <AlertTriangle className="h-3 w-3" />
-        <span>{t('scholarshipDeadline.3800Expired')}</span>
-      </div>
-    );
+    return null;
   }
 
   const { hours, minutes } = timeRemaining;

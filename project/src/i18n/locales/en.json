@@ -1471,7 +1471,9 @@
         "checking": "Checking...",
         "inPerson": "In Person",
         "mixed": "Mixed",
-        "more": "more"
+        "more": "more",
+        "showMore": "Show More Details",
+        "showLess": "Show Less Details"
       },
       "noResults": {
         "title": "No scholarships found",
@@ -1592,7 +1594,8 @@
       "smartAssistantDescription": "Use the floating button on the corner of the screen to ask questions in real-time.",
       "supportChatHelp": "Support Chat:",
       "supportChatDescription": "Access the team chat right below the 'My Applications' section in the dashboard.",
-      "backToOverview": "Got it, Back to Dashboard"
+      "backToOverview": "Got it, Back to Dashboard",
+      "gotItContinue": "Got it, Continue"
     },
     "manualReview": {
       "title": "Manual Document Review",
@@ -1788,6 +1791,7 @@
         "notSelectedForScholarship": "NOT SELECTED FOR THE SCHOLARSHIP"
       },
       "nextSteps": "Next Steps:",
+      "rejectionReason": "Reason:",
       "scholarshipDetails": {
         "annualScholarshipValue": "Annual Scholarships starting from",
         "applicationDate": "Application Date",

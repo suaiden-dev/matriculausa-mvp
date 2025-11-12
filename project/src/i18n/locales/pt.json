@@ -1467,7 +1467,9 @@
         "checking": "Verificando...",
         "inPerson": "Presencial",
         "mixed": "Misto",
-        "more": "mais"
+        "more": "mais",
+        "showMore": "Mostrar Mais Detalhes",
+        "showLess": "Mostrar Menos Detalhes"
       },
       "noResults": {
         "title": "Nenhuma bolsa encontrada",
@@ -1688,7 +1690,8 @@
       "smartAssistantDescription": "Use o botão flutuante no canto da tela para tirar dúvidas em tempo real.",
       "supportChatHelp": "Chat com Suporte:",
       "supportChatDescription": "Acesse o chat da equipe logo abaixo da seção 'Minhas Candidaturas' no painel.",
-      "backToOverview": "Entendi, Voltar ao Painel"
+      "backToOverview": "Entendi, Voltar ao Painel",
+      "gotItContinue": "Entendi, Continuar"
     },
     "manualReview": {
       "title": "Revisão Manual de Documentos",
@@ -1884,6 +1887,7 @@
         "notSelectedForScholarship": "NÃO SELECIONADA PARA A BOLSA"
       },
       "nextSteps": "Próximos Passos:",
+      "rejectionReason": "Motivo:",
       "scholarshipDetails": {
         "annualScholarshipValue": "Valor Anual da Bolsa",
         "applicationDate": "Data da Aplicação",

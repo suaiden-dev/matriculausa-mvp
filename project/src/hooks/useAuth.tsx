@@ -54,6 +54,9 @@ export interface UserProfile {
   // System type inherited from seller
   system_type?: 'legacy' | 'simplified';
 
+  // Onboarding completion status
+  onboarding_completed?: boolean;
+
   // ... outras colunas se existirem
 }
 
@@ -893,6 +896,67 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     
     console.log('✅ [USEAUTH] SignUp bem-sucedido');
     console.log('🔍 [USEAUTH] data.user:', data?.user);
+    
+    // ✅ NOVO: Auto-confirmar email apenas para alunos que NÃO são vendedores em registro
+    if (data?.user && userData.role === 'student') {
+      try {
+        // Verificar se é um registro de vendedor (tem seller_referral_code E está em seller_registrations)
+        let isSellerRegistration = false;
+        
+        if (userData.seller_referral_code) {
+          // Verificar se existe registro pendente em seller_registrations
+          const { data: sellerReg, error: sellerRegError } = await supabase
+            .from('seller_registrations')
+            .select('id')
+            .eq('user_id', data.user.id)
+            .eq('status', 'pending')
+            .maybeSingle();
+          
+          if (!sellerRegError && sellerReg) {
+            isSellerRegistration = true;
+            console.log('🔍 [USEAUTH] Usuário é vendedor em registro, NÃO auto-confirmar email');
+          }
+        }
+        
+        // Auto-confirmar apenas se NÃO for registro de vendedor
+        if (!isSellerRegistration) {
+          console.log('🔍 [USEAUTH] Auto-confirmando email para aluno...');
+          
+          // Chamar Edge Function para confirmar email
+          const { error: confirmError } = await supabase.functions.invoke('auto-confirm-student-email', {
+            body: {
+              userId: data.user.id,
+              role: userData.role
+            }
+          });
+          
+          if (confirmError) {
+            console.warn('⚠️ [USEAUTH] Erro ao auto-confirmar email:', confirmError);
+            // Não falhar o registro se a confirmação falhar
+          } else {
+            console.log('✅ [USEAUTH] Email auto-confirmado com sucesso');
+            
+            // Fazer login automático após confirmação
+            console.log('🔍 [USEAUTH] Fazendo login automático...');
+            const { error: loginError } = await supabase.auth.signInWithPassword({
+              email: normalizedEmail,
+              password,
+            });
+            
+            if (loginError) {
+              console.warn('⚠️ [USEAUTH] Erro ao fazer login automático:', loginError);
+              // Não falhar, o usuário pode fazer login manualmente depois
+            } else {
+              console.log('✅ [USEAUTH] Login automático realizado com sucesso');
+              // O onAuthStateChange vai detectar a mudança e atualizar o estado
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('⚠️ [USEAUTH] Erro ao tentar auto-confirmar email e fazer login:', err);
+        // Não falhar o registro se houver erro
+      }
+    }
     
     // Se o usuário tem scholarship_package_number, converter para scholarship_package_id
     if (userData.scholarship_package_number && data?.user) {

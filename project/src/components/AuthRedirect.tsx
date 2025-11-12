@@ -101,8 +101,27 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
         }
         
         if (user.role === 'student') {
-          // Estudantes agora aceitam termos automaticamente durante o registro
-          // Não precisamos mais verificar termos aceitos
+          // Verificar se aluno completou onboarding
+          try {
+            const { data: profile } = await supabase
+              .from('user_profiles')
+              .select('onboarding_completed')
+              .eq('user_id', user.id)
+              .single();
+            
+            // Se não completou onboarding, redirecionar para onboarding
+            if (!profile?.onboarding_completed) {
+              navigate('/student/onboarding', { replace: true });
+              return;
+            }
+          } catch (error) {
+            // Se houver erro ao verificar, redirecionar para onboarding por segurança
+            console.error('Error checking onboarding status:', error);
+            navigate('/student/onboarding', { replace: true });
+            return;
+          }
+          
+          // Se completou onboarding, ir para dashboard
           navigate('/student/dashboard', { replace: true });
           return;
         }
@@ -152,6 +171,23 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 
       // Se usuário é student e está tentando acessar áreas restritas de outros roles
       if (user.role === 'student' && (currentPath.startsWith('/school/') || currentPath.startsWith('/admin') || currentPath.startsWith('/affiliate-admin'))) {
+        // Verificar se completou onboarding antes de redirecionar
+        try {
+          const { data: profile } = await supabase
+            .from('user_profiles')
+            .select('onboarding_completed')
+            .eq('user_id', user.id)
+            .single();
+          
+          if (!profile?.onboarding_completed) {
+            navigate('/student/onboarding', { replace: true });
+            return;
+          }
+        } catch (error) {
+          navigate('/student/onboarding', { replace: true });
+          return;
+        }
+        
         navigate('/student/dashboard', { replace: true });
         return;
       }

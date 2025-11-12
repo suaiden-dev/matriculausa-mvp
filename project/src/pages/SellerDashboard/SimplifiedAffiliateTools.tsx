@@ -13,21 +13,55 @@ const SimplifiedAffiliateTools: React.FC = () => {
     const fetchSellerCode = async () => {
       if (user?.id) {
         try {
+          // Buscar todos os sellers deste usuário e priorizar o correto
+          // Prioridade: 1) is_active = true e tem affiliate_admin_id, 2) mais recente
           const { data, error } = await supabase
             .from('sellers')
-            .select('referral_code')
+            .select('referral_code, is_active, affiliate_admin_id, created_at')
             .eq('user_id', user.id)
-            .single();
+            .order('is_active', { ascending: false })
+            .order('affiliate_admin_id', { ascending: false, nullsFirst: false })
+            .order('created_at', { ascending: false })
+            .limit(1);
 
-          if (data?.referral_code) {
-            setSellerCode(data.referral_code);
+          if (data && data.length > 0 && data[0]?.referral_code) {
+            setSellerCode(data[0].referral_code);
           } else {
-            // Fallback to user ID based code
-            setSellerCode(`SELL${user.id.slice(-8).toUpperCase()}`);
+            // Se não encontrou nenhum seller válido, buscar qualquer um como fallback
+            const { data: fallbackData } = await supabase
+              .from('sellers')
+              .select('referral_code')
+              .eq('user_id', user.id)
+              .limit(1)
+              .single();
+
+            if (fallbackData?.referral_code) {
+              setSellerCode(fallbackData.referral_code);
+            } else {
+              console.error('No seller found for user:', user.id);
+              setSellerCode('N/A');
+            }
           }
         } catch (err) {
           console.error('Error fetching seller code:', err);
-          setSellerCode(`SELL${user.id.slice(-8).toUpperCase()}`);
+          // Tentar buscar qualquer seller como último recurso
+          try {
+            const { data: fallbackData } = await supabase
+              .from('sellers')
+              .select('referral_code')
+              .eq('user_id', user.id)
+              .limit(1)
+              .single();
+
+            if (fallbackData?.referral_code) {
+              setSellerCode(fallbackData.referral_code);
+            } else {
+              setSellerCode('N/A');
+            }
+          } catch (fallbackErr) {
+            console.error('Fallback query also failed:', fallbackErr);
+            setSellerCode('N/A');
+          }
         }
       }
     };

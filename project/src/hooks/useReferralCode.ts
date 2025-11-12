@@ -50,20 +50,25 @@ export const useReferralCode = () => {
   }, [user?.id]);
 
   const checkActiveDiscount = useCallback(async () => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      console.log('🔍 [useReferralCode] Sem user.id, não verificando desconto');
+      return;
+    }
     
+    console.log('🔍 [useReferralCode] Verificando desconto ativo para user:', user.id);
     try {
       const { data, error } = await supabase.rpc('get_user_active_discount', {
         user_id_param: user.id
       });
 
       if (error) {
-        console.error('🔍 [useReferralCode] Erro ao verificar desconto:', error);
+        console.error('❌ [useReferralCode] Erro ao verificar desconto:', error);
       } else {
+        console.log('✅ [useReferralCode] Resultado do desconto:', data);
         setActiveDiscount(data);
       }
     } catch (error) {
-      console.error('🔍 [useReferralCode] Erro ao verificar desconto:', error);
+      console.error('❌ [useReferralCode] Erro ao verificar desconto:', error);
     }
   }, [user?.id]);
 

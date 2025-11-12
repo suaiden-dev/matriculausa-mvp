@@ -1681,15 +1681,15 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                              }}
                              className={`flex-1 h-12 px-4 sm:px-6 rounded-2xl font-bold text-xs lg:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2 ${
                                 inCart 
-                                  ? 'bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700' 
-                                  : 'bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white hover:from-[#041f3a] hover:to-slate-600'
+                                  ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 shadow-md' 
+                                  : 'bg-gradient-to-r from-blue-400 to-blue-500 text-white hover:from-blue-500 hover:to-blue-600'
                               } ${alreadyApplied || isBlocked ? 'bg-slate-300 text-slate-500 cursor-not-allowed hover:scale-100' : ''}`}
                              disabled={alreadyApplied || isBlocked || isCheckingDiscount}
                            >
                              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
                              <Award className="h-5 w-5 sm:h-6 sm:w-6 mr-2 relative z-10 group-hover:scale-110 transition-transform text-white" aria-hidden="true" />
                              <span className="relative z-10">
-                               {alreadyApplied ? t('studentDashboard.findScholarships.scholarshipCard.alreadyApplied') : inCart ? t('studentDashboard.findScholarships.scholarshipCard.deselect') : (
+                               {alreadyApplied ? t('studentDashboard.findScholarships.scholarshipCard.alreadyApplied') : inCart ? 'Remove from Selection' : (
                                  isCheckingDiscount ? t('studentDashboard.findScholarships.scholarshipCard.checking') : t('studentDashboard.findScholarships.scholarshipCard.selectScholarship')
                                )}
                              </span>
@@ -1938,8 +1938,8 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                         }}
                         className={`flex-1 h-12 px-4 sm:px-6 rounded-2xl font-bold text-xs lg:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2 ${
                            inCart 
-                             ? 'bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700' 
-                             : 'bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white hover:from-[#041f3a] hover:to-slate-600'
+                             ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 shadow-md' 
+                             : 'bg-gradient-to-r from-blue-400 to-blue-500 text-white hover:from-blue-500 hover:to-blue-600'
                          } ${alreadyApplied ? 'bg-slate-300 text-slate-500 cursor-not-allowed hover:scale-100' : ''}`}
                         onClick={async () => {
                           if (alreadyApplied || isBlocked) return;
@@ -1971,7 +1971,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                                          <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
                        <Award className="h-5 w-5 sm:h-6 sm:w-6 mr-2 relative z-10 group-hover:scale-110 transition-transform text-white" aria-hidden="true" />
                        <span className="relative z-10">
-                         {alreadyApplied ? t('studentDashboard.findScholarships.scholarshipCard.alreadyApplied') : inCart ? t('studentDashboard.findScholarships.scholarshipCard.deselect') : (
+                         {alreadyApplied ? t('studentDashboard.findScholarships.scholarshipCard.alreadyApplied') : inCart ? 'Remove from Selection' : (
                            isCheckingDiscount ? t('studentDashboard.findScholarships.scholarshipCard.checking') : t('studentDashboard.findScholarships.scholarshipCard.selectScholarship')
                          )}
                        </span>

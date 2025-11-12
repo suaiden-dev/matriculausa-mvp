@@ -296,9 +296,11 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
           setShowVerificationModal(true);
           return;
         }
-        // Para estudante, mostrar aviso de verificação
+        // ✅ MODIFICADO: Para alunos, não mostrar modal de verificação
+        // O login já foi feito automaticamente, então o AuthRedirect vai redirecionar
         if (activeTab === 'student') {
-          setShowStudentVerificationNotice(true);
+          // Não mostrar modal, apenas aguardar redirecionamento automático
+          // O AuthRedirect vai detectar o usuário logado e redirecionar para /student/dashboard
           return;
         }
         return;
@@ -359,13 +361,13 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
   };
 
   useEffect(() => {
-    if (showVerificationModal || showStudentVerificationNotice) {
+    if (showVerificationModal) {
       const timer = setTimeout(() => {
         navigate('/login');
       }, 9000); // 8 seconds
       return () => clearTimeout(timer);
     }
-  }, [showVerificationModal, showStudentVerificationNotice, navigate]);
+  }, [showVerificationModal, navigate]);
 
   if (mode === 'login') {
     return (
@@ -954,12 +956,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
 
 
           {/* Formulário de registro de estudante */}
-          {showStudentVerificationNotice && (
-            <div className="bg-blue-50 border border-blue-200 text-blue-900 px-4 py-3 rounded-2xl text-sm mb-4 mt-4">
-              <div className="font-bold mb-1">{t('authPage.messages.checkEmail')}</div>
-              {t('authPage.messages.studentVerification')}
-            </div>
-          )}
+          {/* ✅ REMOVIDO: Modal de verificação para alunos - login agora é automático */}
         </div>
       </div>
     </div>

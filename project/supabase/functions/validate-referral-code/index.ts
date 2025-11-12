@@ -42,13 +42,25 @@ Deno.serve(async (req) => {
       });
 
     if (validationError) {
-      console.error('[validate-referral-code] Database error:', validationError);
-      return corsResponse({ success: false, error: 'Erro ao validar código' }, 200);
+      console.error('[validate-referral-code] Database error:', JSON.stringify(validationError, null, 2));
+      // Se o erro contém uma mensagem, usar ela; caso contrário, usar mensagem genérica
+      const errorMessage = validationError.message || validationError.details || 'Erro ao validar código';
+      return corsResponse({ success: false, error: errorMessage }, 200);
+    }
+
+    // Se validationResult é null ou undefined, pode ser um erro silencioso
+    if (!validationResult) {
+      console.error('[validate-referral-code] No result returned from RPC function');
+      return corsResponse({ success: false, error: 'Erro ao validar código - nenhum resultado retornado' }, 200);
     }
 
     const result = validationResult as any;
+    console.log('[validate-referral-code] RPC result:', JSON.stringify(result, null, 2));
+    
     if (!result?.success) {
-      return corsResponse({ success: false, error: result?.error || 'Código inválido' }, 200);
+      const errorMessage = result?.error || 'Código inválido';
+      console.error('[validate-referral-code] Validation failed:', errorMessage);
+      return corsResponse({ success: false, error: errorMessage }, 200);
     }
 
     // Criar cupom no Stripe com ID válido

@@ -1370,8 +1370,8 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
 
         {/* Manual Review Message Modal - Simplified */}
         {showManualReviewMessage && (
-          <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-3">
-            <div className="bg-white rounded-2xl shadow-2xl p-5 max-w-sm w-full mx-2 border border-slate-100">
+          <div className="fixed top-0 left-0 right-0 bottom-0 w-screen h-screen z-[99999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl shadow-2xl p-5 max-w-sm w-full mx-4 border border-slate-100">
               {/* Header */}
               <div className="text-center mb-4">
                 <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-3">
@@ -1381,21 +1381,9 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
                   {t('studentDashboard.documentsAndScholarshipChoice.manualReviewTitle')}
                 </h2>
                 
-                {/* Main message - split into two parts */}
-                <div className="space-y-3 mb-4">
-                  <p className="text-blue-700 text-sm leading-relaxed">
-                    {t('studentDashboard.documentsAndScholarshipChoice.aiProcessingFailed')}
-                  </p>
-                  <p className="text-blue-700 text-sm leading-relaxed">
-                    {t('studentDashboard.documentsAndScholarshipChoice.teamAnalysisMessage')}
-                  </p>
-                </div>
-                
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                  <p className="text-blue-800 text-sm font-bold">
-                    {t('studentDashboard.documentsAndScholarshipChoice.manualReviewTimeframe')}
-                  </p>
-                </div>
+                <p className="text-blue-700 text-sm leading-relaxed">
+                  {t('studentDashboard.documentsAndScholarshipChoice.manualReviewTimeframe')}
+                </p>
               </div>
 
               {/* Help Section - Collapsible */}
@@ -1444,7 +1432,7 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
 
         {/* Analysis Loading Overlay */}
         {analyzing && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="fixed top-0 left-0 right-0 bottom-0 w-screen h-screen z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
             <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl p-6 sm:p-8 flex flex-col items-center border border-slate-100 max-w-sm mx-4 w-full">
               <div className="relative mb-4 sm:mb-6">
                 <div className="animate-spin h-12 w-12 sm:h-16 sm:w-16 border-3 sm:border-4 border-blue-100 border-t-blue-600 rounded-full"></div>

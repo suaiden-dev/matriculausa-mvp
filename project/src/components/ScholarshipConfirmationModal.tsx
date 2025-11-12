@@ -16,6 +16,7 @@ import { useFeeConfig } from '../hooks/useFeeConfig';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from 'react-i18next';
 import { convertCentsToDollars } from '../utils/currency';
+import { ZelleCheckout } from './ZelleCheckout';
 
 // Componente SVG para o logo do PIX
 const PixIcon = ({ className }: { className?: string }) => (
@@ -44,8 +45,15 @@ interface ScholarshipConfirmationModalProps {
   scholarship: Scholarship;
   onStripeCheckout: () => void;
   onPixCheckout?: () => void;
+  onZelleCheckout?: () => void; // Callback para Zelle (se fornecido, mostra inline)
+  onZelleSuccess?: () => void; // Callback quando Zelle payment for aprovado
   isProcessing?: boolean;
   feeType?: 'application_fee' | 'scholarship_fee';
+  zelleMetadata?: { // Metadados para passar ao ZelleCheckout quando inline
+    application_id?: string;
+    selected_scholarship_id?: string;
+    application_fee_amount?: number;
+  };
 }
 
 export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModalProps> = ({
@@ -54,8 +62,11 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
   scholarship,
   onStripeCheckout,
   onPixCheckout,
+  onZelleCheckout,
+  onZelleSuccess,
   isProcessing = false,
-  feeType = 'application_fee'
+  feeType = 'application_fee',
+  zelleMetadata
 }) => {
   const navigate = useNavigate();
   const { getFeeAmount: getFeeAmountFromConfig } = useFeeConfig();
@@ -174,19 +185,24 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
           onStripeCheckout();
         }
       } else if (selectedPaymentMethod === 'zelle') {
-        const params = new URLSearchParams({
-          feeType: feeType,
-          amount: feeAmount.toString(),
-          scholarshipsIds: scholarship.id
-        });
-        
-        if (feeType === 'application_fee') {
-          params.append('applicationFeeAmount', feeAmount.toString());
-        } else if (feeType === 'scholarship_fee') {
-          params.append('scholarshipFeeAmount', feeAmount.toString());
+        // Se há callback onZelleCheckout, não fazer nada aqui - o ZelleCheckout será mostrado inline
+        if (!onZelleCheckout) {
+          // Caso contrário, redirecionar para página de checkout Zelle (comportamento padrão)
+          const params = new URLSearchParams({
+            feeType: feeType,
+            amount: feeAmount.toString(),
+            scholarshipsIds: scholarship.id
+          });
+          
+          if (feeType === 'application_fee') {
+            params.append('applicationFeeAmount', feeAmount.toString());
+          } else if (feeType === 'scholarship_fee') {
+            params.append('scholarshipFeeAmount', feeAmount.toString());
+          }
+          
+          navigate(`/checkout/zelle?${params.toString()}`);
         }
-        
-        navigate(`/checkout/zelle?${params.toString()}`);
+        // Se há onZelleCheckout, o ZelleCheckout será renderizado inline abaixo (não precisa fazer nada aqui)
       }
     } catch (error) {
       console.error('Erro ao processar pagamento:', error);
@@ -194,6 +210,9 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
       setSubmitting(false);
     }
   };
+
+  // Se Zelle foi selecionado e há callback, mostrar ZelleCheckout inline
+  const showZelleInline = selectedPaymentMethod === 'zelle' && onZelleCheckout;
 
   const canProceed = selectedPaymentMethod !== null;
 
@@ -370,54 +389,86 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
             )}
           </div>
         </div>
+
+        {/* ZelleCheckout inline quando Zelle for selecionado e há callback */}
+        {showZelleInline && (
+          <div className="mt-4">
+            <ZelleCheckout
+              feeType={feeType}
+              amount={feeAmount}
+              scholarshipsIds={[scholarship.id]}
+              onSuccess={() => {
+                // Chamar callback de sucesso se fornecido
+                if (onZelleSuccess) {
+                  onZelleSuccess();
+                }
+                onClose();
+              }}
+              metadata={
+                zelleMetadata || (feeType === 'application_fee'
+                  ? {
+                      application_fee_amount: feeAmount,
+                      selected_scholarship_id: scholarship.id
+                    }
+                  : {
+                      selected_scholarship_id: scholarship.id
+                    })
+              }
+            />
+          </div>
+        )}
       </div>
 
-      {/* Footer */}
-      {isInDrawer ? (
-        <DrawerFooter className="flex-row gap-2">
-          <DrawerClose className="flex-1 bg-white text-gray-700 py-2.5 px-4 rounded-lg font-medium border border-gray-300 hover:bg-gray-50 transition-colors text-sm">
-            {t('scholarshipConfirmationModal.payment.cancel')}
-          </DrawerClose>
-          <button
-            onClick={handleProceed}
-            disabled={!canProceed || isProcessing || submitting}
-            className="flex-1 bg-blue-600 text-white py-2.5 px-4 rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors text-sm"
-          >
-            {isProcessing || submitting ? (
-              <div className="flex items-center justify-center">
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                {t('scholarshipConfirmationModal.loading.processing')}
-              </div>
-            ) : (
-              modalContent.buttonText
-            )}
-          </button>
-        </DrawerFooter>
-      ) : (
-        <div className="bg-gray-50 px-4 sm:px-6 py-3 sm:py-4 flex gap-2 sm:gap-3 flex-shrink-0 border-t border-gray-100">
-          <button
-            onClick={onClose}
-            disabled={isProcessing || submitting}
-            className="flex-1 bg-white text-gray-700 py-2.5 sm:py-3 px-4 sm:px-6 rounded-lg font-medium border border-gray-300 hover:bg-gray-50 transition-colors text-sm sm:text-base"
-          >
-            {t('scholarshipConfirmationModal.payment.cancel')}
-          </button>
-          
-          <button
-            onClick={handleProceed}
-            disabled={!canProceed || isProcessing || submitting}
-            className="flex-1 bg-blue-600 text-white py-2.5 sm:py-3 px-4 sm:px-6 rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors text-sm sm:text-base"
-          >
-            {isProcessing || submitting ? (
-              <div className="flex items-center justify-center">
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                {t('scholarshipConfirmationModal.loading.processing')}
-              </div>
-            ) : (
-              modalContent.buttonText
-            )}
-          </button>
-        </div>
+      {/* Footer - esconder quando Zelle está sendo processado inline */}
+      {!showZelleInline && (
+        <>
+          {isInDrawer ? (
+            <DrawerFooter className="flex-row gap-2">
+              <DrawerClose className="flex-1 bg-white text-gray-700 py-2.5 px-4 rounded-lg font-medium border border-gray-300 hover:bg-gray-50 transition-colors text-sm">
+                {t('scholarshipConfirmationModal.payment.cancel')}
+              </DrawerClose>
+              <button
+                onClick={handleProceed}
+                disabled={!canProceed || isProcessing || submitting}
+                className="flex-1 bg-blue-600 text-white py-2.5 px-4 rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors text-sm"
+              >
+                {isProcessing || submitting ? (
+                  <div className="flex items-center justify-center">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                    {t('scholarshipConfirmationModal.loading.processing')}
+                  </div>
+                ) : (
+                  modalContent.buttonText
+                )}
+              </button>
+            </DrawerFooter>
+          ) : (
+            <div className="bg-gray-50 px-4 sm:px-6 py-3 sm:py-4 flex gap-2 sm:gap-3 flex-shrink-0 border-t border-gray-100">
+              <button
+                onClick={onClose}
+                disabled={isProcessing || submitting}
+                className="flex-1 bg-white text-gray-700 py-2.5 sm:py-3 px-4 sm:px-6 rounded-lg font-medium border border-gray-300 hover:bg-gray-50 transition-colors text-sm sm:text-base"
+              >
+                {t('scholarshipConfirmationModal.payment.cancel')}
+              </button>
+              
+              <button
+                onClick={handleProceed}
+                disabled={!canProceed || isProcessing || submitting}
+                className="flex-1 bg-blue-600 text-white py-2.5 sm:py-3 px-4 sm:px-6 rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors text-sm sm:text-base"
+              >
+                {isProcessing || submitting ? (
+                  <div className="flex items-center justify-center">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                    {t('scholarshipConfirmationModal.loading.processing')}
+                  </div>
+                ) : (
+                  modalContent.buttonText
+                )}
+              </button>
+            </div>
+          )}
+        </>
       )}
     </>
   );

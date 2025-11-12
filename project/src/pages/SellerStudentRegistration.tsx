@@ -37,7 +37,6 @@ const SellerStudentRegistration: React.FC = () => {
   
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showVerificationModal, setShowVerificationModal] = useState(false);
   const [sellerReferralCodeValid, setSellerReferralCodeValid] = useState<boolean | null>(null);
   const [, setSellerReferralCodeLoading] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
@@ -251,7 +250,8 @@ const SellerStudentRegistration: React.FC = () => {
       
       await register(formData.email, formData.password, registerData);
       
-      setShowVerificationModal(true);
+      // ✅ MODIFICADO: Não mostrar modal de verificação - login agora é automático
+      // O AuthRedirect vai detectar o usuário logado e redirecionar automaticamente
     } catch (err: any) {
       console.error('Registration error:', err);
       setError(err.message || 'An error occurred during registration');
@@ -683,26 +683,7 @@ const SellerStudentRegistration: React.FC = () => {
         </div>
       </div>
 
-      {/* Verification Modal */}
-      {showVerificationModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full">
-            <div className="text-center">
-              <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Account Created Successfully!</h3>
-              <p className="text-gray-600 mb-4">
-                Please check your email and click the verification link to activate your account.
-              </p>
-              <button
-                onClick={() => navigate('/login')}
-                className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Go to Login
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* ✅ REMOVIDO: Verification Modal - login agora é automático após registro */}
     </div>
   );
 };

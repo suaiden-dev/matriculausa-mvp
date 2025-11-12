@@ -1647,7 +1647,9 @@
         "checking": "Verificando...",
         "inPerson": "Presencial",
         "mixed": "Mixto",
-        "more": "más"
+        "more": "más",
+        "showMore": "Mostrar Más Detalles",
+        "showLess": "Mostrar Menos Detalles"
       },
       "noResults": {
         "title": "No se encontraron becas",
@@ -1868,7 +1870,8 @@
       "smartAssistantDescription": "Usa el botón flotante en la esquina de la pantalla para hacer preguntas en tiempo real.",
       "supportChatHelp": "Chat de Soporte:",
       "supportChatDescription": "Accede al chat del equipo justo debajo de la sección 'Mis Aplicaciones' en el panel.",
-      "backToOverview": "Entendido, Volver al Panel"
+      "backToOverview": "Entendido, Volver al Panel",
+      "gotItContinue": "Entendido, Continuar"
     },
     "manualReview": {
       "title": "Revisión Manual de Documentos",
@@ -2064,6 +2067,7 @@
         "notSelectedForScholarship": "NO SELECCIONADA PARA LA BECA"
       },
       "nextSteps": "Próximos Pasos:",
+      "rejectionReason": "Motivo:",
       "scholarshipDetails": {
         "annualScholarshipValue": "Valor Anual de la Beca",
         "applicationDate": "Fecha de Solicitud",
