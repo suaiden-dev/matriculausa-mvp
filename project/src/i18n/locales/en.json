@@ -2058,6 +2058,12 @@
         "underReview": "Under Review",
         "notSubmitted": "Not Submitted"
       },
+      "hardcodedTexts": {
+        "authenticating": "Authenticating...",
+        "followSteps": "Follow these steps to complete your application",
+        "checkAllInformation": "Check all your application information",
+        "completeI20Payment": "Complete the I-20 control fee payment to proceed with your application"
+      },
       "errors": {
         "downloadFailed": "Failed to download file.",
         "paymentSessionError": "Error creating payment session.",

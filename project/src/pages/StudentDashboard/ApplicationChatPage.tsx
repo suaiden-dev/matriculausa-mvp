@@ -11,7 +11,7 @@ import DocumentRequestsCard from '../../components/DocumentRequestsCard';
 import { supabase } from '../../lib/supabase';
 import DocumentViewerModal from '../../components/DocumentViewerModal';
 import { STRIPE_PRODUCTS } from '../../stripe-config';
-import { FileText, UserCircle, GraduationCap, CheckCircle, Building, Award, Home, Info, FileCheck, FolderOpen } from 'lucide-react';
+import { FileText, UserCircle, GraduationCap, CheckCircle, Building, Award, Home, Info, FileCheck, FolderOpen, MapPin, Phone, Globe, Mail, BookOpen } from 'lucide-react';
 import { I20ControlFeeModal } from '../../components/I20ControlFeeModal';
 import TruncatedText from '../../components/TruncatedText';
 import { ExpandableTabs } from '../../components/ui/expandable-tabs';
@@ -27,12 +27,7 @@ interface DocumentInfo {
   description: string;
 }
 
-// Componente de card padrão para dashboard
-const DashboardCard: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = '' }) => (
-  <div className={`bg-white rounded-2xl shadow-2xl border border-blue-100 p-6 md:p-10 mb-8 w-full ${className}`}>
-    {children}
-  </div>
-);
+// Componente DashboardCard removido - não mais utilizado
 
 // Função utilitária de download imediato será movida para dentro do componente
 
@@ -322,7 +317,7 @@ const ApplicationChatPage: React.FC = () => {
 
   // AGORA podemos ter o return condicional - todos os hooks já foram chamados
   if (!user) {
-    return <div className="text-center text-gray-500 py-10">Authenticating...</div>;
+    return <div className="text-center text-gray-500 py-10">{t('studentDashboard.applicationChatPage.hardcodedTexts.authenticating')}</div>;
   }
 
   // Array de informações dos documentos
@@ -429,135 +424,227 @@ const ApplicationChatPage: React.FC = () => {
         </div>
         {/* Conteúdo das abas */}
         {activeTab === 'welcome' && applicationDetails && (
-          // RESTAURAR layout visual anterior do Welcome (não usar DashboardCard)
-          <div className="bg-white rounded-2xl shadow-2xl p-0 overflow-hidden border border-blue-100 flex flex-col">
-            {/* Header Welcome + Next Steps (layout visual anterior) */}
-            <div className="flex items-center gap-4 px-8 pt-8 pb-4 border-b border-slate-100 bg-gradient-to-r from-blue-50 to-blue-100">
-              <div className="flex-shrink-0 hidden sm:flex items-center justify-center w-16 h-16 bg-white rounded-full border border-blue-100">
-                {applicationDetails.scholarships?.universities?.logo_url ? (
-                  <img
-                    src={applicationDetails.scholarships.universities.logo_url || ''}
-                    alt={(applicationDetails.scholarships.universities.name || 'university') + ' logo'}
-                    className="w-12 h-12 object-contain rounded-full"
-                    loading="lazy"
-                  />
-                ) : (
-                  <GraduationCap className="w-8 h-8 text-blue-400" />
-                )}
+          <div className="w-full max-w-4xl mx-auto">
+            {/* Hero Section - Mobile First */}
+            <div className="relative bg-gradient-to-br from-[#05294E] via-[#0a4a7a] to-[#05294E] rounded-3xl overflow-hidden mb-8 shadow-2xl">
+              {/* Background Pattern */}
+              <div className="absolute inset-0 opacity-10">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-white rounded-full -translate-y-16 translate-x-16"></div>
+                <div className="absolute bottom-0 left-0 w-24 h-24 bg-white rounded-full translate-y-12 -translate-x-12"></div>
               </div>
-              <div className="flex-1 min-w-0">
-                <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-[#05294E] mb-1 leading-tight">
-                  {t('studentDashboard.applicationChatPage.welcome.welcomeMessage', { firstName: applicationDetails.user_profiles?.full_name?.split(' ')[0] || 'Student' })}
-                </h1>
-                <div className="text-sm sm:text-base text-slate-700 leading-relaxed">
-                  {t('studentDashboard.applicationChatPage.welcome.applicationInProgress', { universityName: applicationDetails.scholarships?.universities?.name || 'your university' })}
+              
+              <div className="relative z-10 p-6 sm:p-8 md:p-12">
+                <div className="flex flex-col items-center text-center space-y-4">
+                  <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white leading-tight text-center">
+                    {t('studentDashboard.applicationChatPage.welcome.welcomeMessage', { 
+                      firstName: applicationDetails.user_profiles?.full_name?.split(' ')[0] || 'Student' 
+                    })}
+                  </h1>
+                  
+                  <p className="text-lg sm:text-xl text-white/90 max-w-2xl mx-auto leading-relaxed text-center">
+                    {t('studentDashboard.applicationChatPage.welcome.applicationInProgress', { 
+                      universityName: applicationDetails.scholarships?.universities?.name || 'your university' 
+                    })}
+                  </p>
+                  
+                  {applicationDetails.scholarships?.title && (
+                    <div className="inline-flex items-center justify-center bg-white/10 backdrop-blur-sm rounded-full px-6 py-3 mt-6">
+                      <Award className="w-5 h-5 text-white mr-2" />
+                      <span className="text-white font-medium">
+                        {applicationDetails.scholarships.title}
+                      </span>
+                    </div>
+                  )}
                 </div>
-                {applicationDetails.scholarships?.title && (
-                  <div className="text-xs sm:text-sm text-slate-600 mt-2 leading-tight">
-                    <span className="block sm:inline">
-                      {t('studentDashboard.applicationChatPage.welcome.scholarship')}
-                    </span>
-                    <span className="font-semibold block sm:inline sm:ml-1">
-                      {applicationDetails.scholarships.title}
-                    </span>
-                  </div>
-                )}
               </div>
             </div>
-            {/* Next Steps - Guia prático */}
-            <div className="px-8 py-8 bg-white flex flex-col gap-6 items-center">
-              <h2 className="text-2xl font-extrabold text-[#05294E] mb-2 text-center tracking-tight">{t('studentDashboard.applicationChatPage.welcome.howToProceed')}</h2>
-              {/* Passo 1: Document Requests */}
-              <div className="w-full bg-blue-50 rounded-xl p-6 flex flex-col md:flex-row items-center gap-4 shadow">
-                <FileText className="w-10 h-10 text-blue-600 flex-shrink-0" />
-                <div className="flex-1">
-                  <div className="font-bold text-blue-900 text-lg mb-1">{t('studentDashboard.applicationChatPage.welcome.documentRequests.title')}</div>
-                  <div className="text-base text-slate-700 mb-2">{t('studentDashboard.applicationChatPage.welcome.documentRequests.description')}</div>
-                  <button onClick={() => setActiveTab('documents')} className="bg-blue-600 text-white px-5 py-2 rounded-lg font-semibold shadow hover:bg-blue-700 transition-all duration-200">{t('studentDashboard.applicationChatPage.welcome.documentRequests.button')}</button>
-                </div>
+
+            {/* Steps Section - Mobile First */}
+            <div className="space-y-6">
+              <div className="text-center mb-8">
+                <h2 className="text-2xl sm:text-3xl font-bold text-[#05294E] mb-3">
+                  {t('studentDashboard.applicationChatPage.welcome.howToProceed')}
+                </h2>
+                <p className="text-gray-600 text-lg">{t('studentDashboard.applicationChatPage.hardcodedTexts.followSteps')}</p>
               </div>
 
-              {/* Passo 3: Application Details */}
-              <div className="w-full bg-blue-50 rounded-xl p-6 flex flex-col md:flex-row items-center gap-4 shadow">
-                <UserCircle className="w-10 h-10 text-blue-600 flex-shrink-0" />
-                <div className="flex-1">
-                  <div className="font-bold text-blue-900 text-lg mb-1">{t('studentDashboard.applicationChatPage.welcome.applicationDetails.title')}</div>
-                  <div className="text-base text-slate-700 mb-2">{t('studentDashboard.applicationChatPage.welcome.applicationDetails.description')}</div>
-                  <button onClick={() => setActiveTab('details')} className="bg-blue-600 text-white px-5 py-2 rounded-lg font-semibold shadow hover:bg-blue-700 transition-all duration-200">{t('studentDashboard.applicationChatPage.welcome.applicationDetails.button')}</button>
-                </div>
-              </div>
-              {/* Passo 4: I-20 Control Fee (liberado após scholarship fee) */}
-              {applicationDetails.is_scholarship_fee_paid && (
-                <div className="w-full bg-blue-50 rounded-xl p-6 flex flex-col md:flex-row items-center gap-4 shadow">
-                  <Award className="w-10 h-10 text-blue-600 flex-shrink-0" />
-                  <div className="flex-1">
-                    <div className="font-bold text-blue-900 text-lg mb-1">{t('studentDashboard.applicationChatPage.welcome.i20ControlFee.title')}</div>
-                    <div className="text-base text-slate-700 mb-2">{t('studentDashboard.applicationChatPage.welcome.i20ControlFee.description')}</div>
-                    <button onClick={() => setActiveTab('i20')} className="bg-blue-600 text-white px-5 py-2 rounded-lg font-semibold shadow hover:bg-blue-700 transition-all duration-200">{t('studentDashboard.applicationChatPage.welcome.i20ControlFee.button')}</button>
+              {/* Step Cards */}
+              <div className="grid gap-6 md:gap-8">
+                {/* Step 1: Documents */}
+                <div className="group bg-white rounded-2xl p-6 sm:p-8 shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100 hover:border-[#05294E]/20 transform hover:-translate-y-1">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center">
+                    
+                    <div className="flex-1 space-y-3">
+                      <div className="flex items-center gap-3">
+                        <span className="inline-flex items-center justify-center w-8 h-8 bg-blue-100 text-blue-600 rounded-full text-sm font-bold">1</span>
+                        <h3 className="text-xl sm:text-2xl font-bold text-gray-900">
+                          {t('studentDashboard.applicationChatPage.welcome.documentRequests.title')}
+                        </h3>
+                      </div>
+                      
+                      <p className="text-gray-600 text-base sm:text-lg leading-relaxed">
+                        {t('studentDashboard.applicationChatPage.welcome.documentRequests.description')}
+                      </p>
+                      
+                      <button 
+                        onClick={() => setActiveTab('documents')}
+                        className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 group"
+                      >
+                        {t('studentDashboard.applicationChatPage.welcome.documentRequests.button')}
+                        <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </button>
+                    </div>
                   </div>
                 </div>
-              )}
+
+                {/* Step 2: Application Details */}
+                <div className="group bg-white rounded-2xl p-6 sm:p-8 shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100 hover:border-[#05294E]/20 transform hover:-translate-y-1">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center">
+
+                    <div className="flex-1 space-y-3">
+                      <div className="flex items-center gap-3">
+                        <span className="inline-flex items-center justify-center w-8 h-8 bg-[#05294E]/10 text-[#05294E] rounded-full text-sm font-bold">2</span>
+                        <h3 className="text-xl sm:text-2xl font-bold text-gray-900">
+                          {t('studentDashboard.applicationChatPage.welcome.applicationDetails.title')}
+                        </h3>
+                      </div>
+                      
+                      <p className="text-gray-600 text-base sm:text-lg leading-relaxed">
+                        {t('studentDashboard.applicationChatPage.welcome.applicationDetails.description')}
+                      </p>
+                      
+                      <button 
+                        onClick={() => setActiveTab('details')}
+                        className="inline-flex items-center gap-2 bg-gradient-to-r from-[#05294E] to-[#0a4a7a] text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 group"
+                      >
+                        {t('studentDashboard.applicationChatPage.welcome.applicationDetails.button')}
+                        <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Step 3: I-20 Control Fee (if available) */}
+                {applicationDetails.is_scholarship_fee_paid && (
+                  <div className="group bg-white rounded-2xl p-6 sm:p-8 shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100 hover:border-[#D0151C]/20 transform hover:-translate-y-1">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center ">
+                      
+                      <div className="flex-1 space-y-3">
+                        <div className="flex items-center gap-3">
+                          <span className="inline-flex items-center justify-center w-8 h-8 bg-red-100 text-[#D0151C] rounded-full text-sm font-bold">3</span>
+                          <h3 className="text-xl sm:text-2xl font-bold text-gray-900">
+                            {t('studentDashboard.applicationChatPage.welcome.i20ControlFee.title')}
+                          </h3>
+                        </div>
+                        
+                        <p className="text-gray-600 text-base sm:text-lg leading-relaxed">
+                          {t('studentDashboard.applicationChatPage.welcome.i20ControlFee.description')}
+                        </p>
+                        
+                        <button 
+                          onClick={() => setActiveTab('i20')}
+                          className="inline-flex items-center gap-2 bg-gradient-to-r from-[#D0151C] to-red-600 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 group"
+                        >
+                          {t('studentDashboard.applicationChatPage.welcome.i20ControlFee.button')}
+                          <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
         {activeTab === 'details' && applicationDetails && (
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-            <div className="xl:col-span-2 space-y-8">
+          <div className="w-full max-w-6xl mx-auto">
+            {/* Header Section */}
+            <div className="text-center mb-8">
+              <h1 className="text-3xl sm:text-4xl font-bold text-[#05294E] mb-4">
+                {t('studentDashboard.applicationChatPage.details.studentInformation.title')}
+              </h1>
+              <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+                {t('studentDashboard.applicationChatPage.hardcodedTexts.checkAllInformation')}
+              </p>
+            </div>
+
+            {/* Cards Grid - Mobile First */}
+            <div className="grid gap-6 md:gap-8">
               {/* Student Information Card */}
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                <div className="bg-gradient-to-r from-[#05294E] to-[#0a4a7a] px-6 py-4">
-                  <h2 className="text-xl font-semibold text-white flex items-center">
-                    <UserCircle className="w-6 h-6 mr-3" />
-                    {t('studentDashboard.applicationChatPage.details.studentInformation.title')}
-                  </h2>
+              <div className="group bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100 hover:border-[#05294E]/20 overflow-hidden">
+                <div className="bg-gradient-to-br from-[#05294E] via-[#0a4a7a] to-[#05294E] p-6 sm:p-8">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-sm">
+                      <UserCircle className="w-6 h-6 text-white" />
+                    </div>
+                    <h2 className="text-xl sm:text-2xl font-bold text-white">
+                      {t('studentDashboard.applicationChatPage.details.studentInformation.title')}
+                    </h2>
+                  </div>
                 </div>
-                <div className="p-6">
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="p-6 sm:p-8">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     {/* Personal Information */}
-                    <div className="space-y-4">
-                      <h3 className="text-lg font-semibold text-slate-900 border-b border-slate-200 pb-2">{t('studentDashboard.applicationChatPage.details.studentInformation.personalDetails')}</h3>
-                      <div className="space-y-3">
-                        <div className="flex flex-col">
-                          <span className="text-sm text-slate-600">{t('studentDashboard.applicationChatPage.details.studentInformation.fullName')}</span>
-                          <span className="font-medium text-slate-900">{applicationDetails.user_profiles?.full_name || 'N/A'}</span>
+                    <div className="space-y-6">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-8 h-8 bg-blue-100 rounded-xl flex items-center justify-center">
+                          <UserCircle className="w-5 h-5 text-blue-600" />
                         </div>
-                        <div className="flex flex-col">
-                          <span className="text-sm text-slate-600">{t('studentDashboard.applicationChatPage.details.studentInformation.email')}</span>
-                          <span className="font-medium text-slate-900">{applicationDetails.user_profiles?.email || 'N/A'}</span>
+                        <h3 className="text-lg font-bold text-gray-900">{t('studentDashboard.applicationChatPage.details.studentInformation.personalDetails')}</h3>
+                      </div>
+                      <div className="space-y-4">
+                        <div className="bg-gray-50 rounded-xl p-4 hover:bg-gray-100 transition-colors duration-200">
+                          <span className="text-sm font-medium text-gray-600 block mb-1">{t('studentDashboard.applicationChatPage.details.studentInformation.fullName')}</span>
+                          <span className="text-base font-semibold text-gray-900">{applicationDetails.user_profiles?.full_name || 'N/A'}</span>
                         </div>
-                        <div className="flex flex-col">
-                          <span className="text-sm text-slate-600">{t('studentDashboard.applicationChatPage.details.studentInformation.phone')}</span>
-                          <span className="font-medium text-slate-900">{applicationDetails.user_profiles?.phone || 'N/A'}</span>
+                        <div className="bg-gray-50 rounded-xl p-4 hover:bg-gray-100 transition-colors duration-200">
+                          <span className="text-sm font-medium text-gray-600 block mb-1">{t('studentDashboard.applicationChatPage.details.studentInformation.email')}</span>
+                          <span className="text-base font-semibold text-gray-900">{applicationDetails.user_profiles?.email || 'N/A'}</span>
                         </div>
-                        <div className="flex flex-col">
-                          <span className="text-sm text-slate-600">{t('studentDashboard.applicationChatPage.details.studentInformation.country')}</span>
-                          <span className="font-medium text-slate-900">{applicationDetails.user_profiles?.country || 'N/A'}</span>
+                        <div className="bg-gray-50 rounded-xl p-4 hover:bg-gray-100 transition-colors duration-200">
+                          <span className="text-sm font-medium text-gray-600 block mb-1">{t('studentDashboard.applicationChatPage.details.studentInformation.phone')}</span>
+                          <span className="text-base font-semibold text-gray-900">{applicationDetails.user_profiles?.phone || 'N/A'}</span>
+                        </div>
+                        <div className="bg-gray-50 rounded-xl p-4 hover:bg-gray-100 transition-colors duration-200">
+                          <span className="text-sm font-medium text-gray-600 block mb-1">{t('studentDashboard.applicationChatPage.details.studentInformation.country')}</span>
+                          <span className="text-base font-semibold text-gray-900">{applicationDetails.user_profiles?.country || 'N/A'}</span>
                         </div>
                       </div>
                     </div>
 
                     {/* Academic Information */}
-                    <div className="space-y-4">
-                      <h3 className="text-lg font-semibold text-slate-900 border-b border-slate-200 pb-2">{t('studentDashboard.applicationChatPage.details.studentInformation.academicProfile')}</h3>
-                      <div className="space-y-3">
-                        <div className="flex flex-col">
-                          <span className="text-sm text-slate-600">{t('studentDashboard.applicationChatPage.details.studentInformation.studentType')}</span>
-                          <span className="font-medium text-slate-900">
+                    <div className="space-y-6">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-8 h-8 bg-green-100 rounded-xl flex items-center justify-center">
+                          <GraduationCap className="w-5 h-5 text-green-600" />
+                        </div>
+                        <h3 className="text-lg font-bold text-gray-900">{t('studentDashboard.applicationChatPage.details.studentInformation.academicProfile')}</h3>
+                      </div>
+                      <div className="space-y-4">
+                        <div className="bg-gray-50 rounded-xl p-4 hover:bg-gray-100 transition-colors duration-200">
+                          <span className="text-sm font-medium text-gray-600 block mb-1">{t('studentDashboard.applicationChatPage.details.studentInformation.studentType')}</span>
+                          <span className="text-base font-semibold text-gray-900">
                             {applicationDetails.student_process_type === 'initial' ? t('studentDashboard.applicationChatPage.details.studentInformation.initialF1VisaRequired') :
                              applicationDetails.student_process_type === 'transfer' ? t('studentDashboard.applicationChatPage.details.studentInformation.transferCurrentF1Student') :
                              applicationDetails.student_process_type === 'change_of_status' ? t('studentDashboard.applicationChatPage.details.studentInformation.changeOfStatusFromOtherVisa') :
                              applicationDetails.student_process_type || 'N/A'}
                           </span>
                         </div>
-                        <div className="flex flex-col">
-                          <span className="text-sm text-slate-600">{t('studentDashboard.applicationChatPage.details.studentInformation.applicationDate')}</span>
-                          <span className="font-medium text-slate-900">
+                        <div className="bg-gray-50 rounded-xl p-4 hover:bg-gray-100 transition-colors duration-200">
+                          <span className="text-sm font-medium text-gray-600 block mb-1">{t('studentDashboard.applicationChatPage.details.studentInformation.applicationDate')}</span>
+                          <span className="text-base font-semibold text-gray-900">
                             {new Date(applicationDetails.created_at || Date.now()).toLocaleDateString()}
                           </span>
                         </div>
-                        <div className="flex flex-col">
-                          <span className="text-sm text-slate-600">{t('studentDashboard.applicationChatPage.details.studentInformation.lastUpdated')}</span>
-                          <span className="font-medium text-slate-900">
+                        <div className="bg-gray-50 rounded-xl p-4 hover:bg-gray-100 transition-colors duration-200">
+                          <span className="text-sm font-medium text-gray-600 block mb-1">{t('studentDashboard.applicationChatPage.details.studentInformation.lastUpdated')}</span>
+                          <span className="text-base font-semibold text-gray-900">
                             {new Date(applicationDetails.updated_at || Date.now()).toLocaleDateString()}
                           </span>
                         </div>
@@ -565,28 +652,31 @@ const ApplicationChatPage: React.FC = () => {
                     </div>
 
                     {/* Application & Status */}
-                    <div className="space-y-4">
-                      <h3 className="text-lg font-semibold text-slate-900 border-b border-slate-200 pb-2">{t('studentDashboard.applicationChatPage.details.studentInformation.applicationStatus')}</h3>
-                      <div className="space-y-3">
-                        <div className="flex flex-col">
-                          <span className="text-sm text-slate-600">{t('studentDashboard.applicationChatPage.details.studentInformation.currentStatus')}</span>
-                          <div className="mt-1">
-                            {applicationDetails.status === 'enrolled' || applicationDetails.acceptance_letter_status === 'approved' ? (
-                              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-700">
-                                <CheckCircle className="w-4 h-4 mr-1" />
-                                {t('studentDashboard.applicationChatPage.details.studentInformation.enrolled')}
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-700">
-                                <div className="w-2 h-2 bg-yellow-500 rounded-full mr-2 animate-pulse"></div>
-                                {t('studentDashboard.applicationChatPage.details.studentInformation.waitingForAcceptanceLetter')}
-                              </span>
-                            )}
-                          </div>
+                    <div className="space-y-6">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-8 h-8 bg-purple-100 rounded-xl flex items-center justify-center">
+                          <CheckCircle className="w-5 h-5 text-purple-600" />
                         </div>
-                        <div className="flex flex-col">
-                          <span className="text-sm text-slate-600">{t('studentDashboard.applicationChatPage.details.studentInformation.documentsStatus')}</span>
-                          <span className="font-medium text-slate-900">
+                        <h3 className="text-lg font-bold text-gray-900">{t('studentDashboard.applicationChatPage.details.studentInformation.applicationStatus')}</h3>
+                      </div>
+                      <div className="space-y-4">
+                        <div className="bg-gray-50 rounded-xl p-4 hover:bg-gray-100 transition-colors duration-200">
+                          <span className="text-sm font-medium text-gray-600 block mb-2">{t('studentDashboard.applicationChatPage.details.studentInformation.currentStatus')}</span>
+                          {applicationDetails.status === 'enrolled' || applicationDetails.acceptance_letter_status === 'approved' ? (
+                            <span className="inline-flex items-center px-4 py-2 rounded-xl text-sm font-semibold bg-green-100 text-green-700 border border-green-200">
+                              <CheckCircle className="w-4 h-4 mr-2" />
+                              {t('studentDashboard.applicationChatPage.details.studentInformation.enrolled')}
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-4 py-2 rounded-xl text-sm font-semibold bg-yellow-100 text-yellow-700 border border-yellow-200">
+                              <div className="w-2 h-2 bg-yellow-500 rounded-full mr-2 animate-pulse"></div>
+                              {t('studentDashboard.applicationChatPage.details.studentInformation.waitingForAcceptanceLetter')}
+                            </span>
+                          )}
+                        </div>
+                        <div className="bg-gray-50 rounded-xl p-4 hover:bg-gray-100 transition-colors duration-200">
+                          <span className="text-sm font-medium text-gray-600 block mb-1">{t('studentDashboard.applicationChatPage.details.studentInformation.documentsStatus')}</span>
+                          <span className="text-base font-semibold text-gray-900">
                             {DOCUMENTS_INFO.filter(doc => {
                               let docData = Array.isArray(applicationDetails.documents)
                                 ? applicationDetails.documents.find((d: any) => d.type === doc.key)
@@ -605,98 +695,135 @@ const ApplicationChatPage: React.FC = () => {
               </div>
               
               {/* University Information Card */}
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                <div className="bg-gradient-to-r from-slate-700 to-slate-800 px-6 py-4">
-                  <h2 className="text-xl font-semibold text-white flex items-center">
-                    <Building className="w-6 h-6 mr-3" />
-                    {t('studentDashboard.applicationChatPage.details.universityInformation.title')}
-                  </h2>
+              <div className="group bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100 hover:border-blue-200 overflow-hidden">
+                <div className="bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 p-6 sm:p-8">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-sm">
+                      <Building className="w-6 h-6 text-white" />
+                    </div>
+                    <h2 className="text-xl sm:text-2xl font-bold text-white">
+                      {t('studentDashboard.applicationChatPage.details.universityInformation.title')}
+                    </h2>
+                  </div>
                 </div>
-                <div className="p-6">
-                  <div className="space-y-6">
-                    <div className="flex items-start space-x-3">
-                      <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
-                      <div className="flex-1">
-                        <div className="text-sm text-slate-600">{t('studentDashboard.applicationChatPage.details.universityInformation.universityName')}</div>
-                        <div className="font-semibold text-slate-900">{applicationDetails.scholarships?.universities?.name || 'N/A'}</div>
+                <div className="p-6 sm:p-8">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="bg-blue-50 rounded-2xl p-6 hover:bg-blue-100 transition-colors duration-200">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="w-8 h-8 bg-blue-100 rounded-xl flex items-center justify-center">
+                          <GraduationCap className="w-5 h-5 text-blue-600" />
+                        </div>
+                        <span className="text-sm font-medium text-blue-600">{t('studentDashboard.applicationChatPage.details.universityInformation.universityName')}</span>
+                      </div>
+                      <div className="text-lg font-bold text-gray-900">{applicationDetails.scholarships?.universities?.name || 'N/A'}</div>
+                    </div>
+                    
+                    <div className="bg-blue-50 rounded-2xl p-6 hover:bg-blue-100 transition-colors duration-200">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="w-8 h-8 bg-blue-100 rounded-xl flex items-center justify-center">
+                          <MapPin className="w-5 h-5 text-blue-600" />
+                        </div>
+                        <span className="text-sm font-medium text-blue-600">{t('studentDashboard.applicationChatPage.details.universityInformation.location')}</span>
+                      </div>
+                      <div className="text-lg font-bold text-gray-900">
+                        {applicationDetails.scholarships?.universities?.address?.city || 'N/A'}, {applicationDetails.scholarships?.universities?.address?.country || 'N/A'}
                       </div>
                     </div>
-                    <div className="flex items-start space-x-3">
-                      <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
-                      <div className="flex-1">
-                        <div className="text-sm text-slate-600">{t('studentDashboard.applicationChatPage.details.universityInformation.location')}</div>
-                        <div className="font-semibold text-slate-900">
-                          {applicationDetails.scholarships?.universities?.address?.city || 'N/A'}, {applicationDetails.scholarships?.universities?.address?.country || 'N/A'}
+                  </div>
+                  
+                  {/* Contact Information */}
+                  <div className="mt-6 bg-gray-50 rounded-2xl p-6">
+                    <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                      <Phone className="w-5 h-5 text-gray-600" />
+                      {t('studentDashboard.applicationChatPage.details.universityInformation.contactInformation')}
+                    </h3>
+                    <div className="space-y-3">
+                      {applicationDetails.scholarships?.universities?.website && (
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-3 bg-white rounded-xl hover:bg-gray-50 transition-colors duration-200">
+                          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+                            <Globe className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                            <span className="text-sm text-gray-600 whitespace-nowrap">{t('studentDashboard.applicationChatPage.details.universityInformation.website')}</span>
+                          </div>
+                          <a 
+                            href={applicationDetails.scholarships.universities.website} 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            className="text-blue-600 hover:text-blue-800 font-medium break-all sm:break-words sm:ml-auto"
+                          >
+                            {applicationDetails.scholarships.universities.website}
+                          </a>
                         </div>
-                      </div>
-                    </div>
-                    <div className="flex items-start space-x-3">
-                      <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
-                      <div className="flex-1">
-                        <div className="text-sm text-slate-600">{t('studentDashboard.applicationChatPage.details.universityInformation.contactInformation')}</div>
-                        <div className="space-y-1">
-                          {applicationDetails.scholarships?.universities?.website && (
-                            <div className="text-sm">
-                                                              <span className="text-slate-600">{t('studentDashboard.applicationChatPage.details.universityInformation.website')} </span>
-                              <a href={applicationDetails.scholarships.universities.website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">
-                                {applicationDetails.scholarships.universities.website}
-                              </a>
-                            </div>
-                          )}
-                          {(applicationDetails.scholarships?.universities?.contact?.email || applicationDetails.scholarships?.universities?.contact?.admissionsEmail) && (
-                            <div className="text-sm">
-                                                              <span className="text-slate-600">{t('studentDashboard.applicationChatPage.details.universityInformation.email')} </span>
-                              <span className="font-medium text-slate-900">
-                                {applicationDetails.scholarships.universities.contact?.email || applicationDetails.scholarships.universities.contact?.admissionsEmail}
-                              </span>
-                            </div>
-                          )}
-                          {applicationDetails.scholarships?.universities?.contact?.phone && (
-                            <div className="text-sm">
-                                                              <span className="text-slate-600">{t('studentDashboard.applicationChatPage.details.universityInformation.phone')} </span>
-                              <span className="font-medium text-slate-900">{applicationDetails.scholarships.universities.contact.phone}</span>
-                            </div>
-                          )}
+                      )}
+                      {(applicationDetails.scholarships?.universities?.contact?.email || applicationDetails.scholarships?.universities?.contact?.admissionsEmail) && (
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-3 bg-white rounded-xl hover:bg-gray-50 transition-colors duration-200">
+                          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+                            <Mail className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                            <span className="text-sm text-gray-600 whitespace-nowrap">{t('studentDashboard.applicationChatPage.details.universityInformation.email')}</span>
+                          </div>
+                          <span className="font-medium text-gray-900 break-all sm:break-words sm:ml-auto">
+                            {applicationDetails.scholarships.universities.contact?.email || applicationDetails.scholarships.universities.contact?.admissionsEmail}
+                          </span>
                         </div>
-                      </div>
+                      )}
+                      {applicationDetails.scholarships?.universities?.contact?.phone && (
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-3 bg-white rounded-xl hover:bg-gray-50 transition-colors duration-200">
+                          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+                            <Phone className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                            <span className="text-sm text-gray-600 whitespace-nowrap">{t('studentDashboard.applicationChatPage.details.universityInformation.phone')}</span>
+                          </div>
+                          <span className="font-medium text-gray-900 break-all sm:break-words sm:ml-auto">{applicationDetails.scholarships.universities.contact.phone}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Scholarship Information Card */}
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                <div className="bg-gradient-to-r from-slate-600 to-slate-700 px-6 py-4">
-                  <h2 className="text-xl font-semibold text-white flex items-center">
-                    <Award className="w-6 h-6 mr-3" />
-                    {t('studentDashboard.applicationChatPage.details.scholarshipDetails.title')}
-                  </h2>
-                </div>
-                <div className="p-6">
-                  <div className="space-y-6">
-                    <div className="flex items-start space-x-3">
-                      <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
-                      <div className="flex-1">
-                        <div className="text-sm text-slate-600">{t('studentDashboard.applicationChatPage.details.scholarshipDetails.scholarshipName')}</div>
-                        <div className="font-semibold text-slate-900">{applicationDetails.scholarships?.title || applicationDetails.scholarships?.name || 'N/A'}</div>
-                      </div>
+              <div className="group bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100 hover:border-[#D0151C]/20 overflow-hidden">
+                <div className="bg-gradient-to-br from-[#D0151C] via-red-600 to-red-700 p-6 sm:p-8">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-sm">
+                      <Award className="w-6 h-6 text-white" />
                     </div>
-                    {applicationDetails.scholarships?.course && (
-                      <div className="flex items-start space-x-3">
-                        <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
-                        <div className="flex-1">
-                          <div className="text-sm text-slate-600">{t('studentDashboard.applicationChatPage.details.scholarshipDetails.course')}</div>
-                          <div className="font-semibold text-slate-900">{applicationDetails.scholarships.course}</div>
+                    <h2 className="text-xl sm:text-2xl font-bold text-white">
+                      {t('studentDashboard.applicationChatPage.details.scholarshipDetails.title')}
+                    </h2>
+                  </div>
+                </div>
+                <div className="p-6 sm:p-8">
+                  <div className="space-y-6">
+                    <div className="bg-red-50 rounded-2xl p-6 hover:bg-red-100 transition-colors duration-200">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="w-8 h-8 bg-red-100 rounded-xl flex items-center justify-center">
+                          <Award className="w-5 h-5 text-red-600" />
                         </div>
+                        <span className="text-sm font-medium text-red-600">{t('studentDashboard.applicationChatPage.details.scholarshipDetails.scholarshipName')}</span>
+                      </div>
+                      <div className="text-lg font-bold text-gray-900">{applicationDetails.scholarships?.title || applicationDetails.scholarships?.name || 'N/A'}</div>
+                    </div>
+                    
+                    {applicationDetails.scholarships?.course && (
+                      <div className="bg-red-50 rounded-2xl p-6 hover:bg-red-100 transition-colors duration-200">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="w-8 h-8 bg-red-100 rounded-xl flex items-center justify-center">
+                            <BookOpen className="w-5 h-5 text-red-600" />
+                          </div>
+                          <span className="text-sm font-medium text-red-600">{t('studentDashboard.applicationChatPage.details.scholarshipDetails.course')}</span>
+                        </div>
+                        <div className="text-lg font-bold text-gray-900">{applicationDetails.scholarships.course}</div>
                       </div>
                     )}
+                    
                     {applicationDetails.scholarships?.description && (
-                      <div className="flex items-start space-x-3">
-                        <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
-                        <div className="flex-1">
-                          <div className="text-sm text-slate-600">{t('studentDashboard.applicationChatPage.details.scholarshipDetails.description')}</div>
-                          <div className="font-medium text-slate-900">{applicationDetails.scholarships.description}</div>
+                      <div className="bg-red-50 rounded-2xl p-6 hover:bg-red-100 transition-colors duration-200">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="w-8 h-8 bg-red-100 rounded-xl flex items-center justify-center">
+                            <FileText className="w-5 h-5 text-red-600" />
+                          </div>
+                          <span className="text-sm font-medium text-red-600">{t('studentDashboard.applicationChatPage.details.scholarshipDetails.description')}</span>
                         </div>
+                        <div className="text-base font-medium text-gray-900 leading-relaxed">{applicationDetails.scholarships.description}</div>
                       </div>
                     )}
                   </div>
@@ -806,151 +933,250 @@ const ApplicationChatPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Sidebar */}
-            <div className="xl:col-span-1 space-y-6">
-              {/* Quick Stats Card */}
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                <div className="bg-gradient-to-r from-[#05294E] to-[#041f38] px-6 py-4">
-                  <h3 className="text-lg font-semibold text-white">{t('studentDashboard.applicationChatPage.details.applicationSummary')}</h3>
-                </div>
-                <div className="p-6 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-slate-600">{t('studentDashboard.applicationChatPage.details.submitted')}</span>
-                    <span className="text-sm text-slate-900">
-                      {new Date(applicationDetails.created_at || Date.now()).toLocaleDateString()}
-                    </span>
-                  </div>
+          </div>
+        )}
+        {activeTab === 'i20' && applicationDetails && applicationDetails.is_scholarship_fee_paid && (
+          <div className="w-full max-w-4xl mx-auto">
+            {/* Header Section */}
+            <div className="text-center mb-8">
+              <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+                {t('studentDashboard.applicationChatPage.hardcodedTexts.completeI20Payment')}
+              </p>
+            </div>
 
-                </div>
-              </div>
-
-              {/* Recent Activity Card */}
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                <div className="bg-gradient-to-r from-slate-600 to-slate-700 px-6 py-4">
-                  <h3 className="text-lg font-semibold text-white">{t('studentDashboard.applicationChatPage.details.recentActivity')}</h3>
-                </div>
-                <div className="p-6">
-                  <div className="space-y-3">
-                    <div className="flex items-start space-x-3">
-                      <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
-                      <div className="flex-1">
-                        <div className="text-sm font-medium text-slate-900">{t('studentDashboard.applicationChatPage.details.applicationSubmitted')}</div>
-                        <div className="text-xs text-slate-600">{new Date(applicationDetails.created_at || Date.now()).toLocaleDateString()}</div>
+            {!hasPaid ? (
+              <div className="space-y-8">
+                {/* Information Card */}
+                <div className="bg-white rounded-3xl shadow-lg border border-gray-100 overflow-hidden">
+                  <div className="bg-gradient-to-br from-[#D0151C] via-red-600 to-red-700 p-6 sm:p-8">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-sm">
+                        <Award className="w-6 h-6 text-white" />
+                      </div>
+                      <div>
+                        <h2 className="text-xl sm:text-2xl font-bold text-white">Informações do Pagamento</h2>
+                        <p className="text-red-100 text-sm mt-1">Taxa obrigatória para processamento do I-20</p>
                       </div>
                     </div>
-                    {applicationDetails.updated_at !== applicationDetails.created_at && (
-                      <div className="flex items-start space-x-3">
-                        <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
-                        <div className="flex-1">
-                          <div className="text-sm font-medium text-slate-900">{t('studentDashboard.applicationChatPage.details.applicationUpdated')}</div>
-                          <div className="text-xs text-slate-600">{new Date(applicationDetails.updated_at || Date.now()).toLocaleDateString()}</div>
+                  </div>
+                  
+                  <div className="p-6 sm:p-8">
+                    <div className="prose prose-gray max-w-none">
+                      <div className="text-gray-700 leading-relaxed space-y-4">
+                        <p>{t('studentDashboard.applicationChatPage.i20ControlFee.description')}</p>
+                        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                          <div className="flex items-start gap-3">
+                            <div className="w-6 h-6 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                              <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16c-.77.833.192 2.5 1.732 2.5z" />
+                              </svg>
+                            </div>
+                            <div>
+                              <p className="font-semibold text-amber-800 mb-1">{t('studentDashboard.applicationChatPage.i20ControlFee.deadlineInfo')}</p>
+                              <p className="text-amber-700 text-sm">{t('studentDashboard.applicationChatPage.i20ControlFee.timerInfo')}</p>
+                            </div>
+                          </div>
+                        </div>
+                        <p className="text-sm text-gray-600">{t('studentDashboard.applicationChatPage.i20ControlFee.paymentInfo')}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Payment Action Card */}
+                <div className="bg-white rounded-3xl shadow-lg border border-gray-100 overflow-hidden">
+                  <div className="p-6 sm:p-8">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+                      {/* Payment Button */}
+                      <div className="space-y-4">
+                        <h3 className="text-xl font-bold text-gray-900 mb-4">Realizar Pagamento</h3>
+                        <div className="bg-gray-50 rounded-2xl p-6">
+                          <div className="flex items-center justify-between mb-4">
+                            <span className="text-gray-600">Valor da Taxa:</span>
+                            <span className="text-2xl font-bold text-[#D0151C]">{formatFeeAmount(getFeeAmount('i20_control_fee'))}</span>
+                          </div>
+                          <button
+                            onClick={handlePayI20}
+                            disabled={i20Loading}
+                            className="w-full bg-gradient-to-r from-[#D0151C] to-red-600 text-white px-8 py-4 rounded-2xl font-bold text-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-3"
+                          >
+                            {i20Loading ? (
+                              <>
+                                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                {t('studentDashboard.applicationChatPage.i20ControlFee.processing')}
+                              </>
+                            ) : (
+                              <>
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                                </svg>
+                                {t('studentDashboard.applicationChatPage.i20ControlFee.payButton')}
+                              </>
+                            )}
+                          </button>
+                          {dueDate && (
+                            <p className="text-xs text-gray-500 mt-3 text-center">
+                              {t('studentDashboard.applicationChatPage.i20ControlFee.dueDate')} {new Date(dueDate).toLocaleDateString()}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Countdown Timer */}
+                      {scholarshipFeeDeadline && (
+                        <div className="space-y-4">
+                          <h3 className="text-xl font-bold text-gray-900 mb-4">Tempo Restante</h3>
+                          <div className={`rounded-3xl p-8 text-center shadow-lg border-2 ${
+                            i20Countdown === 'Expired' 
+                              ? 'bg-gradient-to-br from-red-50 to-red-100 border-red-200' 
+                              : 'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200'
+                          }`}>
+                            {i20Countdown === 'Expired' ? (
+                              <div className="space-y-3">
+                                <div className="w-16 h-16 bg-red-100 rounded-2xl flex items-center justify-center mx-auto">
+                                  <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                  </svg>
+                                </div>
+                                <div>
+                                  <p className="text-red-600 font-bold text-lg">{t('studentDashboard.applicationChatPage.i20ControlFee.deadlineExpired')}</p>
+                                  <p className="text-red-500 text-sm mt-1">Entre em contato conosco urgentemente</p>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="space-y-3">
+                                <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center mx-auto">
+                                  <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                  </svg>
+                                </div>
+                                <div>
+                                  <p className="text-blue-600 font-semibold text-sm mb-2">Prazo para pagamento:</p>
+                                  <p className="font-mono text-2xl sm:text-3xl font-bold text-[#05294E] tracking-wider">
+                                    {i20Countdown}
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {i20Error && (
+                      <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-xl">
+                        <div className="flex items-center gap-3">
+                          <svg className="w-5 h-5 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <p className="text-red-700 font-medium">{i20Error}</p>
                         </div>
                       </div>
                     )}
                   </div>
                 </div>
               </div>
-
-              {/* Quick Actions Card */}
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                <div className="bg-gradient-to-r from-slate-500 to-slate-600 px-6 py-4">
-                  <h3 className="text-lg font-semibold text-white">{t('studentDashboard.applicationChatPage.details.quickActions')}</h3>
+            ) : (
+              <div className="space-y-8">
+                {/* Success Card */}
+                <div className="bg-white rounded-3xl shadow-lg border border-gray-100 overflow-hidden">
+                  <div className="bg-gradient-to-br from-green-500 via-green-600 to-green-700 p-6 sm:p-8">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-sm">
+                        <CheckCircle className="w-6 h-6 text-white" />
+                      </div>
+                      <div>
+                        <h2 className="text-xl sm:text-2xl font-bold text-white">{t('studentDashboard.applicationChatPage.i20ControlFee.paymentSuccess.title')}</h2>
+                        <p className="text-green-100 text-sm mt-1">Pagamento processado com sucesso</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="p-6 sm:p-8">
+                    <div className="space-y-6">
+                      <p className="text-gray-700 text-base leading-relaxed">
+                        {t('studentDashboard.applicationChatPage.i20ControlFee.paymentSuccess.description')}
+                      </p>
+                      
+                      <div className="bg-green-50 border border-green-200 rounded-2xl p-6">
+                        <h4 className="font-bold text-green-800 mb-4 flex items-center gap-2">
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                          {t('studentDashboard.applicationChatPage.i20ControlFee.paymentSuccess.nextSteps')}
+                        </h4>
+                        <ul className="space-y-3">
+                          {(t('studentDashboard.applicationChatPage.i20ControlFee.paymentSuccess.nextStepsList', { returnObjects: true }) as string[]).map((step, index) => (
+                            <li key={index} className="flex items-start gap-3">
+                              <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                                <span className="text-green-600 text-sm font-bold">{index + 1}</span>
+                              </div>
+                              <span className="text-green-700">{step}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div className="p-6">
-                  <div className="space-y-3">
-                                         {[
-                       { label: t('studentDashboard.applicationChatPage.details.manageDocuments'), tab: 'documents', icon: FileText },
-                      ...(applicationDetails.status === 'enrolled' ? [{ label: 'I-20 Control Fee', tab: 'i20', icon: Award }] : [])
-                    ].map((action) => (
-                      <button
-                        key={action.tab}
-                        onClick={() => setActiveTab(action.tab as any)}
-                        className="w-full flex items-center space-x-3 px-4 py-3 text-sm font-medium text-slate-700 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors"
-                      >
-                        <action.icon className="w-4 h-4 text-slate-500" />
-                        <span>{action.label}</span>
-                      </button>
-                    ))}
+
+                {/* Payment Details Card */}
+                <div className="bg-white rounded-3xl shadow-lg border border-gray-100 overflow-hidden">
+                  <div className="bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 p-6 sm:p-8">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-sm">
+                        <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                      </div>
+                      <h3 className="text-xl sm:text-2xl font-bold text-white">{t('studentDashboard.applicationChatPage.i20ControlFee.paymentInformation')}</h3>
+                    </div>
+                  </div>
+                  
+                  <div className="p-6 sm:p-8">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      <div className="bg-blue-50 rounded-2xl p-6 hover:bg-blue-100 transition-colors duration-200">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="w-8 h-8 bg-blue-100 rounded-xl flex items-center justify-center">
+                            <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                            </svg>
+                          </div>
+                          <span className="text-sm font-medium text-blue-600">{t('studentDashboard.applicationChatPage.i20ControlFee.amountPaid')}</span>
+                        </div>
+                        <div className="text-lg font-bold text-gray-900">{formatFeeAmount(getFeeAmount('i20_control_fee'))}</div>
+                      </div>
+                      
+                      <div className="bg-blue-50 rounded-2xl p-6 hover:bg-blue-100 transition-colors duration-200">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="w-8 h-8 bg-blue-100 rounded-xl flex items-center justify-center">
+                            <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3a4 4 0 118 0v4m-4 8a2 2 0 100-4 2 2 0 000 4zm6-6V7a4 4 0 10-8 0v4h8z" />
+                            </svg>
+                          </div>
+                          <span className="text-sm font-medium text-blue-600">{t('studentDashboard.applicationChatPage.i20ControlFee.paymentDate')}</span>
+                        </div>
+                        <div className="text-lg font-bold text-gray-900">{paymentDate ? new Date(paymentDate).toLocaleDateString() : 'N/A'}</div>
+                      </div>
+                      
+                      <div className="bg-blue-50 rounded-2xl p-6 hover:bg-blue-100 transition-colors duration-200">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="w-8 h-8 bg-blue-100 rounded-xl flex items-center justify-center">
+                            <CheckCircle className="w-5 h-5 text-blue-600" />
+                          </div>
+                          <span className="text-sm font-medium text-blue-600">{t('studentDashboard.applicationChatPage.i20ControlFee.status')}</span>
+                        </div>
+                        <div className="inline-flex items-center px-3 py-2 rounded-xl text-sm font-semibold bg-green-100 text-green-700 border border-green-200">
+                          <CheckCircle className="w-4 h-4 mr-2" />
+                          {t('studentDashboard.applicationChatPage.i20ControlFee.completed')}
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
-        )}
-        {activeTab === 'i20' && applicationDetails && applicationDetails.is_scholarship_fee_paid && (
-          <DashboardCard>
-            <h3 className="text-xl font-bold text-[#05294E] mb-4">{t('studentDashboard.applicationChatPage.i20ControlFee.title')}</h3>
-            
-            {!hasPaid ? (
-              <>
-                <div className="mb-3 text-sm text-slate-700" dangerouslySetInnerHTML={{
-                  __html: t('studentDashboard.applicationChatPage.i20ControlFee.description') + '<br />' +
-                          '<span class="font-semibold">' + t('studentDashboard.applicationChatPage.i20ControlFee.deadlineInfo') + '</span> ' +
-                          t('studentDashboard.applicationChatPage.i20ControlFee.timerInfo') + '<br />' +
-                          t('studentDashboard.applicationChatPage.i20ControlFee.paymentInfo')
-                }} />
-                {/* Cronômetro e botão lado a lado (invertidos) */}
-                <div className="flex flex-col md:flex-row md:items-center md:gap-4 gap-2 w-full mt-4">
-                  <div className="flex-1 flex items-center justify-center">
-                    <button
-                      className="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm font-medium w-full md:w-auto min-w-[140px] max-w-xs shadow-md border border-blue-200"
-                      onClick={handlePayI20}
-                      disabled={i20Loading}
-                      style={{height: '44px'}}>
-                      {i20Loading ? t('studentDashboard.applicationChatPage.i20ControlFee.processing') : t('studentDashboard.applicationChatPage.i20ControlFee.payButton')}
-                    </button>
-                  </div>
-                  {scholarshipFeeDeadline && (
-                    <div className={`flex-1 min-w-[140px] max-w-xs p-3 rounded-xl shadow-md text-center border ${i20Countdown === 'Expired' ? 'bg-red-50 border-red-200' : 'bg-blue-50 border-blue-200'}`}
-                         style={{height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
-                      {i20Countdown === 'Expired' ? (
-                        <span className="text-red-600 font-bold text-sm md:text-base">{t('studentDashboard.applicationChatPage.i20ControlFee.deadlineExpired')}</span>
-                      ) : (
-                        <span className="font-mono text-base md:text-lg text-[#05294E] tracking-widest">
-                          {i20Countdown}
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </div>
-                {dueDate && (
-                  <span className="text-xs text-slate-600">{t('studentDashboard.applicationChatPage.i20ControlFee.dueDate')} {new Date(dueDate).toLocaleDateString()}</span>
-                )}
-                {i20Error && <div className="text-center text-red-500 py-2">{i20Error}</div>}
-              </>
-            ) : (
-              <>
-                <div className="mb-6 p-6 bg-green-50 border border-green-200 rounded-xl">
-                  <div className="flex items-center gap-3 mb-3">
-                    <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <h4 className="text-lg font-bold text-green-800">{t('studentDashboard.applicationChatPage.i20ControlFee.paymentSuccess.title')}</h4>
-                  </div>
-                  <p className="text-green-700 mb-3">
-                    {t('studentDashboard.applicationChatPage.i20ControlFee.paymentSuccess.description')}
-                  </p>
-                                      <div className="text-sm text-green-600">
-                      <strong>{t('studentDashboard.applicationChatPage.i20ControlFee.paymentSuccess.nextSteps')}</strong>
-                                          <ul className="list-disc list-inside mt-2 space-y-1">
-                        {(t('studentDashboard.applicationChatPage.i20ControlFee.paymentSuccess.nextStepsList', { returnObjects: true }) as string[]).map((step, index) => (
-                          <li key={index}>{step}</li>
-                        ))}
-                      </ul>
-                  </div>
-                </div>
-                
-                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                  <h5 className="font-semibold text-blue-900 mb-2">{t('studentDashboard.applicationChatPage.i20ControlFee.paymentInformation')}</h5>
-                  <div className="text-sm text-blue-800 space-y-1">
-                    <div><strong>{t('studentDashboard.applicationChatPage.i20ControlFee.amountPaid')}</strong> {formatFeeAmount(getFeeAmount('i20_control_fee'))}</div>
-                    <div><strong>{t('studentDashboard.applicationChatPage.i20ControlFee.paymentDate')}</strong> {paymentDate ? new Date(paymentDate).toLocaleDateString() : 'N/A'}</div>
-                    <div><strong>{t('studentDashboard.applicationChatPage.i20ControlFee.status')}</strong> <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">{t('studentDashboard.applicationChatPage.i20ControlFee.completed')}</span></div>
-                  </div>
-                </div>
-              </>
             )}
-          </DashboardCard>
+          </div>
         )}
         
         {activeTab === 'documents' && applicationDetails && (

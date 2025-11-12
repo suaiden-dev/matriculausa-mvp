@@ -2134,6 +2134,12 @@
         "underReview": "Em Revisão",
         "notSubmitted": "Não Enviado"
       },
+      "hardcodedTexts": {
+        "authenticating": "Autenticando...",
+        "followSteps": "Siga estes passos para completar sua aplicação",
+        "checkAllInformation": "Confira todas as informações da sua aplicação",
+        "completeI20Payment": "Complete o pagamento da taxa de controle I-20 para prosseguir com sua aplicação"
+      },
       "errors": {
         "downloadFailed": "Falha ao baixar arquivo.",
         "paymentSessionError": "Erro ao criar sessão de pagamento.",

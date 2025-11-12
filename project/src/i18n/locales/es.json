@@ -1926,6 +1926,12 @@
         "paymentSessionError": "Error al crear sesión de pago",
         "paymentRedirectError": "Error al redirigir al pago",
         "downloadFailed": "Error al descargar el archivo"
+      },
+      "hardcodedTexts": {
+        "authenticating": "Autenticando...",
+        "followSteps": "Siga estos pasos para completar su aplicación",
+        "checkAllInformation": "Revise toda la información de su aplicación",
+        "completeI20Payment": "Complete el pago de la tarifa de control I-20 para proceder con su aplicación"
       }
     }
   },
