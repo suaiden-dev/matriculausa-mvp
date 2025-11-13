@@ -49,7 +49,6 @@ const ApplicationChatPage: React.FC = () => {
   const [scholarshipFeeDeadline, setScholarshipFeeDeadline] = useState<Date | null>(null);
   const [showI20ControlFeeModal, setShowI20ControlFeeModal] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'stripe' | 'zelle' | 'pix' | null>(null);
-  // Ajustar tipo de activeTab para remover 'chat'
   const [activeTab, setActiveTab] = useState<'welcome' | 'details' | 'i20' | 'documents'>('welcome');
   
   // Estados para controlar document requests (removidos - não mais utilizados)
@@ -77,8 +76,6 @@ const ApplicationChatPage: React.FC = () => {
       setActiveTab(tabParam as typeof activeTab);
     }
   }, [searchParams]);
-
-  // Chat functionality removed
 
   // Polling para atualizar o perfil do usuário a cada 2 minutos (modo conservador)
   useEffect(() => {
