@@ -58,7 +58,9 @@
     "viewScholarships": "Ver Becas",
     "goToDashboard": "Ir al Panel",
     "startSelectionProcess": "Iniciar Proceso de Selección",
-    "scholarshipsPlatform": "Plataforma de Becas"
+    "scholarshipsPlatform": "Plataforma de Becas",
+    "processingZellePayment": "Pago Zelle en verificación",
+    "zellePaymentPending": "Por favor, espere la verificación de su pago Zelle antes de iniciar un nuevo proceso."
   },
   "paymentBlocker": {
     "scholarships": {
@@ -1498,7 +1500,9 @@
       "description": "Comienza tu viaje a la educación americana completando nuestro proceso de selección integral.",
       "completeApplicationProcess": "Completa tu proceso de solicitud",
       "discountApplied": "✨ ¡Tienes un cupón de descuento aplicado!",
-      "startButton": "Iniciar Proceso de Selección"
+      "startButton": "Iniciar Proceso de Selección",
+      "processingZellePayment": "Pago Zelle en verificación",
+      "pendingPaymentMessage": "Tienes un pago Zelle pendiente de verificación. Por favor, espere la aprobación antes de iniciar un nuevo proceso."
     },
     "stats": {
       "myApplications": "Mis Solicitudes",

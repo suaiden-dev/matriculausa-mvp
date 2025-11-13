@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { GraduationCap, Globe, Users, Award, ArrowRight, CheckCircle, Star, BookOpen, Shield, Sparkles, DollarSign, Play, ChevronRight, Heart, Rocket, CreditCard, MapPin, Lock, Gift } from 'lucide-react';
+import { GraduationCap, Globe, Users, Award, ArrowRight, CheckCircle, Star, BookOpen, Shield, Sparkles, DollarSign, Play, ChevronRight, Heart, Rocket, CreditCard, MapPin, Lock, Gift, Clock } from 'lucide-react';
 import { useTranslationWithFees } from '../hooks/useTranslationWithFees';
 import { useDynamicFees } from '../hooks/useDynamicFees';
 import { useUniversities } from '../hooks/useUniversities';
+import { usePaymentBlocked } from '../hooks/usePaymentBlocked';
 import { StripeCheckout } from '../components/StripeCheckout';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
@@ -18,6 +19,10 @@ const Home: React.FC = () => {
   const { selectionProcessFee, scholarshipFee, i20ControlFee, hasSellerPackage, packageName } = useDynamicFees();
   const navigate = useNavigate();
   const { universities } = useUniversities();
+  const { isBlocked, pendingPayment, loading: paymentBlockedLoading } = usePaymentBlocked();
+  
+  // Verificar se há pagamento Zelle pendente do tipo selection_process
+  const hasPendingSelectionProcessPayment = isBlocked && pendingPayment && pendingPayment.fee_type === 'selection_process';
   
   // Buscar universidades em destaque
   const [featuredSchools, setFeaturedSchools] = useState<any[]>([]);
@@ -113,16 +118,31 @@ const Home: React.FC = () => {
                   </Link>
                   {/* Lógica correta: só para estudante, usando userProfile?.has_paid_selection_process_fee */}
                   {isAuthenticated && user && user.role === 'student' && userProfile && !userProfile.has_paid_selection_process_fee && (
-                    <StripeCheckout 
-                      feeType="selection_process"
-                      paymentType="selection_process"
-                      productId="selectionProcess"
-                      buttonText={t('nav.startSelectionProcess')}
-                      className="group bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-2xl text-lg font-bold transition-all duration-300 shadow-xl hover:shadow-2xl flex items-center justify-center border-0"
-                      onError={(error) => console.error('Checkout error:', error)}
-                      successUrl={`${window.location.origin}/student/dashboard/selection-process-fee-success?session_id={CHECKOUT_SESSION_ID}`}
-                      cancelUrl={`${window.location.origin}/student/dashboard/selection-process-fee-error`}
-                    />
+                    hasPendingSelectionProcessPayment ? (
+                      <div className="group bg-amber-50 border-2 border-amber-200 rounded-2xl p-6">
+                        <div className="flex items-center justify-center mb-2">
+                          <Clock className="h-5 w-5 text-amber-600 mr-2 animate-spin" />
+                          <span className="text-lg font-bold text-amber-800">
+                            {t('nav.processingZellePayment')}
+                          </span>
+                        </div>
+                        <p className="text-sm text-amber-700 text-center">
+                          {t('nav.zellePaymentPending')}
+                        </p>
+                      </div>
+                    ) : (
+                      <StripeCheckout 
+                        feeType="selection_process"
+                        paymentType="selection_process"
+                        productId="selectionProcess"
+                        buttonText={t('nav.startSelectionProcess')}
+                        className="group bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-2xl text-lg font-bold transition-all duration-300 shadow-xl hover:shadow-2xl flex items-center justify-center border-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                        onError={(error) => console.error('Checkout error:', error)}
+                        successUrl={`${window.location.origin}/student/dashboard/selection-process-fee-success?session_id={CHECKOUT_SESSION_ID}`}
+                        cancelUrl={`${window.location.origin}/student/dashboard/selection-process-fee-error`}
+                        disabled={paymentBlockedLoading}
+                      />
+                    )
                   )}
                   {isAuthenticated && user && user.role === 'student' && userProfile && userProfile.has_paid_selection_process_fee && (
                     <Link

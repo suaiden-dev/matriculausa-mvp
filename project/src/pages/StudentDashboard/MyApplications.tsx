@@ -17,6 +17,7 @@ import { useTranslation } from 'react-i18next';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
+import { usePaymentBlocked } from '../../hooks/usePaymentBlocked';
 import { supabase } from '../../lib/supabase';
 import { Application, Scholarship } from '../../types';
 import { useCartStore } from '../../stores/applicationStore';
@@ -37,6 +38,7 @@ const MyApplications: React.FC = () => {
   const { t } = useTranslation();
   const { user, userProfile, refetchUserProfile } = useAuth();
   const { getFeeAmount, formatFeeAmount } = useFeeConfig(user?.id);
+  const { isBlocked, pendingPayment, loading: paymentBlockedLoading } = usePaymentBlocked();
   // Helper: calcular Application Fee exibida considerando dependentes (legacy)
   // O valor vem em centavos do banco, precisa converter para dólares primeiro
   const getApplicationFeeWithDependents = (baseInCents: number): number => {
@@ -719,12 +721,22 @@ const getLevelColor = (level: any) => {
 
   // Function to handle application fee payment confirmation
   const handleApplicationFeeClick = (application: ApplicationWithScholarship) => {
+    // Verificar se há pagamento Zelle pendente antes de abrir o modal
+    if (isBlocked && pendingPayment) {
+      console.log('Pagamento Zelle pendente detectado, bloqueando novo pagamento');
+      return;
+    }
     setPendingApplication(application);
     setShowConfirmationModal(true);
   };
 
   // Function to handle scholarship fee payment confirmation
   const handleScholarshipFeeClick = (application: ApplicationWithScholarship) => {
+    // Verificar se há pagamento Zelle pendente antes de abrir o modal
+    if (isBlocked && pendingPayment) {
+      console.log('Pagamento Zelle pendente detectado, bloqueando novo pagamento');
+      return;
+    }
     setPendingScholarshipFeeApplication(application);
     setShowScholarshipFeeModal(true);
   };
@@ -1465,13 +1477,39 @@ const getLevelColor = (level: any) => {
                             {t('studentDashboard.myApplications.paymentStatus.paid')}
                           </div>
                         ) : (
-                          <button
-                            onClick={() => handleApplicationFeeClick(application)}
-                            className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-2 rounded-lg font-semibold hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 text-sm"
-                            disabled={hasSelectedScholarship && !scholarshipFeePaid}
-                          >
-                            {t('studentDashboard.myApplications.paymentStatus.payApplicationFee')}
-                          </button>
+                          <>
+                            {isBlocked && pendingPayment ? (
+                              <div className="w-full bg-amber-50 border-2 border-amber-200 rounded-lg p-3">
+                                <div className="flex items-center justify-center">
+                                  <Clock className="h-4 w-4 text-amber-600 mr-2 animate-spin" />
+                                  <span className="text-xs font-semibold text-amber-800">
+                                    {t('studentDashboard.myApplications.paymentStatus.processingZellePayment')}
+                                  </span>
+                                </div>
+                                {pendingPayment.fee_type && (
+                                  <p className="text-xs text-amber-700 mt-1 text-center">
+                                    {t('studentDashboard.myApplications.paymentStatus.pendingPaymentType', { 
+                                      feeType: pendingPayment.fee_type === 'application_fee' 
+                                        ? t('studentDashboard.myApplications.paymentStatus.applicationFee')
+                                        : pendingPayment.fee_type === 'scholarship_fee'
+                                        ? t('studentDashboard.myApplications.paymentStatus.scholarshipFee')
+                                        : pendingPayment.fee_type
+                                    })}
+                                  </p>
+                                )}
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => handleApplicationFeeClick(application)}
+                                className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-2 rounded-lg font-semibold hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 text-sm"
+                                disabled={(hasSelectedScholarship && !scholarshipFeePaid) || paymentBlockedLoading}
+                              >
+                                {paymentBlockedLoading 
+                                  ? t('studentDashboard.myApplications.paymentStatus.checking')
+                                  : t('studentDashboard.myApplications.paymentStatus.payApplicationFee')}
+                              </button>
+                            )}
+                          </>
                         )}
                       </div>
   
@@ -1486,13 +1524,39 @@ const getLevelColor = (level: any) => {
                             {t('studentDashboard.myApplications.paymentStatus.paid')}
                           </div>
                         ) : (
-                          <button
-                            onClick={() => handleScholarshipFeeClick(application)}
-                            className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-2 rounded-lg font-semibold hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 text-sm"
-                            disabled={!applicationFeePaid || scholarshipFeePaid || (hasSelectedScholarship && !scholarshipFeePaid)}
-                          >
-                            {t('studentDashboard.myApplications.paymentStatus.payScholarshipFee')}
-                          </button>
+                          <>
+                            {isBlocked && pendingPayment ? (
+                              <div className="w-full bg-amber-50 border-2 border-amber-200 rounded-lg p-3">
+                                <div className="flex items-center justify-center">
+                                  <Clock className="h-4 w-4 text-amber-600 mr-2 animate-spin" />
+                                  <span className="text-xs font-semibold text-amber-800">
+                                    {t('studentDashboard.myApplications.paymentStatus.processingZellePayment')}
+                                  </span>
+                                </div>
+                                {pendingPayment.fee_type && (
+                                  <p className="text-xs text-amber-700 mt-1 text-center">
+                                    {t('studentDashboard.myApplications.paymentStatus.pendingPaymentType', { 
+                                      feeType: pendingPayment.fee_type === 'application_fee' 
+                                        ? t('studentDashboard.myApplications.paymentStatus.applicationFee')
+                                        : pendingPayment.fee_type === 'scholarship_fee'
+                                        ? t('studentDashboard.myApplications.paymentStatus.scholarshipFee')
+                                        : pendingPayment.fee_type
+                                    })}
+                                  </p>
+                                )}
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => handleScholarshipFeeClick(application)}
+                                className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-2 rounded-lg font-semibold hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 text-sm"
+                                disabled={!applicationFeePaid || scholarshipFeePaid || (hasSelectedScholarship && !scholarshipFeePaid) || paymentBlockedLoading}
+                              >
+                                {paymentBlockedLoading 
+                                  ? t('studentDashboard.myApplications.paymentStatus.checking')
+                                  : t('studentDashboard.myApplications.paymentStatus.payScholarshipFee')}
+                              </button>
+                            )}
+                          </>
                         )}
                       </div>
                     </div>
