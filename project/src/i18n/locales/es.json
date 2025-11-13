@@ -725,7 +725,7 @@
       "additionalBenefits": "Additional Benefits",
       "expired": "Expired",
       "scholarshipExpired": "Scholarship Expired",
-      "noLongerAccepting": "This scholarship is no longer accepting new applications.",
+      "noLongerAccepting": "Not Available for application",
       "canStillView": "You can still view the information, but it will not be possible to apply for this scholarship."
     }
   },
@@ -1305,8 +1305,8 @@
             "address": {
               "label": "Address",
               "value": "Los Angeles - CA - USA"
-            }
-          }
+                    }
+      }
         }
       }
     },
@@ -1329,7 +1329,7 @@
       "registrationFailed": "Registration Failed",
       "emailAlreadyRegistered": "This email is already registered. Please sign in or use another email."
     }
-  },
+    },
   "features": {
     "whyChoose": "Why Choose MatriculaUSA?",
     "subtitle": "Everything you need to succeed in your American education journey",
@@ -1405,12 +1405,12 @@
       "title": "Esta es tu barra de progreso de tasas de solicitud. Completa cada paso para avanzar.",
       "allStepsCompleted": "¡Todos los pasos completados! 🎉",
       "selectionProcessFee": "Tarifa de Proceso de Selección",
-      "applicationFee": "Tarifa de Solicitud",
+      "applicationFee": "Tarifa de Solicitud", 
       "scholarshipFee": "Tarifa de Beca",
       "i20ControlFee": "Tarifa de Control I-20",
       "completed": "¡Completado!",
       "payApplicationFee": "Paga la Tarifa de Solicitud para aplicar a una beca específica.",
-      "payScholarshipFee": "Paga la Tarifa de Beca para confirmar tu solicitud de beca.",
+      "payScholarshipFee": "Paga la Tarifa de Beca para confirmar tu solicitud de beca.", 
       "payI20Fee": "Paga la Tarifa de Control I-20 para iniciar tu proceso de validación de documentos e I-20.",
       "daysRemaining": "Tienes 10 días después de la tarifa de beca."
     },
@@ -1429,7 +1429,7 @@
     "stats": {
       "myApplications": "Mis Solicitudes",
       "totalSubmitted": "Total enviadas",
-      "approved": "Aprobadas",
+      "approved": "Aprobadas", 
       "successful": "Exitosas",
       "pending": "Pendientes",
       "underReview": "En revisión"
@@ -1444,7 +1444,7 @@
     },
     "sidebar": {
       "overview": "Resumen",
-      "browseScholarships": "Explorar Becas",
+      "browseScholarships": "Explorar Becas", 
       "selectedScholarships": "Becas Seleccionadas",
       "myApplications": "Mis Solicitudes",
       "matriculaRewards": "Matricula Rewards",
@@ -3148,7 +3148,7 @@
     }
   },
   "scholarshipDeadline": {
-    "3800Expired": "This scholarship is no longer accepting applications",
+    "3800Expired": "Not Available for application",
     "3800Expiring": "Last hours to apply! Deadline expires tomorrow (November 6th)",
     "3800ExpiringShort": "Deadline expires tomorrow"
   }

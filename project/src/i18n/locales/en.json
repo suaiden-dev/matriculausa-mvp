@@ -627,7 +627,7 @@
       "additionalBenefits": "Additional Benefits",
       "expired": "Expired",
       "scholarshipExpired": "Scholarship Expired",
-      "noLongerAccepting": "This scholarship is no longer accepting new applications.",
+      "noLongerAccepting": "Not Available for application",
       "canStillView": "You can still view the information, but it will not be possible to apply for this scholarship."
     }
   },
@@ -3377,7 +3377,7 @@
     }
   },
   "scholarshipDeadline": {
-    "3800Expired": "This scholarship is no longer accepting applications",
+    "3800Expired": "Not Available for application",
     "3800Expiring": "Last hours to apply! Deadline expires tomorrow (November 6th)",
     "3800ExpiringShort": "Deadline expires tomorrow"
   }
