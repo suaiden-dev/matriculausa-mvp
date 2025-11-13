@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './useAuth';
 import { channelManager } from '../lib/supabaseChannelManager';
+import { throttle } from '../utils/debounce';
 
 export interface AdminStudentChatNotification {
   id: string;
@@ -127,6 +128,24 @@ export const useAdminStudentChatNotifications = () => {
     }
   }, [user, fetchNotifications]);
 
+  // ✅ OTIMIZAÇÃO: Throttle para evitar chamadas excessivas em eventos real-time
+  const throttledFetchNotifications = useRef(
+    throttle(() => {
+      if (!user) return;
+      
+      supabase
+        .rpc('get_unread_admin_student_chat_notifications', {
+          user_id_param: user.id
+        })
+        .then(({ data, error }) => {
+          if (!error && data) {
+            setNotifications(data);
+            setUnreadCount(data.length);
+          }
+        });
+    }, 3000) // ✅ OTIMIZAÇÃO: Aumentado para 3 segundos - máximo 1 chamada a cada 3 segundos
+  );
+
   // Configurar real-time para notificações
   useEffect(() => {
     if (!user) return;
@@ -142,18 +161,9 @@ export const useAdminStudentChatNotifications = () => {
           table: 'admin_student_chat_notifications',
           filter: `recipient_id=eq.${user.id}`
         },
-        (payload: any) => {
-          // Buscar a notificação completa
-          supabase
-            .rpc('get_unread_admin_student_chat_notifications', {
-              user_id_param: user.id
-            })
-            .then(({ data, error }) => {
-              if (!error && data) {
-                setNotifications(data);
-                setUnreadCount(data.length);
-              }
-            });
+        () => {
+          // ✅ OTIMIZAÇÃO: Usar throttle para evitar múltiplas chamadas
+          throttledFetchNotifications.current();
         }
       );
 

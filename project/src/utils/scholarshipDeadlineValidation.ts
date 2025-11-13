@@ -92,9 +92,9 @@ export function get3800ScholarshipWarningMessage(
 ): string {
   if (isExpired) {
     const messages: Record<string, string> = {
-      pt: 'Esta bolsa não está mais aceitando candidaturas',
-      en: 'This scholarship is no longer accepting applications',
-      es: 'Esta beca ya no está aceptando solicitudes'
+      pt: 'Não disponível para candidatura',
+      en: 'Not Available for application',
+      es: 'No disponible para candidatura'
     };
     return messages[language] || messages.pt;
   } else {

@@ -861,7 +861,7 @@ const Overview: React.FC<OverviewProps> = ({
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-slate-700">{t('studentDashboard.profileStatus.basicInformation')}</span>
                 {basicInfoComplete ? (
-                  <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-500" />
+                <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-500" />
                 ) : (
                   <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500" />
                 )}
@@ -872,7 +872,7 @@ const Overview: React.FC<OverviewProps> = ({
                 {academicDetailsComplete ? (
                   <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-500" />
                 ) : (
-                  <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500" />
+                <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500" />
                 )}
               </div>
               
@@ -881,7 +881,7 @@ const Overview: React.FC<OverviewProps> = ({
                 {documentsComplete ? (
                   <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-500" />
                 ) : (
-                  <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500" />
+                <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500" />
                 )}
               </div>
             </div>
@@ -900,17 +900,17 @@ const Overview: React.FC<OverviewProps> = ({
                 </Link>
               </div>
             ) : (
-              <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl border border-blue-200">
-                <p className="text-sm font-medium text-blue-800 mb-2">
-                  {t('studentDashboard.profileStatus.completeProfile')}
-                </p>
-                <Link
-                  to="/student/dashboard/profile"
-                  className="text-sm font-bold text-blue-700 hover:text-blue-800 transition-colors"
-                >
-                  {t('studentDashboard.profileStatus.completeNow')} →
-                </Link>
-              </div>
+            <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl border border-blue-200">
+              <p className="text-sm font-medium text-blue-800 mb-2">
+                {t('studentDashboard.profileStatus.completeProfile')}
+              </p>
+              <Link
+                to="/student/dashboard/profile"
+                className="text-sm font-bold text-blue-700 hover:text-blue-800 transition-colors"
+              >
+                {t('studentDashboard.profileStatus.completeNow')} →
+              </Link>
+            </div>
             )}
           </div>
 
