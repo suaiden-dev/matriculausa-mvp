@@ -403,11 +403,8 @@ const ApplicationChatPage: React.FC = () => {
   return (
     <div className="p-6 md:p-12 flex flex-col items-center min-h-screen h-full">
       <div className="w-full max-w-7xl mx-auto space-y-8 flex-1 flex flex-col h-full">
-        <h2 className="text-2xl font-bold text-gray-800 mb-4 text-center">
-          {t('studentDashboard.applicationChatPage.title')}
-        </h2>
         {/* Expandable Tabs */}
-        <div className="mb-6 flex justify-center">
+        <div className="lg:mb-6 mb-0 flex justify-center">
           <ExpandableTabs
             tabs={tabItems}
             activeColor="text-[#05294E]"
@@ -561,15 +558,6 @@ const ApplicationChatPage: React.FC = () => {
         )}
         {activeTab === 'details' && applicationDetails && (
           <div className="w-full max-w-6xl mx-auto">
-            {/* Header Section */}
-            <div className="text-center mb-8">
-              <h1 className="text-3xl sm:text-4xl font-bold text-[#05294E] mb-4">
-                {t('studentDashboard.applicationChatPage.details.studentInformation.title')}
-              </h1>
-              <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-                {t('studentDashboard.applicationChatPage.hardcodedTexts.checkAllInformation')}
-              </p>
-            </div>
 
             {/* Cards Grid - Mobile First */}
             <div className="grid gap-6 md:gap-8">

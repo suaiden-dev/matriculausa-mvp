@@ -30,13 +30,13 @@ interface ExpandableTabsProps {
 const buttonVariants = {
   initial: {
     gap: 0,
-    paddingLeft: ".5rem",
-    paddingRight: ".5rem",
+    paddingLeft: ".75rem",
+    paddingRight: ".75rem",
   },
   animate: (isSelected: boolean) => ({
-    gap: isSelected ? ".375rem" : 0,
-    paddingLeft: isSelected ? ".75rem" : ".5rem",
-    paddingRight: isSelected ? ".75rem" : ".5rem",
+    gap: isSelected ? ".625rem" : 0,
+    paddingLeft: isSelected ? "1.25rem" : ".875rem",
+    paddingRight: isSelected ? "1.25rem" : ".875rem",
   }),
 };
 
@@ -76,13 +76,13 @@ export function ExpandableTabs({
   };
 
   const Separator = () => (
-    <div className="mx-1 h-[24px] w-[1.2px] bg-slate-300" aria-hidden="true" />
+    <div className="mx-1 h-[24px] md:h-[32px] w-[1.2px] bg-slate-300" aria-hidden="true" />
   );
 
   return (
     <div
       className={cn(
-        "flex flex-nowrap items-center gap-2 rounded-2xl border border-slate-200 bg-white p-1 shadow-sm w-fit",
+        "flex flex-nowrap items-center gap-2 md:gap-3 rounded-2xl border border-slate-200 bg-white p-1 md:p-1.5 shadow-sm w-fit",
         className
       )}
     >
@@ -105,13 +105,13 @@ export function ExpandableTabs({
             onClick={() => handleSelect(realIndex)}
             transition={transition}
             className={cn(
-              "relative flex items-center rounded-xl py-2 text-xs font-medium transition-colors duration-300 flex-shrink-0",
+              "relative flex items-center rounded-xl py-2 md:py-3 text-xs md:text-sm font-medium transition-colors duration-300 flex-shrink-0",
               isSelected
                 ? cn("bg-blue-50", activeColor)
                 : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
             )}
           >
-            <Icon size={16} className="flex-shrink-0" />
+            <Icon size={16} className="flex-shrink-0 md:w-5 md:h-5" />
             <AnimatePresence initial={false}>
               {isSelected && (
                 <motion.span
@@ -120,7 +120,7 @@ export function ExpandableTabs({
                   animate="animate"
                   exit="exit"
                   transition={transition}
-                  className="overflow-hidden whitespace-nowrap ml-1 text-xs"
+                  className="overflow-hidden whitespace-nowrap ml-1 md:ml-2 text-xs md:text-sm"
                 >
                   {tab.title}
                 </motion.span>
