@@ -123,16 +123,45 @@ const ChatInbox: React.FC<ChatInboxProps> = ({
   const [showStudentSelector, setShowStudentSelector] = useState(false);
   const [studentEmails, setStudentEmails] = useState<{ [key: string]: string }>({});
 
+  // Função para verificar se deve filtrar (produção, staging ou local para testes)
+  const shouldFilter = useMemo(() => {
+    const hostname = window.location.hostname;
+    const href = window.location.href;
+    
+    const isProd = hostname === 'matriculausa.com' || 
+                   hostname.includes('matriculausa.com') ||
+                   href.includes('matriculausa.com');
+    
+    const isStaging = hostname === 'staging-matriculausa.netlify.app' || 
+                      hostname.includes('staging-matriculausa.netlify.app') ||
+                      hostname.includes('staging-matriculausa') ||
+                      href.includes('staging-matriculausa.netlify.app') ||
+                      href.includes('staging-matriculausa');
+    
+    const result = isProd || isStaging;
+    
+    console.log('🔍 [ChatInbox] shouldFilter debug:', {
+      hostname,
+      href,
+      isDevelopment,
+      isProd,
+      isStaging,
+      result
+    });
+    
+    return result;
+  }, [isDevelopment]);
+
   // Função para verificar se deve excluir um email
   const shouldExcludeEmail = (email: string | null | undefined): boolean => {
     if (!email) return false;
-    if (isDevelopment) return false; // Em desenvolvimento, mostrar todos
+    if (!shouldFilter) return false; // Em desenvolvimento, não excluir
     return email.toLowerCase().includes('@uorak.com');
   };
 
   // Buscar emails dos estudantes para filtrar conversas
   useEffect(() => {
-    if (isDevelopment || conversations.length === 0) {
+    if (!shouldFilter || conversations.length === 0) {
       setStudentEmails({});
       return;
     }
@@ -170,11 +199,11 @@ const ChatInbox: React.FC<ChatInboxProps> = ({
     };
 
     fetchStudentEmails();
-  }, [conversations, isDevelopment]);
+  }, [conversations, shouldFilter]);
 
-  // Filtrar conversas excluindo @uorak.com em produção
+  // Filtrar conversas excluindo @uorak.com em produção/staging
   const filteredConversationsByEmail = useMemo(() => {
-    if (isDevelopment) return conversations;
+    if (!shouldFilter) return conversations;
     
     return conversations.filter(conversation => {
       // Para admin/affiliate_admin, filtrar por email do estudante

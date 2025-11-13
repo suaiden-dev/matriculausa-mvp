@@ -29,10 +29,39 @@ const StudentSelector: React.FC<StudentSelectorProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState<string | null>(null);
 
+  // Função para verificar se deve filtrar (produção, staging ou local para testes)
+  const shouldFilter = useMemo(() => {
+    const hostname = window.location.hostname;
+    const href = window.location.href;
+    
+    const isProd = hostname === 'matriculausa.com' || 
+                   hostname.includes('matriculausa.com') ||
+                   href.includes('matriculausa.com');
+    
+    const isStaging = hostname === 'staging-matriculausa.netlify.app' || 
+                      hostname.includes('staging-matriculausa.netlify.app') ||
+                      hostname.includes('staging-matriculausa') ||
+                      href.includes('staging-matriculausa.netlify.app') ||
+                      href.includes('staging-matriculausa');
+    
+    const result = isProd || isStaging;
+    
+    console.log('🔍 [StudentSelector] shouldFilter debug:', {
+      hostname,
+      href,
+      isDevelopment,
+      isProd,
+      isStaging,
+      result
+    });
+    
+    return result;
+  }, [isDevelopment]);
+
   // Função para verificar se deve excluir um email
   const shouldExcludeEmail = (email: string | null | undefined): boolean => {
     if (!email) return false;
-    if (isDevelopment) return false; // Em desenvolvimento, mostrar todos
+    if (!shouldFilter) return false; // Em desenvolvimento, não excluir
     return email.toLowerCase().includes('@uorak.com');
   };
 
@@ -50,12 +79,14 @@ const StudentSelector: React.FC<StudentSelectorProps> = ({
 
       if (fetchError) throw fetchError;
 
-      // Filtrar estudantes @uorak.com em produção
+      // Filtrar estudantes @uorak.com em produção/staging
       let filteredData = data || [];
-      if (!isDevelopment) {
+      if (shouldFilter) {
+        console.log('🔍 [StudentSelector] Filtrando estudantes:', { total: filteredData.length, shouldFilter });
         filteredData = filteredData.filter((student: Student) => {
           return !shouldExcludeEmail(student.email);
         });
+        console.log('🔍 [StudentSelector] Estudantes filtrados:', { depois: filteredData.length });
       }
 
       setStudents(filteredData);
@@ -71,7 +102,7 @@ const StudentSelector: React.FC<StudentSelectorProps> = ({
     if (isOpen) {
       fetchStudents();
     }
-  }, [isOpen, user, isDevelopment]);
+  }, [isOpen, user, shouldFilter]);
 
   const filteredStudents = useMemo(() => {
     const safeTerm = (searchTerm || '').toLowerCase();

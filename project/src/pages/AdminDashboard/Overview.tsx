@@ -53,38 +53,76 @@ const Overview: React.FC<OverviewProps> = ({ stats, universities, users, applica
   
   const UNIVERSITIES_PER_PAGE = 4; // Reduzido para caber melhor no layout compacto
 
+  // Função para verificar se deve filtrar (produção, staging ou local para testes)
+  const shouldFilter = useMemo(() => {
+    const hostname = window.location.hostname;
+    const href = window.location.href;
+    
+    const isProd = hostname === 'matriculausa.com' || 
+                   hostname.includes('matriculausa.com') ||
+                   href.includes('matriculausa.com');
+    
+    const isStaging = hostname === 'staging-matriculausa.netlify.app' || 
+                      hostname.includes('staging-matriculausa.netlify.app') ||
+                      hostname.includes('staging-matriculausa') ||
+                      href.includes('staging-matriculausa.netlify.app') ||
+                      href.includes('staging-matriculausa');
+    
+    const result = isProd || isStaging;
+    
+    console.log('🔍 [Overview] shouldFilter debug:', {
+      hostname,
+      href,
+      isDevelopment,
+      isProd,
+      isStaging,
+      result
+    });
+    
+    return result;
+  }, [isDevelopment]);
+
   // Função para verificar se deve excluir um email
   const shouldExcludeEmail = (email: string | null | undefined): boolean => {
     if (!email) return false;
-    if (isDevelopment) return false; // Em desenvolvimento, mostrar todos
+    if (!shouldFilter) return false; // Em desenvolvimento, não excluir
     return email.toLowerCase().includes('@uorak.com');
   };
 
-  // Filtrar usuários, universidades e aplicações excluindo @uorak.com em produção
+  // Filtrar usuários, universidades e aplicações excluindo @uorak.com em produção/staging
   const filteredUsers = useMemo(() => {
-    if (isDevelopment) return users;
-    return users.filter((user: any) => {
+    if (!shouldFilter) return users;
+    console.log('🔍 [Overview] Filtrando usuários:', { total: users.length, shouldFilter });
+    const filtered = users.filter((user: any) => {
       const email = user.email || user.user?.email || '';
       return !shouldExcludeEmail(email);
     });
-  }, [users, isDevelopment]);
+    console.log('🔍 [Overview] Usuários filtrados:', { antes: users.length, depois: filtered.length });
+    return filtered;
+  }, [users, shouldFilter]);
 
   const filteredUniversities = useMemo(() => {
-    if (isDevelopment) return universities;
-    return universities.filter((university: any) => {
+    if (!shouldFilter) return universities;
+    console.log('🔍 [Overview] Filtrando universidades:', { total: universities.length, shouldFilter });
+    const filtered = universities.filter((university: any) => {
       // Verificar se a universidade tem um usuário associado com email @uorak.com
       const email = university.user?.email || university.email || '';
       return !shouldExcludeEmail(email);
     });
-  }, [universities, isDevelopment]);
+    console.log('🔍 [Overview] Universidades filtradas:', { antes: universities.length, depois: filtered.length });
+    return filtered;
+  }, [universities, shouldFilter]);
 
   const filteredApplications = useMemo(() => {
-    if (isDevelopment) return applications;
-    return applications.filter((application: any) => {
+    if (!shouldFilter) return applications;
+    console.log('🔍 [Overview] Filtrando aplicações:', { total: applications.length, shouldFilter });
+    const filtered = applications.filter((application: any) => {
       const email = application.user?.email || application.student_email || application.user_email || '';
       return !shouldExcludeEmail(email);
     });
-  }, [applications, isDevelopment]);
+    console.log('🔍 [Overview] Aplicações filtradas:', { antes: applications.length, depois: filtered.length });
+    return filtered;
+  }, [applications, shouldFilter]);
 
   // Recalcular stats baseado nos dados filtrados
   const filteredStats = useMemo(() => {
@@ -161,12 +199,14 @@ const Overview: React.FC<OverviewProps> = ({ stats, universities, users, applica
                   user_profile: userProfiles.find((profile: any) => profile.user_id === payment.user_id)
                 }));
 
-                // Filtrar pagamentos de usuários @uorak.com em produção
-                if (!isDevelopment) {
+                // Filtrar pagamentos de usuários @uorak.com em produção/staging
+                if (shouldFilter) {
+                  console.log('🔍 [Overview] Filtrando Zelle payments:', { total: filteredZellePayments.length, shouldFilter });
                   filteredZellePayments = filteredZellePayments.filter((payment: any) => {
                     const email = payment.user_profile?.email || '';
                     return !shouldExcludeEmail(email);
                   });
+                  console.log('🔍 [Overview] Zelle payments filtrados:', { depois: filteredZellePayments.length });
                 }
               }
             }
@@ -184,7 +224,7 @@ const Overview: React.FC<OverviewProps> = ({ stats, universities, users, applica
     };
 
     loadPendingPaymentsCounts();
-  }, [isDevelopment]);
+  }, [shouldFilter]);
 
   // Filtrar universidades pendentes usando dados filtrados
   const pendingUniversities = filteredUniversities.filter((u: any) => !u.is_approved);
