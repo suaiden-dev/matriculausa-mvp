@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../hooks/useAuth';
+import { useEnvironment } from '../../hooks/useEnvironment';
 import { supabase } from '../../lib/supabase';
 import { Users, Search, MessageSquare, X } from 'lucide-react';
 
@@ -22,10 +23,18 @@ const StudentSelector: React.FC<StudentSelectorProps> = ({
   onStudentSelect 
 }) => {
   const { user } = useAuth();
+  const { isDevelopment } = useEnvironment();
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState<string | null>(null);
+
+  // Função para verificar se deve excluir um email
+  const shouldExcludeEmail = (email: string | null | undefined): boolean => {
+    if (!email) return false;
+    if (isDevelopment) return false; // Em desenvolvimento, mostrar todos
+    return email.toLowerCase().includes('@uorak.com');
+  };
 
   const fetchStudents = async () => {
     if (!user) return;
@@ -41,7 +50,15 @@ const StudentSelector: React.FC<StudentSelectorProps> = ({
 
       if (fetchError) throw fetchError;
 
-      setStudents(data || []);
+      // Filtrar estudantes @uorak.com em produção
+      let filteredData = data || [];
+      if (!isDevelopment) {
+        filteredData = filteredData.filter((student: Student) => {
+          return !shouldExcludeEmail(student.email);
+        });
+      }
+
+      setStudents(filteredData);
     } catch (e: any) {
       console.error('Failed to fetch students:', e);
       setError('Failed to load students. Please try again.');
@@ -54,14 +71,16 @@ const StudentSelector: React.FC<StudentSelectorProps> = ({
     if (isOpen) {
       fetchStudents();
     }
-  }, [isOpen, user]);
+  }, [isOpen, user, isDevelopment]);
 
-  const safeTerm = (searchTerm || '').toLowerCase();
-  const filteredStudents = students.filter((student) => {
-    const name = (student.full_name || '').toLowerCase();
-    const email = (student.email || '').toLowerCase();
-    return name.includes(safeTerm) || email.includes(safeTerm);
-  });
+  const filteredStudents = useMemo(() => {
+    const safeTerm = (searchTerm || '').toLowerCase();
+    return students.filter((student) => {
+      const name = (student.full_name || '').toLowerCase();
+      const email = (student.email || '').toLowerCase();
+      return name.includes(safeTerm) || email.includes(safeTerm);
+    });
+  }, [students, searchTerm]);
 
   const handleStudentSelect = (student: Student) => {
     onStudentSelect(student.user_id, student.full_name);
