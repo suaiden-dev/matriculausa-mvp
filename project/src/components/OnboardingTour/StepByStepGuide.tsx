@@ -334,17 +334,13 @@ const StepByStepGuide: React.FC<StepByStepGuideProps> = ({ isOpen, onClose }) =>
             </div>
 
             {/* Footer */}
-            <div className="bg-gray-50 px-4 sm:px-8 py-4 sm:py-6 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
-              <div className="text-sm text-gray-500 text-center sm:text-left">
-                {t('stepByStepGuide.progress').replace('{current}', (currentStep + 1).toString()).replace('{total}', STEPS.length.toString())}
-              </div>
-              
-              <div className="flex items-center gap-3 w-full sm:w-auto">
+            <div className="bg-gray-50 px-4 sm:px-8 py-4 sm:py-6 flex items-center justify-center">
+              <div className="flex items-center gap-3">
                 <button
                   type="button"
                   onClick={prevStep}
                   disabled={currentStep === 0}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all text-sm flex-1 sm:flex-none ${
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all text-sm ${
                     currentStep === 0
                       ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                       : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
@@ -359,7 +355,7 @@ const StepByStepGuide: React.FC<StepByStepGuideProps> = ({ isOpen, onClose }) =>
                   <button
                     type="button"
                     onClick={onClose}
-                    className="flex items-center gap-2 px-6 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors text-sm flex-1 sm:flex-none"
+                    className="flex items-center gap-2 px-6 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors text-sm"
                   >
                     <span className="hidden sm:inline">{t('stepByStepGuide.startNow')}</span>
                     <span className="sm:hidden">Start</span>
@@ -369,7 +365,7 @@ const StepByStepGuide: React.FC<StepByStepGuideProps> = ({ isOpen, onClose }) =>
                   <button
                     type="button"
                     onClick={nextStep}
-                    className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors text-sm flex-1 sm:flex-none"
+                    className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors text-sm"
                   >
                     <span className="hidden sm:inline">{t('stepByStepGuide.next')}</span>
                     <span className="sm:hidden">Next</span>

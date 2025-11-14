@@ -73,9 +73,6 @@ const MobileTermsView: React.FC<{
       >
         <ArrowLeft className="w-5 h-5 text-gray-600" />
       </button>
-      <h3 className="text-lg font-semibold text-gray-900">
-        {activeTerm ? activeTerm.title : t('preCheckoutModal.termsAndConditions.title')}
-      </h3>
     </div>
 
     {/* Content */}
@@ -999,10 +996,7 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
         <div className="fixed inset-0 z-[10020] flex items-center justify-center bg-black bg-opacity-50 p-2 sm:p-4">
             <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[95dvh] flex flex-col">
               {/* Modal Header */}
-              <div className="flex items-center justify-between p-4 sm:p-6 border-b border-slate-200 flex-shrink-0">
-                <h2 className="text-lg sm:text-2xl font-bold text-slate-900 pr-4">
-                  {activeTerm ? activeTerm.title : t('preCheckoutModal.termsAndConditions.title')}
-                </h2>
+              <div className="flex items-center justify-end p-4 sm:p-6 border-b border-slate-200 flex-shrink-0">
                 <button
                   onClick={() => setShowTermsModal(false)}
                   className="p-2 hover:bg-slate-100 rounded-full transition-colors flex-shrink-0"

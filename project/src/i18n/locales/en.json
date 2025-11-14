@@ -3,7 +3,7 @@
     "title": "Step-by-Step Guide",
     "subtitle": "How the application process works",
     "closeButton": "Close step-by-step guide",
-    "progress": "Step {current} of {total}",
+    "progress": "{{current}} of {{total}}",
     "previous": "Previous",
     "next": "Next",
     "startNow": "Start Now!",
@@ -314,11 +314,11 @@
         },
         "q2": {
           "question": "What is the Selection Process Fee?",
-          "answer": "The Selection Process Fee (US${selectionProcessFee}) is the first mandatory payment on the MatriculaUSA platform. It unlocks your full access to view all scholarships and start your application process."
+          "answer": "The Selection Process Fee (US${{selectionProcessFee}}) is the first mandatory payment on the MatriculaUSA platform. It unlocks your full access to view all scholarships and start your application process."
         },
         "q3": {
           "question": "What is the Scholarship Fee?",
-          "answer": "The Scholarship Fee (US${scholarshipFee}) is charged when you proceed with applications for exclusive scholarships through MatriculaUSA. This fee covers processing costs and personalized support for your scholarship applications."
+          "answer": "The Scholarship Fee (US${{scholarshipFee}}) is charged when you proceed with applications for exclusive scholarships through MatriculaUSA. This fee covers processing costs and personalized support for your scholarship applications."
         },
         "q4": {
           "question": "What is the Application Fee?",
@@ -326,7 +326,7 @@
         },
         "q5": {
           "question": "What is the I-20 Control Fee?",
-          "answer": "The I-20 Control Fee (US${i20ControlFee}) is a mandatory payment for students who need to obtain the I-20 form, essential for applying for the F-1 student visa. This fee ensures fast and accurate processing of your visa documents."
+          "answer": "The I-20 Control Fee (US${{i20ControlFee}}) is a mandatory payment for students who need to obtain the I-20 form, essential for applying for the F-1 student visa. This fee ensures fast and accurate processing of your visa documents."
         },
         "q6": {
           "question": "Are there any other fees I should be aware of?",
@@ -362,7 +362,7 @@
         "description": "Build your comprehensive student profile with academic history, goals, and preferences to help us find the perfect match."
       },
       "step2": {
-        "title": "Discover Opportunities", 
+        "title": "Discover Opportunities",
         "description": "Browse through our curated selection of schools and exclusive scholarship opportunities tailored to your profile and interests."
       },
       "step3": {
@@ -380,7 +380,7 @@
       },
       "testimonial2": {
         "text": "The enrollment process was seamless. From application to visa support, MatriculaUSA guided me every step of the way.",
-        "author": "Carlos Rodriguez", 
+        "author": "Carlos Rodriguez",
         "field": "Business School"
       },
       "testimonial3": {
@@ -396,7 +396,7 @@
       "learnMore": "Learn More",
       "features": {
         "freeToStart": "Free to get started",
-        "noHiddenFees": "No hidden fees", 
+        "noHiddenFees": "No hidden fees",
         "expertSupport": "Expert support included"
       }
     },
@@ -413,32 +413,56 @@
       "profile": {
         "title": "Create Your Profile",
         "description": "Fill out your academic and personal info. Our AI finds your best options.",
-        "items": ["Academic history & achievements", "Career goals & preferences", "Financial requirements"]
+        "items": [
+          "Academic history & achievements",
+          "Career goals & preferences",
+          "Financial requirements"
+        ]
       },
       "selectionFee": {
-        "title": "Pay Selection Fee (${selectionProcessFee})",
+        "title": "Pay Selection Fee (${{selectionProcessFee}})",
         "description": "Unlock all scholarships. This fee is final and non-refundable.",
-        "items": ["Access to scholarship browse", "Initiate application process", "One-time fee"]
+        "items": [
+          "Access to scholarship browse",
+          "Initiate application process",
+          "One-time fee"
+        ]
       },
       "documents": {
         "title": "Choose Scholarships & Upload Docs",
         "description": "Pick scholarships and upload your documents. Fast review.",
-        "items": ["Select multiple scholarships", "Secure document upload", "Automated initial analysis"]
+        "items": [
+          "Select multiple scholarships",
+          "Secure document upload",
+          "Automated initial analysis"
+        ]
       },
       "applicationFee": {
         "title": "Pay Application Fee (As per university)",
         "description": "Confirm your university. This fee is final and non-refundable.",
-        "items": ["See approved scholarships", "Confirm university choice", "Secure your spot"]
+        "items": [
+          "See approved scholarships",
+          "Confirm university choice",
+          "Secure your spot"
+        ]
       },
       "scholarshipFee": {
-        "title": "Pay Scholarship Fee (${scholarshipFee})",
+        "title": "Pay Scholarship Fee (${{scholarshipFee}})",
         "description": "Get direct chat with your university. This fee is final and non-refundable.",
-        "items": ["Direct chat with university", "Submit additional documents", "Final scholarship commitment"]
+        "items": [
+          "Direct chat with university",
+          "Submit additional documents",
+          "Final scholarship commitment"
+        ]
       },
       "i20Fee": {
-        "title": "Pay I-20 Control Fee (${i20ControlFee})",
+        "title": "Pay I-20 Control Fee (${{i20ControlFee}})",
         "description": "Needed for your F-1 visa. This fee is final and non-refundable.",
-        "items": ["Essential for F-1 student visa", "Covers I-20 processing", "10-day payment window"]
+        "items": [
+          "Essential for F-1 student visa",
+          "Covers I-20 processing",
+          "10-day payment window"
+        ]
       }
     },
     "whyUs": {
@@ -468,11 +492,11 @@
       },
       "q2": {
         "question": "What is the Selection Process Fee?",
-        "answer": "The Selection Process Fee (US${selectionProcessFee}) is the first mandatory payment on the MatriculaUSA platform. It unlocks your full access to view all scholarships and start your application process. This fee is final and non-refundable."
+        "answer": "The Selection Process Fee (US${{selectionProcessFee}}) is the first mandatory payment on the MatriculaUSA platform. It unlocks your full access to view all scholarships and start your application process. This fee is final and non-refundable."
       },
       "q3": {
         "question": "What is the Scholarship Fee?",
-        "answer": "The Scholarship Fee (US${scholarshipFee}) is charged when you proceed with applications for exclusive scholarships through MatriculaUSA. This fee covers processing costs and personalized support for your scholarship applications. This fee is final and non-refundable."
+        "answer": "The Scholarship Fee (US${{scholarshipFee}}) is charged when you proceed with applications for exclusive scholarships through MatriculaUSA. This fee covers processing costs and personalized support for your scholarship applications. This fee is final and non-refundable."
       },
       "q4": {
         "question": "What is the Application Fee?",
@@ -480,13 +504,13 @@
       },
       "q5": {
         "question": "What is the I-20 Control Fee?",
-        "answer": "The I-20 Control Fee (US${i20ControlFee}) is a mandatory payment for students who need to obtain the I-20 form, essential for applying for the F-1 student visa. This fee ensures fast and accurate processing of your visa documents. This fee is final and non-refundable."
+        "answer": "The I-20 Control Fee (US${{i20ControlFee}}) is a mandatory payment for students who need to obtain the I-20 form, essential for applying for the F-1 student visa. This fee ensures fast and accurate processing of your visa documents. This fee is final and non-refundable."
       }
     }
   },
   "fees": {
     "selectionProcess": "Selection Process Fee",
-    "application": "Application Fee", 
+    "application": "Application Fee",
     "scholarship": "Scholarship Fee",
     "i20Control": "I-20 Control Fee",
     "finalNonRefundable": "This fee is final and non-refundable"
@@ -622,7 +646,7 @@
       "additionalBenefits": "Additional Benefits",
       "expired": "Expired",
       "scholarshipExpired": "Scholarship Expired",
-      "noLongerAccepting": "This scholarship is no longer accepting new applications.",
+      "noLongerAccepting": "Not Available for application",
       "canStillView": "You can still view the information, but it will not be possible to apply for this scholarship."
     }
   },
@@ -1207,16 +1231,15 @@
         }
       }
     },
-
     "messages": {
       "checkEmail": "Check your email!",
       "studentVerification": "A confirmation link has been sent to your email. Please check your inbox (and spam folder) to activate your account.",
       "passwordsNotMatch": "Passwords do not match",
       "invalidPasswordChars": "Password contains invalid characters. Only letters, numbers, and @ # $ ! are allowed.",
-              "invalidPhone": "Please enter a valid phone number with country code",
-        "mustAcceptTerms": "You must accept the Terms of Use and Privacy Policy to continue",
-        "mustAnswerReferralCode": "Please answer whether you have a referral code to continue",
-        "authenticationFailed": "Authentication failed. Please try again.",
+      "invalidPhone": "Please enter a valid phone number with country code",
+      "mustAcceptTerms": "You must accept the Terms of Use and Privacy Policy to continue",
+      "mustAnswerReferralCode": "Please answer whether you have a referral code to continue",
+      "authenticationFailed": "Authentication failed. Please try again.",
       "invalidCredentials": "Invalid email or password. Please check your credentials and try again.",
       "emailNotConfirmed": "Please check your email and click the confirmation link before signing in.",
       "tooManyRequests": "Too many login attempts. Please wait a few minutes before trying again.",
@@ -1236,7 +1259,7 @@
       "description": "AI-powered system finds the best universities and scholarships for your profile"
     },
     "exclusiveScholarships": {
-      "title": "Exclusive Scholarships", 
+      "title": "Exclusive Scholarships",
       "description": "Access scholarships not available anywhere else, specifically for international students"
     },
     "personalSupport": {
@@ -1254,7 +1277,7 @@
     "searchPlaceholder": "Search universities...",
     "location": "Location",
     "programs": "Programs",
-    "website": "Website", 
+    "website": "Website",
     "viewProfile": "View Profile",
     "applyNow": "Apply Now"
   },
@@ -1301,20 +1324,22 @@
     "welcome": "Welcome back",
     "progressBar": {
       "title": "This is your application fee progress bar. Complete each step to move forward.",
+      "allStepsCompleted": "All Steps Completed! 🎉",
       "selectionProcessFee": "Selection Process Fee",
-      "applicationFee": "Application Fee", 
+      "applicationFee": "Application Fee",
       "scholarshipFee": "Scholarship Fee",
       "i20ControlFee": "I-20 Control Fee",
       "completed": "Completed!",
       "payApplicationFee": "Pay the Application Fee to apply for a specific scholarship.",
-      "payScholarshipFee": "Pay the Scholarship Fee to confirm your scholarship application.", 
+      "payScholarshipFee": "Pay the Scholarship Fee to confirm your scholarship application.",
       "payI20Fee": "Pay the I-20 Control Fee to start your I-20 and document validation process.",
       "daysRemaining": "You have 10 days after the scholarship fee."
     },
     "stepByStepTour": {
       "title": "Step-by-Step Tour",
       "description": "See the full application journey in detail.",
-      "button": "How it works?"
+      "button": "How it works?",
+      "startTour": "Start Tour"
     },
     "selectionProcess": {
       "title": "Selection Process",
@@ -1331,7 +1356,7 @@
     "stats": {
       "myApplications": "My Applications",
       "totalSubmitted": "Total submitted",
-      "approved": "Approved", 
+      "approved": "Approved",
       "successful": "Successful",
       "pending": "Pending",
       "underReview": "Under review"
@@ -1350,7 +1375,7 @@
     },
     "sidebar": {
       "overview": "Overview",
-      "browseScholarships": "Browse Scholarships", 
+      "browseScholarships": "Browse Scholarships",
       "selectedScholarships": "Selected Scholarships",
       "myApplications": "My Applications",
       "matriculaRewards": "Matricula Rewards",
@@ -1360,10 +1385,12 @@
     "profileStatus": {
       "title": "Profile Status",
       "basicInformation": "Basic information",
-      "academicDetails": "Academic details", 
+      "academicDetails": "Academic details",
       "documentsUploaded": "Documents uploaded",
       "completeProfile": "Complete your profile to unlock more opportunities",
-      "completeNow": "Complete now"
+      "completeNow": "Complete now",
+      "profileComplete": "Profile Complete!",
+      "viewProfile": "View Profile"
     },
     "successTips": {
       "title": "Success Tips",
@@ -1378,7 +1405,7 @@
       "startJourneyMessage": "Start your journey by browsing and applying to scholarships",
       "browseScholarships": "Browse Scholarships",
       "totalApplications": "Total Applications",
-      "showingApplications": "Showing {count} of {total} applications",
+      "showingApplications": "Showing {{count}} of {{total}} applications",
       "loadMoreApplications": "Load More Applications",
       "viewAllApplications": "View All Applications",
       "scholarshipApplication": "Scholarship Application",
@@ -1413,7 +1440,7 @@
       },
       "searchPlaceholder": "Search scholarships...",
       "allLevels": "All Levels",
-      "allFields": "All Fields", 
+      "allFields": "All Fields",
       "allModes": "All Modes",
       "allPermissions": "All Permissions",
       "allUniversities": "All Universities",
@@ -1653,7 +1680,8 @@
         "step3Title": "Pay Application Fee",
         "step3Description": "Secure your approved scholarship spot",
         "step4Title": "Pay Scholarship Fee",
-        "step4Description": "Complete enrollment and start your program"
+        "step4Description": "Complete enrollment and start your program",
+        "processSteps": "Process Steps"
       },
       "noApplications": {
         "title": "No applications yet",
@@ -1716,13 +1744,13 @@
         "title": "Confirm Your Scholarship Selection",
         "importantDecision": "Important Decision",
         "description": "By proceeding with this payment, you're making this your final scholarship choice. This action cannot be undone.",
-        "willRemoveOthers": "This will remove {count} other approved application:",
-        "willRemoveOthersPlural": "This will remove {count} other approved applications:",
+        "willRemoveOthers": "This will remove {{count}} other approved application:",
+        "willRemoveOthersPlural": "This will remove {{count}} other approved applications:",
         "letMeThink": "Let me think about it",
         "secureMyScholarship": "Yes, Secure My Scholarship"
       },
       "loading": "Loading your applications...",
-      "error": "Error: {message}",
+      "error": "Error: {{message}}",
       "statusDescriptions": {
         "documentsApprovedByUniversity": {
           "title": "Documents Approved by University",
@@ -1809,7 +1837,11 @@
       },
       "statusLabels": {
         "approvedByUniversity": "APPROVED BY THE UNIVERSITY",
-        "notSelectedForScholarship": "NOT SELECTED FOR THE SCHOLARSHIP"
+        "approved": "APPROVED",
+        "notSelectedForScholarship": "NOT SELECTED FOR THE SCHOLARSHIP",
+        "pending": "PENDING",
+        "underReview": "UNDER REVIEW",
+        "pendingScholarshipFee": "PENDING SCHOLARSHIP FEE"
       },
       "nextSteps": "Next Steps:",
       "scholarshipDetails": {
@@ -1852,17 +1884,17 @@
         "howToProceed": "How to Proceed",
         "documentRequests": {
           "title": "Check Document Requests",
-          "description": "Now that you've reached this stage, you must review and upload the documents requested by your university to continue your process. After this, the school will be able to analyze your application and send your acceptance letter.",
+          "description": "Upload the documents requested by the university to continue your process.",
           "button": "Go to Document Requests"
         },
         "applicationDetails": {
           "title": "View Application Details",
-          "description": "See all your scholarship information, uploaded documents, and your current status (waiting for acceptance letter, enrolled, etc). Stay up to date with your process at any time.",
+          "description": "Check scholarship information, documents, and current application status.",
           "button": "View Application Details"
         },
         "i20ControlFee": {
           "title": "Pay I-20 Control Fee",
-          "description": "After receiving your acceptance letter, you will be able to pay the I-20 Control Fee. This fee is required for the issuance of your I-20 document, essential for your F-1 visa. You have 10 days to pay after it is released.",
+          "description": "Pay the I-20 Control Fee to request your official document. Deadline: 10 days after acceptance letter.",
           "button": "Pay I-20 Control Fee"
         }
       },
@@ -1978,12 +2010,18 @@
       },
       "i20ControlFee": {
         "title": "I-20 Control Fee",
-        "description": "The <strong>I-20 Control Fee</strong> is a mandatory fee required for the issuance and management of your I-20 document, which is essential for the F-1 student visa process in the United States.",
-        "deadlineInfo": "You have up to <span class=\"text-blue-700\">10 days</span> after paying your Scholarship Fee to pay the I-20 Control Fee.",
-        "timerInfo": "The timer below shows exactly how much time you have left to complete this payment.",
-        "paymentInfo": "Paying this fee ensures that your I-20 will be processed and sent correctly by the university. If you have any questions about this process, please contact support.",
+        "description": "The I-20 is the official Certificate of Eligibility issued by the university that proves your student status in the USA.",
+        "deadlineInfo": "Deadline: 10 days after Scholarship Fee payment.",
+        "timerInfo": "Time remaining for payment:",
+        "paymentInfo": "Ensures proper I-20 processing by the university.",
         "payButton": "Pay I-20 Control Fee",
         "processing": "Processing...",
+        "headerTitle": "I-20 Control Fee",
+        "headerSubtitle": "Official student eligibility certificate",
+        "valueLabel": "Amount",
+        "whatIsThisFeeTitle": "What is this fee?",
+        "contactUrgently": "Contact us urgently",
+        "timeRemaining": "Time remaining:",
         "dueDate": "Due date:",
         "deadlineExpired": "The deadline to pay the I-20 Control Fee has expired!",
         "paymentSuccess": {
@@ -2049,6 +2087,12 @@
         "changesRequested": "Changes Requested",
         "underReview": "Under Review",
         "notSubmitted": "Not Submitted"
+      },
+      "hardcodedTexts": {
+        "authenticating": "Authenticating...",
+        "followSteps": "Follow these steps to complete your application",
+        "checkAllInformation": "Check all your application information",
+        "completeI20Payment": "Complete the I-20 control fee payment to proceed with your application"
       },
       "errors": {
         "downloadFailed": "Failed to download file.",
@@ -2289,15 +2333,15 @@
     "searchUniversities": "Search universities by name, location, or type...",
     "previous": "Previous",
     "next": "Next",
-    "showingResults": "Showing {start} to {end} of {total} universities",
-    "referralNumber": "Referral #{id}",
+    "showingResults": "Showing {{start}} to {{end}} of {{total}} universities",
+    "referralNumber": "Referral #{{id}}",
     "earned": "Earned",
     "spent": "Spent",
     "pending": "Pending",
-    "balanceAfter": "Balance: {amount}",
+    "balanceAfter": "Balance: {{amount}}",
     "tryAgain": "Try Again",
     "errorLoadingData": "Error loading data",
-    "loading": "Loading {title}...",
+    "loading": "Loading {{title}}...",
     "shareDescription": "Use the buttons below to quickly share your code",
     "customRedemption": {
       "title": "Custom Tuition Discount",
@@ -2321,8 +2365,8 @@
       "continueToUniversity": "Continue to University Selection",
       "confirmCustomRedemption": "Confirm Custom Redemption",
       "customTuitionDiscount": "Custom Tuition Discount",
-      "customRedemptionSuccess": "Successfully redeemed custom ${amount} tuition discount for ${university}!",
-      "customRedemptionSuccessEnrolled": "Successfully redeemed custom ${amount} tuition discount for your enrolled university: ${university}!"
+      "customRedemptionSuccess": "Successfully redeemed custom ${{amount}} tuition discount for ${{university}}!",
+      "customRedemptionSuccessEnrolled": "Successfully redeemed custom ${{amount}} tuition discount for your enrolled university: ${{university}}!"
     },
     "rewardsStore": {
       "backToRewards": "Back to Rewards",
@@ -2340,7 +2384,7 @@
       "offTuition": "off tuition",
       "redeeming": "Redeeming...",
       "redeemForUniversity": "Redeem for University",
-      "needMoreCoins": "Need {amount} more coins",
+      "needMoreCoins": "Need {{amount}} more coins",
       "noRewardsAvailable": "No rewards available at the moment",
       "checkBackLater": "Check back later for new rewards!",
       "tuitionDiscountHistory": "Tuition Discount History",
@@ -2367,7 +2411,7 @@
       "customTuitionDiscountModal": "Custom Tuition Discount",
       "amountOfCoinsToRedeem": "Amount of Coins to Redeem",
       "enterCoinsAmount": "Enter coins amount...",
-      "availableMinMax": "Available: {available} coins • Min: 10 • Max: {max}",
+      "availableMinMax": "Available: {{available}} coins • Min: 10 • Max: {{max}}",
       "tuitionDiscountPreview": "Tuition Discount",
       "costPreview": "Cost",
       "cancel": "Cancel",
@@ -2399,11 +2443,20 @@
   },
   "paymentSelector": {
     "title": "Choose Payment Method",
-    "subtitle": "Select how you would like to pay your {{feeType}}",
-    "amount": "Amount",
+    "subtitle": "Select how you would like to pay your {{feeType}} fee",
+    "manualVerification": "Processing may take up to 48 hours",
+    "important": "Important:",
+    "zelleUploadNote": "After making the Zelle payment, you'll need to upload a screenshot of the confirmation showing the confirmation code, date, amount, and recipient.",
     "loading": {
       "message": "Loading payment methods...",
       "processing": "Processing..."
+    },
+    "feeTypes": {
+      "selection_process": "selection process",
+      "application_fee": "application",
+      "enrollment_fee": "enrollment",
+      "scholarship_fee": "scholarship",
+      "i20_control_fee": "I-20 control"
     },
     "methods": {
       "stripe": {
@@ -2416,20 +2469,10 @@
       },
       "zelle": {
         "title": "Zelle",
-        "description": "Pay via Zelle and upload the receipt.",
+        "description": "Pay via Zelle transfer",
         "descriptionDetailed": "Pay via Zelle and upload the receipt."
       }
-    },
-    "feeTypes": {
-      "selection_process": "selection process fee",
-      "application_fee": "application fee",
-      "scholarship_fee": "scholarship fee",
-      "enrollment_fee": "enrollment fee",
-      "i20_control_fee": "I-20 control fee"
-    },
-    "manualVerification": "Processing may take up to 48 hours",
-    "important": "Important:",
-    "zelleUploadNote": "After paying via Zelle, you will need to upload the receipt for manual verification."
+    }
   },
   "preCheckoutModal": {
     "securePayment": "Secure Payment",
@@ -2574,7 +2617,7 @@
         "discount": {
           "title": "Available Discount",
           "forTuition": "For Tuition",
-          "applicableTo": "Applicable to {count} universities"
+          "applicableTo": "Applicable to {{count}} universities"
         },
         "stats": {
           "referred": "Friends Referred",
@@ -2586,7 +2629,7 @@
     },
     "stats": {
       "activeStudents": "Active Students",
-      "partnerUniversities": "Partner Universities", 
+      "partnerUniversities": "Partner Universities",
       "discountsGiven": "In Discounts Given",
       "satisfactionRate": "Satisfaction Rate"
     },
@@ -2673,7 +2716,7 @@
         },
         {
           "name": "João Silva",
-          "university": "Arizona State University", 
+          "university": "Arizona State University",
           "text": "The program helped me significantly reduce education costs. Highly recommend!",
           "savings": "Saved $1,200"
         },
@@ -3069,39 +3112,6 @@
       "redirecting": "Please wait, redirecting to checkout"
     }
   },
-  "paymentSelector": {
-    "title": "Choose Payment Method",
-    "subtitle": "Select how you would like to pay your {{feeType}} fee",
-    "manualVerification": "Processing may take up to 48 hours",
-    "important": "Important:",
-    "zelleUploadNote": "After making the Zelle payment, you'll need to upload a screenshot of the confirmation showing the confirmation code, date, amount, and recipient.",
-    "loading": {
-      "message": "Loading payment methods...",
-      "processing": "Processing..."
-    },
-    "feeTypes": {
-      "selection_process": "selection process",
-      "application_fee": "application",
-      "enrollment_fee": "enrollment",
-      "scholarship_fee": "scholarship",
-      "i20_control_fee": "I-20 control"
-    },
-    "methods": {
-      "stripe": {
-        "title": "Stripe",
-        "description": "Pay securely with credit or debit card via Stripe"
-      },
-      "pix": {
-        "title": "PIX",
-        "description": "Instant payment system for Brazilian users"
-      },
-      "zelle": {
-        "title": "Zelle",
-        "description": "Pay via Zelle transfer",
-        "descriptionDetailed": "Pay via Zelle and upload the receipt."
-      }
-    }
-  },
   "successPages": {
     "pixPayment": {
       "processing": "Processing PIX Payment",
@@ -3111,7 +3121,7 @@
     },
     "selectionProcessFee": {
       "title": "Selection Process Fee Payment Successful!",
-      "description": "Your payment of {amount} was processed successfully.",
+      "description": "Your payment of {{amount}} was processed successfully.",
       "message": "You now have access to all scholarships and can apply freely.",
       "button": "Go to Scholarships",
       "verifying": "Verifying your payment...",
@@ -3122,7 +3132,7 @@
     },
     "scholarshipFee": {
       "title": "Scholarship Fee Payment Successful!",
-      "description": "Your payment of {amount} was processed successfully.",
+      "description": "Your payment of {{amount}} was processed successfully.",
       "message": "Your application will now proceed to the next step.",
       "button": "Go to View Details",
       "verifying": "Verifying your payment...",
@@ -3133,7 +3143,7 @@
     },
     "applicationFee": {
       "title": "Application Fee Payment Successful!",
-      "description": "Your payment of {amount} was processed successfully.",
+      "description": "Your payment of {{amount}} was processed successfully.",
       "message": "Your application will now proceed to the next step.",
       "button": "Go to My Applications",
       "verifying": "Verifying Payment...",
@@ -3158,239 +3168,246 @@
       "errorRetry": "Please try again. If the error persists, contact support."
     }
   },
-"eb3Jobs": {
-  "hero": {
-    "badge": "EB-3 Employment Opportunities",
-    "title": "Work and Live <span class=\"text-[#05294E]\">Legally</span> in the USA",
-    "subtitle": "Multiple employment opportunities in essential industries in the USA through the <strong>EB-3</strong> program, which offers <strong>permanent residence (Green Card)</strong> for you and your family.",
-    "importantInfo": {
-      "title": "Important Information",
+  "eb3Jobs": {
+    "hero": {
+      "badge": "EB-3 Employment Opportunities",
+      "title": "Work and Live <span class=\"text-[#05294E]\">Legally</span> in the USA",
+      "subtitle": "Multiple employment opportunities in essential industries in the USA through the <strong>EB-3</strong> program, which offers <strong>permanent residence (Green Card)</strong> for you and your family.",
+      "importantInfo": {
+        "title": "Important Information",
+        "items": [
+          "• These positions are <strong>not guaranteed</strong> and placement is only confirmed after we are hired",
+          "• Positions fill up quickly",
+          "• All listed salaries are the <strong>minimum values established by PWD</strong>"
+        ]
+      },
+      "applyNow": "Apply Now",
+      "learnMore": "Learn More"
+    },
+    "whatIsEb3": {
+      "badge": "What is EB-3?",
+      "title": "Permanent Residence through <span class=\"text-[#05294E]\">Work</span>",
+      "benefits": [
+        {
+          "title": "Permanent Green Card",
+          "description": "Permanent residence for you and your family through qualified employment."
+        },
+        {
+          "title": "Competitive Salaries",
+          "description": "Stable and competitive compensation in essential USA industries."
+        },
+        {
+          "title": "Nationwide",
+          "description": "Opportunities available in multiple states across the United States."
+        }
+      ],
+      "greenCardApproved": "Green Card Approved",
+      "permanentResidence": "Permanent Residence"
+    },
+    "jobs": {
+      "badge": "Available Jobs",
+      "title": "List of <span class=\"text-[#05294E]\">Opportunities</span>",
+      "lastUpdated": "Last updated: September 8, 2025",
+      "filters": {
+        "allJobs": "All Jobs",
+        "healthcare": "Healthcare",
+        "hospitality": "Hospitality",
+        "logistics": "Logistics",
+        "location": "Location:",
+        "allLocations": "All Locations",
+        "searchPlaceholder": "Search jobs..."
+      },
+      "jobCard": {
+        "moreDetails": "More Details",
+        "lessDetails": "Less Details",
+        "apply": "Apply",
+        "description": "Description:",
+        "requirements": "Requirements:"
+      },
+      "noJobsFound": {
+        "title": "No jobs found",
+        "description": "Try adjusting the filters or search term."
+      }
+    },
+    "benefits": {
+      "badge": "EB-3 Program Benefits",
+      "title": "Why choose <span class=\"text-[#05294E]\">EB-3</span>?",
       "items": [
-        "• These positions are <strong>not guaranteed</strong> and placement is only confirmed after we are hired",
-        "• Positions fill up quickly",
-        "• All listed salaries are the <strong>minimum values established by PWD</strong>"
+        {
+          "title": "Permanent Residence",
+          "description": "Green Card for you and your family"
+        },
+        {
+          "title": "Stable Salaries",
+          "description": "Competitive and stable compensation"
+        },
+        {
+          "title": "Multiple States",
+          "description": "Opportunities across the country"
+        },
+        {
+          "title": "Professional Growth",
+          "description": "Stability and career growth"
+        }
       ]
     },
-    "applyNow": "Apply Now",
-    "learnMore": "Learn More"
-  },
-  "whatIsEb3": {
-    "badge": "What is EB-3?",
-    "title": "Permanent Residence through <span class=\"text-[#05294E]\">Work</span>",
-    "benefits": [
-      {
-        "title": "Permanent Green Card",
-        "description": "Permanent residence for you and your family through qualified employment."
-      },
-      {
-        "title": "Competitive Salaries",
-        "description": "Stable and competitive compensation in essential USA industries."
-      },
-      {
-        "title": "Nationwide",
-        "description": "Opportunities available in multiple states across the United States."
-      }
-    ],
-    "greenCardApproved": "Green Card Approved",
-    "permanentResidence": "Permanent Residence"
-  },
-  "jobs": {
-    "badge": "Available Jobs",
-    "title": "List of <span class=\"text-[#05294E]\">Opportunities</span>",
-    "lastUpdated": "Last updated: September 8, 2025",
-    "filters": {
-      "allJobs": "All Jobs",
-      "healthcare": "Healthcare",
-      "hospitality": "Hospitality",
-      "logistics": "Logistics",
-      "location": "Location:",
-      "allLocations": "All Locations",
-      "searchPlaceholder": "Search jobs..."
+    "howItWorks": {
+      "title": "How It <span class=\"text-[#05294E]\">Works</span>",
+      "subtitle": "Simple and transparent process for your journey to the Green Card",
+      "steps": [
+        {
+          "title": "Application",
+          "description": "Fill out the form and our team will contact you to review your profile"
+        },
+        {
+          "title": "Selection",
+          "description": "We evaluate your qualifications and connect you with the best opportunities"
+        },
+        {
+          "title": "Process",
+          "description": "We will guide you through the entire Green Card acquisition process"
+        }
+      ]
     },
-    "jobCard": {
-      "moreDetails": "More Details",
-      "lessDetails": "Less Details",
-      "apply": "Apply",
-      "description": "Description:",
-      "requirements": "Requirements:"
+    "offer": {
+      "title": "DON'T WAIT ANY LONGER FOR YOUR FUTURE",
+      "subtitle": "Fulfill Your Dream of Working in the USA!",
+      "card": {
+        "title": "EB3 Jobs Pre-Application",
+        "features": [
+          "Profile Analysis",
+          "Expert Consultation",
+          "Strategy Development",
+          "Guarantee"
+        ],
+        "pricing": {
+          "originalPrice": "FROM $ 1297.00",
+          "currentPrice": "$ 477.00",
+          "guarantee": "Guaranteed Refund in Case of Inelegibility"
+        },
+        "signUpNow": "Sign Up Now!",
+        "security": {
+          "secureCheckout": "Secure Checkout",
+          "satisfactionGuaranteed": "Satisfaction Guaranteed",
+          "protectedPrivacy": "Protected Privacy"
+        },
+        "paymentMethods": "Payment Methods:",
+        "methods": [
+          "PIX",
+          "VISA",
+          "Mastercard",
+          "PayPal",
+          "Hipercard",
+          "Bank Slip"
+        ]
+      },
+      "guarantee": {
+        "title": "Guarantee and Security",
+        "description": "If, after this evaluation, it is determined that you do not meet the necessary criteria for the EB-3 visa application, we guarantee a full refund of the amount invested in the pre-application process. This means you can proceed knowing that your investment is protected."
+      }
     },
-    "noJobsFound": {
-      "title": "No jobs found",
-      "description": "Try adjusting the filters or search term."
-    }
-  },
-  "benefits": {
-    "badge": "EB-3 Program Benefits",
-    "title": "Why choose <span class=\"text-[#05294E]\">EB-3</span>?",
-    "items": [
-      {
-        "title": "Permanent Residence",
-        "description": "Green Card for you and your family"
-      },
-      {
-        "title": "Stable Salaries",
-        "description": "Competitive and stable compensation"
-      },
-      {
-        "title": "Multiple States",
-        "description": "Opportunities across the country"
-      },
-      {
-        "title": "Professional Growth",
-        "description": "Stability and career growth"
-      }
-    ]
-  },
-  "howItWorks": {
-    "title": "How It <span class=\"text-[#05294E]\">Works</span>",
-    "subtitle": "Simple and transparent process for your journey to the Green Card",
-    "steps": [
-      {
-        "title": "Application",
-        "description": "Fill out the form and our team will contact you to review your profile"
-      },
-      {
-        "title": "Selection",
-        "description": "We evaluate your qualifications and connect you with the best opportunities"
-      },
-      {
-        "title": "Process",
-        "description": "We will guide you through the entire Green Card acquisition process"
-      }
-    ]
-  },
-  "offer": {
-    "title": "DON'T WAIT ANY LONGER FOR YOUR FUTURE",
-    "subtitle": "Fulfill Your Dream of Working in the USA!",
-    "card": {
-      "title": "EB3 Jobs Pre-Application",
+    "faq": {
+      "badge": "Frequently Asked Questions",
+      "title": "Questions about <span class=\"text-[#05294E]\">EB-3</span>?",
+      "subtitle": "Find answers to the main questions about the Green Card acquisition process through the EB-3 program",
+      "questions": [
+        {
+          "question": "What is the EB-3 visa and how does it work?",
+          "answer": "The EB-3 is an employment-based immigration visa category that allows skilled workers, professionals, and unskilled workers to obtain permanent residence (Green Card) in the United States. The process involves a permanent job offer from an American employer and proof that there are no qualified American workers available for the position."
+        },
+        {
+          "question": "What are the requirements to qualify for EB-3?",
+          "answer": "Requirements vary by subcategory: 1) Skilled workers: Require at least 2 years of experience or training; 2) Professionals: Need a bachelor's degree or equivalent; 3) Unskilled workers: May have less than 2 years of experience. All must have a permanent job offer from an American employer."
+        },
+        {
+          "question": "How long does the EB-3 process take?",
+          "answer": "The total time varies from 2 to 4 years, depending on the country of origin and visa availability. The process includes: 1) Labor Certification (6-12 months); 2) I-140 Petition (6-12 months); 3) Status adjustment or consular process (6-18 months). Brazilians generally have shorter wait times compared to other countries."
+        },
+        {
+          "question": "Can I include my family in the EB-3 process?",
+          "answer": "Yes! The EB-3 allows you to include your spouse and unmarried children under 21 years old in the process. Everyone will receive Green Cards and have the same permanent residence rights, including permission to work and study in the United States."
+        },
+        {
+          "question": "What is the total cost of the EB-3 process?",
+          "answer": "Costs include: government fees (approximately $2,000-3,000), legal fees ($5,000-15,000), translations and documentation ($500-1,500), medical exams ($200-500), and travel costs. The employer usually pays the main fees, but some costs may be shared."
+        },
+        {
+          "question": "Do I need to speak English fluently for EB-3?",
+          "answer": "The required English level depends on the specific position. For some positions, basic English is sufficient, especially in unskilled jobs. For professional positions, intermediate or advanced English may be required. MatriculaUSA offers support to improve your language skills."
+        },
+        {
+          "question": "What happens if I lose my job after receiving the Green Card?",
+          "answer": "After receiving the Green Card, you have more flexibility. If you lose your job, you can look for another job in the same or similar field. After 5 years, you can naturalize as an American citizen. The EB-3 Green Card is permanent and is not tied to a specific employer after approval."
+        },
+        {
+          "question": "Can I change jobs during the EB-3 process?",
+          "answer": "During the process, it is possible to change jobs, but it requires a new I-140 petition with the new employer. This may add time to the process. After receiving the Green Card, you have complete freedom to change jobs without restrictions."
+        }
+      ]
+    },
+    "cta": {
+      "badge": "Join thousands of Brazilians",
+      "title": "Ready to start your <span class=\"text-[#D0151C]\">journey</span>?",
+      "subtitle": "Fill out the form below and our team will contact you to review your profile and guide you through the process.",
+      "applyNow": "Apply Now",
+      "contactUs": "Contact Us",
       "features": [
-        "Profile Analysis",
-        "Expert Consultation",
-        "Strategy Development",
-        "Guarantee"
-      ],
-      "pricing": {
-        "originalPrice": "FROM $ 1297.00",
-        "currentPrice": "$ 477.00",
-        "guarantee": "Guaranteed Refund in Case of Inelegibility"
-      },
-      "signUpNow": "Sign Up Now!",
-      "security": {
-        "secureCheckout": "Secure Checkout",
-        "satisfactionGuaranteed": "Satisfaction Guaranteed",
-        "protectedPrivacy": "Protected Privacy"
-      },
-      "paymentMethods": "Payment Methods:",
-      "methods": ["PIX", "VISA", "Mastercard", "PayPal", "Hipercard", "Bank Slip"]
-    },
-    "guarantee": {
-      "title": "Guarantee and Security",
-      "description": "If, after this evaluation, it is determined that you do not meet the necessary criteria for the EB-3 visa application, we guarantee a full refund of the amount invested in the pre-application process. This means you can proceed knowing that your investment is protected."
+        "100% legal process",
+        "Specialized support",
+        "Permanent Green Card"
+      ]
     }
   },
-  "faq": {
-    "badge": "Frequently Asked Questions",
-    "title": "Questions about <span class=\"text-[#05294E]\">EB-3</span>?",
-    "subtitle": "Find answers to the main questions about the Green Card acquisition process through the EB-3 program",
-    "questions": [
-      {
-        "question": "What is the EB-3 visa and how does it work?",
-        "answer": "The EB-3 is an employment-based immigration visa category that allows skilled workers, professionals, and unskilled workers to obtain permanent residence (Green Card) in the United States. The process involves a permanent job offer from an American employer and proof that there are no qualified American workers available for the position."
-      },
-      {
-        "question": "What are the requirements to qualify for EB-3?",
-        "answer": "Requirements vary by subcategory: 1) Skilled workers: Require at least 2 years of experience or training; 2) Professionals: Need a bachelor's degree or equivalent; 3) Unskilled workers: May have less than 2 years of experience. All must have a permanent job offer from an American employer."
-      },
-      {
-        "question": "How long does the EB-3 process take?",
-        "answer": "The total time varies from 2 to 4 years, depending on the country of origin and visa availability. The process includes: 1) Labor Certification (6-12 months); 2) I-140 Petition (6-12 months); 3) Status adjustment or consular process (6-18 months). Brazilians generally have shorter wait times compared to other countries."
-      },
-      {
-        "question": "Can I include my family in the EB-3 process?",
-        "answer": "Yes! The EB-3 allows you to include your spouse and unmarried children under 21 years old in the process. Everyone will receive Green Cards and have the same permanent residence rights, including permission to work and study in the United States."
-      },
-      {
-        "question": "What is the total cost of the EB-3 process?",
-        "answer": "Costs include: government fees (approximately $2,000-3,000), legal fees ($5,000-15,000), translations and documentation ($500-1,500), medical exams ($200-500), and travel costs. The employer usually pays the main fees, but some costs may be shared."
-      },
-      {
-        "question": "Do I need to speak English fluently for EB-3?",
-        "answer": "The required English level depends on the specific position. For some positions, basic English is sufficient, especially in unskilled jobs. For professional positions, intermediate or advanced English may be required. MatriculaUSA offers support to improve your language skills."
-      },
-      {
-        "question": "What happens if I lose my job after receiving the Green Card?",
-        "answer": "After receiving the Green Card, you have more flexibility. If you lose your job, you can look for another job in the same or similar field. After 5 years, you can naturalize as an American citizen. The EB-3 Green Card is permanent and is not tied to a specific employer after approval."
-      },
-      {
-        "question": "Can I change jobs during the EB-3 process?",
-        "answer": "During the process, it is possible to change jobs, but it requires a new I-140 petition with the new employer. This may add time to the process. After receiving the Green Card, you have complete freedom to change jobs without restrictions."
-      }
-    ]
+  "eb3Success": {
+    "loading": {
+      "title": "Verifying your payment...",
+      "description": "Please wait a moment."
+    },
+    "success": {
+      "title": "EB-3 Pre-Application Processed!",
+      "description": "Your EB-3 job pre-application has been successfully processed. Our specialized team will contact you soon to continue your process."
+    },
+    "nextSteps": {
+      "title": "Next Steps",
+      "steps": [
+        {
+          "title": "Email Confirmation",
+          "description": "You will receive an email confirmation with all the details of your pre-application."
+        },
+        {
+          "title": "Team Contact",
+          "description": "Our team will contact you within 24 hours to schedule a conversation."
+        },
+        {
+          "title": "Application Process",
+          "description": "We will begin the complete application process for available EB-3 positions."
+        }
+      ]
+    },
+    "benefits": {
+      "title": "What do you get with your EB-3 pre-application?",
+      "items": [
+        "Exclusive access to EB-3 positions",
+        "Specialized support from our team",
+        "Complete process guidance",
+        "Organized necessary documentation",
+        "Personalized follow-up",
+        "Quality guarantee in the process"
+      ]
+    },
+    "actions": {
+      "viewMoreJobs": "View More EB-3 Jobs",
+      "backToHome": "Back to Home"
+    },
+    "contact": {
+      "title": "Questions?",
+      "description": "Contact us:",
+      "email": "Email: info@matriculausa.com",
+      "whatsapp": "WhatsApp: +1 (213) 676-2544"
+    }
   },
-  "cta": {
-    "badge": "Join thousands of Brazilians",
-    "title": "Ready to start your <span class=\"text-[#D0151C]\">journey</span>?",
-    "subtitle": "Fill out the form below and our team will contact you to review your profile and guide you through the process.",
-    "applyNow": "Apply Now",
-    "contactUs": "Contact Us",
-    "features": [
-      "100% legal process",
-      "Specialized support",
-      "Permanent Green Card"
-    ]
-  }
-},
-"eb3Success": {
-  "loading": {
-    "title": "Verifying your payment...",
-    "description": "Please wait a moment."
-  },
-  "success": {
-    "title": "EB-3 Pre-Application Processed!",
-    "description": "Your EB-3 job pre-application has been successfully processed. Our specialized team will contact you soon to continue your process."
-  },
-  "nextSteps": {
-    "title": "Next Steps",
-    "steps": [
-      {
-        "title": "Email Confirmation",
-        "description": "You will receive an email confirmation with all the details of your pre-application."
-      },
-      {
-        "title": "Team Contact",
-        "description": "Our team will contact you within 24 hours to schedule a conversation."
-      },
-      {
-        "title": "Application Process",
-        "description": "We will begin the complete application process for available EB-3 positions."
-      }
-    ]
-  },
-  "benefits": {
-    "title": "What do you get with your EB-3 pre-application?",
-    "items": [
-      "Exclusive access to EB-3 positions",
-      "Specialized support from our team",
-      "Complete process guidance",
-      "Organized necessary documentation",
-      "Personalized follow-up",
-      "Quality guarantee in the process"
-    ]
-  },
-  "actions": {
-    "viewMoreJobs": "View More EB-3 Jobs",
-    "backToHome": "Back to Home"
-  },
-  "contact": {
-    "title": "Questions?",
-    "description": "Contact us:",
-    "email": "Email: info@matriculausa.com",
-    "whatsapp": "WhatsApp: +1 (213) 676-2544"
-  }
-},
   "scholarshipDeadline": {
-    "3800Expired": "This scholarship is no longer accepting applications",
+    "3800Expired": "Not Available for application",
     "3800Expiring": "Last hours to apply! Deadline expires tomorrow (November 6th)",
     "3800ExpiringShort": "Deadline expires tomorrow"
   }

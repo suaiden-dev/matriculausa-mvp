@@ -38,14 +38,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
   rejectingStates = {},
   deletingStates = {}
 }) => {
-  // 🔍 LOGS PARA DEBUG
-  console.log('🔍 [DocumentsView] Component rendered with props:');
-  console.log('🔍 [DocumentsView] studentDocuments:', studentDocuments);
-  console.log('🔍 [DocumentsView] documentRequests:', documentRequests);
-  console.log('🔍 [DocumentsView] documentRequests length:', documentRequests?.length || 0);
-  console.log('🔍 [DocumentsView] scholarshipApplication:', scholarshipApplication);
-  console.log('🔍 [DocumentsView] studentId:', studentId);
-  console.log('🔍 [DocumentsView] isAdmin:', isAdmin);
+  // ✅ OTIMIZAÇÃO: Removidos console.logs desnecessários
   const [realScholarshipApplication, setRealScholarshipApplication] = useState<any>(null);
   const [loadingApplication, setLoadingApplication] = useState(false);
   const [internalDocumentRequests, setInternalDocumentRequests] = useState<any[]>([]);

@@ -73,13 +73,16 @@ export const useDynamicFees = (): DynamicFeeValues => {
 
     // Verificar se há override para Selection Process Fee
     const hasSelectionOverride = hasOverride('selection_process');
-    // Para legacy, a base deve ser 400 independentemente do valor global (350 é do simplificado)
-    const baseSelectionFee = 400;
     
-    let finalSelectionFee = baseSelectionFee;
-    
-    // Se NÃO há override, adicionar dependentes; se há override, usar valor exato
-    if (!hasSelectionOverride) {
+    // Se há override, usar o valor do override diretamente (já vem do getFeeAmount)
+    // Se não há override, calcular base + dependentes
+    let finalSelectionFee: number;
+    if (hasSelectionOverride) {
+      // Usar valor do override (getFeeAmount já retorna o valor do override)
+      finalSelectionFee = Number(getFeeAmount('selection_process'));
+    } else {
+      // Para legacy, a base deve ser 400 independentemente do valor global (350 é do simplificado)
+      const baseSelectionFee = 400;
       const dependents = Number(userProfile?.dependents) || 0;
       const dependentsCost = dependents * 150;
       finalSelectionFee = baseSelectionFee + dependentsCost;

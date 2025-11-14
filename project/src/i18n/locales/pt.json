@@ -3,7 +3,7 @@
     "title": "Guia Passo a Passo",
     "subtitle": "Como funciona o processo de candidatura",
     "closeButton": "Fechar guia passo a passo",
-    "progress": "Passo {current} de {total}",
+    "progress": "{{current}} de {{total}}",
     "previous": "Anterior",
     "next": "Próximo",
     "startNow": "Começar Agora!",
@@ -29,8 +29,8 @@
         "description": "Envie seus documentos: Passaporte, Diploma do Ensino Médio e Extrato Bancário. Nossa equipe revisará tudo e dará feedback."
       },
       "step6": {
-        "title": "5. Seleção da Taxa de Candidatura",
-        "description": "Após o envio dos documentos, você deve aguardar a aprovação da universidade para continuar com o processo seletivo. Após a aprovação, você será liberado para pagar a Taxa de Candidatura e a Taxa de Bolsa."
+        "title": "5. Seleção da Taxa de Matrícula",
+        "description": "Após o envio dos documentos, você deve aguardar a aprovação da universidade para continuar com o processo seletivo. Após a aprovação, você será liberado para pagar a Taxa de Matrícula e a Taxa de Bolsa."
       },
       "step7": {
         "title": "6. Chat com a Universidade e Acompanhamento",
@@ -249,7 +249,7 @@
     },
     "feeTypes": {
       "i-20_control_fee": "Taxa de Controle I-20",
-      "application_fee": "Taxa de Aplicação",
+      "application_fee": "Taxa de Matrícula",
       "scholarship_fee": "Taxa de Bolsa",
       "selection_process": "Taxa de Processo de Seleção",
       "default": "Pagamento"
@@ -314,19 +314,19 @@
         },
         "q2": {
           "question": "O que é a Taxa de Processo de Seleção?",
-          "answer": "A Taxa de Processo de Seleção (US${selectionProcessFee}) é o primeiro pagamento obrigatório na plataforma MatriculaUSA. Ela desbloqueia seu acesso completo para visualizar todas as bolsas e iniciar seu processo de candidatura."
+          "answer": "A Taxa de Processo de Seleção (US${{selectionProcessFee}}) é o primeiro pagamento obrigatório na plataforma MatriculaUSA. Ela desbloqueia seu acesso completo para visualizar todas as bolsas e iniciar seu processo de candidatura."
         },
         "q3": {
           "question": "O que é a Taxa de Bolsa?",
-          "answer": "A Taxa de Bolsa (US${scholarshipFee}) é cobrada quando você prossegue com candidaturas para bolsas exclusivas através do MatriculaUSA. Esta taxa cobre custos de processamento e suporte personalizado para suas candidaturas de bolsa."
+          "answer": "A Taxa de Bolsa (US${{scholarshipFee}}) é cobrada quando você prossegue com candidaturas para bolsas exclusivas através do MatriculaUSA. Esta taxa cobre custos de processamento e suporte personalizado para suas candidaturas de bolsa."
         },
         "q4": {
-          "question": "O que é a Taxa de Candidatura?",
-          "answer": "A Taxa de Candidatura varia conforme a universidade e é um pagamento necessário para processar formalmente sua candidatura após você ter sido aceito. Este valor confirma sua intenção de se matricular e é gerenciado diretamente pela plataforma."
+          "question": "O que é a Taxa de Matrícula?",
+          "answer": "A Taxa de Matrícula varia conforme a universidade e é um pagamento necessário para processar formalmente sua candidatura após você ter sido aceito. Este valor confirma sua intenção de se matricular e é gerenciado diretamente pela plataforma."
         },
         "q5": {
           "question": "O que é a Taxa de Controle I-20?",
-          "answer": "A Taxa de Controle I-20 (US${i20ControlFee}) é um pagamento obrigatório para estudantes que precisam obter o formulário I-20, essencial para solicitar o visto de estudante F-1. Esta taxa garante processamento rápido e preciso de seus documentos de visto."
+          "answer": "A Taxa de Controle I-20 (US${{i20ControlFee}}) é um pagamento obrigatório para estudantes que precisam obter o formulário I-20, essencial para solicitar o visto de estudante F-1. Esta taxa garante processamento rápido e preciso de seus documentos de visto."
         },
         "q6": {
           "question": "Existem outras taxas que devo conhecer?",
@@ -346,7 +346,7 @@
         },
         "q10": {
           "question": "Preciso pagar todas as taxas de uma vez?",
-          "answer": "Não. As taxas são compras separadas e são pagas em etapas conforme você progride no processo. Você paga a Taxa de Processo de Seleção primeiro, depois a Taxa de Bolsa (se aplicável), seguida pela Taxa de Candidatura, e finalmente a Taxa de Controle I-20. Todas são obrigatórias para o fluxo completo, mas não precisam ser pagas simultaneamente."
+          "answer": "Não. As taxas são compras separadas e são pagas em etapas conforme você progride no processo. Você paga a Taxa de Processo de Seleção primeiro, depois a Taxa de Bolsa (se aplicável), seguida pela Taxa de Matrícula, e finalmente a Taxa de Controle I-20. Todas são obrigatórias para o fluxo completo, mas não precisam ser pagas simultaneamente."
         },
         "q11": {
           "question": "Com quem posso entrar em contato se tiver dúvidas sobre taxas ou pagamentos?",
@@ -413,32 +413,56 @@
       "profile": {
         "title": "Crie Seu Perfil",
         "description": "Preencha suas informações acadêmicas e pessoais. Nossa IA encontra suas melhores opções.",
-        "items": ["Histórico acadêmico e conquistas", "Objetivos de carreira e preferências", "Requisitos financeiros"]
+        "items": [
+          "Histórico acadêmico e conquistas",
+          "Objetivos de carreira e preferências",
+          "Requisitos financeiros"
+        ]
       },
       "selectionFee": {
-        "title": "Pague Taxa de Seleção (${selectionProcessFee})",
+        "title": "Pague Taxa de Seleção (${{selectionProcessFee}})",
         "description": "Desbloqueie todas as bolsas. Esta taxa é final e não reembolsável.",
-        "items": ["Acesso para navegar pelas bolsas", "Iniciar processo de candidatura", "Taxa única"]
+        "items": [
+          "Acesso para navegar pelas bolsas",
+          "Iniciar processo de candidatura",
+          "Taxa única"
+        ]
       },
       "documents": {
         "title": "Escolha Bolsas e Envie Documentos",
         "description": "Escolha bolsas e envie seus documentos. Revisão rápida.",
-        "items": ["Selecione múltiplas bolsas", "Upload seguro de documentos", "Análise inicial automatizada"]
+        "items": [
+          "Selecione múltiplas bolsas",
+          "Upload seguro de documentos",
+          "Análise inicial automatizada"
+        ]
       },
       "applicationFee": {
-        "title": "Pague Taxa de Candidatura (Conforme a universidade)",
+        "title": "Pague Taxa de Matrícula (Conforme a universidade)",
         "description": "Confirme sua universidade. Esta taxa é final e não reembolsável.",
-        "items": ["Veja bolsas aprovadas", "Confirme escolha da universidade", "Garanta sua vaga"]
+        "items": [
+          "Veja bolsas aprovadas",
+          "Confirme escolha da universidade",
+          "Garanta sua vaga"
+        ]
       },
       "scholarshipFee": {
-        "title": "Pague Taxa de Bolsa (${scholarshipFee})",
+        "title": "Pague Taxa de Bolsa (${{scholarshipFee}})",
         "description": "Obtenha chat direto com sua universidade. Esta taxa é final e não reembolsável.",
-        "items": ["Chat direto com universidade", "Envie documentos adicionais", "Compromisso final com bolsa"]
+        "items": [
+          "Chat direto com universidade",
+          "Envie documentos adicionais",
+          "Compromisso final com bolsa"
+        ]
       },
       "i20Fee": {
-        "title": "Pague Taxa de Controle I-20 (${i20ControlFee})",
+        "title": "Pague Taxa de Controle I-20 (${{i20ControlFee}})",
         "description": "Necessário para seu visto F-1. Esta taxa é final e não reembolsável.",
-        "items": ["Essencial para visto de estudante F-1", "Cobre processamento I-20", "Janela de pagamento de 10 dias"]
+        "items": [
+          "Essencial para visto de estudante F-1",
+          "Cobre processamento I-20",
+          "Janela de pagamento de 10 dias"
+        ]
       }
     },
     "whyUs": {
@@ -468,25 +492,25 @@
       },
       "q2": {
         "question": "O que é a Taxa de Processo de Seleção?",
-        "answer": "A Taxa de Processo de Seleção (US${selectionProcessFee}) é o primeiro pagamento obrigatório na plataforma MatriculaUSA. Ela desbloqueia seu acesso completo para visualizar todas as bolsas e iniciar seu processo de candidatura. Esta taxa é final e não reembolsável."
+        "answer": "A Taxa de Processo de Seleção (US${{selectionProcessFee}}) é o primeiro pagamento obrigatório na plataforma MatriculaUSA. Ela desbloqueia seu acesso completo para visualizar todas as bolsas e iniciar seu processo de candidatura. Esta taxa é final e não reembolsável."
       },
       "q3": {
         "question": "O que é a Taxa de Bolsa?",
-        "answer": "A Taxa de Bolsa (US${scholarshipFee}) é cobrada quando você prossegue com candidaturas para bolsas exclusivas através do MatriculaUSA. Esta taxa cobre custos de processamento e suporte personalizado para suas candidaturas de bolsa. Esta taxa é final e não reembolsável."
+        "answer": "A Taxa de Bolsa (US${{scholarshipFee}}) é cobrada quando você prossegue com candidaturas para bolsas exclusivas através do MatriculaUSA. Esta taxa cobre custos de processamento e suporte personalizado para suas candidaturas de bolsa. Esta taxa é final e não reembolsável."
       },
       "q4": {
-        "question": "O que é a Taxa de Candidatura?",
-        "answer": "A Taxa de Candidatura varia conforme a universidade e é um pagamento necessário para processar formalmente sua candidatura após você ter sido aceito. Este valor confirma sua intenção de se matricular e é gerenciado diretamente pela plataforma. Esta taxa é final e não reembolsável."
+        "question": "O que é a Taxa de Matrícula?",
+        "answer": "A Taxa de Matrícula varia conforme a universidade e é um pagamento necessário para processar formalmente sua candidatura após você ter sido aceito. Este valor confirma sua intenção de se matricular e é gerenciado diretamente pela plataforma. Esta taxa é final e não reembolsável."
       },
       "q5": {
         "question": "O que é a Taxa de Controle I-20?",
-        "answer": "A Taxa de Controle I-20 (US${i20ControlFee}) é um pagamento obrigatório para estudantes que precisam obter o formulário I-20, essencial para solicitar o visto de estudante F-1. Esta taxa garante processamento rápido e preciso de seus documentos de visto. Esta taxa é final e não reembolsável."
+        "answer": "A Taxa de Controle I-20 (US${{i20ControlFee}}) é um pagamento obrigatório para estudantes que precisam obter o formulário I-20, essencial para solicitar o visto de estudante F-1. Esta taxa garante processamento rápido e preciso de seus documentos de visto. Esta taxa é final e não reembolsável."
       }
     }
   },
   "fees": {
     "selectionProcess": "Taxa de Processo de Seleção",
-    "application": "Taxa de Candidatura",
+    "application": "Taxa de Matrícula",
     "scholarship": "Taxa de Bolsa",
     "i20Control": "Taxa de Controle I-20",
     "finalNonRefundable": "Esta taxa é final e não reembolsável"
@@ -559,7 +583,7 @@
       "withScholarship": "Com Bolsa",
       "perCredit": "Por Crédito",
       "scholarshipDiscount": "Desconto da Bolsa",
-      "applicationFee": "Taxa de Candidatura",
+      "applicationFee": "Taxa de Matrícula",
       "customFee": "Taxa personalizada pela universidade",
       "standardFee": "Taxa padrão de candidatura",
       "expired": "Expirada",
@@ -1208,26 +1232,25 @@
       }
     }
   },
-
-    "messages": {
-      "checkEmail": "Verifique seu email!",
-      "studentVerification": "Um link de confirmação foi enviado para seu email. Verifique sua caixa de entrada (e pasta de spam) para ativar sua conta.",
-      "passwordsNotMatch": "As senhas não coincidem",
-      "invalidPasswordChars": "A senha contém caracteres inválidos. Apenas letras, números e @ # $ ! são permitidos.",
-              "invalidPhone": "Por favor, digite um número de telefone válido com código do país",
-        "mustAcceptTerms": "Você deve aceitar os Termos de Uso e Política de Privacidade para continuar",
-        "mustAnswerReferralCode": "Por favor, responda se você tem um código de referência para continuar",
-        "authenticationFailed": "Falha na autenticação. Tente novamente.",
-      "invalidCredentials": "Email ou senha inválidos. Verifique suas credenciais e tente novamente.",
-      "emailNotConfirmed": "Verifique seu email e clique no link de confirmação antes de fazer login.",
-      "tooManyRequests": "Muitas tentativas de login. Aguarde alguns minutos antes de tentar novamente.",
-      "userNotFound": "Nenhuma conta encontrada com este endereço de email. Verifique seu email ou crie uma nova conta.",
-      "weakPassword": "A senha é muito fraca. Escolha uma senha mais forte.",
-      "invalidEmail": "Digite um endereço de email válido.",
-      "signupDisabled": "Novos registros estão atualmente desabilitados. Entre em contato com o suporte.",
-      "registrationFailed": "Falha no Registro",
-      "emailAlreadyRegistered": "Este email já está cadastrado. Faça login ou use outro email."
-    },
+  "messages": {
+    "checkEmail": "Verifique seu email!",
+    "studentVerification": "Um link de confirmação foi enviado para seu email. Verifique sua caixa de entrada (e pasta de spam) para ativar sua conta.",
+    "passwordsNotMatch": "As senhas não coincidem",
+    "invalidPasswordChars": "A senha contém caracteres inválidos. Apenas letras, números e @ # $ ! são permitidos.",
+    "invalidPhone": "Por favor, digite um número de telefone válido com código do país",
+    "mustAcceptTerms": "Você deve aceitar os Termos de Uso e Política de Privacidade para continuar",
+    "mustAnswerReferralCode": "Por favor, responda se você tem um código de referência para continuar",
+    "authenticationFailed": "Falha na autenticação. Tente novamente.",
+    "invalidCredentials": "Email ou senha inválidos. Verifique suas credenciais e tente novamente.",
+    "emailNotConfirmed": "Verifique seu email e clique no link de confirmação antes de fazer login.",
+    "tooManyRequests": "Muitas tentativas de login. Aguarde alguns minutos antes de tentar novamente.",
+    "userNotFound": "Nenhuma conta encontrada com este endereço de email. Verifique seu email ou crie uma nova conta.",
+    "weakPassword": "A senha é muito fraca. Escolha uma senha mais forte.",
+    "invalidEmail": "Digite um endereço de email válido.",
+    "signupDisabled": "Novos registros estão atualmente desabilitados. Entre em contato com o suporte.",
+    "registrationFailed": "Falha no Registro",
+    "emailAlreadyRegistered": "Este email já está cadastrado. Faça login ou use outro email."
+  },
   "features": {
     "whyChoose": "Por Que Escolher MatriculaUSA?",
     "subtitle": "Tudo que você precisa para ter sucesso na sua jornada educacional americana",
@@ -1300,20 +1323,22 @@
     "welcome": "Bem-vindo de volta",
     "progressBar": {
       "title": "Esta é sua barra de progresso de taxas de candidatura. Complete cada etapa para avançar.",
+      "allStepsCompleted": "Todos os Passos Completados! 🎉",
       "selectionProcessFee": "Taxa de Processo de Seleção",
-      "applicationFee": "Taxa de Candidatura", 
+      "applicationFee": "Taxa de Matrícula",
       "scholarshipFee": "Taxa de Bolsa",
       "i20ControlFee": "Taxa de Controle I-20",
       "completed": "Completo!",
-      "payApplicationFee": "Pague a Taxa de Candidatura para se candidatar a uma bolsa específica.",
-      "payScholarshipFee": "Pague a Taxa de Bolsa para confirmar sua candidatura de bolsa.", 
+      "payApplicationFee": "Pague a Taxa de Matrícula para se candidatar a uma bolsa específica.",
+      "payScholarshipFee": "Pague a Taxa de Bolsa para confirmar sua candidatura de bolsa.",
       "payI20Fee": "Pague a Taxa de Controle I-20 para iniciar seu processo de validação I-20 e documentos.",
       "daysRemaining": "Você tem 10 dias após a taxa de bolsa."
     },
     "stepByStepTour": {
       "title": "Tour Passo a Passo",
       "description": "Veja toda a jornada de candidatura em detalhes.",
-      "button": "Como funciona?"
+      "button": "Como funciona?",
+      "startTour": "Iniciar Tour"
     },
     "selectionProcess": {
       "title": "Processo de Seleção",
@@ -1327,7 +1352,7 @@
     "stats": {
       "myApplications": "Minhas Candidaturas",
       "totalSubmitted": "Total enviadas",
-      "approved": "Aprovadas", 
+      "approved": "Aprovadas",
       "successful": "Bem-sucedidas",
       "pending": "Pendentes",
       "underReview": "Em análise"
@@ -1346,7 +1371,7 @@
     },
     "sidebar": {
       "overview": "Visão Geral",
-      "browseScholarships": "Navegar Bolsas", 
+      "browseScholarships": "Navegar Bolsas",
       "selectedScholarships": "Bolsas Selecionadas",
       "myApplications": "Minhas Candidaturas",
       "matriculaRewards": "Recompensas Matrícula",
@@ -1356,10 +1381,12 @@
     "profileStatus": {
       "title": "Status do Perfil",
       "basicInformation": "Informações básicas",
-      "academicDetails": "Detalhes acadêmicos", 
+      "academicDetails": "Detalhes acadêmicos",
       "documentsUploaded": "Documentos enviados",
       "completeProfile": "Complete seu perfil para desbloquear mais oportunidades",
-      "completeNow": "Completar agora"
+      "completeNow": "Completar agora",
+      "profileComplete": "Perfil Completo!",
+      "viewProfile": "Ver Perfil"
     },
     "successTips": {
       "title": "Dicas de Sucesso",
@@ -1374,7 +1401,7 @@
       "startJourneyMessage": "Comece sua jornada navegando e se candidatando a bolsas",
       "browseScholarships": "Navegar Bolsas",
       "totalApplications": "Total de Candidaturas",
-      "showingApplications": "Mostrando {count} de {total} candidaturas",
+      "showingApplications": "Mostrando {{count}} de {{total}} candidaturas",
       "loadMoreApplications": "Carregar Mais Candidaturas",
       "viewAllApplications": "Ver Todas as Candidaturas",
       "scholarshipApplication": "Candidatura de Bolsa",
@@ -1409,7 +1436,7 @@
       },
       "searchPlaceholder": "Buscar bolsas...",
       "allLevels": "Todos os Níveis",
-      "allFields": "Todos os Campos", 
+      "allFields": "Todos os Campos",
       "allModes": "Todos os Modos",
       "allPermissions": "Todas as Permissões",
       "allUniversities": "Todas as Universidades",
@@ -1504,26 +1531,6 @@
       "notSelectedYet": "Você ainda não selecionou nenhuma bolsa. Navegue pelos nossos programas disponíveis e adicione-os à sua seleção.",
       "browseScholarships": "Navegar Bolsas"
     },
-    "myApplications": {
-      "title": "Minhas Candidaturas",
-      "subtitle": "Acompanhe o status das suas candidaturas de bolsa e próximos passos",
-      "totalApplications": "Total de Candidaturas",
-      "approved": "Aprovadas",
-      "pending": "Pendentes",
-      "stayUpdated": "Mantenha-se Atualizado!",
-      "important": "Importante:",
-      "emailNotification": "Sempre verifique seu email para notificações da universidade. Atualizações de status da candidatura, solicitações de documentos e prazos importantes serão enviados para seu endereço de email registrado.",
-      "steps": {
-        "step1Title": "Passo 1 — Envie seus documentos",
-        "step1Description": "Envie passaporte, diploma do ensino médio e comprovante de recursos para que a universidade possa avaliar sua candidatura.",
-        "step2Title": "Passo 2 — Análise da universidade",
-        "step2Description": "Sua candidatura aparecerá como Pendente/Em Análise até que a universidade aprove sua candidatura.",
-        "step3Title": "Passo 3 — Taxa de candidatura",
-        "step3Description": "Após aprovação, pague a Taxa de Candidatura para garantir sua vaga na bolsa e prosseguir para a matrícula.",
-        "step4Title": "Passo 4 — Taxa da bolsa",
-        "step4Description": "Uma vez confirmado, pague a Taxa da Bolsa para completar a matrícula e iniciar seu programa acadêmico."
-      }
-    },
     "matriculaRewards": {
       "title": "Recompensas Matrícula",
       "subtitle": "Ganhe créditos indicando amigos para a MatriculaUSA",
@@ -1600,7 +1607,7 @@
       "get100Off": "Receba $100 de desconto nas taxas da sua universidade",
       "get200Off": "Receba $200 de desconto nas taxas da sua universidade",
       "offTuition": "de desconto nas taxas",
-      "needMoreCoins": "Precisa de {count} moedas a mais",
+      "needMoreCoins": "Precisa de {{count}} moedas a mais",
       "helpSupport": "Ajuda e Suporte",
       "smartAssistant": "Assistente Inteligente"
     },
@@ -1623,15 +1630,15 @@
       "documentsApproved": "Documentos Aprovados! Pronto para prosseguir com o pagamento.",
       "congratulations": "Parabéns! Seus documentos foram aprovados.",
       "autoSelected": "Sua bolsa foi automaticamente selecionada para pagamento.",
-      "selectOneScholarship": "Por favor, selecione uma bolsa abaixo para prosseguir com o pagamento da taxa de aplicação.",
+      "selectOneScholarship": "Por favor, selecione uma bolsa abaixo para prosseguir com o pagamento da taxa de matrícula.",
       "selected": "Selecionada",
       "select": "Selecionar",
       "readyToApply": "Pronto para Aplicar!",
       "completeApplication": "Complete sua aplicação com a taxa única",
-      "applicationFee": "Taxa de Aplicação",
+      "applicationFee": "Taxa de Matrícula",
       "customFeeSet": "Taxa personalizada definida pela universidade",
       "securePayment": "✓ Pagamento seguro • ✓ Confirmação instantânea • ✓ Política de reembolso completa",
-      "payApplicationFee": "Pagar Taxa de Aplicação",
+      "payApplicationFee": "Pagar Taxa de Matrícula",
       "nextStep": "Próximo Passo",
       "processing": "Processando...",
       "clearCart": "Limpar Carrinho"
@@ -1695,7 +1702,7 @@
       "uploadingDocuments": "Fazendo Upload dos Documentos...",
       "analyzingDocuments": "Analisando Documentos...",
       "documentsApprovedTitle": "Documentos Aprovados! ✅",
-      "documentsApprovedDescription": "Excelente! Seus documentos foram aprovados e você está pronto para prosseguir com o pagamento da taxa de aplicação.",
+      "documentsApprovedDescription": "Excelente! Seus documentos foram aprovados e você está pronto para prosseguir com o pagamento da taxa de matrícula.",
       "proceedToPayment": "Prosseguir para Pagamento",
       "analyzingOverlayTitle": "Analisando seus documentos...",
       "analyzingOverlayDescription": "Isso pode levar até 40 segundos. Por favor, não feche esta janela.",
@@ -1746,10 +1753,11 @@
         "step1Description": "Faça upload do passaporte, diploma e comprovante de fundos",
         "step2Title": "Revisão da Universidade",
         "step2Description": "A aplicação aparece como Pendente até ser aprovada",
-        "step3Title": "Pagar Taxa de Aplicação",
+        "step3Title": "Pagar Taxa de Matrícula",
         "step3Description": "Garanta sua vaga na bolsa aprovada",
         "step4Title": "Pagar Taxa da Bolsa",
-        "step4Description": "Complete a matrícula e comece seu programa"
+        "step4Description": "Complete a matrícula e comece seu programa",
+        "processSteps": "Passos do Processo"
       },
       "noApplications": {
         "title": "Nenhuma aplicação ainda",
@@ -1773,12 +1781,12 @@
       },
       "paymentStatus": {
         "title": "Status do Pagamento",
-        "applicationFee": "Taxa de Aplicação",
+        "applicationFee": "Taxa de Matrícula",
         "applicationFeeDescription": "Necessário para processar a candidatura",
         "scholarshipFee": "Taxa da Bolsa",
         "scholarshipFeeDescription": "Passo final para garantir sua vaga",
         "paid": "Pago",
-        "payApplicationFee": "Pagar Taxa de Aplicação",
+        "payApplicationFee": "Pagar Taxa de Matrícula",
         "payScholarshipFee": "Pagar Taxa da Bolsa",
         "paymentCompleted": "Pagamento Concluído",
         "uploading": "Fazendo upload...",
@@ -1812,35 +1820,35 @@
         "title": "Confirme Sua Seleção de Bolsa",
         "importantDecision": "Decisão Importante",
         "description": "Ao prosseguir com este pagamento, você está tornando esta sua escolha final de bolsa. Esta ação não pode ser desfeita.",
-        "willRemoveOthers": "Isso removerá {count} outra aplicação aprovada:",
-        "willRemoveOthersPlural": "Isso removerá {count} outras aplicações aprovadas:",
+        "willRemoveOthers": "Isso removerá {{count}} outra aplicação aprovada:",
+        "willRemoveOthersPlural": "Isso removerá {{count}} outras aplicações aprovadas:",
         "letMeThink": "Deixe-me pensar sobre isso",
         "secureMyScholarship": "Sim, Garantir Minha Bolsa"
       },
       "loading": "Carregando suas aplicações...",
-      "error": "Erro: {message}",
+      "error": "Erro: {{message}}",
       "statusDescriptions": {
         "documentsApprovedByUniversity": {
           "title": "Documentos Aprovados pela Universidade",
           "description": "Ótimas notícias! Sua aplicação foi aprovada, mas alguns documentos ainda precisam de atenção.",
           "nextSteps": [
             "Complete qualquer upload de documento pendente",
-            "Pague a taxa de aplicação para garantir sua vaga",
+            "Pague a taxa de matrícula para garantir sua vaga",
             "Prepare-se para a próxima fase da matrícula"
           ]
         },
         "applicationApprovedPaymentRequired": {
           "title": "Aplicação Aprovada - Pagamento Necessário",
-          "description": "Parabéns! Sua aplicação foi totalmente aprovada. O próximo passo é pagar a taxa de aplicação.",
+          "description": "Parabéns! Sua aplicação foi totalmente aprovada. O próximo passo é pagar a taxa de matrícula.",
           "nextSteps": [
-            "Pague a taxa de aplicação para garantir sua bolsa",
+            "Pague a taxa de matrícula para garantir sua bolsa",
             "Complete o processo de matrícula",
             "Prepare-se para sua jornada acadêmica"
           ]
         },
         "applicationFeePaidScholarshipFeeRequired": {
-          "title": "Taxa de Aplicação Paga - Taxa da Bolsa Necessária",
-          "description": "Excelente! Sua taxa de aplicação foi confirmada. Agora pague a taxa da bolsa para finalizar sua matrícula.",
+          "title": "Taxa de Matrícula Paga - Taxa da Bolsa Necessária",
+          "description": "Excelente! Sua taxa de matrícula foi confirmada. Agora pague a taxa da bolsa para finalizar sua matrícula.",
           "nextSteps": [
             "Pague a taxa da bolsa para completar a matrícula",
             "Receba a confirmação final",
@@ -1876,8 +1884,8 @@
           ]
         },
         "applicationFeeConfirmed": {
-          "title": "Taxa de Aplicação Confirmada",
-          "description": "Sua taxa de aplicação foi recebida e confirmada. Você agora é elegível para a bolsa.",
+          "title": "Taxa de Matrícula Confirmada",
+          "description": "Sua taxa de matrícula foi recebida e confirmada. Você agora é elegível para a bolsa.",
           "nextSteps": [
             "Pague a taxa da bolsa para completar a matrícula",
             "Envie quaisquer documentos restantes",
@@ -1905,7 +1913,11 @@
       },
       "statusLabels": {
         "approvedByUniversity": "APROVADA PELA UNIVERSIDADE",
-        "notSelectedForScholarship": "NÃO SELECIONADA PARA A BOLSA"
+        "approved": "APROVADA",
+        "notSelectedForScholarship": "NÃO SELECIONADA PARA A BOLSA",
+        "pending": "PENDENTE",
+        "underReview": "EM REVISÃO",
+        "pendingScholarshipFee": "PENDENTE TAXA DA BOLSA"
       },
       "nextSteps": "Próximos Passos:",
       "scholarshipDetails": {
@@ -1948,17 +1960,17 @@
         "howToProceed": "Como Proceder",
         "documentRequests": {
           "title": "Verificar Solicitações de Documentos",
-          "description": "Agora que você chegou a esta etapa, deve revisar e fazer upload dos documentos solicitados pela sua universidade para continuar seu processo. Após isso, a escola poderá analisar sua aplicação e enviar sua carta de aceitação.",
+          "description": "Faça upload dos documentos solicitados pela universidade para continuar seu processo.",
           "button": "Ir para Solicitações de Documentos"
         },
         "applicationDetails": {
           "title": "Ver Detalhes da Aplicação",
-          "description": "Veja todas as informações da sua bolsa, documentos enviados e seu status atual (aguardando carta de aceitação, matriculado, etc). Mantenha-se atualizado com seu processo a qualquer momento.",
+          "description": "Confira informações da bolsa, documentos e status atual da sua aplicação.",
           "button": "Ver Detalhes da Aplicação"
         },
         "i20ControlFee": {
           "title": "Pagar Taxa de Controle I-20",
-          "description": "Após receber sua carta de aceitação, você poderá pagar a Taxa de Controle I-20. Esta taxa é necessária para a emissão do seu documento I-20, essencial para seu visto F-1. Você tem 10 dias para pagar após ser liberada.",
+          "description": "Pague a Taxa de Controle I-20 para solicitar seu documento oficial. Prazo: 10 dias após carta de aceitação.",
           "button": "Pagar Taxa de Controle I-20"
         }
       },
@@ -2074,12 +2086,18 @@
       },
       "i20ControlFee": {
         "title": "Taxa de Controle I-20",
-        "description": "A <strong>Taxa de Controle I-20</strong> é uma taxa obrigatória necessária para a emissão e gestão do seu documento I-20, que é essencial para o processo de visto de estudante F-1 nos Estados Unidos.",
-        "deadlineInfo": "Você tem até <span class=\"text-blue-700\">10 dias</span> após pagar sua Taxa da Bolsa para pagar a Taxa de Controle I-20.",
-        "timerInfo": "O cronômetro abaixo mostra exatamente quanto tempo você tem para completar este pagamento.",
-        "paymentInfo": "Pagar esta taxa garante que seu I-20 será processado e enviado corretamente pela universidade. Se você tiver dúvidas sobre este processo, entre em contato com o suporte.",
+        "description": "O I-20 é o Certificado de Elegibilidade oficial emitido pela universidade que comprova seu status de estudante nos EUA.",
+        "deadlineInfo": "Prazo: 10 dias após pagamento da Taxa da Bolsa.",
+        "timerInfo": "Tempo restante para pagamento:",
+        "paymentInfo": "Garante processamento correto do seu I-20 pela universidade.",
         "payButton": "Pagar Taxa de Controle I-20",
         "processing": "Processando...",
+        "headerTitle": "Taxa de Controle I-20",
+        "headerSubtitle": "Certificado oficial de elegibilidade estudantil",
+        "valueLabel": "Valor",
+        "whatIsThisFeeTitle": "O que é esta taxa?",
+        "contactUrgently": "Entre em contato urgentemente",
+        "timeRemaining": "Tempo restante:",
         "dueDate": "Data de vencimento:",
         "deadlineExpired": "O prazo para pagar a Taxa de Controle I-20 expirou!",
         "paymentSuccess": {
@@ -2145,6 +2163,12 @@
         "changesRequested": "Alterações Solicitadas",
         "underReview": "Em Revisão",
         "notSubmitted": "Não Enviado"
+      },
+      "hardcodedTexts": {
+        "authenticating": "Autenticando...",
+        "followSteps": "Siga estes passos para completar sua aplicação",
+        "checkAllInformation": "Confira todas as informações da sua aplicação",
+        "completeI20Payment": "Complete o pagamento da taxa de controle I-20 para prosseguir com sua aplicação"
       },
       "errors": {
         "downloadFailed": "Falha ao baixar arquivo.",
@@ -2236,8 +2260,6 @@
         "enrolledMessage": "Você foi matriculado! Verifique seu painel para os próximos passos.",
         "noFilesUploadedYet": "Nenhum arquivo enviado ainda.",
         "noTransferFormUploadedYet": "Nenhum formulário de transferência enviado ainda.",
-        "newDocumentRequest": "Nova Solicitação de Documento",
-        "newIndividualDocumentRequest": "Nova Solicitação Individual de Documento",
         "acceptanceLetterInstructions": "A universidade enviará sua carta de aceitação aqui quando estiver pronta. Uma vez enviada, você será automaticamente matriculado."
       },
       "modals": {
@@ -2387,15 +2409,15 @@
     "searchUniversities": "Pesquisar universidades por nome, localização ou tipo...",
     "previous": "Anterior",
     "next": "Próximo",
-    "showingResults": "Mostrando {start} a {end} de {total} universidades",
-    "referralNumber": "Indicação #{id}",
+    "showingResults": "Mostrando {{start}} a {{end}} de {{total}} universidades",
+    "referralNumber": "Indicação #{{id}}",
     "earned": "Ganhou",
     "spent": "Gastou",
     "pending": "Pendente",
-    "balanceAfter": "Saldo: {amount}",
+    "balanceAfter": "Saldo: {{amount}}",
     "tryAgain": "Tentar Novamente",
     "errorLoadingData": "Erro ao carregar dados",
-    "loading": "Carregando {title}...",
+    "loading": "Carregando {{title}}...",
     "shareDescription": "Use os botões abaixo para compartilhar seu código rapidamente",
     "customRedemption": {
       "title": "Desconto Customizado de Tuition",
@@ -2419,8 +2441,8 @@
       "continueToUniversity": "Continuar para Seleção de Universidade",
       "confirmCustomRedemption": "Confirmar Resgate Customizado",
       "customTuitionDiscount": "Desconto Customizado de Tuition",
-      "customRedemptionSuccess": "Resgate customizado de ${amount} realizado com sucesso para ${university}!",
-      "customRedemptionSuccessEnrolled": "Resgate customizado de ${amount} realizado com sucesso para sua universidade matriculada: ${university}!"
+      "customRedemptionSuccess": "Resgate customizado de ${{amount}} realizado com sucesso para ${{university}}!",
+      "customRedemptionSuccessEnrolled": "Resgate customizado de ${{amount}} realizado com sucesso para sua universidade matriculada: ${{university}}!"
     },
     "rewardsStore": {
       "backToRewards": "Voltar para Recompensas",
@@ -2438,7 +2460,7 @@
       "offTuition": "de desconto em tuition",
       "redeeming": "Resgatando...",
       "redeemForUniversity": "Resgatar para Universidade",
-      "needMoreCoins": "Você tem {available} coins. Precisa de {amount} coins para resgatar",
+      "needMoreCoins": "Você tem {{available}} coins. Precisa de {{amount}} coins para resgatar",
       "noCoins": "Você não tem coins disponíveis",
       "noRewardsAvailable": "Nenhuma recompensa disponível no momento",
       "checkBackLater": "Volte mais tarde para novas recompensas!",
@@ -2466,7 +2488,7 @@
       "customTuitionDiscountModal": "Desconto Customizado de Tuition",
       "amountOfCoinsToRedeem": "Quantidade de Coins para Resgatar",
       "enterCoinsAmount": "Digite a quantidade de coins...",
-      "availableMinMax": "Disponível: {available} coins • Mín: 10 • Máx: {max}",
+      "availableMinMax": "Disponível: {{available}} coins • Mín: 10 • Máx: {{max}}",
       "tuitionDiscountPreview": "Desconto de Tuition",
       "costPreview": "Custo",
       "cancel": "Cancelar",
@@ -2489,7 +2511,7 @@
       },
       "feeTypes": {
         "selection_process": "processo seletivo",
-        "application_fee": "candidatura",
+        "application_fee": "matrícula",
         "enrollment_fee": "matrícula",
         "scholarship_fee": "bolsa",
         "i20_control_fee": "controle do I-20"
@@ -2514,7 +2536,7 @@
   "productNames": {
     "selectionProcess": "Processo de Seleção",
     "selectionProcessFee": "Taxa de Processo de Seleção",
-    "applicationFee": "Taxa de Aplicação",
+    "applicationFee": "Taxa de Matrícula",
     "scholarshipFee": "Taxa de Bolsa",
     "enrollmentFee": "Taxa de Matrícula",
     "collegeEnrollmentFee": "Taxa de Matrícula Universitária",
@@ -2525,7 +2547,7 @@
   },
   "feeDescriptions": {
     "selectionProcess": "Taxa de Processo de Seleção - Complete seu processo de aplicação",
-    "applicationFee": "Taxa de Aplicação - Candidate-se a uma bolsa específica",
+    "applicationFee": "Taxa de Matrícula - Candidate-se a uma bolsa específica",
     "scholarshipFee": "Taxa de Bolsa - Confirme sua candidatura de bolsa",
     "i20ControlFee": "Taxa de Controle I-20 - Processamento e validação de documentos"
   },
@@ -2554,7 +2576,7 @@
     },
     "feeTypes": {
       "selection_process": "taxa de processo de seleção",
-      "application_fee": "taxa de aplicação",
+      "application_fee": "taxa de matrícula",
       "scholarship_fee": "taxa de bolsa",
       "enrollment_fee": "taxa de matrícula",
       "i20_control_fee": "taxa de controle I-20"
@@ -2701,7 +2723,7 @@
         "discount": {
           "title": "Desconto Disponível",
           "forTuition": "Para Mensalidade",
-          "applicableTo": "Aplicável a {count} universidades"
+          "applicableTo": "Aplicável a {{count}} universidades"
         },
         "stats": {
           "referred": "Amigos Indicados",
@@ -3130,7 +3152,7 @@
       "processing": "Processando..."
     },
     "feeTypes": {
-      "application_fee": "candidatura",
+      "application_fee": "matrícula",
       "enrollment_fee": "matrícula",
       "scholarship_fee": "bolsa",
       "selection_process": "processo seletivo"
@@ -3154,7 +3176,7 @@
     "applicationFee": {
       "title": "Confirme sua Seleção de Bolsa",
       "subtitle": "Escolha o método de pagamento e garanta sua bolsa",
-      "feeLabel": "Taxa de Candidatura:",
+      "feeLabel": "Taxa de Matrícula:",
       "feeDescription": "Taxa para garantir sua vaga aprovada",
       "buttonText": "Sim, Garantir Minha Bolsa (${{amount}})",
       "warningText": "Ao prosseguir com este pagamento, você confirma esta como sua escolha final de bolsa. Esta ação não pode ser desfeita."
@@ -3205,7 +3227,7 @@
     },
     "selectionProcessFee": {
       "title": "Pagamento da Taxa de Processo de Seleção Realizado com Sucesso!",
-      "description": "Seu pagamento de {amount} foi processado com sucesso.",
+      "description": "Seu pagamento de {{amount}} foi processado com sucesso.",
       "message": "Agora você tem acesso a todas as bolsas e pode se candidatar livremente.",
       "button": "Ir para Bolsas",
       "verifying": "Verificando seu pagamento...",
@@ -3216,7 +3238,7 @@
     },
     "scholarshipFee": {
       "title": "Pagamento da Taxa da Bolsa Realizado com Sucesso!",
-      "description": "Seu pagamento de {amount} foi processado com sucesso.",
+      "description": "Seu pagamento de {{amount}} foi processado com sucesso.",
       "message": "Sua candidatura irá agora prosseguir para a próxima etapa.",
       "button": "Ver Detalhes",
       "verifying": "Verificando seu pagamento...",
@@ -3226,8 +3248,8 @@
       "errorRetry": "Tente novamente ou entre em contato com o suporte."
     },
     "applicationFee": {
-      "title": "Pagamento da Taxa de Candidatura Realizado com Sucesso!",
-      "description": "Seu pagamento de {amount} foi processado com sucesso.",
+      "title": "Pagamento da Taxa de Matrícula Realizado com Sucesso!",
+      "description": "Seu pagamento de {{amount}} foi processado com sucesso.",
       "message": "Sua candidatura irá agora prosseguir para a próxima etapa.",
       "button": "Ir para Minhas Candidaturas",
       "verifying": "Verificando Pagamento...",
@@ -3376,7 +3398,14 @@
           "protectedPrivacy": "Privacidade Protegida"
         },
         "paymentMethods": "Métodos de Pagamento:",
-        "methods": ["PIX", "VISA", "Mastercard", "PayPal", "Hipercard", "Boleto"]
+        "methods": [
+          "PIX",
+          "VISA",
+          "Mastercard",
+          "PayPal",
+          "Hipercard",
+          "Boleto"
+        ]
       },
       "guarantee": {
         "title": "Garantia e Segurança",

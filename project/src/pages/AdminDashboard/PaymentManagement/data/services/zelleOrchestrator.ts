@@ -526,27 +526,57 @@ export async function rejectZelleFlow(params: {
     });
   } catch (_) {}
 
+  // Criar notificação in-app para o aluno
   try {
     const { data: { session } } = await supabase.auth.getSession();
     const accessToken = session?.access_token;
-    if (accessToken) {
-      const notificationPayload = {
-        user_id: payment.student_id,
-        title: 'Payment Rejected',
-        message: `Your ${String(payment.fee_type).replace('_', ' ')} payment of $${payment.amount} has been rejected. Reason: ${reason}`,
-        type: 'payment_rejected',
-        link: '/student/dashboard',
-      };
-      await fetch(`${import.meta.env.VITE_SUPABASE_FUNCTIONS_URL}/create-student-notification`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify(notificationPayload),
-      });
+    
+    if (!accessToken) {
+      console.error('❌ [rejectZelleFlow] Access token não encontrado para criar notificação');
+      return;
     }
-  } catch (_) {}
+
+    // Formatar o tipo de taxa de forma amigável
+    const feeTypeLabel = String(payment.fee_type || 'payment')
+      .replace('_', ' ')
+      .replace(/\b\w/g, (l) => l.toUpperCase());
+    
+    // Formatar o valor - o amount já vem em dólares (não em centavos)
+    // Exemplo: 210.00 já é $210, não precisa dividir por 100
+    const amountInDollars = typeof payment.amount === 'number' 
+      ? (payment.amount % 1 === 0 ? payment.amount.toString() : payment.amount.toFixed(2))
+      : parseFloat(payment.amount) || payment.amount;
+
+    // Usar user_id (UUID de auth.users) para que a Edge Function busque o student_id correto
+    const notificationPayload = {
+      user_id: payment.user_id, // UUID que referencia auth.users.id
+      title: 'Payment Rejected',
+      message: `Your ${feeTypeLabel} payment of $${amountInDollars} has been rejected. Reason: ${reason}. Please review and submit a new payment if needed.`,
+      link: '/student/dashboard/applications',
+    };
+
+    console.log('📤 [rejectZelleFlow] Criando notificação in-app:', notificationPayload);
+
+    const response = await fetch(`${import.meta.env.VITE_SUPABASE_FUNCTIONS_URL}/create-student-notification`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify(notificationPayload),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ [rejectZelleFlow] Erro ao criar notificação:', response.status, errorText);
+    } else {
+      const result = await response.json();
+      console.log('✅ [rejectZelleFlow] Notificação in-app criada com sucesso!', result);
+    }
+  } catch (error) {
+    console.error('❌ [rejectZelleFlow] Erro ao criar notificação in-app:', error);
+    // Não falhar o processo se a notificação falhar
+  }
 }
 
 

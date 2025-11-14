@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import { AuthProvider } from './hooks/useAuth';
@@ -14,7 +14,8 @@ import UniversityDetail from './pages/UniversityDetail';
 import HowItWorks from './pages/HowItWorks';
 import TermsAndConditions from './pages/TermsAndConditions';
 import StudentTermsAcceptance from './pages/StudentTermsAcceptance';
-import SchoolProfileSetup from './pages/SchoolProfileSetup';
+// ✅ OTIMIZAÇÃO: Lazy loading do SchoolProfileSetup para evitar carregar cities.json (208 MB) no início
+const SchoolProfileSetup = React.lazy(() => import('./pages/SchoolProfileSetup'));
 import { SchoolDashboard } from './pages/SchoolDashboard/index';
 import StudentDashboard from './pages/StudentDashboard/index';
 import AdminDashboard from './pages/AdminDashboard/index';
@@ -102,7 +103,14 @@ const AppContent = () => {
           <Route path="/student/dashboard/*" element={<StudentDashboard />} />
           {/* School Routes */}
           <Route path="/school/termsandconditions" element={<TermsAndConditions />} />
-          <Route path="/school/setup-profile" element={<SchoolProfileSetup />} />
+          <Route 
+            path="/school/setup-profile" 
+            element={
+              <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Carregando...</div>}>
+                <SchoolProfileSetup />
+              </Suspense>
+            } 
+          />
           {/* New Scholarship is nested inside SchoolDashboard provider */}
           <Route path="/school/dashboard/*" element={<SchoolDashboard />} />
           {/* Admin Dashboard Direct Route */}

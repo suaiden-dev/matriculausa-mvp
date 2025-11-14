@@ -29,6 +29,7 @@ import TermsManagement from './TermsManagement';
 import AffiliateManagement from './AffiliateManagement';
 import AdminChatPage from './AdminChatPage';
 import AdminStudentDetails from './AdminStudentDetails';
+import AdminStudentDetailsRefactored from './AdminStudentDetails.refactored';
 import SystemSettings from './SystemSettings';
 import { Dialog } from '@headlessui/react';
 import { CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
@@ -683,7 +684,7 @@ const AdminDashboard: React.FC = () => {
         />
         <Route path="/application-monitoring" element={<ApplicationMonitoring />} />
         <Route path="/application-monitoring/:applicationId" element={<AdminApplicationView />} />
-        <Route path="/students/:profileId" element={<AdminStudentDetails />} />
+        <Route path="/students/:profileId" element={<AdminStudentDetailsRefactored />} />
         <Route path="/matricula-rewards" element={<MatriculaRewardsAdmin />} />
         <Route path="/payout-requests" element={<AdminPayoutRequests />} />
         <Route path="/affiliate-payment-requests" element={<AffiliatePaymentRequests />} />
