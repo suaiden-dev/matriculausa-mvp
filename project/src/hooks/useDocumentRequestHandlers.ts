@@ -23,18 +23,21 @@ export const useDocumentRequestHandlers = (
     try {
       // Upload file to Supabase Storage
       const fileExt = file.name.split('.').pop();
-      const fileName = `${student.user_id}/${requestId}/${Date.now()}.${fileExt}`;
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const filePath = `${student.user_id}/${requestId}/${fileName}`;
       
       const { error: uploadError } = await supabase.storage
-        .from('document-uploads')
-        .upload(fileName, file);
+        .from('student-documents')
+        .upload(filePath, file);
 
       if (uploadError) throw uploadError;
 
       // Get public URL
       const { data: { publicUrl } } = supabase.storage
-        .from('document-uploads')
-        .getPublicUrl(fileName);
+        .from('student-documents')
+        .getPublicUrl(filePath);
+
+      if (!publicUrl) throw new Error('Uploaded file is not accessible');
 
       // Save upload record
       const { error: recordError } = await supabase
@@ -42,9 +45,9 @@ export const useDocumentRequestHandlers = (
         .insert({
           document_request_id: requestId,
           file_url: publicUrl,
-          filename: file.name,
           uploaded_by: userId,
-          status: 'pending'
+          status: 'under_review',
+          uploaded_at: new Date().toISOString()
         });
 
       if (recordError) throw recordError;
@@ -77,8 +80,8 @@ export const useDocumentRequestHandlers = (
         .from('document_request_uploads')
         .update({ 
           status: 'approved',
-          approved_at: new Date().toISOString(),
-          approved_by: userId
+          reviewed_at: new Date().toISOString(),
+          reviewed_by: userId
         })
         .eq('id', uploadId);
 
@@ -102,8 +105,8 @@ export const useDocumentRequestHandlers = (
         .from('document_request_uploads')
         .update({ 
           status: 'rejected',
-          rejected_at: new Date().toISOString(),
-          rejected_by: userId,
+          reviewed_at: new Date().toISOString(),
+          reviewed_by: userId,
           rejection_reason: reason
         })
         .eq('id', uploadId);
@@ -121,10 +124,12 @@ export const useDocumentRequestHandlers = (
   }, [userId]);
 
   // Handler para fazer download de documento
-  const handleDownloadDocument = useCallback((doc: { file_url: string; filename: string }) => {
+  const handleDownloadDocument = useCallback((doc: { file_url: string; filename?: string }) => {
     const link = document.createElement('a');
     link.href = doc.file_url;
-    link.download = doc.filename;
+    // Extrair filename da URL se não fornecido
+    const filename = doc.filename || doc.file_url.split('/').pop() || 'document.pdf';
+    link.download = filename;
     link.click();
   }, []);
 
