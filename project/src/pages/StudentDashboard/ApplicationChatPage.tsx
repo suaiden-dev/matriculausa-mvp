@@ -40,6 +40,9 @@ const ApplicationChatPage: React.FC = () => {
   const { i20ControlFee } = useDynamicFees();
   const { logAction } = useStudentLogs(userProfile?.id || '');
 
+  // Ref para o container principal
+  const containerRef = React.useRef<HTMLDivElement>(null);
+
   // Todos os hooks devem vir ANTES de qualquer return condicional
   const [i20Loading, setI20Loading] = useState(false);
   const [i20Error, setI20Error] = useState<string | null>(null);
@@ -49,6 +52,7 @@ const ApplicationChatPage: React.FC = () => {
   const [scholarshipFeeDeadline, setScholarshipFeeDeadline] = useState<Date | null>(null);
   const [showI20ControlFeeModal, setShowI20ControlFeeModal] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'stripe' | 'zelle' | 'pix' | null>(null);
+  // Ajustar tipo de activeTab para remover 'chat'
   const [activeTab, setActiveTab] = useState<'welcome' | 'details' | 'i20' | 'documents'>('welcome');
   
   // Estados para controlar document requests (removidos - não mais utilizados)
@@ -76,6 +80,33 @@ const ApplicationChatPage: React.FC = () => {
       setActiveTab(tabParam as typeof activeTab);
     }
   }, [searchParams]);
+
+  // useEffect para fazer scroll para o topo quando a aba mudar
+  useEffect(() => {
+    // Aguardar a renderização completa da nova aba
+    const timer = setTimeout(() => {
+      // Scroll para o container principal ou para o topo da página
+      if (containerRef.current) {
+        containerRef.current.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start' 
+        });
+      }
+      
+      // Fallback: scroll da página inteira
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      
+      // Garantir que chegou ao topo
+      setTimeout(() => {
+        window.scrollTo(0, 0);
+        document.documentElement.scrollTop = 0;
+      }, 300);
+    }, 100);
+    
+    return () => clearTimeout(timer);
+  }, [activeTab]);
+
+  // Chat functionality removed
 
   // Polling para atualizar o perfil do usuário a cada 2 minutos (modo conservador)
   useEffect(() => {
@@ -401,10 +432,13 @@ const ApplicationChatPage: React.FC = () => {
   }, [activeTab, applicationDetails?.is_scholarship_fee_paid]);
 
   return (
-    <div className="p-6 md:p-12 flex flex-col items-center min-h-screen h-full">
+    <div ref={containerRef} className="p-6 md:p-12 flex flex-col items-center min-h-screen h-full">
       <div className="w-full max-w-7xl mx-auto space-y-8 flex-1 flex flex-col h-full">
+        <h2 className="text-2xl font-bold text-gray-800 mb-4 text-center">
+          {t('studentDashboard.applicationChatPage.title')}
+        </h2>
         {/* Expandable Tabs */}
-        <div className="lg:mb-6 mb-0 flex justify-center">
+        <div className="mb-6 flex justify-center">
           <ExpandableTabs
             tabs={tabItems}
             activeColor="text-[#05294E]"
@@ -456,9 +490,6 @@ const ApplicationChatPage: React.FC = () => {
             {/* Steps Section - Mobile First */}
             <div className="space-y-6">
               <div className="text-center mb-8">
-                <h2 className="text-2xl sm:text-3xl font-bold text-[#05294E] mb-3">
-                  {t('studentDashboard.applicationChatPage.welcome.howToProceed')}
-                </h2>
                 <p className="text-gray-600 text-lg">{t('studentDashboard.applicationChatPage.hardcodedTexts.followSteps')}</p>
               </div>
 
@@ -558,7 +589,6 @@ const ApplicationChatPage: React.FC = () => {
         )}
         {activeTab === 'details' && applicationDetails && (
           <div className="w-full max-w-6xl mx-auto">
-
             {/* Cards Grid - Mobile First */}
             <div className="grid gap-6 md:gap-8">
               {/* Student Information Card */}
@@ -921,123 +951,110 @@ const ApplicationChatPage: React.FC = () => {
           </div>
         )}
         {activeTab === 'i20' && applicationDetails && applicationDetails.is_scholarship_fee_paid && (
-          <div className="w-full max-w-4xl mx-auto">
-            {/* Header Section */}
-            <div className="text-center mb-8">
-              <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-                {t('studentDashboard.applicationChatPage.hardcodedTexts.completeI20Payment')}
-              </p>
-            </div>
-
+          <div className="w-full max-w-5xl mx-auto">
             {!hasPaid ? (
-              <div className="space-y-8">
-                {/* Information Card */}
-                <div className="bg-white rounded-3xl shadow-lg border border-gray-100 overflow-hidden">
-                  <div className="bg-gradient-to-br from-[#D0151C] via-red-600 to-red-700 p-6 sm:p-8">
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                {/* Header */}
+                <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-6 border-b border-gray-200">
+                  <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-sm">
-                        <Award className="w-6 h-6 text-white" />
+                      <div className="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center">
+                        <Award className="w-6 h-6 text-blue-600" />
                       </div>
                       <div>
-                        <h2 className="text-xl sm:text-2xl font-bold text-white">Informações do Pagamento</h2>
-                        <p className="text-red-100 text-sm mt-1">Taxa obrigatória para processamento do I-20</p>
+                        <h2 className="text-xl font-semibold text-gray-900">{t('studentDashboard.applicationChatPage.i20ControlFee.headerTitle')}</h2>
+                        <p className="text-gray-600 text-sm">{t('studentDashboard.applicationChatPage.i20ControlFee.headerSubtitle')}</p>
                       </div>
                     </div>
-                  </div>
-                  
-                  <div className="p-6 sm:p-8">
-                    <div className="prose prose-gray max-w-none">
-                      <div className="text-gray-700 leading-relaxed space-y-4">
-                        <p>{t('studentDashboard.applicationChatPage.i20ControlFee.description')}</p>
-                        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-                          <div className="flex items-start gap-3">
-                            <div className="w-6 h-6 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-                              <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16c-.77.833.192 2.5 1.732 2.5z" />
-                              </svg>
-                            </div>
-                            <div>
-                              <p className="font-semibold text-amber-800 mb-1">{t('studentDashboard.applicationChatPage.i20ControlFee.deadlineInfo')}</p>
-                              <p className="text-amber-700 text-sm">{t('studentDashboard.applicationChatPage.i20ControlFee.timerInfo')}</p>
-                            </div>
-                          </div>
-                        </div>
-                        <p className="text-sm text-gray-600">{t('studentDashboard.applicationChatPage.i20ControlFee.paymentInfo')}</p>
-                      </div>
+                    <div className="text-right">
+                      <div className="text-gray-500 text-sm font-medium">{t('studentDashboard.applicationChatPage.i20ControlFee.valueLabel')}</div>
+                      <div className="text-2xl font-bold text-gray-900">{formatFeeAmount(getFeeAmount('i20_control_fee'))}</div>
                     </div>
                   </div>
                 </div>
 
-                {/* Payment Action Card */}
-                <div className="bg-white rounded-3xl shadow-lg border border-gray-100 overflow-hidden">
-                  <div className="p-6 sm:p-8">
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
-                      {/* Payment Button */}
-                      <div className="space-y-4">
-                        <h3 className="text-xl font-bold text-gray-900 mb-4">Realizar Pagamento</h3>
-                        <div className="bg-gray-50 rounded-2xl p-6">
-                          <div className="flex items-center justify-between mb-4">
-                            <span className="text-gray-600">Valor da Taxa:</span>
-                            <span className="text-2xl font-bold text-[#D0151C]">{formatFeeAmount(getFeeAmount('i20_control_fee'))}</span>
-                          </div>
-                          <button
-                            onClick={handlePayI20}
-                            disabled={i20Loading}
-                            className="w-full bg-gradient-to-r from-[#D0151C] to-red-600 text-white px-8 py-4 rounded-2xl font-bold text-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-3"
-                          >
-                            {i20Loading ? (
-                              <>
-                                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                {t('studentDashboard.applicationChatPage.i20ControlFee.processing')}
-                              </>
-                            ) : (
-                              <>
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                                </svg>
-                                {t('studentDashboard.applicationChatPage.i20ControlFee.payButton')}
-                              </>
-                            )}
-                          </button>
-                          {dueDate && (
-                            <p className="text-xs text-gray-500 mt-3 text-center">
-                              {t('studentDashboard.applicationChatPage.i20ControlFee.dueDate')} {new Date(dueDate).toLocaleDateString()}
-                            </p>
-                          )}
+                {/* Content */}
+                <div className="p-6">
+                  <div className="space-y-6">
+                    {/* Description */}
+                    <div>
+                      <h3 className="text-lg font-medium text-gray-900 mb-3">{t('studentDashboard.applicationChatPage.i20ControlFee.whatIsThisFeeTitle')}</h3>
+                      <p className="text-gray-600 leading-relaxed mb-4">
+                        {t('studentDashboard.applicationChatPage.i20ControlFee.description')} {t('studentDashboard.applicationChatPage.i20ControlFee.paymentInfo')}
+                      </p>
+                    </div>
+
+                    {/* Deadline Info */}
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                      <div className="flex items-start gap-3">
+                        <div className="w-5 h-5 text-amber-600 mt-0.5">
+                          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16c-.77.833.192 2.5 1.732 2.5z" />
+                          </svg>
                         </div>
+                        <div>
+                          <p className="font-medium text-amber-800 text-sm">
+                            {t('studentDashboard.applicationChatPage.i20ControlFee.deadlineInfo')}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Timer and Button Row */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                      {/* Payment Button */}
+                      <div>
+                        <button
+                          onClick={handlePayI20}
+                          disabled={i20Loading}
+                          className="w-full bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                        >
+                          {i20Loading ? (
+                            <>
+                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                              {t('studentDashboard.applicationChatPage.i20ControlFee.processing')}
+                            </>
+                          ) : (
+                            <>
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                              </svg>
+                              {t('studentDashboard.applicationChatPage.i20ControlFee.payButton')}
+                            </>
+                          )}
+                        </button>
                       </div>
 
                       {/* Countdown Timer */}
                       {scholarshipFeeDeadline && (
-                        <div className="space-y-4">
-                          <h3 className="text-xl font-bold text-gray-900 mb-4">Tempo Restante</h3>
-                          <div className={`rounded-3xl p-8 text-center shadow-lg border-2 ${
+                        <div>
+                          <div className={`rounded-lg p-4 text-center border ${
                             i20Countdown === 'Expired' 
-                              ? 'bg-gradient-to-br from-red-50 to-red-100 border-red-200' 
-                              : 'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200'
+                              ? 'bg-red-50 border-red-200' 
+                              : 'bg-blue-50 border-blue-200'
                           }`}>
                             {i20Countdown === 'Expired' ? (
-                              <div className="space-y-3">
-                                <div className="w-16 h-16 bg-red-100 rounded-2xl flex items-center justify-center mx-auto">
-                                  <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <div className="space-y-2">
+                                <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center mx-auto">
+                                  <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                   </svg>
                                 </div>
                                 <div>
-                                  <p className="text-red-600 font-bold text-lg">{t('studentDashboard.applicationChatPage.i20ControlFee.deadlineExpired')}</p>
-                                  <p className="text-red-500 text-sm mt-1">Entre em contato conosco urgentemente</p>
+                                  <p className="text-red-700 font-medium text-sm">{t('studentDashboard.applicationChatPage.i20ControlFee.deadlineExpired')}</p>
+                                  <p className="text-red-600 text-xs mt-1">{t('studentDashboard.applicationChatPage.i20ControlFee.contactUrgently')}</p>
                                 </div>
                               </div>
                             ) : (
-                              <div className="space-y-3">
-                                <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center mx-auto">
-                                  <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <div className="space-y-2">
+                                <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center mx-auto">
+                                  <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                   </svg>
                                 </div>
                                 <div>
-                                  <p className="text-blue-600 font-semibold text-sm mb-2">Prazo para pagamento:</p>
-                                  <p className="font-mono text-2xl sm:text-3xl font-bold text-[#05294E] tracking-wider">
+                                  <p className="text-blue-600 font-medium text-xs mb-1">{t('studentDashboard.applicationChatPage.i20ControlFee.timeRemaining')}</p>
+                                  <p className="font-mono text-sm font-bold text-gray-900 tracking-wider">
                                     {i20Countdown}
                                   </p>
                                 </div>
@@ -1047,18 +1064,18 @@ const ApplicationChatPage: React.FC = () => {
                         </div>
                       )}
                     </div>
-                    
-                    {i20Error && (
-                      <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-xl">
-                        <div className="flex items-center gap-3">
-                          <svg className="w-5 h-5 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                          <p className="text-red-700 font-medium">{i20Error}</p>
-                        </div>
-                      </div>
-                    )}
                   </div>
+                  
+                  {i20Error && (
+                    <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <svg className="w-4 h-4 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <p className="text-red-700 text-sm">{i20Error}</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             ) : (
