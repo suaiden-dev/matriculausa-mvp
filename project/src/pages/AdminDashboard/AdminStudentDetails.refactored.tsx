@@ -12,6 +12,10 @@ import { useDocumentRequestHandlers } from '../../hooks/useDocumentRequestHandle
 import { generateTermAcceptancePDF, StudentTermAcceptanceData } from '../../utils/pdfGenerator';
 
 // Componentes de UI Base
+import {
+  Clock,
+  ExternalLink
+} from 'lucide-react';
 import SkeletonLoader from '../../components/AdminDashboard/StudentDetails/SkeletonLoader';
 import StudentDetailsHeader from '../../components/AdminDashboard/StudentDetails/StudentDetailsHeader';
 import StudentDetailsTabNavigation, { TabId } from '../../components/AdminDashboard/StudentDetails/StudentDetailsTabNavigation';
@@ -163,6 +167,7 @@ const AdminStudentDetails: React.FC = () => {
   const [referralInfo, setReferralInfo] = useState<any>(null);
   const [realPaidAmounts, setRealPaidAmounts] = useState<Record<string, number>>({});
   const [hasMatriculaRewardsDiscount, setHasMatriculaRewardsDiscount] = useState(false);
+  const [pendingZellePayments, setPendingZellePayments] = useState<any[]>([]);
   
   // Estados de edição
   const [isEditingProcessType, setIsEditingProcessType] = useState(false);
@@ -396,6 +401,33 @@ const AdminStudentDetails: React.FC = () => {
 
     loadSecondaryData();
   }, [student?.user_id, student?.seller_referral_code]);
+
+  // Buscar pagamentos Zelle pendentes
+  React.useEffect(() => {
+    const fetchPendingZellePayments = async () => {
+      if (!student?.user_id) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('zelle_payments')
+          .select('*')
+          .eq('user_id', student.user_id)
+          .eq('status', 'pending_verification')
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          console.error('Error fetching pending Zelle payments:', error);
+          return;
+        }
+
+        setPendingZellePayments(data || []);
+      } catch (error) {
+        console.error('Error fetching pending Zelle payments:', error);
+      }
+    };
+    
+    fetchPendingZellePayments();
+  }, [student]);
 
   // Admin notes agora são gerenciados pelo hook useAdminNotes
 
@@ -1144,6 +1176,10 @@ const AdminStudentDetails: React.FC = () => {
     setEditingFees(null);
   }, []);
 
+  const handleGoToZellePayments = useCallback(() => {
+    navigate('/admin/dashboard/payments?tab=zelle');
+  }, [navigate]);
+
   // Função utilitária para sanitizar nome de arquivo
   // Funções de Transfer Form e Document Requests agora vêm dos hooks personalizados
 
@@ -1223,6 +1259,36 @@ const AdminStudentDetails: React.FC = () => {
         activeTab={activeTab}
         onTabChange={setActiveTab}
       />
+
+      {/* Zelle Payments Pending Alert */}
+      {pendingZellePayments.length > 0 && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="flex-shrink-0">
+                <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
+                  <Clock className="w-4 h-4 text-yellow-600" />
+                </div>
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-yellow-800">
+                  Pending Zelle Payment Approvals
+                </h3>
+                <p className="text-sm text-yellow-700">
+                  This student has a Zelle payment awaiting administrative approval.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={handleGoToZellePayments}
+              className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white text-sm font-medium rounded-lg transition-colors duration-200 flex items-center space-x-2"
+            >
+              <span>Review Payments</span>
+              <ExternalLink className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Overview Tab */}
       {activeTab === 'overview' && (
