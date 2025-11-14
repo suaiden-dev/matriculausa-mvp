@@ -58,7 +58,9 @@
     "viewScholarships": "Ver Becas",
     "goToDashboard": "Ir al Panel",
     "startSelectionProcess": "Iniciar Proceso de Selección",
-    "scholarshipsPlatform": "Plataforma de Becas"
+    "scholarshipsPlatform": "Plataforma de Becas",
+    "processingZellePayment": "Pago Zelle en verificación",
+    "zellePaymentPending": "Por favor, espere la verificación de su pago Zelle antes de iniciar un nuevo proceso."
   },
   "paymentBlocker": {
     "scholarships": {
@@ -142,10 +144,27 @@
       "recipient": "Destinatario",
       "recipientDesc": "Quién recibió el pago"
     },
+    "receiptType": {
+      "title": "Tipo de Comprobante Requerido",
+      "description": "Para garantizar una verificación rápida y precisa, asegúrese de enviar el comprobante correcto:",
+      "correct": {
+        "title": "Comprobante Correcto",
+        "description": "Envíe una captura de pantalla del comprobante de confirmación que aparece inmediatamente después de completar el pago en la aplicación Zelle. Esta es la confirmación instantánea generada por la aplicación."
+      },
+      "incorrect": {
+        "title": "No Aceptado",
+        "description": "No envíe el comprobante en formato PDF que está disponible posteriormente en la aplicación. Solo se acepta la captura de pantalla inmediata de la aplicación para verificación."
+      },
+      "understood": "Entendido, continuar"
+    },
     "steps": {
       "title": "Completa estos pasos:",
       "step1": "Completa tu transferencia Zelle del monto requerido",
       "step2": "Guarda la captura de pantalla de confirmación de pago que muestre toda la información requerida",
+      "step2Important": {
+        "title": "Importante:",
+        "description": "Envíe una captura de pantalla del comprobante de confirmación que aparece inmediatamente después de completar el pago en la aplicación Zelle. Esta es la confirmación instantánea generada por la aplicación. No envíe el comprobante en formato PDF que está disponible posteriormente en la aplicación."
+      },
       "step3": "Sube tu captura de pantalla de confirmación abajo",
       "step4": "Espera el procesamiento (puede tomar hasta 48 horas)"
     },
@@ -1481,7 +1500,9 @@
       "description": "Comienza tu viaje a la educación americana completando nuestro proceso de selección integral.",
       "completeApplicationProcess": "Completa tu proceso de solicitud",
       "discountApplied": "✨ ¡Tienes un cupón de descuento aplicado!",
-      "startButton": "Iniciar Proceso de Selección"
+      "startButton": "Iniciar Proceso de Selección",
+      "processingZellePayment": "Pago Zelle en verificación",
+      "pendingPaymentMessage": "Tienes un pago Zelle pendiente de verificación. Por favor, espere la aprobación antes de iniciar un nuevo proceso."
     },
     "stats": {
       "myApplications": "Mis Solicitudes",
@@ -1942,7 +1963,10 @@
         "paymentCompleted": "Pago Completado",
         "uploading": "Subiendo...",
         "uploadDocument": "Subir Documento",
-        "selected": "Seleccionado:"
+        "selected": "Seleccionado:",
+        "checking": "Verificando...",
+        "processingZellePayment": "Procesando pago Zelle...",
+        "pendingPaymentType": "Pago pendiente: {{feeType}}"
       },
       "documents": {
         "title": "Documentos",
