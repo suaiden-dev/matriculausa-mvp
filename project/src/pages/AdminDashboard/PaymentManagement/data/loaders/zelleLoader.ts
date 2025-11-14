@@ -11,6 +11,7 @@ export async function loadZellePaymentsLoader(
 ): Promise<ZelleLoadResult> {
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
+  
   const query = supabase
     .from('zelle_payments')
     .select('*', { count: 'exact' })

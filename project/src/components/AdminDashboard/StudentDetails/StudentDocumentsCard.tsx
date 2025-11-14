@@ -35,11 +35,15 @@ interface StudentDocumentsCardProps {
   uploadingDocs: Record<string, boolean>;
   approvingDocs: Record<string, boolean>;
   rejectingDocs: Record<string, boolean>;
+  approvingStudent?: boolean;
+  rejectingStudent?: boolean;
   onToggleExpand: (appKey: string) => void;
   onViewDocument: (doc: { file_url: string; filename: string }) => void;
   onUploadDocument: (appId: string, docType: string, file: File) => Promise<void>;
   onApproveDocument: (appId: string, docType: string) => Promise<void>;
   onRejectDocument: (appId: string, docType: string) => void;
+  onApproveApplication?: (appId: string) => void;
+  onRejectApplication?: (appId: string) => void;
 }
 
 /**
@@ -54,11 +58,15 @@ const StudentDocumentsCard: React.FC<StudentDocumentsCardProps> = React.memo(({
   uploadingDocs,
   approvingDocs,
   rejectingDocs,
+  approvingStudent = false,
+  rejectingStudent = false,
   onToggleExpand,
   onViewDocument,
   onUploadDocument,
   onApproveDocument,
   onRejectDocument,
+  onApproveApplication,
+  onRejectApplication,
 }) => {
   if (applications.length === 0) {
     return (
@@ -330,6 +338,63 @@ const StudentDocumentsCard: React.FC<StudentDocumentsCardProps> = React.memo(({
                         <p className="text-xs text-slate-500">Student has not uploaded any documents yet.</p>
                       </div>
                     )}
+                    
+                    {/* Application Approval Section - Only for Platform Admins */}
+                    {canPlatformAdmin && (
+                      <div className={`mt-4 p-4 rounded-lg border ${
+                        app.status === 'approved' 
+                          ? 'bg-green-50 border-green-200' 
+                          : app.status === 'rejected'
+                          ? 'bg-red-50 border-red-200'
+                          : 'bg-slate-50 border-slate-200'
+                      }`}>
+                        <div className="flex items-center justify-between mb-3">
+                          <div>
+                            <h4 className="font-semibold text-slate-900">Application Approval</h4>
+                            <p className="text-sm text-slate-600">
+                              {app.status === 'approved' 
+                                ? 'This application has been approved.' 
+                                : app.status === 'rejected'
+                                ? 'This application has been rejected.'
+                                : 'You can approve this application regardless of document status.'
+                              }
+                            </p>
+                          </div>
+                          {app.status === 'approved' && (
+                            <div className="flex items-center space-x-1 text-green-600">
+                              <CheckCircle className="w-4 h-4" />
+                              <span className="text-sm font-medium">Approved</span>
+                            </div>
+                          )}
+                          {app.status === 'rejected' && (
+                            <div className="flex items-center space-x-1 text-red-600">
+                              <XCircle className="w-4 h-4" />
+                              <span className="text-sm font-medium">Rejected</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex flex-col sm:flex-row gap-2">
+                          <button
+                            onClick={() => onRejectApplication && onRejectApplication(app.id)}
+                            disabled={approvingStudent || rejectingStudent || app.status === 'approved' || app.status === 'rejected'}
+                            className={`px-4 py-2 rounded-lg font-medium border transition-colors text-center text-sm ${
+                              app.status === 'rejected' 
+                                ? 'bg-red-100 text-red-700 border-red-300 cursor-not-allowed' 
+                                : 'text-red-600 border-red-200 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed'
+                            }`}
+                          >
+                            {app.status === 'approved' ? 'Application Approved' : app.status === 'rejected' ? 'Application Rejected' : 'Reject Application'}
+                          </button>
+                          <button
+                            disabled={approvingStudent || rejectingStudent || app.status === 'approved' || app.status === 'rejected'}
+                            onClick={() => onApproveApplication && onApproveApplication(app.id)}
+                            className="px-4 py-2 rounded-lg font-medium bg-[#05294E] text-white hover:bg-[#041f38] disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-center text-sm"
+                          >
+                            {app.status === 'approved' ? 'Approved' : app.status === 'rejected' ? 'Rejected' : (approvingStudent ? 'Approving...' : 'Approve Application')}
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -340,12 +405,21 @@ const StudentDocumentsCard: React.FC<StudentDocumentsCardProps> = React.memo(({
     </div>
   );
 }, (prevProps, nextProps) => {
+  // Verificar se as aplicações mudaram (especialmente o status)
+  const appsChanged = prevProps.applications.length !== nextProps.applications.length ||
+    prevProps.applications.some((app, index) => {
+      const nextApp = nextProps.applications[index];
+      return !nextApp || app.id !== nextApp.id || app.status !== nextApp.status;
+    });
+  
   return (
-    prevProps.applications.length === nextProps.applications.length &&
+    !appsChanged &&
     JSON.stringify(prevProps.expandedApps) === JSON.stringify(nextProps.expandedApps) &&
     JSON.stringify(prevProps.uploadingDocs) === JSON.stringify(nextProps.uploadingDocs) &&
     JSON.stringify(prevProps.approvingDocs) === JSON.stringify(nextProps.approvingDocs) &&
-    JSON.stringify(prevProps.rejectingDocs) === JSON.stringify(nextProps.rejectingDocs)
+    JSON.stringify(prevProps.rejectingDocs) === JSON.stringify(nextProps.rejectingDocs) &&
+    prevProps.approvingStudent === nextProps.approvingStudent &&
+    prevProps.rejectingStudent === nextProps.rejectingStudent
   );
 });
 

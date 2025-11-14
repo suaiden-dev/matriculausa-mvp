@@ -211,6 +211,8 @@ const PaymentManagement = (): React.JSX.Element => {
   const affiliateRequestsCacheTimestamp = useRef<number>(0);
   const cachedZellePayments = useRef<PaymentRecord[]>([]);
   const zellePaymentsCacheTimestamp = useRef<number>(0);
+  const cachedZellePage = useRef<number>(1);
+  const cachedZelleItemsPerPage = useRef<number>(10);
   const CACHE_TTL = 2 * 60 * 1000; // Cache válido por 2 minutos
 
   // Backend pagination for Payments tab (supports specific university or all)
@@ -352,11 +354,14 @@ const PaymentManagement = (): React.JSX.Element => {
       }
     } else if (activeTab === 'zelle-payments') {
       const now = Date.now();
+      // Verificar se o cache é válido E se é para a mesma página e itemsPerPage
       const isCacheValid = cachedZellePayments.current.length > 0 && 
-                          (now - zellePaymentsCacheTimestamp.current) < CACHE_TTL;
+                          (now - zellePaymentsCacheTimestamp.current) < CACHE_TTL &&
+                          cachedZellePage.current === currentPageZelle &&
+                          cachedZelleItemsPerPage.current === itemsPerPage;
       
       if (isCacheValid && !hasLoadedZellePayments.current) {
-        // Mostrar cache imediatamente
+        // Mostrar cache imediatamente apenas se for para a mesma página
         setZellePayments(cachedZellePayments.current);
         setLoadingZellePayments(false);
         // Recarregar em background
@@ -368,6 +373,19 @@ const PaymentManagement = (): React.JSX.Element => {
       }
     }
   }, [activeTab]);
+
+  // Recarregar Zelle payments quando página ou itemsPerPage mudarem
+  useEffect(() => {
+    if (activeTab === 'zelle-payments') {
+      // Invalidar cache se página ou itemsPerPage mudaram
+      if (cachedZellePage.current !== currentPageZelle || cachedZelleItemsPerPage.current !== itemsPerPage) {
+        hasLoadedZellePayments.current = false;
+        loadZellePayments(false);
+        hasLoadedZellePayments.current = true;
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPageZelle, itemsPerPage, activeTab]);
 
   // Realtime updates for Affiliate Requests
   useEffect(() => {
@@ -395,16 +413,21 @@ const PaymentManagement = (): React.JSX.Element => {
     if (saved) setViewMode(saved);
   }, []);
 
-  // Carregar preferência de itens por página
+  // Nota: A preferência de itens por página já é inicializada no useAdminPaymentsState
+  // Este useEffect garante sincronização adicional se necessário
   useEffect(() => {
     const saved = localStorage.getItem('payment-items-per-page');
     if (saved) {
       const items = Number(saved);
       if ([10, 20, 50, 100].includes(items)) {
-        setItemsPerPage(items);
+        // Só atualizar se for diferente do valor atual
+        if (items !== pageSize) {
+          setItemsPerPage(items);
+        }
       }
     }
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Executar apenas uma vez na montagem
 
   const loadUniversities = async () => {
     try {
@@ -564,12 +587,12 @@ const PaymentManagement = (): React.JSX.Element => {
       if (!backgroundRefresh) {
         setLoadingZellePayments(true);
       }
-      console.time('[zelle] loadZellePayments');
       if (zelleLoadController.current) {
         try { zelleLoadController.current.abort(); } catch (_) {}
       }
       zelleLoadController.current = new AbortController();
       const { loadZellePaymentsLoader } = await import('./PaymentManagement/data/loaders/zelleLoader');
+      
       const { records, count } = await loadZellePaymentsLoader(
         supabase,
         currentPageZelle,
@@ -577,17 +600,18 @@ const PaymentManagement = (): React.JSX.Element => {
         zelleLoadController.current.signal
       );
       
-      // ✅ Salvar no cache
+      // ✅ Salvar no cache (incluindo página e itemsPerPage para validação)
       cachedZellePayments.current = records as any;
       zellePaymentsCacheTimestamp.current = Date.now();
+      cachedZellePage.current = currentPageZelle;
+      cachedZelleItemsPerPage.current = itemsPerPage;
       
       setZellePayments(records as any);
       setZelleTotalCount(count || 0);
     } catch (error) {
-      console.error('❌ Error loading Zelle payments:', error);
+      console.error('Error loading Zelle payments:', error);
       setError('Failed to load Zelle payments');
     } finally {
-      console.timeEnd('[zelle] loadZellePayments');
       setLoadingZellePayments(false);
     }
   };
@@ -1179,7 +1203,17 @@ const PaymentManagement = (): React.JSX.Element => {
           openZelleNotesModal={openZelleNotesModal}
           currentPage={currentPageZelle}
           totalPages={Math.max(1, Math.ceil(zelleTotalCount / itemsPerPage))}
-          onPageChange={(page: number) => { setCurrentPageZelle(page); loadZellePayments(); }}
+          totalItems={zelleTotalCount}
+          itemsPerPage={itemsPerPage}
+          onPageChange={(page: number) => { 
+            setCurrentPageZelle(page); 
+            loadZellePayments(); 
+          }}
+          onItemsPerPageChange={(newItemsPerPage: number) => {
+            setItemsPerPage(newItemsPerPage);
+            setCurrentPageZelle(1);
+            loadZellePayments();
+          }}
         />
       )}
       {/* Payment Details Modal */}
