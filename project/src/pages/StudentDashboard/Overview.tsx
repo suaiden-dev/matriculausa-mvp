@@ -19,6 +19,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
 import { useDynamicFees } from '../../hooks/useDynamicFees';
+import { usePaymentBlocked } from '../../hooks/usePaymentBlocked';
 import { StripeCheckout } from '../../components/StripeCheckout';
 import { useAuth } from '../../hooks/useAuth';
 import { useReferralCode } from '../../hooks/useReferralCode';
@@ -62,10 +63,14 @@ const Overview: React.FC<OverviewProps> = ({
   const { getFeeAmount, userFeeOverrides } = useFeeConfig(user?.id);
   const { selectionProcessFee, scholarshipFee, i20ControlFee, selectionProcessFeeAmount, scholarshipFeeAmount, i20ControlFeeAmount } = useDynamicFees();
   const { isGuideOpen, openGuide, closeGuide } = useStepByStepGuide();
+  const { isBlocked, pendingPayment, loading: paymentBlockedLoading } = usePaymentBlocked();
   const [visibleApplications, setVisibleApplications] = useState(5); // Mostrar 5 inicialmente
   const [feesLoading, setFeesLoading] = useState(true);
   const [studentDocuments, setStudentDocuments] = useState<any[]>([]);
   const [documentsLoading, setDocumentsLoading] = useState(true);
+  
+  // Verificar se há pagamento Zelle pendente do tipo selection_process
+  const hasPendingSelectionProcessPayment = isBlocked && pendingPayment && pendingPayment.fee_type === 'selection_process';
   
   const hasMoreApplications = recentApplications.length > visibleApplications;
   const displayedApplications = recentApplications.slice(0, visibleApplications);
@@ -514,15 +519,30 @@ const Overview: React.FC<OverviewProps> = ({
               </p>
               
               {/* Botão de pagamento sempre visível */}
-          <StripeCheckout 
-                productId="selectionProcess"
-                feeType="selection_process"
-                paymentType="selection_process"
-            buttonText={t('studentDashboard.selectionProcess.startButton')}
-                className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 sm:py-3 px-4 sm:px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 cursor-pointer border-2 border-white text-sm sm:text-base"
-                successUrl={`${window.location.origin}/student/dashboard/selection-process-fee-success?session_id={CHECKOUT_SESSION_ID}`}
-                cancelUrl={`${window.location.origin}/student/dashboard/selection-process-fee-error`}
-              />
+              {hasPendingSelectionProcessPayment ? (
+                <div className="w-full sm:w-auto bg-amber-50 border-2 border-amber-200 rounded-xl p-3 sm:p-4">
+                  <div className="flex items-center justify-center">
+                    <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-amber-600 mr-2 animate-spin" />
+                    <span className="text-xs sm:text-sm font-semibold text-amber-800">
+                      {t('studentDashboard.selectionProcess.processingZellePayment')}
+                    </span>
+                  </div>
+                  <p className="text-xs text-amber-700 mt-1 text-center">
+                    {t('studentDashboard.selectionProcess.pendingPaymentMessage')}
+                  </p>
+                </div>
+              ) : (
+                <StripeCheckout 
+                  productId="selectionProcess"
+                  feeType="selection_process"
+                  paymentType="selection_process"
+                  buttonText={t('studentDashboard.selectionProcess.startButton')}
+                  className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 sm:py-3 px-4 sm:px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 cursor-pointer border-2 border-white text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed"
+                  successUrl={`${window.location.origin}/student/dashboard/selection-process-fee-success?session_id={CHECKOUT_SESSION_ID}`}
+                  cancelUrl={`${window.location.origin}/student/dashboard/selection-process-fee-error`}
+                  disabled={paymentBlockedLoading}
+                />
+              )}
               
               {/* Aviso para usuários com seller_referral_code */}
               {/* {userProfile.seller_referral_code && userProfile.seller_referral_code.trim() !== '' && (

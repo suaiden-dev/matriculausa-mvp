@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useAdminStudentConversations } from '../../hooks/useAdminStudentChat';
 import { useAdminStudentChatNotifications } from '../../hooks/useAdminStudentChatNotifications';
 import { useUnreadMessages } from '../../contexts/UnreadMessagesContext';
 import { useGlobalStudentUnread } from '../../hooks/useGlobalStudentUnread';
+import { useEnvironment } from '../../hooks/useEnvironment';
 import { Users, MessageSquare, Plus } from 'lucide-react';
 import StudentSelector from './StudentSelector';
 import { supabase } from '../../lib/supabase';
@@ -113,15 +114,110 @@ const ChatInbox: React.FC<ChatInboxProps> = ({
   selectedConversationId 
 }) => {
   const { user, userProfile } = useAuth();
+  const { isDevelopment } = useEnvironment();
   const { conversations, loading, error, isInitialLoad, refetchConversations, updateConversationUnreadCount } = useAdminStudentConversations();
   const { markConversationAsRead } = useAdminStudentChatNotifications();
   const { resetUnreadCount } = useUnreadMessages();
   const { getUnreadCount } = useGlobalStudentUnread();
   const [searchTerm, setSearchTerm] = useState('');
   const [showStudentSelector, setShowStudentSelector] = useState(false);
+  const [studentEmails, setStudentEmails] = useState<{ [key: string]: string }>({});
+
+  // Função para verificar se deve filtrar (produção, staging ou local para testes)
+  const shouldFilter = useMemo(() => {
+    const hostname = window.location.hostname;
+    const href = window.location.href;
+    
+    const isProd = hostname === 'matriculausa.com' || 
+                   hostname.includes('matriculausa.com') ||
+                   href.includes('matriculausa.com');
+    
+    const isStaging = hostname === 'staging-matriculausa.netlify.app' || 
+                      hostname.includes('staging-matriculausa.netlify.app') ||
+                      hostname.includes('staging-matriculausa') ||
+                      href.includes('staging-matriculausa.netlify.app') ||
+                      href.includes('staging-matriculausa');
+    
+    const result = isProd || isStaging;
+    
+    console.log('🔍 [ChatInbox] shouldFilter debug:', {
+      hostname,
+      href,
+      isDevelopment,
+      isProd,
+      isStaging,
+      result
+    });
+    
+    return result;
+  }, [isDevelopment]);
+
+  // Função para verificar se deve excluir um email
+  const shouldExcludeEmail = (email: string | null | undefined): boolean => {
+    if (!email) return false;
+    if (!shouldFilter) return false; // Em desenvolvimento, não excluir
+    return email.toLowerCase().includes('@uorak.com');
+  };
+
+  // Buscar emails dos estudantes para filtrar conversas
+  useEffect(() => {
+    if (!shouldFilter || conversations.length === 0) {
+      setStudentEmails({});
+      return;
+    }
+
+    const fetchStudentEmails = async () => {
+      try {
+        // Extrair todos os student_ids únicos das conversas
+        const studentIds = conversations
+          .map(conv => conv.student_id)
+          .filter((id, index, self) => id && self.indexOf(id) === index);
+
+        if (studentIds.length === 0) {
+          setStudentEmails({});
+          return;
+        }
+
+        // Buscar emails dos estudantes
+        const { data: userProfiles, error } = await supabase
+          .from('user_profiles')
+          .select('user_id, email')
+          .in('user_id', studentIds);
+
+        if (!error && userProfiles) {
+          const emailsMap: { [key: string]: string } = {};
+          userProfiles.forEach((profile: any) => {
+            if (profile.user_id && profile.email) {
+              emailsMap[profile.user_id] = profile.email;
+            }
+          });
+          setStudentEmails(emailsMap);
+        }
+      } catch (error) {
+        console.error('Error fetching student emails:', error);
+      }
+    };
+
+    fetchStudentEmails();
+  }, [conversations, shouldFilter]);
+
+  // Filtrar conversas excluindo @uorak.com em produção/staging
+  const filteredConversationsByEmail = useMemo(() => {
+    if (!shouldFilter) return conversations;
+    
+    return conversations.filter(conversation => {
+      // Para admin/affiliate_admin, filtrar por email do estudante
+      if (userProfile?.role === 'affiliate_admin' || userProfile?.role === 'admin') {
+        const studentEmail = studentEmails[conversation.student_id] || '';
+        return !shouldExcludeEmail(studentEmail);
+      }
+      // Para estudantes, não filtrar (eles veem conversas com admins)
+      return true;
+    });
+  }, [conversations, studentEmails, isDevelopment, userProfile?.role]);
 
   // Filter conversations based on search term
-  const filteredConversations = conversations.filter(conversation => {
+  const filteredConversations = filteredConversationsByEmail.filter(conversation => {
     const recipient = (userProfile?.role === 'affiliate_admin' || userProfile?.role === 'admin')
       ? conversation.student_profile 
       : conversation.admin_profile;
