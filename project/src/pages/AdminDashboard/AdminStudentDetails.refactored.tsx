@@ -113,7 +113,7 @@ const AdminStudentDetails: React.FC = () => {
     handleEditNote,
     handleSaveEditNote,
     handleDeleteNote
-  } = useAdminNotes(student, user?.id);
+  } = useAdminNotes(student, user?.id, setStudent);
   
   // Hooks para Document Request Handlers
   const {

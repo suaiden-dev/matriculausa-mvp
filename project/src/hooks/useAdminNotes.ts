@@ -6,7 +6,11 @@ interface StudentRecord {
   admin_notes?: any;
 }
 
-export const useAdminNotes = (student: StudentRecord | null, userId?: string) => {
+export const useAdminNotes = (
+  student: StudentRecord | null, 
+  userId?: string,
+  setStudent?: (student: any) => void
+) => {
   const [adminNotes, setAdminNotes] = useState<any[]>([]);
   const [isAddingNote, setIsAddingNote] = useState(false);
   const [newNoteContent, setNewNoteContent] = useState('');
@@ -16,7 +20,10 @@ export const useAdminNotes = (student: StudentRecord | null, userId?: string) =>
 
   // Carregar admin notes do student
   useEffect(() => {
-    if (!student) return;
+    if (!student) {
+      setAdminNotes([]);
+      return;
+    }
 
     // Admin notes vem do RPC get_admin_student_full_details no campo admin_notes
     // Se vier como string JSON, fazer parse; se já for array, usar diretamente
@@ -26,13 +33,31 @@ export const useAdminNotes = (student: StudentRecord | null, userId?: string) =>
           setAdminNotes(student.admin_notes);
         } else if (typeof student.admin_notes === 'string') {
           const parsed = JSON.parse(student.admin_notes);
-          setAdminNotes(Array.isArray(parsed) ? parsed : [parsed]);
+          if (Array.isArray(parsed)) {
+            setAdminNotes(parsed);
+          } else {
+            // Fallback: criar array com nota única
+            setAdminNotes([{
+              id: `note-${Date.now()}`,
+              content: parsed,
+              created_by: 'unknown',
+              created_by_name: 'Admin',
+              created_at: new Date().toISOString()
+            }]);
+          }
         } else {
           setAdminNotes([]);
         }
       } catch (error) {
         console.error('Error parsing admin notes:', error);
-        setAdminNotes([]);
+        // Se não conseguir fazer parse, criar array com nota única
+        setAdminNotes([{
+          id: `note-${Date.now()}`,
+          content: student.admin_notes,
+          created_by: 'unknown',
+          created_by_name: 'Admin',
+          created_at: new Date().toISOString()
+        }]);
       }
     } else {
       setAdminNotes([]);
@@ -45,31 +70,45 @@ export const useAdminNotes = (student: StudentRecord | null, userId?: string) =>
     
     setSavingNotes(true);
     try {
-      const { error } = await supabase.from('admin_notes').insert({
-        student_id: student.student_id,
-        content: newNoteContent,
-        created_by: userId,
-      });
+      // Obter informações do usuário atual
+      const { data: { user } } = await supabase.auth.getUser();
+      const userEmail = user?.email || 'Admin';
+
+      const newNote = {
+        id: `note-${Date.now()}-${Math.random().toString(36).substring(2)}`,
+        content: newNoteContent.trim(),
+        created_by: userId || user?.id || 'unknown',
+        created_by_name: userEmail,
+        created_at: new Date().toISOString()
+      };
+
+      const updatedNotes = [newNote, ...adminNotes];
+      
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({
+          admin_notes: JSON.stringify(updatedNotes),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', student.student_id);
 
       if (error) throw error;
       
+      setAdminNotes(updatedNotes);
       setNewNoteContent('');
       setIsAddingNote(false);
       
-      // Reload notes
-      const { data } = await supabase
-        .from('admin_notes')
-        .select('*')
-        .eq('student_id', student.student_id)
-        .order('created_at', { ascending: false });
-      
-      if (data) setAdminNotes(data);
+      // Atualizar o estado do student se setStudent for fornecido
+      if (setStudent) {
+        setStudent((prev: any) => prev ? { ...prev, admin_notes: JSON.stringify(updatedNotes) } : prev);
+      }
     } catch (err) {
       console.error('Error adding note:', err);
+      alert('Erro ao adicionar nota: ' + (err as any)?.message);
     } finally {
       setSavingNotes(false);
     }
-  }, [student, newNoteContent, userId]);
+  }, [student, newNoteContent, userId, adminNotes, setStudent]);
 
   // Handler para iniciar edição de nota
   const handleEditNote = useCallback((noteId: string) => {
@@ -82,33 +121,41 @@ export const useAdminNotes = (student: StudentRecord | null, userId?: string) =>
 
   // Handler para salvar edição de nota
   const handleSaveEditNote = useCallback(async () => {
-    if (!editingNoteId || !student) return;
+    if (!editingNoteId || !student || !editingNoteContent.trim()) return;
     
     setSavingNotes(true);
     try {
+      const updatedNotes = adminNotes.map(note => 
+        note.id === editingNoteId 
+          ? { ...note, content: editingNoteContent.trim() }
+          : note
+      );
+      
       const { error } = await supabase
-        .from('admin_notes')
-        .update({ content: editingNoteContent })
-        .eq('id', editingNoteId);
+        .from('user_profiles')
+        .update({
+          admin_notes: JSON.stringify(updatedNotes),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', student.student_id);
 
       if (error) throw error;
       
+      setAdminNotes(updatedNotes);
       setEditingNoteId(null);
+      setEditingNoteContent('');
       
-      // Reload notes
-      const { data } = await supabase
-        .from('admin_notes')
-        .select('*')
-        .eq('student_id', student.student_id)
-        .order('created_at', { ascending: false });
-      
-      if (data) setAdminNotes(data);
+      // Atualizar o estado do student se setStudent for fornecido
+      if (setStudent) {
+        setStudent((prev: any) => prev ? { ...prev, admin_notes: JSON.stringify(updatedNotes) } : prev);
+      }
     } catch (err) {
       console.error('Error updating note:', err);
+      alert('Erro ao atualizar nota: ' + (err as any)?.message);
     } finally {
       setSavingNotes(false);
     }
-  }, [editingNoteId, editingNoteContent, student]);
+  }, [editingNoteId, editingNoteContent, student, adminNotes, setStudent]);
 
   // Handler para deletar nota
   const handleDeleteNote = useCallback(async (noteId: string) => {
@@ -116,27 +163,31 @@ export const useAdminNotes = (student: StudentRecord | null, userId?: string) =>
     
     setSavingNotes(true);
     try {
+      const updatedNotes = adminNotes.filter(note => note.id !== noteId);
+      
       const { error } = await supabase
-        .from('admin_notes')
-        .delete()
-        .eq('id', noteId);
+        .from('user_profiles')
+        .update({
+          admin_notes: JSON.stringify(updatedNotes),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', student.student_id);
 
       if (error) throw error;
       
-      // Reload notes
-      const { data } = await supabase
-        .from('admin_notes')
-        .select('*')
-        .eq('student_id', student.student_id)
-        .order('created_at', { ascending: false });
+      setAdminNotes(updatedNotes);
       
-      if (data) setAdminNotes(data);
+      // Atualizar o estado do student se setStudent for fornecido
+      if (setStudent) {
+        setStudent((prev: any) => prev ? { ...prev, admin_notes: JSON.stringify(updatedNotes) } : prev);
+      }
     } catch (err) {
       console.error('Error deleting note:', err);
+      alert('Erro ao deletar nota: ' + (err as any)?.message);
     } finally {
       setSavingNotes(false);
     }
-  }, [student]);
+  }, [student, adminNotes, setStudent]);
 
   return {
     adminNotes,

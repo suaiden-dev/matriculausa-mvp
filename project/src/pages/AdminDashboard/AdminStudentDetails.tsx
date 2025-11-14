@@ -723,69 +723,69 @@ const AdminStudentDetails: React.FC = () => {
         
         // Fallback: usar query original se RPC não funcionou
         if (!useRpc || !s) {
-          const { data, error } = await supabase
-            .from('user_profiles')
-            .select(`
+        const { data, error } = await supabase
+          .from('user_profiles')
+          .select(`
+            id,
+            user_id,
+            full_name,
+            email,
+            phone,
+            country,
+            field_of_interest,
+            academic_level,
+            gpa,
+            english_proficiency,
+            status,
+            avatar_url,
+            dependents,
+            desired_scholarship_range,
+            created_at,
+            has_paid_selection_process_fee,
+            has_paid_i20_control_fee,
+            selection_process_fee_payment_method,
+            i20_control_fee_payment_method,
+            role,
+            seller_referral_code,
+            admin_notes,
+            scholarship_applications (
               id,
-              user_id,
-              full_name,
-              email,
-              phone,
-              country,
-              field_of_interest,
-              academic_level,
-              gpa,
-              english_proficiency,
+              scholarship_id,
               status,
-              avatar_url,
-              dependents,
-              desired_scholarship_range,
-              created_at,
-              has_paid_selection_process_fee,
-              has_paid_i20_control_fee,
-              selection_process_fee_payment_method,
-              i20_control_fee_payment_method,
-              role,
-              seller_referral_code,
-              admin_notes,
-              scholarship_applications (
-                id,
-                scholarship_id,
-                status,
-                applied_at,
-                is_application_fee_paid,
-                is_scholarship_fee_paid,
-                application_fee_payment_method,
-                scholarship_fee_payment_method,
-                acceptance_letter_status,
-                acceptance_letter_url,
-                acceptance_letter_sent_at,
-                acceptance_letter_signed_at,
-                acceptance_letter_approved_at,
-                transfer_form_url,
-                transfer_form_status,
-                transfer_form_sent_at,
-                student_process_type,
-                payment_status,
-                reviewed_at,
-                reviewed_by,
-                documents,
-                scholarships (
-                  title,
-                  university_id,
-                  field_of_study,
-                  annual_value_with_scholarship,
-                  application_fee_amount,
-                  universities (
-                    name
-                  )
+              applied_at,
+              is_application_fee_paid,
+              is_scholarship_fee_paid,
+              application_fee_payment_method,
+              scholarship_fee_payment_method,
+              acceptance_letter_status,
+              acceptance_letter_url,
+              acceptance_letter_sent_at,
+              acceptance_letter_signed_at,
+              acceptance_letter_approved_at,
+              transfer_form_url,
+              transfer_form_status,
+              transfer_form_sent_at,
+              student_process_type,
+              payment_status,
+              reviewed_at,
+              reviewed_by,
+              documents,
+              scholarships (
+                title,
+                university_id,
+                field_of_study,
+                annual_value_with_scholarship,
+                application_fee_amount,
+                universities (
+                  name
                 )
               )
-            `)
-            .eq('id', profileId)
-            .single();
+            )
+          `)
+          .eq('id', profileId)
+          .single();
 
-          if (error) throw error;
+        if (error) throw error;
           s = data;
         }
 
@@ -1059,8 +1059,8 @@ const AdminStudentDetails: React.FC = () => {
             secondaryPromises.push(
               fetchReferralInfo(student.seller_referral_code).then(() => {})
             );
-          }
-
+        }
+        
           // 3. Buscar valores reais pagos de individual_fee_payments
           if (student.user_id) {
             secondaryPromises.push(
@@ -3537,8 +3537,8 @@ const AdminStudentDetails: React.FC = () => {
           </div>
         </div>
       </div>
-    </div>
-  );
+      </div>
+    );
 
   if (loading || !student) {
     return <SkeletonLoader />;
@@ -5807,29 +5807,29 @@ const AdminStudentDetails: React.FC = () => {
             </div>
           ) : (
             <Suspense fallback={<TabLoadingSkeleton />}>
-              <DocumentsView
-                studentDocuments={[]}
-                documentRequests={documentRequests}
-                scholarshipApplication={(() => {
-                  // Priorizar aplicação com application fee pago (aplicação ativa)
-                  const apps = student?.all_applications || [];
-                  const paidApp = apps.find(app => app.is_application_fee_paid);
-                  return paidApp || apps[0];
-                })()}
-                studentId={student?.user_id}
-                onViewDocument={handleViewDocument}
-                onDownloadDocument={handleDownloadDocument}
-                onUploadDocument={handleUploadDocumentRequest}
-                onApproveDocument={handleApproveDocumentRequest}
-                onRejectDocument={handleRejectDocumentRequest}
-                onEditTemplate={handleEditTemplate}
-                onDeleteDocumentRequest={handleDeleteDocumentRequest}
-                isAdmin={isPlatformAdmin}
-                uploadingStates={uploadingDocumentRequest}
-                approvingStates={approvingDocumentRequest}
-                rejectingStates={rejectingDocumentRequest}
-                deletingStates={deletingDocumentRequest}
-              />
+            <DocumentsView
+              studentDocuments={[]}
+              documentRequests={documentRequests}
+              scholarshipApplication={(() => {
+                // Priorizar aplicação com application fee pago (aplicação ativa)
+                const apps = student?.all_applications || [];
+                const paidApp = apps.find(app => app.is_application_fee_paid);
+                return paidApp || apps[0];
+              })()}
+              studentId={student?.user_id}
+              onViewDocument={handleViewDocument}
+              onDownloadDocument={handleDownloadDocument}
+              onUploadDocument={handleUploadDocumentRequest}
+              onApproveDocument={handleApproveDocumentRequest}
+              onRejectDocument={handleRejectDocumentRequest}
+              onEditTemplate={handleEditTemplate}
+              onDeleteDocumentRequest={handleDeleteDocumentRequest}
+              isAdmin={isPlatformAdmin}
+              uploadingStates={uploadingDocumentRequest}
+              approvingStates={approvingDocumentRequest}
+              rejectingStates={rejectingDocumentRequest}
+              deletingStates={deletingDocumentRequest}
+            />
             </Suspense>
           )}
         </div>
@@ -5838,10 +5838,10 @@ const AdminStudentDetails: React.FC = () => {
       {activeTab === 'scholarships' && student && (
         <div className="space-y-6">
           <Suspense fallback={<TabLoadingSkeleton />}>
-            <AdminScholarshipSelection
-              studentProfileId={student.student_id}
-              studentUserId={student.user_id}
-            />
+          <AdminScholarshipSelection
+            studentProfileId={student.student_id}
+            studentUserId={student.user_id}
+          />
           </Suspense>
         </div>
       )}
@@ -5849,10 +5849,10 @@ const AdminStudentDetails: React.FC = () => {
       {activeTab === 'logs' && student && (
         <div className="p-6">
           <Suspense fallback={<TabLoadingSkeleton />}>
-            <StudentLogsView 
-              studentId={student.student_id} 
-              studentName={student.student_name} 
-            />
+          <StudentLogsView 
+            studentId={student.student_id} 
+            studentName={student.student_name} 
+          />
           </Suspense>
         </div>
       )}
