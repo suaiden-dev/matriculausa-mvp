@@ -17,7 +17,7 @@ const StudentDetailsHeader: React.FC<StudentDetailsHeaderProps> = React.memo(({
   onBack,
 }) => {
   return (
-    <div className="flex items-center justify-between">
+    <div className="flex items-center justify-between w-full">
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Student Details</h1>
         <p className="text-slate-600">Detailed view for {studentName}</p>

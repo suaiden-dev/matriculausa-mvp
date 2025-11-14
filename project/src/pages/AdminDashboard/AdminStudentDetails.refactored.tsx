@@ -3,8 +3,11 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
-import { useStudentDetails } from '../../hooks/useStudentDetails';
+import { useStudentDetailsQuery, useStudentSecondaryDataQuery, usePendingZellePaymentsQuery } from '../../hooks/useStudentDetailsQueries';
 import { useAdminStudentActions } from '../../hooks/useAdminStudentActions';
+import { useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '../../lib/queryKeys';
+import RefreshButton from '../../components/RefreshButton';
 import { useTransferForm } from '../../hooks/useTransferForm';
 import { useDocumentRequests } from '../../hooks/useDocumentRequests';
 import { useAdminNotes } from '../../hooks/useAdminNotes';
@@ -68,9 +71,59 @@ const AdminStudentDetails: React.FC = () => {
   const { profileId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   
-  // Custom Hooks
-  const { student, setStudent, loading } = useStudentDetails(profileId);
+  // React Query Hooks
+  const studentDetailsQuery = useStudentDetailsQuery(profileId);
+  const student = studentDetailsQuery.data || null;
+  const loading = studentDetailsQuery.isLoading;
+  
+  // Dados secundários
+  const secondaryDataQuery = useStudentSecondaryDataQuery(student?.user_id);
+  const pendingZelleQuery = usePendingZellePaymentsQuery(student?.user_id);
+  
+  // Extrair dados secundários
+  const termAcceptances = secondaryDataQuery.data?.termAcceptances || [];
+  const realPaidAmounts = (() => {
+    const amounts: Record<string, number> = {};
+    (secondaryDataQuery.data?.individualFeePayments || []).forEach((p: any) => {
+      amounts[p.fee_type] = p.amount_paid;
+    });
+    return amounts;
+  })();
+  const pendingZellePayments = pendingZelleQuery.data || [];
+  
+  // Função para atualizar student localmente (mantida para compatibilidade com hooks que dependem de setStudent)
+  const setStudent = React.useCallback((updater: any) => {
+    if (typeof updater === 'function') {
+      const current = studentDetailsQuery.data;
+      if (current) {
+        const updated = updater(current);
+        // Atualizar cache do React Query
+        queryClient.setQueryData(queryKeys.students.details(profileId), updated);
+      }
+    } else {
+      queryClient.setQueryData(queryKeys.students.details(profileId), updater);
+    }
+  }, [studentDetailsQuery.data, profileId, queryClient]);
+  
+  // Função para refresh de todos os dados
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await Promise.all([
+        studentDetailsQuery.refetch(),
+        secondaryDataQuery.refetch(),
+        pendingZelleQuery.refetch(),
+      ]);
+    } finally {
+      setTimeout(() => {
+        setIsRefreshing(false);
+      }, 300);
+    }
+  };
+  
   const { saving, saveProfile, markFeeAsPaid, approveDocument, rejectDocument } = useAdminStudentActions();
   const { getFeeAmount, formatFeeAmount, hasOverride, userSystemType, userFeeOverrides } = useFeeConfig(student?.user_id);
   
@@ -162,12 +215,10 @@ const AdminStudentDetails: React.FC = () => {
   const [rejectStudentReason, setRejectStudentReason] = useState('');
   const [pendingRejectAppId, setPendingRejectAppId] = useState<string | null>(null);
   
-  // Estados de dados secundários
-  const [termAcceptances, setTermAcceptances] = useState<any[]>([]);
+  // Estados de dados secundários (alguns ainda são locais)
   const [referralInfo, setReferralInfo] = useState<any>(null);
-  const [realPaidAmounts, setRealPaidAmounts] = useState<Record<string, number>>({});
   const [hasMatriculaRewardsDiscount, setHasMatriculaRewardsDiscount] = useState(false);
-  const [pendingZellePayments, setPendingZellePayments] = useState<any[]>([]);
+  // termAcceptances, realPaidAmounts e pendingZellePayments agora vêm dos React Query hooks (definidos acima)
   
   // Estados de edição
   const [isEditingProcessType, setIsEditingProcessType] = useState(false);
@@ -301,133 +352,16 @@ const AdminStudentDetails: React.FC = () => {
     checkMatriculaRewardsDiscount();
   }, [student?.user_id, student?.seller_referral_code]);
 
-  // Carregar dados secundários
+  // Carregar referral info quando necessário (ainda é local pois depende de seller_referral_code)
   React.useEffect(() => {
-    if (!student?.user_id) return;
+    if (student?.seller_referral_code) {
+      fetchReferralInfo(student.seller_referral_code);
+    } else {
+      setReferralInfo(null);
+    }
+  }, [student?.seller_referral_code]);
 
-    const loadSecondaryData = async () => {
-      try {
-        // Tentar usar RPC consolidado
-        const { data: rpcData, error: rpcError } = await supabase.rpc(
-          'get_admin_student_secondary_data',
-          { target_user_id: student.user_id }
-        );
-
-        if (!rpcError && rpcData) {
-          const parsed = typeof rpcData === 'string' ? JSON.parse(rpcData) : rpcData;
-          
-          // Atualizar estados com dados da RPC
-          if (parsed.term_acceptances) {
-            // Garantir que os dados estão no formato correto
-            const mappedAcceptances = parsed.term_acceptances.map((acc: any) => ({
-              ...acc,
-              user_email: acc.user_email || student?.student_email,
-              user_full_name: acc.user_full_name || student?.student_name,
-              term_title: acc.term_title || 'Term',
-              term_content: acc.term_content || ''
-            }));
-            setTermAcceptances(mappedAcceptances);
-          }
-          if (parsed.referral_info) {
-            setReferralInfo(parsed.referral_info);
-          }
-          if (parsed.individual_fee_payments) {
-            const payments = parsed.individual_fee_payments;
-            const amounts: Record<string, number> = {};
-            payments.forEach((p: any) => {
-              amounts[p.fee_type] = p.amount_paid;
-            });
-            setRealPaidAmounts(amounts);
-          }
-        } else {
-          // Fallback: carregar manualmente
-          await loadSecondaryDataFallback();
-        }
-      } catch (error) {
-        console.error('Error loading secondary data:', error);
-        await loadSecondaryDataFallback();
-      }
-    };
-
-    const loadSecondaryDataFallback = async () => {
-      // Carregar referral info
-      if (student.seller_referral_code) {
-        await fetchReferralInfo(student.seller_referral_code);
-      }
-
-      // Carregar real paid amounts
-      const { data: payments } = await supabase
-        .from('individual_fee_payments')
-        .select('fee_type, amount_paid')
-        .eq('user_id', student.user_id);
-
-      if (payments) {
-        const amounts: Record<string, number> = {};
-        payments.forEach((p) => {
-          amounts[p.fee_type] = p.amount_paid;
-        });
-        setRealPaidAmounts(amounts);
-      }
-
-      // Carregar term acceptances com joins para obter dados completos
-      const { data: acceptances } = await supabase
-        .from('comprehensive_term_acceptance')
-        .select(`
-          *,
-          user_profiles!comprehensive_term_acceptance_user_id_fkey (
-            email,
-            full_name
-          ),
-          application_terms!comprehensive_term_acceptance_term_id_fkey (
-            title,
-            content
-          )
-        `)
-        .eq('user_id', student.user_id)
-        .order('accepted_at', { ascending: false });
-
-      if (acceptances) {
-        // Mapear os dados para o formato esperado
-        const mappedAcceptances = acceptances.map((acc: any) => ({
-          ...acc,
-          user_email: acc.user_profiles?.email || student.student_email,
-          user_full_name: acc.user_profiles?.full_name || student.student_name,
-          term_title: acc.application_terms?.title || 'Term',
-          term_content: acc.application_terms?.content || ''
-        }));
-        setTermAcceptances(mappedAcceptances);
-      }
-    };
-
-    loadSecondaryData();
-  }, [student?.user_id, student?.seller_referral_code]);
-
-  // Buscar pagamentos Zelle pendentes
-  React.useEffect(() => {
-    const fetchPendingZellePayments = async () => {
-      if (!student?.user_id) return;
-      
-      try {
-        const { data, error } = await supabase
-          .from('zelle_payments')
-          .select('*')
-          .eq('user_id', student.user_id)
-          .eq('status', 'pending_verification')
-          .order('created_at', { ascending: false });
-
-        if (error) {
-          console.error('Error fetching pending Zelle payments:', error);
-          return;
-        }
-
-        setPendingZellePayments(data || []);
-      } catch (error) {
-        console.error('Error fetching pending Zelle payments:', error);
-      }
-    };
-    
-    fetchPendingZellePayments();
-  }, [student]);
+  // Pagamentos Zelle pendentes agora vêm do usePendingZellePaymentsQuery hook
 
   // Admin notes agora são gerenciados pelo hook useAdminNotes
 
@@ -651,11 +585,13 @@ const AdminStudentDetails: React.FC = () => {
 
     if (result.success) {
       setIsEditing(false);
+      // Invalidar queries relacionadas
+      queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
       alert('Profile saved successfully!');
     } else {
       alert('Error saving profile: ' + result.error);
     }
-  }, [student, dependents, saveProfile]);
+  }, [student, dependents, saveProfile, profileId, queryClient]);
 
   const handleMarkAsPaid = useCallback((feeType: string) => {
     setPendingPayment({ fee_type: feeType });
@@ -676,8 +612,10 @@ const AdminStudentDetails: React.FC = () => {
     if (result.success) {
       setShowPaymentModal(false);
       setPendingPayment(null);
+      // Invalidar queries relacionadas
+      queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.students.secondaryData(student?.user_id) });
       alert('Payment recorded successfully!');
-      window.location.reload();
     } else {
       alert('Error recording payment: ' + result.error);
     }
@@ -708,6 +646,8 @@ const AdminStudentDetails: React.FC = () => {
             );
             return { ...prev, all_applications: updatedApps } as any;
           });
+          // Invalidar queries relacionadas
+          queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
         }
       } else {
         console.error('Error approving document:', result.error);
@@ -751,6 +691,8 @@ const AdminStudentDetails: React.FC = () => {
             );
             return { ...prev, all_applications: updatedApps } as any;
           });
+          // Invalidar queries relacionadas
+          queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
         }
         
         // Fechar o modal de rejeição
@@ -903,7 +845,10 @@ const AdminStudentDetails: React.FC = () => {
           return newStudent;
         });
         
-        console.log('✅ [APPROVE] setStudent chamado, aguardando re-render...');
+          console.log('✅ [APPROVE] setStudent chamado, aguardando re-render...');
+          // Invalidar queries relacionadas
+          queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
+          queryClient.invalidateQueries({ queryKey: queryKeys.students.all });
       } else {
         console.warn('⚠️ [APPROVE] updatedApp é null ou undefined');
       }
@@ -912,7 +857,7 @@ const AdminStudentDetails: React.FC = () => {
     } finally {
       setApprovingStudent(false);
     }
-  }, [student, isPlatformAdmin, user, setStudent]);
+  }, [student, isPlatformAdmin, user, setStudent, profileId, queryClient]);
 
   const rejectApplication = useCallback(async (applicationId: string) => {
     if (!student || !isPlatformAdmin) return;
@@ -964,13 +909,16 @@ const AdminStudentDetails: React.FC = () => {
         });
         
         console.log('✅ [REJECT] Estado local atualizado com sucesso');
+        // Invalidar queries relacionadas
+        queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
+        queryClient.invalidateQueries({ queryKey: queryKeys.students.all });
       }
     } catch (error: any) {
       console.error('Erro ao rejeitar aplicação:', error);
     } finally {
       setRejectingStudent(false);
     }
-  }, [student, isPlatformAdmin, rejectStudentReason, setStudent]);
+  }, [student, isPlatformAdmin, rejectStudentReason, setStudent, profileId, queryClient]);
 
   // Admin Notes handlers
   // Funções de Admin Notes agora vêm do useAdminNotes hook
@@ -1101,8 +1049,9 @@ const AdminStudentDetails: React.FC = () => {
       if (error) throw error;
 
       setEditingFees(null);
-      // Recarregar dados do estudante para refletir as mudanças
-      window.location.reload();
+      // Invalidar queries relacionadas
+      queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.students.secondaryData(student?.user_id) });
     } catch (error: any) {
       console.error('Error saving fee overrides:', error);
       alert('Erro ao salvar as taxas personalizadas: ' + error.message);
@@ -1127,8 +1076,9 @@ const AdminStudentDetails: React.FC = () => {
       if (error) throw error;
 
       setEditingFees(null);
-      // Recarregar dados do estudante para refletir as mudanças
-      window.location.reload();
+      // Invalidar queries relacionadas
+      queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.students.secondaryData(student?.user_id) });
     } catch (error: any) {
       console.error('Error resetting fees:', error);
       alert('Erro ao resetar as taxas: ' + error.message);
@@ -1230,8 +1180,9 @@ const AdminStudentDetails: React.FC = () => {
       }
       
       setEditingPaymentMethod(null);
+      // Invalidar queries relacionadas
+      queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
       alert('Payment method updated successfully!');
-      window.location.reload();
     } catch (error: any) {
       console.error('Error updating payment method:', error);
       alert('Error updating payment method: ' + error.message);
@@ -1248,11 +1199,40 @@ const AdminStudentDetails: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
       {/* Header */}
-      <StudentDetailsHeader
-        studentName={student.student_name}
-        onOpenChat={handleOpenChat}
-        onBack={handleBack}
-      />
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b border-gray-200">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Student Details</h1>
+          <p className="text-slate-600 mt-1">Detailed view for {student.student_name}</p>
+        </div>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="flex items-center bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
+            <button
+              onClick={handleOpenChat}
+              className="group relative px-4 py-2.5 text-slate-700 flex items-center space-x-2 transition-all duration-200 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-200 focus:ring-inset"
+              title="Send message to student"
+            >
+              <svg className="w-4 h-4 transition-transform duration-200 group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              </svg>
+              <span className="font-medium text-sm whitespace-nowrap">Send Message</span>
+            </button>
+            <div className="h-6 w-px bg-slate-200"></div>
+            <button
+              onClick={handleBack}
+              className="px-4 py-2.5 text-slate-600 hover:bg-slate-50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-slate-200 focus:ring-inset"
+            >
+              <span className="font-medium text-sm whitespace-nowrap">Back</span>
+            </button>
+          </div>
+          <div className="flex-shrink-0">
+            <RefreshButton
+              onClick={handleRefresh}
+              isRefreshing={isRefreshing}
+              title="Refresh student data"
+            />
+          </div>
+        </div>
+      </div>
 
       {/* Tab Navigation */}
       <StudentDetailsTabNavigation
