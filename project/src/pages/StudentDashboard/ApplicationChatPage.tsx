@@ -40,8 +40,9 @@ const ApplicationChatPage: React.FC = () => {
   const { i20ControlFee } = useDynamicFees();
   const { logAction } = useStudentLogs(userProfile?.id || '');
 
-  // Ref para o container principal
+  // Refs para controle de scroll
   const containerRef = React.useRef<HTMLDivElement>(null);
+  const tabsContainerRef = React.useRef<HTMLDivElement>(null);
 
   // Todos os hooks devem vir ANTES de qualquer return condicional
   const [i20Loading, setI20Loading] = useState(false);
@@ -83,24 +84,14 @@ const ApplicationChatPage: React.FC = () => {
 
   // useEffect para fazer scroll para o topo quando a aba mudar
   useEffect(() => {
-    // Aguardar a renderização completa da nova aba
+    // Scroll imediato para o topo da página
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    
+    // Garantir que chegou ao topo absoluto após um pequeno delay
     const timer = setTimeout(() => {
-      // Scroll para o container principal ou para o topo da página
-      if (containerRef.current) {
-        containerRef.current.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'start' 
-        });
-      }
-      
-      // Fallback: scroll da página inteira
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      
-      // Garantir que chegou ao topo
-      setTimeout(() => {
-        window.scrollTo(0, 0);
-        document.documentElement.scrollTop = 0;
-      }, 300);
+      window.scrollTo(0, 0);
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
     }, 100);
     
     return () => clearTimeout(timer);
@@ -434,11 +425,9 @@ const ApplicationChatPage: React.FC = () => {
   return (
     <div ref={containerRef} className="p-6 md:p-12 flex flex-col items-center min-h-screen h-full">
       <div className="w-full max-w-7xl mx-auto space-y-8 flex-1 flex flex-col h-full">
-        <h2 className="text-2xl font-bold text-gray-800 mb-4 text-center">
-          {t('studentDashboard.applicationChatPage.title')}
-        </h2>
+
         {/* Expandable Tabs */}
-        <div className="mb-6 flex justify-center">
+        <div ref={tabsContainerRef} className="lg:mb-6 flex justify-center">
           <ExpandableTabs
             tabs={tabItems}
             activeColor="text-[#05294E]"
