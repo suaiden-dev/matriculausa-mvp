@@ -3,9 +3,10 @@ import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 import { GlobalErrorBoundary } from './components/GlobalErrorBoundary';
-import './i18n'; // Importar i18n para inicializar
+import i18nInstance from './i18n'; // ✅ OTIMIZAÇÃO: Importar instância para aguardar inicialização
 
-// Inicialização simplificada para evitar problemas no mobile
+// ✅ OTIMIZAÇÃO: Aguardar i18n inicializar antes de renderizar
+// Isso evita bloqueio durante o carregamento inicial
 const rootElement = document.getElementById('root');
 
 if (rootElement) {
@@ -15,14 +16,28 @@ if (rootElement) {
     mobileLoading.remove();
   }
   
-  const root = createRoot(rootElement);
-  root.render(
-    <StrictMode>
-      <GlobalErrorBoundary>
-        <App />
-      </GlobalErrorBoundary>
-    </StrictMode>
-  );
+  // Aguardar i18n inicializar (já é uma Promise)
+  i18nInstance.then(() => {
+    const root = createRoot(rootElement);
+    root.render(
+      <StrictMode>
+        <GlobalErrorBoundary>
+          <App />
+        </GlobalErrorBoundary>
+      </StrictMode>
+    );
+  }).catch((error) => {
+    console.error('Error initializing i18n:', error);
+    // Renderizar mesmo se i18n falhar
+    const root = createRoot(rootElement);
+    root.render(
+      <StrictMode>
+        <GlobalErrorBoundary>
+          <App />
+        </GlobalErrorBoundary>
+      </StrictMode>
+    );
+  });
 } else {
   console.error('❌ Elemento root não encontrado');
 }

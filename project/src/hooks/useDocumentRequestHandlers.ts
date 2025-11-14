@@ -56,9 +56,11 @@ export const useDocumentRequestHandlers = (
       
       // Reload document requests if callback provided
       if (setDocumentRequests) {
+        // ✅ OTIMIZAÇÃO: Selecionar apenas campos necessários
+        const fields = 'id,title,description,due_date,is_global,university_id,scholarship_application_id,created_at,updated_at,template_url,attachment_url';
         const { data } = await supabase
           .from('document_requests')
-          .select('*')
+          .select(fields)
           .eq('user_id', student.user_id)
           .order('created_at', { ascending: false });
 
@@ -135,7 +137,6 @@ export const useDocumentRequestHandlers = (
 
   // Handler para editar template
   const handleEditTemplate = useCallback((requestId: string) => {
-    console.log('Edit template for request:', requestId);
     // Implementation would go here - placeholder for future functionality
   }, []);
 
@@ -165,9 +166,11 @@ export const useDocumentRequestHandlers = (
       
       // Reload document requests if callback provided
       if (setDocumentRequests) {
+        // ✅ OTIMIZAÇÃO: Selecionar apenas campos necessários
+        const fields = 'id,title,description,due_date,is_global,university_id,scholarship_application_id,created_at,updated_at,template_url,attachment_url';
         const { data } = await supabase
           .from('document_requests')
-          .select('*')
+          .select(fields)
           .eq('user_id', student.user_id)
           .order('created_at', { ascending: false });
 

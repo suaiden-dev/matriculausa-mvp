@@ -119,31 +119,46 @@ export const useDocumentRequests = (
         const applicationIds = (student.all_applications || []).map((app: any) => app.id).filter(Boolean);
         
         if (applicationIds.length > 0) {
-          const { data: specificRequests } = await supabase
-            .from('document_requests')
-            .select('*')
-            .in('scholarship_application_id', applicationIds)
-            .order('created_at', { ascending: false });
-
-          const universityIds = (student.all_applications || [])
-            .map((app: any) => app.scholarships?.university_id || app.university_id)
-            .filter(Boolean);
-          const uniqueUniversityIds = [...new Set(universityIds)];
-
-          let globalRequests: any[] = [];
-          if (uniqueUniversityIds.length > 0) {
-            const { data: globalData } = await supabase
+          // ✅ OTIMIZAÇÃO: Selecionar apenas campos necessários
+          const fields = 'id,title,description,due_date,is_global,university_id,scholarship_application_id,created_at,updated_at,template_url,attachment_url';
+          
+          const [specificResult, globalResult] = await Promise.all([
+            supabase
               .from('document_requests')
-              .select('*')
-              .eq('is_global', true)
-              .in('university_id', uniqueUniversityIds)
-              .order('created_at', { ascending: false });
+              .select(fields)
+              .in('scholarship_application_id', applicationIds)
+              .order('created_at', { ascending: false }),
+            
+            (() => {
+              const universityIds = (student.all_applications || [])
+                .map((app: any) => app.scholarships?.university_id || app.university_id)
+                .filter(Boolean);
+              const uniqueUniversityIds = [...new Set(universityIds)];
+              
+              if (uniqueUniversityIds.length === 0) {
+                return Promise.resolve({ data: [] });
+              }
+              
+              return supabase
+                .from('document_requests')
+                .select(fields)
+                .eq('is_global', true)
+                .in('university_id', uniqueUniversityIds)
+                .order('created_at', { ascending: false });
+            })()
+          ]);
 
-            globalRequests = globalData || [];
-          }
+          const allRequests = [
+            ...(specificResult.data || []),
+            ...(globalResult.data || [])
+          ];
 
-          const allRequests = [...(specificRequests || []), ...globalRequests];
-          setDocumentRequests(allRequests);
+          // Remover duplicatas
+          const uniqueRequests = Array.from(
+            new Map(allRequests.map(req => [req.id, req])).values()
+          );
+
+          setDocumentRequests(uniqueRequests);
         }
       }
       

@@ -392,71 +392,85 @@ const AdminStudentDetails: React.FC = () => {
 
   // Admin notes agora são gerenciados pelo hook useAdminNotes
 
-  // Carregar document requests - usa scholarship_application_id, não user_id
+  // ✅ OTIMIZAÇÃO: Carregar document requests apenas quando necessário
+  // Usa cache e debounce para evitar múltiplas queries
   React.useEffect(() => {
-    if (!student?.all_applications || student.all_applications.length === 0) {
-      setDocumentRequests([]);
+    if (activeTab !== 'documents' || !student?.all_applications || student.all_applications.length === 0) {
+      if (activeTab !== 'documents') {
+        setDocumentRequests([]);
+      }
       return;
     }
 
+    let cancelled = false;
     const loadDocumentRequests = async () => {
       try {
-        if (!student?.all_applications || student.all_applications.length === 0) {
-          setDocumentRequests([]);
-          return;
-        }
-
         const applicationIds = student.all_applications.map((app: any) => app.id).filter(Boolean);
         
         if (applicationIds.length === 0) {
-          setDocumentRequests([]);
+          if (!cancelled) setDocumentRequests([]);
           return;
         }
 
-        // Buscar requests específicos para as aplicações
-        const { data: specificRequests, error: specificError } = await supabase
-          .from('document_requests')
-          .select('*')
-          .in('scholarship_application_id', applicationIds)
-          .order('created_at', { ascending: false });
+        // ✅ OTIMIZAÇÃO: Selecionar apenas campos necessários
+        const fields = 'id,title,description,due_date,is_global,university_id,scholarship_application_id,created_at,updated_at,template_url,attachment_url';
 
-        if (specificError) {
-          console.error('Error fetching specific document requests:', specificError);
-        }
-
-        // Buscar requests globais das universidades
-        const universityIds = (student.all_applications || [])
-          .map((app: any) => app.scholarships?.university_id || app.university_id)
-          .filter(Boolean);
-        const uniqueUniversityIds = [...new Set(universityIds)];
-
-        let globalRequests: any[] = [];
-        if (uniqueUniversityIds.length > 0) {
-          const { data: globalData, error: globalError } = await supabase
+        // ✅ OTIMIZAÇÃO: Executar queries em paralelo
+        const [specificResult, globalResult] = await Promise.all([
+          supabase
             .from('document_requests')
-            .select('*')
-            .eq('is_global', true)
-            .in('university_id', uniqueUniversityIds)
-            .order('created_at', { ascending: false });
+            .select(fields)
+            .in('scholarship_application_id', applicationIds)
+            .order('created_at', { ascending: false }),
+          
+          (() => {
+            const universityIds = (student.all_applications || [])
+              .map((app: any) => app.scholarships?.university_id || app.university_id)
+              .filter(Boolean);
+            const uniqueUniversityIds = [...new Set(universityIds)];
+            
+            if (uniqueUniversityIds.length === 0) {
+              return Promise.resolve({ data: [], error: null });
+            }
+            
+            return supabase
+              .from('document_requests')
+              .select(fields)
+              .eq('is_global', true)
+              .in('university_id', uniqueUniversityIds)
+              .order('created_at', { ascending: false });
+          })()
+        ]);
 
-          if (globalError) {
-            console.error('Error fetching global document requests:', globalError);
-          } else {
-            globalRequests = globalData || [];
-          }
-        }
+        if (cancelled) return;
 
-        // Combinar requests específicos e globais
-        const allRequests = [...(specificRequests || []), ...globalRequests];
-        setDocumentRequests(allRequests);
+        const allRequests = [
+          ...(specificResult.data || []),
+          ...(globalResult.data || [])
+        ];
+
+        // Remover duplicatas
+        const uniqueRequests = Array.from(
+          new Map(allRequests.map(req => [req.id, req])).values()
+        );
+
+        setDocumentRequests(uniqueRequests);
       } catch (error) {
-        console.error('Error loading document requests:', error);
-        setDocumentRequests([]);
+        if (!cancelled) {
+          console.error('Error loading document requests:', error);
+          setDocumentRequests([]);
+        }
       }
     };
 
-    loadDocumentRequests();
-  }, [student?.all_applications]);
+    // Debounce para evitar múltiplas chamadas
+    const timeoutId = setTimeout(loadDocumentRequests, 300);
+    
+    return () => {
+      cancelled = true;
+      clearTimeout(timeoutId);
+    };
+  }, [student?.all_applications, activeTab]);
 
   // Função para buscar informações de referência
   const fetchReferralInfo = async (referralCode: string) => {

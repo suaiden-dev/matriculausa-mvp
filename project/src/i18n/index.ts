@@ -2,29 +2,17 @@ import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
 
-// Importar arquivos de tradução
-import enTranslations from './locales/en.json';
-import ptTranslations from './locales/pt.json';
-import esTranslations from './locales/es.json';
-
-// Debug: Verificar se as traduções foram carregadas
-if (process.env.NODE_ENV === 'development') {
-  console.log('📦 Translations loaded:', {
-    en: !!enTranslations,
-    pt: !!ptTranslations,
-    es: !!esTranslations
-  });
-}
-
+// ✅ OTIMIZAÇÃO: Lazy loading de traduções
+// Carregar apenas o idioma necessário, não todos de uma vez
 const resources = {
   en: {
-    translation: enTranslations
+    translation: () => import('./locales/en.json')
   },
   pt: {
-    translation: ptTranslations
+    translation: () => import('./locales/pt.json')
   },
   es: {
-    translation: esTranslations
+    translation: () => import('./locales/es.json')
   }
 };
 
@@ -69,51 +57,64 @@ const getPreferredLanguage = (): string => {
   return mappedLang;
 };
 
+// ✅ OTIMIZAÇÃO: Carregar traduções de forma assíncrona
+const loadTranslations = async (lang: string) => {
+  try {
+    const translation = await resources[lang as keyof typeof resources]?.translation();
+    return translation.default || translation;
+  } catch (error) {
+    console.error(`Error loading ${lang} translations:`, error);
+    // Fallback para inglês
+    if (lang !== 'en') {
+      const enTranslation = await resources.en.translation();
+      return enTranslation.default || enTranslation;
+    }
+    return {};
+  }
+};
+
 // Inicializar i18n
 const initI18n = async () => {
   const preferredLang = getPreferredLanguage();
+  
+  // ✅ OTIMIZAÇÃO: Carregar apenas o idioma necessário
+  const initialTranslation = await loadTranslations(preferredLang);
   
   await i18n
     .use(LanguageDetector)
     .use(initReactI18next)
     .init({
-      resources,
-      lng: preferredLang, // Usar idioma detectado automaticamente
+      resources: {
+        [preferredLang]: {
+          translation: initialTranslation
+        }
+      },
+      lng: preferredLang,
       fallbackLng: 'en',
-      debug: process.env.NODE_ENV === 'development', // Habilitar debug em desenvolvimento
+      debug: false, // ✅ OTIMIZAÇÃO: Desabilitar debug em produção
       
       interpolation: {
-        escapeValue: false // react já faz escape
+        escapeValue: false
       },
       
       detection: {
-        // Ordem de detecção: localStorage > navigator > htmlTag
         order: ['localStorage', 'navigator', 'htmlTag'],
-        
-        // Cache das preferências
         caches: ['localStorage'],
-        
-        // Função customizada para mapear idiomas detectados
         convertDetectedLanguage: (lng: string) => {
-          const mapped = mapBrowserLanguage(lng);
-          return mapped;
+          return mapBrowserLanguage(lng);
         }
       }
     });
 
-  // IMPORTANTE: Forçar a aplicação do idioma detectado
-  if (i18n.language !== preferredLang) {
-    try {
-      await i18n.changeLanguage(preferredLang);
-      
-      // Salvar no localStorage para futuras visitas
-      localStorage.setItem('i18nextLng', preferredLang);
-    } catch (error) {
-      console.error('Erro ao forçar idioma:', error);
+  // ✅ OTIMIZAÇÃO: Carregar outros idiomas de forma lazy quando necessário
+  i18n.on('languageChanged', async (lng) => {
+    if (!i18n.hasResourceBundle(lng, 'translation')) {
+      const translation = await loadTranslations(lng);
+      i18n.addResourceBundle(lng, 'translation', translation, true, true);
     }
-  }
-  
-  // Marcar como inicializado para futuras visitas
+  });
+
+  // Marcar como inicializado
   localStorage.setItem('i18n_initialized', 'true');
   
   return i18n;
