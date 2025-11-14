@@ -13,9 +13,7 @@ const STEPS: { key: OnboardingStep; label: string }[] = [
   { key: 'scholarship_review', label: 'Review Scholarships' },
   { key: 'process_type', label: 'Process Type' },
   { key: 'documents_upload', label: 'Upload Documents' },
-  { key: 'waiting_approval', label: 'Review' },
-  { key: 'application_fee', label: 'Application Fee' },
-  { key: 'scholarship_fee', label: 'Scholarship Fee' },
+  { key: 'waiting_approval', label: 'My Applications' },
 ];
 
 export const StepIndicator: React.FC<StepIndicatorProps> = ({ currentStep, completedSteps }) => {

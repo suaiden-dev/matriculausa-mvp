@@ -17,6 +17,7 @@ import { STRIPE_PRODUCTS } from '../../stripe-config';
 import { FileText, UserCircle, GraduationCap, CheckCircle, Building, Award, Home, Info, FileCheck, FolderOpen } from 'lucide-react';
 import { I20ControlFeeModal } from '../../components/I20ControlFeeModal';
 import TruncatedText from '../../components/TruncatedText';
+import FlipCardTimer from '../../components/FlipCardTimer';
 // Remover os imports das imagens
 // import WelcomeImg from '../../assets/page 7.png';
 // import SupportImg from '../../assets/page 8.png';
@@ -55,6 +56,7 @@ const ApplicationChatPage: React.FC = () => {
   const [applicationDetails, setApplicationDetails] = useState<any>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [i20Countdown, setI20Countdown] = useState<string | null>(null);
+  const [i20CountdownValues, setI20CountdownValues] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
   const [scholarshipFeeDeadline, setScholarshipFeeDeadline] = useState<Date | null>(null);
   const [showI20ControlFeeModal, setShowI20ControlFeeModal] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'stripe' | 'zelle' | 'pix' | null>(null);
@@ -166,6 +168,7 @@ const ApplicationChatPage: React.FC = () => {
       const diff = scholarshipFeeDeadline.getTime() - now.getTime();
       if (diff <= 0) {
         setI20Countdown('Expired');
+        setI20CountdownValues(null);
         return;
       }
       const days = Math.floor(diff / (1000 * 60 * 60 * 24));
@@ -173,6 +176,7 @@ const ApplicationChatPage: React.FC = () => {
       const minutes = Math.floor((diff / (1000 * 60)) % 60);
       const seconds = Math.floor((diff / 1000) % 60);
       setI20Countdown(`${days}d ${hours}h ${minutes}m ${seconds}s`);
+      setI20CountdownValues({ days, hours, minutes, seconds });
     }
     updateCountdown();
     const interval = setInterval(updateCountdown, 1000);
@@ -900,10 +904,18 @@ const ApplicationChatPage: React.FC = () => {
                     </button>
                   </div>
                   {scholarshipFeeDeadline && (
-                    <div className={`flex-1 min-w-[140px] max-w-xs p-3 rounded-xl shadow-md text-center border ${i20Countdown === 'Expired' ? 'bg-red-50 border-red-200' : 'bg-blue-50 border-blue-200'}`}
-                         style={{height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+                    <div className="flex-1 min-w-[280px] max-w-full text-center"
+                         style={{display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
                       {i20Countdown === 'Expired' ? (
                         <span className="text-red-600 font-bold text-sm md:text-base">{t('studentDashboard.applicationChatPage.i20ControlFee.deadlineExpired')}</span>
+                      ) : i20CountdownValues ? (
+                        <FlipCardTimer 
+                          days={i20CountdownValues.days}
+                          hours={i20CountdownValues.hours}
+                          minutes={i20CountdownValues.minutes}
+                          seconds={i20CountdownValues.seconds}
+                          size="small"
+                        />
                       ) : (
                         <span className="font-mono text-base md:text-lg text-[#05294E] tracking-widest">
                           {i20Countdown}

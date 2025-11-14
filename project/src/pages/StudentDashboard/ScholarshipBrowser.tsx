@@ -788,55 +788,8 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
 
     // SEGUNDO: Verificar se já pagou a selection process fee
     if (!userProfile?.has_paid_selection_process_fee) {
-      // User has not paid selection process fee, checking for active discount
-      
-      // SEGUNDO: Verificar se já tem desconto ativo
-      setIsCheckingDiscount(true);
-      try {
-        const { data: sessionData } = await supabase.auth.getSession();
-        const token = sessionData.session?.access_token;
-        
-        if (!token) {
-          // No token, showing referral code modal
-          setSelectedScholarshipForCheckout(scholarship);
-          setShowPreCheckoutModal(true);
-          return;
-        }
-
-        // Verificar se já há desconto ativo usando função RPC
-        // Verificando desconto ativo
-        const { data: result, error } = await supabase.rpc('get_user_active_discount', {
-          user_id_param: user.id
-        });
-
-        if (error) {
-          console.error('❌ Erro ao verificar desconto:', error);
-          // Em caso de erro, mostrar modal por segurança
-          setSelectedScholarshipForCheckout(scholarship);
-          setShowPreCheckoutModal(true);
-          return;
-        }
-
-        // Resultado da verificação obtido
-        
-        if (result && result.has_discount) {
-          // Usuário já tem desconto ativo, indo direto para Stripe
-          // Se já tem desconto, ir direto para Stripe
-          proceedToStripeDirectly();
-        } else {
-          // Sem desconto ativo, mostrando modal para código de referência
-          // Se não tem desconto, mostrar modal
-          setSelectedScholarshipForCheckout(scholarship);
-          setShowPreCheckoutModal(true);
-        }
-      } catch (error) {
-        console.error('❌ Erro ao verificar desconto:', error);
-        // Em caso de erro, mostrar modal por segurança
-        setSelectedScholarshipForCheckout(scholarship);
-        setShowPreCheckoutModal(true);
-      } finally {
-        setIsCheckingDiscount(false);
-      }
+      // Redirecionar para o onboarding ao invés de abrir o modal
+      navigate('/student/onboarding?step=selection_fee');
       return;
     }
 

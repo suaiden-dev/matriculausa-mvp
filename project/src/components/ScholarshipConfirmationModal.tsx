@@ -185,8 +185,10 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
           onStripeCheckout();
         }
       } else if (selectedPaymentMethod === 'zelle') {
-        // Se há callback onZelleCheckout, não fazer nada aqui - o ZelleCheckout será mostrado inline
-        if (!onZelleCheckout) {
+        // Sempre chamar callback para redirecionar (tanto mobile quanto desktop)
+        if (onZelleCheckout) {
+          onZelleCheckout();
+        } else {
           // Caso contrário, redirecionar para página de checkout Zelle (comportamento padrão)
           const params = new URLSearchParams({
             feeType: feeType,
@@ -202,7 +204,6 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
           
           navigate(`/checkout/zelle?${params.toString()}`);
         }
-        // Se há onZelleCheckout, o ZelleCheckout será renderizado inline abaixo (não precisa fazer nada aqui)
       }
     } catch (error) {
       console.error('Erro ao processar pagamento:', error);
@@ -211,8 +212,8 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
     }
   };
 
-  // Se Zelle foi selecionado e há callback, mostrar ZelleCheckout inline
-  const showZelleInline = selectedPaymentMethod === 'zelle' && onZelleCheckout;
+  // Nunca mostrar Zelle inline - sempre redirecionar para página dedicada
+  const showZelleInline = false;
 
   const canProceed = selectedPaymentMethod !== null;
 

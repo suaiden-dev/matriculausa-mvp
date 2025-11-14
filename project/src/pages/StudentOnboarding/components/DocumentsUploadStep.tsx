@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Upload, FileText, CheckCircle, Loader2, X, Clock, Plus, DollarSign, ChevronRight } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Upload, FileText, CheckCircle, Loader2, X, Clock, Plus, DollarSign, ChevronRight, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuth';
 import { supabase } from '../../../lib/supabase';
 import { useTranslation } from 'react-i18next';
@@ -28,9 +28,24 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [showManualReviewMessage, setShowManualReviewMessage] = useState(false);
+  const [isLocked, setIsLocked] = useState(false);
 
   // Obter process type do localStorage ou userProfile
   const processType = userProfile?.process_type || localStorage.getItem('studentProcessType') || 'initial';
+
+  // Verificar se já passou pela review (tem documentos enviados ou aprovados)
+  useEffect(() => {
+    const checkIfLocked = () => {
+      if (!userProfile) return;
+      
+      // Se documentos estão enviados ou aprovados, significa que já passou pela review
+      const documentsUploaded = userProfile.documents_uploaded || false;
+      const documentsApproved = userProfile.documents_status === 'approved';
+      setIsLocked(documentsUploaded || documentsApproved);
+    };
+    
+    checkIfLocked();
+  }, [userProfile?.documents_uploaded, userProfile?.documents_status]);
 
   // Função para obter limite de documentos baseado no process type
   const getDocumentLimit = (): number => {
@@ -111,6 +126,10 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
 
   // Função para adicionar arquivos de fundos
   const handleFundsFileAdd = (newFiles: File[]) => {
+    if (isLocked) {
+      setError('Você já passou pela revisão. Não é possível alterar os documentos enviados.');
+      return;
+    }
     const currentFundsFiles = Array.isArray(files.funds_proof) ? files.funds_proof : [];
     const documentLimit = getDocumentLimit();
     
@@ -168,6 +187,10 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
 
   // Função para lidar com mudança de arquivo (documentos únicos)
   const handleFileChange = (type: string, file: File | null) => {
+    if (isLocked) {
+      setError('Você já passou pela revisão. Não é possível alterar os documentos enviados.');
+      return;
+    }
     if (type === 'funds_proof') {
       // Para funds_proof, não usar esta função - usar handleFundsFileAdd
       return;
@@ -380,6 +403,11 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
 
   const handleUpload = async () => {
     console.log('🔍 [DocumentsUploadStep] handleUpload: Starting...');
+    
+    if (isLocked) {
+      setError('Você já passou pela revisão. Não é possível alterar os documentos enviados.');
+      return;
+    }
     
     if (!user?.id) {
       setError('User not authenticated');
@@ -630,11 +658,40 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
     return files[doc.key] !== null;
   });
 
+  // Se já passou pela review, mostrar tela de etapa concluída
+  if (isLocked) {
+    return (
+      <div className="space-y-6 pb-24 sm:pb-6">
+        <div className="bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 rounded-xl p-8 sm:p-12 border-2 border-green-200 shadow-sm">
+          <div className="text-center">
+            <div className="mb-6">
+              <CheckCircle className="w-20 h-20 text-green-600 mx-auto" />
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3">
+              Etapa Concluída
+            </h2>
+            <p className="text-base sm:text-lg text-gray-700 mb-6">
+              Você já enviou seus documentos e eles foram aprovados. Esta etapa está completa.
+            </p>
+            <button
+              onClick={onNext}
+              className="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-md hover:shadow-lg"
+            >
+              Continuar
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 pb-24 sm:pb-6">
       <div className="text-center">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Upload Your Documents</h2>
-        <p className="text-gray-600">Please upload the required documents to continue</p>
+        <p className="text-gray-600">
+          Please upload the required documents to continue
+        </p>
       </div>
 
       {error && (
@@ -699,11 +756,11 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                             handleFundsFileAdd(selectedFiles);
                             e.target.value = '';
                           }}
-                          disabled={uploading || analyzing || mergingPdfs}
+                          disabled={isLocked || uploading || analyzing || mergingPdfs}
                           className="hidden"
                           id={`funds-upload-${doc.key}`}
                         />
-                        <label htmlFor={`funds-upload-${doc.key}`} className="cursor-pointer">
+                        <label htmlFor={`funds-upload-${doc.key}`} className={isLocked ? "cursor-not-allowed opacity-60" : "cursor-pointer"}>
                           <Upload className="w-8 h-8 text-blue-500 mx-auto mb-2" />
                           <p className="text-sm text-blue-600 font-medium">
                             Drag and drop files here or click to select
@@ -728,7 +785,7 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                               </div>
                               <button
                                 onClick={() => handleFundsFileRemove(index)}
-                                disabled={uploading || analyzing || mergingPdfs}
+                                disabled={isLocked || uploading || analyzing || mergingPdfs}
                                 className="p-1 text-slate-400 hover:text-red-500 transition-colors disabled:opacity-50"
                               >
                                 <X className="w-4 h-4" />
@@ -798,14 +855,18 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                   <div className="space-y-2 sm:space-y-3">
                     {/* Input de arquivo customizado */}
                     <div className="flex items-center space-x-3">
-                      <label className="flex items-center justify-center px-4 py-2 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg cursor-pointer hover:bg-blue-100 transition-colors font-medium text-sm">
+                      <label className={`flex items-center justify-center px-4 py-2 border rounded-lg transition-colors font-medium text-sm ${
+                        isLocked 
+                          ? 'bg-slate-200 text-slate-500 border-slate-300 cursor-not-allowed opacity-60' 
+                          : 'bg-blue-50 text-blue-700 border-blue-200 cursor-pointer hover:bg-blue-100'
+                      }`}>
                         <Upload className="w-4 h-4 mr-2" />
                         Choose File
                         <input
                           type="file"
                           accept="application/pdf,image/*"
                           onChange={(e) => handleFileChange(doc.key, e.target.files?.[0] || null)}
-                          disabled={uploading || analyzing || mergingPdfs}
+                          disabled={isLocked || uploading || analyzing || mergingPdfs}
                           className="hidden"
                         />
                       </label>

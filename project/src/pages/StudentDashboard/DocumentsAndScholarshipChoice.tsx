@@ -1381,9 +1381,9 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
                   {t('studentDashboard.documentsAndScholarshipChoice.manualReviewTitle')}
                 </h2>
                 
-                <p className="text-blue-700 text-sm leading-relaxed">
-                  {t('studentDashboard.documentsAndScholarshipChoice.manualReviewTimeframe')}
-                </p>
+                  <p className="text-blue-700 text-sm leading-relaxed">
+                    {t('studentDashboard.documentsAndScholarshipChoice.manualReviewTimeframe')}
+                  </p>
               </div>
 
               {/* Help Section - Collapsible */}

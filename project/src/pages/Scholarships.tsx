@@ -1018,7 +1018,7 @@ const Scholarships: React.FC = () => {
                          {is3800Scholarship(scholarship) ? (
                            <ScholarshipCountdownTimer scholarship={scholarship} />
                          ) : (
-                           <div className={`px-3 py-1.5 rounded-xl text-xs font-bold shadow-lg backdrop-blur-sm border border-white/20 flex items-center gap-1 ${deadlineStatus.bg} ${deadlineStatus.color}`}>
+                                                    <div className={`px-3 py-1.5 rounded-xl text-xs font-bold shadow-lg backdrop-blur-sm border border-white/20 flex items-center gap-1 ${deadlineStatus.bg} ${deadlineStatus.color}`}>
                              <Clock className="h-3 w-3" />
                              {daysLeft <= 0 ? t('scholarshipsPage.scholarshipCard.expired') : `${daysLeft} ${t('scholarshipsPage.scholarshipCard.days')}`}
                            </div>
@@ -1028,14 +1028,14 @@ const Scholarships: React.FC = () => {
                      
                      {/* Card Content */}
                      <div className="p-6 flex-1 flex flex-col">
-                        {/* Header Section */}
-                        <div className="mb-4 flex-1">
+                       {/* Header Section */}
+                       <div className="mb-4 flex-1">
                           {/* Warning for $3800 scholarships - inline version */}
                           <ScholarshipExpiryWarning scholarship={scholarship} variant="badge" className="mb-3" />
                           
-                          <h3 id={`scholarship-title-${scholarship.id}`} className={`text-xl font-bold text-slate-900 mb-3 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors duration-300`}>
-                            {scholarship.title}
-                          </h3>
+                         <h3 id={`scholarship-title-${scholarship.id}`} className={`text-xl font-bold text-slate-900 mb-3 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors duration-300`}>
+                           {scholarship.title}
+                         </h3>
                          
                          {/* Field and Level Badges */}
                         <div className={`flex flex-wrap items-center gap-2 mb-3`}>

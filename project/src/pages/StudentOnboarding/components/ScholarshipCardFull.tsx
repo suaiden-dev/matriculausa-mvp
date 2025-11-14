@@ -32,13 +32,15 @@ interface ScholarshipCardFullProps {
   isSelected: boolean;
   onToggle: () => void;
   userProfile?: any;
+  isLocked?: boolean;
 }
 
 export const ScholarshipCardFull: React.FC<ScholarshipCardFullProps> = ({
   scholarship,
   isSelected,
   onToggle,
-  userProfile
+  userProfile,
+  isLocked = false
 }) => {
   const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(false);
@@ -239,14 +241,21 @@ export const ScholarshipCardFull: React.FC<ScholarshipCardFullProps> = ({
             <button
               type="button"
               onClick={onToggle}
+              disabled={isLocked}
               className={`w-full h-10 px-4 rounded-lg font-bold text-sm flex items-center justify-center transition-all duration-300 ${
-                isSelected
+                isLocked
+                  ? 'bg-slate-300 text-slate-500 cursor-not-allowed opacity-60'
+                  : isSelected
                   ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 shadow-md'
                   : 'bg-gradient-to-r from-blue-400 to-blue-500 text-white hover:from-blue-500 hover:to-blue-600'
               }`}
             >
               <Award className="h-4 w-4 mr-2" />
-              {isSelected ? 'Remove from Selection' : t('studentDashboard.findScholarships.scholarshipCard.selectScholarship')}
+              {isLocked 
+                ? 'Já Selecionado'
+                : isSelected 
+                ? 'Remove from Selection' 
+                : t('studentDashboard.findScholarships.scholarshipCard.selectScholarship')}
             </button>
           )}
         </div>

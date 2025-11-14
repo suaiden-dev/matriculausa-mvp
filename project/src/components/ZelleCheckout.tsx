@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Upload, DollarSign, CheckCircle, AlertCircle, X, Clock } from 'lucide-react';
+import { Upload, DollarSign, CheckCircle, AlertCircle, X, Clock, Loader2, FileUp, Send, Sparkles } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { usePaymentBlocked } from '../hooks/usePaymentBlocked';
 import { supabase } from '../lib/supabase';
+import { generateUUID } from '../utils/uuid';
 
 interface ZelleCheckoutProps {
   feeType: 'selection_process' | 'application_fee' | 'enrollment_fee' | 'scholarship_fee';
@@ -31,19 +32,7 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
   onProcessingChange
 }) => {
   const { user } = useAuth();
-  const { isBlocked, pendingPayment: blockedPendingPayment, loading: paymentBlockedLoading } = usePaymentBlocked();
-  
-  console.log('🔍 [ZelleCheckout] Componente renderizado com props:', {
-    feeType,
-    amount,
-    metadata,
-    discount_applied: metadata?.discount_applied,
-    original_amount: metadata?.original_amount,
-    final_amount: metadata?.final_amount,
-    isBlocked,
-    hasPendingPayment: !!blockedPendingPayment,
-    paymentBlockedLoading
-  });
+  const { isBlocked, pendingPayment: blockedPendingPayment, rejectedPayment: blockedRejectedPayment, approvedPayment: blockedApprovedPayment, loading: paymentBlockedLoading } = usePaymentBlocked();
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<'instructions' | 'analyzing' | 'success' | 'under_review' | 'rejected'>('instructions');
   const [comprovanteFile, setComprovanteFile] = useState<File | null>(null);
@@ -54,161 +43,680 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
   const [rejectionReason, setRejectionReason] = useState<string | null>(null);
   const [timeElapsed, setTimeElapsed] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploadStep, setUploadStep] = useState<'uploading' | 'sending' | 'analyzing'>('uploading');
+  const [uploadProgress, setUploadProgress] = useState(0);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Usar usePaymentBlocked para verificar pagamentos pendentes
+  const lastProcessedPaymentIdRef = useRef<string | null>(null);
+  const lastProcessedRejectedIdRef = useRef<string | null>(null);
+  const lastDataKeyRef = useRef<string | null>(null);
+  const stepRef = useRef(step);
+  const zellePaymentIdRef = useRef(zellePaymentId);
+  const rejectionReasonRef = useRef(rejectionReason);
+  const paymentStatusRef = useRef(paymentStatus);
+  const isProcessingRef = useRef(isProcessing);
+  
+  // Atualizar refs quando estados mudam
   useEffect(() => {
-    // IMPORTANTE: Não executar este useEffect se já está em 'rejected' ou 'success' - esses são estados finais
-    // Também não executar se há rejectionReason (significa que foi rejeitado)
-    if (step === 'rejected' || step === 'success' || rejectionReason) {
-      if (rejectionReason && step !== 'rejected') {
-        // Se há rejectionReason mas step não é 'rejected', garantir que seja
-        console.log('🔒 [ZelleCheckout] Há motivo de rejeição mas step não é rejected - corrigindo');
+    stepRef.current = step;
+  }, [step]);
+  
+  useEffect(() => {
+    zellePaymentIdRef.current = zellePaymentId;
+  }, [zellePaymentId]);
+  
+  useEffect(() => {
+    rejectionReasonRef.current = rejectionReason;
+  }, [rejectionReason]);
+  
+  useEffect(() => {
+    paymentStatusRef.current = paymentStatus;
+  }, [paymentStatus]);
+  
+  useEffect(() => {
+    isProcessingRef.current = isProcessing;
+  }, [isProcessing]);
+
+  // Função helper para determinar o estado do pagamento baseado nos dados do banco
+  const determinePaymentState = (
+    pendingPayment: typeof blockedPendingPayment,
+    rejectedPayment: typeof blockedRejectedPayment,
+    approvedPayment: typeof blockedApprovedPayment,
+    currentStep: typeof step,
+    currentZellePaymentId: string | null,
+    currentRejectionReason: string | null
+  ): {
+    step: typeof step;
+    paymentStatus: typeof paymentStatus;
+    zellePaymentId: string | null;
+    rejectionReason: string | null;
+    isProcessing: boolean;
+  } => {
+    // PRIORIDADE 1: Se há pagamento aprovado recente, sempre mostrar success
+    // CRÍTICO: Só considerar pagamento aprovado se o fee_type corresponder EXATAMENTE ao feeType atual
+    // Não aceitar fee_type null/vazio como match - isso pode causar confusão com pagamentos de outras taxas
+    if (approvedPayment && approvedPayment.fee_type === feeType) {
+      // Se há pagamento pendente, só mostrar aprovação se for o mesmo pagamento
+      if (pendingPayment) {
+        // Se o pagamento aprovado é o mesmo que está pendente (mesmo ID), mostrar success
+        if (approvedPayment.id === pendingPayment.id) {
+          return {
+            step: 'success',
+            paymentStatus: 'approved',
+            zellePaymentId: approvedPayment.id,
+            rejectionReason: null,
+            isProcessing: false
+          };
+        }
+        // Se são pagamentos diferentes, processar o pendente primeiro
+      } else {
+        // Se não há pagamento pendente, mostrar aprovação
+        return {
+          step: 'success',
+          paymentStatus: 'approved',
+          zellePaymentId: approvedPayment.id,
+          rejectionReason: null,
+          isProcessing: false
+        };
+      }
+    }
+
+    // Estados finais não mudam a menos que haja nova informação do banco
+    if (currentStep === 'success') {
+      return {
+        step: 'success',
+        paymentStatus: 'approved',
+        zellePaymentId: currentZellePaymentId,
+        rejectionReason: null,
+        isProcessing: false
+      };
+    }
+
+    // Se há pagamento rejeitado recente, mostrar rejected APENAS se:
+    // 1. Não há pagamento pendente (para não mostrar rejeição antiga quando há novo pagamento)
+    // 2. OU o pagamento rejeitado é o mesmo que estava pendente (mesmo ID)
+    // CRÍTICO: Só considerar pagamento rejeitado se o fee_type corresponder EXATAMENTE ao feeType atual
+    // Não aceitar fee_type null/vazio como match - isso pode causar confusão com pagamentos de outras taxas
+    // CRÍTICO: Se estamos em 'instructions' ou 'analyzing' ou 'under_review' e há um currentZellePaymentId,
+    // isso significa que acabamos de fazer um novo upload - IGNORAR rejeição antiga completamente
+    if (rejectedPayment && rejectedPayment.fee_type === feeType) {
+      // Se estamos em um estado que indica novo upload (instructions, analyzing, under_review) E temos um zellePaymentId,
+      // isso significa que acabamos de fazer um novo upload - IGNORAR rejeição antiga
+      const isNewUpload = (currentStep === 'instructions' || currentStep === 'analyzing' || currentStep === 'under_review') && 
+                          currentZellePaymentId && 
+                          currentZellePaymentId !== rejectedPayment.id;
+      
+      if (isNewUpload) {
+        // Novo upload em andamento - ignorar rejeição antiga completamente
+        // Continuar processamento abaixo para mostrar o novo pagamento pendente
+      } else if (pendingPayment) {
+        // Se há pagamento pendente, só mostrar rejeição se for o mesmo pagamento
+        if (rejectedPayment.id === pendingPayment.id) {
+          return {
+            step: 'rejected',
+            paymentStatus: 'rejected',
+            zellePaymentId: rejectedPayment.id,
+            rejectionReason: rejectedPayment.admin_notes || 'Payment was rejected by admin',
+            isProcessing: false
+          };
+        }
+        // Se são pagamentos diferentes, ignorar a rejeição antiga e processar o pendente
+      } else {
+        // Se não há pagamento pendente, mostrar rejeição (pode ser rejeição recente)
+        return {
+          step: 'rejected',
+          paymentStatus: 'rejected',
+          zellePaymentId: rejectedPayment.id,
+          rejectionReason: rejectedPayment.admin_notes || 'Payment was rejected by admin',
+          isProcessing: false
+        };
+      }
+    }
+
+    // Se já está em rejected e não há novo pagamento rejeitado, manter rejected
+    if (currentStep === 'rejected') {
+      return {
+        step: 'rejected',
+        paymentStatus: 'rejected',
+        zellePaymentId: currentZellePaymentId,
+        rejectionReason: currentRejectionReason,
+        isProcessing: false
+      };
+    }
+
+    // Se há pagamento pendente, mapear status do banco para estado do componente
+    // CRÍTICO: Só considerar pagamento pendente se o fee_type corresponder EXATAMENTE ao feeType atual
+    // Não aceitar fee_type null/vazio como match - isso pode causar confusão com pagamentos de outras taxas
+    if (pendingPayment && pendingPayment.fee_type === feeType) {
+      const paymentId = pendingPayment.id;
+      
+      switch (pendingPayment.status) {
+        case 'rejected':
+          return {
+            step: 'rejected',
+            paymentStatus: 'rejected',
+            zellePaymentId: paymentId,
+            rejectionReason: null, // Será buscado se necessário
+            isProcessing: false
+          };
+        case 'approved':
+        case 'verified':
+          return {
+            step: 'success',
+            paymentStatus: 'approved',
+            zellePaymentId: paymentId,
+            rejectionReason: null,
+            isProcessing: false
+          };
+        case 'pending_verification':
+          return {
+            step: 'under_review',
+            paymentStatus: 'under_review',
+            zellePaymentId: paymentId,
+            rejectionReason: null,
+            isProcessing: true
+          };
+        case 'pending':
+        default:
+          return {
+            step: 'analyzing',
+            paymentStatus: 'analyzing',
+            zellePaymentId: paymentId,
+            rejectionReason: null,
+            isProcessing: true
+          };
+      }
+    }
+
+    // IMPORTANTE: Se temos um zellePaymentId mas não há pendingPayment nem rejectedPayment,
+    // pode ser que o pagamento foi rejeitado recentemente e o hook ainda não atualizou.
+    // Neste caso, manter o estado atual (analyzing/under_review) para evitar reset prematuro.
+    // O polling ou próximo ciclo do usePaymentBlocked vai detectar a rejeição.
+    if (currentZellePaymentId && !pendingPayment && !rejectedPayment && (currentStep === 'analyzing' || currentStep === 'under_review')) {
+      // Manter estado atual enquanto aguarda atualização do hook
+      return {
+        step: currentStep,
+        paymentStatus: currentStep === 'under_review' ? 'under_review' : 'analyzing',
+        zellePaymentId: currentZellePaymentId,
+        rejectionReason: currentRejectionReason,
+        isProcessing: true
+      };
+    }
+
+    // Se não há pagamento pendente ou rejeitado, e não está em estado final, mostrar instruções
+    // MAS apenas se realmente não há nenhum pagamento relacionado
+    if (currentStep !== 'rejected' && currentStep !== 'success' && !currentZellePaymentId) {
+      return {
+        step: 'instructions',
+        paymentStatus: 'analyzing',
+        zellePaymentId: null,
+        rejectionReason: null,
+        isProcessing: false
+      };
+    }
+
+    // Manter estado atual se não há mudanças
+    return {
+      step: currentStep,
+      paymentStatus: currentStep === 'rejected' ? 'rejected' : currentStep === 'success' ? 'approved' : currentStep === 'under_review' ? 'under_review' : 'analyzing',
+      zellePaymentId: currentZellePaymentId,
+      rejectionReason: currentRejectionReason,
+      isProcessing: currentStep === 'analyzing' || currentStep === 'under_review'
+    };
+  };
+
+  // useEffect inicial: verificar pagamentos pendentes/rejeitados ao montar o componente
+  useEffect(() => {
+    // Ao montar, se não há estado definido mas há pagamento pendente/rejeitado, atualizar imediatamente
+    if (!paymentBlockedLoading && step === 'instructions' && !zellePaymentId) {
+      if (blockedPendingPayment && blockedPendingPayment.fee_type === feeType) {
+        // Há pagamento pendente - atualizar estado imediatamente
+        const newState = determinePaymentState(
+          blockedPendingPayment,
+          blockedRejectedPayment,
+          blockedApprovedPayment,
+          'instructions',
+          null,
+          null
+        );
+        setStep(newState.step);
+        setPaymentStatus(newState.paymentStatus);
+        setZellePaymentId(newState.zellePaymentId);
+        setIsProcessing(newState.isProcessing);
+        onProcessingChange?.(newState.isProcessing);
+        
+        // Atualizar refs
+        stepRef.current = newState.step;
+        paymentStatusRef.current = newState.paymentStatus;
+        zellePaymentIdRef.current = newState.zellePaymentId;
+        isProcessingRef.current = newState.isProcessing;
+      } else if (blockedApprovedPayment && blockedApprovedPayment.fee_type === feeType) {
+        // Há pagamento aprovado - atualizar estado imediatamente
+        setStep('success');
+        setPaymentStatus('approved');
+        setZellePaymentId(blockedApprovedPayment.id);
+        setRejectionReason(null);
+        setIsProcessing(false);
+        onProcessingChange?.(false);
+        
+        // Atualizar refs
+        stepRef.current = 'success';
+        paymentStatusRef.current = 'approved';
+        zellePaymentIdRef.current = blockedApprovedPayment.id;
+        isProcessingRef.current = false;
+        
+        // Chamar onSuccess para avançar para próxima step
+        onSuccess?.();
+      } else if (blockedRejectedPayment && blockedRejectedPayment.fee_type === feeType) {
+        // Há pagamento rejeitado - atualizar estado imediatamente
         setStep('rejected');
         setPaymentStatus('rejected');
+        setZellePaymentId(blockedRejectedPayment.id);
+        setRejectionReason(blockedRejectedPayment.admin_notes || 'Payment was rejected by admin');
         setIsProcessing(false);
         onProcessingChange?.(false);
-      } else {
-        console.log('🔒 [ZelleCheckout] Estado final (rejected/success) - não executando verificação de bloqueio', {
-          step,
-          hasRejectionReason: !!rejectionReason
-        });
+        
+        // Atualizar refs
+        stepRef.current = 'rejected';
+        paymentStatusRef.current = 'rejected';
+        zellePaymentIdRef.current = blockedRejectedPayment.id;
+        rejectionReasonRef.current = blockedRejectedPayment.admin_notes || 'Payment was rejected by admin';
+        isProcessingRef.current = false;
       }
-      return;
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paymentBlockedLoading, blockedPendingPayment?.id, blockedRejectedPayment?.id, blockedApprovedPayment?.id, feeType]);
 
-    console.log('🔍 [ZelleCheckout] Verificando estado de bloqueio:', {
-      isBlocked,
-      hasPendingPayment: !!blockedPendingPayment,
-      paymentBlockedLoading,
-      pendingPaymentFeeType: blockedPendingPayment?.fee_type,
-      currentFeeType: feeType,
-      currentStep: step
-    });
-
+  // useEffect principal: sincronizar estado com dados do banco
+  useEffect(() => {
     // Se está carregando, aguardar
     if (paymentBlockedLoading) {
-      console.log('⏳ [ZelleCheckout] Aguardando verificação de pagamentos pendentes...');
       return;
     }
 
-        // Se há pagamento pendente (de qualquer tipo ou do tipo específico)
-        if (isBlocked && blockedPendingPayment) {
-          console.log('🚫 [ZelleCheckout] Pagamento pendente detectado:', {
-            id: blockedPendingPayment.id,
-            status: blockedPendingPayment.status,
-            fee_type: blockedPendingPayment.fee_type,
-            amount: blockedPendingPayment.amount,
-            created_at: blockedPendingPayment.created_at
-          });
-
-          // Se o pagamento pendente é do mesmo feeType OU se queremos bloquear qualquer pagamento pendente
-          const isRelevantPayment = blockedPendingPayment.fee_type === feeType || true; // Bloquear para qualquer pagamento pendente
-          
-          if (isRelevantPayment) {
-            setIsProcessing(true);
-            setZellePaymentId(blockedPendingPayment.id);
-            onProcessingChange?.(true);
-            
-            // Calcular tempo decorrido desde a criação do pagamento
-            const createdAt = new Date(blockedPendingPayment.created_at);
-            const now = new Date();
-            const elapsed = Math.floor((now.getTime() - createdAt.getTime()) / 1000);
-            setTimeElapsed(elapsed);
-            
-            console.log('🔄 [ZelleCheckout] Configurando estado de processamento:', {
-              status: blockedPendingPayment.status,
-              elapsedSeconds: elapsed
-            });
-            
-            // Buscar admin_notes se rejeitado
-            if (blockedPendingPayment.status === 'rejected') {
-              console.log('📋 [ZelleCheckout] Status: rejected → rejected');
-              setStep('rejected');
-              setPaymentStatus('rejected');
-              setIsProcessing(false);
-              onProcessingChange?.(false);
-              // Garantir que o zellePaymentId está setado para o polling funcionar
-              if (!zellePaymentId) {
-                setZellePaymentId(blockedPendingPayment.id);
-              }
-              // Buscar motivo da rejeição
-              supabase
-                .from('zelle_payments')
-                .select('admin_notes')
-                .eq('id', blockedPendingPayment.id)
-                .maybeSingle()
-                .then(({ data }) => {
-                  if (data?.admin_notes) {
-                    setRejectionReason(data.admin_notes);
-                  } else {
-                    setRejectionReason('Payment was rejected by admin');
-                  }
-                });
-            } else if (blockedPendingPayment.status === 'pending_verification') {
-              console.log('📋 [ZelleCheckout] Status: pending_verification → under_review');
-              setStep('under_review');
-              setPaymentStatus('under_review');
-              // Garantir que o zellePaymentId está setado para o polling funcionar
-              if (!zellePaymentId) {
-                setZellePaymentId(blockedPendingPayment.id);
-              }
-            } else if (blockedPendingPayment.status === 'pending') {
-              console.log('📋 [ZelleCheckout] Status: pending → analyzing');
-              setStep('analyzing');
-              setPaymentStatus('analyzing');
-              // Garantir que o zellePaymentId está setado para o polling funcionar
-              if (!zellePaymentId) {
-                setZellePaymentId(blockedPendingPayment.id);
-              }
-            } else if (blockedPendingPayment.status === 'approved') {
-              console.log('✅ [ZelleCheckout] Status: approved → success');
-              setStep('success');
-              setPaymentStatus('approved');
-              setIsProcessing(false);
-              onProcessingChange?.(false);
-              onSuccess?.();
-            } else {
-              console.log('⚠️ [ZelleCheckout] Status inesperado:', blockedPendingPayment.status, '→ under_review');
-              setStep('under_review');
-              setPaymentStatus('under_review');
-              // Garantir que o zellePaymentId está setado para o polling funcionar
-              if (!zellePaymentId) {
-                setZellePaymentId(blockedPendingPayment.id);
-              }
-            }
-            return;
-          }
-        }
-
-    // Se não há pagamento pendente, mostrar formulário
-    // IMPORTANTE: Não resetar se já está em 'rejected' ou 'success' - esses estados são finais
-    // Também não resetar se há rejectionReason (significa que foi rejeitado)
-    if (!isBlocked && !blockedPendingPayment) {
-      // Verificação adicional: se há rejectionReason, significa que foi rejeitado - não resetar
-      if (rejectionReason) {
-        console.log('🔒 [ZelleCheckout] Há motivo de rejeição - mantendo estado rejected');
-        // Garantir que o step está como 'rejected' se há rejectionReason
-        if (step !== 'rejected') {
-          console.log('🔒 [ZelleCheckout] Corrigindo step para rejected (há rejectionReason)');
-          setStep('rejected');
-          setPaymentStatus('rejected');
-          setIsProcessing(false);
-          onProcessingChange?.(false);
-        }
+    // CRÍTICO: Se acabamos de fazer um novo upload (temos zellePaymentId mas step é analyzing/under_review),
+    // e há uma rejeição antiga no hook, IGNORAR completamente a rejeição antiga até que o novo pagamento apareça no hook
+    if ((stepRef.current === 'analyzing' || stepRef.current === 'under_review') && 
+        zellePaymentIdRef.current && 
+        blockedRejectedPayment && 
+        blockedRejectedPayment.id !== zellePaymentIdRef.current) {
+      // Novo upload em andamento - ignorar rejeição antiga completamente
+      // Não processar até que o novo pagamento apareça no hook
+      if (!blockedPendingPayment || blockedPendingPayment.id !== zellePaymentIdRef.current) {
+        // Ainda não temos o novo pagamento no hook - aguardar
         return;
       }
-      // Só resetar se não está em 'rejected' ou 'success' E não há rejectionReason
-      if (step !== 'rejected' && step !== 'success') {
-        console.log('✅ [ZelleCheckout] Nenhum pagamento pendente - mostrando formulário');
-        setStep('instructions');
-        setIsProcessing(false);
-        setZellePaymentId(null);
-        onProcessingChange?.(false);
-      }
     }
-  }, [isBlocked, blockedPendingPayment, paymentBlockedLoading, feeType, onProcessingChange, step, rejectionReason]);
+
+    // Verificar se os dados do banco mudaram (usar refs para evitar processamento duplicado)
+    const currentPendingId = blockedPendingPayment?.id || null;
+    const currentRejectedId = blockedRejectedPayment?.id || null;
+    const currentPendingStatus = blockedPendingPayment?.status || null;
+    const currentRejectedStatus = blockedRejectedPayment?.status || null;
+    
+    // Criar chave única para identificar mudanças significativas
+    const dataKey = `${currentPendingId}-${currentPendingStatus}-${currentRejectedId}-${currentRejectedStatus}`;
+    
+    // Se não há mudança significativa, não processar novamente
+    // EXCETO se estamos em analyzing/under_review e acabamos de definir manualmente (após resposta n8n)
+    // Neste caso, permitir processamento para sincronizar com o banco, mas não resetar o estado
+    if (dataKey === lastDataKeyRef.current) {
+      // Se acabamos de processar resposta do n8n e ainda não há pendingPayment no hook,
+      // não resetar o estado (aguardar hook atualizar)
+      if ((stepRef.current === 'analyzing' || stepRef.current === 'under_review') && 
+          !blockedPendingPayment && zellePaymentIdRef.current) {
+        // Não resetar - manter estado definido manualmente após resposta n8n
+        return;
+      }
+      return;
+    }
+
+    // Atualizar refs ANTES de processar para evitar reprocessamento
+    lastDataKeyRef.current = dataKey;
+    if (currentPendingId) {
+      lastProcessedPaymentIdRef.current = currentPendingId;
+    }
+    if (currentRejectedId) {
+      lastProcessedRejectedIdRef.current = currentRejectedId;
+    }
+
+    // Usar função helper para determinar estado baseado nos dados do banco
+    // Usar refs para acessar valores atuais sem depender deles nas dependências
+    const newState = determinePaymentState(
+      blockedPendingPayment,
+      blockedRejectedPayment,
+      blockedApprovedPayment,
+      stepRef.current,
+      zellePaymentIdRef.current,
+      rejectionReasonRef.current
+    );
+
+    // Aplicar mudanças apenas se necessário (comparar com refs)
+    if (newState.step !== stepRef.current) {
+      setStep(newState.step);
+    }
+    if (newState.zellePaymentId !== zellePaymentIdRef.current) {
+      setZellePaymentId(newState.zellePaymentId);
+    }
+    if (newState.rejectionReason !== rejectionReasonRef.current) {
+      setRejectionReason(newState.rejectionReason);
+    }
+    if (newState.paymentStatus !== paymentStatusRef.current) {
+      setPaymentStatus(newState.paymentStatus);
+    }
+    if (newState.isProcessing !== isProcessingRef.current) {
+      setIsProcessing(newState.isProcessing);
+      onProcessingChange?.(newState.isProcessing);
+    }
+
+    // Calcular tempo decorrido se há pagamento pendente
+    if (blockedPendingPayment && blockedPendingPayment.fee_type === feeType) {
+      const createdAt = new Date(blockedPendingPayment.created_at);
+      const now = new Date();
+      const elapsed = Math.floor((now.getTime() - createdAt.getTime()) / 1000);
+      setTimeElapsed(elapsed);
+    }
+
+    // Se status mudou para approved, chamar onSuccess (apenas uma vez)
+    if (newState.step === 'success' && stepRef.current !== 'success') {
+      onSuccess?.();
+    }
+            
+    // Buscar admin_notes se necessário (quando status é rejected mas não temos motivo)
+    if (newState.step === 'rejected' && !newState.rejectionReason && newState.zellePaymentId) {
+      supabase
+        .from('zelle_payments')
+        .select('admin_notes, status')
+        .eq('id', newState.zellePaymentId)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data?.admin_notes) {
+            setRejectionReason(data.admin_notes);
+          }
+          // Se o status no banco é rejected mas não temos rejectedPayment do hook,
+          // forçar atualização do estado
+          if (data?.status === 'rejected' && !blockedRejectedPayment) {
+            // Isso vai forçar uma nova verificação no próximo ciclo
+            lastDataKeyRef.current = null;
+          }
+        });
+    }
+    
+    // Verificação adicional: se temos zellePaymentId mas não há pendingPayment nem rejectedPayment,
+    // verificar diretamente no banco se foi aprovado ou rejeitado (apenas quando estamos em analyzing/under_review)
+    // Isso evita que o estado seja resetado prematuramente quando o admin aprova/rejeita
+    // TAMBÉM verificar se há pendingPayment com status approved/verified ou rejected (caso o hook ainda não atualizou)
+    
+    // PRIORIDADE 1: Verificar se pagamento foi APROVADO
+    if (blockedPendingPayment && 
+        (blockedPendingPayment.status === 'approved' || blockedPendingPayment.status === 'verified') && 
+        blockedPendingPayment.fee_type === feeType) {
+      // Pagamento pendente foi aprovado! Atualizar estado imediatamente
+      setStep('success');
+      setPaymentStatus('approved');
+      setZellePaymentId(blockedPendingPayment.id);
+      setRejectionReason(null);
+      setIsProcessing(false);
+      onProcessingChange?.(false);
+      
+      // Atualizar refs
+      stepRef.current = 'success';
+      paymentStatusRef.current = 'approved';
+      zellePaymentIdRef.current = blockedPendingPayment.id;
+      isProcessingRef.current = false;
+      
+      // Chamar onSuccess para avançar para próxima step
+      onSuccess?.();
+    }
+    // PRIORIDADE 2: Verificar se pagamento foi REJEITADO
+    else if (blockedPendingPayment && blockedPendingPayment.status === 'rejected' && blockedPendingPayment.fee_type === feeType) {
+      // Pagamento pendente foi rejeitado! Atualizar estado imediatamente
+      setStep('rejected');
+      setPaymentStatus('rejected');
+      setZellePaymentId(blockedPendingPayment.id);
+      setRejectionReason(null); // Será buscado abaixo
+      setIsProcessing(false);
+      onProcessingChange?.(false);
+      
+      // Buscar admin_notes
+      supabase
+        .from('zelle_payments')
+        .select('admin_notes')
+        .eq('id', blockedPendingPayment.id)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data?.admin_notes) {
+            setRejectionReason(data.admin_notes);
+          }
+        });
+      
+      // Atualizar refs
+      stepRef.current = 'rejected';
+      paymentStatusRef.current = 'rejected';
+      zellePaymentIdRef.current = blockedPendingPayment.id;
+      isProcessingRef.current = false;
+    } 
+    // IMPORTANTE: Se tínhamos um pendingPayment antes mas agora não temos mais (e não temos rejectedPayment),
+    // pode ser que o pagamento foi aprovado ou rejeitado e o hook ainda não atualizou. Verificar diretamente no banco.
+    else if (lastProcessedPaymentIdRef.current && !blockedPendingPayment && !blockedRejectedPayment && 
+        (stepRef.current === 'analyzing' || stepRef.current === 'under_review' || stepRef.current === 'instructions')) {
+      // Tínhamos um pagamento pendente que desapareceu - verificar se foi aprovado ou rejeitado
+      const checkIfApprovedOrRejected = async () => {
+        try {
+          const { data } = await supabase
+            .from('zelle_payments')
+            .select('id, status, admin_notes, fee_type')
+            .eq('id', lastProcessedPaymentIdRef.current)
+            .eq('fee_type', feeType)
+            .maybeSingle();
+          
+          if (data?.status === 'approved' || data?.status === 'verified') {
+            // Pagamento foi aprovado! Atualizar estado imediatamente
+            setStep('success');
+            setPaymentStatus('approved');
+            setZellePaymentId(data.id);
+            setRejectionReason(null);
+            setIsProcessing(false);
+            onProcessingChange?.(false);
+            
+            // Atualizar refs
+            stepRef.current = 'success';
+            paymentStatusRef.current = 'approved';
+            zellePaymentIdRef.current = data.id;
+            isProcessingRef.current = false;
+            
+            // Chamar onSuccess para avançar para próxima step
+            onSuccess?.();
+            
+            // Forçar atualização do hook na próxima verificação
+            lastDataKeyRef.current = null;
+          } else if (data?.status === 'rejected') {
+            // Pagamento foi rejeitado! Atualizar estado imediatamente
+            setStep('rejected');
+            setPaymentStatus('rejected');
+            setZellePaymentId(data.id);
+            setRejectionReason(data.admin_notes || 'Payment was rejected by admin');
+            setIsProcessing(false);
+            onProcessingChange?.(false);
+            
+            // Atualizar refs
+            stepRef.current = 'rejected';
+            paymentStatusRef.current = 'rejected';
+            zellePaymentIdRef.current = data.id;
+            rejectionReasonRef.current = data.admin_notes || 'Payment was rejected by admin';
+            isProcessingRef.current = false;
+            
+            // Forçar atualização do hook na próxima verificação
+            lastDataKeyRef.current = null;
+          }
+        } catch (error) {
+          console.error('❌ [ZelleCheckout] Erro ao verificar se pagamento foi aprovado/rejeitado:', error);
+        }
+      };
+      
+      // Executar verificação com pequeno delay para evitar race conditions
+      setTimeout(checkIfApprovedOrRejected, 300);
+    } else if (zellePaymentIdRef.current && !blockedPendingPayment && !blockedRejectedPayment && 
+        (stepRef.current === 'analyzing' || stepRef.current === 'under_review')) {
+      // Usar um timeout para evitar múltiplas verificações simultâneas
+      const checkApprovalOrRejection = async () => {
+        try {
+          const { data } = await supabase
+            .from('zelle_payments')
+            .select('id, status, admin_notes, fee_type')
+            .eq('id', zellePaymentIdRef.current)
+            .eq('fee_type', feeType)
+            .maybeSingle();
+          
+          if (data?.status === 'approved' || data?.status === 'verified') {
+            // Pagamento foi aprovado! Atualizar estado imediatamente
+            setStep('success');
+            setPaymentStatus('approved');
+            setZellePaymentId(data.id);
+            setRejectionReason(null);
+            setIsProcessing(false);
+            onProcessingChange?.(false);
+            
+            // Atualizar refs
+            stepRef.current = 'success';
+            paymentStatusRef.current = 'approved';
+            zellePaymentIdRef.current = data.id;
+            isProcessingRef.current = false;
+            
+            // Chamar onSuccess para avançar para próxima step
+            onSuccess?.();
+            
+            // Forçar atualização do hook na próxima verificação
+            lastDataKeyRef.current = null;
+          } else if (data?.status === 'rejected') {
+            // Pagamento foi rejeitado! Atualizar estado imediatamente
+            setStep('rejected');
+            setPaymentStatus('rejected');
+            setZellePaymentId(data.id);
+            setRejectionReason(data.admin_notes || 'Payment was rejected by admin');
+            setIsProcessing(false);
+            onProcessingChange?.(false);
+            
+            // Atualizar refs
+            stepRef.current = 'rejected';
+            paymentStatusRef.current = 'rejected';
+            zellePaymentIdRef.current = data.id;
+            rejectionReasonRef.current = data.admin_notes || 'Payment was rejected by admin';
+            isProcessingRef.current = false;
+            
+            // Forçar atualização do hook na próxima verificação
+            lastDataKeyRef.current = null;
+          }
+        } catch (error) {
+          console.error('❌ [ZelleCheckout] Erro ao verificar aprovação/rejeição:', error);
+        }
+      };
+      
+      // Executar apenas uma vez por ciclo, com pequeno delay para evitar race conditions
+      setTimeout(checkApprovalOrRejection, 500);
+    }
+    // IMPORTANTE: Dependências apenas dos dados do banco, não dos estados locais que atualizamos
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isBlocked, blockedPendingPayment?.id, blockedPendingPayment?.status, blockedRejectedPayment?.id, blockedRejectedPayment?.status, blockedApprovedPayment?.id, blockedApprovedPayment?.status, paymentBlockedLoading, feeType]);
+
+  // Polling controlado para atualizações rápidas quando há pagamento em processamento
+  // Funciona para TODOS os tipos de taxa: selection_process, application_fee, scholarship_fee, enrollment_fee
+  useEffect(() => {
+    // Polling apenas quando:
+    // - Há zellePaymentId definido
+    // - Estado NÃO é final (rejected ou success)
+    // - Estado é analyzing ou under_review (aguardando resultado)
+    if (!zellePaymentId || step === 'rejected' || step === 'success' || step === 'instructions') {
+      return;
+              }
+
+    if (step !== 'analyzing' && step !== 'under_review') {
+      return;
+    }
+
+    console.log(`🔄 [ZelleCheckout] Iniciando polling para paymentId: ${zellePaymentId}, feeType: ${feeType}`);
+
+    const pollPaymentStatus = async () => {
+      try {
+        const { data: paymentData, error } = await supabase
+          .from('zelle_payments')
+          .select('id, status, admin_notes, fee_type')
+          .eq('id', zellePaymentId)
+          .eq('fee_type', feeType)
+          .maybeSingle();
+
+        if (error) {
+          console.error('❌ [ZelleCheckout] Erro ao fazer polling:', error);
+          return;
+        }
+
+        if (!paymentData) {
+          console.log('⚠️ [ZelleCheckout] Pagamento não encontrado no polling');
+            return;
+          }
+
+        // Se status mudou para rejeitado, atualizar estado imediatamente
+        // Funciona para TODOS os tipos de taxa (application_fee, scholarship_fee, etc.)
+        if (paymentData.status === 'rejected') {
+          console.log(`🚫 [ZelleCheckout] Rejeição detectada no polling para ${feeType}, atualizando estado`);
+          setStep('rejected');
+          setPaymentStatus('rejected');
+          setRejectionReason(paymentData.admin_notes || 'Payment was rejected by admin');
+          setIsProcessing(false);
+          onProcessingChange?.(false);
+          
+          // Atualizar refs
+          stepRef.current = 'rejected';
+          paymentStatusRef.current = 'rejected';
+          rejectionReasonRef.current = paymentData.admin_notes || 'Payment was rejected by admin';
+          isProcessingRef.current = false;
+          
+          // Forçar atualização do hook na próxima verificação
+          lastDataKeyRef.current = null;
+          return;
+        }
+
+        // Se status é aprovado, atualizar estado imediatamente
+        // Funciona para TODOS os tipos de taxa (application_fee, scholarship_fee, etc.)
+        if (paymentData.status === 'approved' || paymentData.status === 'verified') {
+          console.log(`✅ [ZelleCheckout] Aprovação detectada no polling para ${feeType}, atualizando estado`);
+          setStep('success');
+          setPaymentStatus('approved');
+          setRejectionReason(null);
+          setIsProcessing(false);
+          onProcessingChange?.(false);
+          
+          // Atualizar refs
+          stepRef.current = 'success';
+          paymentStatusRef.current = 'approved';
+          isProcessingRef.current = false;
+          
+          // Chamar onSuccess para avançar para próxima step
+          onSuccess?.();
+          
+          // Forçar atualização do hook na próxima verificação
+          lastDataKeyRef.current = null;
+          return;
+        }
+      } catch (error) {
+        console.error('❌ [ZelleCheckout] Erro no polling:', error);
+      }
+    };
+
+    // Primeira verificação imediata
+    pollPaymentStatus();
+
+    // Polling a cada 10 segundos para detectar mudanças mais rapidamente
+    const interval = setInterval(() => {
+      pollPaymentStatus();
+    }, 10000);
+
+    return () => {
+      console.log('🛑 [ZelleCheckout] Parando polling');
+      clearInterval(interval);
+    };
+  }, [zellePaymentId, step, rejectionReason]);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -247,6 +755,20 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
     if (!comprovanteFile) return null;
     
     try {
+      setUploadStep('uploading');
+      setUploadProgress(0);
+      
+      // Simular progresso do upload (Supabase não fornece progresso real, então simulamos)
+      const progressInterval = setInterval(() => {
+        setUploadProgress(prev => {
+          if (prev >= 90) {
+            clearInterval(progressInterval);
+            return 90;
+          }
+          return prev + 10;
+        });
+      }, 200);
+      
       // Usar nome de arquivo organizado: timestamp_fee_type.extension
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
       const fileExt = comprovanteFile.name.split('.').pop()?.toLowerCase();
@@ -257,6 +779,9 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
         .from('zelle_comprovantes')
         .upload(filePath, comprovanteFile);
       
+      clearInterval(progressInterval);
+      setUploadProgress(100);
+      
       if (uploadError) {
         throw uploadError;
       }
@@ -264,6 +789,9 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
       const { data: { publicUrl } } = supabase.storage
         .from('zelle_comprovantes')
         .getPublicUrl(filePath);
+      
+      // Pequeno delay para mostrar 100%
+      await new Promise(resolve => setTimeout(resolve, 300));
       
       return publicUrl;
     } catch (error) {
@@ -329,137 +857,6 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
     }
   };
 
-  // Polling contínuo para verificar status do pagamento
-  // IMPORTANTE: Continuar polling mesmo quando está em 'under_review' para detectar rejeição/aprovação
-  useEffect(() => {
-    // IMPORTANTE: NÃO fazer polling se já está em 'rejected' ou 'success' - esses são estados finais
-    // Também não fazer polling se há rejectionReason (significa que foi rejeitado)
-    if (step === 'rejected' || step === 'success' || rejectionReason) {
-      if (rejectionReason && step !== 'rejected') {
-        // Se há rejectionReason mas step não é 'rejected', garantir que seja
-        console.log('🔒 [ZelleCheckout] Há motivo de rejeição mas step não é rejected - corrigindo no polling');
-        setStep('rejected');
-        setPaymentStatus('rejected');
-        setIsProcessing(false);
-        onProcessingChange?.(false);
-      } else {
-        console.log('🔒 [ZelleCheckout] Estado final (rejected/success) - não iniciando polling');
-      }
-      return;
-    }
-    
-    // Continuar polling se está processando OU se está em under_review/analyzing (aguardando decisão do admin)
-    // NÃO parar o polling se está em under_review, mesmo que isProcessing seja false
-    if (step !== 'under_review' && step !== 'analyzing' && !isProcessing) return;
-    
-    // Usar o ID do pagamento pendente do hook ou do estado local
-    // Priorizar zellePaymentId (do estado local) sobre blockedPendingPayment
-    const paymentIdToCheck = zellePaymentId || blockedPendingPayment?.id;
-    if (!paymentIdToCheck || !user?.id) {
-      console.log('⏳ [ZelleCheckout] Polling não iniciado - sem paymentId ou user:', { paymentIdToCheck, userId: user?.id });
-      return;
-    }
-    
-    console.log('🔄 [ZelleCheckout] Iniciando polling para paymentId:', paymentIdToCheck, 'step:', step);
-    
-    const interval = setInterval(async () => {
-      try {
-        // Primeiro tentar buscar pelo ID específico (mais preciso)
-        let payment = null;
-        let error = null;
-        
-        if (paymentIdToCheck) {
-          const { data, error: fetchError } = await supabase
-            .from('zelle_payments')
-            .select('id, status, admin_notes')
-            .eq('id', paymentIdToCheck)
-            .maybeSingle();
-          
-          payment = data;
-          error = fetchError;
-        }
-        
-        // Se não encontrou pelo ID, buscar o mais recente do usuário para este fee_type
-        if (!payment && !error) {
-          const { data: recentPayment, error: recentError } = await supabase
-            .from('zelle_payments')
-            .select('id, status, admin_notes')
-            .eq('user_id', user.id)
-            .eq('fee_type', feeType)
-            .in('status', ['pending', 'pending_verification', 'approved', 'rejected'])
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
-          
-          payment = recentPayment;
-          error = recentError;
-        }
-        
-        if (payment && !error) {
-          console.log('🔍 [ZelleCheckout] Status do pagamento:', payment.status, 'admin_notes:', payment.admin_notes, 'step atual:', step);
-          
-          // Verificar status
-          if (payment.status === 'approved') {
-            console.log('✅ [ZelleCheckout] Pagamento aprovado - parando polling e avançando');
-            clearInterval(interval);
-            setIsProcessing(false);
-            onProcessingChange?.(false);
-            setPaymentStatus('approved');
-            setStep('success');
-            // Avançar para próxima step automaticamente
-            onSuccess?.();
-            return;
-          } else if (payment.status === 'rejected') {
-            console.log('❌ [ZelleCheckout] Pagamento rejeitado - parando polling e mostrando rejeição');
-            clearInterval(interval);
-            setIsProcessing(false);
-            onProcessingChange?.(false);
-            setPaymentStatus('rejected');
-            setStep('rejected');
-            // Armazenar motivo da rejeição
-            const reason = payment.admin_notes || 'Payment was rejected by admin';
-            setRejectionReason(reason);
-            // Garantir que o zellePaymentId está setado para manter o estado
-            setZellePaymentId(payment.id);
-            console.log('❌ [ZelleCheckout] Pagamento rejeitado. Motivo:', reason);
-            console.log('❌ [ZelleCheckout] Estado atualizado para rejected, zellePaymentId:', payment.id);
-            console.log('❌ [ZelleCheckout] rejectionReason setado:', reason);
-            // IMPORTANTE: Não fazer return aqui - deixar o useEffect terminar normalmente
-            // O return abaixo vai garantir que o polling não reinicie
-            return;
-          } else if (payment.status === 'pending_verification') {
-            // Continuar processando - atualizar estado se necessário
-            if (step !== 'under_review') {
-              console.log('📋 [ZelleCheckout] Mudando para under_review');
-              setPaymentStatus('under_review');
-              setStep('under_review');
-              setIsProcessing(true);
-              onProcessingChange?.(true);
-            }
-          } else if (payment.status === 'pending') {
-            // Ainda em análise inicial
-            if (step !== 'analyzing') {
-              console.log('📋 [ZelleCheckout] Mudando para analyzing');
-              setPaymentStatus('analyzing');
-              setStep('analyzing');
-              setIsProcessing(true);
-              onProcessingChange?.(true);
-            }
-          }
-        } else {
-          console.log('⏳ [ZelleCheckout] Pagamento não encontrado ainda, continuando polling...');
-        }
-      } catch (error) {
-        // Pagamento ainda não foi criado ou erro na busca, continuar verificando
-        console.log('⏳ [ZelleCheckout] Erro no polling, continuando...', error);
-      }
-    }, 3000); // Verificar a cada 3 segundos
-    
-    return () => {
-      console.log('🛑 [ZelleCheckout] Parando polling');
-      clearInterval(interval);
-    };
-  }, [isProcessing, zellePaymentId, blockedPendingPayment?.id, user?.id, feeType, onSuccess, onProcessingChange, step, rejectionReason]);
 
   const handleSubmit = async () => {
     // BLOQUEIO: Não permitir submit se há pagamento pendente
@@ -473,6 +870,9 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
     
     setLoading(true);
     setError(null);
+    setShowUploadModal(true);
+    setUploadStep('uploading');
+    setUploadProgress(0);
     
     try {
       // Upload comprovante
@@ -481,9 +881,24 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
         throw new Error('Failed to upload payment confirmation');
       }
       
+      // Atualizar modal para etapa de envio
+      setUploadStep('sending');
+      setUploadProgress(0);
+      
+      // Simular progresso do envio
+      const sendProgressInterval = setInterval(() => {
+        setUploadProgress(prev => {
+          if (prev >= 80) {
+            clearInterval(sendProgressInterval);
+            return 80;
+          }
+          return prev + 15;
+        });
+      }, 150);
+      
       // Gerar ID único para o pagamento (será usado pelo n8n para criar o registro)
       console.log('💾 [ZelleCheckout] Gerando ID único para o pagamento...');
-      const realPaymentId = crypto.randomUUID();
+      const realPaymentId = generateUUID();
       console.log('✅ [ZelleCheckout] ID gerado:', realPaymentId);
       setZellePaymentId(realPaymentId);
       
@@ -493,7 +908,15 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
       // Enviar para n8n e aguardar resposta (igual ao fluxo padrão)
       const { tempPaymentId, n8nResponse } = await sendToN8n(comprovanteUrl, realPaymentId);
       
-      // Iniciar processamento
+      clearInterval(sendProgressInterval);
+      setUploadProgress(100);
+      
+      // Atualizar para etapa de análise
+      setUploadStep('analyzing');
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
+      // Fechar modal e iniciar processamento
+      setShowUploadModal(false);
       setIsProcessing(true);
       setTimeElapsed(0);
       onProcessingChange?.(true);
@@ -506,9 +929,15 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
         if (isPositiveResponse) {
           setStep('analyzing');
           setPaymentStatus('analyzing');
+          // Atualizar refs imediatamente para evitar sobrescrita
+          stepRef.current = 'analyzing';
+          paymentStatusRef.current = 'analyzing';
         } else {
           setStep('under_review');
           setPaymentStatus('under_review');
+          // Atualizar refs imediatamente para evitar sobrescrita
+          stepRef.current = 'under_review';
+          paymentStatusRef.current = 'under_review';
         }
         
         // ✅ SEMPRE atualizar o pagamento no banco com a imagem e resposta do n8n (igual ao fluxo padrão)
@@ -622,11 +1051,18 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
         // Se não tem resposta imediata, aguardar verificação
         setStep('analyzing');
         setPaymentStatus('analyzing');
+        // Atualizar refs imediatamente para evitar sobrescrita
+        stepRef.current = 'analyzing';
+        paymentStatusRef.current = 'analyzing';
       }
+      
+      // Atualizar zellePaymentIdRef também
+      zellePaymentIdRef.current = realPaymentId;
       
       setLoading(false);
       
     } catch (error: any) {
+      setShowUploadModal(false);
       setError(error.message || 'An error occurred while processing your payment');
       onError?.(error.message);
       setLoading(false);
@@ -640,31 +1076,180 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
     setStep('instructions');
   };
 
+  // Modal de Upload com Animação
+  const UploadModal = () => {
+    // Não mostrar modal em estados finais
+    if (!showUploadModal || step === 'rejected' || step === 'success') return null;
+
+    const getStepInfo = () => {
+      switch (uploadStep) {
+        case 'uploading':
+          return {
+            icon: FileUp,
+            title: 'Uploading Document...',
+            message: 'Please wait while we upload your payment confirmation',
+            bgGradient: 'from-blue-50/50 to-blue-100/30',
+            borderColor: 'border-blue-200',
+            iconGradient: 'from-blue-500 to-blue-600',
+            ringColor: 'border-blue-300',
+            titleColor: 'text-blue-900',
+            progressGradient: 'from-blue-500 to-blue-600',
+            dotColor: 'bg-blue-500'
+          };
+        case 'sending':
+          return {
+            icon: Send,
+            title: 'Sending for Verification...',
+            message: 'Your payment proof is being sent for automatic validation',
+            bgGradient: 'from-indigo-50/50 to-indigo-100/30',
+            borderColor: 'border-indigo-200',
+            iconGradient: 'from-indigo-500 to-indigo-600',
+            ringColor: 'border-indigo-300',
+            titleColor: 'text-indigo-900',
+            progressGradient: 'from-indigo-500 to-indigo-600',
+            dotColor: 'bg-indigo-500'
+          };
+        case 'analyzing':
+          return {
+            icon: Sparkles,
+            title: 'Analyzing Payment...',
+            message: 'Our AI is validating your payment confirmation',
+            bgGradient: 'from-purple-50/50 to-purple-100/30',
+            borderColor: 'border-purple-200',
+            iconGradient: 'from-purple-500 to-purple-600',
+            ringColor: 'border-purple-300',
+            titleColor: 'text-purple-900',
+            progressGradient: 'from-purple-500 to-purple-600',
+            dotColor: 'bg-purple-500'
+          };
+        default:
+          return {
+            icon: Loader2,
+            title: 'Processing...',
+            message: 'Please wait',
+            bgGradient: 'from-blue-50/50 to-blue-100/30',
+            borderColor: 'border-blue-200',
+            iconGradient: 'from-blue-500 to-blue-600',
+            ringColor: 'border-blue-300',
+            titleColor: 'text-blue-900',
+            progressGradient: 'from-blue-500 to-blue-600',
+            dotColor: 'bg-blue-500'
+          };
+      }
+    };
+
+    const stepInfo = getStepInfo();
+    const Icon = stepInfo.icon;
+
+    return (
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+        <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 relative overflow-hidden">
+          {/* Background Gradient */}
+          <div className={`absolute inset-0 bg-gradient-to-br ${stepInfo.bgGradient}`}></div>
+          
+          {/* Animated Border */}
+          <div className={`absolute inset-0 rounded-3xl border-2 ${stepInfo.borderColor} animate-pulse`}></div>
+          
+          <div className="relative z-10 text-center">
+            {/* Animated Icon */}
+            <div className="mb-6 flex justify-center">
+              <div className={`relative w-20 h-20 bg-gradient-to-br ${stepInfo.iconGradient} rounded-2xl flex items-center justify-center shadow-xl`}>
+                <Icon className="w-10 h-10 text-white animate-pulse" />
+                {/* Rotating Ring */}
+                <div className={`absolute inset-0 rounded-2xl border-4 ${stepInfo.ringColor} animate-spin`} style={{ borderTopColor: 'transparent' }}></div>
+              </div>
+            </div>
+
+            {/* Title */}
+            <h3 className={`text-2xl font-bold ${stepInfo.titleColor} mb-2`}>
+              {stepInfo.title}
+            </h3>
+
+            {/* Message */}
+            <p className="text-gray-600 mb-6 text-sm">
+              {stepInfo.message}
+            </p>
+
+            {/* Progress Bar */}
+            <div className="mb-4">
+              <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                <div
+                  className={`h-full bg-gradient-to-r ${stepInfo.progressGradient} rounded-full transition-all duration-300 ease-out shadow-lg`}
+                  style={{ width: `${uploadProgress}%` }}
+                >
+                  <div className="h-full bg-white/30 animate-pulse"></div>
+                </div>
+              </div>
+              <p className="text-xs text-gray-500 mt-2">{uploadProgress}%</p>
+            </div>
+
+            {/* Animated Dots */}
+            <div className="flex justify-center space-x-2">
+              <div className={`w-2 h-2 ${stepInfo.dotColor} rounded-full animate-bounce`} style={{ animationDelay: '0s' }}></div>
+              <div className={`w-2 h-2 ${stepInfo.dotColor} rounded-full animate-bounce`} style={{ animationDelay: '0.2s' }}></div>
+              <div className={`w-2 h-2 ${stepInfo.dotColor} rounded-full animate-bounce`} style={{ animationDelay: '0.4s' }}></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   if (step === 'analyzing') {
     return (
-      <div className={`bg-blue-50 border border-blue-200 rounded-lg p-4 sm:p-6 text-center ${className}`}>
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-        <h3 className="text-lg sm:text-xl font-semibold text-blue-800 mb-2">
+      <div className={`bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-2xl p-6 sm:p-8 text-center shadow-lg ${className}`}>
+          <div className="relative mb-6">
+            {/* Animated Background Circle */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-24 h-24 bg-blue-200/30 rounded-full animate-ping"></div>
+            </div>
+            {/* Main Icon */}
+            <div className="relative w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-xl mx-auto">
+              <Sparkles className="w-10 h-10 text-white animate-pulse" />
+              {/* Rotating Ring */}
+              <div className="absolute inset-0 rounded-2xl border-4 border-blue-300 animate-spin" style={{ borderTopColor: 'transparent' }}></div>
+            </div>
+          </div>
+          <h3 className="text-xl sm:text-2xl font-bold text-blue-900 mb-3">
           Analyzing Payment...
         </h3>
-        <p className="text-sm sm:text-base text-blue-700 mb-2">
-          Your payment confirmation is being automatically validated. Please wait...
+          <p className="text-sm sm:text-base text-blue-700 mb-4">
+            Your payment confirmation is being automatically validated by our AI system.
         </p>
+          <div className="flex justify-center space-x-2 mt-4">
+            <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0s' }}></div>
+            <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+            <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+          </div>
       </div>
     );
   }
 
   if (step === 'under_review') {
     return (
-      <div className={`bg-amber-50 border border-amber-200 rounded-lg p-4 sm:p-6 ${className}`}>
-        <div className="text-center mb-4 sm:mb-6">
-          <Clock className="w-16 h-16 sm:w-20 sm:h-20 text-amber-500 mx-auto mb-4 animate-pulse" />
-          <h3 className="text-lg sm:text-xl font-semibold text-amber-800 mb-2">
-            Processing Payment
+      <div className={`bg-gradient-to-br from-amber-50 to-orange-50 border-2 border-amber-200 rounded-2xl p-6 sm:p-8 shadow-lg ${className}`}>
+          <div className="text-center mb-6">
+            <div className="relative mb-6 inline-block">
+              {/* Animated Background Circle */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-24 h-24 bg-amber-200/40 rounded-full animate-pulse"></div>
+              </div>
+              {/* Main Icon */}
+              <div className="relative w-20 h-20 bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl flex items-center justify-center shadow-xl">
+                <Clock className="w-10 h-10 text-white animate-pulse" />
+              </div>
+            </div>
+            <h3 className="text-xl sm:text-2xl font-bold text-amber-900 mb-3">
+              Payment Under Review
           </h3>
-          <p className="text-sm sm:text-base text-amber-700 mb-4">
+            <p className="text-sm sm:text-base text-amber-800 mb-4 leading-relaxed">
             Your payment proof requires additional verification. Our team will review it within 24 hours.
           </p>
+            <div className="flex justify-center space-x-2 mt-4">
+              <div className="w-2 h-2 bg-amber-500 rounded-full animate-bounce" style={{ animationDelay: '0s' }}></div>
+              <div className="w-2 h-2 bg-amber-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+              <div className="w-2 h-2 bg-amber-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+            </div>
         </div>
 
 
@@ -808,7 +1393,8 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
         <div className="space-y-3">
           <button
             onClick={() => {
-              // Resetar formulário para permitir novo upload
+              console.log('🔄 [ZelleCheckout] Usuário clicou em "Upload New Payment Proof" - resetando formulário');
+              // Resetar todos os estados para permitir novo upload
               setComprovanteFile(null);
               setComprovantePreview(null);
               setError(null);
@@ -817,6 +1403,17 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
               setIsProcessing(false);
               onProcessingChange?.(false);
               setZellePaymentId(null);
+              
+              // IMPORTANTE: Limpar refs também para garantir que a lógica de determinePaymentState
+              // não use valores antigos
+              stepRef.current = 'instructions';
+              paymentStatusRef.current = 'analyzing';
+              zellePaymentIdRef.current = null;
+              rejectionReasonRef.current = null;
+              isProcessingRef.current = false;
+              lastProcessedPaymentIdRef.current = null;
+              lastProcessedRejectedIdRef.current = null;
+              lastDataKeyRef.current = null;
             }}
             className="w-full bg-red-600 text-white py-3 sm:py-4 px-6 rounded-lg hover:bg-red-700 transition-colors font-semibold text-base sm:text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
           >
@@ -883,6 +1480,10 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
   }
 
   return (
+    <>
+      {/* Modal de Upload */}
+      <UploadModal />
+      
     <div className={`bg-white border border-gray-200 rounded-lg p-4 sm:p-6 ${className}`}>
       {/* IMPORTANTE: Só mostrar instruções se NÃO estiver processando e NÃO tiver pagamento pendente */}
       {/* Se há pagamento pendente, os estados analyzing/under_review já foram renderizados acima */}
@@ -1036,5 +1637,6 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
       )}
 
     </div>
+    </>
   );
 };

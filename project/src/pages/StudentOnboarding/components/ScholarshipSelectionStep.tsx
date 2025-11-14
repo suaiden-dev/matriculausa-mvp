@@ -6,6 +6,7 @@ import { useScholarships } from '../../../hooks/useScholarships';
 import { usePackageScholarshipFilter } from '../../../hooks/usePackageScholarshipFilter';
 import { StepProps } from '../types';
 import { ScholarshipCardFull } from './ScholarshipCardFull';
+import { supabase } from '../../../lib/supabase';
 
 export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext }) => {
   const { user, userProfile } = useAuth();
@@ -15,6 +16,9 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext }) => {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
   const [error, setError] = useState<string | null>(null);
+  const isManuallyUpdatingRef = React.useRef(false);
+  const lastCartRef = React.useRef<string>('');
+  const [isLocked, setIsLocked] = useState(false);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [selectedLevel, setSelectedLevel] = useState<string>('all');
   const [selectedField, setSelectedField] = useState<string>('all');
@@ -37,10 +41,73 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext }) => {
     }
   }, [user?.id, fetchCart]);
 
+  // Verificar se já passou pela review (tem process type selecionado)
+  // IMPORTANTE: Só considerar bloqueado se o usuário já pagou a taxa de seleção
+  // Isso evita mostrar "Etapa Concluída" quando há dados antigos
+  useEffect(() => {
+    const checkIfLocked = async () => {
+      if (!userProfile?.id) return;
+      
+      // Só verificar se já passou pela review se o usuário já pagou a taxa de seleção
+      if (!userProfile.has_paid_selection_process_fee) {
+        setIsLocked(false);
+        return;
+      }
+      
+      try {
+        // Verificar se há aplicações com process type (indica que já passou pela review)
+        const { data: applications } = await supabase
+          .from('scholarship_applications')
+          .select('student_process_type')
+          .eq('student_id', userProfile.id)
+          .limit(1);
+        
+        // Só considerar bloqueado se realmente há aplicações criadas com process type
+        // Não usar localStorage para evitar dados antigos
+        const hasProcessType = applications && applications.length > 0 && !!applications[0].student_process_type;
+        
+        setIsLocked(hasProcessType);
+      } catch (error) {
+        console.error('Error checking if locked:', error);
+        setIsLocked(false);
+      }
+    };
+    
+    checkIfLocked();
+  }, [userProfile?.id, userProfile?.has_paid_selection_process_fee]);
+
   useEffect(() => {
     // Sincronizar selectedIds com cart
-    const cartIds = new Set(cart.map(item => item.scholarships.id));
-    setSelectedIds(cartIds);
+    // Mas não sobrescrever se acabamos de fazer uma atualização manual
+    if (isManuallyUpdatingRef.current) {
+      // Resetar flag após um pequeno delay para permitir que a atualização do store seja processada
+      setTimeout(() => {
+        isManuallyUpdatingRef.current = false;
+      }, 100);
+      return;
+    }
+    
+    // Criar uma chave única baseada nos IDs do cart para detectar mudanças
+    const cartIdsArray = cart.map(item => item.scholarships.id).sort();
+    const cartKey = cartIdsArray.join(',');
+    
+    // Só atualizar se o cart realmente mudou (evitar re-renders desnecessários)
+    if (lastCartRef.current === cartKey) {
+      return;
+    }
+    
+    lastCartRef.current = cartKey;
+    const cartIds = new Set(cartIdsArray);
+    
+    // Atualizar selectedIds apenas se houver diferença
+    setSelectedIds(prev => {
+      const prevArray = Array.from(prev).sort();
+      if (prevArray.length !== cartIdsArray.length || 
+          !prevArray.every((id, index) => id === cartIdsArray[index])) {
+        return cartIds;
+      }
+      return prev;
+    });
   }, [cart]);
 
   // Extrair opções únicas das bolsas para os filtros
@@ -93,7 +160,7 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext }) => {
       uniqueDeliveryModes: Array.from(deliverySet).sort(),
       uniqueWorkPermissions: Array.from(workPermSet).sort(),
       uniqueUniversities: Array.from(universitiesMap.values()).sort((a, b) => 
-        String(a.name).localeCompare(String(b.name))
+      String(a.name).localeCompare(String(b.name))
       )
     };
   }, [allScholarships]);
@@ -317,28 +384,69 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext }) => {
 
   const toggleSelection = useCallback(async (scholarship: any) => {
     if (!user?.id) return;
+    
+    // Bloquear se já passou pela review
+    if (isLocked) {
+      setError('Você já passou pela revisão de bolsas. Não é possível alterar a seleção.');
+      return;
+    }
 
     const isSelected = selectedIds.has(scholarship.id);
+    console.log('🔄 [ScholarshipSelection] Toggling scholarship:', scholarship.id, 'isSelected:', isSelected);
 
     try {
+      // Marcar que estamos fazendo uma atualização manual
+      isManuallyUpdatingRef.current = true;
+      
+      // Atualização otimista: atualizar UI imediatamente
       if (isSelected) {
-        await removeFromCart(scholarship.id, user.id);
+        // Remover: atualizar localmente primeiro
         setSelectedIds(prev => {
           const next = new Set(prev);
           next.delete(scholarship.id);
+          console.log('✅ [ScholarshipSelection] Removed locally, new size:', next.size);
           return next;
         });
+        // Depois atualizar no store/banco
+        await removeFromCart(scholarship.id, user.id);
+        console.log('✅ [ScholarshipSelection] Removed from cart/store');
       } else {
+        // Adicionar: atualizar localmente primeiro
+        setSelectedIds(prev => {
+          const next = new Set(prev).add(scholarship.id);
+          console.log('✅ [ScholarshipSelection] Added locally, new size:', next.size);
+          return next;
+        });
+        // Depois atualizar no store/banco
         await addToCart(scholarship, user.id);
-        setSelectedIds(prev => new Set(prev).add(scholarship.id));
+        console.log('✅ [ScholarshipSelection] Added to cart/store');
       }
+      
+      // Resetar flag após um delay para permitir que o useEffect processe a mudança do cart
+      setTimeout(() => {
+        isManuallyUpdatingRef.current = false;
+        console.log('🔄 [ScholarshipSelection] Reset manual update flag');
+      }, 200);
     } catch (err) {
-      console.error('Error toggling scholarship:', err);
+      console.error('❌ [ScholarshipSelection] Error toggling scholarship:', err);
       setError('Erro ao atualizar seleção. Tente novamente.');
+      
+      // Em caso de erro, reverter a atualização otimista sincronizando com o cart
+      const cartIds = new Set(cart.map(item => item.scholarships.id));
+      setSelectedIds(cartIds);
+      isManuallyUpdatingRef.current = false;
+      console.log('🔄 [ScholarshipSelection] Reverted to cart state due to error');
     }
-  }, [user?.id, selectedIds, addToCart, removeFromCart]);
+  }, [user?.id, selectedIds, addToCart, removeFromCart, cart]);
 
   const handleContinue = () => {
+    // Se já está bloqueado (passou pela review), permitir continuar mesmo sem selecionar novamente
+    if (isLocked) {
+      setError(null);
+      onNext();
+      return;
+    }
+    
     if (selectedIds.size === 0) {
       setError('Please select at least one scholarship to continue. Click on the scholarship cards above to add them to your selection.');
       return;
@@ -352,7 +460,7 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext }) => {
     return (
       <div className="space-y-6">
         <div className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 rounded-xl p-5 sm:p-6 border border-blue-100">
-          <div className="text-center">
+        <div className="text-center">
             <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Choose Your Scholarships</h2>
             <p className="text-base sm:text-lg text-gray-700 font-medium">Click on the scholarship cards below to select them. You need at least one to proceed.</p>
           </div>
@@ -366,6 +474,33 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext }) => {
               <div className="h-10 bg-slate-200 rounded"></div>
             </div>
           ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Se já passou pela review, mostrar tela de etapa concluída
+  if (isLocked) {
+    return (
+      <div className="space-y-6 pb-24 sm:pb-6">
+        <div className="bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 rounded-xl p-8 sm:p-12 border-2 border-green-200 shadow-sm">
+          <div className="text-center">
+            <div className="mb-6">
+              <CheckCircle2 className="w-20 h-20 text-green-600 mx-auto" />
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3">
+              Etapa Concluída
+            </h2>
+            <p className="text-base sm:text-lg text-gray-700 mb-6">
+              Você já selecionou suas bolsas e passou pela revisão. Esta etapa está completa.
+            </p>
+            <button
+              onClick={handleContinue}
+              className="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-md hover:shadow-lg"
+            >
+              Continuar
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -605,20 +740,20 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext }) => {
               <DollarSign className="h-3 w-3 inline mr-1" />
               Max Value
             </label>
-            <input
-              id="max-value"
-              type="number"
-              placeholder="Max"
-              value={maxValue}
-              onChange={(e) => {
-                const value = e.target.value;
-                if (value === '' || (Number(value) >= 0)) {
-                  setMaxValue(value);
-                }
-              }}
+              <input
+                id="max-value"
+                type="number"
+                placeholder="Max"
+                value={maxValue}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value === '' || (Number(value) >= 0)) {
+                    setMaxValue(value);
+                  }
+                }}
               className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-sm"
-            />
-          </div>
+              />
+            </div>
 
           {/* Deadline Filter */}
           <div>
@@ -657,7 +792,7 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext }) => {
             )}
           </h3>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         {paginatedScholarships.map((scholarship) => (
           <ScholarshipCardFull
             key={scholarship.id}
@@ -665,6 +800,7 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext }) => {
             isSelected={selectedIds.has(scholarship.id)}
             onToggle={() => toggleSelection(scholarship)}
             userProfile={userProfile}
+            isLocked={isLocked}
           />
         ))}
         </div>

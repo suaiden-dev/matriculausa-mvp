@@ -14,16 +14,18 @@ import {
   CreditCard,
   Tag,
   Route,
-  XCircle
+  XCircle,
+  PlayCircle
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
 import { useDynamicFees } from '../../hooks/useDynamicFees';
-import { StripeCheckout } from '../../components/StripeCheckout';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useReferralCode } from '../../hooks/useReferralCode';
 import { ProgressBar } from '../../components/ProgressBar';
 import StepByStepButton from '../../components/OnboardingTour/StepByStepButton';
+import ContinueApplicationButton from '../../components/ContinueApplicationButton';
 import './Overview.css'; // Adicionar um arquivo de estilos dedicado para padronização visual
 
 // Componente de skeleton para valores de taxa
@@ -52,6 +54,7 @@ const Overview: React.FC<OverviewProps> = ({
   recentApplications = []
 }) => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { user, userProfile } = useAuth();
   const { activeDiscount } = useReferralCode();
   const { getFeeAmount, userFeeOverrides } = useFeeConfig(user?.id);
@@ -59,6 +62,74 @@ const Overview: React.FC<OverviewProps> = ({
   const [visibleApplications, setVisibleApplications] = useState(5); // Mostrar 5 inicialmente
   const [feesLoading, setFeesLoading] = useState(true);
   
+  // Mapeamento de steps do onboarding para labels (mesmo do StepIndicator)
+  const onboardingStepLabels: Record<string, string> = {
+    'welcome': 'Welcome',
+    'selection_fee': 'Selection Fee',
+    'scholarship_selection': 'Choose Scholarships',
+    'scholarship_review': 'Review Scholarships',
+    'process_type': 'Process Type',
+    'documents_upload': 'Upload Documents',
+    'waiting_approval': 'My Applications',
+    'completed': 'Completed'
+  };
+  
+  // Verificar se há step salvo no onboarding
+  // IMPORTANTE: Ignorar 'welcome' pois é apenas o estado inicial, não significa que o usuário começou
+  const savedOnboardingStep = typeof window !== 'undefined' 
+    ? window.localStorage.getItem('onboarding_current_step')
+    : null;
+  
+  // Limpar 'welcome' do localStorage se existir (é apenas estado inicial, não progresso real)
+  useEffect(() => {
+    if (savedOnboardingStep === 'welcome') {
+      window.localStorage.removeItem('onboarding_current_step');
+    }
+  }, [savedOnboardingStep]);
+  
+  // Considerar que o usuário começou o onboarding apenas se:
+  // 1. O step salvo é 'selection_fee' ou posterior (não 'welcome')
+  // 2. E o usuário realmente tem progresso (pagou fee OU tem aplicações)
+  const stepsAfterStart = ['selection_fee', 'scholarship_selection', 'scholarship_review', 'process_type', 'documents_upload', 'waiting_approval', 'completed'];
+  const hasValidStep = savedOnboardingStep && 
+    savedOnboardingStep !== 'welcome' &&
+    stepsAfterStart.includes(savedOnboardingStep);
+  
+  // Verificar se o usuário realmente tem progresso no onboarding
+  // O indicador mais confiável é se ele pagou a taxa de seleção OU tem aplicações
+  const hasRealProgress = userProfile && (
+    userProfile.has_paid_selection_process_fee || 
+    (recentApplications && recentApplications.length > 0)
+  );
+  
+  // Só mostrar "Continue Onboarding" se tiver step válido E progresso real
+  // Se não tem progresso real, não importa o step salvo - não começou de verdade
+  const hasSavedOnboardingStep = hasValidStep && hasRealProgress;
+  
+  const currentStepLabel = hasSavedOnboardingStep 
+    ? onboardingStepLabels[savedOnboardingStep] || savedOnboardingStep
+    : null;
+
+  // Log para debug do desconto (após calcular selectionFeeDisplayAmount)
+  useEffect(() => {
+    if (user?.id && activeDiscount) {
+      console.log('🔍 [Overview] activeDiscount atualizado:', activeDiscount);
+      if (activeDiscount.has_discount) {
+        const baseAmount = selectionProcessFeeAmount || 0;
+        const discountAmount = activeDiscount.discount_amount || 0;
+        const finalPrice = Math.max(baseAmount - discountAmount, 0);
+        console.log('✅ [Overview] Desconto ativo detectado:', {
+          discount_amount: discountAmount,
+          affiliate_code: activeDiscount.affiliate_code,
+          baseAmount,
+          finalPrice
+        });
+      } else {
+        console.log('ℹ️ [Overview] Sem desconto ativo');
+      }
+    }
+  }, [user?.id, activeDiscount, selectionProcessFeeAmount]);
+
   const hasMoreApplications = recentApplications.length > visibleApplications;
   const displayedApplications = recentApplications.slice(0, visibleApplications);
   
@@ -156,6 +227,24 @@ const Overview: React.FC<OverviewProps> = ({
   // Display amounts - usar valores já calculados do useDynamicFees
   const selectionWithDependents = selectionBase; // Já inclui dependentes
   const i20WithDependents = i20Base + i20Extra;
+
+  // Calcular valor final com desconto para exibição
+  const selectionFeeDisplayAmount = useMemo(() => {
+    const baseAmount = selectionWithDependents;
+    if (activeDiscount?.has_discount) {
+      const discountAmount = activeDiscount.discount_amount || 0;
+      const finalAmount = Math.max(baseAmount - discountAmount, 0);
+      console.log('💰 [Overview] Calculando valor com desconto:', {
+        baseAmount,
+        discountAmount,
+        finalAmount,
+        activeDiscount
+      });
+      return finalAmount;
+    }
+    console.log('💰 [Overview] Sem desconto, usando valor base:', baseAmount);
+    return baseAmount;
+  }, [selectionWithDependents, activeDiscount]);
 
   // Valores das taxas para o ProgressBar (Application fee é variável)
   // ✅ CORREÇÃO: Aplicar desconto na barra de progresso se houver activeDiscount
@@ -347,7 +436,8 @@ const Overview: React.FC<OverviewProps> = ({
             <ProgressBar steps={steps} feeValues={dynamicFeeValues} />
           </div>
 
-          {userProfile && !userProfile.has_paid_selection_process_fee && (
+          {/* Card: Start Selection Process - Mostrar apenas se NÃO começou onboarding ainda */}
+          {userProfile && !userProfile.has_paid_selection_process_fee && !hasSavedOnboardingStep && (
             <div className="bg-white/10 backdrop-blur-sm border border-white/30 rounded-xl p-4 sm:p-6 mb-4">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0 mb-3 sm:mb-4">
                 <div className="flex items-center">
@@ -364,7 +454,7 @@ const Overview: React.FC<OverviewProps> = ({
                     <div className="flex flex-col sm:text-center">
                       <div className="text-lg sm:text-xl md:text-2xl font-bold text-white line-through">${selectionWithDependents}</div>
                       <div className="text-base sm:text-lg md:text-xl font-bold text-green-300">
-                        ${Math.max(selectionWithDependents - (activeDiscount.discount_amount || 0), 0)}
+                        ${selectionFeeDisplayAmount.toFixed(2)}
                       </div>
                       <div className="flex items-center sm:justify-center mt-1">
                         <Tag className="h-3 w-3 text-green-300 mr-1" />
@@ -388,15 +478,12 @@ const Overview: React.FC<OverviewProps> = ({
               </p>
               
               {/* Botão de pagamento sempre visível */}
-          <StripeCheckout 
-                productId="selectionProcess"
-                feeType="selection_process"
-                paymentType="selection_process"
-            buttonText={t('studentDashboard.selectionProcess.startButton')}
+              <button
+                onClick={() => navigate('/student/onboarding?step=welcome')}
                 className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 sm:py-3 px-4 sm:px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 cursor-pointer border-2 border-white text-sm sm:text-base"
-                successUrl={`${window.location.origin}/student/dashboard/selection-process-fee-success?session_id={CHECKOUT_SESSION_ID}`}
-                cancelUrl={`${window.location.origin}/student/dashboard/selection-process-fee-error`}
-              />
+              >
+                {t('studentDashboard.selectionProcess.startButton')}
+              </button>
               
               {/* Aviso para usuários com seller_referral_code */}
               {/* {userProfile.seller_referral_code && userProfile.seller_referral_code.trim() !== '' && (
@@ -409,6 +496,37 @@ const Overview: React.FC<OverviewProps> = ({
                   </div>
                 </div>
               )} */}
+            </div>
+          )}
+
+          {/* Card: Continue Onboarding - Mostrar apenas se já começou onboarding (tem step salvo) */}
+          {hasSavedOnboardingStep && (
+            <div className="bg-white/10 backdrop-blur-sm border border-white/30 rounded-xl p-4 sm:p-6 mb-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0 mb-3 sm:mb-4">
+                <div className="flex items-center">
+                  <PlayCircle className="h-4 w-4 sm:h-5 sm:w-5 text-white mr-2 sm:mr-3" />
+                  <div>
+                    <h3 className="text-base sm:text-lg md:text-xl font-bold text-white">
+                      Continue Onboarding
+                    </h3>
+                    <p className="text-blue-100 text-xs sm:text-sm">
+                      {currentStepLabel 
+                        ? `You were at: ${currentStepLabel}`
+                        : 'Resume your application process'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <p className="text-blue-100 text-xs sm:text-sm mb-3 sm:mb-4 leading-relaxed">
+                Pick up where you left off and complete your scholarship application process.
+              </p>
+              
+              {/* Botão animado para continuar onboarding */}
+              <div className="flex justify-start">
+                <ContinueApplicationButton
+                onClick={() => navigate(`/student/onboarding?step=${savedOnboardingStep}`)}
+                />
+              </div>
             </div>
           )}
           {/* Removed three unused mini-cards (Discover/Apply/Track) as requested */}

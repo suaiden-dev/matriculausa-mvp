@@ -56,19 +56,95 @@ export const useReferralCode = () => {
     }
     
     console.log('🔍 [useReferralCode] Verificando desconto ativo para user:', user.id);
+    
+    // PRIMEIRO: Verificar diretamente na tabela used_referral_codes
+    let appliedCodeFromTable: any = null;
+    try {
+      console.log('🔍 [useReferralCode] Buscando códigos usados diretamente na tabela...');
+      const { data: usedCodes, error: usedCodesError } = await supabase
+        .from('used_referral_codes')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('applied_at', { ascending: false })
+        .limit(5);
+
+      if (usedCodesError) {
+        console.error('❌ [useReferralCode] Erro ao buscar códigos usados:', usedCodesError);
+      } else {
+        console.log('🔍 [useReferralCode] Códigos encontrados na tabela:', usedCodes);
+        if (usedCodes && usedCodes.length > 0) {
+          // Procurar por um código com status 'applied'
+          appliedCodeFromTable = usedCodes.find(code => code.status === 'applied');
+          if (appliedCodeFromTable) {
+            console.log('✅ [useReferralCode] Código aplicado encontrado na tabela:', appliedCodeFromTable);
+          } else {
+            console.log('⚠️ [useReferralCode] Nenhum código com status "applied" encontrado. Status encontrados:', usedCodes.map(c => c.status));
+            // Se não encontrou com status 'applied', tentar com qualquer status (fallback)
+            appliedCodeFromTable = usedCodes[0];
+            console.log('⚠️ [useReferralCode] Usando primeiro código encontrado como fallback:', appliedCodeFromTable);
+          }
+        } else {
+          console.log('ℹ️ [useReferralCode] Nenhum código usado encontrado na tabela');
+        }
+      }
+    } catch (error) {
+      console.error('❌ [useReferralCode] Erro ao buscar códigos usados:', error);
+    }
+
+    // SEGUNDO: Chamar a função RPC
     try {
       const { data, error } = await supabase.rpc('get_user_active_discount', {
         user_id_param: user.id
       });
 
       if (error) {
-        console.error('❌ [useReferralCode] Erro ao verificar desconto:', error);
+        console.error('❌ [useReferralCode] Erro ao verificar desconto via RPC:', error);
+        // Se a RPC falhou mas temos um código na tabela, usar como fallback
+        if (appliedCodeFromTable) {
+          console.log('🔄 [useReferralCode] RPC falhou, usando código da tabela como fallback');
+          setActiveDiscount({
+            has_discount: true,
+            affiliate_code: appliedCodeFromTable.affiliate_code,
+            discount_amount: appliedCodeFromTable.discount_amount || 50,
+            stripe_coupon_id: appliedCodeFromTable.stripe_coupon_id,
+            referrer_id: appliedCodeFromTable.referrer_id,
+            applied_at: appliedCodeFromTable.applied_at,
+            expires_at: appliedCodeFromTable.expires_at
+          });
+        }
       } else {
-        console.log('✅ [useReferralCode] Resultado do desconto:', data);
-        setActiveDiscount(data);
+        console.log('✅ [useReferralCode] Resultado do desconto via RPC:', data);
+        // Se a RPC retornou sem desconto mas temos um código na tabela, usar como fallback
+        if (!data?.has_discount && appliedCodeFromTable) {
+          console.log('🔄 [useReferralCode] RPC não encontrou desconto, mas temos código na tabela. Usando como fallback');
+          setActiveDiscount({
+            has_discount: true,
+            affiliate_code: appliedCodeFromTable.affiliate_code,
+            discount_amount: appliedCodeFromTable.discount_amount || 50,
+            stripe_coupon_id: appliedCodeFromTable.stripe_coupon_id,
+            referrer_id: appliedCodeFromTable.referrer_id,
+            applied_at: appliedCodeFromTable.applied_at,
+            expires_at: appliedCodeFromTable.expires_at
+          });
+        } else {
+          setActiveDiscount(data);
+        }
       }
     } catch (error) {
-      console.error('❌ [useReferralCode] Erro ao verificar desconto:', error);
+      console.error('❌ [useReferralCode] Erro ao verificar desconto via RPC:', error);
+      // Se a RPC deu erro mas temos um código na tabela, usar como fallback
+      if (appliedCodeFromTable) {
+        console.log('🔄 [useReferralCode] RPC deu erro, usando código da tabela como fallback');
+        setActiveDiscount({
+          has_discount: true,
+          affiliate_code: appliedCodeFromTable.affiliate_code,
+          discount_amount: appliedCodeFromTable.discount_amount || 50,
+          stripe_coupon_id: appliedCodeFromTable.stripe_coupon_id,
+          referrer_id: appliedCodeFromTable.referrer_id,
+          applied_at: appliedCodeFromTable.applied_at,
+          expires_at: appliedCodeFromTable.expires_at
+        });
+      }
     }
   }, [user?.id]);
 

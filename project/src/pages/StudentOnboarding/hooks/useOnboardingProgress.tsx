@@ -14,7 +14,7 @@ export const useOnboardingProgress = () => {
   const getSavedStep = useCallback((): OnboardingStep | null => {
     // Usar apenas localStorage por enquanto (campo no banco não existe ainda)
     const savedStep = window.localStorage.getItem(ONBOARDING_STEP_KEY);
-    if (savedStep && ['welcome', 'selection_fee', 'scholarship_selection', 'scholarship_review', 'process_type', 'documents_upload', 'waiting_approval', 'application_fee', 'scholarship_fee', 'completed'].includes(savedStep)) {
+    if (savedStep && ['welcome', 'selection_fee', 'scholarship_selection', 'scholarship_review', 'process_type', 'documents_upload', 'waiting_approval', 'completed'].includes(savedStep)) {
       return savedStep as OnboardingStep;
     }
     return null;
@@ -29,7 +29,7 @@ export const useOnboardingProgress = () => {
   const [state, setState] = useState<OnboardingState>(() => {
     // Inicializar com step do localStorage se existir (síncrono)
     const savedStep = window.localStorage.getItem(ONBOARDING_STEP_KEY);
-    const validSteps = ['welcome', 'selection_fee', 'scholarship_selection', 'scholarship_review', 'process_type', 'documents_upload', 'waiting_approval', 'application_fee', 'scholarship_fee', 'completed'];
+    const validSteps = ['welcome', 'selection_fee', 'scholarship_selection', 'scholarship_review', 'process_type', 'documents_upload', 'waiting_approval', 'completed'];
     const initialStep = savedStep && validSteps.includes(savedStep) ? savedStep as OnboardingStep : 'welcome';
     
     return {
@@ -59,26 +59,33 @@ export const useOnboardingProgress = () => {
       const selectionFeePaid = userProfile.has_paid_selection_process_fee || false;
 
       // 2. Verificar se há bolsas selecionadas (cart ou aplicações)
-      await fetchCart(user.id);
-      // Aguardar um pouco para o cart ser atualizado
-      await new Promise(resolve => setTimeout(resolve, 100));
-      const { cart: currentCart } = useCartStore.getState();
-      const hasCartItems = currentCart.length > 0;
+      // IMPORTANTE: Só considerar bolsas selecionadas se o usuário já pagou a taxa de seleção
+      // Isso evita marcar como concluído quando há dados antigos no carrinho
+      let scholarshipsSelected = false;
+      let applications: any[] | null = null;
       
-      // Verificar também se há aplicações criadas
-      const { data: applications } = await supabase
+      // Sempre buscar aplicações para verificar process type, mas só considerar bolsas selecionadas se pagou a taxa
+      const { data: appsData } = await supabase
         .from('scholarship_applications')
         .select('id, scholarship_id, student_process_type')
         .eq('student_id', userProfile.id)
         .limit(1);
       
-      const scholarshipsSelected = hasCartItems || (applications && applications.length > 0);
+      applications = appsData;
+      
+      if (selectionFeePaid) {
+        await fetchCart(user.id);
+        // Aguardar um pouco para o cart ser atualizado
+        await new Promise(resolve => setTimeout(resolve, 100));
+        const { cart: currentCart } = useCartStore.getState();
+        const hasCartItems = currentCart.length > 0;
+        
+        scholarshipsSelected = hasCartItems || (applications && applications.length > 0);
+      }
 
-      // 3. Verificar Process Type
+      // 3. Verificar Process Type - só considerar se realmente há aplicações criadas
       const processTypeSelected = 
-        applications && applications.length > 0 
-          ? !!applications[0].student_process_type
-          : !!window.localStorage.getItem('studentProcessType');
+        applications && applications.length > 0 && !!applications[0].student_process_type;
 
       // 4. Verificar Documentos
       const documentsUploaded = userProfile.documents_uploaded || false;
@@ -125,6 +132,10 @@ export const useOnboardingProgress = () => {
         if (savedStep && savedStep !== 'welcome') {
           window.localStorage.removeItem(ONBOARDING_STEP_KEY);
         }
+      } else if (savedStep === 'welcome' && !selectionFeePaid && !scholarshipsSelected) {
+        // Se o step salvo é 'welcome' e não há progresso, manter em 'welcome'
+        // Isso permite que o usuário veja a página de welcome quando acessa via URL
+        currentStep = 'welcome';
       } else if (savedStep && savedStep !== 'completed') {
         // Se há um step salvo e não está completado, usar ele
         // Mas validar se o step salvo ainda é válido baseado no progresso
@@ -258,12 +269,6 @@ export const useOnboardingProgress = () => {
         case 'waiting_approval':
           updates.documentsApproved = true;
           break;
-        case 'application_fee':
-          updates.applicationFeePaid = true;
-          break;
-        case 'scholarship_fee':
-          updates.scholarshipFeePaid = true;
-          break;
         case 'completed':
           updates.onboardingCompleted = true;
           break;
@@ -273,7 +278,7 @@ export const useOnboardingProgress = () => {
     });
 
     // Se completou tudo, marcar onboarding como completo no banco
-    if (step === 'scholarship_fee' && userProfile?.id) {
+    if (step === 'completed' && userProfile?.id) {
       try {
         await supabase
           .from('user_profiles')

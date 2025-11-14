@@ -30,6 +30,29 @@ const StudentOnboarding: React.FC = () => {
   const [searchParams] = useSearchParams();
   const { state, loading, checkProgress, goToStep, markStepComplete } = useOnboardingProgress();
 
+  // Ler step da URL quando o componente carrega - deve ter prioridade sobre checkProgress
+  useEffect(() => {
+    const stepParam = searchParams.get('step');
+    if (stepParam) {
+      const validSteps: OnboardingStep[] = ['welcome', 'selection_fee', 'scholarship_selection', 'scholarship_review', 'process_type', 'documents_upload', 'waiting_approval', 'completed'];
+      if (validSteps.includes(stepParam as OnboardingStep)) {
+        // Salvar o step da URL no localStorage imediatamente para que checkProgress o respeite
+        window.localStorage.setItem('onboarding_current_step', stepParam);
+        
+        // Se o step da URL for 'welcome', ir direto para welcome
+        // Isso garante que a página de welcome seja mostrada completamente, sem StepIndicator
+        if (stepParam === 'welcome') {
+          goToStep('welcome');
+        } else {
+          // Para outros steps, aplicar após um pequeno delay
+          setTimeout(() => {
+            goToStep(stepParam as OnboardingStep);
+          }, 100);
+        }
+      }
+    }
+  }, [searchParams, goToStep]);
+
   // Verificar se veio de pagamento bem-sucedido
   useEffect(() => {
     const paymentSuccess = searchParams.get('payment');
@@ -130,7 +153,10 @@ const StudentOnboarding: React.FC = () => {
   // Welcome is always completed if we're past it
   if (state.currentStep !== 'welcome') completedSteps.push('welcome');
   if (state.selectionFeePaid) completedSteps.push('selection_fee');
-  if (state.scholarshipsSelected) completedSteps.push('scholarship_selection');
+  // scholarship_selection só é completado quando passa para scholarship_review
+  if (state.currentStep !== 'scholarship_selection' && state.scholarshipsSelected) {
+    completedSteps.push('scholarship_selection');
+  }
   // scholarship_review é completado quando passa para process_type
   if (state.processTypeSelected) {
     completedSteps.push('scholarship_review');

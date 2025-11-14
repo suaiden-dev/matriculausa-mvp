@@ -471,9 +471,9 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
                             />
                           </div>
                         ) : (
-                          <p className="text-2xl font-bold text-slate-900">
-                            {getDaysUntilDeadline(scholarship.deadline)} {t('scholarshipsPage.modal.daysLeft')}
-                          </p>
+                        <p className="text-2xl font-bold text-slate-900">
+                          {getDaysUntilDeadline(scholarship.deadline)} {t('scholarshipsPage.modal.daysLeft')}
+                        </p>
                         )}
                         <p className="text-slate-700">
                           {t('scholarshipsPage.modal.deadline')} {(() => {
@@ -481,10 +481,10 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
                             const [year, month, day] = scholarship.deadline.split('-').map(Number);
                             const deadlineDate = new Date(year, month - 1, day);
                             return deadlineDate.toLocaleDateString('en-US', {
-                              weekday: 'long',
-                              year: 'numeric',
-                              month: 'long',
-                              day: 'numeric'
+                            weekday: 'long',
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
                             });
                           })()}
                         </p>

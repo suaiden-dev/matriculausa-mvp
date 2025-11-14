@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { Clock, CheckCircle, Loader2, Building, DollarSign, AlertCircle, GraduationCap, FileText, XCircle, Calendar, X } from 'lucide-react';
+import { Clock, CheckCircle, Loader2, Building, DollarSign, AlertCircle, GraduationCap, FileText, XCircle, Calendar, X, ArrowLeft, RefreshCw, ChevronDown } from 'lucide-react';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '../../../hooks/useAuth';
 import { supabase } from '../../../lib/supabase';
 import { StepProps } from '../types';
@@ -37,9 +38,12 @@ export const WaitingApprovalStep: React.FC<StepProps & { onComplete?: () => void
   const { t } = useTranslation();
   const { user, userProfile } = useAuth();
   const { getFeeAmount, formatFeeAmount } = useFeeConfig(user?.id);
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [checking, setChecking] = useState(false);
   const [applications, setApplications] = useState<ApplicationWithScholarship[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const isCheckingRef = useRef(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   
@@ -47,6 +51,9 @@ export const WaitingApprovalStep: React.FC<StepProps & { onComplete?: () => void
   const [openChecklists, setOpenChecklists] = useState<Record<string, boolean>>({});
   const [selectedFiles, setSelectedFiles] = useState<Record<string, File | null>>({});
   const [uploading, setUploading] = useState<Record<string, boolean>>({});
+  
+  // Estado para controlar expansão/colapso da seção de aplicações pendentes
+  const [showPendingApplications, setShowPendingApplications] = useState(false);
 
   // Estados para modais de pagamento
   const [pendingApplication, setPendingApplication] = useState<ApplicationWithScholarship | null>(null);
@@ -162,7 +169,7 @@ export const WaitingApprovalStep: React.FC<StepProps & { onComplete?: () => void
   // Função para obter cor do status
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'approved': return 'bg-green-100 text-green-800 border-green-200';
+      case 'approved': return 'bg-emerald-50 text-emerald-700 border-emerald-200';
       case 'rejected': return 'bg-red-100 text-red-800 border-red-200';
       case 'under_review': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
       case 'pending': return 'bg-blue-100 text-blue-800 border-blue-200';
@@ -432,6 +439,14 @@ export const WaitingApprovalStep: React.FC<StepProps & { onComplete?: () => void
     };
   }, [userProfile?.id]);
 
+  // Quando o aluno pagar a taxa de uma bolsa aprovada, escondemos as demais aprovadas não pagas
+  const chosenPaidApp = applications.find(
+    (a) => !!(a as any).is_application_fee_paid || !!(a as any).is_scholarship_fee_paid
+  );
+  const applicationsToShow = chosenPaidApp
+    ? applications.filter((a) => a.id === chosenPaidApp.id)
+    : applications;
+
   // Função para handle application fee click
   const handleApplicationFeeClick = (application: ApplicationWithScholarship) => {
     setPendingApplication(application);
@@ -444,14 +459,37 @@ export const WaitingApprovalStep: React.FC<StepProps & { onComplete?: () => void
     setShowScholarshipFeeModal(true);
   };
 
-  // Função para handle Zelle Application Fee click - o ZelleCheckout será mostrado inline no modal
+  // Função para handle Zelle Application Fee click
   const handleZelleApplicationFeeClick = () => {
-    // O ScholarshipConfirmationModal já mostra o ZelleCheckout inline quando Zelle é selecionado
+    if (pendingApplication) {
+      // Sempre redirecionar para página Zelle (tanto mobile quanto desktop)
+      const params = new URLSearchParams({
+        zelle_payment: 'true',
+        fee_type: 'application_fee',
+        application_id: pendingApplication.id,
+        scholarship_id: pendingApplication.scholarship_id,
+        amount: getApplicationFeeWithDependents(Number((pendingApplication.scholarships as any)?.application_fee_amount || 35000)).toString()
+      });
+      navigate(`/student/onboarding?step=waiting_approval&${params.toString()}`);
+      setShowConfirmationModal(false);
+    }
   };
 
-  // Função para handle Zelle Scholarship Fee click - o ZelleCheckout será mostrado inline no modal
+  // Função para handle Zelle Scholarship Fee click
   const handleZelleScholarshipFeeClick = () => {
-    // O ScholarshipConfirmationModal já mostra o ZelleCheckout inline quando Zelle é selecionado
+    if (pendingScholarshipFeeApplication) {
+      // Sempre redirecionar para página Zelle (tanto mobile quanto desktop)
+      const scholarshipFeeAmount = getFeeAmount('scholarship_fee');
+      const params = new URLSearchParams({
+        zelle_payment: 'true',
+        fee_type: 'scholarship_fee',
+        application_id: pendingScholarshipFeeApplication.id,
+        scholarship_id: pendingScholarshipFeeApplication.scholarship_id,
+        amount: scholarshipFeeAmount.toString()
+      });
+      navigate(`/student/onboarding?step=waiting_approval&${params.toString()}`);
+      setShowScholarshipFeeModal(false);
+    }
   };
 
   // Função para processar checkout Stripe (Application Fee)
@@ -674,6 +712,130 @@ export const WaitingApprovalStep: React.FC<StepProps & { onComplete?: () => void
     }
   };
 
+  // Verificar se deve mostrar página Zelle (mobile)
+  const zellePayment = searchParams.get('zelle_payment') === 'true';
+  const zelleFeeType = searchParams.get('fee_type') as 'application_fee' | 'scholarship_fee' | null;
+  const zelleApplicationId = searchParams.get('application_id');
+  const zelleScholarshipId = searchParams.get('scholarship_id');
+  const zelleAmount = searchParams.get('amount');
+
+  // Se tiver query params de Zelle, mostrar página Zelle (tanto mobile quanto desktop)
+  if (zellePayment && zelleFeeType && zelleScholarshipId && zelleAmount) {
+    const application = applications.find(app => 
+      app.id === zelleApplicationId || app.scholarship_id === zelleScholarshipId
+    );
+
+    if (!application && loading) {
+      return (
+        <div className="text-center py-12">
+          <Loader2 className="w-16 h-16 text-blue-600 mx-auto animate-spin mb-4" />
+          <p className="text-gray-600">Loading payment information...</p>
+        </div>
+      );
+    }
+
+    if (!application) {
+      return (
+        <div className="text-center py-12">
+          <AlertCircle className="w-16 h-16 text-red-600 mx-auto mb-4" />
+          <p className="text-gray-600">Application not found. Please try again.</p>
+          <button
+            onClick={() => navigate('/student/onboarding?step=waiting_approval')}
+            className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+          >
+            Back to Applications
+          </button>
+        </div>
+      );
+    }
+
+    const scholarship = application.scholarships;
+    const metadata = zelleFeeType === 'application_fee' 
+      ? {
+          application_id: application.id,
+          selected_scholarship_id: application.scholarship_id,
+          application_fee_amount: parseFloat(zelleAmount)
+        }
+      : {
+          application_id: application.id,
+          selected_scholarship_id: application.scholarship_id
+        };
+
+    return (
+      <div className="w-full max-w-4xl mx-auto px-4 py-8">
+        {/* Header com botão voltar */}
+        <div className="mb-6">
+          <button
+            onClick={() => {
+              // Remover query params de Zelle e voltar para a lista
+              navigate('/student/onboarding?step=waiting_approval');
+            }}
+            className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors mb-4"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            <span>Voltar</span>
+          </button>
+          
+          <div className="bg-white rounded-xl shadow-md border border-slate-200 p-6 mb-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              {zelleFeeType === 'scholarship_fee' 
+                ? t('scholarshipConfirmationModal.scholarshipFee.title') || 'Pay Scholarship Fee'
+                : t('scholarshipConfirmationModal.applicationFee.title') || 'Pay Application Fee'}
+            </h2>
+            <p className="text-gray-600 mb-4">
+              {scholarship?.title || 'Scholarship'}
+            </p>
+            <div className="text-sm text-gray-700">
+              <p><strong>University:</strong> {scholarship?.universities?.name || 'Unknown'}</p>
+              <p className="mt-2"><strong>Amount:</strong> <span className="text-emerald-600 font-bold">${parseFloat(zelleAmount).toFixed(2)}</span></p>
+            </div>
+          </div>
+        </div>
+
+        {/* Zelle Checkout */}
+        <div className="bg-white rounded-xl shadow-md border border-slate-200 p-6">
+          <ZelleCheckout
+            feeType={zelleFeeType}
+            amount={parseFloat(zelleAmount)}
+            scholarshipsIds={[zelleScholarshipId]}
+            onSuccess={async () => {
+              // Recarregar aplicações
+              const { data: apps } = await supabase
+                .from('scholarship_applications')
+                .select(`
+                  *,
+                  scholarships:scholarship_id (
+                    *,
+                    universities:university_id (*)
+                  )
+                `)
+                .eq('student_id', userProfile?.id)
+                .order('applied_at', { ascending: false });
+              
+              if (apps) {
+                setApplications(apps as ApplicationWithScholarship[]);
+              }
+              
+              // Se for Application Fee, remover query params de Zelle mas manter na mesma step
+              // Isso faz o componente voltar a mostrar a lista, mas com Application Fee marcada como paga
+              // O usuário continuará na mesma step e poderá pagar a Scholarship Fee
+              if (zelleFeeType === 'application_fee') {
+                // Remover query params de Zelle para voltar à visualização da lista
+                // Mas manter na mesma step (waiting_approval)
+                navigate('/student/onboarding?step=waiting_approval', { replace: true });
+                return;
+              }
+              
+              // Se for Scholarship Fee ou outro tipo, voltar para a lista
+              navigate('/student/onboarding?step=waiting_approval');
+            }}
+            metadata={metadata}
+          />
+        </div>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="text-center py-12">
@@ -683,82 +845,58 @@ export const WaitingApprovalStep: React.FC<StepProps & { onComplete?: () => void
     );
   }
 
+  // Função para refresh manual
+  const handleRefresh = async () => {
+    if (!userProfile?.id || refreshing) return;
+    
+    const fetchApplications = async () => {
+      try {
+        setRefreshing(true);
+        console.log('🔄 [WaitingApprovalStep] Manual refresh triggered');
+        
+        const { data, error } = await supabase
+          .from('scholarship_applications')
+          .select(`*, scholarships(*, universities(id, name, logo_url))`)
+          .eq('student_id', userProfile.id)
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          console.error('🔍 [WaitingApprovalStep] Error fetching applications:', error);
+        } else {
+          const newApplications = (data || []) as ApplicationWithScholarship[];
+          setApplications(newApplications);
+        }
+      } catch (error) {
+        console.error('🔍 [WaitingApprovalStep] Error fetching applications:', error);
+      } finally {
+        setRefreshing(false);
+      }
+    };
+    
+    await fetchApplications();
+  };
+
+  // Verificar se há bolsas aprovadas para priorizar na hierarquia
+  const approvedList = applications.length > 0 
+    ? applicationsToShow.filter(a => a.status === 'approved' || a.status === 'enrolled')
+    : [];
+  const hasApprovedScholarships = approvedList.length > 0;
+
   return (
-    <div className="w-full max-w-6xl mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="mb-8">
-        {userProfile?.documents_status === 'approved' && (
-          <div className="text-center mb-6">
-            <div className="mb-4">
-              <CheckCircle className="w-16 h-16 text-green-600 mx-auto" />
-            </div>
-            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
-              Review Applications & Complete Payments
-            </h2>
-            <p className="text-gray-600 mb-2">
-              Your documents have been approved! Review your applications and complete payments below.
-            </p>
-          </div>
-        )}
-        {userProfile?.documents_status !== 'approved' && (
-          <div className="space-y-6">
-            {/* Main Header Card */}
-            <div className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 rounded-2xl p-6 sm:p-8 border border-blue-100 shadow-sm">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="flex-shrink-0">
-                  <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center">
-                    <Building className="w-6 h-6 text-white" />
-                  </div>
-                </div>
-                <div className="flex-1">
-                  <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">
-                    Processo Seletivo
-                  </h2>
-                  <p className="text-gray-600 text-sm sm:text-base">
-                    Suas aplicações estão sendo analisadas pelas universidades
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Status Cards Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Status Card */}
-              <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm">
-                <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0 w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <FileText className="w-5 h-5 text-blue-600" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-gray-900 mb-1 text-sm">
-                      Status da Aplicação
-                    </h3>
-                    <p className="text-sm text-gray-600 leading-relaxed">
-                      Sua aplicação foi enviada com todos os documentos necessários. As universidades estão analisando seus materiais.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Important Notice Card */}
-              <div className="bg-white rounded-xl p-5 border-2 border-blue-200 shadow-sm">
-                <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0 w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
-                    <AlertCircle className="w-5 h-5 text-blue-600" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-blue-900 mb-1 text-sm">
-                      Atenção
-                    </h3>
-                    <p className="text-sm text-gray-700 leading-relaxed">
-                      As universidades podem rejeitar documentos. Se isso acontecer, você verá o motivo e poderá fazer upload novamente.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+    <div className="w-full max-w-6xl mx-auto px-4 py-4 sm:py-8">
+      {/* Botão de Refresh - Sempre no topo */}
+      <div className="flex justify-end mb-4 sm:mb-6">
+        <button
+          onClick={handleRefresh}
+          disabled={refreshing || loading}
+          className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50 hover:border-slate-400 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md"
+          title="Atualizar aplicações"
+        >
+          <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+          <span className="text-sm font-medium">
+            {refreshing ? 'Atualizando...' : 'Atualizar'}
+          </span>
+        </button>
       </div>
 
       {/* Applications List */}
@@ -770,10 +908,70 @@ export const WaitingApprovalStep: React.FC<StepProps & { onComplete?: () => void
           </p>
         </div>
       ) : (
-        <div className="space-y-8">
-          {/* Seção: Aplicações Aprovadas */}
+        <div className="space-y-4 sm:space-y-6">
+          {/* Cards Informativos - Compactos no topo, visíveis junto com bolsas */}
+          {userProfile?.documents_status !== 'approved' && (
+            <div className="space-y-3">
+              {/* Header Compacto */}
+              <div className="bg-white rounded-lg p-3 sm:p-4 border border-slate-200 shadow-sm">
+                <div className="flex items-start gap-2 sm:gap-3">
+                  <div className="flex-shrink-0">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-slate-100 to-slate-200 rounded-lg flex items-center justify-center border border-slate-300">
+                      <Building className="w-4 h-4 sm:w-5 sm:h-5 text-slate-700" />
+                    </div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-sm sm:text-base font-bold text-gray-900 mb-0.5">
+                      Processo Seletivo
+                    </h3>
+                    <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
+                      Suas aplicações estão sendo analisadas pelas universidades.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Status Cards Grid - Compacto em linha horizontal */}
+              <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                {/* Status Card */}
+                <div className="bg-white rounded-lg p-2.5 sm:p-3 border border-slate-200 shadow-sm">
+                  <div className="flex items-start gap-2">
+                    <div className="flex-shrink-0 w-6 h-6 sm:w-7 sm:h-7 bg-slate-100 rounded-md flex items-center justify-center border border-slate-200">
+                      <FileText className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-slate-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold text-gray-900 mb-0.5 text-[10px] sm:text-xs leading-tight">
+                        Status da Aplicação
+                      </h4>
+                      <p className="text-[10px] sm:text-xs text-gray-600 leading-tight">
+                        Documentos enviados. Análise em andamento.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Important Notice Card */}
+                <div className="bg-white rounded-lg p-2.5 sm:p-3 border border-amber-200 shadow-sm bg-amber-50/30">
+                  <div className="flex items-start gap-2">
+                    <div className="flex-shrink-0 w-6 h-6 sm:w-7 sm:h-7 bg-amber-100 rounded-md flex items-center justify-center border border-amber-200">
+                      <AlertCircle className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold text-amber-900 mb-0.5 text-[10px] sm:text-xs leading-tight">
+                        Atenção
+                      </h4>
+                      <p className="text-[10px] sm:text-xs text-gray-700 leading-tight">
+                        Documentos podem ser rejeitados. Você poderá reenviar.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Seção: Aplicações Aprovadas - Logo após informações */}
           {(() => {
-            const approvedList = applications.filter(a => a.status === 'approved' || a.status === 'enrolled');
             if (approvedList.length === 0) return null;
             
             // Verificar se há uma aplicação com scholarship fee pago (aplicação selecionada)
@@ -781,21 +979,32 @@ export const WaitingApprovalStep: React.FC<StepProps & { onComplete?: () => void
             const hasSelectedScholarship = !!selectedApp;
             
             return (
-              <section>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-bold text-slate-900">{t('studentDashboard.myApplications.sections.approvedByUniversity') || 'Approved by the University'}</h3>
-                  <span className="text-sm text-green-700 bg-green-100 border border-green-200 px-3 py-1 rounded-full font-medium">{approvedList.length} {t('studentDashboard.myApplications.sections.approved') || 'approved'}</span>
+              <section className="mb-6 sm:mb-8">
+                {/* Header Simplificado - Foco nas bolsas */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 sm:mb-6">
+                  <div>
+                    <h2 className="text-xl sm:text-2xl font-bold text-slate-900 mb-1">
+                      {t('studentDashboard.myApplications.sections.approvedByUniversity') || 'Aprovadas pela Universidade'}
+                    </h2>
+                    <p className="text-sm text-gray-600">
+                      Complete os pagamentos para prosseguir
+                    </p>
+                  </div>
+                  <span className="text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-full font-medium self-start sm:self-center">
+                    {approvedList.length} {t('studentDashboard.myApplications.sections.approved') || 'aprovadas'}
+                  </span>
                 </div>
-                {/* Important Notice */}
-                <div className="mb-6 rounded-xl bg-blue-50 border border-blue-200 p-4 sm:p-5 text-sm text-blue-800">
-                  <div className="flex items-start">
-                    <AlertCircle className="h-5 w-5 text-blue-600 mr-3 mt-0.5 flex-shrink-0" />
+                
+                {/* Important Notice - Mais discreto, abaixo do título */}
+                <div className="mb-4 sm:mb-6 rounded-lg bg-amber-50 border border-amber-200 p-3 sm:p-4 text-xs sm:text-sm">
+                  <div className="flex items-start gap-2 sm:gap-3">
+                    <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5 text-amber-600 mt-0.5 flex-shrink-0" />
                     <div>
-                      <span className="font-semibold">{t('studentDashboard.myApplications.importantNotice.title')}</span> {t('studentDashboard.myApplications.importantNotice.description')}
+                      <span className="font-semibold text-amber-900">{t('studentDashboard.myApplications.importantNotice.title')}</span> <span className="text-amber-800">{t('studentDashboard.myApplications.importantNotice.description')}</span>
                     </div>
                   </div>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
                   {approvedList.map((application) => {
                     const Icon = getStatusIcon(application.status);
                     const scholarship = application.scholarships;
@@ -807,40 +1016,41 @@ export const WaitingApprovalStep: React.FC<StepProps & { onComplete?: () => void
               return (
                 <div
                   key={application.id}
-                  className="bg-white rounded-xl shadow-md hover:shadow-lg transition-all duration-300 border border-slate-200 overflow-hidden"
+                  className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300 border-2 sm:border-4 border-emerald-300 overflow-hidden h-full flex flex-col relative"
                 >
-                  <div className="p-4">
-                    {/* Header: Title + Status */}
-                    <div className="mb-3">
-                      <div className="flex items-start justify-between mb-2">
-                        <h3 className="font-bold text-slate-900 text-base leading-tight flex-1 pr-2">
-                          {scholarship.title}
-                        </h3>
-                        <span className={`inline-flex items-center px-2 py-1 rounded-lg text-xs font-bold border ${getStatusColor(application.status)} flex-shrink-0`}>
-                          <Icon className="h-3 w-3 mr-1" />
-                          {getStatusLabel(application.status)}
-                        </span>
-                      </div>
-                    </div>
+                  {/* Subtle gradient background */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-emerald-50/50 to-transparent opacity-30 pointer-events-none" />
 
-                    {/* University + Level na mesma linha */}
-                    <div className="flex items-center justify-between text-sm mb-2">
-                      <div className="flex items-center text-slate-600">
-                        <Building className="h-3 w-3 mr-1.5 text-slate-500 flex-shrink-0" />
-                        <span className="font-medium text-sm truncate">{scholarship.universities?.name || 'Unknown University'}</span>
-                      </div>
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-slate-100 text-slate-700">
-                        <GraduationCap className="h-3 w-3 mr-1" />
-                        {scholarship.level ? scholarship.level.charAt(0).toUpperCase() + scholarship.level.slice(1) : 'N/A'}
+                  <div className="relative z-10 p-4 sm:p-6 md:p-8 lg:p-12 flex flex-col flex-1 min-h-0">
+                    {/* Status Badge - Top Right - Responsivo */}
+                    <div className="absolute top-3 right-3 sm:top-4 sm:right-4 md:top-6 md:right-6">
+                      <span className="inline-flex items-center gap-1 sm:gap-2 bg-emerald-600 text-white px-2 py-1 sm:px-3 sm:py-1.5 md:px-4 md:py-2 rounded-full text-xs sm:text-sm font-bold shadow-md">
+                        <Icon className="w-3 h-3 sm:w-4 sm:h-4" />
+                        <span className="hidden sm:inline">{getStatusLabel(application.status)}</span>
+                        <span className="sm:hidden">APROVADA</span>
                       </span>
                     </div>
 
-                    {/* Scholarship Value */}
-                    <div className="flex items-center text-green-700 mb-3">
-                      <DollarSign className="h-3 w-3 mr-1.5 text-green-600 flex-shrink-0" />
-                      <span className="font-bold text-sm">
+                    {/* University and Program - Responsivo */}
+                    <div className="mb-4 sm:mb-6 md:mb-8 pr-16 sm:pr-20 md:pr-24">
+                      <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 mb-2 leading-tight">
+                        {scholarship.title}
+                      </h3>
+                      <div className="flex flex-wrap items-center gap-1 sm:gap-2 text-gray-600 text-sm sm:text-base">
+                        <Building className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                        <span className="break-words">{scholarship.universities?.name || 'Unknown University'}</span>
+                        <span className="mx-1 sm:mx-2 hidden sm:inline">•</span>
+                        <GraduationCap className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                        <span>{scholarship.level ? scholarship.level.charAt(0).toUpperCase() + scholarship.level.slice(1) : 'N/A'}</span>
+                      </div>
+                    </div>
+
+                    {/* Amount Section - Destacado como no v0 - Responsivo */}
+                    <div className="bg-emerald-50 rounded-xl p-4 sm:p-5 md:p-6 mb-4 sm:mb-6 md:mb-8 border border-emerald-200">
+                      <p className="text-gray-600 text-xs sm:text-sm font-medium mb-1 sm:mb-2">Valor da Bolsa</p>
+                      <p className="text-2xl sm:text-3xl md:text-4xl font-bold text-emerald-700 break-words">
                         {formatAmount(scholarship.annual_value_with_scholarship || 0)}
-                      </span>
+                      </p>
                     </div>
 
                     {/* Documents Status - Individual Check List - apenas se aplicação não foi rejeitada E não está aprovada */}
@@ -865,18 +1075,18 @@ export const WaitingApprovalStep: React.FC<StepProps & { onComplete?: () => void
                       if (docs.length === 0) return null;
 
                       const isOpen = openChecklists[application.id];
-                      
+
                       return (
                         <div className="border-t border-slate-200 pt-3 mt-3">
                           <div className="border border-slate-300 rounded-xl bg-white overflow-hidden transition-all duration-500">
-                            <button 
-                              onClick={() => toggleChecklist(application.id)}
+                          <button 
+                            onClick={() => toggleChecklist(application.id)}
                               className="flex items-center justify-between cursor-pointer select-none w-full p-4 hover:bg-slate-50 transition-colors text-left"
-                            >
-                              <h4 className="text-xs font-bold text-slate-900 flex items-center">
-                                <FileText className="h-3 w-3 mr-2 text-blue-600" />
+                          >
+                            <h4 className="text-xs font-bold text-slate-900 flex items-center">
+                              <FileText className="h-3 w-3 mr-2 text-blue-600" />
                                 Documentos em Análise
-                              </h4>
+                            </h4>
                               <span 
                                 className={`text-2xl text-slate-700 transition-all duration-350 ease-in-out ${
                                   isOpen ? 'rotate-90' : '-rotate-90'
@@ -885,19 +1095,19 @@ export const WaitingApprovalStep: React.FC<StepProps & { onComplete?: () => void
                               >
                                 ›
                               </span>
-                            </button>
-                            
-                            <div 
+                          </button>
+                          
+                          <div 
                               className={`transition-all duration-500 ease-in-out ${
                                 isOpen 
                                   ? 'opacity-100 translate-y-0 mt-4 mb-4 max-h-[500px] overflow-y-auto' 
                                   : 'opacity-0 -translate-y-12 max-h-0 overflow-hidden pointer-events-none'
-                              }`}
+                            }`}
                               style={{
                                 scrollbarWidth: 'thin',
                                 scrollbarColor: 'transparent transparent'
                               }}
-                            >
+                          >
                               <div 
                                 className="px-4 pb-2 space-y-3 custom-scrollbar"
                                 onMouseEnter={(e) => {
@@ -924,7 +1134,7 @@ export const WaitingApprovalStep: React.FC<StepProps & { onComplete?: () => void
                                         {/* Check Icon */}
                                         <div className={`flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center mr-3 mt-0.5 transition-all duration-200 ${
                                           isApproved 
-                                            ? 'bg-green-100 border-green-400 text-green-600' 
+                                            ? 'bg-emerald-50 border-emerald-300 text-emerald-600' 
                                             : isRejected 
                                               ? 'bg-red-100 border-red-400 text-red-600'
                                               : isUnderReview
@@ -950,7 +1160,7 @@ export const WaitingApprovalStep: React.FC<StepProps & { onComplete?: () => void
                                             </h5>
                                             <span className={`px-2 py-1 rounded-full text-xs font-bold border ${
                                               isApproved 
-                                                ? 'bg-green-50 text-green-700 border-green-200' 
+                                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
                                                 : isRejected 
                                                   ? 'bg-red-50 text-red-700 border-red-200'
                                                 : isUnderReview
@@ -1020,59 +1230,66 @@ export const WaitingApprovalStep: React.FC<StepProps & { onComplete?: () => void
                       );
                     })()}
 
-                    {/* Payment Status Section - apenas quando documentos estão aprovados E aplicação está aprovada */}
-                    {userProfile?.documents_status === 'approved' && (application.status === 'approved' || application.status === 'enrolled') && (
-                      <div className="border-t border-slate-200 pt-3 mt-3">
-                        <h3 className="font-bold text-gray-900 mb-3 text-xs">{t('studentDashboard.myApplications.paymentStatus.title') || 'Payment Status'}</h3>
-                        <div className="space-y-2">
-                          {/* Application Fee */}
-                          <div className="bg-white border-2 border-slate-200 rounded-lg p-2.5 shadow-sm">
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="font-semibold text-gray-900 text-xs">{t('studentDashboard.myApplications.paymentStatus.applicationFee') || 'Application Fee'}</span>
-                              <span className="text-sm font-bold text-gray-700">
-                                {formatAmount(getApplicationFeeWithDependents(Number((application.scholarships as any)?.application_fee_amount || 35000)))}
-                              </span>
-                            </div>
-                            {applicationFeePaid ? (
-                              <div className="inline-flex items-center px-2 py-1 rounded-lg text-xs font-semibold bg-green-100 text-green-700 border border-green-200">
-                                <CheckCircle className="h-3 w-3 mr-1" />
-                                {t('studentDashboard.myApplications.paymentStatus.paid') || 'Paid'}
-                              </div>
-                            ) : (
-                              <button
-                                onClick={() => handleApplicationFeeClick(application)}
-                                className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white px-3 py-2 rounded-lg font-semibold hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-md hover:shadow-lg text-xs"
-                                disabled={
-                                  (hasSelectedScholarship && !scholarshipFeePaid) ||
-                                  (isBlocked && pendingPayment?.fee_type === 'application_fee' && 
-                                   (pendingPayment.metadata?.application_id === application.id || 
-                                    pendingPayment.metadata?.selected_scholarship_id === application.scholarship_id))
-                                }
-                              >
-                                {t('studentDashboard.myApplications.paymentStatus.payApplicationFee') || 'Pay Application Fee'}
-                              </button>
-                            )}
+                    {/* Payment Status Section - quando aplicação está aprovada - Estilo v0 - Responsivo */}
+                    {(application.status === 'approved' || application.status === 'enrolled') && (
+                      <div className="space-y-3 sm:space-y-4 mb-4 sm:mb-6 md:mb-8 p-4 sm:p-5 md:p-6 bg-gray-50 rounded-xl border border-gray-200 mt-auto flex-shrink-0">
+                        <div className="flex items-start gap-3 sm:gap-4">
+                          <div className="p-1.5 sm:p-2 bg-white rounded-lg border border-gray-200 flex-shrink-0">
+                            <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-slate-600" />
                           </div>
-
-                          {/* Scholarship Fee */}
-                          <div className="bg-white border-2 border-slate-200 rounded-lg p-2.5 shadow-sm">
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="font-semibold text-gray-900 text-xs">{t('studentDashboard.myApplications.paymentStatus.scholarshipFee') || 'Scholarship Fee'}</span>
-                              <span className="text-sm font-bold text-gray-700">{formatAmount(Number(getFeeAmount('scholarship_fee')))}</span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs sm:text-sm text-gray-600">{t('studentDashboard.myApplications.paymentStatus.title') || 'Status de Pagamento'}</p>
+                            <div className="mt-2 sm:mt-3 space-y-2 sm:space-y-3">
+                              {/* Application Fee */}
+                              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2">
+                                <span className="text-xs sm:text-sm font-medium text-gray-700">{t('studentDashboard.myApplications.paymentStatus.applicationFee') || 'Application Fee'}</span>
+                                <span className="text-sm sm:text-base font-bold text-gray-900">
+                                  {formatAmount(getApplicationFeeWithDependents(Number((application.scholarships as any)?.application_fee_amount || 35000)))}
+                                </span>
+                              </div>
+                              {applicationFeePaid ? (
+                                <div className="inline-flex items-center px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg text-xs sm:text-sm font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                  <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-1.5" />
+                                  {t('studentDashboard.myApplications.paymentStatus.paid') || 'Paid'}
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => handleApplicationFeeClick(application)}
+                                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 sm:py-2.5 md:py-3 rounded-lg shadow-md hover:shadow-lg transition-all text-xs sm:text-sm h-auto disabled:opacity-50 disabled:cursor-not-allowed"
+                                  disabled={
+                                    (hasSelectedScholarship && !scholarshipFeePaid) ||
+                                    (isBlocked && pendingPayment?.fee_type === 'application_fee')
+                                  }
+                                >
+                                  {t('studentDashboard.myApplications.paymentStatus.payApplicationFee') || 'Pay Application Fee'}
+                                </button>
+                              )}
                             </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-start gap-3 sm:gap-4 pt-3 border-t border-gray-200">
+                          <div className="p-1.5 sm:p-2 bg-white rounded-lg border border-gray-200 flex-shrink-0">
+                            <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs sm:text-sm text-gray-600">{t('studentDashboard.myApplications.paymentStatus.scholarshipFee') || 'Scholarship Fee'}</p>
+                            <div className="mt-2 sm:mt-3">
+                              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2 mb-2 sm:mb-3">
+                                <span className="text-xs sm:text-sm font-medium text-gray-700">{t('studentDashboard.myApplications.paymentStatus.scholarshipFee') || 'Scholarship Fee'}</span>
+                                <span className="text-sm sm:text-base font-bold text-gray-900">{formatAmount(Number(getFeeAmount('scholarship_fee')))}</span>
+                              </div>
                             {(() => {
                               const paymentKey = `${application.id}_scholarship_fee`;
                               const paymentStatus = zellePaymentStatus[paymentKey];
                               const isProcessing = paymentStatus?.status === 'processing';
                               const isRejected = paymentStatus?.status === 'rejected';
-                              const isBlockedForThis = isBlocked && pendingPayment?.fee_type === 'scholarship_fee' && 
-                                (pendingPayment.metadata?.application_id === application.id || 
-                                 pendingPayment.metadata?.selected_scholarship_id === application.scholarship_id);
+                              const isBlockedForThis = isBlocked && pendingPayment?.fee_type === 'scholarship_fee';
 
                               if (scholarshipFeePaid) {
                                 return (
-                                  <div className="inline-flex items-center px-2 py-1 rounded-lg text-xs font-semibold bg-green-100 text-green-700 border border-green-200">
-                                    <CheckCircle className="h-3 w-3 mr-1" />
+                                  <div className="inline-flex items-center px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg text-xs sm:text-sm font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                    <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-1.5" />
                                     {t('studentDashboard.myApplications.paymentStatus.paid') || 'Paid'}
                                   </div>
                                 );
@@ -1092,7 +1309,7 @@ export const WaitingApprovalStep: React.FC<StepProps & { onComplete?: () => void
                                     </div>
                                     <button
                                       onClick={() => handleScholarshipFeeClick(application)}
-                                      className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white px-3 py-2 rounded-lg font-semibold hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 shadow-md hover:shadow-lg text-xs"
+                                      className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 sm:py-2.5 md:py-3 rounded-lg shadow-md hover:shadow-lg transition-all text-xs sm:text-sm h-auto disabled:opacity-50 disabled:cursor-not-allowed"
                                       disabled={!applicationFeePaid || (hasSelectedScholarship && !scholarshipFeePaid)}
                                     >
                                       {t('studentDashboard.myApplications.paymentStatus.payScholarshipFee') || 'Pay Scholarship Fee'}
@@ -1115,7 +1332,7 @@ export const WaitingApprovalStep: React.FC<StepProps & { onComplete?: () => void
                               return (
                                 <button
                                   onClick={() => handleScholarshipFeeClick(application)}
-                                  className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white px-3 py-2 rounded-lg font-semibold hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-md hover:shadow-lg text-xs"
+                                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 sm:py-2.5 md:py-3 rounded-lg shadow-md hover:shadow-lg transition-all text-xs sm:text-sm h-auto disabled:opacity-50 disabled:cursor-not-allowed"
                                   disabled={
                                     !applicationFeePaid || 
                                     scholarshipFeePaid || 
@@ -1126,31 +1343,85 @@ export const WaitingApprovalStep: React.FC<StepProps & { onComplete?: () => void
                                 </button>
                               );
                             })()}
+                            </div>
                           </div>
                         </div>
                       </div>
                     )}
+
+                    {/* Action Buttons - Estilo v0 - Responsivo */}
+                    <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mt-auto">
+                      {(applicationFeePaid && scholarshipFeePaid) ? (
+                        <Link
+                          to={`/student/dashboard/application/${application.id}/chat`}
+                          className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 sm:py-3 rounded-lg shadow-md hover:shadow-lg transition-all text-sm sm:text-base h-auto text-center"
+                        >
+                          {t('studentDashboard.myApplications.applicationDetails.viewDetails') || 'Ver Detalhes da Aplicação'}
+                        </Link>
+                      ) : (
+                        <>
+                          {!applicationFeePaid && (
+                            <button
+                              onClick={() => handleApplicationFeeClick(application)}
+                              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 sm:py-3 rounded-lg shadow-md hover:shadow-lg transition-all text-sm sm:text-base h-auto disabled:opacity-50 disabled:cursor-not-allowed"
+                              disabled={
+                                (hasSelectedScholarship && !scholarshipFeePaid) ||
+                                (isBlocked && pendingPayment?.fee_type === 'application_fee')
+                              }
+                            >
+                              {t('studentDashboard.myApplications.paymentStatus.payApplicationFee') || 'Processar Pagamento'}
+                            </button>
+                          )}
+                          <button
+                            className="flex-1 border-2 border-gray-300 hover:bg-gray-50 font-semibold py-2.5 sm:py-3 rounded-lg text-sm sm:text-base h-auto text-gray-700"
+                          >
+                            Mais Informações
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
-                );
+              );
                   })}
                 </div>
               </section>
             );
           })()}
 
-          {/* Seção: Pendentes e Em Progresso */}
+          {/* Seção: Pendentes e Em Progresso - Colapsável - Estilo v0 */}
           {(() => {
-            const otherList = applications.filter(a => a.status !== 'approved' && a.status !== 'enrolled');
+            const otherList = applicationsToShow.filter(a => a.status !== 'approved' && a.status !== 'enrolled');
             if (otherList.length === 0) return null;
             
             return (
               <section>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-bold text-slate-900">{t('studentDashboard.myApplications.sections.pendingAndInProgress') || 'Pending and In Progress'}</h3>
-                  <span className="text-sm text-slate-700 bg-slate-100 border border-slate-200 px-3 py-1 rounded-full font-medium">{otherList.length} {t('studentDashboard.myApplications.sections.applications') || 'applications'}</span>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <button
+                  onClick={() => setShowPendingApplications(!showPendingApplications)}
+                  className="w-full flex items-center justify-between bg-white hover:bg-slate-50 border-2 border-slate-300 rounded-xl p-6 transition-all duration-300 group mb-6 shadow-sm hover:shadow-md"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-slate-100 group-hover:bg-slate-200 rounded-lg transition-colors border border-slate-200">
+                      <Clock className="w-6 h-6 text-slate-600" />
+                    </div>
+                    <div className="text-left">
+                      <h2 className="text-xl font-bold text-gray-900">
+                        {t('studentDashboard.myApplications.sections.pendingAndInProgress') || 'Aplicações Pendentes'}
+                      </h2>
+                      <p className="text-gray-600 text-sm mt-1">
+                        {otherList.length} {t('studentDashboard.myApplications.sections.applications') || 'candidaturas em processamento'}
+                      </p>
+                    </div>
+                  </div>
+                  <ChevronDown
+                    className={`w-6 h-6 text-gray-600 transition-transform duration-300 ${
+                      showPendingApplications ? 'rotate-180' : ''
+                    }`}
+                  />
+                </button>
+                {showPendingApplications && (
+                  <div className="space-y-6 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   {otherList.map((application) => {
                     const Icon = getStatusIcon(application.status);
                     const scholarship = application.scholarships;
@@ -1159,64 +1430,76 @@ export const WaitingApprovalStep: React.FC<StepProps & { onComplete?: () => void
                     // Obter descrição detalhada do status
                     const statusInfo = getStatusDescription(application);
 
+                    // Estilo v0 para cards pendentes
+                    const getStatusColorV0 = (status: string) => {
+                      if (status.includes('análise') || status === 'under_review' || status === 'pending') {
+                        return { bg: 'bg-blue-50', border: 'border-blue-200', badge: 'bg-blue-100 text-blue-700' };
+                      }
+                      if (status.includes('incompleta') || status === 'rejected') {
+                        return { bg: 'bg-red-50', border: 'border-red-200', badge: 'bg-red-100 text-red-700' };
+                      }
+                      return { bg: 'bg-gray-50', border: 'border-gray-200', badge: 'bg-gray-100 text-gray-700' };
+                    };
+
+                    const colors = getStatusColorV0(application.status);
+
                     return (
                       <div
                         key={application.id}
-                        className="bg-white rounded-xl shadow-md hover:shadow-lg transition-all duration-300 border border-slate-200 overflow-hidden"
+                        className={`${colors.bg} border-2 ${colors.border} rounded-xl p-6 hover:shadow-md transition-shadow duration-300`}
                       >
-                        <div className="p-4">
-                          {/* Header: Title + Status */}
-                          <div className="mb-3">
-                            <div className="flex items-start justify-between mb-2">
-                              <h3 className="font-bold text-slate-900 text-base leading-tight flex-1 pr-2">
-                                {scholarship.title}
-                              </h3>
-                              <span className={`inline-flex items-center px-2 py-1 rounded-lg text-xs font-bold border ${getStatusColor(application.status)} flex-shrink-0`}>
-                                <Icon className="h-3 w-3 mr-1" />
-                                {getStatusLabel(application.status)}
-                              </span>
-                            </div>
-                          </div>
-
-                          {/* University + Level na mesma linha */}
-                          <div className="flex items-center justify-between text-sm mb-2">
-                            <div className="flex items-center text-slate-600">
-                              <Building className="h-3 w-3 mr-1.5 text-slate-500 flex-shrink-0" />
-                              <span className="font-medium text-sm truncate">{scholarship.universities?.name || 'Unknown University'}</span>
-                            </div>
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-slate-100 text-slate-700">
-                              <GraduationCap className="h-3 w-3 mr-1" />
-                              {scholarship.level ? scholarship.level.charAt(0).toUpperCase() + scholarship.level.slice(1) : 'N/A'}
-                            </span>
-                          </div>
-
-                          {/* Compact chips row: Status, Date, Value */}
-                          <div className="flex flex-wrap items-center gap-2 text-xs mb-3">
-                            <span className={`inline-flex items-center px-2 py-1 rounded-md border ${getStatusColor(application.status)} whitespace-nowrap`}>
-                              <Icon className="h-3 w-3 mr-1" />
+                        <div className="space-y-4">
+                          {/* Status Badge */}
+                          <div>
+                            <span className={`inline-block ${colors.badge} px-3 py-1 rounded-full text-xs font-semibold`}>
                               {getStatusLabel(application.status)}
                             </span>
-                            <span className="inline-flex items-center px-2 py-1 rounded-md bg-gray-50 text-gray-700 border border-gray-200 whitespace-nowrap">
-                              <Calendar className="h-3 w-3 mr-1.5 text-gray-500" />
-                              {new Date(application.applied_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                            </span>
-                            <span className="inline-flex items-center px-2 py-1 rounded-md bg-green-50 text-green-700 border border-green-200 whitespace-nowrap">
-                              <DollarSign className="h-3 w-3 mr-1 text-green-600" />
-                              {formatAmount(scholarship.annual_value_with_scholarship || 0)}
-                            </span>
+                          </div>
+
+                          {/* University */}
+                          <div className="flex gap-3">
+                            <Building className="w-5 h-5 text-gray-500 flex-shrink-0 mt-0.5" />
+                            <div>
+                              <p className="text-xs text-gray-600">Instituição</p>
+                              <p className="font-semibold text-gray-900 text-sm mt-0.5">
+                                {scholarship.universities?.name || 'Unknown University'}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Program */}
+                          <div className="flex gap-3">
+                            <GraduationCap className="w-5 h-5 text-gray-500 flex-shrink-0 mt-0.5" />
+                            <div>
+                              <p className="text-xs text-gray-600">Programa</p>
+                              <p className="font-semibold text-gray-900 text-sm mt-0.5">
+                                {scholarship.title}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Date */}
+                          <div className="flex gap-3">
+                            <Calendar className="w-5 h-5 text-gray-500 flex-shrink-0 mt-0.5" />
+                            <div>
+                              <p className="text-xs text-gray-600">Data de Envio</p>
+                              <p className="font-semibold text-gray-900 text-sm mt-0.5">
+                                {new Date(application.applied_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                              </p>
+                            </div>
                           </div>
 
                           {/* Status Details Section - Removed for pending status with documents under review */}
                           {!(statusInfo.title === t('studentDashboard.myApplications.statusDescriptions.documentsUnderUniversityReview.title')) && (
-                            <div className="mb-4">
-                              <div className={`rounded-lg p-3 border ${statusInfo.bgColor} ${statusInfo.borderColor}`}>
-                                <h3 className={`font-bold text-sm ${statusInfo.color} mb-2`}>
-                                  {statusInfo.title}
-                                </h3>
-                                <p className="text-sm text-slate-700 leading-relaxed mb-3">
-                                  {statusInfo.description}
-                                </p>
-                              </div>
+                          <div className="mb-4">
+                            <div className={`rounded-lg p-3 border ${statusInfo.bgColor} ${statusInfo.borderColor}`}>
+                              <h3 className={`font-bold text-sm ${statusInfo.color} mb-2`}>
+                                {statusInfo.title}
+                              </h3>
+                              <p className="text-sm text-slate-700 leading-relaxed mb-3">
+                                {statusInfo.description}
+                              </p>
+                                </div>
                             </div>
                           )}
 
@@ -1257,18 +1540,18 @@ export const WaitingApprovalStep: React.FC<StepProps & { onComplete?: () => void
                             if (docs.length === 0) return null;
 
                             const isOpen = openChecklists[application.id];
-                            
+
                             return (
                               <div className="border-t border-slate-200 pt-3 mt-3">
                                 <div className="border border-slate-300 rounded-xl bg-white overflow-hidden transition-all duration-500">
-                                  <button 
-                                    onClick={() => toggleChecklist(application.id)}
+                                <button 
+                                  onClick={() => toggleChecklist(application.id)}
                                     className="flex items-center justify-between cursor-pointer select-none w-full p-4 hover:bg-slate-50 transition-colors text-left"
-                                  >
-                                    <h4 className="text-xs font-bold text-slate-900 flex items-center">
-                                      <FileText className="h-3 w-3 mr-2 text-blue-600" />
+                                >
+                                  <h4 className="text-xs font-bold text-slate-900 flex items-center">
+                                    <FileText className="h-3 w-3 mr-2 text-blue-600" />
                                       Documentos em Análise
-                                    </h4>
+                                  </h4>
                                     <span 
                                       className={`text-2xl text-slate-700 transition-all duration-350 ease-in-out ${
                                         isOpen ? 'rotate-90' : '-rotate-90'
@@ -1277,19 +1560,19 @@ export const WaitingApprovalStep: React.FC<StepProps & { onComplete?: () => void
                                     >
                                       ›
                                     </span>
-                                  </button>
-                                  
-                                  <div 
+                                </button>
+                                
+                                <div 
                                     className={`transition-all duration-500 ease-in-out ${
                                       isOpen 
                                         ? 'opacity-100 translate-y-0 mt-4 mb-4 max-h-[500px] overflow-y-auto' 
                                         : 'opacity-0 -translate-y-12 max-h-0 overflow-hidden pointer-events-none'
-                                    }`}
+                                  }`}
                                     style={{
                                       scrollbarWidth: 'thin',
                                       scrollbarColor: 'transparent transparent'
                                     }}
-                                  >
+                                >
                                     <div 
                                       className="px-4 pb-2 space-y-3 custom-scrollbar"
                                       onMouseEnter={(e) => {
@@ -1316,7 +1599,7 @@ export const WaitingApprovalStep: React.FC<StepProps & { onComplete?: () => void
                                               {/* Check Icon */}
                                               <div className={`flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center mr-3 mt-0.5 transition-all duration-200 ${
                                                 isApproved 
-                                                  ? 'bg-green-100 border-green-400 text-green-600' 
+                                                  ? 'bg-emerald-50 border-emerald-300 text-emerald-600' 
                                                   : isRejected 
                                                     ? 'bg-red-100 border-red-400 text-red-600'
                                                     : isUnderReview
@@ -1342,7 +1625,7 @@ export const WaitingApprovalStep: React.FC<StepProps & { onComplete?: () => void
                                                   </h5>
                                                   <span className={`px-2 py-1 rounded-full text-xs font-bold border ${
                                                     isApproved 
-                                                      ? 'bg-green-50 text-green-700 border-green-200' 
+                                                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
                                                       : isRejected 
                                                         ? 'bg-red-50 text-red-700 border-red-200'
                                                       : isUnderReview
@@ -1415,46 +1698,28 @@ export const WaitingApprovalStep: React.FC<StepProps & { onComplete?: () => void
                       </div>
                     );
                   })}
-                </div>
+                    </div>
+
+                    {/* Info Message - Estilo v0 */}
+                    <div className="bg-amber-50 border-l-4 border-amber-400 rounded-lg p-6 flex gap-4 mt-8">
+                      <AlertCircle className="w-6 h-6 text-amber-500 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <h3 className="font-semibold text-amber-900">
+                          Status das candidaturas
+                        </h3>
+                        <p className="text-amber-800 text-sm mt-1">
+                          O processo de análise pode levar até 30 dias. Acompanhe o progresso das suas candidaturas aqui.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </section>
             );
           })()}
         </div>
       )}
 
-      {/* Botão para completar onboarding quando todas as fees estiverem pagas */}
-      {userProfile?.documents_status === 'approved' && applications.length > 0 && (() => {
-        // Filtrar apenas aplicações aprovadas (mesma lógica do MyApplications)
-        const approvedApplications = applications.filter(app => 
-          app.status === 'approved' || app.status === 'enrolled'
-        );
-        
-        // Verificar se todas as aplicações aprovadas têm todas as fees pagas
-        const allFeesPaid = approvedApplications.length > 0 && approvedApplications.every(app => 
-          (app as any).is_application_fee_paid && (app as any).is_scholarship_fee_paid
-        );
-        
-        if (allFeesPaid && onComplete) {
-          return (
-            <div className="mt-8 text-center">
-              <div className="bg-green-50 border-2 border-green-200 rounded-xl p-6 mb-6">
-                <CheckCircle className="w-12 h-12 text-green-600 mx-auto mb-4" />
-                <h3 className="text-lg font-bold text-green-900 mb-2">All Payments Complete!</h3>
-                <p className="text-sm text-green-700 mb-4">
-                  You've successfully paid all fees for your applications. You can now complete the onboarding process.
-                </p>
-                <button
-                  onClick={onComplete}
-                  className="w-full sm:w-auto bg-gradient-to-r from-green-600 to-green-700 text-white px-8 py-3 rounded-lg font-semibold hover:from-green-700 hover:to-green-800 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
-                >
-                  Complete Onboarding
-                </button>
-              </div>
-            </div>
-          );
-        }
-        return null;
-      })()}
 
       {/* Modal de confirmação para Application Fee */}
       {pendingApplication && (
@@ -1468,8 +1733,22 @@ export const WaitingApprovalStep: React.FC<StepProps & { onComplete?: () => void
           onStripeCheckout={handleStripeCheckout}
           onPixCheckout={handlePixCheckout}
           onZelleCheckout={handleZelleApplicationFeeClick}
-          onZelleSuccess={() => {
-            fetchApplications();
+          onZelleSuccess={async () => {
+            const { data: apps } = await supabase
+              .from('scholarship_applications')
+              .select(`
+                *,
+                scholarships:scholarship_id (
+                  *,
+                  universities:university_id (*)
+                )
+              `)
+              .eq('student_id', userProfile?.id)
+              .order('applied_at', { ascending: false });
+            
+            if (apps) {
+              setApplications(apps as ApplicationWithScholarship[]);
+            }
           }}
           isProcessing={isProcessingCheckout}
           zelleMetadata={{
@@ -1492,8 +1771,22 @@ export const WaitingApprovalStep: React.FC<StepProps & { onComplete?: () => void
           onStripeCheckout={handleScholarshipFeeCheckout}
           onPixCheckout={handleScholarshipFeePixCheckout}
           onZelleCheckout={handleZelleScholarshipFeeClick}
-          onZelleSuccess={() => {
-            fetchApplications();
+          onZelleSuccess={async () => {
+            const { data: apps } = await supabase
+              .from('scholarship_applications')
+              .select(`
+                *,
+                scholarships:scholarship_id (
+                  *,
+                  universities:university_id (*)
+                )
+              `)
+              .eq('student_id', userProfile?.id)
+              .order('applied_at', { ascending: false });
+            
+            if (apps) {
+              setApplications(apps as ApplicationWithScholarship[]);
+            }
           }}
           isProcessing={isProcessingScholarshipFeeCheckout}
           feeType="scholarship_fee"

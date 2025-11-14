@@ -1,261 +1,177 @@
 import React from 'react';
 import { useAuth } from '../../../hooks/useAuth';
 import { StepProps } from '../types';
-import { ArrowRight, GraduationCap, Users, Award, CheckCircle, Sparkles, FileText, CreditCard, Upload, Eye, FileCheck, Mail } from 'lucide-react';
+import { Search, FileText, CheckCircle, Clock, ArrowUpRight, GraduationCap } from 'lucide-react';
 
 export const WelcomeStep: React.FC<StepProps> = ({ onNext }) => {
   const { userProfile } = useAuth();
 
-  const features = [
-    {
-      icon: GraduationCap,
-      title: 'Top Universities',
-      description: 'Access prestigious US universities',
-      gradient: 'from-blue-500 to-blue-600',
-      bgGradient: 'from-blue-50 to-blue-100'
-    },
-    {
-      icon: Users,
-      title: 'Expert Support',
-      description: 'Personalized guidance throughout your journey',
-      gradient: 'from-indigo-500 to-indigo-600',
-      bgGradient: 'from-indigo-50 to-indigo-100'
-    },
-    {
-      icon: Award,
-      title: 'Scholarship Matching',
-      description: 'Find scholarships that match your profile',
-      gradient: 'from-purple-500 to-purple-600',
-      bgGradient: 'from-purple-50 to-purple-100'
-    }
-  ];
-
-  const benefits = [
-    'Streamlined application process',
-    'Document verification support',
-    'Visa assistance guidance',
-    '24/7 student support'
-  ];
-
   const processSteps = [
     {
-      number: 1,
-      icon: CreditCard,
-      title: 'Pay Selection Fee',
-      description: '$350 to begin',
-      color: 'blue'
+      id: 1,
+      title: 'Selection Fee',
+      subtitle: 'Starting your journey',
+      description: 'Pay the selection fee to start the application process at American universities.',
+      icon: Search,
+      iconColor: 'text-[#05294E]',
+      iconBg: 'bg-[#05294E]/10',
+      benefits: [
+        '→ Full system access',
+        '→ Specialized support',
+        '→ Foundation for your application'
+      ],
+      completed: true
     },
     {
-      number: 2,
-      icon: Award,
-      title: 'Choose Scholarships',
-      description: 'Select universities',
-      color: 'indigo'
+      id: 2,
+      title: 'Scholarship Selection',
+      subtitle: 'Selecting opportunities',
+      description: 'Explore and choose the universities and scholarships that best align with your academic goals.',
+      icon: GraduationCap,
+      iconColor: 'text-[#D0151C]',
+      iconBg: 'bg-[#D0151C]/10',
+      benefits: [
+        '→ Complete catalog of options',
+        '→ Custom filters',
+        '→ Easy comparison'
+      ],
+      completed: true
     },
     {
-      number: 3,
+      id: 3,
+      title: 'Documents and Approval',
+      subtitle: 'Finalizing your application',
+      description: 'Upload the necessary documents and track the review and approval process in real time.',
       icon: FileText,
-      title: 'Select Process Type',
-      description: 'Initial or Transfer',
-      color: 'purple'
-    },
-    {
-      number: 4,
-      icon: Upload,
-      title: 'Upload Documents',
-      description: 'Passport, diploma, funds',
-      color: 'pink'
-    },
-    {
-      number: 5,
-      icon: Eye,
-      title: 'University Review',
-      description: 'Document review',
-      color: 'orange'
-    },
-    {
-      number: 6,
-      icon: CreditCard,
-      title: 'Pay Application Fee',
-      description: 'After approval',
-      color: 'red'
-    },
-    {
-      number: 7,
-      icon: Award,
-      title: 'Pay Scholarship Fee',
-      description: 'Secure your spot',
-      color: 'green'
-    },
-    {
-      number: 8,
-      icon: Mail,
-      title: 'Acceptance Letter',
-      description: 'Official letter',
-      color: 'teal'
-    },
-    {
-      number: 9,
-      icon: FileCheck,
-      title: 'Complete Enrollment',
-      description: 'Finalize enrollment',
-      color: 'cyan'
+      iconColor: 'text-[#05294E]',
+      iconBg: 'bg-[#05294E]/10',
+      benefits: [
+        '→ Simplified upload',
+        '→ Real-time tracking',
+        '→ Automatic notifications'
+      ],
+      completed: false
     }
   ];
 
-  const getColorClasses = (color: string) => {
-    const colors: { [key: string]: { bg: string; text: string; border: string } } = {
-      blue: { bg: 'bg-blue-50', text: 'text-blue-600', border: 'border-blue-200' },
-      indigo: { bg: 'bg-indigo-50', text: 'text-indigo-600', border: 'border-indigo-200' },
-      purple: { bg: 'bg-purple-50', text: 'text-purple-600', border: 'border-purple-200' },
-      pink: { bg: 'bg-pink-50', text: 'text-pink-600', border: 'border-pink-200' },
-      orange: { bg: 'bg-orange-50', text: 'text-orange-600', border: 'border-orange-200' },
-      red: { bg: 'bg-red-50', text: 'text-red-600', border: 'border-red-200' },
-      green: { bg: 'bg-green-50', text: 'text-green-600', border: 'border-green-200' },
-      teal: { bg: 'bg-teal-50', text: 'text-teal-600', border: 'border-teal-200' },
-      cyan: { bg: 'bg-cyan-50', text: 'text-cyan-600', border: 'border-cyan-200' }
-    };
-    return colors[color] || colors.blue;
-  };
-
   return (
-    <div className="w-full h-full flex flex-col max-w-6xl mx-auto px-4 sm:px-6">
-      {/* Hero Section - Compacto */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 rounded-2xl sm:rounded-3xl p-4 sm:p-5 lg:p-6 mb-3 sm:mb-4">
-        {/* Decorative Elements */}
-        <div className="absolute top-0 right-0 w-48 h-48 sm:w-64 sm:h-64 bg-blue-200 rounded-full blur-3xl opacity-20"></div>
-        <div className="absolute bottom-0 left-0 w-48 h-48 sm:w-64 sm:h-64 bg-purple-200 rounded-full blur-3xl opacity-20"></div>
-        
-        <div className="relative z-10">
-          {/* Welcome Badge */}
-          <div className="inline-flex items-center space-x-2 bg-white/80 backdrop-blur-sm px-3 py-1.5 rounded-full mb-3 shadow-sm">
-            <Sparkles className="w-3 h-3 text-blue-600" />
-            <span className="text-xs font-medium text-gray-700">Welcome to MatriculaUSA</span>
-          </div>
+    <div className="w-full min-h-screen flex flex-col items-center justify-center relative overflow-hidden bg-white">
+      {/* Background Shapes with Brand Colors */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute top-20 left-10 w-72 h-72 bg-[#05294E]/5 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-[#D0151C]/5 rounded-full blur-3xl"></div>
+        <div className="absolute top-1/2 left-1/4 w-80 h-80 bg-[#05294E]/3 rounded-full blur-3xl"></div>
+      </div>
 
-          {/* Main Heading */}
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-gray-900 mb-2 leading-tight">
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-20 relative z-10">
+        {/* Header Section */}
+        <div className="text-center mb-12 sm:mb-16">
+          {/* Tag */}
+          <div className="inline-flex items-center justify-center mb-4">
+            <span className="bg-gray-100 text-gray-600 px-4 py-1.5 rounded-full text-sm font-medium">
+              • Onboarding Process
+            </span>
+          </div>
+          
+          {/* Main Title */}
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 mb-4">
             Welcome{userProfile?.full_name ? `, ${userProfile.full_name.split(' ')[0]}` : ''}!
           </h1>
           
-          <p className="text-sm sm:text-base text-gray-700 mb-3">
-            Start your journey to study in the United States in just a few simple steps.
-          </p>
-
-          {/* Benefits List - Compacto */}
-          <div className="grid grid-cols-2 gap-2">
-            {benefits.map((benefit, index) => (
-              <div key={index} className="flex items-center space-x-2">
-                <div className="flex-shrink-0 w-4 h-4 bg-blue-600 rounded-full flex items-center justify-center">
-                  <CheckCircle className="w-2.5 h-2.5 text-white" />
-                </div>
-                <span className="text-xs text-gray-700 font-medium">{benefit}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Features Grid - Compacto */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3 sm:mb-4">
-        {features.map((feature, index) => {
-          const Icon = feature.icon;
-          return (
-            <div
-              key={index}
-              className="group relative bg-white rounded-xl p-3 sm:p-4 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300"
-            >
-              {/* Gradient Background on Hover */}
-              <div className={`absolute inset-0 bg-gradient-to-br ${feature.bgGradient} opacity-0 group-hover:opacity-100 rounded-xl transition-opacity duration-300`}></div>
-              
-              <div className="relative z-10">
-                {/* Icon */}
-                <div className={`inline-flex p-2.5 bg-gradient-to-br ${feature.gradient} rounded-lg mb-3 shadow-md group-hover:scale-110 transition-transform duration-300`}>
-                  <Icon className="w-5 h-5 text-white" />
-                </div>
-
-                {/* Content */}
-                <h3 className="text-sm sm:text-base font-bold text-gray-900 mb-1 group-hover:text-gray-900">
-                  {feature.title}
-                </h3>
-                <p className="text-xs text-gray-600 group-hover:text-gray-700">
-                  {feature.description}
-                </p>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Process Explanation Section */}
-      <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 mb-3 sm:mb-4">
-        <div className="mb-3">
-          <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-1">
-            Selection Process
-          </h2>
-          <p className="text-xs text-gray-600">
-            Your journey from registration to acceptance letter:
+          {/* Subtitle */}
+          <p className="text-lg sm:text-xl text-gray-600 max-w-3xl mx-auto">
+            Every successful application follows a proven path from start to completion.
           </p>
         </div>
 
-        {/* Process Steps - Grid Layout */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-2">
+        {/* Process Steps Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 mb-12 sm:mb-16">
           {processSteps.map((step, index) => {
             const Icon = step.icon;
-            const colors = getColorClasses(step.color);
+            const isCompleted = step.completed;
+            
             return (
-              <div
-                key={index}
-                className={`relative bg-white rounded-lg p-2.5 border-2 ${colors.border} hover:shadow-md transition-all duration-300`}
-              >
-                {/* Step Number Badge */}
-                <div className={`absolute -top-2 -left-2 w-6 h-6 ${colors.bg} ${colors.text} rounded-full flex items-center justify-center font-bold text-xs border-2 ${colors.border} shadow-sm`}>
-                  {step.number}
+              <div key={step.id} className="relative">
+                {/* Status Indicator */}
+                <div className="flex justify-center mb-4">
+                  {isCompleted ? (
+                    <div className="w-10 h-10 rounded-full bg-gray-900 flex items-center justify-center">
+                      <CheckCircle className="w-6 h-6 text-white" />
+                    </div>
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
+                      <Clock className="w-5 h-5 text-gray-500" />
+                    </div>
+                  )}
                 </div>
 
-                {/* Icon */}
-                <div className={`${colors.bg} ${colors.text} w-8 h-8 rounded-lg flex items-center justify-center mb-2 mt-1.5`}>
-                  <Icon className="w-4 h-4" />
-                </div>
+                {/* Card */}
+                <div className="relative bg-white rounded-2xl border border-gray-200 p-6 sm:p-8 h-full hover:shadow-lg transition-shadow duration-300">
+                  {/* Background Image Effect */}
+                  <div className="absolute inset-0 rounded-2xl opacity-5 bg-gradient-to-br from-[#05294E] to-[#D0151C]"></div>
+                  
+                  <div className="relative z-10">
+                    {/* Icon */}
+                    <div className="mb-4">
+                      <div className={`w-12 h-12 rounded-xl ${step.iconBg} flex items-center justify-center ${step.iconColor}`}>
+                        <Icon className="w-6 h-6" />
+                      </div>
+                    </div>
 
-                {/* Content */}
-                <h3 className="text-xs font-bold text-gray-900 mb-0.5 leading-tight">
-                  {step.title}
-                </h3>
-                <p className="text-xs text-gray-600 leading-tight">
-                  {step.description}
-                </p>
+                    {/* Title */}
+                    <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
+                      {step.title}
+                    </h3>
+
+                    {/* Subtitle */}
+                    <p className="text-sm sm:text-base text-gray-600 mb-4">
+                      {step.subtitle}
+                    </p>
+
+                    {/* Description */}
+                    <p className="text-sm sm:text-base text-gray-700 mb-6 leading-relaxed">
+                      {step.description}
+                    </p>
+
+                    {/* Key Benefits */}
+                    <div>
+                      <h4 className="text-sm font-semibold text-gray-900 mb-3">Key Benefits:</h4>
+                      <ul className="space-y-2">
+                        {step.benefits.map((benefit, idx) => (
+                          <li key={idx} className="text-sm text-gray-600 flex items-start">
+                            <span className="mr-2">{benefit}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
               </div>
             );
           })}
         </div>
 
-        {/* Summary Note */}
-        <div className="mt-3 p-2.5 bg-blue-50 rounded-lg border border-blue-200">
-          <p className="text-xs text-blue-900">
-            <strong className="font-semibold">💡 Tip:</strong> We'll guide you through each step. Process takes 4-8 weeks.
+        {/* Call to Action Section */}
+        <div className="bg-gray-50 rounded-2xl p-8 sm:p-12 text-center border border-gray-200">
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3">
+            Ready to start your journey?
+          </h2>
+          <p className="text-base sm:text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
+            Let's discuss how our process can be adapted to your unique application needs and goals.
           </p>
-        </div>
-      </div>
-
-      {/* CTA Section - Sempre visível */}
-      <div className="flex flex-col items-center justify-center pt-2 mt-auto">
-        <div className="text-center mb-3">
-          <p className="text-sm text-gray-600">Ready to begin?</p>
-        </div>
-        
-        <button
-          onClick={onNext}
-          className="group relative bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3 px-8 rounded-xl font-semibold text-base flex items-center justify-center space-x-2 shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300 overflow-hidden w-full sm:w-auto"
-        >
-          {/* Shine Effect */}
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
           
-          <span className="relative z-10">Get Started</span>
-          <ArrowRight className="w-5 h-5 relative z-10 group-hover:translate-x-1 transition-transform" />
-        </button>
+          {/* Action Button */}
+          <div className="flex justify-center">
+            <button
+              onClick={onNext}
+              className="group bg-[#05294E] hover:bg-[#041d3a] text-white px-8 py-4 rounded-xl font-semibold text-base sm:text-lg flex items-center justify-center gap-2 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 w-full sm:w-auto"
+            >
+              <span>Get Started</span>
+              <ArrowUpRight className="w-5 h-5 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
 };
-

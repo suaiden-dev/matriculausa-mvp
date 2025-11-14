@@ -3,6 +3,7 @@ import { useDropzone } from 'react-dropzone';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { Upload, FileText, CheckCircle, AlertCircle, X, Loader2 } from 'lucide-react';
+import { generateUUID } from '../utils/uuid';
 
 export interface EmailKnowledgeDocument {
   id: string;
@@ -98,7 +99,7 @@ const EmailKnowledgeUpload = forwardRef<EmailKnowledgeUploadRef, EmailKnowledgeU
           
           // ✅ SIMPLIFICADO: Criar objeto de documento para adicionar ao array JSONB
           const docData: EmailKnowledgeDocument = {
-            id: crypto.randomUUID(),
+            id: generateUUID(),
             document_name: file.name,
             file_url: publicUrl,
             file_size: file.size,

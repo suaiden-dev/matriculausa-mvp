@@ -6,8 +6,6 @@ export type OnboardingStep =
   | 'process_type'
   | 'documents_upload'
   | 'waiting_approval'
-  | 'application_fee'
-  | 'scholarship_fee'
   | 'completed';
 
 export interface OnboardingState {

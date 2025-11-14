@@ -1,23 +1,50 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useCartStore } from '../../../stores/applicationStore';
-import { GraduationCap, Loader2, AlertTriangle, X, ArrowRight } from 'lucide-react';
+import { GraduationCap, Loader2, AlertTriangle, X, ArrowRight, CheckCircle } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuth';
 import { useTranslation } from 'react-i18next';
 import { is3800ScholarshipBlocked, is3800Scholarship } from '../../../utils/scholarshipDeadlineValidation';
 import { StepProps } from '../types';
 import { formatAmount } from '../../../utils/scholarshipHelpers';
+import { supabase } from '../../../lib/supabase';
 
 export const ScholarshipReviewStep: React.FC<StepProps> = ({ onNext, onBack }) => {
   const { t } = useTranslation();
   const { cart, removeFromCart, fetchCart, isLoading } = useCartStore();
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
   const [removingScholarshipId, setRemovingScholarshipId] = useState<string | null>(null);
+  const [isLocked, setIsLocked] = useState(false);
 
   useEffect(() => {
     if (user?.id) {
       fetchCart(user.id);
     }
   }, [user?.id, fetchCart]);
+
+  // Verificar se já passou pela review (tem process type selecionado)
+  useEffect(() => {
+    const checkIfLocked = async () => {
+      if (!userProfile?.id) return;
+      
+      try {
+        // Verificar se há aplicações com process type (indica que já passou pela review)
+        const { data: applications } = await supabase
+          .from('scholarship_applications')
+          .select('student_process_type')
+          .eq('student_id', userProfile.id)
+          .limit(1);
+        
+        const hasProcessType = applications && applications.length > 0 && !!applications[0].student_process_type;
+        const hasProcessTypeInLocalStorage = !!window.localStorage.getItem('studentProcessType');
+        
+        setIsLocked(hasProcessType || hasProcessTypeInLocalStorage);
+      } catch (error) {
+        console.error('Error checking if locked:', error);
+      }
+    };
+    
+    checkIfLocked();
+  }, [userProfile?.id]);
 
   // Verificar se há bolsas bloqueadas no carrinho
   const hasBlockedScholarships = useMemo(() => {
@@ -151,6 +178,35 @@ export const ScholarshipReviewStep: React.FC<StepProps> = ({ onNext, onBack }) =
       </div>
     );
   };
+
+  // Se já passou pela review, mostrar tela de etapa concluída
+  if (isLocked) {
+    return (
+      <div className="w-full h-full flex flex-col">
+        <div className="max-w-2xl mx-auto w-full px-4">
+          <div className="bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 rounded-xl p-8 sm:p-12 border-2 border-green-200 shadow-sm">
+            <div className="text-center">
+              <div className="mb-6">
+                <CheckCircle className="w-20 h-20 text-green-600 mx-auto" />
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3">
+                Etapa Concluída
+              </h2>
+              <p className="text-base sm:text-lg text-gray-700 mb-6">
+                Você já revisou suas bolsas selecionadas e passou para a próxima etapa. Esta etapa está completa.
+              </p>
+              <button
+                onClick={onNext}
+                className="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-md hover:shadow-lg"
+              >
+                Continuar
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full h-full flex flex-col">
