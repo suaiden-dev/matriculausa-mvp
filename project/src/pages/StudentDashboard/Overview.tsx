@@ -25,6 +25,9 @@ import { useAuth } from '../../hooks/useAuth';
 import { useReferralCode } from '../../hooks/useReferralCode';
 import { ProgressBar } from '../../components/ProgressBar';
 import StepByStepButton from '../../components/OnboardingTour/StepByStepButton';
+import StepByStepGuide from '../../components/OnboardingTour/StepByStepGuide';
+import { useStepByStepGuide } from '../../hooks/useStepByStepGuide';
+import { supabase } from '../../lib/supabase';
 import './Overview.css'; // Adicionar um arquivo de estilos dedicado para padronização visual
 
 // Componente de skeleton para valores de taxa
@@ -53,13 +56,18 @@ const Overview: React.FC<OverviewProps> = ({
   recentApplications = []
 }) => {
   const { t } = useTranslation();
-  const { user, userProfile } = useAuth();
+  
+
+  const { user, userProfile, refetchUserProfile } = useAuth();
   const { activeDiscount } = useReferralCode();
   const { getFeeAmount, userFeeOverrides } = useFeeConfig(user?.id);
   const { selectionProcessFee, scholarshipFee, i20ControlFee, selectionProcessFeeAmount, scholarshipFeeAmount, i20ControlFeeAmount } = useDynamicFees();
+  const { isGuideOpen, openGuide, closeGuide } = useStepByStepGuide();
   const { isBlocked, pendingPayment, loading: paymentBlockedLoading } = usePaymentBlocked();
   const [visibleApplications, setVisibleApplications] = useState(5); // Mostrar 5 inicialmente
   const [feesLoading, setFeesLoading] = useState(true);
+  const [studentDocuments, setStudentDocuments] = useState<any[]>([]);
+  const [documentsLoading, setDocumentsLoading] = useState(true);
   
   // Verificar se há pagamento Zelle pendente do tipo selection_process
   const hasPendingSelectionProcessPayment = isBlocked && pendingPayment && pendingPayment.fee_type === 'selection_process';
@@ -70,6 +78,85 @@ const Overview: React.FC<OverviewProps> = ({
   const handleLoadMore = () => {
     setVisibleApplications(prev => Math.min(prev + 5, recentApplications.length));
   };
+
+  // Função para buscar documentos do estudante
+  const fetchStudentDocuments = React.useCallback(async () => {
+    if (!user?.id) {
+      setDocumentsLoading(false);
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('student_documents')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('uploaded_at', { ascending: false });
+
+      if (error) {
+        console.error('Erro ao buscar documentos:', error);
+        setStudentDocuments([]);
+      } else {
+        setStudentDocuments(data || []);
+      }
+    } catch (error) {
+      console.error('Erro ao buscar documentos:', error);
+      setStudentDocuments([]);
+    } finally {
+      setDocumentsLoading(false);
+    }
+  }, [user?.id]);
+
+  // Buscar documentos do estudante
+  useEffect(() => {
+    fetchStudentDocuments();
+  }, [fetchStudentDocuments]);
+
+  // Configurar real-time subscription para atualizações de documentos
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const channel = supabase
+      .channel(`student-documents-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'student_documents',
+          filter: `user_id=eq.${user.id}`
+        },
+        () => {
+          // Refetch documentos quando houver mudanças
+          fetchStudentDocuments();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, fetchStudentDocuments]);
+
+  // Refetch perfil quando necessário (ex: após atualização)
+  useEffect(() => {
+    if (user?.id) {
+      refetchUserProfile();
+    }
+  }, [user?.id, refetchUserProfile]);
+
+  // Atualizar documentos quando o componente receber foco (ex: ao voltar da página de perfil)
+  useEffect(() => {
+    const handleFocus = () => {
+      if (user?.id && !documentsLoading) {
+        fetchStudentDocuments();
+        refetchUserProfile();
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [user?.id, documentsLoading, refetchUserProfile, fetchStudentDocuments]);
 
   // Exibir skeleton até os dados de perfil e taxas estarem prontos para evitar flicker
   useEffect(() => {
@@ -109,6 +196,45 @@ const Overview: React.FC<OverviewProps> = ({
       default: return Clock;
     }
   };
+
+  // Funções para verificar o status de cada seção do perfil
+  const checkBasicInformationComplete = (): boolean => {
+    if (!userProfile) return false;
+    return !!(
+      userProfile.full_name &&
+      userProfile.phone &&
+      userProfile.country
+    );
+  };
+
+  const checkAcademicDetailsComplete = (): boolean => {
+    if (!userProfile) return false;
+    return !!(
+      userProfile.field_of_interest &&
+      userProfile.academic_level &&
+      userProfile.gpa !== null &&
+      userProfile.gpa !== undefined &&
+      userProfile.english_proficiency
+    );
+  };
+
+  const checkDocumentsUploaded = (): boolean => {
+    if (documentsLoading) return false;
+    
+    const requiredDocTypes = ['passport', 'diploma', 'funds_proof'];
+    const uploadedDocTypes = new Set(
+      studentDocuments
+        .filter(doc => doc.file_url && doc.status !== 'rejected')
+        .map(doc => doc.type)
+    );
+    
+    return requiredDocTypes.every(type => uploadedDocTypes.has(type));
+  };
+
+  // Status de cada seção
+  const basicInfoComplete = checkBasicInformationComplete();
+  const academicDetailsComplete = checkAcademicDetailsComplete();
+  const documentsComplete = checkDocumentsUploaded();
 
   const quickActions = [
     {
@@ -346,7 +472,7 @@ const Overview: React.FC<OverviewProps> = ({
 
           {/* Progress Bar dentro do bloco azul */}
           <div className="text-center text-white/90 text-sm md:text-base font-medium mb-1">
-            {allCompleted ? 'All Steps Completed! 🎉' : t('studentDashboard.progressBar.title')}
+            {allCompleted ? t('studentDashboard.progressBar.allStepsCompleted') : t('studentDashboard.progressBar.title')}
           </div>
           <div className="mb-2 md:mb-4">
             <ProgressBar steps={steps} feeValues={dynamicFeeValues} />
@@ -437,16 +563,35 @@ const Overview: React.FC<OverviewProps> = ({
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
-              <Route className="h-7 w-7 text-white" />
+        <div 
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            openGuide();
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              openGuide();
+            }
+          }}
+          role="button"
+          tabIndex={0}
+          className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-2xl shadow-md border-2 border-blue-300 hover:border-blue-400 hover:shadow-lg transition-all duration-300 flex flex-col justify-between cursor-pointer group relative overflow-hidden"
+        >
+          <div className="relative z-10 pointer-events-none">
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+                <Route className="h-7 w-7 text-white" />
+              </div>
             </div>
-          </div>
-          <h3 className="font-bold text-slate-900 mb-2">{t('studentDashboard.stepByStepTour.title')}</h3>
-          <p className="text-slate-600 text-sm mb-4">{t('studentDashboard.stepByStepTour.description')}</p>
-          <div className="flex justify-end">
-            <StepByStepButton />
+            <h3 className="font-bold text-slate-900 mb-2 group-hover:text-blue-700 transition-colors">{t('studentDashboard.stepByStepTour.title')}</h3>
+            <p className="text-slate-600 text-sm mb-4">{t('studentDashboard.stepByStepTour.description')}</p>
+            <div className="flex justify-end">
+              <div className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold text-sm shadow-md hover:shadow-lg transition-all duration-200 transform hover:scale-105">
+                {t('studentDashboard.stepByStepTour.startTour')}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -688,7 +833,10 @@ const Overview: React.FC<OverviewProps> = ({
                   <div className="text-center space-y-3 sm:space-y-4">
                     {/* Contador de Applications */}
                     <div className="text-xs sm:text-sm text-slate-600">
-                      {`Showing ${displayedApplications.length} of ${recentApplications.length} applications`}
+                      {t('studentDashboard.recentApplications.showingApplications', { 
+                        count: displayedApplications.length, 
+                        total: recentApplications.length 
+                      })}
                     </div>
                     
                     {/* Load More Button */}
@@ -732,20 +880,46 @@ const Overview: React.FC<OverviewProps> = ({
             <div className="space-y-3 sm:space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-slate-700">{t('studentDashboard.profileStatus.basicInformation')}</span>
+                {basicInfoComplete ? (
                 <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-500" />
+                ) : (
+                  <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500" />
+                )}
               </div>
               
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-slate-700">{t('studentDashboard.profileStatus.academicDetails')}</span>
+                {academicDetailsComplete ? (
+                  <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-500" />
+                ) : (
                 <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500" />
+                )}
               </div>
               
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-slate-700">{t('studentDashboard.profileStatus.documentsUploaded')}</span>
+                {documentsComplete ? (
+                  <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-500" />
+                ) : (
                 <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500" />
+                )}
               </div>
             </div>
 
+            {(basicInfoComplete && academicDetailsComplete && documentsComplete) ? (
+              <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-xl border border-green-200">
+                <p className="text-sm font-medium text-green-800 mb-2 flex items-center">
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  {t('studentDashboard.profileStatus.profileComplete')}
+                </p>
+                <Link
+                  to="/student/dashboard/profile"
+                  className="text-sm font-bold text-green-700 hover:text-green-800 transition-colors"
+                >
+                  {t('studentDashboard.profileStatus.viewProfile')} →
+                </Link>
+              </div>
+            ) : (
             <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl border border-blue-200">
               <p className="text-sm font-medium text-blue-800 mb-2">
                 {t('studentDashboard.profileStatus.completeProfile')}
@@ -757,6 +931,7 @@ const Overview: React.FC<OverviewProps> = ({
                 {t('studentDashboard.profileStatus.completeNow')} →
               </Link>
             </div>
+            )}
           </div>
 
           {/* Study Tips */}
@@ -788,6 +963,9 @@ const Overview: React.FC<OverviewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Step By Step Guide Modal */}
+      <StepByStepGuide isOpen={isGuideOpen} onClose={closeGuide} />
 
     </div>
   );

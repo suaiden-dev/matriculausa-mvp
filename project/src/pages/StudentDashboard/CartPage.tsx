@@ -231,7 +231,7 @@ const CartPage: React.FC = () => {
                     <div className="flex items-start gap-3 mb-2">
                       <div className="flex-1">
                         <div className="font-bold text-slate-900 mb-1">{scholarship.title}</div>
-                        <div className="text-slate-600 text-sm">{scholarship.universities?.name || scholarship.university_name || 'Unknown University'}</div>
+                        <div className="text-slate-600 text-sm">{scholarship.universities?.name || scholarship.university_name || t('applicationCart.unknownUniversity')}</div>
                       </div>
                       {!isRemoving && (
                         <button

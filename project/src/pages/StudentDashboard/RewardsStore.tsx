@@ -511,8 +511,8 @@ const RewardsStore: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-slate-50 py-4 sm:py-6 lg:py-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-8">
@@ -526,17 +526,17 @@ const RewardsStore: React.FC = () => {
           </div>
 
           {/* Balance Card */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 mb-8">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-bold text-slate-900 mb-2">{t('matriculaRewards.rewardsStore.title')}</h1>
-                <p className="text-slate-600 text-lg">{t('matriculaRewards.rewardsStore.subtitle')}</p>
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6 lg:p-8 mb-6 sm:mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex-1">
+                <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-2">{t('matriculaRewards.rewardsStore.title')}</h1>
+                <p className="text-slate-600 text-sm sm:text-base lg:text-lg">{t('matriculaRewards.rewardsStore.subtitle')}</p>
               </div>
-              <div className="text-right">
-                <div className="text-4xl font-bold text-slate-900 mb-1">
+              <div className="text-left sm:text-right">
+                <div className="text-3xl sm:text-4xl font-bold text-slate-900 mb-1">
                   {credits?.balance || 0}
                 </div>
-                <div className="text-lg font-medium text-slate-600">
+                <div className="text-sm sm:text-base lg:text-lg font-medium text-slate-600">
                   {t('matriculaRewards.rewardsStore.matriculaCoinsAvailable')}
                 </div>
               </div>
@@ -577,30 +577,30 @@ const RewardsStore: React.FC = () => {
         )}
 
         {/* Tabs */}
-        <div className="flex justify-center mb-8">
-          <div className="flex space-x-1 bg-white p-1 rounded-xl shadow-sm border border-slate-200">
+        <div className="flex justify-center mb-6 sm:mb-8">
+          <div className="flex space-x-1 bg-white p-1 rounded-xl shadow-sm border border-slate-200 w-full sm:w-auto">
             <button
               onClick={() => setActiveTab('store')}
-              className={`px-6 py-2 rounded-lg font-medium transition-colors ${
+              className={`flex-1 sm:flex-none px-4 sm:px-6 py-2 rounded-lg font-medium transition-colors text-sm sm:text-base ${
                 activeTab === 'store'
                   ? 'bg-blue-600 text-white shadow-sm'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center justify-center space-x-2">
                 <Gift className="h-4 w-4" />
                 <span>{t('matriculaRewards.rewardsStore.store')}</span>
               </div>
             </button>
             <button
               onClick={() => setActiveTab('history')}
-              className={`px-6 py-2 rounded-lg font-medium transition-colors ${
+              className={`flex-1 sm:flex-none px-4 sm:px-6 py-2 rounded-lg font-medium transition-colors text-sm sm:text-base ${
                 activeTab === 'history'
                   ? 'bg-blue-600 text-white shadow-sm'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center justify-center space-x-2">
                 <History className="h-4 w-4" />
                 <span>{t('matriculaRewards.rewardsStore.history')}</span>
               </div>
@@ -612,18 +612,17 @@ const RewardsStore: React.FC = () => {
         {activeTab === 'store' && (
           <>
             {/* Quick Custom Redemption */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-8">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-semibold text-slate-900 mb-1">{t('matriculaRewards.rewardsStore.customTuitionDiscount')}</h3>
-                  <p className="text-slate-600 text-sm">{t('matriculaRewards.rewardsStore.redeemAnyAmount')}</p>
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6 mb-6 sm:mb-8">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="flex-1">
+                  <h3 className="text-base sm:text-lg font-semibold text-slate-900 mb-1">{t('matriculaRewards.rewardsStore.customTuitionDiscount')}</h3>
+                  <p className="text-slate-600 text-xs sm:text-sm">{t('matriculaRewards.rewardsStore.redeemAnyAmount')}</p>
                 </div>
-                <div className="flex items-center space-x-4">
-
+                <div className="flex items-center w-full sm:w-auto">
                   <button
                     onClick={handleCustomRedemption}
                     disabled={!credits || credits.balance < 10}
-                    className={`px-6 py-3 rounded-lg font-medium transition-colors ${
+                    className={`w-full sm:w-auto px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg font-medium transition-colors text-sm sm:text-base ${
                       credits && credits.balance >= 10
                         ? 'bg-blue-600 text-white hover:bg-blue-700'
                         : 'bg-slate-200 text-slate-500 cursor-not-allowed'
@@ -636,14 +635,14 @@ const RewardsStore: React.FC = () => {
             </div>
 
             {/* Tuition Discounts Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               {tuitionDiscounts.map((discount) => (
                 <div key={discount.id} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-lg transition-shadow flex flex-col">
                   {/* Discount Image */}
-                  <div className="h-48 bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center relative">
-                    <Gift className="h-16 w-16 text-blue-500" />
+                  <div className="h-40 sm:h-48 bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center relative">
+                    <Gift className="h-12 w-12 sm:h-16 sm:w-16 text-blue-500" />
                     {discount.cost_coins <= (credits?.balance || 0) && (
-                      <div className="absolute top-4 right-4">
+                      <div className="absolute top-3 right-3 sm:top-4 sm:right-4">
                         <div className="bg-green-500 text-white px-2 py-1 rounded-full text-xs font-medium">
                           {t('matriculaRewards.rewardsStore.available')}
                         </div>
@@ -652,16 +651,16 @@ const RewardsStore: React.FC = () => {
                   </div>
 
                   {/* Discount Content */}
-                  <div className="p-6 flex flex-col flex-1">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="text-lg font-semibold text-slate-900">{discount.name}</h3>
-                      <div className="flex items-center space-x-1 bg-blue-100 px-2 py-1 rounded-full">
+                  <div className="p-4 sm:p-6 flex flex-col flex-1">
+                    <div className="flex items-center justify-between mb-2 gap-2">
+                      <h3 className="text-base sm:text-lg font-semibold text-slate-900 flex-1 min-w-0">{discount.name}</h3>
+                      <div className="flex items-center space-x-1 bg-blue-100 px-2 py-1 rounded-full flex-shrink-0">
                         <Star className="h-3 w-3 text-blue-600" />
                         <span className="text-xs font-medium text-blue-600">{discount.cost_coins}</span>
                       </div>
                     </div>
 
-                    <p className="text-slate-600 text-sm mb-4">{discount.description}</p>
+                    <p className="text-slate-600 text-xs sm:text-sm mb-4">{discount.description}</p>
 
                     {/* Discount Details */}
                     <div className="flex items-center justify-between mb-4">
@@ -715,36 +714,36 @@ const RewardsStore: React.FC = () => {
 
         {/* History Tab */}
         {activeTab === 'history' && (
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             {/* Tuition Redemptions */}
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-              <h2 className="text-xl font-semibold text-slate-900 mb-4 flex items-center space-x-2">
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6">
+              <h2 className="text-lg sm:text-xl font-semibold text-slate-900 mb-4 flex items-center space-x-2">
                 <Building className="h-5 w-5 text-green-600" />
                 <span>{t('matriculaRewards.rewardsStore.tuitionDiscountHistory')}</span>
               </h2>
               
               {tuitionRedemptions.length > 0 ? (
-                <div className="space-y-4">
+                <div className="space-y-3 sm:space-y-4">
                   {tuitionRedemptions.map((redemption) => (
-                    <div key={redemption.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
-                      <div className="flex items-center space-x-4">
-                        <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                    <div key={redemption.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 p-3 sm:p-4 bg-slate-50 rounded-lg">
+                      <div className="flex items-center space-x-3 sm:space-x-4 flex-1 min-w-0">
+                        <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
                           <Building className="h-5 w-5 text-green-600" />
                         </div>
-                        <div>
-                          <h3 className="font-medium text-slate-900">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-medium text-slate-900 text-sm sm:text-base truncate">
                             ${redemption.discount_amount} - {redemption.university?.name || 'Unknown University'}
                           </h3>
-                          <p className="text-sm text-slate-500">
+                          <p className="text-xs sm:text-sm text-slate-500">
                             {redemption.university?.location && `${redemption.university.location} • `}
                             Redeemed on {formatDate(redemption.redeemed_at)}
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-center space-x-4">
-                        <div className="text-right">
-                          <div className="font-medium text-slate-900">{redemption.cost_coins_paid} coins</div>
-                          <div className={`text-xs px-2 py-1 rounded-full ${
+                      <div className="flex items-center justify-between sm:justify-end space-x-4 sm:flex-shrink-0">
+                        <div className="text-left sm:text-right">
+                          <div className="font-medium text-slate-900 text-sm sm:text-base">{redemption.cost_coins_paid} coins</div>
+                          <div className={`text-xs px-2 py-1 rounded-full inline-block ${
                             redemption.status === 'confirmed' ? 'bg-green-100 text-green-800' :
                             redemption.status === 'pending' ? 'bg-blue-100 text-blue-800' :
                             redemption.status === 'expired' ? 'bg-red-100 text-red-800' :
@@ -769,18 +768,18 @@ const RewardsStore: React.FC = () => {
 
 
             {/* Transactions */}
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-              <h2 className="text-xl font-semibold text-slate-900 mb-4 flex items-center space-x-2">
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6">
+              <h2 className="text-lg sm:text-xl font-semibold text-slate-900 mb-4 flex items-center space-x-2">
                 <History className="h-5 w-5 text-green-600" />
                 <span>{t('matriculaRewards.rewardsStore.transactionHistory')}</span>
               </h2>
               
               {transactions.length > 0 ? (
-                <div className="space-y-4">
+                <div className="space-y-3 sm:space-y-4">
                   {transactions.map((transaction) => (
-                    <div key={transaction.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
-                      <div className="flex items-center space-x-4">
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                    <div key={transaction.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 p-3 sm:p-4 bg-slate-50 rounded-lg">
+                      <div className="flex items-center space-x-3 sm:space-x-4 flex-1 min-w-0">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
                           transaction.type === 'earned' ? 'bg-green-100' : 'bg-red-100'
                         }`}>
                           {transaction.type === 'earned' ? (
@@ -789,15 +788,15 @@ const RewardsStore: React.FC = () => {
                             <ShoppingCart className="h-5 w-5 text-red-600" />
                           )}
                         </div>
-                        <div>
-                          <h3 className="font-medium text-slate-900">{transaction.description}</h3>
-                          <p className="text-sm text-slate-500">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-medium text-slate-900 text-sm sm:text-base truncate">{transaction.description}</h3>
+                          <p className="text-xs sm:text-sm text-slate-500">
                             {formatDate(transaction.created_at)}
                           </p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className={`font-medium ${
+                      <div className="text-left sm:text-right flex-shrink-0">
+                        <div className={`font-medium text-sm sm:text-base ${
                           transaction.type === 'earned' ? 'text-green-600' : 'text-red-600'
                         }`}>
                           {transaction.type === 'earned' ? '+' : '-'}{transaction.amount} coins
@@ -823,30 +822,30 @@ const RewardsStore: React.FC = () => {
 
       {/* University Selection Modal */}
       {showUniversitySelection && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[80vh] overflow-hidden">
-            <div className="p-6 border-b border-slate-200">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-slate-900">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[95vh] sm:max-h-[80vh] overflow-hidden flex flex-col">
+            <div className="p-4 sm:p-6 border-b border-slate-200">
+              <div className="flex items-center justify-between gap-2">
+                <h2 className="text-lg sm:text-xl font-semibold text-slate-900 flex-1">
                   {t('matriculaRewards.rewardsStore.selectUniversity')}
                 </h2>
                 <button
                   onClick={() => setShowUniversitySelection(false)}
-                  className="text-slate-400 hover:text-slate-600"
+                  className="text-slate-400 hover:text-slate-600 flex-shrink-0"
                   title={t('matriculaRewards.rewardsStore.closeModal')}
                 >
-                  <XCircle className="h-6 w-6" />
+                  <XCircle className="h-5 w-5 sm:h-6 sm:w-6" />
                 </button>
               </div>
-              <p className="text-slate-600 mt-2">
+              <p className="text-slate-600 mt-2 text-sm sm:text-base">
                 {t('matriculaRewards.rewardsStore.chooseUniversity')} ${selectedDiscount?.discount_amount}
               </p>
               
               {/* Mensagem para alunos matriculados */}
               {isEnrolledStudent && userUniversity && (
-                <div className="mt-3 bg-blue-50 border border-blue-200 text-blue-700 px-3 py-2 rounded-lg text-sm">
-                  <div className="flex items-center">
-                    <Info className="h-4 w-4 mr-2" />
+                <div className="mt-3 bg-blue-50 border border-blue-200 text-blue-700 px-3 py-2 rounded-lg text-xs sm:text-sm">
+                  <div className="flex items-start">
+                    <Info className="h-4 w-4 mr-2 flex-shrink-0 mt-0.5" />
                     <span>
                       <strong>{t('matriculaRewards.rewardsStore.noteEnrolled')}</strong> {t('matriculaRewards.rewardsStore.youAreEnrolled')} <strong>{userUniversity.name}</strong>. 
                       {t('matriculaRewards.rewardsStore.differentUniversity')}
@@ -856,7 +855,7 @@ const RewardsStore: React.FC = () => {
               )}
             </div>
 
-            <div className="p-6 max-h-[500px] overflow-y-auto">
+            <div className="p-4 sm:p-6 max-h-[calc(95vh-180px)] sm:max-h-[500px] overflow-y-auto flex-1">
               {/* Search */}
               <div className="mb-6">
                 <div className="relative">
@@ -892,31 +891,31 @@ const RewardsStore: React.FC = () => {
                   <button
                     key={university.id}
                     onClick={() => handleSelectUniversity(university)}
-                    className="w-full p-4 text-left border border-slate-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors"
+                    className="w-full p-3 sm:p-4 text-left border border-slate-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors"
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <h3 className="font-medium text-slate-900">{university.name}</h3>
-                        <div className="flex items-center space-x-4 text-sm text-slate-600 mt-1">
+                    <div className="flex items-start sm:items-center justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-medium text-slate-900 text-sm sm:text-base truncate">{university.name}</h3>
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs sm:text-sm text-slate-600 mt-1">
                           <div className="flex items-center space-x-1">
-                            <MapPin className="h-3 w-3" />
-                            <span>{university.location}</span>
+                            <MapPin className="h-3 w-3 flex-shrink-0" />
+                            <span className="truncate">{university.location}</span>
                           </div>
                           {university.established_year && (
                             <div className="flex items-center space-x-1">
-                              <Calendar className="h-3 w-3" />
+                              <Calendar className="h-3 w-3 flex-shrink-0" />
                               <span>Est. {university.established_year}</span>
                             </div>
                           )}
                           {university.student_count && (
                             <div className="flex items-center space-x-1">
-                              <Users className="h-3 w-3" />
+                              <Users className="h-3 w-3 flex-shrink-0" />
                               <span>{university.student_count.toLocaleString()} students</span>
                             </div>
                           )}
                         </div>
                       </div>
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center space-x-2 flex-shrink-0">
                         {university.website && (
                           <a
                             href={university.website}
@@ -986,11 +985,11 @@ const RewardsStore: React.FC = () => {
 
       {/* Custom Redemption Modal */}
       {showCustomRedemption && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-semibold text-slate-900">{t('matriculaRewards.rewardsStore.customTuitionDiscountModal')}</h2>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full max-h-[95vh] overflow-y-auto">
+            <div className="p-4 sm:p-6">
+              <div className="flex items-center justify-between gap-2 mb-4 sm:mb-6">
+                <h2 className="text-lg sm:text-xl font-semibold text-slate-900 flex-1">{t('matriculaRewards.rewardsStore.customTuitionDiscountModal')}</h2>
                 <button
                   onClick={() => {
                     setShowCustomRedemption(false);
@@ -998,9 +997,9 @@ const RewardsStore: React.FC = () => {
                     setCustomDiscountAmount(0);
                     setIsCustomRedemption(false);
                   }}
-                  className="text-slate-400 hover:text-slate-600"
+                  className="text-slate-400 hover:text-slate-600 flex-shrink-0"
                 >
-                  <XCircle className="h-6 w-6" />
+                  <XCircle className="h-5 w-5 sm:h-6 sm:w-6" />
                 </button>
               </div>
 
@@ -1015,28 +1014,28 @@ const RewardsStore: React.FC = () => {
                     max={Math.min(10000, credits?.balance || 0)}
                     value={customCoinsAmount || ''}
                     onChange={(e) => handleCustomCoinsChange(parseInt(e.target.value) || 0)}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2.5 sm:py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
                     placeholder={t('matriculaRewards.rewardsStore.enterCoinsAmount')}
                   />
 
                 </div>
 
                 {customCoinsAmount > 0 && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <div className="flex justify-between items-center">
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
                       <div>
-                        <div className="text-sm text-slate-600">{t('matriculaRewards.rewardsStore.tuitionDiscountPreview')}</div>
-                        <div className="text-2xl font-bold text-blue-600">${customDiscountAmount}</div>
+                        <div className="text-xs sm:text-sm text-slate-600">{t('matriculaRewards.rewardsStore.tuitionDiscountPreview')}</div>
+                        <div className="text-xl sm:text-2xl font-bold text-blue-600">${customDiscountAmount}</div>
                       </div>
-                      <div className="text-right">
-                        <div className="text-sm text-slate-600">{t('matriculaRewards.rewardsStore.costPreview')}</div>
-                        <div className="text-lg font-semibold text-slate-900">{customCoinsAmount} coins</div>
+                      <div className="text-left sm:text-right">
+                        <div className="text-xs sm:text-sm text-slate-600">{t('matriculaRewards.rewardsStore.costPreview')}</div>
+                        <div className="text-base sm:text-lg font-semibold text-slate-900">{customCoinsAmount} coins</div>
                       </div>
                     </div>
                   </div>
                 )}
 
-                <div className="flex space-x-3 pt-4">
+                <div className="flex flex-col sm:flex-row gap-3 pt-4">
                   <button
                     onClick={() => {
                       setShowCustomRedemption(false);
@@ -1044,14 +1043,14 @@ const RewardsStore: React.FC = () => {
                       setCustomDiscountAmount(0);
                       setIsCustomRedemption(false);
                     }}
-                    className="flex-1 px-4 py-3 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50"
+                    className="flex-1 px-4 py-2.5 sm:py-3 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 text-sm sm:text-base"
                   >
                     {t('matriculaRewards.rewardsStore.cancel')}
                   </button>
                   <button
                     onClick={handleConfirmCustomRedemption}
                     disabled={!customCoinsAmount || customCoinsAmount < 10 || customCoinsAmount > (credits?.balance || 0)}
-                    className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-slate-300"
+                    className="flex-1 px-4 py-2.5 sm:py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-slate-300 text-sm sm:text-base"
                   >
                     {t('matriculaRewards.rewardsStore.continue')}
                   </button>
@@ -1064,11 +1063,11 @@ const RewardsStore: React.FC = () => {
 
       {/* University Confirmation Modal */}
       {showConfirmation && confirmationData && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-semibold text-slate-900">{t('matriculaRewards.rewardsStore.confirmUniversity')}</h2>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full max-h-[95vh] overflow-y-auto">
+            <div className="p-4 sm:p-6">
+              <div className="flex items-center justify-between gap-2 mb-4 sm:mb-6">
+                <h2 className="text-lg sm:text-xl font-semibold text-slate-900 flex-1">{t('matriculaRewards.rewardsStore.confirmUniversity')}</h2>
                 <button
                   onClick={() => {
                     setShowConfirmation(false);
@@ -1076,48 +1075,48 @@ const RewardsStore: React.FC = () => {
                     setSelectedUniversity(null);
                     setSelectedDiscount(null);
                   }}
-                  className="text-slate-400 hover:text-slate-600"
+                  className="text-slate-400 hover:text-slate-600 flex-shrink-0"
                 >
-                  <XCircle className="h-6 w-6" />
+                  <XCircle className="h-5 w-5 sm:h-6 sm:w-6" />
                 </button>
               </div>
 
               {/* University Info */}
-              <div className="bg-slate-50 rounded-lg p-4 mb-6">
-                <div className="flex items-center space-x-3 mb-4">
-                  <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center">
-                    <Building className="h-6 w-6 text-white" />
+              <div className="bg-slate-50 rounded-lg p-3 sm:p-4 mb-4 sm:mb-6">
+                <div className="flex items-center space-x-3 mb-3 sm:mb-4">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <Building className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                   </div>
-                  <div>
-                    <h3 className="font-semibold text-slate-900">{confirmationData.name}</h3>
-                    <p className="text-slate-600 text-sm flex items-center">
-                      <MapPin className="h-4 w-4 mr-1" />
-                      {confirmationData.location}
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-slate-900 text-sm sm:text-base truncate">{confirmationData.name}</h3>
+                    <p className="text-slate-600 text-xs sm:text-sm flex items-center">
+                      <MapPin className="h-3 w-3 sm:h-4 sm:w-4 mr-1 flex-shrink-0" />
+                      <span className="truncate">{confirmationData.location}</span>
                     </p>
                   </div>
                 </div>
                 
                 {confirmationData.website && (
-                  <div className="text-sm text-slate-600">
+                  <div className="text-xs sm:text-sm text-slate-600 break-words">
                     <span className="font-medium">{t('matriculaRewards.rewardsStore.website')}</span> {confirmationData.website}
                   </div>
                 )}
               </div>
 
               {/* Discount Info */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                <div className="flex justify-between items-center">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4 mb-4 sm:mb-6">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
                   <div>
-                    <div className="text-sm text-slate-600">
+                    <div className="text-xs sm:text-sm text-slate-600">
                       {isCustomRedemption ? t('matriculaRewards.rewardsStore.customTuitionDiscount') : 'Tuition Discount'}
                     </div>
-                    <div className="text-2xl font-bold text-blue-600">
+                    <div className="text-xl sm:text-2xl font-bold text-blue-600">
                       ${isCustomRedemption ? customDiscountAmount : selectedDiscount?.discount_amount}
                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className="text-sm text-slate-600">{t('matriculaRewards.rewardsStore.costPreview')}</div>
-                    <div className="text-lg font-semibold text-slate-900">
+                  <div className="text-left sm:text-right">
+                    <div className="text-xs sm:text-sm text-slate-600">{t('matriculaRewards.rewardsStore.costPreview')}</div>
+                    <div className="text-base sm:text-lg font-semibold text-slate-900">
                       {isCustomRedemption ? customCoinsAmount : selectedDiscount?.cost_coins} coins
                     </div>
                   </div>
@@ -1125,7 +1124,7 @@ const RewardsStore: React.FC = () => {
               </div>
 
               {/* Action Buttons */}
-              <div className="flex space-x-3">
+              <div className="flex flex-col sm:flex-row gap-3">
                 <button
                   onClick={() => {
                     setShowConfirmation(false);
@@ -1133,23 +1132,23 @@ const RewardsStore: React.FC = () => {
                     setSelectedUniversity(null);
                     setSelectedDiscount(null);
                   }}
-                  className="flex-1 px-4 py-3 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50"
-                  >
-                    {t('matriculaRewards.rewardsStore.cancel')}
-                  </button>
-                  <button
-                    onClick={handleRedeemTuitionDiscount}
-                    disabled={redeemingTuition === selectedDiscount?.id || redeemingTuition === 'custom'}
-                    className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-slate-300"
-                  >
-                    {redeemingTuition === selectedDiscount?.id || redeemingTuition === 'custom' ? (
-                      <div className="flex items-center justify-center space-x-2">
-                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                        <span>{t('matriculaRewards.rewardsStore.processing')}</span>
-                      </div>
-                    ) : (
-                      t('matriculaRewards.rewardsStore.confirmAndRedeem')
-                    )}
+                  className="flex-1 px-4 py-2.5 sm:py-3 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 text-sm sm:text-base"
+                >
+                  {t('matriculaRewards.rewardsStore.cancel')}
+                </button>
+                <button
+                  onClick={handleRedeemTuitionDiscount}
+                  disabled={redeemingTuition === selectedDiscount?.id || redeemingTuition === 'custom'}
+                  className="flex-1 px-4 py-2.5 sm:py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-slate-300 text-sm sm:text-base"
+                >
+                  {redeemingTuition === selectedDiscount?.id || redeemingTuition === 'custom' ? (
+                    <div className="flex items-center justify-center space-x-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                      <span>{t('matriculaRewards.rewardsStore.processing')}</span>
+                    </div>
+                  ) : (
+                    t('matriculaRewards.rewardsStore.confirmAndRedeem')
+                  )}
                 </button>
               </div>
             </div>
