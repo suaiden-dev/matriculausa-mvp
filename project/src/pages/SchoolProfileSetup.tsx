@@ -4,7 +4,7 @@ import { Building, MapPin, Phone, Users, CheckCircle, Plus, X } from 'lucide-rea
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import NotificationService from '../services/NotificationService';
-import citiesData from 'cities.json';
+// ✅ OTIMIZAÇÃO: Lazy loading do cities.json - carregar apenas quando necessário
 
 import PhoneInput from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
@@ -68,8 +68,9 @@ const SchoolProfileSetup: React.FC = () => {
     city.toLowerCase().includes(citySearch.toLowerCase())
   );
 
-  // Função para buscar cidades usando dados estáticos
-  const fetchCitiesByState = (state: string) => {
+  // ✅ OTIMIZAÇÃO: Função para buscar cidades com lazy loading do cities.json
+  // Carrega o arquivo de 208 MB apenas quando o usuário seleciona um estado
+  const fetchCitiesByState = async (state: string) => {
     if (!state) {
       setCities([]);
       setCitySearch(''); // Limpar busca quando não há estado
@@ -81,26 +82,14 @@ const SchoolProfileSetup: React.FC = () => {
     
     try {
       const stateCode = getStateAbbreviation(state);
-      console.log('🏙️ [CITY-LOADER] Buscando cidades para:', state, '(', stateCode, ')');
       
-      // Debug: verificar estrutura dos dados
-      console.log('🏙️ [CITY-LOADER] Estrutura dos dados:', citiesData);
-      console.log('🏙️ [CITY-LOADER] Primeiras 5 entradas:', (citiesData as any[]).slice(0, 5));
-      
-      // Debug detalhado: ver campos de cada entrada
-      const firstEntry = (citiesData as any[])[0];
-      console.log('🏙️ [CITY-LOADER] Primeira entrada detalhada:', firstEntry);
-      console.log('🏙️ [CITY-LOADER] Campos da primeira entrada:', Object.keys(firstEntry));
-      
-      // Buscar algumas entradas dos EUA para ver o formato
-      const usEntries = (citiesData as any[]).filter(entry => 
-        entry.country === 'US' || entry.country === 'us' || entry.country === 'United States'
-      ).slice(0, 3);
-      console.log('🏙️ [CITY-LOADER] Entradas dos EUA encontradas:', usEntries);
+      // ✅ OTIMIZAÇÃO: Carregar cities.json apenas quando necessário (lazy loading)
+      // Isso evita carregar 208 MB no início da aplicação
+      const citiesModule = await import('cities.json');
+      const citiesData = citiesModule.default || citiesModule;
       
       // Filtrar cidades dos EUA para o estado específico
       const allCities = (citiesData as any[]);
-      console.log('🏙️ [CITY-LOADER] Total de entradas no dataset:', allCities.length);
       
       // O dataset usa 'admin1' para o estado, não 'state'
       const stateCities = allCities
@@ -118,13 +107,10 @@ const SchoolProfileSetup: React.FC = () => {
           self.indexOf(city) === index // Remove duplicatas
         )
         .sort();
-
-      console.log('🏙️ [CITY-LOADER] Total de cidades encontradas:', stateCities.length);
-      console.log('🏙️ [CITY-LOADER] Primeiras 10 cidades:', stateCities.slice(0, 10));
       
       setCities(stateCities);
     } catch (error: any) {
-      console.error('🏙️ [CITY-LOADER] Erro ao buscar cidades:', error.message);
+      console.error('Erro ao buscar cidades:', error.message);
       setCities([]);
     } finally {
       setLoadingCities(false);

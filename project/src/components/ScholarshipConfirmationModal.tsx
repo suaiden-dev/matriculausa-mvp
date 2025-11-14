@@ -69,8 +69,8 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
   zelleMetadata
 }) => {
   const navigate = useNavigate();
-  const { getFeeAmount: getFeeAmountFromConfig } = useFeeConfig();
-  const { userProfile } = useAuth();
+  const { user, userProfile } = useAuth();
+  const { getFeeAmount: getFeeAmountFromConfig } = useFeeConfig(user?.id);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'stripe' | 'zelle' | 'pix' | null>(null);
   const { t } = useTranslation();
   const [submitting, setSubmitting] = useState<boolean>(false);
@@ -119,7 +119,9 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
   // Valor dinâmico baseado no tipo de taxa
   const getFeeAmount = () => {
     if (feeType === 'scholarship_fee') {
-      return scholarship.scholarship_fee_amount || getFeeAmountFromConfig('scholarship_fee');
+      // Prioridade: 1) Valor da bolsa, 2) Override do usuário, 3) Valor padrão do config
+      const scholarshipFeeFromConfig = getFeeAmountFromConfig('scholarship_fee');
+      return scholarship.scholarship_fee_amount || scholarshipFeeFromConfig;
     }
     
     // Application Fee: o valor vem em centavos do banco
@@ -153,7 +155,7 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
         title: t('scholarshipConfirmationModal.scholarshipFee.title'),
         subtitle: t('scholarshipConfirmationModal.scholarshipFee.subtitle'),
         feeLabel: t('scholarshipConfirmationModal.scholarshipFee.feeLabel'),
-        buttonText: t('scholarshipConfirmationModal.scholarshipFee.buttonText', { amount: getFeeAmountFromConfig('scholarship_fee') })
+        buttonText: t('scholarshipConfirmationModal.scholarshipFee.buttonText', { amount: feeAmount.toFixed(2) })
       };
     }
     

@@ -1,15 +1,35 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense, lazy } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
 import { useAuth } from '../../hooks/useAuth';
 import { useStudentLogs } from '../../hooks/useStudentLogs';
 import { recordIndividualFeePayment } from '../../lib/paymentRecorder';
-import DocumentsView from '../../components/EnhancedStudentTracking/DocumentsView';
-import AdminScholarshipSelection from '../../components/AdminDashboard/AdminScholarshipSelection';
-import StudentLogsView from '../../components/AdminDashboard/StudentLogsView';
 import DocumentViewerModal from '../../components/DocumentViewerModal';
 import { generateTermAcceptancePDF, StudentTermAcceptanceData } from '../../utils/pdfGenerator';
+
+// Lazy loading dos componentes das abas
+const DocumentsView = lazy(() => import('../../components/EnhancedStudentTracking/DocumentsView'));
+const AdminScholarshipSelection = lazy(() => import('../../components/AdminDashboard/AdminScholarshipSelection'));
+const StudentLogsView = lazy(() => import('../../components/AdminDashboard/StudentLogsView'));
+
+// Componente de loading para as abas
+const TabLoadingSkeleton: React.FC = () => (
+  <div className="space-y-6 animate-pulse">
+    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+      <div className="h-6 w-48 bg-slate-200 rounded mb-4"></div>
+      <div className="space-y-4">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="border border-slate-200 rounded-xl p-4">
+            <div className="h-5 w-64 bg-slate-200 rounded mb-3"></div>
+            <div className="h-4 w-full bg-slate-200 rounded mb-2"></div>
+            <div className="h-4 w-3/4 bg-slate-200 rounded"></div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+);
 // Função simples de toast
 const showToast = (message: string, type: 'success' | 'error' = 'success') => {
   const toast = document.createElement('div');
@@ -109,6 +129,7 @@ const AdminStudentDetails: React.FC = () => {
   const navigate = useNavigate();
   const [student, setStudent] = useState<StudentRecord | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadingSecondaryData, setLoadingSecondaryData] = useState(false);
   const [expandedApps, setExpandedApps] = useState<{[key: string]: boolean}>({});
   const [dependents, setDependents] = useState<number>(0);
   const [approvingDocs, setApprovingDocs] = useState<{[key: string]: boolean}>({});
@@ -651,10 +672,57 @@ const AdminStudentDetails: React.FC = () => {
     return { step: steps[steps.length - 1], index: steps.length - 1, status: 'completed' };
   };
 
+  // Carregamento progressivo: Primeiro carregar dados críticos
   useEffect(() => {
-    const run = async () => {
+    const loadCriticalData = async () => {
+      if (!profileId) return; // Guard clause
+      
       try {
         setLoading(true);
+        
+        // ✅ OTIMIZAÇÃO: Tentar usar RPC consolidada primeiro (reduz de múltiplas queries para 1)
+        let s: any = null;
+        let useRpc = true;
+        
+        try {
+          const { data: rpcData, error: rpcError } = await supabase.rpc(
+            'get_admin_student_full_details',
+            { target_profile_id: profileId }
+          );
+          
+          if (!rpcError && rpcData) {
+            // RPC retorna jsonb, converter para objeto se necessário
+            if (typeof rpcData === 'string') {
+              try {
+                s = JSON.parse(rpcData);
+              } catch (parseError) {
+                console.error('❌ [PERFORMANCE] Erro ao fazer parse do JSON da RPC:', parseError);
+                useRpc = false;
+              }
+            } else {
+              s = rpcData;
+            }
+            
+            if (s && s.id) {
+              console.log('✅ [PERFORMANCE] Usando RPC consolidada para carregar dados do estudante');
+            } else {
+              console.warn('⚠️ [PERFORMANCE] RPC retornou dados inválidos, usando fallback');
+              useRpc = false;
+              s = null;
+            }
+          } else {
+            // Se RPC falhar, usar query original como fallback
+            console.warn('⚠️ [PERFORMANCE] RPC falhou, usando query original como fallback:', rpcError);
+            useRpc = false;
+          }
+        } catch (rpcError) {
+          // Se RPC não existir ou falhar, usar query original
+          console.warn('⚠️ [PERFORMANCE] RPC não disponível, usando query original como fallback:', rpcError);
+          useRpc = false;
+        }
+        
+        // Fallback: usar query original se RPC não funcionou
+        if (!useRpc || !s) {
         const { data, error } = await supabase
           .from('user_profiles')
           .select(`
@@ -718,8 +786,14 @@ const AdminStudentDetails: React.FC = () => {
           .single();
 
         if (error) throw error;
+          s = data;
+        }
 
-        const s = data as any;
+        // Garantir que temos dados válidos
+        if (!s) {
+          throw new Error('Failed to load student data');
+        }
+
         let lockedApplication = null;
         let activeApplication = null;
         if (s.scholarship_applications && s.scholarship_applications.length > 0) {
@@ -849,11 +923,6 @@ const AdminStudentDetails: React.FC = () => {
         setStudent(formatted);
         setDependents(Number(s.dependents || 0));
         
-        // Buscar termos aceitos pelo estudante
-        if (s.user_id) {
-          fetchTermAcceptances(s.user_id);
-        }
-        
         // Processar notas do admin - converter de string para array se necessário
         if (s.admin_notes) {
           try {
@@ -890,26 +959,127 @@ const AdminStudentDetails: React.FC = () => {
           setAdminNotes([]);
         }
         
-        // Calcular deadline do I-20
+        // Calcular deadline do I-20 (dados críticos)
         calculateI20Deadline(formatted);
-        
-        // Buscar informações de referência
-        if (formatted.seller_referral_code) {
-          fetchReferralInfo(formatted.seller_referral_code);
-        }
-        
-        // Buscar valores reais pagos de individual_fee_payments
-        if (s.user_id) {
-          fetchRealPaidAmounts(s.user_id);
-        }
       } catch (e) {
-        // noop
+        console.error('Error loading critical data:', e);
       } finally {
         setLoading(false);
       }
     };
-    if (profileId) run();
+    if (profileId) loadCriticalData();
   }, [profileId]);
+
+  // Carregamento progressivo: Dados secundários após dados críticos estarem prontos
+  useEffect(() => {
+    const loadSecondaryData = async () => {
+      if (!student || loading) return; // Aguardar dados críticos
+
+      try {
+        setLoadingSecondaryData(true);
+        
+        // ✅ OTIMIZAÇÃO: Tentar usar RPC consolidada primeiro (reduz múltiplas queries para 1)
+        let useRpc = true;
+        
+        try {
+          const { data: rpcData, error: rpcError } = await supabase.rpc(
+            'get_admin_student_secondary_data',
+            {
+              target_user_id: student.user_id,
+              referral_code: student.seller_referral_code || null
+            }
+          );
+
+          if (!rpcError && rpcData) {
+            // RPC retorna jsonb, processar os dados
+            const data = typeof rpcData === 'string' ? JSON.parse(rpcData) : rpcData;
+            
+            // Processar term acceptances
+            if (data.term_acceptances && Array.isArray(data.term_acceptances)) {
+              setTermAcceptances(data.term_acceptances);
+            } else {
+              setTermAcceptances([]);
+            }
+
+            // Processar referral info
+            if (data.referral_info && data.referral_info !== 'null' && data.referral_info !== null) {
+              // Se for string JSON, fazer parse
+              const referralData = typeof data.referral_info === 'string' 
+                ? (data.referral_info === 'null' ? null : JSON.parse(data.referral_info))
+                : data.referral_info;
+              setReferralInfo(referralData);
+            } else {
+              setReferralInfo(null);
+            }
+
+            // Processar real paid amounts
+            if (data.real_paid_amounts && typeof data.real_paid_amounts === 'object') {
+              const amounts: typeof realPaidAmounts = {};
+              if (data.real_paid_amounts.selection_process) {
+                amounts.selection_process = Number(data.real_paid_amounts.selection_process);
+              }
+              if (data.real_paid_amounts.application) {
+                amounts.application = Number(data.real_paid_amounts.application);
+              }
+              if (data.real_paid_amounts.scholarship) {
+                amounts.scholarship = Number(data.real_paid_amounts.scholarship);
+              }
+              if (data.real_paid_amounts.i20_control) {
+                amounts.i20_control = Number(data.real_paid_amounts.i20_control);
+              }
+              setRealPaidAmounts(amounts);
+            } else {
+              setRealPaidAmounts({});
+            }
+
+            console.log('✅ [PERFORMANCE] Usando RPC consolidada para carregar dados secundários');
+            return;
+          } else {
+            console.warn('⚠️ [PERFORMANCE] RPC consolidada falhou, usando queries individuais como fallback:', rpcError);
+            useRpc = false;
+          }
+        } catch (rpcError) {
+          console.warn('⚠️ [PERFORMANCE] RPC consolidada não disponível, usando queries individuais como fallback:', rpcError);
+          useRpc = false;
+        }
+
+        // Fallback: usar queries individuais se RPC não funcionou
+        if (!useRpc) {
+          const secondaryPromises: Promise<void>[] = [];
+
+          // 1. Buscar termos aceitos pelo estudante
+          if (student.user_id) {
+            secondaryPromises.push(
+              fetchTermAcceptances(student.user_id).then(() => {})
+            );
+          }
+
+          // 2. Buscar informações de referência
+          if (student.seller_referral_code) {
+            secondaryPromises.push(
+              fetchReferralInfo(student.seller_referral_code).then(() => {})
+            );
+        }
+        
+          // 3. Buscar valores reais pagos de individual_fee_payments
+          if (student.user_id) {
+            secondaryPromises.push(
+              fetchRealPaidAmounts(student.user_id).then(() => {})
+            );
+          }
+
+          // Executar todos em paralelo
+          await Promise.all(secondaryPromises);
+        }
+      } catch (e) {
+        console.error('Error loading secondary data:', e);
+      } finally {
+        setLoadingSecondaryData(false);
+      }
+    };
+
+    loadSecondaryData();
+  }, [student?.user_id, student?.seller_referral_code, loading]);
 
   useEffect(() => {
     if (activeTab === 'documents' && student) {
@@ -1174,34 +1344,46 @@ const AdminStudentDetails: React.FC = () => {
       console.log('📤 [handleRejectDocument] Enviando notificação in-app para o aluno...');
       
       try {
+        // Obter labels amigáveis para os documentos
+        const docLabels: Record<string, string> = {
+          passport: 'Passport',
+          diploma: 'High School Diploma',
+          funds_proof: 'Proof of Funds',
+        };
+        const docLabel = docLabels[docType] || docType;
+        
+        // Usar Edge Function que tem service role para criar notificação
         const { data: { session } } = await supabase.auth.getSession();
         const accessToken = session?.access_token;
         
-        if (accessToken) {
-          const notificationPayload = {
-            user_id: student.user_id,
-            title: 'Document Rejected',
-            message: `Your ${docType} document has been rejected by platform admin. Reason: ${reason}`,
-            type: 'document_rejected',
-            link: '/student/dashboard/applications',
-          };
-          
-          const response = await fetch(`${import.meta.env.VITE_SUPABASE_FUNCTIONS_URL}/create-student-notification`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${accessToken}`,
-            },
-            body: JSON.stringify(notificationPayload),
-          });
-          
-          if (response.ok) {
-            console.log('✅ [handleRejectDocument] Notificação in-app enviada com sucesso!');
-          } else {
-            console.warn('⚠️ [handleRejectDocument] Erro ao enviar notificação in-app:', response.status);
-          }
+        if (!accessToken) {
+          console.error('❌ [handleRejectDocument] Access token não encontrado');
+          return;
+        }
+        
+        // Preparar payload - usar user_id (UUID) que a Edge Function vai converter para student_id
+        // A Edge Function busca o student_id (user_profiles.id) a partir do user_id
+        const notificationPayload = {
+          user_id: student.user_id, // UUID que referencia auth.users.id
+          title: 'Document Rejected',
+          message: `Your ${docLabel} document has been rejected. Reason: ${reason}. Please review and upload a corrected version.`,
+          link: '/student/dashboard/applications',
+        };
+        
+        const response = await fetch(`${import.meta.env.VITE_SUPABASE_FUNCTIONS_URL}/create-student-notification`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify(notificationPayload),
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('❌ [handleRejectDocument] Erro ao criar notificação:', response.status, errorText);
         } else {
-          console.error('❌ [handleRejectDocument] Access token não encontrado para notificação in-app');
+          await response.json(); // Result não usado, apenas para consumir a resposta
         }
       } catch (notificationError) {
         console.error('❌ [handleRejectDocument] Erro ao enviar notificação in-app:', notificationError);
@@ -3231,16 +3413,147 @@ const AdminStudentDetails: React.FC = () => {
     }
   };
 
-  if (loading || !student) {
-    return (
-      <div className="min-h-[60vh] flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#05294E]"></div>
+  // Skeleton Loader Component
+  const SkeletonLoader = () => (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 animate-pulse">
+      {/* Header Skeleton */}
+      <div className="flex items-center justify-between">
+        <div className="space-y-3">
+          <div className="h-8 w-48 bg-slate-200 rounded-lg"></div>
+          <div className="h-5 w-64 bg-slate-200 rounded-lg"></div>
+        </div>
+        <div className="flex items-center space-x-3">
+          <div className="h-11 w-36 bg-slate-200 rounded-xl"></div>
+          <div className="h-11 w-24 bg-slate-200 rounded-xl"></div>
+        </div>
+      </div>
+
+      {/* Tabs Skeleton */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
+        <div className="border-b border-slate-200">
+          <div className="flex space-x-8 px-6">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="py-4">
+                <div className="h-5 w-24 bg-slate-200 rounded"></div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Content Grid Skeleton */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* Main Content Skeleton */}
+        <div className="lg:col-span-8 space-y-6">
+          {/* Student Information Card */}
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
+            <div className="bg-gradient-to-r from-slate-300 to-slate-400 rounded-t-2xl px-6 py-4">
+              <div className="h-6 w-48 bg-slate-200 rounded"></div>
+            </div>
+            <div className="p-6 space-y-6">
+              <div className="bg-slate-50 rounded-xl p-4">
+                <div className="h-6 w-56 bg-slate-200 rounded mb-4"></div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {[1, 2, 3, 4, 5, 6].map((i) => (
+                    <div key={i} className="space-y-2">
+                      <div className="h-4 w-24 bg-slate-200 rounded"></div>
+                      <div className="h-5 w-full bg-slate-200 rounded"></div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="bg-slate-50 rounded-xl p-4">
+                <div className="h-6 w-48 bg-slate-200 rounded mb-4"></div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="space-y-2">
+                      <div className="h-4 w-32 bg-slate-200 rounded"></div>
+                      <div className="h-5 w-full bg-slate-200 rounded"></div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Applications Card */}
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
+            <div className="bg-gradient-to-r from-slate-300 to-slate-400 rounded-t-2xl px-6 py-4">
+              <div className="h-6 w-40 bg-slate-200 rounded"></div>
+            </div>
+            <div className="p-6 space-y-4">
+              {[1, 2].map((i) => (
+                <div key={i} className="border border-slate-200 rounded-xl p-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="h-5 w-48 bg-slate-200 rounded"></div>
+                    <div className="h-6 w-20 bg-slate-200 rounded-full"></div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="h-4 w-full bg-slate-200 rounded"></div>
+                    <div className="h-4 w-3/4 bg-slate-200 rounded"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Sidebar Skeleton */}
+        <div className="lg:col-span-4 space-y-6">
+          {/* Quick Actions Card */}
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+            <div className="h-6 w-32 bg-slate-200 rounded mb-4"></div>
+            <div className="space-y-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-10 w-full bg-slate-200 rounded-lg"></div>
+              ))}
+            </div>
+          </div>
+
+          {/* Payment Status Card */}
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+            <div className="h-6 w-40 bg-slate-200 rounded mb-4"></div>
+            <div className="space-y-4">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="flex items-center justify-between">
+                  <div className="h-4 w-32 bg-slate-200 rounded"></div>
+                  <div className="h-6 w-16 bg-slate-200 rounded-full"></div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Notes Card */}
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+            <div className="h-6 w-24 bg-slate-200 rounded mb-4"></div>
+            <div className="space-y-3">
+              {[1, 2].map((i) => (
+                <div key={i} className="p-3 bg-slate-50 rounded-lg">
+                  <div className="h-4 w-full bg-slate-200 rounded mb-2"></div>
+                  <div className="h-4 w-2/3 bg-slate-200 rounded"></div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
       </div>
     );
+
+  if (loading || !student) {
+    return <SkeletonLoader />;
   }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      {/* Indicador de carregamento de dados secundários */}
+      {loadingSecondaryData && (
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 flex items-center gap-3">
+          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+          <p className="text-sm text-blue-700">Carregando informações adicionais...</p>
+        </div>
+      )}
+      
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Student Details</h1>
@@ -3931,13 +4244,6 @@ const AdminStudentDetails: React.FC = () => {
                       .map((app: any, i: number) => {
                       const appKey = app.id || `app-${i}`;
                       const isExpanded = expandedApps[appKey] || false;
-                      
-                      console.log('🎨 [RENDER APPLICATION CARD]', {
-                        appId: app.id,
-                        status: app.status,
-                        scholarship: app.scholarships?.title,
-                        isExpanded
-                      });
                       
                       return (
                         <div key={appKey} className={`border rounded-xl overflow-hidden ${
@@ -5500,6 +5806,7 @@ const AdminStudentDetails: React.FC = () => {
               </div>
             </div>
           ) : (
+            <Suspense fallback={<TabLoadingSkeleton />}>
             <DocumentsView
               studentDocuments={[]}
               documentRequests={documentRequests}
@@ -5523,25 +5830,30 @@ const AdminStudentDetails: React.FC = () => {
               rejectingStates={rejectingDocumentRequest}
               deletingStates={deletingDocumentRequest}
             />
+            </Suspense>
           )}
         </div>
         )}
 
       {activeTab === 'scholarships' && student && (
         <div className="space-y-6">
+          <Suspense fallback={<TabLoadingSkeleton />}>
           <AdminScholarshipSelection
             studentProfileId={student.student_id}
             studentUserId={student.user_id}
           />
+          </Suspense>
         </div>
       )}
 
       {activeTab === 'logs' && student && (
         <div className="p-6">
+          <Suspense fallback={<TabLoadingSkeleton />}>
           <StudentLogsView 
             studentId={student.student_id} 
             studentName={student.student_name} 
           />
+          </Suspense>
         </div>
       )}
 

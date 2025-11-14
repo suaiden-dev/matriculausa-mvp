@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, CreditCard, Upload, X } from 'lucide-react';
+import { ArrowLeft, CreditCard, Upload, X, CheckCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
@@ -52,6 +52,8 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [feesLoading, setFeesLoading] = useState(true);
+  const [showReceiptInfoModal, setShowReceiptInfoModal] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
 
   // Estado para desconto ativo
   const [activeDiscount, setActiveDiscount] = useState<any>(null);
@@ -217,6 +219,35 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
       setSelectedFile(file);
       const url = URL.createObjectURL(file);
       setPreviewUrl(url);
+      // Mostrar popup informativo
+      setShowReceiptInfoModal(true);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      setSelectedFile(file);
+      const url = URL.createObjectURL(file);
+      setPreviewUrl(url);
+      // Mostrar popup informativo
+      setShowReceiptInfoModal(true);
     }
   };
 
@@ -942,7 +973,14 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
                     </li>
                     <li className="flex items-start gap-3">
                       <span className="w-5 h-5 bg-gray-200 text-gray-700 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0">2</span>
-                      <span>{t('zelleCheckout.steps.step2')}</span>
+                      <div className="flex-1">
+                        <span className="block font-medium text-gray-900 mb-1">{t('zelleCheckout.steps.step2')}</span>
+                        <div className="bg-blue-50 border-l-4 border-blue-500 p-3 rounded-r-lg mt-2">
+                          <p className="text-sm text-blue-900 leading-relaxed">
+                            <strong className="font-semibold">{t('zelleCheckout.steps.step2Important.title')}</strong> {t('zelleCheckout.steps.step2Important.description')}
+                          </p>
+                        </div>
+                      </div>
                     </li>
                     <li className="flex items-start gap-3">
                       <span className="w-5 h-5 bg-gray-200 text-gray-700 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0">3</span>
@@ -960,7 +998,16 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     {t('zelleCheckout.uploadReceipt')}
                   </label>
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
+                  <div 
+                    className={`border-2 border-dashed rounded-lg p-6 text-center transition-all duration-300 ${
+                      isDragging 
+                        ? 'border-blue-500 bg-blue-50 scale-[1.02]' 
+                        : 'border-gray-300 hover:border-gray-400'
+                    }`}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                  >
                     <input
                       type="file"
                       accept="image/*"
@@ -1075,6 +1122,79 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Receipt Type Info Modal */}
+      <Dialog 
+        open={showReceiptInfoModal} 
+        onClose={() => setShowReceiptInfoModal(false)}
+        className="relative z-50"
+      >
+        {/* Backdrop com animação fluida */}
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300 ease-out"
+          aria-hidden="true"
+        />
+        
+        {/* Modal Container com animação fluida */}
+        <div className="fixed inset-0 flex items-center justify-center p-4 z-50">
+          <Dialog.Panel className="w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden transform transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-4">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                    <Upload className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <Dialog.Title className="text-xl font-bold">
+                      {t('zelleCheckout.receiptType.title')}
+                    </Dialog.Title>
+                    <p className="text-blue-100 text-sm mt-1">
+                      {t('zelleCheckout.receiptType.description')}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowReceiptInfoModal(false)}
+                  className="p-2 hover:bg-white/10 rounded-full transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 space-y-4">
+              {/* Correct Receipt Type */}
+              <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl border-2 border-green-200 p-5 transform transition-all duration-200 hover:scale-[1.02]">
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0 shadow-lg">
+                    <CheckCircle className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-bold text-green-900 mb-2 text-lg">
+                      {t('zelleCheckout.receiptType.correct.title')}
+                    </h4>
+                    <p className="text-sm text-green-800 leading-relaxed">
+                      {t('zelleCheckout.receiptType.correct.description')}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Button */}
+              <div className="pt-4">
+                <button
+                  onClick={() => setShowReceiptInfoModal(false)}
+                  className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3 px-6 rounded-xl font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
+                >
+                  {t('zelleCheckout.receiptType.understood')}
+                </button>
+              </div>
+            </div>
+          </Dialog.Panel>
+        </div>
+      </Dialog>
     </div>
   );
 };

@@ -38,10 +38,8 @@ export const useFeeConfig = (userId?: string) => {
 
   useEffect(() => {
     if (userId) {
-      loadUserPackageFees();
-      loadUserFeeOverrides();
-      loadRealPaymentAmounts();
-      loadUserSystemType();
+      // ✅ OTIMIZAÇÃO: Tentar usar RPC consolidada primeiro (reduz de 4 queries para 1)
+      loadUserFeeConfigConsolidated();
     }
   }, [userId]);
 
@@ -174,6 +172,76 @@ export const useFeeConfig = (userId?: string) => {
     } catch (err) {
       console.error('❌ [useFeeConfig] Erro inesperado ao carregar valores reais de pagamento:', err);
       setRealPaymentAmounts({});
+    }
+  };
+
+  // ✅ OTIMIZAÇÃO: Função consolidada para carregar todos os dados de uma vez
+  const loadUserFeeConfigConsolidated = async () => {
+    if (!userId) return;
+
+    let useRpc = true;
+    try {
+      const { data: rpcData, error: rpcError } = await supabase.rpc(
+        'get_user_fee_config_consolidated',
+        { target_user_id: userId }
+      );
+
+      if (!rpcError && rpcData) {
+        // RPC retorna jsonb, processar os dados
+        const data = typeof rpcData === 'string' ? JSON.parse(rpcData) : rpcData;
+        
+        // Processar package fees
+        if (data.user_package_fees && data.user_package_fees !== 'null') {
+          setUserPackageFees(data.user_package_fees);
+        } else {
+          setUserPackageFees(null);
+        }
+
+        // Processar fee overrides
+        if (data.user_fee_overrides && data.user_fee_overrides !== 'null') {
+          const normalized = {
+            selection_process_fee: data.user_fee_overrides.selection_process_fee != null ? Number(data.user_fee_overrides.selection_process_fee) : undefined,
+            application_fee: data.user_fee_overrides.application_fee != null ? Number(data.user_fee_overrides.application_fee) : undefined,
+            scholarship_fee: data.user_fee_overrides.scholarship_fee != null ? Number(data.user_fee_overrides.scholarship_fee) : undefined,
+            i20_control_fee: data.user_fee_overrides.i20_control_fee != null ? Number(data.user_fee_overrides.i20_control_fee) : undefined,
+          };
+          setUserFeeOverrides(normalized);
+        } else {
+          setUserFeeOverrides(null);
+        }
+
+        // Processar real payment amounts
+        if (data.real_payment_amounts && Array.isArray(data.real_payment_amounts) && data.real_payment_amounts.length > 0) {
+          const amounts: {[key: string]: number} = {};
+          if (data.real_payment_amounts[0].payment_amount) {
+            amounts.selection_process = Number(data.real_payment_amounts[0].payment_amount);
+          }
+          setRealPaymentAmounts(amounts);
+        } else {
+          setRealPaymentAmounts({});
+        }
+
+        // Processar system_type
+        const systemType = data.system_type || 'legacy';
+        setUserSystemType(systemType as 'legacy' | 'simplified');
+
+        console.log('✅ [PERFORMANCE] Usando RPC consolidada para carregar fee config');
+        return;
+      } else {
+        console.warn('⚠️ [PERFORMANCE] RPC consolidada falhou, usando queries individuais como fallback:', rpcError);
+        useRpc = false;
+      }
+    } catch (rpcError) {
+      console.warn('⚠️ [PERFORMANCE] RPC consolidada não disponível, usando queries individuais como fallback:', rpcError);
+      useRpc = false;
+    }
+
+    // Fallback: usar queries individuais se RPC não funcionou
+    if (!useRpc) {
+      loadUserPackageFees();
+      loadUserFeeOverrides();
+      loadRealPaymentAmounts();
+      loadUserSystemType();
     }
   };
 
