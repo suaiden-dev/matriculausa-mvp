@@ -151,6 +151,13 @@ const AdminStudentDetails: React.FC = () => {
   const [paymentMethod, setPaymentMethod] = useState('manual');
   const [paymentAmount, setPaymentAmount] = useState(0);
   
+  // Estados para aprovar/rejeitar aplicação
+  const [approvingStudent, setApprovingStudent] = useState(false);
+  const [rejectingStudent, setRejectingStudent] = useState(false);
+  const [showRejectStudentModal, setShowRejectStudentModal] = useState(false);
+  const [rejectStudentReason, setRejectStudentReason] = useState('');
+  const [pendingRejectAppId, setPendingRejectAppId] = useState<string | null>(null);
+  
   // Estados de dados secundários
   const [termAcceptances, setTermAcceptances] = useState<any[]>([]);
   const [referralInfo, setReferralInfo] = useState<any>(null);
@@ -645,19 +652,40 @@ const AdminStudentDetails: React.FC = () => {
   }, [student, pendingPayment, paymentAmount, paymentMethod, markFeeAsPaid]);
 
   const handleApproveDocument = useCallback(async (appId: string, docType: string) => {
+    if (!student) return;
+    
     setApprovingDocs(prev => ({ ...prev, [`${appId}:${docType}`]: true }));
     
-    const result = await approveDocument(appId, docType);
-    
-    setApprovingDocs(prev => ({ ...prev, [`${appId}:${docType}`]: false }));
-    
-    if (result.success) {
-      alert('Document approved!');
-      window.location.reload();
-    } else {
-      alert('Error: ' + result.error);
+    try {
+      const result = await approveDocument(appId, docType);
+      
+      if (result.success) {
+        // Buscar os documentos atualizados do banco de dados
+        const { data: updatedApp, error: fetchError } = await supabase
+          .from('scholarship_applications')
+          .select('id, documents')
+          .eq('id', appId)
+          .single();
+        
+        if (!fetchError && updatedApp) {
+          // Atualizar o estado do student localmente sem reload
+          setStudent(prev => {
+            if (!prev) return prev;
+            const updatedApps = (prev.all_applications || []).map((a: any) =>
+              a.id === appId ? { ...a, documents: updatedApp.documents || [] } : a
+            );
+            return { ...prev, all_applications: updatedApps } as any;
+          });
+        }
+      } else {
+        console.error('Error approving document:', result.error);
+      }
+    } catch (error) {
+      console.error('Error approving document:', error);
+    } finally {
+      setApprovingDocs(prev => ({ ...prev, [`${appId}:${docType}`]: false }));
     }
-  }, [approveDocument]);
+  }, [approveDocument, student, setStudent]);
 
   const handleRejectDocument = useCallback((appId: string, docType: string) => {
     setRejectDocData({ applicationId: appId, docType });
@@ -665,21 +693,44 @@ const AdminStudentDetails: React.FC = () => {
   }, []);
 
   const handleConfirmReject = useCallback(async (reason: string) => {
-    if (!rejectDocData) return;
+    if (!rejectDocData || !student) return;
 
-    const result = await rejectDocument(
-      rejectDocData.applicationId,
-      rejectDocData.docType,
-      reason
-    );
+    try {
+      const result = await rejectDocument(
+        rejectDocData.applicationId,
+        rejectDocData.docType,
+        reason
+      );
 
-    if (result.success) {
-      alert('Document rejected!');
-      window.location.reload();
-    } else {
-      alert('Error: ' + result.error);
+      if (result.success) {
+        // Buscar os documentos atualizados do banco de dados
+        const { data: updatedApp, error: fetchError } = await supabase
+          .from('scholarship_applications')
+          .select('id, documents')
+          .eq('id', rejectDocData.applicationId)
+          .single();
+        
+        if (!fetchError && updatedApp) {
+          // Atualizar o estado do student localmente sem reload
+          setStudent(prev => {
+            if (!prev) return prev;
+            const updatedApps = (prev.all_applications || []).map((a: any) =>
+              a.id === rejectDocData.applicationId ? { ...a, documents: updatedApp.documents || [] } : a
+            );
+            return { ...prev, all_applications: updatedApps } as any;
+          });
+        }
+        
+        // Fechar o modal de rejeição
+        setShowRejectDocModal(false);
+        setRejectDocData(null);
+      } else {
+        console.error('Error rejecting document:', result.error);
+      }
+    } catch (error) {
+      console.error('Error rejecting document:', error);
     }
-  }, [rejectDocData, rejectDocument]);
+  }, [rejectDocData, rejectDocument, student, setStudent]);
 
   const handleViewDocument = useCallback((doc: { file_url: string; filename: string }) => {
     window.open(doc.file_url, '_blank');
@@ -690,6 +741,204 @@ const AdminStudentDetails: React.FC = () => {
     // Implementation would go here
     setUploadingDocs(prev => ({ ...prev, [`${appId}:${docType}`]: false }));
   }, []);
+
+  // Funções para aprovar/rejeitar aplicação
+  const approveApplication = useCallback(async (applicationId: string) => {
+    if (!student || !isPlatformAdmin) return;
+    
+    try {
+      setApprovingStudent(true);
+      
+      console.log('🔄 [APPROVE] Iniciando aprovação da aplicação:', applicationId);
+      
+      const { data: updatedApp, error: updateError } = await supabase
+        .from('scholarship_applications')
+        .update({ status: 'approved' })
+        .eq('id', applicationId)
+        .select()
+        .single();
+
+      if (updateError) {
+        console.error('❌ [APPROVE] Erro ao atualizar status da aplicação:', updateError);
+        throw new Error('Failed to update application status: ' + updateError.message);
+      }
+      
+      console.log('✅ [APPROVE] Aplicação aprovada no banco:', updatedApp);
+
+      // Atualizar também o documents_status no perfil do usuário
+      const { error: profileUpdateError } = await supabase
+        .from('user_profiles')
+        .update({ documents_status: 'approved' })
+        .eq('user_id', student.user_id);
+
+      if (profileUpdateError) {
+        console.error('Erro ao atualizar documents_status:', profileUpdateError);
+      }
+
+      // Webhook e notificação
+      try {
+        const { data: userData } = await supabase
+          .from('user_profiles')
+          .select('email')
+          .eq('user_id', student.user_id)
+          .single();
+
+        if (userData?.email) {
+          const webhookPayload = {
+            tipo_notf: "Aluno aprovado na bolsa",
+            email_aluno: userData.email,
+            nome_aluno: student.student_name,
+            email_universidade: user?.email,
+            o_que_enviar: `Congratulations, you have been selected for the scholarship.`
+          };
+          
+          try {
+            const webhookResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(webhookPayload),
+            });
+            
+            if (!webhookResponse.ok) {
+              const webhookErrorText = await webhookResponse.text();
+              console.error('Webhook error:', webhookErrorText);
+            }
+          } catch (webhookError) {
+            console.error('Erro ao enviar webhook:', webhookError);
+          }
+
+          // Enviar também notificação in-app para o aluno (sino)
+          try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const accessToken = session?.access_token;
+            if (accessToken) {
+              await fetch(`${import.meta.env.VITE_SUPABASE_FUNCTIONS_URL}/create-student-notification`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${accessToken}`,
+                },
+                body: JSON.stringify({
+                  user_id: student.user_id,
+                  title: 'Scholarship approved',
+                  message: `You have been selected for the scholarship.`,
+                  type: 'scholarship_approved',
+                  link: '/student/dashboard',
+                }),
+              });
+            }
+          } catch (e) {
+            console.error('Error sending in-app student notification:', e);
+          }
+        }
+      } catch (error) {
+        console.error('Error sending webhook:', error);
+      }
+
+      // Atualizar o estado local com os dados atualizados do banco
+      if (updatedApp) {
+        console.log('🔄 [APPROVE] Atualizando estado local...');
+        setStudent(prev => {
+          if (!prev) {
+            console.warn('⚠️ [APPROVE] Student é null, não é possível atualizar');
+            return prev;
+          }
+          
+          // Criar um novo array de aplicações com a aplicação atualizada
+          const updatedApps = (prev.all_applications || []).map((app: any) => {
+            if (app.id === applicationId) {
+              console.log('🔄 [APPROVE] Atualizando aplicação:', app.id, 'de', app.status, 'para approved');
+              // Criar um novo objeto completamente para garantir que o React detecte a mudança
+              return {
+                ...app,
+                status: 'approved',
+                updated_at: updatedApp.updated_at || new Date().toISOString()
+              };
+            }
+            return app;
+          });
+          
+          console.log('✅ [APPROVE] Novo array de aplicações criado:', updatedApps.length, 'aplicações');
+          
+          // Criar um novo objeto student completamente para garantir que o React detecte a mudança
+          const newStudent = {
+            ...prev,
+            all_applications: updatedApps,
+            application_status: 'approved'
+          } as any;
+          
+          console.log('✅ [APPROVE] Novo objeto student criado');
+          return newStudent;
+        });
+        
+        console.log('✅ [APPROVE] setStudent chamado, aguardando re-render...');
+      } else {
+        console.warn('⚠️ [APPROVE] updatedApp é null ou undefined');
+      }
+    } catch (error: any) {
+      console.error('Error approving application:', error);
+    } finally {
+      setApprovingStudent(false);
+    }
+  }, [student, isPlatformAdmin, user, setStudent]);
+
+  const rejectApplication = useCallback(async (applicationId: string) => {
+    if (!student || !isPlatformAdmin) return;
+    
+    try {
+      setRejectingStudent(true);
+      
+      const { data: updatedApp, error: updateError } = await supabase
+        .from('scholarship_applications')
+        .update({ status: 'rejected', notes: rejectStudentReason || null })
+        .eq('id', applicationId)
+        .select()
+        .single();
+      
+      if (updateError) {
+        console.error('Erro ao atualizar status da aplicação:', updateError);
+        throw updateError;
+      }
+      
+      setShowRejectStudentModal(false);
+      setRejectStudentReason('');
+      setPendingRejectAppId(null);
+      
+      // Atualizar o estado local com os dados atualizados do banco
+      if (updatedApp) {
+        setStudent(prev => {
+          if (!prev) return prev;
+          
+          // Criar um novo array de aplicações com a aplicação atualizada
+          const updatedApps = (prev.all_applications || []).map((app: any) => {
+            if (app.id === applicationId) {
+              // Criar um novo objeto completamente para garantir que o React detecte a mudança
+              return {
+                ...app,
+                status: 'rejected',
+                notes: rejectStudentReason || null,
+                updated_at: updatedApp.updated_at || new Date().toISOString()
+              };
+            }
+            return app;
+          });
+          
+          // Criar um novo objeto student completamente para garantir que o React detecte a mudança
+          return {
+            ...prev,
+            all_applications: updatedApps,
+            application_status: 'rejected'
+          } as any;
+        });
+        
+        console.log('✅ [REJECT] Estado local atualizado com sucesso');
+      }
+    } catch (error: any) {
+      console.error('Erro ao rejeitar aplicação:', error);
+    } finally {
+      setRejectingStudent(false);
+    }
+  }, [student, isPlatformAdmin, rejectStudentReason, setStudent]);
 
   // Admin Notes handlers
   // Funções de Admin Notes agora vêm do useAdminNotes hook
@@ -1036,7 +1285,17 @@ const AdminStudentDetails: React.FC = () => {
                 />
               )}
 
-              <SelectedScholarshipCard student={student} />
+              <SelectedScholarshipCard 
+                student={student} 
+                isPlatformAdmin={isPlatformAdmin}
+                approvingStudent={approvingStudent}
+                rejectingStudent={rejectingStudent}
+                onApproveApplication={approveApplication}
+                onRejectApplication={(appId) => {
+                  setPendingRejectAppId(appId);
+                  setShowRejectStudentModal(true);
+                }}
+              />
 
               <StudentDocumentsCard
                 applications={student.all_applications || []}
@@ -1046,11 +1305,18 @@ const AdminStudentDetails: React.FC = () => {
                 uploadingDocs={uploadingDocs}
                 approvingDocs={approvingDocs}
                 rejectingDocs={rejectingDocs}
+                approvingStudent={approvingStudent}
+                rejectingStudent={rejectingStudent}
                 onToggleExpand={(appKey) => setExpandedApps(prev => ({ ...prev, [appKey]: !prev[appKey] }))}
                 onViewDocument={handleViewDocument}
                 onUploadDocument={handleUploadDocument}
                 onApproveDocument={handleApproveDocument}
                 onRejectDocument={handleRejectDocument}
+                onApproveApplication={approveApplication}
+                onRejectApplication={(appId) => {
+                  setPendingRejectAppId(appId);
+                  setShowRejectStudentModal(true);
+                }}
               />
             </Suspense>
           </div>
@@ -1241,6 +1507,54 @@ const AdminStudentDetails: React.FC = () => {
         onReject={handleConfirmReject}
         documentType={rejectDocData?.docType || ''}
       />
+
+      {/* Modal para rejeitar aplicação */}
+      {showRejectStudentModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+          <div className="bg-white rounded-xl p-6 max-w-lg w-full mx-4">
+            <h3 className="text-xl font-semibold text-slate-900 mb-4">Reject Application</h3>
+            <p className="text-sm text-slate-600 mb-4">
+              Please provide a reason for rejecting this application. This information will be shared with the student.
+            </p>
+            <textarea
+              value={rejectStudentReason}
+              onChange={(e) => setRejectStudentReason(e.target.value)}
+              className="w-full h-32 p-3 border border-slate-300 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
+              placeholder="Enter your reason here..."
+            />
+            <div className="flex justify-end gap-3 mt-4">
+              <button
+                onClick={() => {
+                  setShowRejectStudentModal(false);
+                  setRejectStudentReason('');
+                  setPendingRejectAppId(null);
+                }}
+                className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  if (pendingRejectAppId) {
+                    rejectApplication(pendingRejectAppId);
+                  }
+                }}
+                disabled={!rejectStudentReason.trim() || rejectingStudent}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50 flex items-center"
+              >
+                {rejectingStudent ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Rejecting...
+                  </>
+                ) : (
+                  'Reject Application'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

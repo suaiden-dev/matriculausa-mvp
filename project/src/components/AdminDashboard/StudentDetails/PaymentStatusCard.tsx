@@ -78,7 +78,7 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
   // This is a simplified version - full implementation would include all fee types
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
-      <div className="bg-gradient-to-r from-[#05294E] to-[#0a4a7a] px-6 py-4 flex items-center justify-between">
+      <div className="bg-gradient-to-r from-[#05294E] rounded-t-2xl to-[#0a4a7a] px-6 py-4 flex items-center justify-between">
         <h2 className="text-xl font-semibold text-white flex items-center">
           <CreditCard className="w-6 h-6 mr-3" />
           Payment Status
