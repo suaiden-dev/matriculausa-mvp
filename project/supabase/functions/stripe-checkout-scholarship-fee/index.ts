@@ -3,6 +3,7 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import Stripe from 'npm:stripe@17.7.0';
 import { createClient } from 'npm:@supabase/supabase-js@2.49.1';
 import { getStripeConfig } from '../stripe-config.ts';
+import { calculateCardAmountWithFees, calculatePIXAmountWithFees } from '../utils/stripe-fee-calculator.ts';
 
 const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
 
@@ -189,7 +190,46 @@ Deno.serve(async (req) => {
         console.log(`[stripe-checkout-scholarship-fee] Valor muito baixo (${explicitAmount}), ajustando para mínimo: ${minAmount}`);
         finalAmount = minAmount;
       }
-      const unitAmountCents = Math.round(finalAmount * 100);
+      
+      // Valor base (sem markup) - usado para comissões
+      const baseAmount = finalAmount;
+      
+      // Verificar se deve aplicar markup (não aplicar em produção por padrão)
+      const enableMarkupEnv = Deno.env.get('ENABLE_STRIPE_FEE_MARKUP');
+      const shouldApplyMarkup = enableMarkupEnv === 'true' 
+        ? true 
+        : enableMarkupEnv === 'false' 
+          ? false 
+          : !config.environment.isProduction; // Se não definido, usar detecção automática
+      
+      // Calcular valor com ou sem markup de taxas do Stripe
+      let grossAmountInCents: number;
+      if (shouldApplyMarkup) {
+        if (payment_method === 'pix') {
+          // Para PIX: calcular markup considerando taxa de câmbio
+          grossAmountInCents = calculatePIXAmountWithFees(baseAmount, exchangeRate);
+        } else {
+          // Para cartão: calcular markup
+          grossAmountInCents = calculateCardAmountWithFees(baseAmount);
+        }
+        console.log('[stripe-checkout-scholarship-fee] ✅ Markup ATIVADO (ambiente:', config.environment.environment, ')');
+      } else {
+        // Sem markup: usar valor original
+        if (payment_method === 'pix') {
+          grossAmountInCents = Math.round(baseAmount * exchangeRate * 100);
+        } else {
+          grossAmountInCents = Math.round(baseAmount * 100);
+        }
+        console.log('[stripe-checkout-scholarship-fee] ⚠️ Markup DESATIVADO (ambiente:', config.environment.environment, ')');
+      }
+      
+      // Adicionar valores base e gross ao metadata para uso em comissões
+      sessionConfig.metadata.base_amount = baseAmount.toString();
+      sessionConfig.metadata.gross_amount = (grossAmountInCents / 100).toString();
+      sessionConfig.metadata.fee_type = shouldApplyMarkup ? 'stripe_processing' : 'none';
+      sessionConfig.metadata.fee_amount = shouldApplyMarkup ? ((grossAmountInCents / 100) - baseAmount).toString() : '0';
+      sessionConfig.metadata.markup_enabled = shouldApplyMarkup.toString();
+      
       sessionConfig.line_items = [
         {
           price_data: {
@@ -198,12 +238,14 @@ Deno.serve(async (req) => {
               name: 'Scholarship Fee',
               description: 'Scholarship application processing fee',
             },
-            unit_amount: payment_method === 'pix' ? Math.round(finalAmount * exchangeRate * 100) : unitAmountCents,
+            unit_amount: grossAmountInCents,
           },
           quantity: 1,
         },
       ];
-      console.log('[stripe-checkout-scholarship-fee] ✅ Usando amount explícito:', payment_method === 'pix' ? `BRL ${finalAmount * exchangeRate}` : `USD ${finalAmount}`);
+      console.log('[stripe-checkout-scholarship-fee] ✅ Usando amount explícito');
+      console.log('[stripe-checkout-scholarship-fee] 💰 Valor base (para comissões):', baseAmount);
+      console.log('[stripe-checkout-scholarship-fee] 💰 Valor final (cobrado do aluno):', grossAmountInCents / 100);
     } else if (userPackageFees && typeof userPackageFees.scholarship_fee === 'number') {
       // ⚠️ FALLBACK: Usando valor do pacote, mas priorizando $900 para scholarship fee
       let packageAmount = userPackageFees.scholarship_fee;
@@ -216,7 +258,46 @@ Deno.serve(async (req) => {
       
       packageAmount = packageAmount < minAmount ? minAmount : packageAmount;
       console.log('[stripe-checkout-scholarship-fee] ⚠️ FALLBACK: Usando valor do pacote (ajustado):', packageAmount, 'USD');
-      const dynamicAmount = Math.round(packageAmount * 100);
+      
+      // Valor base (sem markup) - usado para comissões
+      const baseAmount = packageAmount;
+      
+      // Verificar se deve aplicar markup (não aplicar em produção por padrão)
+      const enableMarkupEnv = Deno.env.get('ENABLE_STRIPE_FEE_MARKUP');
+      const shouldApplyMarkup = enableMarkupEnv === 'true' 
+        ? true 
+        : enableMarkupEnv === 'false' 
+          ? false 
+          : !config.environment.isProduction; // Se não definido, usar detecção automática
+      
+      // Calcular valor com ou sem markup de taxas do Stripe
+      let grossAmountInCents: number;
+      if (shouldApplyMarkup) {
+        if (payment_method === 'pix') {
+          // Para PIX: calcular markup considerando taxa de câmbio
+          grossAmountInCents = calculatePIXAmountWithFees(baseAmount, exchangeRate);
+        } else {
+          // Para cartão: calcular markup
+          grossAmountInCents = calculateCardAmountWithFees(baseAmount);
+        }
+        console.log('[stripe-checkout-scholarship-fee] ✅ Markup ATIVADO (ambiente:', config.environment.environment, ')');
+      } else {
+        // Sem markup: usar valor original
+        if (payment_method === 'pix') {
+          grossAmountInCents = Math.round(baseAmount * exchangeRate * 100);
+        } else {
+          grossAmountInCents = Math.round(baseAmount * 100);
+        }
+        console.log('[stripe-checkout-scholarship-fee] ⚠️ Markup DESATIVADO (ambiente:', config.environment.environment, ')');
+      }
+      
+      // Adicionar valores base e gross ao metadata para uso em comissões
+      sessionConfig.metadata.base_amount = baseAmount.toString();
+      sessionConfig.metadata.gross_amount = (grossAmountInCents / 100).toString();
+      sessionConfig.metadata.fee_type = shouldApplyMarkup ? 'stripe_processing' : 'none';
+      sessionConfig.metadata.fee_amount = shouldApplyMarkup ? ((grossAmountInCents / 100) - baseAmount).toString() : '0';
+      sessionConfig.metadata.markup_enabled = shouldApplyMarkup.toString();
+      
       sessionConfig.line_items = [
         {
           price_data: {
@@ -225,12 +306,14 @@ Deno.serve(async (req) => {
               name: 'Scholarship Fee',
               description: `Scholarship Fee - ${userPackageFees.package_name}`,
             },
-            unit_amount: payment_method === 'pix' ? Math.round(packageAmount * exchangeRate * 100) : dynamicAmount,
+            unit_amount: grossAmountInCents,
           },
           quantity: 1,
         },
       ];
-      console.log('[stripe-checkout-scholarship-fee] ✅ Usando valor do pacote:', payment_method === 'pix' ? `BRL ${packageAmount * exchangeRate}` : `USD ${packageAmount}`);
+      console.log('[stripe-checkout-scholarship-fee] ✅ Usando valor do pacote');
+      console.log('[stripe-checkout-scholarship-fee] 💰 Valor base (para comissões):', baseAmount);
+      console.log('[stripe-checkout-scholarship-fee] 💰 Valor final (cobrado do aluno):', grossAmountInCents / 100);
     } else {
       sessionConfig.line_items = [
         {
