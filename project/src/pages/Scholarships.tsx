@@ -865,7 +865,7 @@ const Scholarships: React.FC = () => {
                             className="flex-1 bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 hover:from-[#041f3a] hover:to-slate-600 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2"
                             onClick={async () => {
                               if (!userProfile?.has_paid_selection_process_fee) {
-                                navigate('/student/dashboard');
+                                navigate('/student/onboarding?step=selection_fee');
                                 return;
                               }
                               navigate('/student/dashboard/scholarships');
@@ -1213,7 +1213,7 @@ const Scholarships: React.FC = () => {
                              className="flex-1 bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 hover:from-[#041f3a] hover:to-slate-600 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2"
                              onClick={async () => {
                                if (!userProfile?.has_paid_selection_process_fee) {
-                                 navigate('/student/dashboard');
+                                 navigate('/student/onboarding?step=selection_fee');
                                  return;
                                }
                                navigate('/student/dashboard/scholarships');

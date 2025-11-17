@@ -24,8 +24,11 @@ import { usePaymentBlocked } from '../../hooks/usePaymentBlocked';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useReferralCode } from '../../hooks/useReferralCode';
+import { useStepByStepGuide } from '../../hooks/useStepByStepGuide';
+import { supabase } from '../../lib/supabase';
 import { ProgressBar } from '../../components/ProgressBar';
 import StepByStepButton from '../../components/OnboardingTour/StepByStepButton';
+import StepByStepGuide from '../../components/OnboardingTour/StepByStepGuide';
 import ContinueApplicationButton from '../../components/ContinueApplicationButton';
 import './Overview.css'; // Adicionar um arquivo de estilos dedicado para padronização visual
 
@@ -56,19 +59,25 @@ const Overview: React.FC<OverviewProps> = ({
 }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { user, userProfile } = useAuth();
+  const { user, userProfile, refetchUserProfile } = useAuth();
   const { activeDiscount } = useReferralCode();
   const { getFeeAmount, userFeeOverrides } = useFeeConfig(user?.id);
   const { selectionProcessFee, scholarshipFee, i20ControlFee, selectionProcessFeeAmount, scholarshipFeeAmount, i20ControlFeeAmount } = useDynamicFees();
   const { isGuideOpen, openGuide, closeGuide } = useStepByStepGuide();
   const { isBlocked, pendingPayment, loading: paymentBlockedLoading } = usePaymentBlocked();
+  
+  // Verificar se há pagamento Zelle pendente do tipo selection_process
+  const hasPendingSelectionProcessPayment = isBlocked && pendingPayment && pendingPayment.fee_type === 'selection_process';
+  
   const [visibleApplications, setVisibleApplications] = useState(5); // Mostrar 5 inicialmente
   const [feesLoading, setFeesLoading] = useState(true);
+  const [documentsLoading, setDocumentsLoading] = useState(true);
+  const [studentDocuments, setStudentDocuments] = useState<any[]>([]);
   
   // Mapeamento de steps do onboarding para labels (mesmo do StepIndicator)
   const onboardingStepLabels: Record<string, string> = {
     'welcome': 'Welcome',
-    'selection_fee': 'Selection Fee',
+    'selection_fee': 'Selection Process Fee',
     'scholarship_selection': 'Choose Scholarships',
     'scholarship_review': 'Review Scholarships',
     'process_type': 'Process Type',
@@ -554,7 +563,15 @@ const Overview: React.FC<OverviewProps> = ({
             {allCompleted ? t('studentDashboard.progressBar.allStepsCompleted') : t('studentDashboard.progressBar.title')}
           </div>
           <div className="mb-2 md:mb-4">
-            <ProgressBar steps={steps} feeValues={dynamicFeeValues} />
+            <ProgressBar 
+              steps={steps} 
+              feeValues={dynamicFeeValues}
+              applicationId={recentApplications?.[0]?.id || null}
+              isSelectionProcessUnlocked={true} // Sempre liberada
+              isApplicationFeeUnlocked={userProfile?.has_paid_selection_process_fee || false}
+              isScholarshipFeeUnlocked={hasApplicationFeePaid}
+              isI20Unlocked={hasScholarshipFeePaid}
+            />
           </div>
 
           {/* Card: Start Selection Process - Mostrar apenas se NÃO começou onboarding ainda */}
@@ -612,16 +629,12 @@ const Overview: React.FC<OverviewProps> = ({
                   </p>
                 </div>
               ) : (
-                <StripeCheckout 
-                  productId="selectionProcess"
-                  feeType="selection_process"
-                  paymentType="selection_process"
-                  buttonText={t('studentDashboard.selectionProcess.startButton')}
-                  className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 sm:py-3 px-4 sm:px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 cursor-pointer border-2 border-white text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed"
-                  successUrl={`${window.location.origin}/student/dashboard/selection-process-fee-success?session_id={CHECKOUT_SESSION_ID}`}
-                  cancelUrl={`${window.location.origin}/student/dashboard/selection-process-fee-error`}
-                  disabled={paymentBlockedLoading}
-                />
+                <Link
+                  to="/student/onboarding?step=selection_fee"
+                  className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 sm:py-3 px-4 sm:px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 cursor-pointer border-2 border-white text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed text-center inline-block"
+                >
+                  {t('studentDashboard.selectionProcess.startButton')}
+                </Link>
               )}
               
               {/* Aviso para usuários com seller_referral_code */}

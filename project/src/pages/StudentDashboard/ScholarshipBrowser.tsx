@@ -1640,7 +1640,6 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                              disabled={alreadyApplied || isBlocked || isCheckingDiscount}
                            >
                              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                             <Award className="h-5 w-5 sm:h-6 sm:w-6 mr-2 relative z-10 group-hover:scale-110 transition-transform text-white" aria-hidden="true" />
                              <span className="relative z-10">
                                {alreadyApplied ? t('studentDashboard.findScholarships.scholarshipCard.alreadyApplied') : inCart ? 'Remove from Selection' : (
                                  isCheckingDiscount ? t('studentDashboard.findScholarships.scholarshipCard.checking') : t('studentDashboard.findScholarships.scholarshipCard.selectScholarship')

@@ -16,7 +16,7 @@ import { supabase } from '../../lib/supabase';
 
 const STEPS = [
   { key: 'welcome' as OnboardingStep, label: 'Welcome' },
-  { key: 'selection_fee' as OnboardingStep, label: 'Selection Fee' },
+  { key: 'selection_fee' as OnboardingStep, label: 'Selection Process Fee' },
   { key: 'scholarship_selection' as OnboardingStep, label: 'Choose Scholarships' },
   { key: 'scholarship_review' as OnboardingStep, label: 'Review Scholarships' },
   { key: 'process_type' as OnboardingStep, label: 'Process Type' },

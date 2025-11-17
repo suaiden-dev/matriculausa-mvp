@@ -190,16 +190,17 @@ export const ScholarshipReviewStep: React.FC<StepProps> = ({ onNext, onBack }) =
                 <CheckCircle className="w-20 h-20 text-green-600 mx-auto" />
               </div>
               <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3">
-                Etapa Concluída
+                Step Completed
               </h2>
               <p className="text-base sm:text-lg text-gray-700 mb-6">
-                Você já revisou suas bolsas selecionadas e passou para a próxima etapa. Esta etapa está completa.
+                You have already reviewed your selected scholarships and moved to the next step. This step is complete.
               </p>
               <button
                 onClick={onNext}
-                className="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-md hover:shadow-lg"
+                className="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-md hover:shadow-lg flex items-center justify-center space-x-2"
               >
-                Continuar
+                <span>Continue</span>
+                <ArrowRight className="w-5 h-5" />
               </button>
             </div>
           </div>

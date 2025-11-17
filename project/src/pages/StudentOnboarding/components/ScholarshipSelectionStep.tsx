@@ -19,6 +19,7 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext }) => {
   const isManuallyUpdatingRef = React.useRef(false);
   const lastCartRef = React.useRef<string>('');
   const [isLocked, setIsLocked] = useState(false);
+  const [expandedCardIds, setExpandedCardIds] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [selectedLevel, setSelectedLevel] = useState<string>('all');
   const [selectedField, setSelectedField] = useState<string>('all');
@@ -508,8 +509,8 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext }) => {
 
   return (
     <div className="space-y-6 pb-24 sm:pb-6">
-      {/* Header Section with Clear Instructions */}
-      <div className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 rounded-xl p-5 sm:p-6 border border-blue-100">
+      {/* Header Section */}
+      <div>
         <div className="text-center mb-4">
           <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
             Choose Your Scholarships
@@ -519,8 +520,8 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext }) => {
           </p>
         </div>
 
-        {/* Instructions Box */}
-        <div className="bg-white rounded-lg p-4 border-2 border-blue-200 shadow-sm">
+        {/* Instructions Box - Sem background azul */}
+        <div className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm">
           <div className="flex items-start space-x-3">
             <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
@@ -548,7 +549,6 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext }) => {
             </div>
           </div>
         </div>
-
       </div>
 
       {displayError && (
@@ -793,16 +793,33 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext }) => {
           </h3>
         </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-        {paginatedScholarships.map((scholarship) => (
-          <ScholarshipCardFull
-            key={scholarship.id}
-            scholarship={scholarship}
-            isSelected={selectedIds.has(scholarship.id)}
-            onToggle={() => toggleSelection(scholarship)}
-            userProfile={userProfile}
-            isLocked={isLocked}
-          />
-        ))}
+        {paginatedScholarships.map((scholarship) => {
+          const scholarshipIdStr = String(scholarship.id);
+          const isExpanded = expandedCardIds.has(scholarshipIdStr);
+          
+          return (
+            <ScholarshipCardFull
+              key={`scholarship-${scholarship.id}`}
+              scholarship={scholarship}
+              isSelected={selectedIds.has(scholarship.id)}
+              onToggle={() => toggleSelection(scholarship)}
+              userProfile={userProfile}
+              isLocked={isLocked}
+              isExpanded={isExpanded}
+              onToggleExpand={(id: string) => {
+                setExpandedCardIds(prev => {
+                  const newSet = new Set(prev);
+                  if (newSet.has(id)) {
+                    newSet.delete(id);
+                  } else {
+                    newSet.add(id);
+                  }
+                  return newSet;
+                });
+              }}
+            />
+          );
+        })}
         </div>
       </div>
 

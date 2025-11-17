@@ -405,3 +405,31 @@ body.modal-open [style*="zIndex: 10002"] {
 .animate-fade-in {
   animation: fadeIn 0.3s ease-out;
 }
+
+/* Garantir que apenas cards expandidos mostrem conteúdo */
+[data-expanded="false"] {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  overflow: hidden !important;
+}
+
+/* Isolar conteúdo expandido de scholarship cards */
+[id^="scholarship-details-"]:not([data-expanded="true"]) {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  overflow: hidden !important;
+}
+
+/* Garantir que cada card seja isolado no grid */
+[id^="scholarship-card-wrapper-"] {
+  position: relative;
+  isolation: isolate;
+}
+
+/* Garantir que conteúdo expandido fique dentro do card */
+[id^="scholarship-card-wrapper-"] [id^="scholarship-details-"] {
+  position: relative;
+  z-index: 1;
+}

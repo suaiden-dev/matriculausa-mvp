@@ -148,7 +148,6 @@ export const ScholarshipCardExpandable: React.FC<ScholarshipCardExpandableProps>
                 : 'bg-gradient-to-r from-blue-400 to-blue-500 text-white hover:from-blue-500 hover:to-blue-600'
             }`}
           >
-            <Award className="h-4 w-4 mr-2" />
             {isSelected ? 'Remove from Selection' : t('studentDashboard.findScholarships.scholarshipCard.selectScholarship')}
           </button>
         )}

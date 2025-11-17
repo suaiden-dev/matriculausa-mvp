@@ -688,10 +688,31 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
   return (
     <div className="space-y-6 pb-24 sm:pb-6">
       <div className="text-center">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Upload Your Documents</h2>
-        <p className="text-gray-600">
-          Please upload the required documents to continue
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          {t('studentDashboard.documentsAndScholarshipChoice.step2Title')}
+        </h2>
+        <p className="text-gray-600 mb-4">
+          {t('studentDashboard.documentsAndScholarshipChoice.step2Description')}
         </p>
+        
+        {/* Seção Importante com destaque amarelo e link do parceiro */}
+        <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg max-w-2xl mx-auto">
+          <p className="text-sm text-amber-800 font-bold mb-2">
+            {t('studentDashboard.documentsAndScholarshipChoice.step2Important').split('.')[0]}.
+          </p>
+          <p className="text-sm text-amber-700 leading-relaxed">
+            {t('studentDashboard.documentsAndScholarshipChoice.step2Important').split('.')[1]?.trim()}{' '}
+            <a 
+              href={`https://${t('studentDashboard.documentsAndScholarshipChoice.step2PartnerUrl')}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-amber-600 hover:text-amber-800 underline font-medium transition-colors"
+            >
+              {t('studentDashboard.documentsAndScholarshipChoice.step2PartnerUrl')}
+            </a>
+            .
+          </p>
+        </div>
       </div>
 
       {error && (

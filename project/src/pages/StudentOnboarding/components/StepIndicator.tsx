@@ -8,7 +8,7 @@ interface StepIndicatorProps {
 }
 
 const STEPS: { key: OnboardingStep; label: string }[] = [
-  { key: 'selection_fee', label: 'Selection Fee' },
+  { key: 'selection_fee', label: 'Selection Process Fee' },
   { key: 'scholarship_selection', label: 'Choose Scholarships' },
   { key: 'scholarship_review', label: 'Review Scholarships' },
   { key: 'process_type', label: 'Process Type' },

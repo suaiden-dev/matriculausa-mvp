@@ -131,17 +131,13 @@ const Home: React.FC = () => {
                         </p>
                       </div>
                     ) : (
-                      <StripeCheckout 
-                        feeType="selection_process"
-                        paymentType="selection_process"
-                        productId="selectionProcess"
-                        buttonText={t('nav.startSelectionProcess')}
-                        className="group bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-2xl text-lg font-bold transition-all duration-300 shadow-xl hover:shadow-2xl flex items-center justify-center border-0 disabled:opacity-50 disabled:cursor-not-allowed"
-                        onError={(error) => console.error('Checkout error:', error)}
-                        successUrl={`${window.location.origin}/student/dashboard/selection-process-fee-success?session_id={CHECKOUT_SESSION_ID}`}
-                        cancelUrl={`${window.location.origin}/student/dashboard/selection-process-fee-error`}
-                        disabled={paymentBlockedLoading}
-                      />
+                      <Link
+                        to="/student/onboarding?step=selection_fee"
+                        className="group bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-2xl text-lg font-bold transition-all duration-300 shadow-xl hover:shadow-2xl flex items-center justify-center border-0"
+                      >
+                        {t('nav.startSelectionProcess')}
+                        <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                      </Link>
                     )
                   )}
                   {isAuthenticated && user && user.role === 'student' && userProfile && userProfile.has_paid_selection_process_fee && (

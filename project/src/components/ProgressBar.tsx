@@ -14,7 +14,13 @@ interface Step {
 
 interface ProgressBarProps {
   steps: Step[];
-  feeValues?: string[];
+  feeValues?: (string | React.ReactNode)[];
+  applicationId?: string | null;
+  // Cada taxa só é clicável quando a anterior foi paga
+  isSelectionProcessUnlocked?: boolean; // Selection Process Fee - sempre liberada
+  isApplicationFeeUnlocked?: boolean; // Application Fee - liberada quando Selection Process Fee foi pago
+  isScholarshipFeeUnlocked?: boolean; // Scholarship Fee - liberada quando Application Fee foi pago
+  isI20Unlocked?: boolean; // I-20 Control Fee - liberada quando Scholarship Fee foi pago
 }
 
 const getStepColor = (completed: boolean, current: boolean) => {
@@ -41,7 +47,15 @@ const FeeSkeleton = () => (
   </div>
 );
 
-export const ProgressBar: React.FC<ProgressBarProps> = ({ steps, feeValues: customFeeValues }) => {
+export const ProgressBar: React.FC<ProgressBarProps> = ({ 
+  steps, 
+  feeValues: customFeeValues,
+  applicationId,
+  isSelectionProcessUnlocked = true, // Sempre liberada
+  isApplicationFeeUnlocked = false,
+  isScholarshipFeeUnlocked = false,
+  isI20Unlocked = false
+}) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { getFeeAmount } = useFeeConfig(user?.id);
@@ -50,19 +64,58 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({ steps, feeValues: cust
 
   // Função para determinar a rota baseada no índice do step
   const getStepRoute = (idx: number): string | null => {
+    // Selection Process Fee (índice 0) -> onboarding
+    if (idx === 0) return '/student/onboarding?step=selection_fee';
     // Application Fee (índice 1) -> browse scholarships (escolher bolsas)
     if (idx === 1) return '/student/dashboard/scholarships';
     // Scholarship Fee (índice 2) -> my application
     if (idx === 2) return '/student/dashboard/applications';
-    // I-20 Control Fee (índice 3) -> student details/profile
-    if (idx === 3) return '/student/dashboard/profile';
+    // I-20 Control Fee (índice 3) -> application details com aba i20
+    if (idx === 3) {
+      if (applicationId && isI20Unlocked) {
+        return `/student/dashboard/applications/${applicationId}?tab=i20`;
+      }
+      return null; // Não está liberado ou não tem applicationId
+    }
     return null;
+  };
+
+  // Função para verificar se um step é clicável
+  const isStepClickable = (idx: number, step: Step): boolean => {
+    // Steps completos são sempre clicáveis (para navegação)
+    if (step.completed) {
+      const route = getStepRoute(idx);
+      return route !== null;
+    }
+    
+    // Verificar se a taxa está liberada baseado no índice
+    let isUnlocked = false;
+    if (idx === 0) {
+      // Selection Process Fee - sempre liberada
+      isUnlocked = isSelectionProcessUnlocked;
+    } else if (idx === 1) {
+      // Application Fee - liberada quando Selection Process Fee foi pago
+      isUnlocked = isApplicationFeeUnlocked;
+    } else if (idx === 2) {
+      // Scholarship Fee - liberada quando Application Fee foi pago
+      isUnlocked = isScholarshipFeeUnlocked;
+    } else if (idx === 3) {
+      // I-20 Control Fee - liberada quando Scholarship Fee foi pago e tem applicationId
+      isUnlocked = isI20Unlocked && applicationId !== null;
+    }
+    
+    // Só é clicável se estiver liberado e tiver uma rota
+    if (!isUnlocked) {
+      return false;
+    }
+    
+    const route = getStepRoute(idx);
+    return route !== null;
   };
 
   // Função para lidar com o clique no step
   const handleStepClick = (idx: number, step: Step) => {
-    // Só permite clique se não estiver completo e tiver uma rota
-    if (!step.completed) {
+    if (isStepClickable(idx, step)) {
       const route = getStepRoute(idx);
       if (route) {
         navigate(route);
@@ -102,8 +155,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({ steps, feeValues: cust
               <div className="w-full h-2 rounded-full bg-gradient-to-r from-green-400 via-yellow-300 to-slate-300 opacity-60" />
             </div>
             {steps.map((step, idx) => {
-              const route = getStepRoute(idx);
-              const isClickable = !step.completed && route !== null;
+              const isClickable = isStepClickable(idx, step);
               return (
                 <React.Fragment key={idx}>
                   {/* Seta animada antes da etapa atual */}
@@ -132,8 +184,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({ steps, feeValues: cust
         {/* Mobile: vertical/empilhado */}
         <div className="flex flex-col gap-3 md:hidden w-full">
           {steps.map((step, idx) => {
-            const route = getStepRoute(idx);
-            const isClickable = !step.completed && route !== null;
+            const isClickable = isStepClickable(idx, step);
             return (
               <div 
                 key={idx} 
@@ -158,8 +209,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({ steps, feeValues: cust
       {/* Linha de textos das etapas, centralizada e alinhada com os círculos (desktop) */}
       <div className="hidden md:flex w-full max-w-2xl mx-auto justify-between px-2 gap-4 md:gap-6 lg:gap-8 mt-4">
         {steps.map((step, idx) => {
-          const route = getStepRoute(idx);
-          const isClickable = !step.completed && route !== null;
+          const isClickable = isStepClickable(idx, step);
           return (
             <div 
               key={idx} 

@@ -1,7 +1,7 @@
 import React from 'react';
 import { useAuth } from '../../../hooks/useAuth';
 import { StepProps } from '../types';
-import { Search, FileText, CheckCircle, Clock, ArrowUpRight, GraduationCap } from 'lucide-react';
+import { Search, FileText, CheckCircle, Clock, ArrowUpRight, GraduationCap, DollarSign } from 'lucide-react';
 
 export const WelcomeStep: React.FC<StepProps> = ({ onNext }) => {
   const { userProfile } = useAuth();
@@ -9,47 +9,47 @@ export const WelcomeStep: React.FC<StepProps> = ({ onNext }) => {
   const processSteps = [
     {
       id: 1,
-      title: 'Selection Fee',
+      title: 'Selection Process Fee',
       subtitle: 'Starting your journey',
-      description: 'Pay the selection fee to start the application process at American universities.',
+      description: 'Pay the fee to unlock the platform and start selecting scholarships.',
       icon: Search,
       iconColor: 'text-[#05294E]',
       iconBg: 'bg-[#05294E]/10',
-      benefits: [
-        '→ Full system access',
-        '→ Specialized support',
-        '→ Foundation for your application'
-      ],
       completed: true
     },
     {
       id: 2,
       title: 'Scholarship Selection',
       subtitle: 'Selecting opportunities',
-      description: 'Explore and choose the universities and scholarships that best align with your academic goals.',
+      description: 'Choose universities and scholarships that match your goals.',
       icon: GraduationCap,
       iconColor: 'text-[#D0151C]',
       iconBg: 'bg-[#D0151C]/10',
-      benefits: [
-        '→ Complete catalog of options',
-        '→ Custom filters',
-        '→ Easy comparison'
-      ],
       completed: true
     },
     {
       id: 3,
       title: 'Documents and Approval',
       subtitle: 'Finalizing your application',
-      description: 'Upload the necessary documents and track the review and approval process in real time.',
+      description: 'Upload documents and track approval status.',
       icon: FileText,
+      iconColor: 'text-[#D0151C]',
+      iconBg: 'bg-[#D0151C]/10',
+      completed: false
+    },
+    {
+      id: 4,
+      title: 'Additional Fees',
+      subtitle: 'Application fees',
+      description: 'Pay Application Fee, Scholarship Fee, and I-20 Control Fee.',
+      fees: [
+        'Application Fee',
+        'Scholarship Fee',
+        'I-20 Control Fee'
+      ],
+      icon: DollarSign,
       iconColor: 'text-[#05294E]',
       iconBg: 'bg-[#05294E]/10',
-      benefits: [
-        '→ Simplified upload',
-        '→ Real-time tracking',
-        '→ Automatic notifications'
-      ],
       completed: false
     }
   ];
@@ -66,13 +66,6 @@ export const WelcomeStep: React.FC<StepProps> = ({ onNext }) => {
       <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-20 relative z-10">
         {/* Header Section */}
         <div className="text-center mb-12 sm:mb-16">
-          {/* Tag */}
-          <div className="inline-flex items-center justify-center mb-4">
-            <span className="bg-gray-100 text-gray-600 px-4 py-1.5 rounded-full text-sm font-medium">
-              • Onboarding Process
-            </span>
-          </div>
-          
           {/* Main Title */}
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 mb-4">
             Welcome{userProfile?.full_name ? `, ${userProfile.full_name.split(' ')[0]}` : ''}!
@@ -80,12 +73,12 @@ export const WelcomeStep: React.FC<StepProps> = ({ onNext }) => {
           
           {/* Subtitle */}
           <p className="text-lg sm:text-xl text-gray-600 max-w-3xl mx-auto">
-            Every successful application follows a proven path from start to completion.
+            Start your selection process here and follow the steps to complete your application to American universities.
           </p>
         </div>
 
         {/* Process Steps Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 mb-12 sm:mb-16">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 mb-12 sm:mb-16">
           {processSteps.map((step, index) => {
             const Icon = step.icon;
             const isCompleted = step.completed;
@@ -133,17 +126,20 @@ export const WelcomeStep: React.FC<StepProps> = ({ onNext }) => {
                       {step.description}
                     </p>
 
-                    {/* Key Benefits */}
-                    <div>
-                      <h4 className="text-sm font-semibold text-gray-900 mb-3">Key Benefits:</h4>
-                      <ul className="space-y-2">
-                        {step.benefits.map((benefit, idx) => (
-                          <li key={idx} className="text-sm text-gray-600 flex items-start">
-                            <span className="mr-2">{benefit}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
+                    {/* Fees Information */}
+                    {step.fees && step.fees.length > 0 && (
+                      <div className="mt-6 pt-6 border-t border-gray-200">
+                        <h4 className="text-sm font-semibold text-gray-900 mb-3">Fees:</h4>
+                        <ul className="space-y-2">
+                          {step.fees.map((fee, idx) => (
+                            <li key={idx} className="text-sm text-gray-600 flex items-center">
+                              <span className="mr-2">•</span>
+                              <span>{fee}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -153,12 +149,9 @@ export const WelcomeStep: React.FC<StepProps> = ({ onNext }) => {
 
         {/* Call to Action Section */}
         <div className="bg-gray-50 rounded-2xl p-8 sm:p-12 text-center border border-gray-200">
-          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3">
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-8">
             Ready to start your journey?
           </h2>
-          <p className="text-base sm:text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
-            Let's discuss how our process can be adapted to your unique application needs and goals.
-          </p>
           
           {/* Action Button */}
           <div className="flex justify-center">

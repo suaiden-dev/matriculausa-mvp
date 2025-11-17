@@ -171,6 +171,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
 
   // Terms acceptance states
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [hasAcceptedTermsInDB, setHasAcceptedTermsInDB] = useState(false); // Flag para indicar se já aceitou no banco
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showTermsInDrawer, setShowTermsInDrawer] = useState(false);
   const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
@@ -312,6 +313,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
         }
         
         setTermsAccepted(true);
+        setHasAcceptedTermsInDB(true); // Marcar que foi aceito no banco
         
         if (isMobile) {
           setShowTermsInDrawer(false);
@@ -711,6 +713,12 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
 
   // Handle checkbox change
   const handleCheckboxChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Se já aceitou os termos no banco, não permite desmarcar
+    if (hasAcceptedTermsInDB && !e.target.checked) {
+      e.preventDefault();
+      return;
+    }
+    
     setUserClickedCheckbox(true);
     
     if (e.target.checked) {
@@ -721,10 +729,13 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
         handleTermsClick();
       }
     } else {
-      setTermsAccepted(false);
-      setHasScrolledToBottom(false);
-      setShowTermsModal(false);
-      setShowTermsInDrawer(false);
+      // Só permite desmarcar se não foi aceito no banco ainda
+      if (!hasAcceptedTermsInDB) {
+        setTermsAccepted(false);
+        setHasScrolledToBottom(false);
+        setShowTermsModal(false);
+        setShowTermsInDrawer(false);
+      }
     }
   };
 
@@ -738,6 +749,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
         if (hasAccepted) {
           console.log('✅ [SelectionFeeStep] Usuário já aceitou termos');
           setTermsAccepted(true);
+          setHasAcceptedTermsInDB(true); // Marcar que já foi aceito no banco
         }
       } catch (error) {
         console.error('Erro ao verificar aceitação de termos:', error);
@@ -995,7 +1007,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
   const paymentMethods = [
     {
       id: 'stripe' as const,
-      name: 'Credit/Debit Card',
+      name: 'Stripe',
       description: 'Pay securely with your credit or debit card',
       icon: StripeIcon
     },
@@ -1125,44 +1137,41 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                   {/* Campo de input - aparece se checkbox marcado OU se já tem código aplicado */}
                   {((hasReferralCode && showCodeStep) || (activeDiscount?.has_discount && discountCode) || (codeApplied && discountCode)) && (
                     <div className="space-y-3">
-                      {(activeDiscount?.has_discount || codeApplied) && (
-                        <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                          <div className="flex items-center">
-                            <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-                            <p className="text-green-800 text-sm font-medium">
-                              {t('preCheckoutModal.discountAlreadyApplied') || 'Discount already applied'}
-                            </p>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={discountCode}
+                          onChange={(e) => {
+                            // Só permitir edição se não houver desconto ativo e código não foi aplicado
+                            if (!activeDiscount?.has_discount && !codeApplied) {
+                              setDiscountCode(e.target.value.toUpperCase());
+                            }
+                          }}
+                          placeholder={t('preCheckoutModal.placeholder') || 'Enter code'}
+                          readOnly={!!activeDiscount?.has_discount || !!hasAffiliateCode || codeApplied}
+                          className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-center font-mono text-base tracking-wider ${
+                            activeDiscount?.has_discount || hasAffiliateCode || codeApplied
+                              ? 'border-green-400 bg-green-50 text-gray-800 cursor-not-allowed pr-10' 
+                              : 'border-gray-300 bg-white hover:border-gray-400'
+                          }`}
+                          style={{ fontSize: '16px' }}
+                          maxLength={8}
+                        />
+                        {(activeDiscount?.has_discount || codeApplied) && (
+                          <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                            <CheckCircle className="w-5 h-5 text-green-500" />
                           </div>
-                        </div>
-                      )}
-                      <input
-                        type="text"
-                        value={discountCode}
-                        onChange={(e) => {
-                          // Só permitir edição se não houver desconto ativo e código não foi aplicado
-                          if (!activeDiscount?.has_discount && !codeApplied) {
-                            setDiscountCode(e.target.value.toUpperCase());
-                          }
-                        }}
-                        placeholder={t('preCheckoutModal.placeholder') || 'Enter code'}
-                        readOnly={!!activeDiscount?.has_discount || !!hasAffiliateCode || codeApplied}
-                        className={`w-full px-4 sm:px-5 py-3 sm:py-4 border-2 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-center font-mono text-base sm:text-lg tracking-wider ${
-                          activeDiscount?.has_discount || hasAffiliateCode || codeApplied
-                            ? 'border-green-300 bg-green-50 cursor-not-allowed' 
-                            : 'border-gray-300'
-                        }`}
-                        style={{ fontSize: '16px' }}
-                        maxLength={8}
-                      />
+                        )}
+                      </div>
                       {!activeDiscount?.has_discount && !hasAffiliateCode && !codeApplied && (
                         <button
                           onClick={validateDiscountCode}
                           disabled={isValidating || !discountCode.trim()}
-                          className="w-full px-6 sm:px-8 py-3 sm:py-4 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
+                          className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
                         >
                           {isValidating ? (
                             <div className="flex items-center space-x-2 justify-center">
-                              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                               <span>{t('preCheckoutModal.validating') || 'Validating...'}</span>
                             </div>
                           ) : (
@@ -1171,22 +1180,11 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                         </button>
                       )}
                       
-                      {/* Validation Result */}
-                      {validationResult && (
-                        <div className={`p-4 rounded-xl border-2 ${
-                          validationResult.isValid 
-                            ? 'bg-green-50 border-green-300 text-green-800' 
-                            : 'bg-red-50 border-red-300 text-red-800'
-                        }`}>
-                          <div className="flex items-center space-x-3">
-                            {validationResult.isValid ? (
-                              <CheckCircle className="w-5 h-5 text-green-600" />
-                            ) : (
-                              <AlertCircle className="w-5 h-5 text-red-600" />
-                            )}
-                            <span className="font-medium text-sm">{validationResult.message}</span>
-                          </div>
-                        </div>
+                      {/* Validation Result - apenas mensagem de erro simples */}
+                      {validationResult && !validationResult.isValid && (
+                        <p className="text-sm text-red-600 text-center">
+                          {validationResult.message}
+                        </p>
                       )}
                     </div>
                   )}
@@ -1198,18 +1196,19 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
           {/* Terms acceptance section */}
           <div className="mb-6">
             <div className="flex items-start space-x-3 p-3 sm:p-4 bg-slate-100 rounded-2xl">
-              <label htmlFor="termsAccepted" className="checkbox-container cursor-pointer flex-shrink-0">
+              <label htmlFor="termsAccepted" className={`checkbox-container ${hasAcceptedTermsInDB ? 'cursor-not-allowed opacity-75' : 'cursor-pointer'} flex-shrink-0`}>
                 <input
                   id="termsAccepted"
                   name="termsAccepted"
                   type="checkbox"
                   checked={termsAccepted}
                   onChange={handleCheckboxChange}
+                  disabled={hasAcceptedTermsInDB}
                   className="custom-checkbox"
                 />
                 <div className="checkmark" />
               </label>
-              <label htmlFor="termsAccepted" className="text-xs sm:text-sm text-slate-700 leading-relaxed cursor-pointer flex-1">
+              <label htmlFor="termsAccepted" className={`text-xs sm:text-sm text-slate-700 leading-relaxed flex-1 ${hasAcceptedTermsInDB ? 'cursor-default' : 'cursor-pointer'}`}>
                 {t('preCheckoutModal.acceptContractTerms') || 'I accept the terms and conditions'}
               </label>
             </div>
