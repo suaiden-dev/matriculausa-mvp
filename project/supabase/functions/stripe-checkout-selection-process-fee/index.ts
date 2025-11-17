@@ -56,7 +56,7 @@ Deno.serve(async (req) => {
 
     console.log('[stripe-checkout-selection-process-fee] ✅ Variáveis de ambiente verificadas');
 
-    const { price_id, amount, success_url, cancel_url, mode, metadata, payment_method } = await req.json();
+    const { price_id, amount, success_url, cancel_url, mode, metadata, payment_method, promotional_coupon } = await req.json();
     
     console.log('[stripe-checkout-selection-process-fee] 📥 Payload recebido:', { price_id, amount, success_url, cancel_url, mode, metadata, payment_method });
     
@@ -78,8 +78,39 @@ Deno.serve(async (req) => {
 
     console.log('[stripe-checkout-selection-process-fee] ✅ Usuário autenticado:', user.id);
 
+    // Verificar se há cupom promocional (BLACK, etc) - ANTES de buscar desconto ativo
+    let promotionalCouponData: any = null;
+    if (promotional_coupon && promotional_coupon.trim()) {
+      try {
+        const normalizedCoupon = promotional_coupon.trim().toUpperCase();
+        console.log('[stripe-checkout-selection-process-fee] 🎟️ Validando cupom promocional:', normalizedCoupon);
+        
+        const { data: couponValidation, error: couponError } = await supabase
+          .rpc('validate_promotional_coupon', {
+            user_id_param: user.id,
+            coupon_code_param: normalizedCoupon,
+            fee_type_param: 'selection_process',
+            purchase_amount_param: amount || 0
+          });
+
+        if (couponError) {
+          console.error('[stripe-checkout-selection-process-fee] ❌ Erro ao validar cupom promocional:', couponError);
+        } else if (couponValidation && couponValidation.success) {
+          promotionalCouponData = couponValidation;
+          console.log('[stripe-checkout-selection-process-fee] ✅ Cupom promocional válido!');
+          console.log('[stripe-checkout-selection-process-fee] Coupon ID:', promotionalCouponData.coupon_id);
+          console.log('[stripe-checkout-selection-process-fee] Discount Amount:', promotionalCouponData.discount_amount);
+          console.log('[stripe-checkout-selection-process-fee] Final Amount:', promotionalCouponData.final_amount);
+        } else {
+          console.log('[stripe-checkout-selection-process-fee] ⚠️ Cupom promocional inválido:', couponValidation?.error);
+        }
+      } catch (error) {
+        console.error('[stripe-checkout-selection-process-fee] ❌ Erro ao verificar cupom promocional:', error);
+      }
+    }
+
     // Buscar taxas do pacote do usuário
-    let userPackageFees = null;
+    let userPackageFees: any = null;
     try {
       console.log('[stripe-checkout-selection-process-fee] 🔍 Tentando buscar taxas do pacote para user_id:', user.id);
       
@@ -344,8 +375,61 @@ Deno.serve(async (req) => {
 
     console.log('[stripe-checkout-selection-process-fee] ⚙️ Configuração da sessão Stripe:', sessionConfig);
 
-    // Aplica desconto se houver
-    if (activeDiscount && activeDiscount.stripe_coupon_id) {
+    // Aplica cupom promocional se houver (prioridade sobre código de referência)
+    if (promotionalCouponData && promotionalCouponData.success) {
+      console.log('[stripe-checkout-selection-process-fee] 🎟️ APLICANDO CUPOM PROMOCIONAL');
+      console.log('[stripe-checkout-selection-process-fee] Coupon Code:', promotionalCouponData.coupon_code);
+      console.log('[stripe-checkout-selection-process-fee] Discount Amount:', promotionalCouponData.discount_amount);
+      
+      // Criar ou buscar cupom no Stripe
+      let stripeCouponId = promotionalCouponData.stripe_coupon_id;
+      
+      if (!stripeCouponId) {
+        // Criar cupom no Stripe se não existir
+        try {
+          const couponName = `Promoção ${promotionalCouponData.coupon_code}`;
+          const discountAmount = Math.round(promotionalCouponData.discount_amount * 100); // Converter para centavos
+          
+          const coupon = await stripe.coupons.create({
+            percent_off: promotionalCouponData.discount_type === 'percentage' ? promotionalCouponData.discount_value : undefined,
+            amount_off: promotionalCouponData.discount_type === 'fixed_amount' ? discountAmount : undefined,
+            currency: payment_method === 'pix' ? 'brl' : 'usd',
+            duration: 'once',
+            name: couponName,
+            metadata: {
+              coupon_code: promotionalCouponData.coupon_code,
+              user_id: user.id,
+              fee_type: 'selection_process',
+              discount_type: promotionalCouponData.discount_type
+            }
+          });
+          
+          stripeCouponId = coupon.id;
+          console.log('[stripe-checkout-selection-process-fee] ✅ Cupom criado no Stripe:', stripeCouponId);
+          
+          // Atualizar cupom no banco com stripe_coupon_id
+          await supabase
+            .from('promotional_coupons')
+            .update({ stripe_coupon_id: stripeCouponId })
+            .eq('code', promotionalCouponData.coupon_code);
+        } catch (stripeError: any) {
+          console.error('[stripe-checkout-selection-process-fee] ❌ Erro ao criar cupom no Stripe:', stripeError);
+        }
+      }
+      
+      if (stripeCouponId) {
+        sessionConfig.discounts = [{ coupon: stripeCouponId }];
+        delete sessionConfig.allow_promotion_codes;
+        
+        sessionMetadata.promotional_coupon = promotionalCouponData.coupon_code;
+        sessionMetadata.promotional_discount = true;
+        sessionMetadata.promotional_discount_amount = promotionalCouponData.discount_amount.toString();
+        
+        console.log('[stripe-checkout-selection-process-fee] ✅ Cupom promocional aplicado na sessão!');
+      }
+    }
+    // Aplica desconto de código de referência se houver (e não houver cupom promocional)
+    else if (activeDiscount && activeDiscount.stripe_coupon_id) {
       console.log('[stripe-checkout-selection-process-fee] �� APLICANDO DESCONTO');
       console.log('[stripe-checkout-selection-process-fee] Coupon ID:', activeDiscount.stripe_coupon_id);
       console.log('[stripe-checkout-selection-process-fee] Discount Amount:', activeDiscount.discount_amount);

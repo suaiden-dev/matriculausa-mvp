@@ -418,11 +418,19 @@ const PaymentManagement = (): React.JSX.Element => {
   // Estado para controlar animação do botão refresh
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Função para forçar recarregamento quando necessário - usando refetch do React Query
+  // Função para forçar recarregamento quando necessário - usando invalidateQueries para garantir atualização completa
   const forceRefreshAll = async () => {
     setIsRefreshing(true);
     try {
-      // Aguardar todas as queries refetcharem
+      // Invalidar todas as queries de payments (incluindo todas as páginas de Zelle)
+      // Isso força uma nova busca e atualiza todos os componentes que dependem dessas queries
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.payments.all }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.payments.references.universities }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.payments.references.affiliates }),
+      ]);
+      
+      // Aguardar as queries refetcharem após a invalidação
       await Promise.all([
         paymentsQuery.refetch(),
         universitiesQuery.refetch(),

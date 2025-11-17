@@ -240,6 +240,10 @@ const ApplicationChatPage: React.FC = () => {
         const baseAmount = getFeeAmount('i20_control_fee');
         const finalAmount = baseAmount;
         
+        // Verificar se há cupom promocional válido
+        const promotionalCoupon = (window as any).__checkout_promotional_coupon || null;
+        const finalAmountWithDiscount = (window as any).__checkout_final_amount || finalAmount;
+        
         const res = await fetch(apiUrl, {
           method: 'POST',
           headers: {
@@ -250,8 +254,9 @@ const ApplicationChatPage: React.FC = () => {
             success_url: window.location.origin + '/student/dashboard/i20-control-fee-success?session_id={CHECKOUT_SESSION_ID}',
             cancel_url: window.location.origin + '/student/dashboard/i20-control-fee-error',
             price_id: STRIPE_PRODUCTS.controlFee.priceId,
-            amount: finalAmount, // Valor fixo do I-20 (sem dependentes)
-            payment_method: 'stripe'
+            amount: finalAmountWithDiscount, // Valor com desconto se houver cupom
+            payment_method: 'stripe',
+            promotional_coupon: promotionalCoupon // Passar cupom promocional
           }),
         });
         const data = await res.json();
@@ -273,6 +278,10 @@ const ApplicationChatPage: React.FC = () => {
         }
         const finalAmount = parseFloat(i20ControlFee.replace('$', ''));
         
+        // Verificar se há cupom promocional válido
+        const promotionalCoupon = (window as any).__checkout_promotional_coupon || null;
+        const finalAmountWithDiscount = (window as any).__checkout_final_amount || finalAmount;
+        
         const res = await fetch(apiUrl, {
           method: 'POST',
           headers: {
@@ -283,8 +292,9 @@ const ApplicationChatPage: React.FC = () => {
             success_url: window.location.origin + '/student/dashboard/i20-control-fee-success?session_id={CHECKOUT_SESSION_ID}',
             cancel_url: window.location.origin + '/student/dashboard/i20-control-fee-error',
             price_id: STRIPE_PRODUCTS.controlFee.priceId,
-            amount: finalAmount, // Valor fixo do I-20 (sem dependentes)
-            payment_method: 'pix'
+            amount: finalAmountWithDiscount, // Valor com desconto se houver cupom
+            payment_method: 'pix',
+            promotional_coupon: promotionalCoupon // Passar cupom promocional
           }),
         });
         const data = await res.json();
@@ -295,8 +305,10 @@ const ApplicationChatPage: React.FC = () => {
         }
       } else if (selectedPaymentMethod === 'zelle') {
         // Redirecionar para a página de pagamento Zelle (mesma rota das outras taxas)
-        // Usar valor dinâmico do I-20 Control Fee (com overrides se aplicável)
-        const i20Amount = getFeeAmount('i20_control_fee').toString();
+        // Verificar se há cupom promocional válido
+        const promotionalCoupon = (window as any).__checkout_promotional_coupon || null;
+        const finalAmountWithDiscount = (window as any).__checkout_final_amount || getFeeAmount('i20_control_fee');
+        const i20Amount = finalAmountWithDiscount.toString();
         
         const params = new URLSearchParams({
           feeType: 'i20_control_fee',
@@ -306,6 +318,11 @@ const ApplicationChatPage: React.FC = () => {
         
         // Adicionar campo específico para I-20 Control Fee
         params.append('i20ControlFeeAmount', i20Amount);
+        
+        // Adicionar cupom promocional se houver
+        if (promotionalCoupon) {
+          params.append('promotionalCoupon', promotionalCoupon);
+        }
         
         window.location.href = `/checkout/zelle?${params.toString()}`;
       }

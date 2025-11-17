@@ -44,7 +44,7 @@ Deno.serve(async (req) => {
 
     console.log(`🔧 Using Stripe in ${config.environment.environment} mode`);
 
-    const { success_url, cancel_url, price_id: incomingPriceId, amount, metadata, payment_method } = await req.json();
+    const { success_url, cancel_url, price_id: incomingPriceId, amount, metadata, payment_method, promotional_coupon } = await req.json();
     const price_id = incomingPriceId;
     const mode = 'payment';
     
@@ -60,7 +60,7 @@ Deno.serve(async (req) => {
       return corsResponse({ error: 'Invalid token' }, 401);
     }
 
-    // Buscar taxas do pacote do usuário
+    // Buscar taxas do pacote do usuário PRIMEIRO para usar valor original na validação do cupom
     let userPackageFees = null;
     try {
       const { data: packageData, error: packageError } = await supabase
@@ -76,6 +76,55 @@ Deno.serve(async (req) => {
       }
     } catch (err) {
       console.error('[stripe-checkout-i20-control-fee] ❌ Erro ao buscar taxas do pacote:', err);
+    }
+
+    // Determinar valor original para validação do cupom
+    // IMPORTANTE: SEMPRE usar valor do pacote quando disponível, NUNCA usar amount do frontend
+    // pois o frontend pode estar enviando valor já com desconto aplicado
+    let originalAmountForCouponValidation = 0;
+    if (userPackageFees?.i20_control_fee) {
+      originalAmountForCouponValidation = userPackageFees.i20_control_fee;
+      console.log('[stripe-checkout-i20-control-fee] 💰 Usando valor do pacote para validação do cupom:', originalAmountForCouponValidation);
+    } else {
+      // Se não tem pacote, usar um valor padrão (não usar amount do frontend que pode ter desconto)
+      // O valor padrão do I-20 Control Fee é 900
+      originalAmountForCouponValidation = 900;
+      console.log('[stripe-checkout-i20-control-fee] ⚠️ Sem pacote, usando valor padrão (900) para validação do cupom');
+    }
+    console.log('[stripe-checkout-i20-control-fee] 💰 Valor original para validação do cupom:', originalAmountForCouponValidation);
+    console.log('[stripe-checkout-i20-control-fee] 💰 Amount recebido do frontend (pode ter desconto):', amount);
+
+    // Verificar se há cupom promocional (BLACK, etc) - ANTES de buscar desconto ativo
+    // IMPORTANTE: Usar valor ORIGINAL (sem desconto) para validar o cupom
+    let promotionalCouponData: any = null;
+    if (promotional_coupon && promotional_coupon.trim()) {
+      try {
+        const normalizedCoupon = promotional_coupon.trim().toUpperCase();
+        console.log('[stripe-checkout-i20-control-fee] 🎟️ Validando cupom promocional:', normalizedCoupon);
+        console.log('[stripe-checkout-i20-control-fee] 💰 Usando valor original para validação:', originalAmountForCouponValidation);
+        
+        const { data: couponValidation, error: couponError } = await supabase
+          .rpc('validate_promotional_coupon', {
+            user_id_param: user.id,
+            coupon_code_param: normalizedCoupon,
+            fee_type_param: 'i20_control_fee',
+            purchase_amount_param: originalAmountForCouponValidation // Usar valor ORIGINAL, não o amount que pode ter desconto
+          });
+
+        if (couponError) {
+          console.error('[stripe-checkout-i20-control-fee] ❌ Erro ao validar cupom promocional:', couponError);
+        } else if (couponValidation && couponValidation.success) {
+          promotionalCouponData = couponValidation;
+          console.log('[stripe-checkout-i20-control-fee] ✅ Cupom promocional válido!');
+          console.log('[stripe-checkout-i20-control-fee] Coupon ID:', promotionalCouponData.coupon_id);
+          console.log('[stripe-checkout-i20-control-fee] Discount Amount:', promotionalCouponData.discount_amount);
+          console.log('[stripe-checkout-i20-control-fee] Final Amount:', promotionalCouponData.final_amount);
+        } else {
+          console.log('[stripe-checkout-i20-control-fee] ⚠️ Cupom promocional inválido:', couponValidation?.error);
+        }
+      } catch (error) {
+        console.error('[stripe-checkout-i20-control-fee] ❌ Erro ao verificar cupom promocional:', error);
+      }
     }
 
     // Lógica para PIX (conversão USD -> BRL)
@@ -138,9 +187,16 @@ Deno.serve(async (req) => {
     // Garantir valor mínimo de $0.50 USD
     const minAmount = 0.50;
     
+    // Se houver cupom promocional válido, usar o final_amount do cupom (PRIORIDADE MÁXIMA)
+    let amountToUse = amount;
+    if (promotionalCouponData && promotionalCouponData.success && promotionalCouponData.final_amount) {
+      amountToUse = promotionalCouponData.final_amount;
+      console.log('[stripe-checkout-i20-control-fee] 🎟️ Usando valor com desconto do cupom promocional:', amountToUse);
+    }
+    
     // Se o frontend enviou um amount específico (incluindo dependentes), usar esse valor
-    if (amount && typeof amount === 'number' && amount > 0) {
-      let finalAmount = amount;
+    if (amountToUse && typeof amountToUse === 'number' && amountToUse > 0) {
+      let finalAmount = amountToUse;
       if (finalAmount < minAmount) {
         console.log(`[stripe-checkout-i20-control-fee] Valor muito baixo (${finalAmount}), ajustando para mínimo: ${minAmount}`);
         finalAmount = minAmount;
@@ -202,10 +258,36 @@ Deno.serve(async (req) => {
       console.log('[stripe-checkout-i20-control-fee] 💰 Valor base (para comissões):', baseAmount);
       console.log('[stripe-checkout-i20-control-fee] 💰 Valor final (cobrado do aluno):', grossAmountInCents / 100);
     }
+    
+    // Aplica cupom promocional se houver (prioridade sobre código de referência)
+    // NOTA: O valor já foi recalculado nos line_items usando final_amount, então não precisamos aplicar desconto via Stripe
+    if (promotionalCouponData && promotionalCouponData.success) {
+      console.log('[stripe-checkout-i20-control-fee] 🎟️ CUPOM PROMOCIONAL APLICADO (valor já recalculado nos line_items)');
+      console.log('[stripe-checkout-i20-control-fee] Coupon Code:', promotionalCouponData.coupon_code);
+      console.log('[stripe-checkout-i20-control-fee] Original Amount (para validação):', originalAmountForCouponValidation);
+      console.log('[stripe-checkout-i20-control-fee] Amount recebido do frontend:', amount);
+      console.log('[stripe-checkout-i20-control-fee] Discount Amount:', promotionalCouponData.discount_amount);
+      console.log('[stripe-checkout-i20-control-fee] Final Amount:', promotionalCouponData.final_amount);
+      
+      // Adicionar informações do cupom no metadata
+      sessionMetadata.promotional_coupon = promotionalCouponData.coupon_code;
+      sessionMetadata.promotional_discount = 'true';
+      sessionMetadata.promotional_discount_amount = promotionalCouponData.discount_amount.toString();
+      sessionMetadata.original_amount = originalAmountForCouponValidation.toString(); // Usar valor original correto
+      sessionMetadata.final_amount = promotionalCouponData.final_amount.toString();
+      
+      console.log('[stripe-checkout-i20-control-fee] ✅ Informações do cupom promocional adicionadas ao metadata!');
+    }
     // Se o usuário tem pacote mas não foi enviado amount, usar preço dinâmico do pacote
     else if (userPackageFees) {
       // Garantir valor mínimo para pacote também
       let packageAmount = userPackageFees.i20_control_fee < minAmount ? minAmount : userPackageFees.i20_control_fee;
+      
+      // Se houver cupom promocional válido, aplicar desconto no valor do pacote
+      if (promotionalCouponData && promotionalCouponData.success && promotionalCouponData.final_amount) {
+        packageAmount = promotionalCouponData.final_amount;
+        console.log('[stripe-checkout-i20-control-fee] 🎟️ Aplicando cupom promocional ao valor do pacote:', packageAmount);
+      }
       
       // Valor base (sem markup) - usado para comissões
       const baseAmount = packageAmount;

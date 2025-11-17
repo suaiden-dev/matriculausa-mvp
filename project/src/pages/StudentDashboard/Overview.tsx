@@ -68,6 +68,12 @@ const Overview: React.FC<OverviewProps> = ({
   const [feesLoading, setFeesLoading] = useState(true);
   const [studentDocuments, setStudentDocuments] = useState<any[]>([]);
   const [documentsLoading, setDocumentsLoading] = useState(true);
+  const [promotionalCouponDiscount, setPromotionalCouponDiscount] = useState<{ discountAmount: number; finalAmount: number } | null>(null);
+  const [realPaidAmounts, setRealPaidAmounts] = useState<{
+    selection_process?: number;
+    scholarship?: number;
+    i20_control?: number;
+  }>({});
   
   // Verificar se há pagamento Zelle pendente do tipo selection_process
   const hasPendingSelectionProcessPayment = isBlocked && pendingPayment && pendingPayment.fee_type === 'selection_process';
@@ -107,10 +113,48 @@ const Overview: React.FC<OverviewProps> = ({
     }
   }, [user?.id]);
 
+  // Função para buscar valores reais pagos de individual_fee_payments
+  const fetchRealPaidAmounts = React.useCallback(async () => {
+    if (!user?.id) {
+      setRealPaidAmounts({});
+      return;
+    }
+
+    try {
+      const { data: payments, error } = await supabase
+        .from('individual_fee_payments')
+        .select('fee_type, amount')
+        .eq('user_id', user.id);
+      
+      if (error) {
+        console.error('Erro ao buscar valores pagos:', error);
+        setRealPaidAmounts({});
+        return;
+      }
+      
+      const amounts: typeof realPaidAmounts = {};
+      payments?.forEach(payment => {
+        if (payment.fee_type === 'selection_process') {
+          amounts.selection_process = Number(payment.amount);
+        } else if (payment.fee_type === 'scholarship') {
+          amounts.scholarship = Number(payment.amount);
+        } else if (payment.fee_type === 'i20_control') {
+          amounts.i20_control = Number(payment.amount);
+        }
+      });
+      
+      setRealPaidAmounts(amounts);
+    } catch (error) {
+      console.error('Erro ao buscar valores pagos:', error);
+      setRealPaidAmounts({});
+    }
+  }, [user?.id]);
+
   // Buscar documentos do estudante
   useEffect(() => {
     fetchStudentDocuments();
-  }, [fetchStudentDocuments]);
+    fetchRealPaidAmounts();
+  }, [fetchStudentDocuments, fetchRealPaidAmounts]);
 
   // Configurar real-time subscription para atualizações de documentos
   useEffect(() => {
@@ -138,12 +182,39 @@ const Overview: React.FC<OverviewProps> = ({
     };
   }, [user?.id, fetchStudentDocuments]);
 
+  // Configurar real-time subscription para atualizações de pagamentos
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const channel = supabase
+      .channel(`student-payments-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'individual_fee_payments',
+          filter: `user_id=eq.${user.id}`
+        },
+        () => {
+          // Refetch valores pagos quando houver mudanças
+          fetchRealPaidAmounts();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, fetchRealPaidAmounts]);
+
   // Refetch perfil quando necessário (ex: após atualização)
   useEffect(() => {
     if (user?.id) {
       refetchUserProfile();
+      fetchRealPaidAmounts(); // Atualizar valores pagos quando perfil for atualizado
     }
-  }, [user?.id, refetchUserProfile]);
+  }, [user?.id, refetchUserProfile, fetchRealPaidAmounts]);
 
   // Atualizar documentos quando o componente receber foco (ex: ao voltar da página de perfil)
   useEffect(() => {
@@ -151,12 +222,14 @@ const Overview: React.FC<OverviewProps> = ({
       if (user?.id && !documentsLoading) {
         fetchStudentDocuments();
         refetchUserProfile();
+        fetchRealPaidAmounts(); // Atualizar valores pagos quando página receber foco
       }
     };
 
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
-  }, [user?.id, documentsLoading, refetchUserProfile, fetchStudentDocuments]);
+  }, [user?.id, documentsLoading, refetchUserProfile, fetchStudentDocuments, fetchRealPaidAmounts]);
+
 
   // Exibir skeleton até os dados de perfil e taxas estarem prontos para evitar flicker
   useEffect(() => {
@@ -288,17 +361,71 @@ const Overview: React.FC<OverviewProps> = ({
   const selectionWithDependents = selectionBase; // Já inclui dependentes
   const i20WithDependents = i20Base + i20Extra;
 
+  // Verificar se há cupom promocional validado no modal (DEPOIS de selectionWithDependents ser definido)
+  useEffect(() => {
+    const checkPromotionalCoupon = () => {
+      // Verificar se há cupom promocional validado armazenado no window
+      const storedCoupon = (window as any).__promotional_coupon_validation;
+      if (storedCoupon && storedCoupon.isValid && storedCoupon.discountAmount) {
+        setPromotionalCouponDiscount({
+          discountAmount: storedCoupon.discountAmount,
+          finalAmount: storedCoupon.finalAmount || Math.max(selectionWithDependents - storedCoupon.discountAmount, 0)
+        });
+      } else {
+        setPromotionalCouponDiscount(null);
+      }
+    };
+
+    // Verificar imediatamente
+    checkPromotionalCoupon();
+
+    // Verificar periodicamente enquanto o modal pode estar aberto
+    const interval = setInterval(checkPromotionalCoupon, 500);
+    
+    // Escutar eventos customizados de validação de cupom
+    const handleCouponValidation = (event: CustomEvent) => {
+      if (event.detail?.isValid && event.detail?.discountAmount) {
+        setPromotionalCouponDiscount({
+          discountAmount: event.detail.discountAmount,
+          finalAmount: event.detail.finalAmount || Math.max(selectionWithDependents - event.detail.discountAmount, 0)
+        });
+      } else {
+        setPromotionalCouponDiscount(null);
+      }
+    };
+
+    window.addEventListener('promotionalCouponValidated', handleCouponValidation as EventListener);
+    
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('promotionalCouponValidated', handleCouponValidation as EventListener);
+    };
+  }, [selectionWithDependents]);
+
   // Valores das taxas para o ProgressBar (Application fee é variável)
-  // ✅ CORREÇÃO: Aplicar desconto na barra de progresso se houver activeDiscount
-  const selectionFeeWithDiscount = activeDiscount?.has_discount 
-    ? Math.max(selectionWithDependents - (activeDiscount.discount_amount || 0), 0)
-    : selectionWithDependents;
+  // ✅ CORREÇÃO: Se o pagamento já foi feito, usar o valor REAL pago (que pode ter desconto)
+  // Caso contrário, aplicar desconto na barra de progresso se houver activeDiscount ou cupom promocional
+  const selectionFeeToDisplay = userProfile?.has_paid_selection_process_fee && realPaidAmounts.selection_process
+    ? realPaidAmounts.selection_process // Valor real pago (já inclui desconto se aplicável)
+    : promotionalCouponDiscount
+      ? promotionalCouponDiscount.finalAmount
+      : activeDiscount?.has_discount 
+        ? Math.max(selectionWithDependents - (activeDiscount.discount_amount || 0), 0)
+        : selectionWithDependents;
+
+  const scholarshipFeeToDisplay = userProfile?.is_scholarship_fee_paid && realPaidAmounts.scholarship
+    ? realPaidAmounts.scholarship // Valor real pago (já inclui desconto se aplicável)
+    : scholarshipBase;
+
+  const i20FeeToDisplay = userProfile?.has_paid_i20_control_fee && realPaidAmounts.i20_control
+    ? realPaidAmounts.i20_control // Valor real pago (já inclui desconto se aplicável)
+    : i20WithDependents;
 
   const dynamicFeeValues = [
-    isFeesLoading ? <FeeSkeleton /> : `$${selectionFeeWithDiscount}`, // Selection Process Fee (com desconto se aplicável)
+    isFeesLoading ? <FeeSkeleton /> : `$${selectionFeeToDisplay.toFixed(2)}`, // Selection Process Fee (valor real pago ou com desconto se aplicável)
     t('feeValues.asPerUniversity'), // Application Fee (variável - não mostra valor específico)
-    isFeesLoading ? <FeeSkeleton /> : `$${scholarshipBase}`, // Scholarship Fee (sem dependentes)
-    isFeesLoading ? <FeeSkeleton /> : `$${i20WithDependents}`, // I-20 Control Fee (inclui dependentes)
+    isFeesLoading ? <FeeSkeleton /> : `$${scholarshipFeeToDisplay.toFixed(2)}`, // Scholarship Fee (valor real pago ou base)
+    isFeesLoading ? <FeeSkeleton /> : `$${i20FeeToDisplay.toFixed(2)}`, // I-20 Control Fee (valor real pago ou base)
   ];
 
   // Lógica da barra de progresso dinâmica
@@ -491,6 +618,24 @@ const Overview: React.FC<OverviewProps> = ({
                 <div className="text-left sm:text-right">
                   {feesLoading ? (
                     <div className="inline-block w-24 h-6 bg-white/30 rounded animate-pulse" />
+                  ) : userProfile?.has_paid_selection_process_fee && realPaidAmounts.selection_process ? (
+                    // Se já pagou, mostrar valor real pago (já inclui desconto se aplicável)
+                    <div className="text-lg sm:text-xl md:text-2xl font-bold text-white">
+                      ${realPaidAmounts.selection_process.toFixed(2)}
+                    </div>
+                  ) : promotionalCouponDiscount ? (
+                    <div className="flex flex-col sm:text-center">
+                      <div className="text-lg sm:text-xl md:text-2xl font-bold text-white line-through">${selectionWithDependents}</div>
+                      <div className="text-base sm:text-lg md:text-xl font-bold text-green-300">
+                        ${promotionalCouponDiscount.finalAmount.toFixed(2)}
+                      </div>
+                      <div className="flex items-center sm:justify-center mt-1">
+                        <Tag className="h-3 w-3 text-green-300 mr-1" />
+                        <span className="text-xs text-green-300 font-medium">
+                          Cupom aplicado -${promotionalCouponDiscount.discountAmount.toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
                   ) : activeDiscount?.has_discount ? (
                     <div className="flex flex-col sm:text-center">
                       <div className="text-lg sm:text-xl md:text-2xl font-bold text-white line-through">${selectionWithDependents}</div>

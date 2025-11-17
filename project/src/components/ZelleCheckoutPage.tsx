@@ -57,6 +57,24 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
 
   // Estado para desconto ativo
   const [activeDiscount, setActiveDiscount] = useState<any>(null);
+  
+  // Estado para cupom promocional da Scholarship Fee
+  const [scholarshipFeePromotionalCoupon, setScholarshipFeePromotionalCoupon] = useState<{
+    discountAmount: number;
+    finalAmount: number;
+    code: string;
+  } | null>(null);
+  
+  const [i20ControlFeePromotionalCoupon, setI20ControlFeePromotionalCoupon] = useState<{
+    discountAmount: number;
+    finalAmount: number;
+    code: string;
+  } | null>(null);
+
+  // Obter parâmetros da URL (ANTES dos useEffects para evitar erros de inicialização)
+  const feeType = searchParams.get('type') || searchParams.get('feeType') || 'selection_process';
+  // Normalizar feeType para lidar com inconsistências (i20_control_fee vs i-20_control_fee)
+  const normalizedFeeType = feeType === 'i20_control_fee' ? 'i20_control' : feeType;
 
   // Verificar desconto ativo do usuário
   useEffect(() => {
@@ -83,17 +101,150 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
     checkActiveDiscount();
   }, [user]);
 
-  // Obter parâmetros da URL
-  const feeType = searchParams.get('type') || searchParams.get('feeType') || 'selection_process';
+  // Carregar cupom promocional do localStorage quando for scholarship_fee ou i20_control_fee
+  useEffect(() => {
+    // Verificar se o usuário pode usar cupom promocional
+    const hasSellerReferralCode = userProfile?.seller_referral_code && userProfile.seller_referral_code.trim() !== '';
+    const isLegacySystem = userProfile?.system_type === 'legacy';
+    const canUsePromotionalCoupon = hasSellerReferralCode && isLegacySystem;
+    
+    if (!canUsePromotionalCoupon) {
+      setScholarshipFeePromotionalCoupon(null);
+      setI20ControlFeePromotionalCoupon(null);
+      return;
+    }
+    
+    // Carregar cupom para scholarship_fee
+    if (normalizedFeeType !== 'scholarship_fee') {
+      setScholarshipFeePromotionalCoupon(null);
+    }
+    
+    // Carregar cupom para i20_control_fee
+    if (normalizedFeeType !== 'i20_control') {
+      setI20ControlFeePromotionalCoupon(null);
+    }
+
+    // Carregar do localStorage
+    const checkPromotionalCoupon = () => {
+      try {
+        const savedCoupon = localStorage.getItem('__promotional_coupon_scholarship_fee');
+        if (savedCoupon) {
+          const couponData = JSON.parse(savedCoupon);
+          // Verificar se o cupom ainda é válido (menos de 24 horas)
+          const isExpired = Date.now() - couponData.timestamp > 24 * 60 * 60 * 1000;
+          
+          if (!isExpired && couponData.validation && couponData.validation.isValid) {
+            setScholarshipFeePromotionalCoupon({
+              discountAmount: couponData.validation.discountAmount || 0,
+              finalAmount: couponData.validation.finalAmount || (scholarshipFee ? parseFloat(scholarshipFee.replace('$', '')) : 0),
+              code: couponData.code
+            });
+            console.log('[ZelleCheckoutPage] Cupom promocional carregado do localStorage:', couponData.code);
+          } else {
+            // Remover cupom expirado
+            localStorage.removeItem('__promotional_coupon_scholarship_fee');
+            setScholarshipFeePromotionalCoupon(null);
+          }
+        } else {
+          setScholarshipFeePromotionalCoupon(null);
+        }
+      } catch (error) {
+        console.error('[ZelleCheckoutPage] Erro ao carregar cupom do localStorage:', error);
+        setScholarshipFeePromotionalCoupon(null);
+      }
+    };
+
+    checkPromotionalCoupon();
+    
+    // Carregar cupom para i20_control_fee
+    const checkI20PromotionalCoupon = () => {
+      if (normalizedFeeType !== 'i20_control') return;
+      
+      try {
+        const savedCoupon = localStorage.getItem('__promotional_coupon_i20_control_fee');
+        if (savedCoupon) {
+          const couponData = JSON.parse(savedCoupon);
+          // Verificar se o cupom ainda é válido (menos de 24 horas)
+          const isExpired = Date.now() - couponData.timestamp > 24 * 60 * 60 * 1000;
+          
+          if (!isExpired && couponData.validation && couponData.validation.isValid) {
+            setI20ControlFeePromotionalCoupon({
+              discountAmount: couponData.validation.discountAmount || 0,
+              finalAmount: couponData.validation.finalAmount || (i20ControlFee ? parseFloat(i20ControlFee.replace('$', '')) : 0),
+              code: couponData.code
+            });
+            console.log('[ZelleCheckoutPage] Cupom promocional I-20 carregado do localStorage:', couponData.code);
+          } else {
+            // Remover cupom expirado
+            localStorage.removeItem('__promotional_coupon_i20_control_fee');
+            setI20ControlFeePromotionalCoupon(null);
+          }
+        } else {
+          setI20ControlFeePromotionalCoupon(null);
+        }
+      } catch (error) {
+        console.error('[ZelleCheckoutPage] Erro ao carregar cupom I-20 do localStorage:', error);
+        setI20ControlFeePromotionalCoupon(null);
+      }
+    };
+    
+    checkI20PromotionalCoupon();
+    
+    // Verificar periodicamente e ouvir eventos
+    const interval = setInterval(() => {
+      checkPromotionalCoupon();
+      checkI20PromotionalCoupon();
+    }, 1000);
+    
+    // Ouvir eventos de validação de cupom do modal
+    const handleCouponValidation = (event: CustomEvent) => {
+      if (event.detail?.isValid && event.detail?.discountAmount) {
+        if (normalizedFeeType === 'scholarship_fee') {
+          const baseAmount = scholarshipFee ? parseFloat(scholarshipFee.replace('$', '')) : 0;
+          setScholarshipFeePromotionalCoupon({
+            discountAmount: event.detail.discountAmount,
+            finalAmount: event.detail.finalAmount || (baseAmount - event.detail.discountAmount),
+            code: (window as any).__checkout_promotional_coupon || 'BLACK'
+          });
+        } else if (normalizedFeeType === 'i20_control') {
+          const baseAmount = i20ControlFee ? parseFloat(i20ControlFee.replace('$', '')) : 0;
+          setI20ControlFeePromotionalCoupon({
+            discountAmount: event.detail.discountAmount,
+            finalAmount: event.detail.finalAmount || (baseAmount - event.detail.discountAmount),
+            code: (window as any).__checkout_promotional_coupon || 'BLACK'
+          });
+        }
+      } else {
+        // Se o cupom foi removido, limpar estado
+        if (normalizedFeeType === 'scholarship_fee') {
+          const savedCoupon = localStorage.getItem('__promotional_coupon_scholarship_fee');
+          if (!savedCoupon) {
+            setScholarshipFeePromotionalCoupon(null);
+          }
+        } else if (normalizedFeeType === 'i20_control') {
+          const savedCoupon = localStorage.getItem('__promotional_coupon_i20_control_fee');
+          if (!savedCoupon) {
+            setI20ControlFeePromotionalCoupon(null);
+          }
+        }
+      }
+    };
+
+    window.addEventListener('promotionalCouponValidated', handleCouponValidation as EventListener);
+    
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('promotionalCouponValidated', handleCouponValidation as EventListener);
+    };
+  }, [userProfile?.seller_referral_code, userProfile?.system_type, normalizedFeeType, scholarshipFee, i20ControlFee]);
+
+  // Obter outros parâmetros da URL
   const amount = searchParams.get('amount') || getFeeAmount('selection_process').toString();
   const scholarshipsIds = searchParams.get('scholarshipsIds') || '';
   const applicationFeeAmount = searchParams.get('applicationFeeAmount') ? parseFloat(searchParams.get('applicationFeeAmount')!) : undefined;
   
   // Guardar resolução de bolsa/aplicação para uso em múltiplos pontos do fluxo
   let resolvedScholarshipId: string | null = null;
-  
-  // Normalizar feeType para lidar com inconsistências (i20_control_fee vs i-20_control_fee)
-  const normalizedFeeType = feeType === 'i20_control_fee' ? 'i20_control' : feeType;
 
   // Debug logs
   console.log('🔍 [ZelleCheckoutPage] Componente renderizando - ID:', Math.random().toString(36).substr(2, 9));
@@ -109,8 +260,23 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
       type: 'selection_process',
       amount: (() => {
         // ✅ CORREÇÃO: Usar sempre useDynamicFees que já considera system_type e dependentes
+        // ✅ Priorizar valor da URL se estiver presente (já vem com desconto aplicado)
         if (!selectionProcessFee) return 0; // Aguardar carregamento
         const base = parseFloat(selectionProcessFee.replace('$', ''));
+        
+        // Se há valor na URL e é diferente do base, usar o valor da URL (já tem desconto aplicado)
+        if (normalizedFeeType === 'selection_process') {
+          const amountFromUrl = searchParams.get('amount');
+          if (amountFromUrl) {
+            const urlAmount = parseFloat(amountFromUrl);
+            if (!Number.isNaN(urlAmount) && urlAmount !== base) {
+              console.log('[ZelleCheckoutPage] ✅ Usando valor da URL (com desconto) para selection_process:', urlAmount, 'vs base:', base);
+              return urlAmount;
+            }
+          }
+        }
+        
+        // Aplicar desconto de referral code se houver
         const discount = (activeDiscount && feeType === 'selection_process') ? (activeDiscount.discount_amount || 0) : 0;
         return Math.max(0, base - discount);
       })(),
@@ -145,15 +311,62 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
     {
       type: 'scholarship_fee',
       // ✅ CORREÇÃO: Usar sempre useDynamicFees que já considera system_type
-      amount: scholarshipFee ? parseFloat(scholarshipFee.replace('$', '')) : 0, // Aguardar carregamento
-      description: `${t('feeDescriptions.scholarshipFee')}${hasSellerPackage ? ` (${packageName})` : ''}`,
+      // ✅ Aplicar desconto do cupom promocional se houver
+      // ✅ Priorizar valor da URL se estiver presente (já vem com desconto aplicado)
+      amount: (() => {
+        const baseAmount = scholarshipFee ? parseFloat(scholarshipFee.replace('$', '')) : 0;
+        
+        // Se há valor na URL e é diferente do base, usar o valor da URL (já tem desconto aplicado)
+        if (normalizedFeeType === 'scholarship_fee') {
+          const amountFromUrl = searchParams.get('amount') || searchParams.get('scholarshipFeeAmount');
+          if (amountFromUrl) {
+            const urlAmount = parseFloat(amountFromUrl);
+            if (!Number.isNaN(urlAmount) && urlAmount !== baseAmount) {
+              console.log('[ZelleCheckoutPage] ✅ Usando valor da URL (com desconto):', urlAmount, 'vs base:', baseAmount);
+              return urlAmount;
+            }
+          }
+        }
+        
+        // Se há cupom promocional no localStorage, usar o valor do cupom
+        if (scholarshipFeePromotionalCoupon && normalizedFeeType === 'scholarship_fee') {
+          console.log('[ZelleCheckoutPage] ✅ Usando valor do cupom promocional:', scholarshipFeePromotionalCoupon.finalAmount);
+          return scholarshipFeePromotionalCoupon.finalAmount;
+        }
+        
+        return baseAmount;
+      })(),
+      description: `${t('feeDescriptions.scholarshipFee')}${hasSellerPackage ? ` (${packageName})` : ''}${scholarshipFeePromotionalCoupon && normalizedFeeType === 'scholarship_fee' ? ` (Cupom ${scholarshipFeePromotionalCoupon.code} - $${scholarshipFeePromotionalCoupon.discountAmount.toFixed(2)} desconto)` : ''}`,
       icon: <CreditCard className="w-6 h-6" />
     },
     {
       type: 'i20_control',
-      // ✅ CORREÇÃO: Usar sempre useDynamicFees que já considera system_type
-      amount: i20ControlFee ? parseFloat(i20ControlFee.replace('$', '')) : 0, // Aguardar carregamento
-      description: `${t('feeDescriptions.i20ControlFee')}${hasSellerPackage ? ` (${packageName})` : ''}`,
+      amount: (() => {
+        // ✅ CORREÇÃO: Usar sempre useDynamicFees que já considera system_type
+        if (!i20ControlFee) return 0; // Aguardar carregamento
+        const baseAmount = parseFloat(i20ControlFee.replace('$', ''));
+        
+        // Se há valor na URL e é diferente do base, usar o valor da URL (já tem desconto aplicado)
+        if (normalizedFeeType === 'i20_control') {
+          const amountFromUrl = searchParams.get('amount') || searchParams.get('i20ControlFeeAmount');
+          if (amountFromUrl) {
+            const urlAmount = parseFloat(amountFromUrl);
+            if (!Number.isNaN(urlAmount) && urlAmount !== baseAmount) {
+              console.log('[ZelleCheckoutPage] ✅ Usando valor da URL (com desconto) para i20_control:', urlAmount, 'vs base:', baseAmount);
+              return urlAmount;
+            }
+          }
+        }
+        
+        // Se há cupom promocional no localStorage, usar o valor do cupom
+        if (i20ControlFeePromotionalCoupon && normalizedFeeType === 'i20_control') {
+          console.log('[ZelleCheckoutPage] ✅ Usando valor do cupom promocional:', i20ControlFeePromotionalCoupon.finalAmount);
+          return i20ControlFeePromotionalCoupon.finalAmount;
+        }
+        
+        return baseAmount;
+      })(),
+      description: `${t('feeDescriptions.i20ControlFee')}${hasSellerPackage ? ` (${packageName})` : ''}${i20ControlFeePromotionalCoupon && normalizedFeeType === 'i20_control' ? ` (Cupom ${i20ControlFeePromotionalCoupon.code} - $${i20ControlFeePromotionalCoupon.discountAmount.toFixed(2)} desconto)` : ''}`,
       icon: <CreditCard className="w-6 h-6" />
     }
   ];
@@ -343,12 +556,27 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
       const webhookPayload: WebhookPayload = {
         user_id: user?.id,
         image_url: imageUrl,
-        value: currentFee.amount.toString(), // Apenas o número, sem símbolos
+        value: currentFee.amount.toString(), // Apenas o número, sem símbolos (já com desconto aplicado se houver cupom)
         currency: 'USD',
         fee_type: normalizedFeeType,
         timestamp: new Date().toISOString(),
         payment_id: realPaymentId // ID real do pagamento
       };
+      
+      // Adicionar cupom promocional ao payload se aplicável
+      if (normalizedFeeType === 'scholarship_fee' && scholarshipFeePromotionalCoupon) {
+        (webhookPayload as any).promotional_coupon = scholarshipFeePromotionalCoupon.code;
+        (webhookPayload as any).promotional_discount_amount = scholarshipFeePromotionalCoupon.discountAmount;
+        (webhookPayload as any).original_amount = scholarshipFee ? parseFloat(scholarshipFee.replace('$', '')) : currentFee.amount;
+        (webhookPayload as any).final_amount = currentFee.amount;
+        console.log('[ZelleCheckoutPage] Cupom promocional adicionado ao webhook payload:', scholarshipFeePromotionalCoupon.code);
+      } else if (normalizedFeeType === 'i20_control' && i20ControlFeePromotionalCoupon) {
+        (webhookPayload as any).promotional_coupon = i20ControlFeePromotionalCoupon.code;
+        (webhookPayload as any).promotional_discount_amount = i20ControlFeePromotionalCoupon.discountAmount;
+        (webhookPayload as any).original_amount = i20ControlFee ? parseFloat(i20ControlFee.replace('$', '')) : currentFee.amount;
+        (webhookPayload as any).final_amount = currentFee.amount;
+        console.log('[ZelleCheckoutPage] Cupom promocional I-20 adicionado ao webhook payload:', i20ControlFeePromotionalCoupon.code);
+      }
 
       // Incluir scholarships_ids diretamente do parâmetro de URL, se disponível
       if ((normalizedFeeType === 'application_fee' || normalizedFeeType === 'scholarship_fee') && scholarshipsIds) {
@@ -813,16 +1041,40 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
                   <div className="flex items-center gap-3">
                     <div>
                       <h3 className="font-medium text-gray-900">
-                        {currentFee.description.split(' - ')[1]}
+                        {currentFee.description.split(' - ')[1] || currentFee.description}
                       </h3>
                       <p className="text-sm text-gray-600">
-                        {currentFee.description.split(' - ')[0]}
+                        {currentFee.description.split(' - ')[0] || ''}
                       </p>
                     </div>
                   </div>
                   <div className="text-right">
                     {feesLoading ? (
                       <div className="w-24 h-7 bg-gray-200 rounded animate-pulse" />
+                    ) : scholarshipFeePromotionalCoupon && normalizedFeeType === 'scholarship_fee' ? (
+                      <div>
+                        <div className="text-xl font-bold text-gray-400 line-through">
+                          ${scholarshipFee ? parseFloat(scholarshipFee.replace('$', '')) : currentFee.amount}
+                        </div>
+                        <div className="text-2xl font-bold text-green-600">
+                          ${currentFee.amount}
+                        </div>
+                        <div className="text-xs text-green-600 mt-1">
+                          Cupom {scholarshipFeePromotionalCoupon.code} aplicado
+                        </div>
+                      </div>
+                    ) : i20ControlFeePromotionalCoupon && normalizedFeeType === 'i20_control' ? (
+                      <div>
+                        <div className="text-xl font-bold text-gray-400 line-through">
+                          ${i20ControlFee ? parseFloat(i20ControlFee.replace('$', '')) : currentFee.amount}
+                        </div>
+                        <div className="text-2xl font-bold text-green-600">
+                          ${currentFee.amount}
+                        </div>
+                        <div className="text-xs text-green-600 mt-1">
+                          Cupom {i20ControlFeePromotionalCoupon.code} aplicado
+                        </div>
+                      </div>
                     ) : (
                       <div className="text-2xl font-bold text-gray-900">
                         ${currentFee.amount}
@@ -837,6 +1089,24 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
                     <span className="text-lg font-medium text-gray-900">{t('zelleCheckout.amount')}</span>
                     {feesLoading ? (
                       <div className="w-24 h-7 bg-gray-200 rounded animate-pulse" />
+                    ) : scholarshipFeePromotionalCoupon && normalizedFeeType === 'scholarship_fee' ? (
+                      <div className="text-right">
+                        <div className="text-xl font-bold text-gray-400 line-through">
+                          ${scholarshipFee ? parseFloat(scholarshipFee.replace('$', '')) : currentFee.amount}
+                        </div>
+                        <span className="text-2xl font-bold text-green-600">
+                          ${currentFee.amount}
+                        </span>
+                      </div>
+                    ) : i20ControlFeePromotionalCoupon && normalizedFeeType === 'i20_control' ? (
+                      <div className="text-right">
+                        <div className="text-xl font-bold text-gray-400 line-through">
+                          ${i20ControlFee ? parseFloat(i20ControlFee.replace('$', '')) : currentFee.amount}
+                        </div>
+                        <span className="text-2xl font-bold text-green-600">
+                          ${currentFee.amount}
+                        </span>
+                      </div>
                     ) : (
                       <span className="text-2xl font-bold text-gray-900">
                         ${currentFee.amount}

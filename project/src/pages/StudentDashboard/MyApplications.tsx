@@ -45,6 +45,11 @@ const MyApplications: React.FC = () => {
     discountAmount: number;
     finalAmount: number;
   } | null>(null);
+  // Estado para valores reais pagos (incluindo descontos)
+  const [realPaidAmounts, setRealPaidAmounts] = useState<{
+    application?: number;
+    scholarship?: number;
+  }>({});
   // Helper: calcular Application Fee exibida considerando dependentes (legacy)
   // O valor vem em centavos do banco, precisa converter para dólares primeiro
   const getApplicationFeeWithDependents = (baseInCents: number): number => {
@@ -138,11 +143,48 @@ const MyApplications: React.FC = () => {
     }
   };
 
+  // Função para buscar valores reais pagos de individual_fee_payments
+  const fetchRealPaidAmounts = React.useCallback(async () => {
+    if (!user?.id) {
+      setRealPaidAmounts({});
+      return;
+    }
+
+    try {
+      const { data: payments, error } = await supabase
+        .from('individual_fee_payments')
+        .select('fee_type, amount')
+        .eq('user_id', user.id);
+      
+      if (error) {
+        console.error('Erro ao buscar valores pagos:', error);
+        setRealPaidAmounts({});
+        return;
+      }
+      
+      const amounts: typeof realPaidAmounts = {};
+      payments?.forEach(payment => {
+        if (payment.fee_type === 'application') {
+          amounts.application = Number(payment.amount);
+        } else if (payment.fee_type === 'scholarship') {
+          amounts.scholarship = Number(payment.amount);
+        }
+      });
+      
+      setRealPaidAmounts(amounts);
+    } catch (error) {
+      console.error('Erro ao buscar valores pagos:', error);
+      setRealPaidAmounts({});
+    }
+  }, [user?.id]);
+
   useEffect(() => {
     setUserProfileId(userProfile?.id || null);
     // Mantemos o polling ativo para refletir mudanças de pagamento/edge imediatamente
     setIsPolling(true);
-  }, [userProfile?.id]);
+    // Buscar valores pagos quando o perfil mudar
+    fetchRealPaidAmounts();
+  }, [userProfile?.id, fetchRealPaidAmounts]);
 
   // Carregar cupom promocional do localStorage e ouvir eventos de validação
   useEffect(() => {
@@ -156,7 +198,7 @@ const MyApplications: React.FC = () => {
       return;
     }
 
-    // Carregar do localStorage
+    // Carregar do localStorage (sem chamar getFeeAmount para evitar loops)
     const checkPromotionalCoupon = () => {
       try {
         const savedCoupon = localStorage.getItem('__promotional_coupon_scholarship_fee');
@@ -166,9 +208,18 @@ const MyApplications: React.FC = () => {
           const isExpired = Date.now() - couponData.timestamp > 24 * 60 * 60 * 1000;
           
           if (!isExpired && couponData.validation && couponData.validation.isValid) {
-            setScholarshipFeePromotionalCoupon({
+            // Usar apenas o valor do localStorage, sem chamar getFeeAmount
+            const newCoupon = {
               discountAmount: couponData.validation.discountAmount || 0,
-              finalAmount: couponData.validation.finalAmount || getFeeAmount('scholarship_fee')
+              finalAmount: couponData.validation.finalAmount || 0
+            };
+            
+            // Só atualizar se o valor mudou para evitar loops
+            setScholarshipFeePromotionalCoupon(prev => {
+              if (prev?.discountAmount === newCoupon.discountAmount && prev?.finalAmount === newCoupon.finalAmount) {
+                return prev; // Não atualizar se o valor não mudou
+              }
+              return newCoupon;
             });
           } else {
             // Remover cupom expirado
@@ -186,15 +237,23 @@ const MyApplications: React.FC = () => {
 
     checkPromotionalCoupon();
     
-    // Verificar periodicamente e ouvir eventos
-    const interval = setInterval(checkPromotionalCoupon, 1000);
+    // Verificar periodicamente (aumentar intervalo para reduzir re-renders)
+    const interval = setInterval(checkPromotionalCoupon, 5000); // 5 segundos em vez de 1
     
     // Ouvir eventos de validação de cupom do modal
     const handleCouponValidation = (event: CustomEvent) => {
       if (event.detail?.isValid && event.detail?.discountAmount) {
-        setScholarshipFeePromotionalCoupon({
+        const newCoupon = {
           discountAmount: event.detail.discountAmount,
-          finalAmount: event.detail.finalAmount || (getFeeAmount('scholarship_fee') - event.detail.discountAmount)
+          finalAmount: event.detail.finalAmount || 0
+        };
+        
+        // Só atualizar se o valor mudou
+        setScholarshipFeePromotionalCoupon(prev => {
+          if (prev?.discountAmount === newCoupon.discountAmount && prev?.finalAmount === newCoupon.finalAmount) {
+            return prev;
+          }
+          return newCoupon;
         });
       } else {
         // Se o cupom foi removido, limpar estado
@@ -211,7 +270,7 @@ const MyApplications: React.FC = () => {
       clearInterval(interval);
       window.removeEventListener('promotionalCouponValidated', handleCouponValidation as EventListener);
     };
-  }, [userProfile?.seller_referral_code, userProfile?.system_type, getFeeAmount]);
+  }, [userProfile?.seller_referral_code, userProfile?.system_type]);
 
   useEffect(() => {
     let isMounted = true;
@@ -408,18 +467,47 @@ const MyApplications: React.FC = () => {
         setLoading(false);
       };
       fetchApplications();
+      // Buscar valores pagos atualizados após retorno do pagamento
+      fetchRealPaidAmounts();
       // Remove o parâmetro da URL para evitar loops
       params.delete('from');
       window.history.replaceState({}, '', `${location.pathname}${params.toString() ? '?' + params.toString() : ''}`);
     }
-  }, [location.search, userProfile]);
+  }, [location.search, userProfile, fetchRealPaidAmounts]);
 
   // Sincronizar cart com banco de dados quando a página carrega
   useEffect(() => {
     if (user?.id) {
       syncCartWithDatabase(user.id);
+      fetchRealPaidAmounts();
     }
-  }, [user?.id, syncCartWithDatabase]);
+  }, [user?.id, syncCartWithDatabase, fetchRealPaidAmounts]);
+
+  // Configurar real-time subscription para atualizações de pagamentos
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const channel = supabase
+      .channel(`student-payments-myapplications-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'individual_fee_payments',
+          filter: `user_id=eq.${user.id}`
+        },
+        () => {
+          // Refetch valores pagos quando houver mudanças
+          fetchRealPaidAmounts();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, fetchRealPaidAmounts]);
 
   // Quando o aluno pagar a taxa de uma bolsa aprovada, escondemos as demais aprovadas não pagas
   const chosenPaidApp = applications.find(
@@ -1554,7 +1642,9 @@ const MyApplications: React.FC = () => {
                         <div className="flex items-center justify-between mb-3">
                           <span className="font-semibold text-gray-900 text-sm">{t('studentDashboard.myApplications.paymentStatus.applicationFee')}</span>
                           <span className="text-base font-bold text-gray-700">
-                            {formatAmount(getApplicationFeeWithDependents(Number(scholarship.application_fee_amount || 35000)))}
+                            {applicationFeePaid && realPaidAmounts.application
+                              ? formatAmount(realPaidAmounts.application) // Valor real pago (já inclui desconto se aplicável)
+                              : formatAmount(getApplicationFeeWithDependents(Number(scholarship.application_fee_amount || 35000)))}
                           </span>
                         </div>
                         {applicationFeePaid ? (
@@ -1602,7 +1692,10 @@ const MyApplications: React.FC = () => {
                       <div className="bg-white border-2 border-slate-200 rounded-xl p-3 shadow-sm">
                         <div className="flex items-center justify-between mb-3">
                           <span className="font-semibold text-gray-900 text-sm">{t('studentDashboard.myApplications.paymentStatus.scholarshipFee')}</span>
-                          {scholarshipFeePromotionalCoupon ? (
+                          {scholarshipFeePaid && realPaidAmounts.scholarship ? (
+                            // Se já pagou, mostrar valor real pago (já inclui desconto se aplicável)
+                            <span className="text-base font-bold text-gray-700">{formatAmount(realPaidAmounts.scholarship)}</span>
+                          ) : scholarshipFeePromotionalCoupon ? (
                             <div className="text-right">
                               <div className="text-base font-bold text-gray-400 line-through">{formatAmount(Number(getFeeAmount('scholarship_fee')))}</div>
                               <div className="text-base font-bold text-green-600">{formatAmount(scholarshipFeePromotionalCoupon.finalAmount)}</div>
