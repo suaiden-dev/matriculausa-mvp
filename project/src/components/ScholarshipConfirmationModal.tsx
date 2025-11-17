@@ -17,6 +17,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from 'react-i18next';
 import { convertCentsToDollars } from '../utils/currency';
 import { calculateCardAmountWithFees, calculatePIXAmountWithFees, getExchangeRate } from '../utils/stripeFeeCalculator';
+import { supabase } from '../lib/supabase';
 
 // Componente SVG para o logo do PIX
 const PixIcon = ({ className }: { className?: string }) => (
@@ -119,7 +120,7 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
   }, [isOpen]);
 
   // Valor dinâmico baseado no tipo de taxa
-  const feeAmount = useMemo(() => {
+  const baseFeeAmount = useMemo(() => {
     if (feeType === 'scholarship_fee') {
       // Prioridade: 1) Valor da bolsa, 2) Override do usuário, 3) Valor padrão do config
       const scholarshipFeeFromConfig = getFeeAmountFromConfig('scholarship_fee');
@@ -146,8 +147,6 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
 
     return final;
   }, [feeType, scholarship, getFeeAmountFromConfig, userProfile]);
-
-  const baseFeeAmount = getFeeAmount();
   
   // Verificar se o usuário pode usar cupom promocional
   const hasSellerReferralCode = userProfile?.seller_referral_code && userProfile.seller_referral_code.trim() !== '';

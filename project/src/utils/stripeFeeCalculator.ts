@@ -6,7 +6,7 @@
  * 
  * Taxas configuradas:
  * - Cartão USD: 3.9% + $0.30 (taxa conservadora para cartões internacionais - garante valor mínimo)
- * - PIX BRL: 1.19% (processamento) + ~1.5% (conversão de moedas) = ~2.7% total (IOF de 3.5% é adicionado automaticamente pelo Stripe ao aluno)
+ * - PIX BRL: 1.19% (processamento) + ~0.6% (conversão de moedas) = ~1.8% total (IOF de 3.5% é adicionado automaticamente pelo Stripe ao aluno)
  */
 
 /**
@@ -78,12 +78,12 @@ export function calculateCardAmountWithFees(netAmount: number): number {
 export function calculatePIXAmountWithFees(netAmountUSD: number, exchangeRate: number): number {
   // Taxas do Stripe para PIX:
   // - Taxa de processamento: 1.19%
-  // - Taxa de conversão de moedas: ~1.5% (aplicada sobre o valor convertido - conservador)
-  // Total aproximado: ~2.7% (conservador para garantir valor mínimo)
+  // - Taxa de conversão de moedas: ~0.6% (aplicada sobre o valor convertido - conservador para garantir valor mínimo)
+  // Total aproximado: ~1.8% (conservador para garantir que sempre recebamos pelo menos o valor desejado)
   // IOF de 3.5% é adicionado automaticamente pelo Stripe ao aluno, não precisa incluir no cálculo
   const STRIPE_PIX_PROCESSING_PERCENTAGE = 0.0119; // 1.19% - taxa de processamento
-  const STRIPE_CURRENCY_CONVERSION_PERCENTAGE = 0.015; // 1.5% - taxa de conversão de moedas (conservador)
-  const STRIPE_PIX_TOTAL_PERCENTAGE = STRIPE_PIX_PROCESSING_PERCENTAGE + STRIPE_CURRENCY_CONVERSION_PERCENTAGE; // ~2.7%
+  const STRIPE_CURRENCY_CONVERSION_PERCENTAGE = 0.006; // 0.6% - taxa de conversão de moedas (conservador)
+  const STRIPE_PIX_TOTAL_PERCENTAGE = STRIPE_PIX_PROCESSING_PERCENTAGE + STRIPE_CURRENCY_CONVERSION_PERCENTAGE; // ~1.8%
   
   // 1. Converter USD para BRL
   const netAmountBRL = netAmountUSD * exchangeRate;
