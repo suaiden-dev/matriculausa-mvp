@@ -224,7 +224,7 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
   const finalPrice = promotionalCouponValidation?.isValid && promotionalCouponValidation.finalAmount
     ? promotionalCouponValidation.finalAmount
     : computedBasePrice;
-  
+
   // Terms acceptance states
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);

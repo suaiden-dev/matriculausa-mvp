@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { CreditCard, Smartphone, CheckCircle, AlertCircle } from 'lucide-react';
+import { calculateCardAmountWithFees, calculatePIXAmountWithFees, getExchangeRate } from '../utils/stripeFeeCalculator';
 
 // Componente SVG para o logo do PIX (oficial)
 const PixIcon = ({ className }: { className?: string }) => (
@@ -53,16 +54,30 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
   selectedMethod,
   onMethodSelect,
   feeType,
-  amount: _amount,
+  amount,
   className = ''
 }) => {
   const { t } = useTranslation();
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [loading, setLoading] = useState(true);
   const [processingSelection, setProcessingSelection] = useState(false);
+  const [exchangeRate, setExchangeRate] = useState<number | null>(null);
+  
+  // Calcular valores com markup de taxas do Stripe
+  const cardAmountWithFees = amount > 0 ? calculateCardAmountWithFees(amount) : 0;
+  const pixAmountWithFees = amount > 0 && exchangeRate ? calculatePIXAmountWithFees(amount, exchangeRate) : 0;
 
   useEffect(() => {
     loadPaymentMethods();
+    // Buscar taxa de câmbio da mesma API que o backend usa
+    getExchangeRate().then(rate => {
+      setExchangeRate(rate);
+      console.log('[PaymentMethodSelector] Taxa de câmbio obtida:', rate);
+    }).catch(error => {
+      console.error('[PaymentMethodSelector] Erro ao buscar taxa de câmbio:', error);
+      // Fallback para 5.6 se falhar
+      setExchangeRate(5.6);
+    });
   }, []);
 
   // Reset processing state when component unmounts
@@ -213,17 +228,35 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
                   
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-900">
-                          {method.display_name}
-                        </h4>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <h4 className="text-sm font-medium text-gray-900">
+                            {method.display_name}
+                          </h4>
+                          {/* Exibir valor ao lado de cada opção */}
+                          {amount > 0 && method.id === 'stripe' && (
+                            <span className="text-sm font-semibold text-blue-700 whitespace-nowrap">
+                              ${cardAmountWithFees.toFixed(2)}
+                            </span>
+                          )}
+                          {amount > 0 && method.id === 'pix' && (
+                            <span className="text-sm font-semibold text-blue-700 whitespace-nowrap">
+                              {exchangeRate ? `R$ ${pixAmountWithFees.toFixed(2)}` : '...'}
+                            </span>
+                          )}
+                          {method.id === 'zelle' && (
+                            <span className="text-sm font-semibold text-blue-700 whitespace-nowrap">
+                              ${amount.toFixed(2)}
+                            </span>
+                          )}
+                        </div>
                         <p className="text-sm text-gray-500 mt-1">
                           {method.description}
                         </p>
                       </div>
                       
                       {isSelected && !processingSelection && (
-                        <CheckCircle className="w-5 h-5 text-blue-600" />
+                        <CheckCircle className="w-5 h-5 text-blue-600 flex-shrink-0 ml-2" />
                       )}
                     </div>
                     
