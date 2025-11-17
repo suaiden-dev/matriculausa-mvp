@@ -1,6 +1,8 @@
 import React, { Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from './lib/reactQuery';
 import { AuthProvider } from './hooks/useAuth';
 import { UnreadMessagesProvider } from './contexts/UnreadMessagesContext';
 import Layout from './components/Layout';
@@ -160,6 +162,7 @@ const AppContent = () => {
 const App: React.FC = () => {
   return (
     <HelmetProvider>
+      <QueryClientProvider client={queryClient}>
       <Router>
         <AuthProvider>
           <UnreadMessagesProvider>
@@ -169,6 +172,7 @@ const App: React.FC = () => {
           </UnreadMessagesProvider>
         </AuthProvider>
       </Router>
+      </QueryClientProvider>
     </HelmetProvider>
   );
 };

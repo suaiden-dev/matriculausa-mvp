@@ -2035,7 +2035,7 @@
           "nextStepsList": [
             "Wait for the university to process your acceptance letter",
             "Your acceptance letter will appear in the Documents tab once ready",
-            "Contact the university if you have any questions about the process"
+            "Contact the support chat if you have any questions about the process"
           ]
         },
         "paymentInformation": "Payment Information",
@@ -2476,6 +2476,13 @@
         "description": "Pay via Zelle transfer",
         "descriptionDetailed": "Pay via Zelle and upload the receipt."
       }
+    },
+    "includesProcessingFees": "* Includes processing fees",
+    "pix": {
+      "baseAmount": "Base amount",
+      "iofFee": "IOF Fee",
+      "totalDue": "Total due",
+      "iofNote": "This is an international purchase. IOF of 3.5% will be added by Stripe."
     }
   },
   "preCheckoutModal": {

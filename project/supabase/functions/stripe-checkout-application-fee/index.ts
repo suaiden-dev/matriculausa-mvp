@@ -2,6 +2,7 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import Stripe from 'npm:stripe@17.7.0';
 import { createClient } from 'npm:@supabase/supabase-js@2.49.1';
 import { getStripeConfig } from '../stripe-config.ts';
+import { calculateCardAmountWithFees, calculatePIXAmountWithFees } from '../utils/stripe-fee-calculator.ts';
 
 const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
 
@@ -43,6 +44,9 @@ Deno.serve(async (req) => {
     console.log(`🔧 Using Stripe in ${config.environment.environment} mode`);
 
     const { price_id, success_url, cancel_url, mode, metadata, payment_method } = await req.json();
+    
+    // Garantir que payment_method tenha um valor padrão
+    const finalPaymentMethod = payment_method || 'stripe';
     
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
@@ -244,32 +248,33 @@ Deno.serve(async (req) => {
       applicationFeeAmount = minAmount;
     }
     
-    // Calcular valor em centavos para o Stripe
-    const amountInCents = Math.round(applicationFeeAmount * 100);
+    // Valor base (sem markup) - usado para comissões
+    const baseAmount = applicationFeeAmount;
     
     console.log('[stripe-checkout-application-fee] Valores finais calculados:', {
       originalAmount: applicationFeeAmount,
-      amountInCents,
+      baseAmount,
       stripeConnectAccountId
     });
 
-    // Monta o metadata para o Stripe
-    const sessionMetadata = {
+    // Monta o metadata para o Stripe (valores base serão atualizados após cálculo do markup)
+    const sessionMetadata: any = {
       ...metadata, // Primeiro o metadata recebido
       student_id: user.id,
       fee_type: 'application_fee',
       application_id: applicationId,
       student_process_type: application?.student_process_type || metadata?.student_process_type || null,
       application_fee_amount: applicationFeeAmount.toString(),
+      base_amount: baseAmount.toString(), // Valor base para comissões
       university_id: universityId,
       stripe_connect_account_id: stripeConnectAccountId,
       selected_scholarship_id: application.scholarship_id,
-      payment_method: payment_method || 'stripe', // Adicionar método de pagamento
+      payment_method: finalPaymentMethod, // Adicionar método de pagamento
       exchange_rate: exchangeRate.toString(), // Adicionar taxa de câmbio para PIX
     };
 
     console.log('[stripe-checkout-application-fee] Metadata final configurado:', sessionMetadata);
-    if (payment_method === 'pix') {
+    if (finalPaymentMethod === 'pix') {
       console.log('[PIX] 🇧🇷 PIX selecionado para Application Fee - Configurando sessão PIX...');
       console.log('[PIX] 💰 Valor USD:', applicationFeeAmount);
       try {
@@ -301,26 +306,69 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Verificar se deve aplicar markup (não aplicar em produção por padrão)
+    const enableMarkupEnv = Deno.env.get('ENABLE_STRIPE_FEE_MARKUP');
+    const shouldApplyMarkup = enableMarkupEnv === 'true' 
+      ? true 
+      : enableMarkupEnv === 'false' 
+        ? false 
+        : !config.environment.isProduction; // Se não definido, usar detecção automática
+    
+    // Calcular valor com ou sem markup de taxas do Stripe
+    let grossAmountInCents: number;
+    if (shouldApplyMarkup) {
+      if (finalPaymentMethod === 'pix') {
+        // Para PIX: calcular markup considerando taxa de câmbio
+        grossAmountInCents = calculatePIXAmountWithFees(baseAmount, exchangeRate);
+      } else {
+        // Para cartão: calcular markup
+        grossAmountInCents = calculateCardAmountWithFees(baseAmount);
+      }
+      console.log('[stripe-checkout-application-fee] ✅ Markup ATIVADO (ambiente:', config.environment.environment, ')');
+    } else {
+      // Sem markup: usar valor original
+      if (finalPaymentMethod === 'pix') {
+        grossAmountInCents = Math.round(baseAmount * exchangeRate * 100);
+      } else {
+        grossAmountInCents = Math.round(baseAmount * 100);
+      }
+      console.log('[stripe-checkout-application-fee] ⚠️ Markup DESATIVADO (ambiente:', config.environment.environment, ')');
+    }
+    
+    // Atualizar metadata com valores gross e fee
+    sessionMetadata.gross_amount = (grossAmountInCents / 100).toString();
+    sessionMetadata.fee_type = shouldApplyMarkup ? 'stripe_processing' : 'none';
+    sessionMetadata.fee_amount = shouldApplyMarkup ? ((grossAmountInCents / 100) - baseAmount).toString() : '0';
+    sessionMetadata.markup_enabled = shouldApplyMarkup.toString();
+    
+    console.log('[stripe-checkout-application-fee] 💰 Valores calculados:', {
+      baseAmount,
+      grossAmount: grossAmountInCents / 100,
+      feeAmount: shouldApplyMarkup ? (grossAmountInCents / 100) - baseAmount : 0,
+      grossAmountInCents,
+      markupEnabled: shouldApplyMarkup
+    });
+
     // Configuração da sessão Stripe
     const sessionConfig: any = {
-      payment_method_types: payment_method === 'pix' ? ['pix'] : ['card'],
+      payment_method_types: finalPaymentMethod === 'pix' ? ['pix'] : ['card'],
       client_reference_id: user.id,
       customer_email: user.email,
       line_items: [
         {
           price_data: {
-            currency: payment_method === 'pix' ? 'brl' : 'usd',
+            currency: finalPaymentMethod === 'pix' ? 'brl' : 'usd',
             product_data: {
               name: 'Application Fee',
               description: `Application fee for scholarship application`,
             },
-            unit_amount: payment_method === 'pix' ? Math.round(applicationFeeAmount * exchangeRate * 100) : amountInCents,
+            unit_amount: grossAmountInCents, // Valor com markup já calculado
           },
           quantity: 1,
         },
       ],
       mode: mode || 'payment',
-      success_url: payment_method === 'pix' 
+      success_url: finalPaymentMethod === 'pix' 
         ? `${success_url}&pix_payment=true`
         : success_url,
       cancel_url: cancel_url, // Mesma página de erro para PIX e Stripe
@@ -334,11 +382,13 @@ Deno.serve(async (req) => {
       // Adicionar informações do Connect no metadata
       sessionMetadata.stripe_connect_account_id = stripeConnectAccountId;
       sessionMetadata.requires_transfer = 'true';
-      sessionMetadata.transfer_amount = amountInCents.toString(); // 100% do valor para a universidade
+      // Transferir o valor base (sem markup) para a universidade
+      sessionMetadata.transfer_amount = Math.round(baseAmount * 100).toString(); // 100% do valor base para a universidade
       
       console.log('[stripe-checkout-application-fee] Metadata configurado para webhook:', {
         stripe_connect_account_id: stripeConnectAccountId,
-        transfer_amount: amountInCents,
+        transfer_amount: Math.round(baseAmount * 100),
+        base_amount: baseAmount,
         requires_transfer: true
       });
     } else {
@@ -351,7 +401,7 @@ Deno.serve(async (req) => {
     console.log('[stripe-checkout-application-fee] Created Stripe session:', {
       sessionId: session.id,
       amount: applicationFeeAmount,
-      amountInCents,
+      grossAmountInCents,
       metadata: session.metadata,
       hasStripeConnect: !!stripeConnectAccountId,
       fullAmountToUniversity: true
@@ -367,7 +417,7 @@ Deno.serve(async (req) => {
         p_performed_by_type: 'student',
         p_metadata: {
           fee_type: 'application_fee',
-          payment_method: 'stripe',
+          payment_method: finalPaymentMethod,
           session_id: session.id,
           amount: applicationFeeAmount,
           application_id: applicationId,

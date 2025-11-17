@@ -61,7 +61,8 @@ export const ModalContent: React.FC<ModalContentProps> = ({
           </div>
           <p className="text-xs text-gray-600 mt-1">{t('preCheckoutModal.totalAmount')}</p>
         </div>
-        <div className="inline-flex items-center space-x-2 bg-blue-100 px-3 py-1 rounded-full">
+        
+        <div className="inline-flex items-center space-x-2 bg-blue-100 px-3 py-1 rounded-full mt-3">
           <Lock className="w-4 h-4 text-blue-600" />
           <span className="text-sm font-medium text-blue-700">{t('preCheckoutModal.securePaymentGateway')}</span>
         </div>

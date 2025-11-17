@@ -2,6 +2,7 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import Stripe from 'npm:stripe@17.7.0';
 import { createClient } from 'npm:@supabase/supabase-js@2.49.1';
 import { getStripeConfig } from '../stripe-config.ts';
+import { calculateCardAmountWithFees, calculatePIXAmountWithFees } from '../utils/stripe-fee-calculator.ts';
 
 const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
 
@@ -145,7 +146,45 @@ Deno.serve(async (req) => {
         finalAmount = minAmount;
       }
       
-      const unitAmountCents = Math.round(finalAmount * 100);
+      // Valor base (sem markup) - usado para comissões
+      const baseAmount = finalAmount;
+      
+      // Verificar se deve aplicar markup (não aplicar em produção por padrão)
+      const enableMarkupEnv = Deno.env.get('ENABLE_STRIPE_FEE_MARKUP');
+      const shouldApplyMarkup = enableMarkupEnv === 'true' 
+        ? true 
+        : enableMarkupEnv === 'false' 
+          ? false 
+          : !config.environment.isProduction; // Se não definido, usar detecção automática
+      
+      // Calcular valor com ou sem markup de taxas do Stripe
+      let grossAmountInCents: number;
+      if (shouldApplyMarkup) {
+        if (payment_method === 'pix') {
+          // Para PIX: calcular markup considerando taxa de câmbio
+          grossAmountInCents = calculatePIXAmountWithFees(baseAmount, exchangeRate);
+        } else {
+          // Para cartão: calcular markup
+          grossAmountInCents = calculateCardAmountWithFees(baseAmount);
+        }
+        console.log('[stripe-checkout-i20-control-fee] ✅ Markup ATIVADO (ambiente:', config.environment.environment, ')');
+      } else {
+        // Sem markup: usar valor original
+        if (payment_method === 'pix') {
+          grossAmountInCents = Math.round(baseAmount * exchangeRate * 100);
+        } else {
+          grossAmountInCents = Math.round(baseAmount * 100);
+        }
+        console.log('[stripe-checkout-i20-control-fee] ⚠️ Markup DESATIVADO (ambiente:', config.environment.environment, ')');
+      }
+      
+      // Adicionar valores base e gross ao metadata para uso em comissões
+      sessionMetadata.base_amount = baseAmount.toString();
+      sessionMetadata.gross_amount = (grossAmountInCents / 100).toString();
+      sessionMetadata.fee_type = shouldApplyMarkup ? 'stripe_processing' : 'none';
+      sessionMetadata.fee_amount = shouldApplyMarkup ? ((grossAmountInCents / 100) - baseAmount).toString() : '0';
+      sessionMetadata.markup_enabled = shouldApplyMarkup.toString();
+      
       sessionConfig.line_items = [
         {
           price_data: {
@@ -154,18 +193,59 @@ Deno.serve(async (req) => {
               name: 'I-20 Control Fee',
               description: userPackageFees ? `I-20 Control Fee - ${userPackageFees.package_name}` : 'I-20 Control Fee',
             },
-            unit_amount: payment_method === 'pix' ? Math.round(finalAmount * exchangeRate * 100) : unitAmountCents,
+            unit_amount: grossAmountInCents,
           },
           quantity: 1,
         },
       ];
-      console.log('[stripe-checkout-i20-control-fee] ✅ Usando amount explícito:', payment_method === 'pix' ? `BRL ${finalAmount * exchangeRate}` : `USD ${finalAmount}`);
+      console.log('[stripe-checkout-i20-control-fee] ✅ Usando amount explícito');
+      console.log('[stripe-checkout-i20-control-fee] 💰 Valor base (para comissões):', baseAmount);
+      console.log('[stripe-checkout-i20-control-fee] 💰 Valor final (cobrado do aluno):', grossAmountInCents / 100);
     }
     // Se o usuário tem pacote mas não foi enviado amount, usar preço dinâmico do pacote
     else if (userPackageFees) {
       // Garantir valor mínimo para pacote também
-      const packageAmount = userPackageFees.i20_control_fee < minAmount ? minAmount : userPackageFees.i20_control_fee;
-      const dynamicAmount = Math.round(packageAmount * 100);
+      let packageAmount = userPackageFees.i20_control_fee < minAmount ? minAmount : userPackageFees.i20_control_fee;
+      
+      // Valor base (sem markup) - usado para comissões
+      const baseAmount = packageAmount;
+      
+      // Verificar se deve aplicar markup (não aplicar em produção por padrão)
+      const enableMarkupEnv = Deno.env.get('ENABLE_STRIPE_FEE_MARKUP');
+      const shouldApplyMarkup = enableMarkupEnv === 'true' 
+        ? true 
+        : enableMarkupEnv === 'false' 
+          ? false 
+          : !config.environment.isProduction; // Se não definido, usar detecção automática
+      
+      // Calcular valor com ou sem markup de taxas do Stripe
+      let grossAmountInCents: number;
+      if (shouldApplyMarkup) {
+        if (payment_method === 'pix') {
+          // Para PIX: calcular markup considerando taxa de câmbio
+          grossAmountInCents = calculatePIXAmountWithFees(baseAmount, exchangeRate);
+        } else {
+          // Para cartão: calcular markup
+          grossAmountInCents = calculateCardAmountWithFees(baseAmount);
+        }
+        console.log('[stripe-checkout-i20-control-fee] ✅ Markup ATIVADO (ambiente:', config.environment.environment, ')');
+      } else {
+        // Sem markup: usar valor original
+        if (payment_method === 'pix') {
+          grossAmountInCents = Math.round(baseAmount * exchangeRate * 100);
+        } else {
+          grossAmountInCents = Math.round(baseAmount * 100);
+        }
+        console.log('[stripe-checkout-i20-control-fee] ⚠️ Markup DESATIVADO (ambiente:', config.environment.environment, ')');
+      }
+      
+      // Adicionar valores base e gross ao metadata para uso em comissões
+      sessionMetadata.base_amount = baseAmount.toString();
+      sessionMetadata.gross_amount = (grossAmountInCents / 100).toString();
+      sessionMetadata.fee_type = shouldApplyMarkup ? 'stripe_processing' : 'none';
+      sessionMetadata.fee_amount = shouldApplyMarkup ? ((grossAmountInCents / 100) - baseAmount).toString() : '0';
+      sessionMetadata.markup_enabled = shouldApplyMarkup.toString();
+      
       sessionConfig.line_items = [
         {
           price_data: {
@@ -174,12 +254,14 @@ Deno.serve(async (req) => {
               name: 'I-20 Control Fee',
               description: `I-20 Control Fee - ${userPackageFees.package_name}`,
             },
-            unit_amount: payment_method === 'pix' ? Math.round(packageAmount * exchangeRate * 100) : dynamicAmount,
+            unit_amount: grossAmountInCents,
           },
           quantity: 1,
         },
       ];
-      console.log('[stripe-checkout-i20-control-fee] ✅ Usando valor do pacote:', payment_method === 'pix' ? `BRL ${packageAmount * exchangeRate}` : `USD ${packageAmount}`);
+      console.log('[stripe-checkout-i20-control-fee] ✅ Usando valor do pacote');
+      console.log('[stripe-checkout-i20-control-fee] 💰 Valor base (para comissões):', baseAmount);
+      console.log('[stripe-checkout-i20-control-fee] 💰 Valor final (cobrado do aluno):', grossAmountInCents / 100);
     } else {
       // Usar price_id padrão se não tiver pacote
       sessionConfig.line_items = [

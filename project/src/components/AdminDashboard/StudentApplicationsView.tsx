@@ -24,6 +24,10 @@ import { useFeeConfig } from '../../hooks/useFeeConfig';
 import { useAuth } from '../../hooks/useAuth';
 import { useStudentUnreadMessages } from '../../hooks/useStudentUnreadMessages';
 import { useGlobalStudentUnread } from '../../hooks/useGlobalStudentUnread';
+import { useStudentsQuery, useFilterDataQuery } from './hooks/useStudentApplicationsQueries';
+import { useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '../../lib/queryKeys';
+import RefreshButton from '../RefreshButton';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
@@ -67,8 +71,7 @@ interface StudentRecord {
 
 const StudentApplicationsView: React.FC = () => {
   const { t } = useTranslation();
-  const [students, setStudents] = useState<StudentRecord[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedStudent, setSelectedStudent] = useState<StudentRecord | null>(null);
@@ -78,6 +81,32 @@ const StudentApplicationsView: React.FC = () => {
   const [dependents, setDependents] = useState<number>(0);
   const [approvingDocs, setApprovingDocs] = useState<{[key: string]: boolean}>({});
   const [pendingZelleByUser, setPendingZelleByUser] = useState<{ [userId: string]: number }>({});
+
+  // React Query Hooks
+  const studentsQuery = useStudentsQuery();
+  const filterDataQuery = useFilterDataQuery();
+
+  // Extrair dados dos queries
+  const students = studentsQuery.data || [];
+  const loading = studentsQuery.isLoading;
+  const affiliates = filterDataQuery.data?.affiliates || [];
+  const scholarships = filterDataQuery.data?.scholarships || [];
+  const universities = filterDataQuery.data?.universities || [];
+
+  // Função para refresh de todos os dados
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await Promise.all([
+        studentsQuery.refetch(),
+        filterDataQuery.refetch(),
+      ]);
+    } finally {
+      setTimeout(() => {
+        setIsRefreshing(false);
+      }, 300);
+    }
+  };
 
   // Evitar mostrar usuários de teste em produção
   const isProductionHost = typeof window !== 'undefined' && window.location.origin === 'https://matriculausa.com';
@@ -99,6 +128,7 @@ const StudentApplicationsView: React.FC = () => {
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [rejectData, setRejectData] = useState<{applicationId: string, docType: string} | null>(null);
   const [rejectReason, setRejectReason] = useState('');
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
   // Estado para modal de visualização de documentos
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -153,6 +183,9 @@ const StudentApplicationsView: React.FC = () => {
         );
         return { ...prev, all_applications: updatedApps } as any;
       });
+
+      // Invalidar query de students para refetch automático
+      queryClient.invalidateQueries({ queryKey: queryKeys.students.all });
     } finally {
       setApprovingDocs(prev => ({ ...prev, [loadingKey]: false }));
     }
@@ -229,6 +262,9 @@ const StudentApplicationsView: React.FC = () => {
       setShowRejectModal(false);
       setRejectData(null);
       setRejectReason('');
+
+      // Invalidar query de students para refetch automático
+      queryClient.invalidateQueries({ queryKey: queryKeys.students.all });
       
     } catch (error: any) {
       console.error('Erro ao rejeitar documento:', error);
@@ -258,10 +294,7 @@ const StudentApplicationsView: React.FC = () => {
   const [endDate, setEndDate] = useState<dayjs.Dayjs | null>(null);
   const [onlyPaidSelectionFee, setOnlyPaidSelectionFee] = useState(false);
   
-  // Dados para os filtros
-  const [affiliates, setAffiliates] = useState<any[]>([]);
-  const [scholarships, setScholarships] = useState<any[]>([]);
-  const [universities, setUniversities] = useState<any[]>([]);
+  // Dados para os filtros - agora vêm do React Query (filterDataQuery)
 
   // Chave para localStorage
   const FILTERS_STORAGE_KEY = 'admin_student_filters';
@@ -327,8 +360,7 @@ const StudentApplicationsView: React.FC = () => {
   useEffect(() => {
     // Carregar filtros salvos primeiro
     loadFiltersFromStorage();
-    fetchStudents();
-    fetchFilterData();
+    // fetchStudents e fetchFilterData removidos - agora usando React Query hooks
   }, []);
 
   // Carregar pagamentos Zelle pendentes para os estudantes listados
@@ -408,244 +440,8 @@ const StudentApplicationsView: React.FC = () => {
     }
   };
 
-  const fetchFilterData = async () => {
-    try {
-      // Buscar usuários com role affiliate_admin da tabela user_profiles
-      const { data: affiliateAdminsData, error: affiliateAdminsError } = await supabase
-        .from('user_profiles')
-        .select('user_id, full_name, email')
-        .eq('role', 'affiliate_admin')
-        .eq('status', 'active')
-        .order('created_at', { ascending: false });
-      
-      if (affiliateAdminsError) {
-        console.error('Error loading affiliate admins:', affiliateAdminsError);
-      } else if (affiliateAdminsData) {
-        console.log('🔍 DEBUG: Found affiliate admins:', affiliateAdminsData);
-        
-        // Para cada affiliate admin, buscar os sellers associados
-        const affiliatesWithSellers = await Promise.all(
-          affiliateAdminsData.map(async (admin) => {
-            // Primeiro buscar o affiliate_admin_id na tabela affiliate_admins
-            const { data: affiliateAdminData } = await supabase
-              .from('affiliate_admins')
-              .select('id')
-              .eq('user_id', admin.user_id)
-              .single();
-            
-            let sellers: any[] = [];
-            if (affiliateAdminData) {
-              // Buscar sellers que pertencem a este affiliate admin
-              const { data: sellersData } = await supabase
-                .from('sellers')
-                .select('id, referral_code, name, email')
-                .eq('affiliate_admin_id', affiliateAdminData.id)
-                .eq('is_active', true);
-              
-              sellers = sellersData || [];
-            }
-            
-            // Se não encontrar sellers diretos, buscar por email
-            if (sellers.length === 0) {
-              const { data: sellersByEmail } = await supabase
-                .from('sellers')
-                .select('id, referral_code, name, email')
-                .eq('email', admin.email)
-                .eq('is_active', true);
-              sellers = sellersByEmail || [];
-            }
-            
-            console.log(`🔍 DEBUG: Affiliate ${admin.full_name} has sellers:`, sellers.map(s => s.referral_code));
-            
-            return {
-              id: admin.user_id,
-              user_id: admin.user_id,
-              name: admin.full_name || admin.email,
-              email: admin.email,
-              referral_code: sellers[0]?.referral_code || null,
-              sellers: sellers
-            };
-          })
-        );
-        
-        console.log('🔍 DEBUG: Loaded affiliates with sellers:', affiliatesWithSellers);
-        setAffiliates(affiliatesWithSellers);
-      }
-
-      // Carregar scholarships
-      const { data: scholarshipsData } = await supabase
-        .from('scholarships')
-        .select('id, title, universities!inner(name)')
-        .eq('is_active', true)
-        .order('title', { ascending: true });
-      
-      if (scholarshipsData) {
-        setScholarships(scholarshipsData);
-      }
-
-      // Carregar universities
-      const { data: universitiesData } = await supabase
-        .from('universities')
-        .select('id, name')
-        .eq('is_approved', true)
-        .order('name', { ascending: true });
-      
-      if (universitiesData) {
-        setUniversities(universitiesData);
-      }
-    } catch (error) {
-      console.error('Error loading filter data:', error);
-    }
-  };
-
-  const fetchStudents = async () => {
-    try {
-      // Buscar estudantes com informações de atividade recente
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .select(`
-          id,
-          user_id,
-          full_name,
-          email,
-          created_at,
-          updated_at,
-          has_paid_selection_process_fee,
-          has_paid_i20_control_fee,
-          role,
-          seller_referral_code,
-          scholarship_applications (
-            id,
-            scholarship_id,
-            status,
-            applied_at,
-            is_application_fee_paid,
-            is_scholarship_fee_paid,
-            acceptance_letter_status,
-            payment_status,
-            reviewed_at,
-            reviewed_by,
-            student_process_type,
-            transfer_form_status,
-            documents,
-            updated_at,
-            scholarships (
-              title,
-              universities (
-                name
-              )
-            )
-          )
-        `)
-        .eq('role', 'student')
-        // .eq('has_paid_selection_process_fee', true)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      // Debug: verificar se o campo seller_referral_code está sendo retornado
-      console.log('🔍 DEBUG: Raw students data (first 3):', data?.slice(0, 3).map(s => ({ 
-        name: s.full_name, 
-        email: s.email, 
-        seller_referral_code: s.seller_referral_code 
-      })));
-
-      const formattedData = data?.map((student: any) => {
-        // Cada estudante aparece apenas uma vez na tabela
-        let scholarshipInfo = null;
-        let applicationStatus = null;
-        
-        let lockedApplication = null;
-        
-        if (student.scholarship_applications && student.scholarship_applications.length > 0) {
-          // Priorizar aplicação que teve Application Fee pago, depois enrolled, depois approved
-          lockedApplication = student.scholarship_applications.find((app: any) => app.is_application_fee_paid) ||
-                             student.scholarship_applications.find((app: any) => app.status === 'enrolled') ||
-                             student.scholarship_applications.find((app: any) => app.status === 'approved');
-          
-          // Se há uma aplicação locked, mostrar informações dela no campo scholarship
-          if (lockedApplication) {
-            scholarshipInfo = {
-              title: lockedApplication.scholarships?.title || 'N/A',
-              university: lockedApplication.scholarships?.universities?.name || 'N/A'
-            };
-            applicationStatus = lockedApplication.status;
-          }
-          // Se não há aplicação locked, deixar campo scholarship vazio
-        }
-
-        // Calcular a data de atividade mais recente
-        const getMostRecentActivity = () => {
-          const activities = [];
-          
-          // Data de atualização do perfil
-          if (student.updated_at) {
-            activities.push(new Date(student.updated_at));
-          }
-          
-          // Datas das aplicações
-          if (student.scholarship_applications) {
-            student.scholarship_applications.forEach((app: any) => {
-              if (app.applied_at) activities.push(new Date(app.applied_at));
-              if (app.updated_at) activities.push(new Date(app.updated_at));
-              if (app.reviewed_at) activities.push(new Date(app.reviewed_at));
-            });
-          }
-          
-          // Retornar a data mais recente ou a data de criação se não houver atividades
-          return activities.length > 0 ? new Date(Math.max(...activities.map(d => d.getTime()))) : new Date(student.created_at);
-        };
-
-        const mostRecentActivity = getMostRecentActivity();
-
-        return {
-          student_id: student.id,
-          user_id: student.user_id,
-          student_name: student.full_name || 'N/A',
-          student_email: student.email || 'N/A',
-          student_created_at: student.created_at,
-          has_paid_selection_process_fee: student.has_paid_selection_process_fee || false,
-          has_paid_i20_control_fee: student.has_paid_i20_control_fee || false,
-          seller_referral_code: student.seller_referral_code || null,
-          // Dados da aplicação só aparecem se locked
-          application_id: lockedApplication?.id || null,
-          scholarship_id: lockedApplication?.scholarship_id || null,
-          status: applicationStatus,
-          application_status: applicationStatus, // Adicionar campo para compatibilidade
-          applied_at: lockedApplication?.applied_at || null,
-          is_application_fee_paid: lockedApplication?.is_application_fee_paid || false,
-          is_scholarship_fee_paid: lockedApplication?.is_scholarship_fee_paid || false,
-          acceptance_letter_status: lockedApplication?.acceptance_letter_status || null,
-          payment_status: lockedApplication?.payment_status || null,
-          student_process_type: lockedApplication?.student_process_type || null,
-          transfer_form_status: lockedApplication?.transfer_form_status || null,
-          scholarship_title: scholarshipInfo ? scholarshipInfo.title : null,
-          university_name: scholarshipInfo ? scholarshipInfo.university : null,
-          reviewed_at: lockedApplication?.reviewed_at || null,
-          reviewed_by: lockedApplication?.reviewed_by || null,
-          is_locked: !!lockedApplication,
-          total_applications: student.scholarship_applications ? student.scholarship_applications.length : 0,
-          // Guardar todas as aplicações para o modal
-          all_applications: student.scholarship_applications || [],
-          // Campo para ordenação por atividade recente
-          most_recent_activity: mostRecentActivity
-        };
-      }) || [];
-
-      // Ordenar por atividade recente (mais recente primeiro)
-      formattedData.sort((a, b) => {
-        const dateA = a.most_recent_activity || new Date(a.student_created_at);
-        const dateB = b.most_recent_activity || new Date(b.student_created_at);
-        return new Date(dateB).getTime() - new Date(dateA).getTime();
-      });
-
-      setStudents(formattedData);
-    } catch (error) {
-      console.error('Error fetching students:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Funções fetchStudents e fetchFilterData removidas - agora usando React Query hooks
+  // useStudentsQuery e useFilterDataQuery fazem o trabalho
 
   const getStepStatus = (student: StudentRecord, step: string) => {
     switch (step) {
@@ -978,6 +774,11 @@ const StudentApplicationsView: React.FC = () => {
           <span className="text-sm text-gray-500">
             {filteredStudents.length} students found
           </span>
+          <RefreshButton
+            onClick={handleRefresh}
+            isRefreshing={isRefreshing}
+            title="Refresh student data"
+          />
         </div>
       </div>
 
