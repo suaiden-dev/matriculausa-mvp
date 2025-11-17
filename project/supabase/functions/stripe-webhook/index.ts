@@ -1219,11 +1219,14 @@ async function handleCheckoutSessionCompleted(session, stripe) {
         const { data: usedCode, error: codeError } = await supabase.from('used_referral_codes').select('referrer_id, affiliate_code').eq('user_id', userId).single();
         if (!codeError && usedCode) {
           console.log('[FATURAMENTO] Registrando scholarship_fee para faturamento do seller:', usedCode.referrer_id);
+          // Usar valor base do metadata (sem markup) para comissões, se disponível
+          const baseAmount = metadata.base_amount ? Number(metadata.base_amount) : (amount_total ? amount_total / 100 : 0);
+          console.log('[FATURAMENTO] Valor base usado para comissão:', baseAmount, '(gross:', amount_total ? amount_total / 100 : 0, ')');
           const { error: upsertRefError } = await supabase.from('affiliate_referrals').upsert({
             referrer_id: usedCode.referrer_id,
             referred_id: userId,
             affiliate_code: usedCode.affiliate_code,
-            payment_amount: Number(amount_total ? amount_total / 100 : 0),
+            payment_amount: baseAmount, // Usar valor base, não o valor com markup
             credits_earned: 0,
             status: 'completed',
             payment_session_id: session.id,

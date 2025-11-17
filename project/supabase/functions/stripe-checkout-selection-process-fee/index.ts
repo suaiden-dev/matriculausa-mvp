@@ -2,6 +2,7 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import Stripe from 'npm:stripe@17.7.0';
 import { createClient } from 'npm:@supabase/supabase-js@2.49.1';
 import { getStripeConfig } from '../stripe-config.ts';
+import { calculateCardAmountWithFees, calculatePIXAmountWithFees } from '../utils/stripe-fee-calculator.ts';
 
 // O Stripe fará a conversão de moeda automaticamente
 // quando payment_method_types incluir 'pix' e a moeda for USD
@@ -210,7 +211,45 @@ Deno.serve(async (req) => {
 
     // Se o frontend enviou um amount específico (incluindo dependentes), usar esse valor
     if (amount && typeof amount === 'number' && amount > 0) {
-      const finalAmount = Math.round(amount * 100); // Converter para centavos
+      // Valor base (sem markup) - usado para comissões
+      const baseAmount = amount;
+      
+      // Verificar se deve aplicar markup (não aplicar em produção por padrão)
+      const enableMarkupEnv = Deno.env.get('ENABLE_STRIPE_FEE_MARKUP');
+      const shouldApplyMarkup = enableMarkupEnv === 'true' 
+        ? true 
+        : enableMarkupEnv === 'false' 
+          ? false 
+          : !config.environment.isProduction; // Se não definido, usar detecção automática
+      
+      // Calcular valor com ou sem markup de taxas do Stripe
+      let grossAmountInCents: number;
+      if (shouldApplyMarkup) {
+        if (payment_method === 'pix') {
+          // Para PIX: calcular markup considerando taxa de câmbio
+          grossAmountInCents = calculatePIXAmountWithFees(baseAmount, exchangeRate);
+        } else {
+          // Para cartão: calcular markup
+          grossAmountInCents = calculateCardAmountWithFees(baseAmount);
+        }
+        console.log('[stripe-checkout-selection-process-fee] ✅ Markup ATIVADO (ambiente:', config.environment.environment, ')');
+      } else {
+        // Sem markup: usar valor original
+        if (payment_method === 'pix') {
+          grossAmountInCents = Math.round(baseAmount * exchangeRate * 100);
+        } else {
+          grossAmountInCents = Math.round(baseAmount * 100);
+        }
+        console.log('[stripe-checkout-selection-process-fee] ⚠️ Markup DESATIVADO (ambiente:', config.environment.environment, ')');
+      }
+      
+      // Adicionar valores base e gross ao metadata para uso em comissões
+      sessionMetadata.base_amount = baseAmount.toString();
+      sessionMetadata.gross_amount = (grossAmountInCents / 100).toString();
+      sessionMetadata.fee_type = shouldApplyMarkup ? 'stripe_processing' : 'none';
+      sessionMetadata.fee_amount = shouldApplyMarkup ? ((grossAmountInCents / 100) - baseAmount).toString() : '0';
+      sessionMetadata.markup_enabled = shouldApplyMarkup.toString();
+      
       sessionConfig.line_items = [
         {
           price_data: {
@@ -219,19 +258,58 @@ Deno.serve(async (req) => {
               name: 'Selection Process Fee',
               description: userPackageFees ? `Selection Process Fee - ${userPackageFees.package_name}` : 'Selection Process Fee',
             },
-            unit_amount: payment_method === 'pix' ? Math.round(finalAmount * exchangeRate) : finalAmount, // Conversão manual para PIX
+            unit_amount: grossAmountInCents,
           },
           quantity: 1,
         },
       ];
       console.log('[stripe-checkout-selection-process-fee] 💰 USANDO VALOR ENVIADO PELO FRONTEND');
-      console.log('[stripe-checkout-selection-process-fee] 💰 Valor enviado:', amount);
-      console.log('[stripe-checkout-selection-process-fee] 💰 Valor em centavos:', finalAmount);
+      console.log('[stripe-checkout-selection-process-fee] 💰 Valor base (para comissões):', baseAmount);
+      console.log('[stripe-checkout-selection-process-fee] 💰 Valor final (cobrado do aluno):', grossAmountInCents / 100);
+      console.log('[stripe-checkout-selection-process-fee] 💰 Valor em centavos:', grossAmountInCents);
       console.log('[stripe-checkout-selection-process-fee] 💰 Inclui dependentes: SIM');
     }
     // Se o usuário tem pacote mas não foi enviado amount, usar preço dinâmico do pacote
     else if (userPackageFees) {
-      const dynamicAmount = Math.round(userPackageFees.selection_process_fee * 100); // Converter para centavos
+      // Valor base (sem markup) - usado para comissões
+      const baseAmount = userPackageFees.selection_process_fee;
+      
+      // Verificar se deve aplicar markup (não aplicar em produção por padrão)
+      const enableMarkupEnv = Deno.env.get('ENABLE_STRIPE_FEE_MARKUP');
+      const shouldApplyMarkup = enableMarkupEnv === 'true' 
+        ? true 
+        : enableMarkupEnv === 'false' 
+          ? false 
+          : !config.environment.isProduction; // Se não definido, usar detecção automática
+      
+      // Calcular valor com ou sem markup de taxas do Stripe
+      let grossAmountInCents: number;
+      if (shouldApplyMarkup) {
+        if (payment_method === 'pix') {
+          // Para PIX: calcular markup considerando taxa de câmbio
+          grossAmountInCents = calculatePIXAmountWithFees(baseAmount, exchangeRate);
+        } else {
+          // Para cartão: calcular markup
+          grossAmountInCents = calculateCardAmountWithFees(baseAmount);
+        }
+        console.log('[stripe-checkout-selection-process-fee] ✅ Markup ATIVADO (ambiente:', config.environment.environment, ')');
+      } else {
+        // Sem markup: usar valor original
+        if (payment_method === 'pix') {
+          grossAmountInCents = Math.round(baseAmount * exchangeRate * 100);
+        } else {
+          grossAmountInCents = Math.round(baseAmount * 100);
+        }
+        console.log('[stripe-checkout-selection-process-fee] ⚠️ Markup DESATIVADO (ambiente:', config.environment.environment, ')');
+      }
+      
+      // Adicionar valores base e gross ao metadata para uso em comissões
+      sessionMetadata.base_amount = baseAmount.toString();
+      sessionMetadata.gross_amount = (grossAmountInCents / 100).toString();
+      sessionMetadata.fee_type = shouldApplyMarkup ? 'stripe_processing' : 'none';
+      sessionMetadata.fee_amount = shouldApplyMarkup ? ((grossAmountInCents / 100) - baseAmount).toString() : '0';
+      sessionMetadata.markup_enabled = shouldApplyMarkup.toString();
+      
       sessionConfig.line_items = [
         {
           price_data: {
@@ -240,14 +318,15 @@ Deno.serve(async (req) => {
               name: 'Selection Process Fee',
               description: `Selection Process Fee - ${userPackageFees.package_name}`,
             },
-            unit_amount: payment_method === 'pix' ? Math.round(dynamicAmount * exchangeRate) : dynamicAmount, // Conversão manual para PIX
+            unit_amount: grossAmountInCents,
           },
           quantity: 1,
         },
       ];
       console.log('[stripe-checkout-selection-process-fee] 💰 USANDO PREÇO DINÂMICO DO PACOTE');
-      console.log('[stripe-checkout-selection-process-fee] 💰 Valor do pacote:', userPackageFees.selection_process_fee);
-      console.log('[stripe-checkout-selection-process-fee] 💰 Valor em centavos:', dynamicAmount);
+      console.log('[stripe-checkout-selection-process-fee] 💰 Valor base (para comissões):', baseAmount);
+      console.log('[stripe-checkout-selection-process-fee] 💰 Valor final (cobrado do aluno):', grossAmountInCents / 100);
+      console.log('[stripe-checkout-selection-process-fee] 💰 Valor em centavos:', grossAmountInCents);
       console.log('[stripe-checkout-selection-process-fee] 💰 Nome do pacote:', userPackageFees.package_name);
       console.log('[stripe-checkout-selection-process-fee] ⚠️ ATENÇÃO: Não inclui dependentes - usar amount do frontend');
     } else {
