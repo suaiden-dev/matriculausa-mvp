@@ -2246,6 +2246,13 @@
         "description": "Pay via Zelle transfer",
         "descriptionDetailed": "Pay via Zelle and upload the receipt."
       }
+    },
+    "includesProcessingFees": "* Incluye tarifas de procesamiento",
+    "pix": {
+      "baseAmount": "Valor base",
+      "iofFee": "Tarifa de IOF",
+      "totalDue": "Total a pagar",
+      "iofNote": "Esta es una compra internacional. IOF del 3,5% será agregado por Stripe."
     }
   },
   "preCheckoutModal": {
