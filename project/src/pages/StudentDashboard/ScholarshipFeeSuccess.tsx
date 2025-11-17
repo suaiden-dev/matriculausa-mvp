@@ -12,6 +12,8 @@ const ScholarshipFeeSuccess: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [applicationId, setApplicationId] = useState<string | null>(null);
   const [showAnimation, setShowAnimation] = useState<boolean>(false);
+  const [paidAmount, setPaidAmount] = useState<number | null>(null);
+  const [promotionalCoupon, setPromotionalCoupon] = useState<string | null>(null);
   const navigate = useNavigate();
   const { userProfile } = useAuth();
 
@@ -48,6 +50,24 @@ const ScholarshipFeeSuccess: React.FC = () => {
           navigate('/student/dashboard/scholarship-fee-error');
           return;
         }
+        
+        // Extrair informações do pagamento do resultado
+        // Prioridade: final_amount (já em USD) > amount_paid (convertido) > fallback 900
+        if (result.final_amount) {
+          setPaidAmount(result.final_amount);
+        } else if (result.amount_paid) {
+          setPaidAmount(result.amount_paid);
+        }
+        if (result.promotional_coupon) {
+          setPromotionalCoupon(result.promotional_coupon);
+          
+          // Limpar cupom do localStorage após pagamento bem-sucedido
+          localStorage.removeItem('__promotional_coupon_scholarship_fee');
+          console.log('[ScholarshipFeeSuccess] Cupom promocional removido do localStorage após pagamento bem-sucedido');
+        }
+        
+        console.log('[ScholarshipFeeSuccess] Valor pago:', result.final_amount || result.amount_paid);
+        console.log('[ScholarshipFeeSuccess] Cupom promocional:', result.promotional_coupon);
         let appId = null;
         if (Array.isArray(result.application_ids) && result.application_ids.length > 0) {
           appId = result.application_ids[result.application_ids.length - 1];
@@ -179,12 +199,17 @@ const ScholarshipFeeSuccess: React.FC = () => {
 
   // Se deve mostrar animação, usar o overlay
   if (showAnimation && !loading && !error) {
+    const displayAmount = paidAmount ? paidAmount.toFixed(2) : '900.00';
+    const messageText = promotionalCoupon 
+      ? `${t('successPages.common.paymentProcessedAmount', { amount: displayAmount })} ${t('successPages.scholarshipFee.message')} (Cupom ${promotionalCoupon} aplicado)`
+      : `${t('successPages.common.paymentProcessedAmount', { amount: displayAmount })} ${t('successPages.scholarshipFee.message')}`;
+    
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center bg-white px-4 relative">
         <PaymentSuccessOverlay
           isSuccess={true}
           title={t('successPages.scholarshipFee.title')}
-          message={`${t('successPages.common.paymentProcessedAmount', { amount: '900.00' })} ${t('successPages.scholarshipFee.message')}`}
+          message={messageText}
         />
       </div>
     );

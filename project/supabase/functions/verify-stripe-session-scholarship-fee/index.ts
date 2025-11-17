@@ -490,10 +490,34 @@ Deno.serve(async (req)=>{
       // Limpa carrinho (opcional)
       const { error: cartError } = await supabase.from('user_cart').delete().eq('user_id', userId);
       if (cartError) throw new Error(`Failed to clear user_cart: ${cartError.message}`);
+      
+      // Retornar informações do pagamento para exibição na página de sucesso
+      // amount_total está em centavos da moeda da sessão (USD ou BRL)
+      const amountPaid = session.amount_total ? session.amount_total / 100 : null;
+      const currency = session.currency?.toUpperCase() || 'USD';
+      const promotionalCoupon = session.metadata?.promotional_coupon || null;
+      const originalAmount = session.metadata?.original_amount ? parseFloat(session.metadata.original_amount) : null;
+      const finalAmount = session.metadata?.final_amount ? parseFloat(session.metadata.final_amount) : null;
+      
+      // Se for PIX (BRL), converter para USD usando a taxa de câmbio do metadata
+      let amountPaidUSD = amountPaid;
+      if (currency === 'BRL' && session.metadata?.exchange_rate) {
+        const exchangeRate = parseFloat(session.metadata.exchange_rate);
+        if (exchangeRate > 0) {
+          amountPaidUSD = amountPaid / exchangeRate;
+        }
+      }
+      
       return corsResponse({
         status: 'complete',
         message: 'Session verified and processed successfully.',
-        application_ids: updatedApps?.map((app)=>app.id) || []
+        application_ids: updatedApps?.map((app)=>app.id) || [],
+        amount_paid: amountPaidUSD || amountPaid, // Retornar em USD para exibição
+        amount_paid_original: amountPaid, // Valor original na moeda da sessão
+        currency: currency,
+        promotional_coupon: promotionalCoupon,
+        original_amount: originalAmount,
+        final_amount: finalAmount
       }, 200);
     } else {
       console.log('Session not paid or complete.');
