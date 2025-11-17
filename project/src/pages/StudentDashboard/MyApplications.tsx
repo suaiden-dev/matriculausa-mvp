@@ -1366,11 +1366,11 @@ const MyApplications: React.FC = () => {
                   {/* Header Section Compacto */}
                   <div className="mb-4">
                     {/* Linha 1: Título e Status Badge */}
-                    <div className="flex justify-between items-start gap-2 mb-2">
-                      <h2 className="font-bold text-gray-900 text-base leading-tight flex-1 pr-3">
-                        {scholarship.title}
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 mb-2">
+                      <h2 className="font-bold text-gray-900 text-base leading-tight flex-1 min-w-0 pr-0 sm:pr-3">
+                        <span className="line-clamp-2">{scholarship.title}</span>
                       </h2>
-                      <span className={`inline-flex items-center px-2 py-1 rounded-lg text-xs font-bold border flex-shrink-0 ${getStatusColor(application.status === 'enrolled' ? 'approved' : application.status)}`}>
+                      <span className={`inline-flex items-center px-2 sm:px-2.5 py-1 rounded-lg text-[10px] sm:text-xs font-bold border flex-shrink-0 self-start sm:self-auto ${getStatusColor(application.status === 'enrolled' ? 'approved' : application.status)}`}>
                         <Icon className="h-3 w-3 mr-1 flex-shrink-0" />
                         <span className="whitespace-nowrap">{application.status === 'approved' || application.status === 'enrolled' ? t('studentDashboard.myApplications.statusLabels.approved') : getStatusLabel(application.status)}</span>
                       </span>
@@ -1626,13 +1626,13 @@ const MyApplications: React.FC = () => {
                             {/* Compact Mobile Header */}
                             <div className="mb-4">
                               {/* Line 1: Title + Status */}
-                              <div className="flex items-start justify-between mb-2">
-                                <h3 className="font-bold text-slate-900 text-lg group-hover:text-blue-600 transition-colors leading-tight flex-1 pr-3">
-                                  {scholarship.title}
+                              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-2">
+                                <h3 className="font-bold text-slate-900 text-base sm:text-lg group-hover:text-blue-600 transition-colors leading-tight flex-1 min-w-0 pr-0 sm:pr-3">
+                                  <span className="line-clamp-2">{scholarship.title}</span>
                                 </h3>
-                                <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold border ${getStatusColor(application.status)} flex-shrink-0`}>
-                                  <Icon className="h-3 w-3 mr-1" />
-                                  {getStatusLabel(application.status)}
+                                <span className={`inline-flex items-center px-2 sm:px-2.5 py-1 rounded-lg text-[10px] sm:text-xs font-bold border ${getStatusColor(application.status)} flex-shrink-0 self-start sm:self-auto`}>
+                                  <Icon className="h-3 w-3 mr-1 flex-shrink-0" />
+                                  <span className="whitespace-nowrap">{getStatusLabel(application.status)}</span>
                                 </span>
                               </div>
                               

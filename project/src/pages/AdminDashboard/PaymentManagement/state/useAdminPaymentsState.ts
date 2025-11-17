@@ -32,7 +32,20 @@ export function useAdminPaymentsState(): AdminPaymentsStateReturn {
 	const [filters, setFiltersState] = useState<AdminPaymentsFilters>({});
 	const [loading, setLoading] = useState<boolean>(false);
 	const [currentPage, setCurrentPage] = useState<number>(1);
-	const [pageSize, setPageSize] = useState<number>(25);
+	// Inicializar com valor do localStorage ou 10 como padrão
+	const getInitialPageSize = (): number => {
+		if (typeof window !== 'undefined') {
+			const saved = localStorage.getItem('payment-items-per-page');
+			if (saved) {
+				const items = Number(saved);
+				if ([10, 20, 50, 100].includes(items)) {
+					return items;
+				}
+			}
+		}
+		return 10; // Valor padrão
+	};
+	const [pageSize, setPageSize] = useState<number>(getInitialPageSize());
 	const [selectedPayments, setSelectedPayments] = useState<Set<string>>(new Set());
 	const [selectAll, setSelectAll] = useState<boolean>(false);
 	const [showDetails, setShowDetails] = useState<boolean>(false);

@@ -1964,17 +1964,17 @@
         "howToProceed": "Como Proceder",
         "documentRequests": {
           "title": "Verificar Solicitações de Documentos",
-          "description": "Agora que você chegou a esta etapa, deve revisar e fazer upload dos documentos solicitados pela sua universidade para continuar seu processo. Após isso, a escola poderá analisar sua aplicação e enviar sua carta de aceitação.",
+          "description": "Faça upload dos documentos solicitados pela universidade para continuar seu processo.",
           "button": "Ir para Solicitações de Documentos"
         },
         "applicationDetails": {
           "title": "Ver Detalhes da Aplicação",
-          "description": "Veja todas as informações da sua bolsa, documentos enviados e seu status atual (aguardando carta de aceitação, matriculado, etc). Mantenha-se atualizado com seu processo a qualquer momento.",
+          "description": "Confira informações da bolsa, documentos e status atual da sua aplicação.",
           "button": "Ver Detalhes da Aplicação"
         },
         "i20ControlFee": {
           "title": "Pagar Taxa de Controle I-20",
-          "description": "Após receber sua carta de aceitação, você poderá pagar a Taxa de Controle I-20. Esta taxa é necessária para a emissão do seu documento I-20, essencial para seu visto F-1. Você tem 10 dias para pagar após ser liberada.",
+          "description": "Pague a Taxa de Controle I-20 para solicitar seu documento oficial. Prazo: 10 dias após carta de aceitação.",
           "button": "Pagar Taxa de Controle I-20"
         }
       },
@@ -2090,12 +2090,18 @@
       },
       "i20ControlFee": {
         "title": "Taxa de Controle I-20",
-        "description": "A <strong>Taxa de Controle I-20</strong> é uma taxa obrigatória necessária para a emissão e gestão do seu documento I-20, que é essencial para o processo de visto de estudante F-1 nos Estados Unidos.",
-        "deadlineInfo": "Você tem até <span class=\"text-blue-700\">10 dias</span> após pagar sua Taxa da Bolsa para pagar a Taxa de Controle I-20.",
-        "timerInfo": "O cronômetro abaixo mostra exatamente quanto tempo você tem para completar este pagamento.",
-        "paymentInfo": "Pagar esta taxa garante que seu I-20 será processado e enviado corretamente pela universidade. Se você tiver dúvidas sobre este processo, entre em contato com o suporte.",
+        "description": "O I-20 é o Certificado de Elegibilidade oficial emitido pela universidade que comprova seu status de estudante nos EUA.",
+        "deadlineInfo": "Prazo: 10 dias após pagamento da Taxa da Bolsa.",
+        "timerInfo": "Tempo restante para pagamento:",
+        "paymentInfo": "Garante processamento correto do seu I-20 pela universidade.",
         "payButton": "Pagar Taxa de Controle I-20",
         "processing": "Processando...",
+        "headerTitle": "Taxa de Controle I-20",
+        "headerSubtitle": "Certificado oficial de elegibilidade estudantil",
+        "valueLabel": "Valor",
+        "whatIsThisFeeTitle": "O que é esta taxa?",
+        "contactUrgently": "Entre em contato urgentemente",
+        "timeRemaining": "Tempo restante:",
         "dueDate": "Data de vencimento:",
         "deadlineExpired": "O prazo para pagar a Taxa de Controle I-20 expirou!",
         "paymentSuccess": {

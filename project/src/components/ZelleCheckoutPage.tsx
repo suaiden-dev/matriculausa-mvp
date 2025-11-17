@@ -1142,9 +1142,6 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
             <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-                    <Upload className="w-5 h-5 text-white" />
-                  </div>
                   <div>
                     <Dialog.Title className="text-xl font-bold">
                       {t('zelleCheckout.receiptType.title')}

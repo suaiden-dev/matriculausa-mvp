@@ -1829,19 +1829,19 @@
         "scholarship": "Beca:",
         "howToProceed": "Cómo Proceder",
         "documentRequests": {
-          "title": "Solicitudes de Documentos",
-          "description": "Sube todos los documentos requeridos para completar tu solicitud.",
-          "button": "Ver Documentos"
+          "title": "Verificar Solicitudes de Documentos",
+          "description": "Sube los documentos solicitados por la universidad para continuar tu proceso.",
+          "button": "Ir a Solicitudes de Documentos"
         },
         "applicationDetails": {
-          "title": "Detalles de la Solicitud",
-          "description": "Revisa la información de tu solicitud y el estado de tus documentos.",
-          "button": "Ver Detalles"
+          "title": "Ver Detalles de la Aplicación",
+          "description": "Consulta información de la beca, documentos y estado actual de tu solicitud.",
+          "button": "Ver Detalles de la Aplicación"
         },
         "i20ControlFee": {
-          "title": "Tarifa de Control I-20",
-          "description": "Paga la tarifa de control I-20 para procesar tu documento I-20.",
-          "button": "Pagar Tarifa"
+          "title": "Pagar Tarifa de Control I-20",
+          "description": "Paga la Tarifa de Control I-20 para solicitar tu documento oficial. Plazo: 10 días después de carta de aceptación.",
+          "button": "Pagar Tarifa de Control I-20"
         }
       },
       "details": {
@@ -1886,9 +1886,18 @@
       },
       "i20ControlFee": {
         "title": "Control Fee I-20",
-        "description": "Esta tarifa es esencial para el procesamiento y emisión de tu documento I-20, requerido para tu visa de estudiante F-1.",
+        "description": "El I-20 es el Certificado de Elegibilidad oficial emitido por la universidad que comprueba tu estatus de estudiante en EUA.",
+        "deadlineInfo": "Plazo: 10 días después del pago de Tarifa de Beca.",
+        "timerInfo": "Tiempo restante para el pago:",
+        "paymentInfo": "Garantiza el procesamiento correcto de tu I-20 por la universidad.",
         "processing": "Procesando pago...",
         "payButton": "Pagar Tarifa I-20",
+        "headerTitle": "Tarifa de Control I-20",
+        "headerSubtitle": "Certificado oficial de elegibilidad estudiantil",
+        "valueLabel": "Importe",
+        "whatIsThisFeeTitle": "¿Qué es esta tarifa?",
+        "contactUrgently": "Contacta urgentemente",
+        "timeRemaining": "Tiempo restante:",
         "status": "Estado:",
         "completed": "Completado",
         "pending": "Pendiente",

@@ -1888,17 +1888,17 @@
         "howToProceed": "How to Proceed",
         "documentRequests": {
           "title": "Check Document Requests",
-          "description": "Now that you've reached this stage, you must review and upload the documents requested by your university to continue your process. After this, the school will be able to analyze your application and send your acceptance letter.",
+          "description": "Upload the documents requested by the university to continue your process.",
           "button": "Go to Document Requests"
         },
         "applicationDetails": {
           "title": "View Application Details",
-          "description": "See all your scholarship information, uploaded documents, and your current status (waiting for acceptance letter, enrolled, etc). Stay up to date with your process at any time.",
+          "description": "Check scholarship information, documents, and current application status.",
           "button": "View Application Details"
         },
         "i20ControlFee": {
           "title": "Pay I-20 Control Fee",
-          "description": "After receiving your acceptance letter, you will be able to pay the I-20 Control Fee. This fee is required for the issuance of your I-20 document, essential for your F-1 visa. You have 10 days to pay after it is released.",
+          "description": "Pay the I-20 Control Fee to request your official document. Deadline: 10 days after acceptance letter.",
           "button": "Pay I-20 Control Fee"
         }
       },
@@ -2014,12 +2014,18 @@
       },
       "i20ControlFee": {
         "title": "I-20 Control Fee",
-        "description": "The <strong>I-20 Control Fee</strong> is a mandatory fee required for the issuance and management of your I-20 document, which is essential for the F-1 student visa process in the United States.",
-        "deadlineInfo": "You have up to <span class=\"text-blue-700\">10 days</span> after paying your Scholarship Fee to pay the I-20 Control Fee.",
-        "timerInfo": "The timer below shows exactly how much time you have left to complete this payment.",
-        "paymentInfo": "Paying this fee ensures that your I-20 will be processed and sent correctly by the university. If you have any questions about this process, please contact support.",
+        "description": "The I-20 is the official Certificate of Eligibility issued by the university that proves your student status in the USA.",
+        "deadlineInfo": "Deadline: 10 days after Scholarship Fee payment.",
+        "timerInfo": "Time remaining for payment:",
+        "paymentInfo": "Ensures proper I-20 processing by the university.",
         "payButton": "Pay I-20 Control Fee",
         "processing": "Processing...",
+        "headerTitle": "I-20 Control Fee",
+        "headerSubtitle": "Official student eligibility certificate",
+        "valueLabel": "Amount",
+        "whatIsThisFeeTitle": "What is this fee?",
+        "contactUrgently": "Contact us urgently",
+        "timeRemaining": "Time remaining:",
         "dueDate": "Due date:",
         "deadlineExpired": "The deadline to pay the I-20 Control Fee has expired!",
         "paymentSuccess": {
