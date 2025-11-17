@@ -2530,6 +2530,13 @@
           "description": "Pague via transferência Zelle",
           "descriptionDetailed": "Pague via Zelle e envie o comprovante. Verificação manual necessária."
         }
+      },
+      "includesProcessingFees": "* Inclui taxas de processamento",
+      "pix": {
+        "baseAmount": "Valor base",
+        "iofFee": "Tarifa de IOF",
+        "totalDue": "Total devido",
+        "iofNote": "Esta é uma compra internacional. IOF de 3,5% será adicionado pelo Stripe."
       }
     }
   },

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Dialog } from '@headlessui/react';
 import { 
   Drawer,
@@ -16,6 +16,7 @@ import { useFeeConfig } from '../hooks/useFeeConfig';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from 'react-i18next';
 import { convertCentsToDollars } from '../utils/currency';
+import { calculateCardAmountWithFees, calculatePIXAmountWithFees, getExchangeRate } from '../utils/stripeFeeCalculator';
 
 // Componente SVG para o logo do PIX
 const PixIcon = ({ className }: { className?: string }) => (
@@ -64,6 +65,7 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
   const { t } = useTranslation();
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [spinnerVisible, setSpinnerVisible] = useState<boolean>(false);
+  const [exchangeRate, setExchangeRate] = useState<number | null>(null);
   
   // Hook para detectar se é mobile
   const [isMobile, setIsMobile] = useState(false);
@@ -106,7 +108,7 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
   }, [isOpen]);
 
   // Valor dinâmico baseado no tipo de taxa
-  const getFeeAmount = () => {
+  const feeAmount = useMemo(() => {
     if (feeType === 'scholarship_fee') {
       // Prioridade: 1) Valor da bolsa, 2) Override do usuário, 3) Valor padrão do config
       const scholarshipFeeFromConfig = getFeeAmountFromConfig('scholarship_fee');
@@ -132,10 +134,31 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
       : applicationFeeAmount;
 
     return final;
-  };
+  }, [feeType, scholarship, getFeeAmountFromConfig, userProfile]);
 
-  const feeAmount = getFeeAmount();
   const universityName = scholarship.universities?.name || scholarship.university_name || 'University';
+  
+  // Buscar taxa de câmbio para PIX
+  useEffect(() => {
+    if (onPixCheckout && feeAmount > 0) {
+      getExchangeRate().then(rate => {
+        setExchangeRate(rate);
+        console.log('[ScholarshipConfirmationModal] Taxa de câmbio obtida:', rate);
+      }).catch(error => {
+        console.error('[ScholarshipConfirmationModal] Erro ao buscar taxa de câmbio:', error);
+        setExchangeRate(5.6);
+      });
+    }
+  }, [onPixCheckout, feeAmount]);
+  
+  // Calcular valores com markup de taxas do Stripe
+  const cardAmountWithFees = useMemo(() => {
+    return feeAmount > 0 ? calculateCardAmountWithFees(feeAmount) : 0;
+  }, [feeAmount]);
+  
+  const pixAmountWithFees = useMemo(() => {
+    return feeAmount > 0 && exchangeRate ? calculatePIXAmountWithFees(feeAmount, exchangeRate) : 0;
+  }, [feeAmount, exchangeRate]);
 
   // Títulos e textos dinâmicos baseados no tipo de taxa
   const getModalContent = () => {
@@ -198,6 +221,37 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
   };
 
   const canProceed = selectedPaymentMethod !== null;
+
+  // Calcular valor dinâmico do botão baseado no método de pagamento selecionado
+  const getButtonAmount = () => {
+    if (!selectedPaymentMethod) return feeAmount;
+    
+    if (selectedPaymentMethod === 'stripe') {
+      return cardAmountWithFees;
+    } else if (selectedPaymentMethod === 'pix') {
+      return pixAmountWithFees;
+    } else {
+      return feeAmount; // Zelle
+    }
+  };
+
+  const buttonAmount = getButtonAmount();
+
+  // Função para obter o texto do botão com valor dinâmico
+  const getButtonText = () => {
+    if (feeType === 'scholarship_fee') {
+      if (selectedPaymentMethod === 'pix' && exchangeRate) {
+        return t('scholarshipConfirmationModal.scholarshipFee.buttonText', { amount: `R$ ${buttonAmount.toFixed(2)}` });
+      }
+      return t('scholarshipConfirmationModal.scholarshipFee.buttonText', { amount: buttonAmount.toFixed(2) });
+    }
+    
+    // Application Fee
+    if (selectedPaymentMethod === 'pix' && exchangeRate) {
+      return t('scholarshipConfirmationModal.applicationFee.buttonText', { amount: `R$ ${buttonAmount.toFixed(2)}` });
+    }
+    return t('scholarshipConfirmationModal.applicationFee.buttonText', { amount: buttonAmount.toFixed(2) });
+  };
 
   // Componente de conteúdo comum para Drawer e Dialog
   const ModalContent = ({ isInDrawer = false }: { isInDrawer?: boolean }) => (
@@ -296,6 +350,7 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
                 )}
               </div>
               
+              <div className="flex items-center justify-between gap-2 sm:gap-3 min-w-0 flex-1">
               <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                 <div className="p-1.5 sm:p-2 bg-blue-100 rounded-lg flex-shrink-0">
                   <CreditCard className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
@@ -304,6 +359,12 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
                   <div className="font-medium text-gray-900 text-sm sm:text-base">{t('scholarshipConfirmationModal.payment.stripe.title')}</div>
                   <div className="text-xs sm:text-sm text-gray-600">{t('scholarshipConfirmationModal.payment.stripe.description')}</div>
                 </div>
+                </div>
+                {feeAmount > 0 && (
+                  <span className="text-sm font-semibold text-blue-700 whitespace-nowrap">
+                    ${cardAmountWithFees.toFixed(2)}
+                  </span>
+                )}
               </div>
             </label>
 
@@ -327,6 +388,7 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
                 )}
               </div>
               
+              <div className="flex items-center justify-between gap-2 sm:gap-3 min-w-0 flex-1">
               <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                 <div className="p-1.5 sm:p-2 bg-green-100 rounded-lg flex-shrink-0">
                   <ZelleIcon className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -335,6 +397,10 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
                   <div className="font-medium text-gray-900 text-sm sm:text-base">{t('scholarshipConfirmationModal.payment.zelle.title')}</div>
                   <div className="text-xs sm:text-sm text-gray-600">{t('scholarshipConfirmationModal.payment.zelle.description')}</div>
                 </div>
+                </div>
+                <span className="text-sm font-semibold text-blue-700 whitespace-nowrap">
+                  ${feeAmount.toFixed(2)}
+                </span>
               </div>
             </label>
 
@@ -359,6 +425,7 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
                   )}
                 </div>
                 
+                <div className="flex items-center justify-between gap-2 sm:gap-3 min-w-0 flex-1">
                 <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                   <div className="p-1.5 sm:p-2 bg-green-100 rounded-lg flex-shrink-0">
                     <PixIcon className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -367,6 +434,12 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
                     <div className="font-medium text-gray-900 text-sm sm:text-base">{t('scholarshipConfirmationModal.payment.pix.title')}</div>
                     <div className="text-xs sm:text-sm text-gray-600">{t('scholarshipConfirmationModal.payment.pix.description')}</div>
                   </div>
+                  </div>
+                  {feeAmount > 0 && (
+                    <span className="text-sm font-semibold text-blue-700 whitespace-nowrap">
+                      {exchangeRate ? `R$ ${pixAmountWithFees.toFixed(2)}` : '...'}
+                    </span>
+                  )}
                 </div>
               </label>
             )}
@@ -391,7 +464,7 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
                 {t('scholarshipConfirmationModal.loading.processing')}
               </div>
             ) : (
-              modalContent.buttonText
+              getButtonText()
             )}
           </button>
         </DrawerFooter>
@@ -416,7 +489,7 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
                 {t('scholarshipConfirmationModal.loading.processing')}
               </div>
             ) : (
-              modalContent.buttonText
+              getButtonText()
             )}
           </button>
         </div>

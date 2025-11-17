@@ -210,7 +210,7 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
         return productPrice;
     }
   })();
-  
+
   // Terms acceptance states
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
