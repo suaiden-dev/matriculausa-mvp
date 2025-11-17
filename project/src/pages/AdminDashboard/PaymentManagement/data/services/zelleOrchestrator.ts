@@ -14,6 +14,7 @@ type PaymentLike = {
   created_at: string;
   scholarships_ids?: string[];
   scholarship_id?: string | null;
+  metadata?: any; // Metadata do pagamento (inclui dados de cupom promocional)
 };
 
 export async function approveZelleFlow(params: {
@@ -38,7 +39,7 @@ export async function approveZelleFlow(params: {
 
     // Record payment (individual table)
     const approvedAt = payment.admin_approved_at || payment.created_at;
-    await recordIndividualFeePayment(supabase, {
+    const individualFeePaymentResult = await recordIndividualFeePayment(supabase, {
       userId: payment.user_id,
       feeType: 'selection_process',
       amount: payment.amount,
@@ -46,6 +47,41 @@ export async function approveZelleFlow(params: {
       paymentMethod: 'zelle',
       zellePaymentId: payment.id,
     });
+    const individualFeePaymentId = individualFeePaymentResult?.paymentId || null;
+
+    // Registrar uso do cupom promocional se houver
+    if (payment.metadata && typeof payment.metadata === 'object') {
+      const metadata = payment.metadata as any;
+      const promotionalCoupon = metadata.promotional_coupon || null;
+      const promotionalDiscountAmount = metadata.promotional_discount_amount ? parseFloat(metadata.promotional_discount_amount) : null;
+      const originalAmount = metadata.original_amount ? parseFloat(metadata.original_amount) : null;
+      const finalAmount = metadata.final_amount ? parseFloat(metadata.final_amount) : payment.amount;
+      
+      if (promotionalCoupon && promotionalDiscountAmount && originalAmount) {
+        try {
+          await supabase
+            .from('promotional_coupon_usage')
+            .insert({
+              user_id: payment.user_id,
+              coupon_code: promotionalCoupon,
+              fee_type: 'selection_process',
+              payment_id: payment.id,
+              payment_method: 'zelle',
+              original_amount: originalAmount,
+              discount_amount: promotionalDiscountAmount,
+              final_amount: finalAmount,
+              zelle_payment_id: payment.id,
+              individual_fee_payment_id: individualFeePaymentId,
+              metadata: {
+                coupon_id: metadata.promotional_coupon_id || null
+              }
+            });
+          console.log('[Promotional Coupon Usage] ✅ Uso do cupom promocional Selection Process registrado com sucesso!');
+        } catch (couponUsageError) {
+          console.warn('[Promotional Coupon Usage] Warning: Could not record coupon usage:', couponUsageError);
+        }
+      }
+    }
 
     // Resolve dynamic amount from package overrides
     let correctAmount = payment.amount;
@@ -166,7 +202,7 @@ export async function approveZelleFlow(params: {
       .select();
 
     const approvedAt = payment.admin_approved_at || payment.created_at;
-    await recordIndividualFeePayment(supabase, {
+    const individualFeePaymentResult = await recordIndividualFeePayment(supabase, {
       userId: payment.user_id,
       feeType: 'i20_control',
       amount: payment.amount,
@@ -174,6 +210,41 @@ export async function approveZelleFlow(params: {
       paymentMethod: 'zelle',
       zellePaymentId: payment.id,
     });
+    const individualFeePaymentId = individualFeePaymentResult?.paymentId || null;
+
+    // Registrar uso do cupom promocional se houver
+    if (payment.metadata && typeof payment.metadata === 'object') {
+      const metadata = payment.metadata as any;
+      const promotionalCoupon = metadata.promotional_coupon || null;
+      const promotionalDiscountAmount = metadata.promotional_discount_amount ? parseFloat(metadata.promotional_discount_amount) : null;
+      const originalAmount = metadata.original_amount ? parseFloat(metadata.original_amount) : null;
+      const finalAmount = metadata.final_amount ? parseFloat(metadata.final_amount) : payment.amount;
+      
+      if (promotionalCoupon && promotionalDiscountAmount && originalAmount) {
+        try {
+          await supabase
+            .from('promotional_coupon_usage')
+            .insert({
+              user_id: payment.user_id,
+              coupon_code: promotionalCoupon,
+              fee_type: 'i20_control_fee',
+              payment_id: payment.id,
+              payment_method: 'zelle',
+              original_amount: originalAmount,
+              discount_amount: promotionalDiscountAmount,
+              final_amount: finalAmount,
+              zelle_payment_id: payment.id,
+              individual_fee_payment_id: individualFeePaymentId || null,
+              metadata: {
+                coupon_id: metadata.promotional_coupon_id || null
+              }
+            });
+          console.log('[Promotional Coupon Usage] ✅ Uso do cupom promocional I-20 registrado com sucesso!');
+        } catch (couponUsageError) {
+          console.warn('[Promotional Coupon Usage] Warning: Could not record coupon usage:', couponUsageError);
+        }
+      }
+    }
 
     let correctAmount = payment.amount;
     try {
@@ -213,6 +284,53 @@ export async function approveZelleFlow(params: {
   // Application/Scholarship fees logic (applications table updates, logging, billing scholarship)
   if (payment.fee_type === 'application_fee' || payment.fee_type === 'scholarship_fee') {
     if (payment.scholarships_ids && payment.scholarships_ids.length > 0) {
+      // Registrar pagamento na tabela individual_fee_payments
+      const approvedAt = payment.admin_approved_at || payment.created_at;
+      const feeType = payment.fee_type === 'application_fee' ? 'application' : 'scholarship';
+      const individualFeePaymentResult = await recordIndividualFeePayment(supabase, {
+        userId: payment.user_id,
+        feeType: feeType as any,
+        amount: payment.amount,
+        paymentDate: approvedAt,
+        paymentMethod: 'zelle',
+        zellePaymentId: payment.id,
+      });
+      const individualFeePaymentId = individualFeePaymentResult?.paymentId || null;
+
+      // Registrar uso do cupom promocional se houver
+      if (payment.metadata && typeof payment.metadata === 'object') {
+        const metadata = payment.metadata as any;
+        const promotionalCoupon = metadata.promotional_coupon || null;
+        const promotionalDiscountAmount = metadata.promotional_discount_amount ? parseFloat(metadata.promotional_discount_amount) : null;
+        const originalAmount = metadata.original_amount ? parseFloat(metadata.original_amount) : null;
+        const finalAmount = metadata.final_amount ? parseFloat(metadata.final_amount) : payment.amount;
+        
+        if (promotionalCoupon && promotionalDiscountAmount && originalAmount) {
+          try {
+            await supabase
+              .from('promotional_coupon_usage')
+              .insert({
+                user_id: payment.user_id,
+                coupon_code: promotionalCoupon,
+                fee_type: payment.fee_type === 'application_fee' ? 'application_fee' : 'scholarship_fee',
+                payment_id: payment.id,
+                payment_method: 'zelle',
+                original_amount: originalAmount,
+                discount_amount: promotionalDiscountAmount,
+                final_amount: finalAmount,
+                zelle_payment_id: payment.id,
+                individual_fee_payment_id: individualFeePaymentId,
+                metadata: {
+                  coupon_id: metadata.promotional_coupon_id || null
+                }
+              });
+            console.log(`[Promotional Coupon Usage] ✅ Uso do cupom promocional ${payment.fee_type} (com scholarships_ids) registrado com sucesso!`);
+          } catch (couponUsageError) {
+            console.warn('[Promotional Coupon Usage] Warning: Could not record coupon usage:', couponUsageError);
+          }
+        }
+      }
+
       const { data: updateData } = await supabase
         .from('scholarship_applications')
         .update({
@@ -263,7 +381,7 @@ export async function approveZelleFlow(params: {
 
       const approvedAt = payment.admin_approved_at || payment.created_at;
       const feeType = payment.fee_type === 'application_fee' ? 'application' : 'scholarship';
-      await recordIndividualFeePayment(supabase, {
+      const individualFeePaymentResult = await recordIndividualFeePayment(supabase, {
         userId: payment.user_id,
         feeType: feeType as any,
         amount: payment.amount,
@@ -271,6 +389,41 @@ export async function approveZelleFlow(params: {
         paymentMethod: 'zelle',
         zellePaymentId: payment.id,
       });
+      const individualFeePaymentId = individualFeePaymentResult?.paymentId || null;
+
+      // Registrar uso do cupom promocional se houver
+      if (payment.metadata && typeof payment.metadata === 'object') {
+        const metadata = payment.metadata as any;
+        const promotionalCoupon = metadata.promotional_coupon || null;
+        const promotionalDiscountAmount = metadata.promotional_discount_amount ? parseFloat(metadata.promotional_discount_amount) : null;
+        const originalAmount = metadata.original_amount ? parseFloat(metadata.original_amount) : null;
+        const finalAmount = metadata.final_amount ? parseFloat(metadata.final_amount) : payment.amount;
+        
+        if (promotionalCoupon && promotionalDiscountAmount && originalAmount) {
+          try {
+            await supabase
+              .from('promotional_coupon_usage')
+              .insert({
+                user_id: payment.user_id,
+                coupon_code: promotionalCoupon,
+                fee_type: payment.fee_type === 'application_fee' ? 'application_fee' : 'scholarship_fee',
+                payment_id: payment.id,
+                payment_method: 'zelle',
+                original_amount: originalAmount,
+                discount_amount: promotionalDiscountAmount,
+                final_amount: finalAmount,
+                zelle_payment_id: payment.id,
+                individual_fee_payment_id: individualFeePaymentId,
+                metadata: {
+                  coupon_id: metadata.promotional_coupon_id || null
+                }
+              });
+            console.log(`[Promotional Coupon Usage] ✅ Uso do cupom promocional ${payment.fee_type} registrado com sucesso!`);
+          } catch (couponUsageError) {
+            console.warn('[Promotional Coupon Usage] Warning: Could not record coupon usage:', couponUsageError);
+          }
+        }
+      }
 
       await supabase.rpc('log_student_action', {
         p_student_id: payment.student_id,

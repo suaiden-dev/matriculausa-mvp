@@ -141,6 +141,82 @@ serve(async (req) => {
       console.log('✅ [approve-zelle-payment-automatic] has_paid_selection_process_fee marcado como true')
       console.log('🔍 [approve-zelle-payment-automatic] Dados atualizados:', updateData)
 
+      // Registrar pagamento na tabela individual_fee_payments
+      let individualFeePaymentId = null;
+      try {
+        const { data: feePaymentData, error: feePaymentError } = await supabaseClient.rpc('insert_individual_fee_payment', {
+          p_user_id: user_id,
+          p_fee_type: 'selection_process',
+          p_amount: paymentAmount,
+          p_payment_date: new Date().toISOString(),
+          p_payment_method: 'zelle',
+          p_payment_intent_id: null,
+          p_stripe_charge_id: null,
+          p_zelle_payment_id: paymentId
+        });
+
+        if (feePaymentError) {
+          console.warn('[Individual Fee Payment] Warning: Could not record fee payment:', feePaymentError);
+        } else {
+          console.log('[Individual Fee Payment] Selection process fee recorded successfully:', feePaymentData);
+          individualFeePaymentId = feePaymentData?.id || null;
+        }
+      } catch (recordError) {
+        console.warn('[Individual Fee Payment] Warning: Failed to record individual fee payment:', recordError);
+      }
+
+      // Registrar uso do cupom promocional se houver
+      try {
+        const { data: zellePaymentData, error: zellePaymentError } = await supabaseClient
+          .from('zelle_payments')
+          .select('metadata, amount')
+          .eq('id', paymentId)
+          .single();
+        
+        if (!zellePaymentError && zellePaymentData?.metadata) {
+          const promotionalCoupon = zellePaymentData.metadata.promotional_coupon || null;
+          const promotionalDiscountAmount = zellePaymentData.metadata.promotional_discount_amount ? parseFloat(zellePaymentData.metadata.promotional_discount_amount) : null;
+          const originalAmount = zellePaymentData.metadata.original_amount ? parseFloat(zellePaymentData.metadata.original_amount) : null;
+          const finalAmount = zellePaymentData.metadata.final_amount ? parseFloat(zellePaymentData.metadata.final_amount) : paymentAmount;
+          
+          if (promotionalCoupon && promotionalDiscountAmount && originalAmount) {
+            console.log('[Promotional Coupon Usage] Registrando uso do cupom promocional no Zelle (selection_process):', {
+              coupon_code: promotionalCoupon,
+              fee_type: 'selection_process',
+              original_amount: originalAmount,
+              discount_amount: promotionalDiscountAmount,
+              final_amount: finalAmount
+            });
+            
+            const { error: couponUsageError } = await supabaseClient
+              .from('promotional_coupon_usage')
+              .insert({
+                user_id: user_id,
+                coupon_code: promotionalCoupon,
+                fee_type: 'selection_process',
+                payment_id: paymentId,
+                payment_method: 'zelle',
+                original_amount: originalAmount,
+                discount_amount: promotionalDiscountAmount,
+                final_amount: finalAmount,
+                zelle_payment_id: paymentId,
+                individual_fee_payment_id: individualFeePaymentId,
+                metadata: {
+                  coupon_id: zellePaymentData.metadata.promotional_coupon_id || null
+                }
+              });
+            
+            if (couponUsageError) {
+              console.warn('[Promotional Coupon Usage] Warning: Could not record coupon usage:', couponUsageError);
+            } else {
+              console.log('[Promotional Coupon Usage] ✅ Uso do cupom promocional registrado com sucesso!');
+            }
+          }
+        }
+      } catch (couponUsageException) {
+        console.warn('[Promotional Coupon Usage] Warning: Failed to record coupon usage:', couponUsageException);
+      }
+
       // Log the payment action
       try {
         await supabaseClient.rpc('log_student_action', {
@@ -224,6 +300,82 @@ serve(async (req) => {
 
       console.log('✅ [approve-zelle-payment-automatic] has_paid_i20_control_fee marcado como true')
       console.log('🔍 [approve-zelle-payment-automatic] Dados atualizados:', updateData)
+
+      // Registrar pagamento na tabela individual_fee_payments
+      let individualFeePaymentId = null;
+      try {
+        const { data: feePaymentData, error: feePaymentError } = await supabaseClient.rpc('insert_individual_fee_payment', {
+          p_user_id: user_id,
+          p_fee_type: 'i20_control',
+          p_amount: paymentAmount,
+          p_payment_date: new Date().toISOString(),
+          p_payment_method: 'zelle',
+          p_payment_intent_id: null,
+          p_stripe_charge_id: null,
+          p_zelle_payment_id: paymentId
+        });
+
+        if (feePaymentError) {
+          console.warn('[Individual Fee Payment] Warning: Could not record fee payment:', feePaymentError);
+        } else {
+          console.log('[Individual Fee Payment] I20 control fee recorded successfully:', feePaymentData);
+          individualFeePaymentId = feePaymentData?.id || null;
+        }
+      } catch (recordError) {
+        console.warn('[Individual Fee Payment] Warning: Failed to record individual fee payment:', recordError);
+      }
+
+      // Registrar uso do cupom promocional se houver
+      try {
+        const { data: zellePaymentData, error: zellePaymentError } = await supabaseClient
+          .from('zelle_payments')
+          .select('metadata, amount')
+          .eq('id', paymentId)
+          .single();
+        
+        if (!zellePaymentError && zellePaymentData?.metadata) {
+          const promotionalCoupon = zellePaymentData.metadata.promotional_coupon || null;
+          const promotionalDiscountAmount = zellePaymentData.metadata.promotional_discount_amount ? parseFloat(zellePaymentData.metadata.promotional_discount_amount) : null;
+          const originalAmount = zellePaymentData.metadata.original_amount ? parseFloat(zellePaymentData.metadata.original_amount) : null;
+          const finalAmount = zellePaymentData.metadata.final_amount ? parseFloat(zellePaymentData.metadata.final_amount) : paymentAmount;
+          
+          if (promotionalCoupon && promotionalDiscountAmount && originalAmount) {
+            console.log('[Promotional Coupon Usage] Registrando uso do cupom promocional no Zelle (i20_control):', {
+              coupon_code: promotionalCoupon,
+              fee_type: 'i20_control_fee',
+              original_amount: originalAmount,
+              discount_amount: promotionalDiscountAmount,
+              final_amount: finalAmount
+            });
+            
+            const { error: couponUsageError } = await supabaseClient
+              .from('promotional_coupon_usage')
+              .insert({
+                user_id: user_id,
+                coupon_code: promotionalCoupon,
+                fee_type: 'i20_control_fee',
+                payment_id: paymentId,
+                payment_method: 'zelle',
+                original_amount: originalAmount,
+                discount_amount: promotionalDiscountAmount,
+                final_amount: finalAmount,
+                zelle_payment_id: paymentId,
+                individual_fee_payment_id: individualFeePaymentId,
+                metadata: {
+                  coupon_id: zellePaymentData.metadata.promotional_coupon_id || null
+                }
+              });
+            
+            if (couponUsageError) {
+              console.warn('[Promotional Coupon Usage] Warning: Could not record coupon usage:', couponUsageError);
+            } else {
+              console.log('[Promotional Coupon Usage] ✅ Uso do cupom promocional registrado com sucesso!');
+            }
+          }
+        }
+      } catch (couponUsageException) {
+        console.warn('[Promotional Coupon Usage] Warning: Failed to record coupon usage:', couponUsageException);
+      }
 
       // Log the payment action
       try {
@@ -377,6 +529,7 @@ serve(async (req) => {
           console.log(`📝 [approve-zelle-payment-automatic] Criando individual_fee_payments ANTES de marcar como pago...`)
           console.log(`🔍 [approve-zelle-payment-automatic] fee_type normalizado: ${normalizedFeeType}, amount: ${paymentAmount}`)
           
+          let individualFeePaymentId = null;
           try {
             const { data: feePaymentData, error: feePaymentError } = await supabaseClient.rpc('insert_individual_fee_payment', {
               p_user_id: user_id,
@@ -395,9 +548,64 @@ serve(async (req) => {
             }
 
             console.log(`✅ [approve-zelle-payment-automatic] individual_fee_payments criado com sucesso:`, feePaymentData)
+            individualFeePaymentId = feePaymentData?.id || null;
           } catch (feePaymentException) {
             console.error(`❌ [approve-zelle-payment-automatic] Exceção ao criar individual_fee_payments:`, feePaymentException)
             throw feePaymentException // Não marcar como pago se o registro individual falhar
+          }
+
+          // Registrar uso do cupom promocional se houver
+          try {
+            // Buscar dados do pagamento Zelle para obter informações do cupom do metadata
+            const { data: zellePaymentData, error: zellePaymentError } = await supabaseClient
+              .from('zelle_payments')
+              .select('metadata, amount')
+              .eq('id', paymentId)
+              .single();
+            
+            if (!zellePaymentError && zellePaymentData?.metadata) {
+              const promotionalCoupon = zellePaymentData.metadata.promotional_coupon || null;
+              const promotionalDiscountAmount = zellePaymentData.metadata.promotional_discount_amount ? parseFloat(zellePaymentData.metadata.promotional_discount_amount) : null;
+              const originalAmount = zellePaymentData.metadata.original_amount ? parseFloat(zellePaymentData.metadata.original_amount) : null;
+              const finalAmount = zellePaymentData.metadata.final_amount ? parseFloat(zellePaymentData.metadata.final_amount) : paymentAmount;
+              
+              if (promotionalCoupon && promotionalDiscountAmount && originalAmount) {
+                console.log('[Promotional Coupon Usage] Registrando uso do cupom promocional no Zelle:', {
+                  coupon_code: promotionalCoupon,
+                  fee_type: normalizedFeeTypeGlobal,
+                  original_amount: originalAmount,
+                  discount_amount: promotionalDiscountAmount,
+                  final_amount: finalAmount
+                });
+                
+                const { error: couponUsageError } = await supabaseClient
+                  .from('promotional_coupon_usage')
+                  .insert({
+                    user_id: user_id,
+                    coupon_code: promotionalCoupon,
+                    fee_type: normalizedFeeTypeGlobal === 'application_fee' ? 'application_fee' : normalizedFeeTypeGlobal === 'scholarship_fee' ? 'scholarship_fee' : normalizedFeeTypeGlobal,
+                    payment_id: paymentId,
+                    payment_method: 'zelle',
+                    original_amount: originalAmount,
+                    discount_amount: promotionalDiscountAmount,
+                    final_amount: finalAmount,
+                    zelle_payment_id: paymentId,
+                    individual_fee_payment_id: individualFeePaymentId,
+                    metadata: {
+                      coupon_id: zellePaymentData.metadata.promotional_coupon_id || null
+                    }
+                  });
+                
+                if (couponUsageError) {
+                  console.warn('[Promotional Coupon Usage] Warning: Could not record coupon usage:', couponUsageError);
+                } else {
+                  console.log('[Promotional Coupon Usage] ✅ Uso do cupom promocional registrado com sucesso!');
+                }
+              }
+            }
+          } catch (couponUsageException) {
+            console.warn('[Promotional Coupon Usage] Warning: Failed to record coupon usage:', couponUsageException);
+            // Não quebra o fluxo - continua normalmente
           }
 
           // APENAS DEPOIS de criar o registro individual, marcar como pago
