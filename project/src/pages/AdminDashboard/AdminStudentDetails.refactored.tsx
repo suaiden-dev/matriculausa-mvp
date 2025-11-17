@@ -356,7 +356,7 @@ const AdminStudentDetails: React.FC = () => {
   React.useEffect(() => {
     if (student?.seller_referral_code) {
       fetchReferralInfo(student.seller_referral_code);
-    } else {
+        } else {
       setReferralInfo(null);
     }
   }, [student?.seller_referral_code]);
@@ -845,7 +845,7 @@ const AdminStudentDetails: React.FC = () => {
           return newStudent;
         });
         
-          console.log('✅ [APPROVE] setStudent chamado, aguardando re-render...');
+        console.log('✅ [APPROVE] setStudent chamado, aguardando re-render...');
           // Invalidar queries relacionadas
           queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
           queryClient.invalidateQueries({ queryKey: queryKeys.students.all });

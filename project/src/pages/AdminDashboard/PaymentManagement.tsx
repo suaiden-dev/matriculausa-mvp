@@ -262,8 +262,8 @@ const PaymentManagement = (): React.JSX.Element => {
   useEffect(() => {
     if (activeTab === 'payments') {
       if (!filters?.university || filters.university === 'all') {
-        setBackendTotalCount(null);
-        
+      setBackendTotalCount(null);
+      
         // React Query gerencia o cache automaticamente
         if (paymentsQuery.data) {
           setPayments(paymentsQuery.data.paymentRecords);
@@ -273,19 +273,19 @@ const PaymentManagement = (): React.JSX.Element => {
         // Quando desabilitada, isLoading é false por padrão no React Query
         if (shouldLoadPayments) {
           setLoading(paymentsQuery.isLoading);
-        } else {
+      } else {
           // Se não deve carregar, não está em loading
           setLoading(false);
         }
       }
       // Se university não é 'all', o usePaymentsBackendPagination gerencia o loading
-    } else {
+          } else {
       // Quando não está na aba payments, não precisa de loading
       setLoading(false);
       if (activeTab !== 'payments') {
         setPayments([]);
       }
-    }
+      }
   }, [activeTab, filters?.university, paymentsQuery.data, paymentsQuery.isLoading, shouldLoadPayments]);
 
   // Realtime updates for Affiliate Requests - invalidar query quando houver mudança

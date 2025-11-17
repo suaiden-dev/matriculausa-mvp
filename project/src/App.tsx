@@ -161,15 +161,15 @@ const App: React.FC = () => {
   return (
     <HelmetProvider>
       <QueryClientProvider client={queryClient}>
-        <Router>
-          <AuthProvider>
-            <UnreadMessagesProvider>
-              <AuthRedirect>
-                <AppContent />
-              </AuthRedirect>
-            </UnreadMessagesProvider>
-          </AuthProvider>
-        </Router>
+      <Router>
+        <AuthProvider>
+          <UnreadMessagesProvider>
+            <AuthRedirect>
+              <AppContent />
+            </AuthRedirect>
+          </UnreadMessagesProvider>
+        </AuthProvider>
+      </Router>
       </QueryClientProvider>
     </HelmetProvider>
   );
