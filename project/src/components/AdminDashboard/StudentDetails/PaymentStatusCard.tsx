@@ -277,6 +277,12 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
               {student.is_application_fee_paid ? (
                 <dd className="text-sm font-semibold text-slate-700 mt-1">
                   {(() => {
+                    // Se o pagamento já foi feito E temos o valor real pago, mostrar o valor REAL pago
+                    if (realPaidAmounts?.application) {
+                      return formatFeeAmount(realPaidAmounts.application);
+                    }
+                    
+                    // Caso contrário, usar valor da bolsa ou valor padrão
                     const paidApplication = student.all_applications?.find((app: any) => app.is_application_fee_paid);
                     if (paidApplication?.scholarships) {
                       const scholarship = Array.isArray(paidApplication.scholarships)
@@ -396,7 +402,15 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                 </div>
               ) : (
                 <dd className="text-sm font-semibold text-slate-700 mt-1 flex items-center">
-                  {formatFeeAmount(getFeeAmount('scholarship_fee'))}
+                  {(() => {
+                    // Se o pagamento já foi feito E temos o valor real pago, mostrar o valor REAL pago
+                    if (student?.is_scholarship_fee_paid && realPaidAmounts?.scholarship) {
+                      return formatFeeAmount(realPaidAmounts.scholarship);
+                    }
+                    
+                    // Caso contrário, mostrar valor esperado
+                    return formatFeeAmount(getFeeAmount('scholarship_fee'));
+                  })()}
                   {hasOverride('scholarship_fee') && (
                     <span className="ml-2 text-xs text-blue-500">(custom)</span>
                   )}
@@ -503,7 +517,15 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                 </div>
               ) : (
                 <dd className="text-sm font-semibold text-slate-700 mt-1 flex items-center">
-                  {formatFeeAmount(getFeeAmount('i20_control_fee'))}
+                  {(() => {
+                    // Se o pagamento já foi feito E temos o valor real pago, mostrar o valor REAL pago
+                    if (student?.has_paid_i20_control_fee && realPaidAmounts?.i20_control) {
+                      return formatFeeAmount(realPaidAmounts.i20_control);
+                    }
+                    
+                    // Caso contrário, mostrar valor esperado
+                    return formatFeeAmount(getFeeAmount('i20_control_fee'));
+                  })()}
                   {hasOverride('i20_control_fee') && (
                     <span className="ml-2 text-xs text-blue-500">(custom)</span>
                   )}

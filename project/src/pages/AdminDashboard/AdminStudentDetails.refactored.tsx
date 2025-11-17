@@ -88,7 +88,8 @@ const AdminStudentDetails: React.FC = () => {
   const realPaidAmounts = (() => {
     const amounts: Record<string, number> = {};
     (secondaryDataQuery.data?.individualFeePayments || []).forEach((p: any) => {
-      amounts[p.fee_type] = p.amount_paid;
+      // O campo na tabela é 'amount', não 'amount_paid'
+      amounts[p.fee_type] = Number(p.amount || p.amount_paid || 0);
     });
     return amounts;
   })();

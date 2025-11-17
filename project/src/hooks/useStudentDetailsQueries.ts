@@ -190,10 +190,18 @@ export function useStudentSecondaryDataQuery(userId: string | undefined) {
 
       if (!rpcError && rpcData) {
         const parsed = typeof rpcData === 'string' ? JSON.parse(rpcData) : rpcData;
+        // A RPC retorna real_paid_amounts já mapeado como objeto JSON
+        // Converter para formato de array para compatibilidade com o fallback
+        const realPaidAmounts = parsed.real_paid_amounts || {};
+        const individualFeePayments = Object.entries(realPaidAmounts).map(([fee_type, amount]) => ({
+          fee_type,
+          amount: typeof amount === 'number' ? amount : parseFloat(String(amount)) || 0
+        }));
+        
         return {
           termAcceptances: parsed.term_acceptances || [],
           referralInfo: parsed.referral_info || null,
-          individualFeePayments: parsed.individual_fee_payments || [],
+          individualFeePayments,
         };
       }
 
@@ -216,7 +224,7 @@ export function useStudentSecondaryDataQuery(userId: string | undefined) {
           .order('accepted_at', { ascending: false }),
         supabase
           .from('individual_fee_payments')
-          .select('fee_type, amount_paid')
+          .select('fee_type, amount')
           .eq('user_id', userId),
       ]);
 
