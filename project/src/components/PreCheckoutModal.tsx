@@ -251,25 +251,40 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
   useEffect(() => {
     if (isOpen && canUsePromotionalCoupon && feeType) {
       try {
-        const savedCoupon = localStorage.getItem(`__promotional_coupon_${feeType}`);
+        // Tentar carregar com o feeType exato primeiro
+        let savedCoupon = localStorage.getItem(`__promotional_coupon_${feeType}`);
+        
+        // Se não encontrar, tentar com 'selection_process' (para compatibilidade)
+        if (!savedCoupon && feeType === 'selection_process') {
+          savedCoupon = localStorage.getItem('__promotional_coupon_selection_process');
+        }
+        
         if (savedCoupon) {
           const couponData = JSON.parse(savedCoupon);
           // Verificar se o cupom ainda é válido (menos de 24 horas)
           const isExpired = Date.now() - couponData.timestamp > 24 * 60 * 60 * 1000;
           
-          if (!isExpired && couponData.code && couponData.validation) {
+          // Verificar se o feeType do cupom salvo corresponde ao feeType atual
+          const feeTypeMatches = !couponData.feeType || couponData.feeType === feeType;
+          
+          if (!isExpired && couponData.code && couponData.validation && feeTypeMatches) {
             setPromotionalCoupon(couponData.code);
             setPromotionalCouponValidation(couponData.validation);
             // Restaurar no window também
             (window as any).__promotional_coupon_validation = couponData.validation;
+            (window as any).__checkout_promotional_coupon = couponData.code;
+            (window as any).__checkout_final_amount = couponData.validation.finalAmount;
             // Disparar evento para atualizar Overview
             window.dispatchEvent(new CustomEvent('promotionalCouponValidated', {
               detail: couponData.validation
             }));
-            console.log('[PreCheckoutModal] Cupom restaurado do localStorage:', couponData.code);
+            console.log('[PreCheckoutModal] Cupom restaurado do localStorage:', couponData.code, 'para feeType:', feeType);
           } else {
-            // Remover cupom expirado
+            // Remover cupom expirado ou incompatível
             localStorage.removeItem(`__promotional_coupon_${feeType}`);
+            if (feeType === 'selection_process') {
+              localStorage.removeItem('__promotional_coupon_selection_process');
+            }
           }
         }
       } catch (error) {
@@ -293,15 +308,8 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
       setUserClickedCheckbox(false); // Reset user interaction flag
       setHasReferralCode(false); // Reset referral code checkbox
       setShowCodeStep(false); // Reset code step
-      setPromotionalCoupon(''); // Reset promotional coupon
-      setPromotionalCouponValidation(null); // Reset validation
+      // NÃO resetar cupom promocional aqui - será carregado do localStorage no useEffect específico
       setIsValidatingPromotionalCoupon(false); // Reset validating state
-      // Limpar cupom promocional do window
-      delete (window as any).__promotional_coupon_validation;
-      // Notificar Overview que o cupom foi removido
-      window.dispatchEvent(new CustomEvent('promotionalCouponValidated', {
-        detail: { isValid: false }
-      }));
       checkReferralCodeUsage();
       
       // iOS Safari zoom prevention
@@ -826,7 +834,13 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
         feeType: feeType,
         timestamp: Date.now()
       };
+      // Salvar com o feeType exato
       localStorage.setItem(`__promotional_coupon_${feeType}`, JSON.stringify(couponData));
+      // Para selection_process, também salvar com chave alternativa para compatibilidade
+      if (feeType === 'selection_process') {
+        localStorage.setItem('__promotional_coupon_selection_process', JSON.stringify(couponData));
+      }
+      console.log('[PreCheckoutModal] Cupom salvo no localStorage:', normalizedCode, 'para feeType:', feeType);
 
     } catch (error: any) {
       console.error('🔍 [PreCheckoutModal] Erro ao validar cupom promocional:', error);
@@ -1075,7 +1089,7 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
                   productName={productName}
                   computedBasePrice={finalPrice}
                   hasUsedReferralCode={hasUsedReferralCode}
-                  hasSellerReferralCode={!!hasSellerReferralCode}
+                  hasSellerReferralCode={Boolean(hasSellerReferralCode)}
                   activeDiscount={activeDiscount}
                   hasReferralCode={hasReferralCode}
                   showCodeStep={showCodeStep}
@@ -1100,7 +1114,7 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
                   isValidatingPromotionalCoupon={isValidatingPromotionalCoupon}
                   validatePromotionalCoupon={validatePromotionalCoupon}
                   feeType={feeType}
-                  canUsePromotionalCoupon={canUsePromotionalCoupon}
+                  canUsePromotionalCoupon={Boolean(canUsePromotionalCoupon)}
                 />
               )}
             </div>
@@ -1177,7 +1191,7 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
                 isValidatingPromotionalCoupon={isValidatingPromotionalCoupon}
                 validatePromotionalCoupon={validatePromotionalCoupon}
                 feeType={feeType}
-                canUsePromotionalCoupon={canUsePromotionalCoupon}
+                canUsePromotionalCoupon={Boolean(canUsePromotionalCoupon)}
               />
             </div>
           </Dialog.Panel>

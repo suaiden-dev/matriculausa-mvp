@@ -436,6 +436,7 @@ Deno.serve(async (req)=>{
       if (profileError) throw new Error(`Failed to update user_profiles: ${profileError.message}`);
 
       // Registrar pagamento na tabela individual_fee_payments
+      let individualFeePaymentId = null;
       try {
         const paymentDate = new Date().toISOString();
         const paymentAmount = session.amount_total ? session.amount_total / 100 : 0;
@@ -457,10 +458,57 @@ Deno.serve(async (req)=>{
           console.warn('[Individual Fee Payment] Warning: Could not record fee payment:', insertError);
         } else {
           console.log('[Individual Fee Payment] Selection process fee recorded successfully:', insertResult);
+          individualFeePaymentId = insertResult?.id || null;
         }
       } catch (recordError) {
         console.warn('[Individual Fee Payment] Warning: Failed to record individual fee payment:', recordError);
         // Não quebra o fluxo - continua normalmente
+      }
+
+      // Registrar uso do cupom promocional se houver
+      const promotionalCoupon = session.metadata?.promotional_coupon || null;
+      const promotionalDiscountAmount = session.metadata?.promotional_discount_amount ? parseFloat(session.metadata.promotional_discount_amount) : null;
+      const originalAmount = session.metadata?.original_amount ? parseFloat(session.metadata.original_amount) : null;
+      const finalAmount = session.metadata?.final_amount ? parseFloat(session.metadata.final_amount) : null;
+      
+      if (promotionalCoupon && promotionalDiscountAmount && originalAmount && finalAmount) {
+        try {
+          console.log('[Promotional Coupon Usage] Registrando uso do cupom promocional:', {
+            coupon_code: promotionalCoupon,
+            fee_type: 'selection_process',
+            original_amount: originalAmount,
+            discount_amount: promotionalDiscountAmount,
+            final_amount: finalAmount
+          });
+          
+          const { error: couponUsageError } = await supabase
+            .from('promotional_coupon_usage')
+            .insert({
+              user_id: userId,
+              coupon_code: promotionalCoupon,
+              fee_type: 'selection_process',
+              payment_id: sessionId,
+              payment_method: 'stripe',
+              original_amount: originalAmount,
+              discount_amount: promotionalDiscountAmount,
+              final_amount: finalAmount,
+              stripe_session_id: sessionId,
+              individual_fee_payment_id: individualFeePaymentId,
+              metadata: {
+                coupon_id: session.metadata?.promotional_coupon_id || null,
+                stripe_coupon_id: session.metadata?.stripe_coupon_id || null
+              }
+            });
+          
+          if (couponUsageError) {
+            console.warn('[Promotional Coupon Usage] Warning: Could not record coupon usage:', couponUsageError);
+          } else {
+            console.log('[Promotional Coupon Usage] ✅ Uso do cupom promocional registrado com sucesso!');
+          }
+        } catch (couponUsageException) {
+          console.warn('[Promotional Coupon Usage] Warning: Failed to record coupon usage:', couponUsageException);
+          // Não quebra o fluxo - continua normalmente
+        }
       }
 
       // Log the payment action

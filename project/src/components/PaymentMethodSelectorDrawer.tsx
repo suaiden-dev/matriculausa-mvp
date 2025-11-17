@@ -51,8 +51,8 @@ export const PaymentMethodSelectorDrawer: React.FC<PaymentMethodSelectorDrawerPr
   const isLegacySystem = userProfile?.system_type === 'legacy';
   const canUsePromotionalCoupon = hasSellerReferralCode && isLegacySystem;
   
-  // Verificar se o feeType permite cupom promocional (não application_fee)
-  const shouldShowPromotionalCoupon = canUsePromotionalCoupon && feeType && feeType !== 'application_fee';
+  // Verificar se o feeType permite cupom promocional (não application_fee e não selection_process)
+  const shouldShowPromotionalCoupon = canUsePromotionalCoupon && feeType && feeType !== 'application_fee' && feeType !== 'selection_process';
   
   // Valor final considerando desconto promocional
   const finalAmount = promotionalCouponValidation?.isValid && promotionalCouponValidation.finalAmount
