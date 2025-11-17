@@ -10,12 +10,13 @@ import {
   DrawerClose
 } from '@/components/ui/drawer';
 import { useNavigate } from 'react-router-dom';
-import { CreditCard, CheckCircle, X } from 'lucide-react';
+import { CreditCard, CheckCircle, X, AlertCircle } from 'lucide-react';
 import { Scholarship } from '../types';
 import { useFeeConfig } from '../hooks/useFeeConfig';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from 'react-i18next';
 import { convertCentsToDollars } from '../utils/currency';
+import { supabase } from '../lib/supabase';
 
 // Componente SVG para o logo do PIX
 const PixIcon = ({ className }: { className?: string }) => (
@@ -64,6 +65,17 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
   const { t } = useTranslation();
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [spinnerVisible, setSpinnerVisible] = useState<boolean>(false);
+  
+  // Estados para cupom promocional
+  const [promotionalCoupon, setPromotionalCoupon] = useState('');
+  const [promotionalCouponValidation, setPromotionalCouponValidation] = useState<{
+    isValid: boolean;
+    message: string;
+    discountAmount?: number;
+    finalAmount?: number;
+  } | null>(null);
+  const [isValidatingPromotionalCoupon, setIsValidatingPromotionalCoupon] = useState(false);
+  const promotionalCouponInputRef = React.useRef<HTMLInputElement>(null);
   
   // Hook para detectar se é mobile
   const [isMobile, setIsMobile] = useState(false);
@@ -134,8 +146,134 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
     return final;
   };
 
-  const feeAmount = getFeeAmount();
+  const baseFeeAmount = getFeeAmount();
+  
+  // Verificar se o usuário pode usar cupom promocional
+  const hasSellerReferralCode = userProfile?.seller_referral_code && userProfile.seller_referral_code.trim() !== '';
+  const isLegacySystem = userProfile?.system_type === 'legacy';
+  const canUsePromotionalCoupon = hasSellerReferralCode && isLegacySystem && feeType === 'scholarship_fee';
+  
+  // Calcular valor final considerando cupom promocional
+  const feeAmount = promotionalCouponValidation?.isValid && promotionalCouponValidation.finalAmount
+    ? promotionalCouponValidation.finalAmount
+    : baseFeeAmount;
+  
   const universityName = scholarship.universities?.name || scholarship.university_name || 'University';
+  
+  // Função para validar cupom promocional
+  const validatePromotionalCoupon = async () => {
+    if (!promotionalCoupon.trim() || !user?.id) return;
+    
+    setIsValidatingPromotionalCoupon(true);
+    try {
+      const normalizedCode = promotionalCoupon.trim().toUpperCase();
+      
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      
+      if (!token) {
+        throw new Error('Usuário não autenticado');
+      }
+
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/validate-promotional-coupon`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          coupon_code: normalizedCode,
+          fee_type: 'scholarship_fee',
+          purchase_amount: baseFeeAmount
+        }),
+      });
+
+      if (!response.ok) {
+        setPromotionalCouponValidation({
+          isValid: false,
+          message: `Erro ao conectar com o servidor (${response.status}). Tente novamente.`
+        });
+        return;
+      }
+
+      const result = await response.json();
+
+      if (!result.success) {
+        setPromotionalCouponValidation({
+          isValid: false,
+          message: result.error || 'Cupom inválido'
+        });
+        return;
+      }
+
+      // Cupom válido
+      const validationData = {
+        isValid: true,
+        message: `Cupom ${normalizedCode} aplicado! Desconto de $${result.discount_amount.toFixed(2)} aplicado.`,
+        discountAmount: result.discount_amount,
+        finalAmount: result.final_amount
+      };
+      
+      setPromotionalCouponValidation(validationData);
+      
+      // Armazenar no window para uso no checkout
+      (window as any).__checkout_promotional_coupon = normalizedCode;
+      
+      // Salvar no localStorage para persistir entre sessões
+      const couponData = {
+        code: normalizedCode,
+        validation: validationData,
+        feeType: 'scholarship_fee',
+        timestamp: Date.now()
+      };
+      localStorage.setItem('__promotional_coupon_scholarship_fee', JSON.stringify(couponData));
+      
+    } catch (error: any) {
+      console.error('Erro ao validar cupom promocional:', error);
+      setPromotionalCouponValidation({
+        isValid: false,
+        message: error?.message || 'Erro ao validar cupom. Verifique sua conexão e tente novamente.'
+      });
+    } finally {
+      setIsValidatingPromotionalCoupon(false);
+    }
+  };
+  
+  // Carregar cupom do localStorage quando modal abre
+  useEffect(() => {
+    if (isOpen && canUsePromotionalCoupon && feeType === 'scholarship_fee') {
+      try {
+        const savedCoupon = localStorage.getItem('__promotional_coupon_scholarship_fee');
+        if (savedCoupon) {
+          const couponData = JSON.parse(savedCoupon);
+          // Verificar se o cupom ainda é válido (menos de 24 horas)
+          const isExpired = Date.now() - couponData.timestamp > 24 * 60 * 60 * 1000;
+          
+          if (!isExpired && couponData.code && couponData.validation) {
+            setPromotionalCoupon(couponData.code);
+            setPromotionalCouponValidation(couponData.validation);
+            // Restaurar no window também
+            (window as any).__checkout_promotional_coupon = couponData.code;
+            console.log('[ScholarshipConfirmationModal] Cupom restaurado do localStorage:', couponData.code);
+          } else {
+            // Remover cupom expirado
+            localStorage.removeItem('__promotional_coupon_scholarship_fee');
+          }
+        }
+      } catch (error) {
+        console.error('[ScholarshipConfirmationModal] Erro ao carregar cupom do localStorage:', error);
+      }
+    }
+  }, [isOpen, canUsePromotionalCoupon, feeType]);
+
+  // Reset cupom quando modal fecha (mas manter no localStorage)
+  useEffect(() => {
+    if (!isOpen) {
+      // Não limpar o localStorage, apenas limpar estados temporários
+      // O cupom será restaurado quando o modal abrir novamente
+      setIsValidatingPromotionalCoupon(false);
+    }
+  }, [isOpen]);
 
   // Títulos e textos dinâmicos baseados no tipo de taxa
   const getModalContent = () => {
@@ -167,6 +305,10 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
 
     try {
       setSubmitting(true);
+      
+      // Se houver cupom promocional válido, manter no localStorage para uso no checkout
+      // O cupom será usado no checkout e depois removido quando o pagamento for confirmado
+      
       if (selectedPaymentMethod === 'stripe') {
         onStripeCheckout();
       } else if (selectedPaymentMethod === 'pix') {
@@ -201,7 +343,7 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
 
   // Componente de conteúdo comum para Drawer e Dialog
   const ModalContent = ({ isInDrawer = false }: { isInDrawer?: boolean }) => (
-    <>
+    <div className={isInDrawer ? 'flex flex-col min-h-0' : 'relative'}>
       {/* Loading Overlay */}
       {(isProcessing || submitting) && spinnerVisible && (
         <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex items-center justify-center">
@@ -215,7 +357,7 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
       
       {/* Header */}
       {isInDrawer ? (
-        <DrawerHeader className="text-center">
+        <DrawerHeader className="text-center flex-shrink-0">
           <DrawerTitle className="text-xl font-bold text-gray-900">
             {modalContent.title}
           </DrawerTitle>
@@ -251,7 +393,7 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
       )}
 
       {/* Content */}
-      <div className={`${isInDrawer ? 'p-4' : 'flex-1 overflow-y-auto p-4 sm:p-6'} space-y-4`}>
+      <div className={`${isInDrawer ? 'flex-1 overflow-y-auto p-4 min-h-0' : 'flex-1 overflow-y-auto p-4 sm:p-6'} space-y-4`}>
         {/* Scholarship Info */}
         <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
           <h3 className="font-semibold text-gray-900 mb-2 text-sm sm:text-base">{t('scholarshipConfirmationModal.labels.selectedScholarship')}</h3>
@@ -266,10 +408,103 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
             </div>
             <div className="flex justify-between text-sm border-t border-gray-200 pt-2">
               <span className="text-gray-600">{modalContent.feeLabel}</span>
-              <span className="font-bold text-base sm:text-lg text-green-600">${feeAmount.toFixed(2)} USD</span>
+              {promotionalCouponValidation?.isValid ? (
+                <div className="text-right animate-in fade-in slide-in-from-right duration-300">
+                  <div className="font-bold text-base sm:text-lg text-gray-400 line-through transition-all">${baseFeeAmount.toFixed(2)}</div>
+                  <div className="font-bold text-base sm:text-lg text-green-600 transition-all">${feeAmount.toFixed(2)} USD</div>
+                  {promotionalCouponValidation.discountAmount && (
+                    <div className="text-xs text-green-500 mt-1">
+                      -${promotionalCouponValidation.discountAmount.toFixed(2)} de desconto
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <span className="font-bold text-base sm:text-lg text-green-600 transition-all">${feeAmount.toFixed(2)} USD</span>
+              )}
             </div>
           </div>
         </div>
+
+        {/* Promotional Coupon Section - apenas para scholarship_fee */}
+        {canUsePromotionalCoupon && (
+          <div className="bg-gray-50 rounded-lg p-3 sm:p-4 space-y-3">
+            <div className="text-center">
+              <h3 className="text-sm sm:text-base font-semibold text-gray-900 mb-2">
+                Cupom Promocional
+              </h3>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex gap-2">
+                <input
+                  ref={promotionalCouponInputRef}
+                  type="text"
+                  id="promotional-coupon-input-scholarship"
+                  name="promotional-coupon-scholarship"
+                  value={promotionalCoupon}
+                  onChange={(e) => {
+                    const newValue = e.target.value.toUpperCase();
+                    // Manter o cursor na posição correta
+                    const cursorPosition = e.target.selectionStart;
+                    setPromotionalCoupon(newValue);
+                    // Restaurar posição do cursor após atualização
+                    requestAnimationFrame(() => {
+                      if (promotionalCouponInputRef.current) {
+                        promotionalCouponInputRef.current.setSelectionRange(cursorPosition, cursorPosition);
+                        promotionalCouponInputRef.current.focus();
+                      }
+                    });
+                  }}
+                  onBlur={(e) => {
+                    // Manter o valor em uppercase quando perder foco
+                    const upperValue = e.target.value.toUpperCase();
+                    if (upperValue !== promotionalCoupon) {
+                      setPromotionalCoupon(upperValue);
+                    }
+                  }}
+                  placeholder="Digite o código"
+                  className="flex-1 px-4 sm:px-5 py-2 sm:py-3 border-2 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-center font-mono text-sm sm:text-base tracking-wider border-gray-300"
+                  style={{ fontSize: '16px' }}
+                  maxLength={20}
+                  autoComplete="off"
+                />
+                <button
+                  onClick={validatePromotionalCoupon}
+                  disabled={isValidatingPromotionalCoupon || !promotionalCoupon.trim()}
+                  className={`px-4 sm:px-6 py-2 sm:py-3 rounded-xl font-semibold disabled:bg-gray-300 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl transform whitespace-nowrap text-sm sm:text-base ${
+                    promotionalCouponValidation?.isValid
+                      ? 'bg-green-600 text-white hover:bg-green-700'
+                      : 'bg-blue-600 text-white hover:bg-blue-700'
+                  }`}
+                >
+                  {isValidatingPromotionalCoupon ? (
+                    <div className="flex items-center justify-center space-x-2">
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <span className="hidden sm:inline">Validando...</span>
+                    </div>
+                  ) : promotionalCouponValidation?.isValid ? (
+                    <div className="flex items-center justify-center space-x-2">
+                      <CheckCircle className="w-4 h-4" />
+                      <span>Validado</span>
+                    </div>
+                  ) : (
+                    'Validar'
+                  )}
+                </button>
+              </div>
+              
+              {/* Validation Result - apenas para erros */}
+              {promotionalCouponValidation && !promotionalCouponValidation.isValid && (
+                <div className="p-3 rounded-xl border-2 animate-in fade-in slide-in-from-top duration-300 bg-red-50 border-red-300 text-red-800">
+                  <div className="flex items-center space-x-2">
+                    <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
+                    <span className="font-medium text-xs sm:text-sm">{promotionalCouponValidation.message}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Payment Method Selection */}
         <div className="space-y-3">
@@ -376,14 +611,14 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
 
       {/* Footer */}
       {isInDrawer ? (
-        <DrawerFooter className="flex-row gap-2">
-          <DrawerClose className="flex-1 bg-white text-gray-700 py-2.5 px-4 rounded-lg font-medium border border-gray-300 hover:bg-gray-50 transition-colors text-sm">
+        <DrawerFooter className="flex-row gap-2 flex-shrink-0 border-t border-gray-200 bg-gray-50 p-4 mt-auto">
+          <DrawerClose className="flex-1 bg-white text-gray-700 py-3 px-4 rounded-lg font-medium border border-gray-300 hover:bg-gray-50 transition-colors text-sm">
             {t('scholarshipConfirmationModal.payment.cancel')}
           </DrawerClose>
           <button
             onClick={handleProceed}
             disabled={!canProceed || isProcessing || submitting}
-            className="flex-1 bg-blue-600 text-white py-2.5 px-4 rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors text-sm"
+            className="flex-1 bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors text-sm"
           >
             {isProcessing || submitting ? (
               <div className="flex items-center justify-center">
@@ -421,14 +656,14 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
           </button>
         </div>
       )}
-    </>
+    </div>
   );
 
   // Usar Drawer em mobile, Dialog em desktop
   if (isMobile) {
     return (
       <Drawer open={isOpen} onOpenChange={onClose}>
-        <DrawerContent className="max-h-[90vh] bg-white">
+        <DrawerContent className="max-h-[85vh] bg-white flex flex-col">
           <ModalContent isInDrawer={true} />
         </DrawerContent>
       </Drawer>
