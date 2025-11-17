@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { AlertCircle, CheckCircle, Lock } from 'lucide-react';
 
 interface ModalContentProps {
@@ -24,6 +24,19 @@ interface ModalContentProps {
   handleProceed: () => void;
   isLoading: boolean;
   t: any;
+  // Props para cupom promocional
+  promotionalCoupon?: string;
+  setPromotionalCoupon?: (value: string) => void;
+  promotionalCouponValidation?: {
+    isValid: boolean;
+    message: string;
+    discountAmount?: number;
+    finalAmount?: number;
+  } | null;
+  isValidatingPromotionalCoupon?: boolean;
+  validatePromotionalCoupon?: () => void;
+  feeType?: 'selection_process' | 'application_fee' | 'enrollment_fee' | 'scholarship_fee';
+  canUsePromotionalCoupon?: boolean; // Passado do PreCheckoutModal (seller_referral_code + legacy)
 }
 
 export const ModalContent: React.FC<ModalContentProps> = ({
@@ -48,8 +61,20 @@ export const ModalContent: React.FC<ModalContentProps> = ({
   handleCheckboxChange,
   handleProceed,
   isLoading,
-  t
-}) => (
+  t,
+  promotionalCoupon = '',
+  setPromotionalCoupon,
+  promotionalCouponValidation = null,
+  isValidatingPromotionalCoupon = false,
+  validatePromotionalCoupon,
+  feeType,
+  canUsePromotionalCoupon = false
+}) => {
+  // Verificar se o feeType permite cupom promocional (não application_fee) E se o usuário pode usar
+  const shouldShowPromotionalCoupon = canUsePromotionalCoupon && feeType && feeType !== 'application_fee';
+  const promotionalCouponInputRef = useRef<HTMLInputElement>(null);
+  
+  return (
   <div className="space-y-4 sm:space-y-6 bg-white min-h-full">
     {/* Product Info */}
     <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-4 sm:p-6 border-0">
@@ -59,7 +84,16 @@ export const ModalContent: React.FC<ModalContentProps> = ({
           <div className="text-3xl font-bold text-blue-700">
             ${computedBasePrice.toFixed(2)}
           </div>
-          <p className="text-xs text-gray-600 mt-1">{t('preCheckoutModal.totalAmount')}</p>
+          <p className="text-xs text-gray-600 mt-1">
+            {promotionalCouponValidation?.isValid 
+              ? 'Valor com desconto' 
+              : t('preCheckoutModal.totalAmount')}
+          </p>
+          {promotionalCouponValidation?.isValid && promotionalCouponValidation.discountAmount && (
+            <p className="text-xs text-gray-500 mt-1 line-through">
+              ${(computedBasePrice + promotionalCouponValidation.discountAmount).toFixed(2)} (original)
+            </p>
+          )}
         </div>
         
         <div className="inline-flex items-center space-x-2 bg-blue-100 px-3 py-1 rounded-full mt-3">
@@ -68,6 +102,69 @@ export const ModalContent: React.FC<ModalContentProps> = ({
         </div>
       </div>
     </div>
+
+    {/* Promotional Coupon Section - apenas para usuários com seller_referral_code + legacy system_type e feeTypes permitidos */}
+    {shouldShowPromotionalCoupon && (
+      <div className="space-y-4">
+        <div className="text-center">
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            Cupom Promocional
+          </h3>
+        </div>
+
+        <div className="space-y-3">
+          <div className="flex gap-2">
+            <input
+              ref={promotionalCouponInputRef}
+              type="text"
+              id="promotional-coupon-input"
+              name="promotional-coupon"
+              value={promotionalCoupon}
+              onChange={(e) => {
+                const newValue = e.target.value.toUpperCase();
+                // Manter o cursor na posição correta
+                const cursorPosition = e.target.selectionStart;
+                setPromotionalCoupon?.(newValue);
+                // Restaurar posição do cursor após atualização usando requestAnimationFrame
+                requestAnimationFrame(() => {
+                  if (promotionalCouponInputRef.current) {
+                    promotionalCouponInputRef.current.setSelectionRange(cursorPosition, cursorPosition);
+                    promotionalCouponInputRef.current.focus();
+                  }
+                });
+              }}
+              onBlur={(e) => {
+                // Manter o valor em uppercase quando perder foco
+                const upperValue = e.target.value.toUpperCase();
+                if (upperValue !== promotionalCoupon) {
+                  setPromotionalCoupon?.(upperValue);
+                }
+              }}
+              placeholder="Digite o código"
+              className="flex-1 px-4 sm:px-5 py-3 sm:py-4 border-2 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-center font-mono text-base sm:text-lg tracking-wider border-gray-300"
+              style={{ fontSize: '16px' }}
+              maxLength={20}
+              autoComplete="off"
+            />
+            <button
+              onClick={validatePromotionalCoupon}
+              disabled={isValidatingPromotionalCoupon || !promotionalCoupon.trim()}
+              className="px-6 sm:px-8 py-3 sm:py-4 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl transform whitespace-nowrap"
+            >
+              {isValidatingPromotionalCoupon ? (
+                <div className="flex items-center justify-center space-x-2">
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span className="hidden sm:inline">Validando...</span>
+                </div>
+              ) : (
+                'Validar'
+              )}
+            </button>
+          </div>
+          
+        </div>
+      </div>
+    )}
 
     {/* Discount Code Section */}
     {(!hasUsedReferralCode && !hasSellerReferralCode) || activeDiscount?.has_discount ? (
@@ -224,4 +321,5 @@ export const ModalContent: React.FC<ModalContentProps> = ({
       </button>
     </div>
   </div>
-);
+  );
+};

@@ -34,6 +34,7 @@ const allowedFeeTypes = new Set([
   'enrollment_fee',
   'scholarship_fee',
   'i20_control',
+  'i20_control_fee', // Adicionar suporte ao nome usado no frontend
 ]);
 
 function corsResponse(body: ValidateResponse | null, status = 200) {
@@ -75,11 +76,16 @@ Deno.serve(async (req) => {
 
     const body: ValidateRequest = await req.json();
     const couponCode = String(body.coupon_code ?? '').trim().toUpperCase();
-    const feeType = String(body.fee_type ?? '').trim();
+    let feeType = String(body.fee_type ?? '').trim();
     const purchaseAmount = Number(body.purchase_amount ?? 0);
 
     if (!couponCode) {
       return corsResponse({ success: false, error: 'Informe o código do cupom' }, 200);
+    }
+
+    // Normalizar i20_control_fee para i20_control (formato esperado pela RPC)
+    if (feeType === 'i20_control_fee') {
+      feeType = 'i20_control';
     }
 
     if (!feeType || !allowedFeeTypes.has(feeType)) {
