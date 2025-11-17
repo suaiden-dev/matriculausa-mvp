@@ -1,7 +1,7 @@
 import React from 'react';
 import { useAuth } from '../../../hooks/useAuth';
 import { StepProps } from '../types';
-import { Search, FileText, CheckCircle, Clock, ArrowUpRight, GraduationCap, DollarSign } from 'lucide-react';
+import { Search, FileText, CheckCircle, ArrowUpRight, GraduationCap, DollarSign } from 'lucide-react';
 
 export const WelcomeStep: React.FC<StepProps> = ({ onNext }) => {
   const { userProfile } = useAuth();
@@ -93,7 +93,7 @@ export const WelcomeStep: React.FC<StepProps> = ({ onNext }) => {
                     </div>
                   ) : (
                     <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
-                      <Clock className="w-5 h-5 text-gray-500" />
+                      <CheckCircle className="w-5 h-5 text-gray-500" />
                     </div>
                   )}
                 </div>
