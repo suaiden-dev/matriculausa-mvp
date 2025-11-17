@@ -13,6 +13,8 @@ import { useDocumentRequests } from '../../hooks/useDocumentRequests';
 import { useAdminNotes } from '../../hooks/useAdminNotes';
 import { useDocumentRequestHandlers } from '../../hooks/useDocumentRequestHandlers';
 import { generateTermAcceptancePDF, StudentTermAcceptanceData } from '../../utils/pdfGenerator';
+import { recordIndividualFeePayment } from '../../lib/paymentRecorder';
+import { useStudentLogs } from '../../hooks/useStudentLogs';
 
 // Componentes de UI Base
 import {
@@ -20,7 +22,6 @@ import {
   ExternalLink
 } from 'lucide-react';
 import SkeletonLoader from '../../components/AdminDashboard/StudentDetails/SkeletonLoader';
-import StudentDetailsHeader from '../../components/AdminDashboard/StudentDetails/StudentDetailsHeader';
 import StudentDetailsTabNavigation, { TabId } from '../../components/AdminDashboard/StudentDetails/StudentDetailsTabNavigation';
 
 // Componentes Overview - Lazy Load
@@ -126,6 +127,7 @@ const AdminStudentDetails: React.FC = () => {
   
   const { saving, saveProfile, markFeeAsPaid, approveDocument, rejectDocument } = useAdminStudentActions();
   const { getFeeAmount, formatFeeAmount, hasOverride, userSystemType, userFeeOverrides } = useFeeConfig(student?.user_id);
+  const { logAction } = useStudentLogs(student?.student_id || '');
   
   // Estados locais - Definir antes dos hooks personalizados que dependem deles
   const [documentRequests, setDocumentRequests] = useState<any[]>([]);
@@ -368,7 +370,7 @@ const AdminStudentDetails: React.FC = () => {
   // ✅ OTIMIZAÇÃO: Carregar document requests apenas quando necessário
   // Usa cache e debounce para evitar múltiplas queries
   React.useEffect(() => {
-    if (activeTab !== 'documents' || !student?.all_applications || student.all_applications.length === 0) {
+    if (activeTab !== 'documents' || !student?.all_applications || (student.all_applications && student.all_applications.length === 0)) {
       if (activeTab !== 'documents') {
         setDocumentRequests([]);
       }
@@ -378,6 +380,10 @@ const AdminStudentDetails: React.FC = () => {
     let cancelled = false;
     const loadDocumentRequests = async () => {
       try {
+        if (!student?.all_applications) {
+          if (!cancelled) setDocumentRequests([]);
+          return;
+        }
         const applicationIds = student.all_applications.map((app: any) => app.id).filter(Boolean);
         
         if (applicationIds.length === 0) {
@@ -602,24 +608,169 @@ const AdminStudentDetails: React.FC = () => {
   const handleConfirmPayment = useCallback(async () => {
     if (!student || !pendingPayment) return;
 
+    const feeType = pendingPayment.fee_type as 'selection_process' | 'application' | 'scholarship' | 'i20_control';
+    let applicationId: string | undefined = undefined;
+
+    // Para Application Fee, buscar a aplicação aprovada ou mais recente
+    if (feeType === 'application') {
+      const approvedApps = student?.all_applications?.filter((app: any) => app.status === 'approved') || [];
+      
+      if (approvedApps.length > 1) {
+        // Com múltiplas aplicações, usar a primeira aprovada (ou implementar seleção se necessário)
+        applicationId = approvedApps[0]?.id;
+      } else if (approvedApps.length === 1) {
+        applicationId = approvedApps[0].id;
+      } else {
+        // Se não há aplicação aprovada, buscar a mais recente
+        const { data: applications, error: fetchError } = await supabase
+          .from('scholarship_applications')
+          .select('id, status')
+          .eq('student_id', student.student_id)
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        if (!fetchError && applications && applications.length > 0) {
+          applicationId = applications[0].id;
+        } else {
+          alert('No application found for this student');
+          return;
+        }
+      }
+    }
+
+    // Para Application Fee, calcular o valor correto baseado na bolsa
+    let finalPaymentAmount = paymentAmount;
+    if (feeType === 'application' && applicationId) {
+      try {
+        const { data: applicationData } = await supabase
+          .from('scholarship_applications')
+          .select(`
+            id,
+            scholarships (
+              application_fee_amount
+            )
+          `)
+          .eq('id', applicationId)
+          .single();
+
+        if (applicationData?.scholarships) {
+          const scholarship = Array.isArray(applicationData.scholarships) 
+            ? applicationData.scholarships[0] 
+            : applicationData.scholarships;
+          
+          if (scholarship?.application_fee_amount) {
+            finalPaymentAmount = Number(scholarship.application_fee_amount);
+          }
+        }
+
+        // Adicionar $100 por dependente apenas para sistema legacy
+        const systemType = userSystemType || 'legacy';
+        const studentDependents = dependents || Number(student.dependents || 0);
+        if (systemType === 'legacy' && studentDependents > 0) {
+          finalPaymentAmount += studentDependents * 100;
+        }
+      } catch (error) {
+        console.error('Error fetching application data for fee calculation:', error);
+      }
+    }
+
+    // Registrar pagamento na tabela individual_fee_payments
+    const paymentDate = new Date().toISOString();
+    const paymentMethodValue = (paymentMethod || 'manual') as 'stripe' | 'zelle' | 'manual';
+    
+    try {
+      await recordIndividualFeePayment(supabase, {
+        userId: student.user_id,
+        feeType: feeType,
+        amount: finalPaymentAmount,
+        paymentDate: paymentDate,
+        paymentMethod: paymentMethodValue,
+        paymentIntentId: null,
+        stripeChargeId: null,
+        zellePaymentId: null
+      });
+    } catch (recordError) {
+      console.error('Failed to record individual fee payment:', recordError);
+      // Não quebra o fluxo, mas loga o erro
+    }
+
+    // Marcar como pago usando o hook
     const result = await markFeeAsPaid(
       student.user_id,
-      pendingPayment.fee_type,
-      paymentAmount,
-      paymentMethod
+      feeType,
+      finalPaymentAmount,
+      paymentMethodValue,
+      applicationId
     );
 
     if (result.success) {
+      // Para Application Fee, atualizar o estado local com a bolsa comprometida
+      if (feeType === 'application' && applicationId) {
+        try {
+          const { data: updatedApplication } = await supabase
+            .from('scholarship_applications')
+            .select(`
+              id,
+              scholarships!inner (
+                title,
+                universities!inner (
+                  name
+                )
+              )
+            `)
+            .eq('id', applicationId)
+            .single();
+
+          if (updatedApplication?.scholarships) {
+            const scholarship = Array.isArray(updatedApplication.scholarships) 
+              ? updatedApplication.scholarships[0] 
+              : updatedApplication.scholarships;
+            
+            if (scholarship) {
+              setStudent((prev: any) => {
+                if (!prev) return prev;
+                const updatedStudent = { ...prev, is_application_fee_paid: true };
+                updatedStudent.scholarship_title = scholarship.title;
+                const university = Array.isArray(scholarship.universities) 
+                  ? scholarship.universities[0] 
+                  : scholarship.universities;
+                updatedStudent.university_name = university?.name;
+                return updatedStudent as any;
+              });
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching application details:', error);
+        }
+      }
+
+      // Log the action
+      try {
+        await logAction(
+          'fee_payment',
+          `${feeType === 'selection_process' ? 'Selection Process Fee' : feeType === 'application' ? 'Application Fee' : feeType === 'scholarship' ? 'Scholarship Fee' : 'I-20 Control Fee'} marked as paid via ${paymentMethodValue} payment`,
+          user?.id || '',
+          'admin',
+          {
+            fee_type: feeType,
+            payment_method: paymentMethodValue,
+            amount: finalPaymentAmount,
+            ...(applicationId && { application_id: applicationId })
+          }
+        );
+      } catch (logError) {
+        console.error('Failed to log action:', logError);
+      }
+
       setShowPaymentModal(false);
       setPendingPayment(null);
       // Invalidar queries relacionadas
       queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.students.secondaryData(student?.user_id) });
-      alert('Payment recorded successfully!');
     } else {
-      alert('Error recording payment: ' + result.error);
+      console.error('Error recording payment:', result.error);
     }
-  }, [student, pendingPayment, paymentAmount, paymentMethod, markFeeAsPaid]);
+  }, [student, pendingPayment, paymentAmount, paymentMethod, markFeeAsPaid, dependents, userSystemType, user, logAction, profileId, queryClient]);
 
   const handleApproveDocument = useCallback(async (appId: string, docType: string) => {
     if (!student) return;
@@ -639,7 +790,7 @@ const AdminStudentDetails: React.FC = () => {
         
         if (!fetchError && updatedApp) {
           // Atualizar o estado do student localmente sem reload
-          setStudent(prev => {
+          setStudent((prev: any) => {
             if (!prev) return prev;
             const updatedApps = (prev.all_applications || []).map((a: any) =>
               a.id === appId ? { ...a, documents: updatedApp.documents || [] } : a
@@ -684,7 +835,7 @@ const AdminStudentDetails: React.FC = () => {
         
         if (!fetchError && updatedApp) {
           // Atualizar o estado do student localmente sem reload
-          setStudent(prev => {
+          setStudent((prev: any) => {
             if (!prev) return prev;
             const updatedApps = (prev.all_applications || []).map((a: any) =>
               a.id === rejectDocData.applicationId ? { ...a, documents: updatedApp.documents || [] } : a
@@ -812,7 +963,7 @@ const AdminStudentDetails: React.FC = () => {
       // Atualizar o estado local com os dados atualizados do banco
       if (updatedApp) {
         console.log('🔄 [APPROVE] Atualizando estado local...');
-        setStudent(prev => {
+        setStudent((prev: any) => {
           if (!prev) {
             console.warn('⚠️ [APPROVE] Student é null, não é possível atualizar');
             return prev;
@@ -883,7 +1034,7 @@ const AdminStudentDetails: React.FC = () => {
       
       // Atualizar o estado local com os dados atualizados do banco
       if (updatedApp) {
-        setStudent(prev => {
+        setStudent((prev: any) => {
           if (!prev) return prev;
           
           // Criar um novo array de aplicações com a aplicação atualizada
@@ -1304,7 +1455,7 @@ const AdminStudentDetails: React.FC = () => {
                 onProcessTypeChange={setEditingProcessType}
               />
 
-              {student.seller_referral_code && (
+              {student.seller_referral_code && student.all_applications && (
                 <ReferralInfoCard
                   referralCode={student.seller_referral_code}
                   referralInfo={referralInfo}

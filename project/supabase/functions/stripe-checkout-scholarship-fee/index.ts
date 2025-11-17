@@ -59,7 +59,7 @@ Deno.serve(async (req) => {
       return corsResponse({ error: 'Invalid JSON in request body' }, 400);
     }
 
-    const { price_id, success_url, cancel_url, mode, metadata, scholarships_ids, amount, payment_method } = requestBody;
+    const { price_id, success_url, cancel_url, mode, metadata, scholarships_ids, amount, payment_method, promotional_coupon } = requestBody;
     
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
@@ -76,7 +76,38 @@ Deno.serve(async (req) => {
     }
 
     console.log('[stripe-checkout-scholarship-fee] ✅ User authenticated:', user.id);
-    console.log('[stripe-checkout-scholarship-fee] 📋 Payload validation:', { price_id, success_url, cancel_url, mode, amount, payment_method });
+    console.log('[stripe-checkout-scholarship-fee] 📋 Payload validation:', { price_id, success_url, cancel_url, mode, amount, payment_method, promotional_coupon });
+
+    // Verificar se há cupom promocional (BLACK, etc) - ANTES de buscar desconto ativo
+    let promotionalCouponData: any = null;
+    if (promotional_coupon && promotional_coupon.trim()) {
+      try {
+        const normalizedCoupon = promotional_coupon.trim().toUpperCase();
+        console.log('[stripe-checkout-scholarship-fee] 🎟️ Validando cupom promocional:', normalizedCoupon);
+        
+        const { data: couponValidation, error: couponError } = await supabase
+          .rpc('validate_promotional_coupon', {
+            user_id_param: user.id,
+            coupon_code_param: normalizedCoupon,
+            fee_type_param: 'scholarship_fee',
+            purchase_amount_param: amount || 0
+          });
+
+        if (couponError) {
+          console.error('[stripe-checkout-scholarship-fee] ❌ Erro ao validar cupom promocional:', couponError);
+        } else if (couponValidation && couponValidation.success) {
+          promotionalCouponData = couponValidation;
+          console.log('[stripe-checkout-scholarship-fee] ✅ Cupom promocional válido!');
+          console.log('[stripe-checkout-scholarship-fee] Coupon ID:', promotionalCouponData.coupon_id);
+          console.log('[stripe-checkout-scholarship-fee] Discount Amount:', promotionalCouponData.discount_amount);
+          console.log('[stripe-checkout-scholarship-fee] Final Amount:', promotionalCouponData.final_amount);
+        } else {
+          console.log('[stripe-checkout-scholarship-fee] ⚠️ Cupom promocional inválido:', couponValidation?.error);
+        }
+      } catch (error) {
+        console.error('[stripe-checkout-scholarship-fee] ❌ Erro ao verificar cupom promocional:', error);
+      }
+    }
 
     // Buscar taxas do pacote do usuário
     type UserPackageFees = {
@@ -168,17 +199,32 @@ Deno.serve(async (req) => {
       },
     };
 
+    // Se houver cupom promocional válido, usar o final_amount do cupom (PRIORIDADE MÁXIMA)
+    let amountToUse = amount;
+    if (promotionalCouponData && promotionalCouponData.success && promotionalCouponData.final_amount) {
+      amountToUse = promotionalCouponData.final_amount;
+      console.log('[stripe-checkout-scholarship-fee] 🎟️ Usando valor com desconto do cupom promocional:', amountToUse);
+    }
+    
     // Definição das line_items priorizando amount explícito ou valor do pacote.
-    // 1) Se veio amount no payload/metadata, usa price_data com esse valor (centavos)
-    // 2) Senão, se usuário tem pacote, usa o scholarship_fee do pacote
-    // 3) Senão, fallback para price_id (mantém compatibilidade)
-    const explicitAmount = Number(metadata?.final_amount ?? metadata?.scholarship_fee_amount ?? metadata?.amount ?? amount);
+    // 1) PRIORIDADE: Se houver cupom promocional válido, usar final_amount do cupom
+    // 2) Se veio final_amount no metadata, usa esse valor
+    // 3) Se veio amount no payload/metadata, usa price_data com esse valor (centavos)
+    // 4) Senão, se usuário tem pacote, usa o scholarship_fee do pacote
+    // 5) Senão, fallback para price_id (mantém compatibilidade)
+    const explicitAmount = Number(
+      (promotionalCouponData && promotionalCouponData.success && promotionalCouponData.final_amount) 
+        ? promotionalCouponData.final_amount 
+        : (metadata?.final_amount ?? metadata?.scholarship_fee_amount ?? metadata?.amount ?? amountToUse)
+    );
     
     console.log('[stripe-checkout-scholarship-fee] 🔍 Debug valores:', {
+      'promotionalCouponData.final_amount': promotionalCouponData?.final_amount,
       'metadata.final_amount': metadata?.final_amount,
       'metadata.scholarship_fee_amount': metadata?.scholarship_fee_amount,
       'metadata.amount': metadata?.amount,
       'amount': amount,
+      'amountToUse': amountToUse,
       'explicitAmount': explicitAmount
     });
     
@@ -323,6 +369,27 @@ Deno.serve(async (req) => {
       ];
       console.log('[stripe-checkout-scholarship-fee] ⚠️ ÚLTIMO FALLBACK: Usando price_id:', price_id);
       console.log('[stripe-checkout-scholarship-fee] ⚠️ ATENÇÃO: Nenhum valor explícito encontrado, usando preço do Stripe');
+    }
+
+    console.log('[stripe-checkout-scholarship-fee] ⚙️ Configuração da sessão Stripe:', sessionConfig);
+
+    // Aplica cupom promocional se houver (prioridade sobre código de referência)
+    // NOTA: O valor já foi recalculado nos line_items usando final_amount, então não precisamos aplicar desconto via Stripe
+    if (promotionalCouponData && promotionalCouponData.success) {
+      console.log('[stripe-checkout-scholarship-fee] 🎟️ CUPOM PROMOCIONAL APLICADO (valor já recalculado nos line_items)');
+      console.log('[stripe-checkout-scholarship-fee] Coupon Code:', promotionalCouponData.coupon_code);
+      console.log('[stripe-checkout-scholarship-fee] Original Amount:', amount);
+      console.log('[stripe-checkout-scholarship-fee] Discount Amount:', promotionalCouponData.discount_amount);
+      console.log('[stripe-checkout-scholarship-fee] Final Amount:', promotionalCouponData.final_amount);
+      
+      // Adicionar informações do cupom no metadata
+      sessionConfig.metadata.promotional_coupon = promotionalCouponData.coupon_code;
+      sessionConfig.metadata.promotional_discount = 'true';
+      sessionConfig.metadata.promotional_discount_amount = promotionalCouponData.discount_amount.toString();
+      sessionConfig.metadata.original_amount = amount?.toString() || explicitAmount.toString();
+      sessionConfig.metadata.final_amount = promotionalCouponData.final_amount.toString();
+      
+      console.log('[stripe-checkout-scholarship-fee] ✅ Informações do cupom promocional adicionadas ao metadata!');
     }
 
     const session = await stripe.checkout.sessions.create(sessionConfig);
