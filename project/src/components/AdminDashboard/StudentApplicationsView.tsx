@@ -561,6 +561,11 @@ const StudentApplicationsView: React.FC = () => {
   };
 
   const filteredStudents = students.filter((student: StudentRecord) => {
+    // Excluir estudantes com status enrolled (eles aparecem na aba Completed)
+    if (student.application_status === 'enrolled') {
+      return false;
+    }
+
     // Em produção, ocultar usuários de teste com email contendo "uorak"
     if (isProductionHost && (student.student_email || '').toLowerCase().includes('uorak')) {
       return false;
