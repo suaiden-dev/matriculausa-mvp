@@ -108,3 +108,4 @@ CREATE TRIGGER update_promotional_coupon_usage_updated_at
   FOR EACH ROW
   EXECUTE FUNCTION update_promotional_coupon_usage_updated_at();
 
+

@@ -69,6 +69,7 @@ const Overview: React.FC<OverviewProps> = ({
   const [studentDocuments, setStudentDocuments] = useState<any[]>([]);
   const [documentsLoading, setDocumentsLoading] = useState(true);
   const [promotionalCouponDiscount, setPromotionalCouponDiscount] = useState<{ discountAmount: number; finalAmount: number } | null>(null);
+  const [scholarshipFeePromotionalCoupon, setScholarshipFeePromotionalCoupon] = useState<{ discountAmount: number; finalAmount: number } | null>(null);
   const [realPaidAmounts, setRealPaidAmounts] = useState<{
     selection_process?: number;
     scholarship?: number;
@@ -402,6 +403,81 @@ const Overview: React.FC<OverviewProps> = ({
     };
   }, [selectionWithDependents]);
 
+  // Verificar no banco de dados se há cupom promocional aplicado para scholarship_fee
+  useEffect(() => {
+    const checkScholarshipFeePromotionalCoupon = async () => {
+      if (!user?.id || userProfile?.is_scholarship_fee_paid) {
+        setScholarshipFeePromotionalCoupon(null);
+        return;
+      }
+      
+      try {
+        // Buscar registro mais recente de uso do cupom para scholarship_fee
+        const { data: couponUsage, error } = await supabase
+          .from('promotional_coupon_usage')
+          .select('coupon_code, original_amount, discount_amount, final_amount, metadata, used_at')
+          .eq('user_id', user.id)
+          .eq('fee_type', 'scholarship_fee')
+          .order('used_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        
+        if (error) {
+          console.error('[Overview] Erro ao buscar cupom do banco para scholarship_fee:', error);
+          setScholarshipFeePromotionalCoupon(null);
+          return;
+        }
+        
+        if (couponUsage && couponUsage.coupon_code) {
+          // Verificar se é uma validação recente (menos de 24 horas) ou se já foi usado em pagamento
+          const usedAt = new Date(couponUsage.used_at);
+          const now = new Date();
+          const hoursDiff = (now.getTime() - usedAt.getTime()) / (1000 * 60 * 60);
+          const isRecentValidation = hoursDiff < 24 || couponUsage.metadata?.is_validation === true;
+          
+          if (isRecentValidation) {
+            // Verificar se o final_amount está correto
+            const originalAmount = Number(couponUsage.original_amount);
+            const discountAmount = Number(couponUsage.discount_amount);
+            const finalAmountFromDB = Number(couponUsage.final_amount);
+            
+            // Se final_amount está igual ao original_amount, recalcular baseado no desconto
+            const finalAmount = finalAmountFromDB < originalAmount 
+              ? finalAmountFromDB 
+              : originalAmount - discountAmount;
+            
+            setScholarshipFeePromotionalCoupon({
+              discountAmount: discountAmount,
+              finalAmount: finalAmount
+            });
+            
+            console.log('[Overview] Cupom promocional para scholarship_fee carregado do banco:', couponUsage.coupon_code, 'finalAmount:', finalAmount);
+          } else {
+            setScholarshipFeePromotionalCoupon(null);
+          }
+        } else {
+          setScholarshipFeePromotionalCoupon(null);
+        }
+      } catch (error) {
+        console.error('[Overview] Erro ao verificar cupom do banco para scholarship_fee:', error);
+        setScholarshipFeePromotionalCoupon(null);
+      }
+    };
+
+    checkScholarshipFeePromotionalCoupon();
+    
+    // Escutar eventos de remoção de cupom
+    const handleCouponRemoved = () => {
+      setScholarshipFeePromotionalCoupon(null);
+    };
+    
+    window.addEventListener('promotionalCouponRemoved', handleCouponRemoved);
+    
+    return () => {
+      window.removeEventListener('promotionalCouponRemoved', handleCouponRemoved);
+    };
+  }, [user?.id, userProfile?.is_scholarship_fee_paid]);
+
   // Valores das taxas para o ProgressBar (Application fee é variável)
   // ✅ CORREÇÃO: Se o pagamento já foi feito, usar o valor REAL pago (que pode ter desconto)
   // Caso contrário, aplicar desconto na barra de progresso se houver activeDiscount ou cupom promocional
@@ -415,7 +491,9 @@ const Overview: React.FC<OverviewProps> = ({
 
   const scholarshipFeeToDisplay = userProfile?.is_scholarship_fee_paid && realPaidAmounts.scholarship
     ? realPaidAmounts.scholarship // Valor real pago (já inclui desconto se aplicável)
-    : scholarshipBase;
+    : scholarshipFeePromotionalCoupon
+      ? scholarshipFeePromotionalCoupon.finalAmount
+      : scholarshipBase;
 
   const i20FeeToDisplay = userProfile?.has_paid_i20_control_fee && realPaidAmounts.i20_control
     ? realPaidAmounts.i20_control // Valor real pago (já inclui desconto se aplicável)
