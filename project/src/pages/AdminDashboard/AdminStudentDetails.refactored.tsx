@@ -88,7 +88,8 @@ const AdminStudentDetails: React.FC = () => {
   const realPaidAmounts = (() => {
     const amounts: Record<string, number> = {};
     (secondaryDataQuery.data?.individualFeePayments || []).forEach((p: any) => {
-      amounts[p.fee_type] = p.amount_paid;
+      // O campo na tabela é 'amount', não 'amount_paid'
+      amounts[p.fee_type] = Number(p.amount || p.amount_paid || 0);
     });
     return amounts;
   })();
@@ -858,14 +859,134 @@ const AdminStudentDetails: React.FC = () => {
   }, [rejectDocData, rejectDocument, student, setStudent]);
 
   const handleViewDocument = useCallback((doc: { file_url: string; filename: string }) => {
-    window.open(doc.file_url, '_blank');
+    // ✅ Aceitar tanto file_url quanto url (fallback)
+    const fileUrl: string | undefined = doc?.file_url || (doc as any)?.url;
+    if (!doc || !fileUrl) {
+      console.error('Documento ou file_url/url está vazio ou undefined');
+      return;
+    }
+    
+    try {
+      // ✅ CORREÇÃO: Se já é uma URL completa do Supabase, usar diretamente
+      if (fileUrl && (fileUrl.startsWith('https://') || fileUrl.startsWith('http://'))) {
+        // Se já é uma URL completa, usar diretamente
+        window.open(fileUrl, '_blank');
+      } else {
+        // Se file_url é um path do storage, converter para URL pública
+        const publicUrl = supabase.storage
+          .from('student-documents')
+          .getPublicUrl(fileUrl)
+          .data.publicUrl;
+        
+        window.open(publicUrl, '_blank');
+      }
+    } catch (error) {
+      console.error('Erro ao gerar URL pública:', error);
+      // Fallback: tentar usar a URL original
+      window.open(fileUrl, '_blank');
+    }
   }, []);
 
-  const handleUploadDocument = useCallback(async (appId: string, docType: string, _file: File) => {
-    setUploadingDocs(prev => ({ ...prev, [`${appId}:${docType}`]: true }));
-    // Implementation would go here
-    setUploadingDocs(prev => ({ ...prev, [`${appId}:${docType}`]: false }));
-  }, []);
+  const handleUploadDocument = useCallback(async (appId: string, docType: string, file: File) => {
+    if (!canUniversityManage || !student) return;
+    const k = `${appId}:${docType}`;
+    setUploadingDocs(prev => ({ ...prev, [k]: true }));
+    
+    try {
+      // Caminho no bucket
+      const safeDocType = docType.replace(/[^a-z0-9_\-]/gi, '').toLowerCase();
+      const timestamp = Date.now();
+      const storagePath = `${student.student_id}/${appId}/${safeDocType}_${timestamp}_${file.name}`;
+
+      // Upload no bucket student-documents (upsert para substituir)
+      const { error: uploadError } = await supabase.storage
+        .from('student-documents')
+        .upload(storagePath, file, { upsert: true, cacheControl: '3600' });
+      
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        alert('Error uploading document: ' + uploadError.message);
+        return;
+      }
+
+      // URL pública
+      const { data: pub } = supabase.storage.from('student-documents').getPublicUrl(storagePath);
+      const publicUrl = pub?.publicUrl || storagePath;
+
+      // Atualizar array de documentos na aplicação
+      const targetApp = student.all_applications?.find((a: any) => a.id === appId);
+      if (!targetApp) {
+        console.error('Application not found:', appId);
+        return;
+      }
+      
+      const currentDocs: any[] = Array.isArray(targetApp.documents) ? targetApp.documents : [];
+      let found = false;
+      const updatedDocs = currentDocs.map((d: any) => {
+        if (d?.type === docType) {
+          found = true;
+          return {
+            ...d,
+            url: publicUrl,
+            status: 'under_review',
+            uploaded_at: new Date().toISOString()
+          };
+        }
+        return d;
+      });
+      
+      const finalDocs = found
+        ? updatedDocs
+        : [...updatedDocs, { type: docType, url: publicUrl, status: 'under_review', uploaded_at: new Date().toISOString() }];
+
+      const { data, error } = await supabase
+        .from('scholarship_applications')
+        .update({ documents: finalDocs, updated_at: new Date().toISOString() })
+        .eq('id', appId)
+        .select('id, documents')
+        .single();
+      
+      if (error) {
+        console.error('Update documents error:', error);
+        alert('Error updating document: ' + error.message);
+        return;
+      }
+
+      // Atualizar estado local
+      setStudent((prev: any) => {
+        if (!prev) return prev;
+        const updatedApps = (prev.all_applications || []).map((a: any) => 
+          a.id === appId ? { ...a, documents: data?.documents || finalDocs } : a
+        );
+        return { ...prev, all_applications: updatedApps } as any;
+      });
+      
+      // Invalidar queries relacionadas
+      queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
+      
+      // Log the action
+      try {
+        await logAction(
+          'document_upload',
+          `Document ${docType} replaced/uploaded`,
+          user?.id || '',
+          'admin',
+          {
+            application_id: appId,
+            document_type: docType,
+            file_url: publicUrl
+          }
+        );
+      } catch (logError) {
+        console.error('Failed to log action:', logError);
+      }
+    } catch (error: any) {
+      console.error('Error uploading document:', error);
+      alert('Error uploading document: ' + (error.message || 'Unknown error'));
+    } finally {
+      setUploadingDocs(prev => ({ ...prev, [k]: false }));
+    }
+  }, [student, canUniversityManage, setStudent, user, logAction, profileId, queryClient]);
 
   // Funções para aprovar/rejeitar aplicação
   const approveApplication = useCallback(async (applicationId: string) => {

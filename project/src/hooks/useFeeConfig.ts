@@ -225,7 +225,6 @@ export const useFeeConfig = (userId?: string) => {
         const systemType = data.system_type || 'legacy';
         setUserSystemType(systemType as 'legacy' | 'simplified');
 
-        console.log('✅ [PERFORMANCE] Usando RPC consolidada para carregar fee config');
         return;
       } else {
         console.warn('⚠️ [PERFORMANCE] RPC consolidada falhou, usando queries individuais como fallback:', rpcError);

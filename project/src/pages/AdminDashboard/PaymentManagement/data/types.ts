@@ -24,6 +24,7 @@ export interface PaymentRecord {
   reviewed_at?: string;
   admin_approved_at?: string;
   seller_referral_code?: string | null;
+  metadata?: any; // Metadata do pagamento (inclui dados de cupom promocional)
 }
 
 export interface PaymentStats {
