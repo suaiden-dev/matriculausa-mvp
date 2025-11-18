@@ -17,6 +17,7 @@ import {
 import { supabase } from '../../lib/supabase';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
 import { useDynamicFeeCalculation, useDynamicFeeCalculationForUser } from '../../hooks/useDynamicFeeCalculation';
+import { getRealPaidAmounts } from '../../utils/paymentConverter';
 
 function EnhancedStudentTracking(props) {
   const { userId } = props || {};
@@ -63,6 +64,10 @@ function EnhancedStudentTracking(props) {
   const [overridesMap, setOverridesMap] = useState({});
   // Map de dependentes por profile_id
   const [dependentsMap, setDependentsMap] = useState({});
+  // Map de valores reais pagos por user_id (já com desconto e convertido se PIX)
+  const [realPaidAmountsMap, setRealPaidAmountsMap] = useState<Record<string, { selection_process?: number; scholarship?: number; i20_control?: number }>>({});
+  // Estado de loading para valores reais pagos
+  const [loadingRealPaidAmounts, setLoadingRealPaidAmounts] = useState(true);
   // Função para calcular taxas de um estudante específico
   const getStudentFees = (student: any) => {
     // Usar system_type do estudante para determinar os valores
@@ -197,9 +202,58 @@ function EnhancedStudentTracking(props) {
     loadDependents();
   }, [students]);
 
-  // Calcular receita ajustada por estudante usando overrides quando existirem
+  // Buscar valores reais pagos de individual_fee_payments (já com desconto e convertido se PIX)
+  // ✅ OTIMIZAÇÃO: Mostrar valores aproximados primeiro, depois atualizar com valores reais em background
+  useEffect(() => {
+    const loadRealPaidAmounts = async () => {
+      setLoadingRealPaidAmounts(true);
+      try {
+        const uniqueUserIds = Array.from(new Set((students || []).map((s) => s.user_id).filter(Boolean)));
+        if (uniqueUserIds.length === 0) {
+          setRealPaidAmountsMap({});
+          setLoadingRealPaidAmounts(false);
+          return;
+        }
+
+        // ✅ Mostrar valores vazios primeiro (usa fallback) para exibir a página rapidamente
+        setRealPaidAmountsMap({});
+        setLoadingRealPaidAmounts(false);
+
+        // Buscar valores pagos para cada estudante em background (pode demorar)
+        // Limitar a 10 chamadas simultâneas para não sobrecarregar
+        const BATCH_SIZE = 10;
+        const amountsMap: Record<string, { selection_process?: number; scholarship?: number; i20_control?: number }> = {};
+        
+        for (let i = 0; i < uniqueUserIds.length; i += BATCH_SIZE) {
+          const batch = uniqueUserIds.slice(i, i + BATCH_SIZE);
+          
+          await Promise.allSettled(batch.map(async (userId) => {
+            try {
+              const amounts = await getRealPaidAmounts(userId, ['selection_process', 'scholarship', 'i20_control']);
+              amountsMap[userId] = {
+                selection_process: amounts.selection_process,
+                scholarship: amounts.scholarship,
+                i20_control: amounts.i20_control
+              };
+            } catch (error) {
+              console.error(`[EnhancedStudentTrackingRefactored] Erro ao buscar valores pagos para user_id ${userId}:`, error);
+            }
+          }));
+
+          // Atualizar conforme vão sendo carregados
+          setRealPaidAmountsMap({ ...amountsMap });
+        }
+      } catch (e) {
+        console.error('🔍 [EnhancedStudentTrackingRefactored] Erro ao carregar valores reais pagos:', e);
+        setRealPaidAmountsMap({});
+      }
+    };
+    loadRealPaidAmounts();
+  }, [students]);
+
+  // Calcular receita ajustada por estudante usando valores reais pagos quando disponíveis
+  // ✅ OTIMIZAÇÃO: Agora mostra valores aproximados primeiro (fallback) e atualiza com valores reais depois
   const adjustedStudents = useMemo(() => {
-    
     const result = (filteredStudents || []).map((s) => {
       
       if (!s.user_id) {
@@ -207,31 +261,53 @@ function EnhancedStudentTracking(props) {
       }
       const o = overridesMap[s.user_id] || {};
       const dependents = Number(dependentsMap[s.profile_id]) || 0;
+      const realPaid = realPaidAmountsMap[s.user_id] || {};
 
-      // ✅ CORREÇÃO: Usar a mesma lógica simples do Seller Dashboard
+      // ✅ CORREÇÃO: Usar valores reais pagos (já com desconto e convertido se PIX) quando disponíveis
+      // Mesma lógica do Overview.tsx e Analytics.tsx
       let total = 0;
       
-      // Selection Process Fee
+      // Selection Process Fee - usar valor real pago se disponível, senão calcular
       if (s.has_paid_selection_process_fee) {
-        const systemType = s.system_type || 'legacy';
-        const baseSelectionFee = systemType === 'simplified' ? 350 : 400;
-        total += baseSelectionFee + (dependents * 150);
+        if (realPaid.selection_process !== undefined && realPaid.selection_process > 0) {
+          // Usar valor real pago (já com desconto e convertido se PIX)
+          total += realPaid.selection_process;
+        } else {
+          // Fallback: cálculo fixo para dados antigos sem registro
+          const systemType = s.system_type || 'legacy';
+          const baseSelectionFee = systemType === 'simplified' ? 350 : 400;
+          total += baseSelectionFee + (dependents * 150);
+        }
       }
       
-      // Scholarship Fee
-      if (s.is_scholarship_fee_paid) {
-        const systemType = s.system_type || 'legacy';
-        const scholarshipFee = systemType === 'simplified' ? 550 : 900;
-        total += scholarshipFee;
+      // Scholarship Fee - usar valor real pago se disponível, senão calcular
+      const hasAnyScholarshipPaid = s.is_scholarship_fee_paid || false;
+      if (hasAnyScholarshipPaid) {
+        if (realPaid.scholarship !== undefined && realPaid.scholarship > 0) {
+          // Usar valor real pago (já com desconto e convertido se PIX)
+          total += realPaid.scholarship;
+        } else {
+          // Fallback: cálculo fixo para dados antigos sem registro
+          const systemType = s.system_type || 'legacy';
+          const scholarshipFee = systemType === 'simplified' ? 550 : 900;
+          total += scholarshipFee;
+        }
       }
       
-      // I-20 Control Fee (só conta se scholarship foi pago)
-      if (s.is_scholarship_fee_paid && s.has_paid_i20_control_fee) {
-        total += 900; // Sempre $900 para ambos os sistemas
+      // I-20 Control Fee - usar valor real pago se disponível, senão calcular
+      if (hasAnyScholarshipPaid && s.has_paid_i20_control_fee) {
+        if (realPaid.i20_control !== undefined && realPaid.i20_control > 0) {
+          // Usar valor real pago (já com desconto e convertido se PIX)
+          total += realPaid.i20_control;
+        } else {
+          // Fallback: cálculo fixo para dados antigos sem registro
+          total += 900; // Sempre $900 para ambos os sistemas
+        }
       }
       
       console.log(`🔍 [ENHANCED_TRACKING] Calculado para ${s.email}:`, {
           totalCalculated: total,
+          realPaid: realPaid,
           breakdown: {
             selectionPaid: s.has_paid_selection_process_fee,
             scholarshipPaid: s.is_scholarship_fee_paid,  
@@ -254,7 +330,7 @@ function EnhancedStudentTracking(props) {
     
     
     return result;
-  }, [filteredStudents, overridesMap, feeConfig, dependentsMap]);
+  }, [filteredStudents, overridesMap, feeConfig, dependentsMap, realPaidAmountsMap]);
 
   // Toggle expandir vendedor
   const toggleSellerExpansion = (sellerId) => {
@@ -418,11 +494,66 @@ function EnhancedStudentTracking(props) {
     }
   }, [realScholarshipApplication?.id, realScholarshipApplication?.student_process_type]);
 
-  // Loading state
+  // Loading state - usar skeleton ao invés de spinner
+  // ✅ OTIMIZAÇÃO: Só mostrar skeleton no carregamento inicial, não enquanto busca valores reais
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+      <div className="min-h-screen bg-slate-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 animate-pulse">
+          {/* Header Skeleton */}
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+            <div className="h-8 w-64 bg-slate-200 rounded-lg mb-2"></div>
+            <div className="h-4 w-96 bg-slate-200 rounded-lg"></div>
+          </div>
+
+          {/* Stats Cards Skeleton */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <div className="h-4 w-24 bg-slate-200 rounded mb-2"></div>
+                    <div className="h-8 w-20 bg-slate-200 rounded mb-2"></div>
+                    <div className="h-4 w-32 bg-slate-200 rounded"></div>
+                  </div>
+                  <div className="w-12 h-12 bg-slate-200 rounded-xl"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Filters Skeleton */}
+          <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-6">
+            <div className="flex flex-wrap gap-4">
+              <div className="h-10 w-full sm:w-64 bg-slate-200 rounded-lg"></div>
+              <div className="h-10 w-full sm:w-48 bg-slate-200 rounded-lg"></div>
+              <div className="h-10 w-full sm:w-48 bg-slate-200 rounded-lg"></div>
+            </div>
+          </div>
+
+          {/* Sellers List Skeleton */}
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
+            <div className="p-4 sm:p-6 border-b border-slate-200">
+              <div className="h-6 w-48 bg-slate-200 rounded mb-2"></div>
+              <div className="h-4 w-72 bg-slate-200 rounded"></div>
+            </div>
+            <div className="p-4 sm:p-6 space-y-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="bg-slate-50 rounded-xl p-4 border border-slate-200">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="h-5 w-40 bg-slate-200 rounded"></div>
+                    <div className="h-8 w-8 bg-slate-200 rounded"></div>
+                  </div>
+                  <div className="space-y-2">
+                    {[1, 2].map((j) => (
+                      <div key={j} className="h-16 bg-slate-200 rounded-lg"></div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -498,6 +629,7 @@ function EnhancedStudentTracking(props) {
               onTabChange={setActiveTab}
               onViewDocument={handleViewDocument}
               onDownloadDocument={handleDownloadDocument}
+              realPaidAmounts={realPaidAmountsMap[studentDetails?.student_id || studentDetails?.user_id || ''] || {}}
             />
           )}
           

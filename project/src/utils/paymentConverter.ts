@@ -1,0 +1,243 @@
+import { supabase } from '../lib/supabase';
+
+export interface PaymentIntentInfo {
+  currency: string;
+  isPIX: boolean;
+  exchange_rate: number | null;
+  base_amount: number | null; // Valor líquido (sem taxa do Stripe)
+  payment_method_types: string[];
+}
+
+// Cache para evitar múltiplas chamadas ao Stripe para o mesmo payment_intent_id
+const paymentIntentCache = new Map<string, { data: PaymentIntentInfo; timestamp: number }>();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutos
+
+/**
+ * Busca informações do Payment Intent do Stripe via Edge Function
+ */
+async function getPaymentIntentInfoFromStripe(paymentIntentId: string): Promise<PaymentIntentInfo | null> {
+  // Verificar cache primeiro
+  const cached = paymentIntentCache.get(paymentIntentId);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    console.log(`[paymentConverter] Usando cache para payment_intent_id: ${paymentIntentId}`);
+    return cached.data;
+  }
+
+  try {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
+    
+    if (!token) {
+      console.error('[paymentConverter] Usuário não autenticado');
+      return null;
+    }
+
+    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-payment-intent-info`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ payment_intent_id: paymentIntentId }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      console.error('[paymentConverter] Erro ao buscar Payment Intent:', error);
+      return null;
+    }
+
+    const result = await response.json();
+    
+    if (result.success) {
+      const info: PaymentIntentInfo = {
+        currency: result.currency,
+        isPIX: result.isPIX,
+        exchange_rate: result.exchange_rate,
+        base_amount: result.base_amount || null,
+        payment_method_types: result.payment_method_types || [],
+      };
+      
+      // Salvar no cache
+      paymentIntentCache.set(paymentIntentId, { data: info, timestamp: Date.now() });
+      
+      return info;
+    }
+
+    return null;
+  } catch (error) {
+    console.error('[paymentConverter] Exceção ao buscar Payment Intent:', error);
+    return null;
+  }
+}
+
+/**
+ * Identifica se um pagamento é PIX consultando o Payment Intent do Stripe
+ */
+export async function isPIXPayment(paymentIntentId: string | null | undefined): Promise<boolean> {
+  if (!paymentIntentId) {
+    return false;
+  }
+
+  const info = await getPaymentIntentInfoFromStripe(paymentIntentId);
+  return info?.isPIX || false;
+}
+
+/**
+ * Busca a taxa de câmbio do Stripe via Payment Intent
+ */
+export async function getExchangeRateFromStripe(paymentIntentId: string | null | undefined): Promise<number | null> {
+  if (!paymentIntentId) {
+    return null;
+  }
+
+  const info = await getPaymentIntentInfoFromStripe(paymentIntentId);
+  return info?.exchange_rate || null;
+}
+
+/**
+ * Busca o valor líquido (base_amount) do Stripe via Payment Intent
+ * Este é o valor sem a taxa do Stripe, usado para comissões
+ */
+export async function getBaseAmountFromStripe(paymentIntentId: string | null | undefined): Promise<number | null> {
+  if (!paymentIntentId) {
+    return null;
+  }
+
+  const info = await getPaymentIntentInfoFromStripe(paymentIntentId);
+  return info?.base_amount || null;
+}
+
+/**
+ * Converte BRL para USD usando a taxa de câmbio
+ */
+export function convertBRLToUSD(amountBRL: number, exchangeRate: number): number {
+  if (exchangeRate <= 0) {
+    console.warn('[paymentConverter] Taxa de câmbio inválida:', exchangeRate);
+    return amountBRL;
+  }
+  
+  return amountBRL / exchangeRate;
+}
+
+/**
+ * Calcula o valor líquido (net) removendo as taxas do Stripe do valor bruto (gross)
+ * 
+ * Para cartões: Se gross = (net + fixed) / (1 - percentage), então:
+ *   gross * (1 - percentage) = net + fixed
+ *   net = gross * (1 - percentage) - fixed
+ * 
+ * Para PIX: Se gross = net / (1 - percentage), então:
+ *   net = gross * (1 - percentage)
+ */
+function calculateNetAmountFromGross(grossAmount: number, isPIX: boolean = false): number {
+  if (isPIX) {
+    // Para PIX: taxa total ~1.8% (1.19% processamento + 0.6% conversão)
+    const STRIPE_PIX_TOTAL_PERCENTAGE = 0.018; // ~1.8%
+    const netAmount = grossAmount * (1 - STRIPE_PIX_TOTAL_PERCENTAGE);
+    return Math.round(netAmount * 100) / 100;
+  } else {
+    // Para cartão: 3.9% + $0.30
+    // Se gross = (net + 0.30) / (1 - 0.039), então:
+    // net = gross * (1 - 0.039) - 0.30
+    const STRIPE_PERCENTAGE = 0.039; // 3.9%
+    const STRIPE_FIXED_FEE = 0.30;   // $0.30
+    const netAmount = grossAmount * (1 - STRIPE_PERCENTAGE) - STRIPE_FIXED_FEE;
+    return Math.max(0, Math.round(netAmount * 100) / 100); // Garantir que não seja negativo
+  }
+}
+
+/**
+ * Busca valores líquidos pagos (sem taxas do Stripe) de individual_fee_payments
+ * ✅ CORREÇÃO: Agora retorna valores LÍQUIDOS (net) ao invés de brutos (gross)
+ */
+export async function getRealPaidAmounts(
+  userId: string,
+  feeTypes: ('selection_process' | 'scholarship' | 'i20_control' | 'application')[]
+): Promise<Record<string, number>> {
+  try {
+    const { data: payments, error } = await supabase
+      .from('individual_fee_payments')
+      .select('fee_type, amount, payment_method, payment_intent_id')
+      .eq('user_id', userId)
+      .in('fee_type', feeTypes);
+
+    if (error) {
+      console.error('[paymentConverter] Erro ao buscar pagamentos:', error);
+      return {};
+    }
+
+    const amounts: Record<string, number> = {};
+
+    // Processar cada pagamento
+    for (const payment of payments || []) {
+      let amountUSD = Number(payment.amount);
+
+      // Se for pagamento Stripe, calcular o valor LÍQUIDO (sem taxas do Stripe)
+      if (payment.payment_method === 'stripe' && payment.payment_intent_id) {
+        // Buscar informações do Payment Intent (incluindo base_amount se disponível)
+        const paymentInfo = await getPaymentIntentInfoFromStripe(payment.payment_intent_id);
+        const isPIX = paymentInfo?.isPIX || false;
+        
+        // ✅ PRIORIDADE 1: Usar base_amount do metadata se disponível (já é líquido)
+        if (paymentInfo?.base_amount !== null && paymentInfo?.base_amount !== undefined) {
+          amountUSD = paymentInfo.base_amount;
+          console.log(`[paymentConverter] ✅ Usando base_amount (líquido) do metadata: ${amountUSD.toFixed(2)} USD para payment_intent_id: ${payment.payment_intent_id}`);
+        } else {
+          // ✅ PRIORIDADE 2: Calcular valor líquido removendo taxas do Stripe
+          if (isPIX) {
+            // Para PIX: o valor em individual_fee_payments está em BRL (valor bruto)
+            // Converter BRL para USD primeiro
+            const exchangeRate = paymentInfo?.exchange_rate || await getExchangeRateFromStripe(payment.payment_intent_id);
+            
+            if (exchangeRate) {
+              // Converter BRL bruto para USD bruto
+              const grossAmountUSD = convertBRLToUSD(amountUSD, exchangeRate);
+              // Remover taxas do Stripe para obter valor líquido
+              amountUSD = calculateNetAmountFromGross(grossAmountUSD, true);
+              console.log(`[paymentConverter] ✅ Calculado PIX líquido: ${payment.amount} BRL → ${grossAmountUSD.toFixed(2)} USD (bruto) → ${amountUSD.toFixed(2)} USD (líquido)`);
+            } else {
+              console.warn(`[paymentConverter] Taxa de câmbio não encontrada para payment_intent_id: ${payment.payment_intent_id}`);
+              continue;
+            }
+          } else {
+            // Para cartão: o valor em individual_fee_payments já está em USD (valor bruto)
+            // Remover taxas do Stripe para obter valor líquido
+            amountUSD = calculateNetAmountFromGross(amountUSD, false);
+            console.log(`[paymentConverter] ✅ Calculado cartão líquido: ${Number(payment.amount).toFixed(2)} USD (bruto) → ${amountUSD.toFixed(2)} USD (líquido)`);
+          }
+        }
+      }
+
+      // Mapear fee_type para a chave correta
+      const feeTypeKey = payment.fee_type === 'selection_process' ? 'selection_process' :
+                        payment.fee_type === 'scholarship' ? 'scholarship' :
+                        payment.fee_type === 'i20_control' ? 'i20_control' :
+                        payment.fee_type === 'application' ? 'application' : null;
+
+      if (feeTypeKey) {
+        // Se já existe um valor para este fee_type, usar o maior (mais recente)
+        if (!amounts[feeTypeKey] || amountUSD > amounts[feeTypeKey]) {
+          amounts[feeTypeKey] = amountUSD;
+        }
+      }
+    }
+
+    return amounts;
+  } catch (error) {
+    console.error('[paymentConverter] Exceção ao buscar valores pagos:', error);
+    return {};
+  }
+}
+
+/**
+ * Busca valor real pago para um fee_type específico
+ */
+export async function getRealPaidAmount(
+  userId: string,
+  feeType: 'selection_process' | 'scholarship' | 'i20_control' | 'application'
+): Promise<number | null> {
+  const amounts = await getRealPaidAmounts(userId, [feeType]);
+  return amounts[feeType] || null;
+}
+

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Mail, Lock, User, Building, UserCheck, GraduationCap, CheckCircle, X, Gift, Target } from 'lucide-react';
+import { Mail, Lock, User, Building, UserCheck, GraduationCap, CheckCircle, X, Gift, Target, ChevronDown } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 
 import { supabase } from '../lib/supabase';
@@ -25,6 +25,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
     country: '',
     fieldOfInterest: '',
     englishLevel: '',
+    dependents: 0, // Dependents field for SUAIDEN code
     // University specific fields
     universityName: '',
     position: '',
@@ -98,8 +99,15 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
     setReferralCodeLoading(true);
     
     // Detectar tipo automaticamente
-    const isSeller = code.startsWith('SELLER_') || code.length > 8;
-    const isRewards = code.startsWith('MATR') || (code.length <= 8 && /^[A-Z0-9]+$/.test(code));
+    // SUAIDEN é um código especial de seller (Direct Sales) que aplica Package 3 automaticamente
+    const isSuaidenCode = code.toUpperCase() === 'SUAIDEN';
+    const isSeller = isSuaidenCode || code.startsWith('SELLER_') || code.length > 8;
+    const isRewards = !isSuaidenCode && (code.startsWith('MATR') || (code.length <= 8 && /^[A-Z0-9]+$/.test(code)));
+    
+     // Se for SUAIDEN, resetar dependents para 0 (será preenchido pelo usuário)
+     if (isSuaidenCode) {
+       setFormData(prev => ({ ...prev, dependents: 0 }));
+     }
     
     try {
       if (isSeller) {
@@ -254,6 +262,16 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
         
         console.log('✅ [AUTH] Validação de telefone passou:', formData.phone);
         
+        // Detectar se é código SUAIDEN para aplicar Package 3 automaticamente
+        const isSuaidenCode = formData.referralCode.toUpperCase() === 'SUAIDEN';
+        
+         // Validar dependents se for SUAIDEN (deve ser entre 0 e 5)
+         if (activeTab === 'student' && isSuaidenCode && (formData.dependents < 0 || formData.dependents > 5)) {
+           setError('Please select between 0 and 5 dependents.');
+           setLoading(false);
+           return;
+         }
+        
         const userData = {
           full_name: activeTab === 'student' ? formData.full_name : formData.full_name,
           role: (activeTab === 'student' ? 'student' : 'school') as 'student' | 'school',
@@ -274,6 +292,12 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
             }),
             ...(referralCodeType === 'rewards' && formData.referralCode && {
               affiliate_code: formData.referralCode
+            }),
+            // ✅ SUAIDEN: Aplicar Package 3 automaticamente e dependents obrigatório
+            ...(isSuaidenCode && {
+              scholarship_package_number: 3,
+              desired_scholarship_range: 4500,
+              dependents: formData.dependents
             })
           })
         };
@@ -723,7 +747,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                     
                     {/* Feedback de tipo detectado */}
                     {formData.referralCode && (
-                      <div className="mt-2 text-xs">
+                      <div className="mt-1 text-xs">
                         {referralCodeValid === true && (
                           <p className="text-green-600 flex items-center">
                             <CheckCircle className="h-3 w-3 mr-1" />
@@ -744,6 +768,36 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                       </div>
                     )}
                   </div>
+
+                  {/* Dependents field - Only show for SUAIDEN code - placed right after Referral Code */}
+                  {activeTab === 'student' && formData.referralCode.toUpperCase() === 'SUAIDEN' && (
+                    <div className="lg:col-span-1">
+                      <label htmlFor="dependents" className="block text-sm font-bold text-slate-900 mb-2">
+                        Dependents
+                      </label>
+                      <div className="relative">
+                        <User className="absolute left-4 top-4 h-5 w-5 text-slate-400 z-10" />
+                        <ChevronDown className="absolute right-4 top-4 h-5 w-5 text-slate-400 pointer-events-none z-10" />
+                        <select
+                          id="dependents"
+                          name="dependents"
+                          value={formData.dependents || 0}
+                          onChange={(e) => {
+                            const value = parseInt(e.target.value) || 0;
+                            setFormData(prev => ({ ...prev, dependents: value }));
+                          }}
+                          className="appearance-none relative block w-full pl-12 pr-12 py-3 sm:py-4 bg-white border border-slate-300 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300 text-sm sm:text-base cursor-pointer"
+                        >
+                          <option value={0}>0 Dependents</option>
+                          <option value={1}>1 Dependent</option>
+                          <option value={2}>2 Dependents</option>
+                          <option value={3}>3 Dependents</option>
+                          <option value={4}>4 Dependents</option>
+                          <option value={5}>5 Dependents</option>
+                        </select>
+                      </div>
+                    </div>
+                  )}
 
                 </div>
               </>

@@ -114,6 +114,7 @@ const Overview: React.FC<OverviewProps> = ({
   }, [user?.id]);
 
   // Função para buscar valores reais pagos de individual_fee_payments
+  // IMPORTANTE: Não usa valores de pagamentos PIX (que estão em BRL), apenas valores em USD
   const fetchRealPaidAmounts = React.useCallback(async () => {
     if (!user?.id) {
       setRealPaidAmounts({});
@@ -123,7 +124,7 @@ const Overview: React.FC<OverviewProps> = ({
     try {
       const { data: payments, error } = await supabase
         .from('individual_fee_payments')
-        .select('fee_type, amount')
+        .select('fee_type, amount, payment_method')
         .eq('user_id', user.id);
       
       if (error) {
@@ -134,12 +135,25 @@ const Overview: React.FC<OverviewProps> = ({
       
       const amounts: typeof realPaidAmounts = {};
       payments?.forEach(payment => {
+        const amount = Number(payment.amount);
+        
+        // Se o valor for muito alto (> 1000), provavelmente é BRL de um pagamento PIX
+        // Não usar esse valor, deixar undefined para usar os valores das taxas configuradas
+        const isLikelyBRL = amount > 1000;
+        
+        // Se for pagamento via stripe e o valor for alto, provavelmente é PIX (BRL)
+        // Não usar valores de PIX, apenas valores em USD
+        if (isLikelyBRL && payment.payment_method === 'stripe') {
+          console.log(`[Dashboard] Ignorando valor de PIX (BRL) para ${payment.fee_type}: ${amount}`);
+          return; // Não definir o valor, deixar usar os valores das taxas configuradas
+        }
+        
         if (payment.fee_type === 'selection_process') {
-          amounts.selection_process = Number(payment.amount);
+          amounts.selection_process = amount;
         } else if (payment.fee_type === 'scholarship') {
-          amounts.scholarship = Number(payment.amount);
+          amounts.scholarship = amount;
         } else if (payment.fee_type === 'i20_control') {
-          amounts.i20_control = Number(payment.amount);
+          amounts.i20_control = amount;
         }
       });
       
@@ -403,23 +417,17 @@ const Overview: React.FC<OverviewProps> = ({
   }, [selectionWithDependents]);
 
   // Valores das taxas para o ProgressBar (Application fee é variável)
-  // ✅ CORREÇÃO: Se o pagamento já foi feito, usar o valor REAL pago (que pode ter desconto)
-  // Caso contrário, aplicar desconto na barra de progresso se houver activeDiscount ou cupom promocional
-  const selectionFeeToDisplay = userProfile?.has_paid_selection_process_fee && realPaidAmounts.selection_process
-    ? realPaidAmounts.selection_process // Valor real pago (já inclui desconto se aplicável)
-    : promotionalCouponDiscount
-      ? promotionalCouponDiscount.finalAmount
-      : activeDiscount?.has_discount 
-        ? Math.max(selectionWithDependents - (activeDiscount.discount_amount || 0), 0)
-        : selectionWithDependents;
+  // ✅ SEMPRE usar valores base das taxas (sem taxas do Stripe)
+  // Aplicar desconto se houver activeDiscount ou cupom promocional
+  const selectionFeeToDisplay = promotionalCouponDiscount
+    ? promotionalCouponDiscount.finalAmount
+    : activeDiscount?.has_discount 
+      ? Math.max(selectionWithDependents - (activeDiscount.discount_amount || 0), 0)
+      : selectionWithDependents;
 
-  const scholarshipFeeToDisplay = userProfile?.is_scholarship_fee_paid && realPaidAmounts.scholarship
-    ? realPaidAmounts.scholarship // Valor real pago (já inclui desconto se aplicável)
-    : scholarshipBase;
+  const scholarshipFeeToDisplay = scholarshipBase;
 
-  const i20FeeToDisplay = userProfile?.has_paid_i20_control_fee && realPaidAmounts.i20_control
-    ? realPaidAmounts.i20_control // Valor real pago (já inclui desconto se aplicável)
-    : i20WithDependents;
+  const i20FeeToDisplay = i20WithDependents;
 
   const dynamicFeeValues = [
     isFeesLoading ? <FeeSkeleton /> : `$${selectionFeeToDisplay.toFixed(2)}`, // Selection Process Fee (valor real pago ou com desconto se aplicável)
@@ -618,11 +626,6 @@ const Overview: React.FC<OverviewProps> = ({
                 <div className="text-left sm:text-right">
                   {feesLoading ? (
                     <div className="inline-block w-24 h-6 bg-white/30 rounded animate-pulse" />
-                  ) : userProfile?.has_paid_selection_process_fee && realPaidAmounts.selection_process ? (
-                    // Se já pagou, mostrar valor real pago (já inclui desconto se aplicável)
-                    <div className="text-lg sm:text-xl md:text-2xl font-bold text-white">
-                      ${realPaidAmounts.selection_process.toFixed(2)}
-                    </div>
                   ) : promotionalCouponDiscount ? (
                     <div className="flex flex-col sm:text-center">
                       <div className="text-lg sm:text-xl md:text-2xl font-bold text-white line-through">${selectionWithDependents}</div>

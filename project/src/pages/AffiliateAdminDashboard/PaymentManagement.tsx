@@ -18,6 +18,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
 import FinancialOverview from './FinancialOverview';
 import { AffiliatePaymentRequestService } from '../../services/AffiliatePaymentRequestService';
+import { getRealPaidAmounts } from '../../utils/paymentConverter';
 
 const PaymentManagement: React.FC = () => {
   const { user } = useAuth();
@@ -186,40 +187,79 @@ const PaymentManagement: React.FC = () => {
         return acc;
       }, {});
 
-      // 4. Calcular total ajustado considerando dependentes quando não houver override
+      // 4. Buscar valores reais pagos de individual_fee_payments
+      // Buscar valores pagos para todos os estudantes de uma vez
+      const realPaidAmountsMap: Record<string, { selection_process?: number; scholarship?: number; i20_control?: number }> = {};
+      
+      // Buscar valores pagos para cada estudante
+      await Promise.all(profiles.map(async (p: any) => {
+        if (!p.user_id) return;
+        
+        try {
+          const amounts = await getRealPaidAmounts(p.user_id, ['selection_process', 'scholarship', 'i20_control']);
+          realPaidAmountsMap[p.user_id] = {
+            selection_process: amounts.selection_process,
+            scholarship: amounts.scholarship,
+            i20_control: amounts.i20_control
+          };
+        } catch (error) {
+          console.error(`[PaymentManagement] Erro ao buscar valores pagos para user_id ${p.user_id}:`, error);
+        }
+      }));
+
+      // 5. Calcular total usando valores reais pagos, com fallback para cálculo fixo se não houver registro
       const totalRevenueBreakdown: Array<{profile_id: string, selection: number, scholarship: number, i20: number, total: number}> = [];
       const totalRevenue = (profiles || []).reduce((sum: number, p: any) => {
         const deps = Number(p?.dependents || 0);
         const ov = overridesMap[p?.user_id] || {};
+        const realPaid = realPaidAmountsMap[p?.user_id] || {};
 
-        // Selection Process (mesma lógica do super admin)
+        // Selection Process - usar valor real pago se disponível, senão calcular
         let selPaid = 0;
         if (p?.has_paid_selection_process_fee) {
-          const baseSelectionFee = p?.system_type === 'simplified' ? 350 : 400;
-          const sel = ov.selection_process_fee != null
-            ? Number(ov.selection_process_fee)
-            : baseSelectionFee + (deps * 150);
-          selPaid = sel || 0;
+          if (realPaid.selection_process !== undefined) {
+            // Usar valor real pago (já com desconto e convertido se PIX)
+            selPaid = realPaid.selection_process;
+          } else {
+            // Fallback: cálculo fixo para dados antigos sem registro
+            const baseSelectionFee = p?.system_type === 'simplified' ? 350 : 400;
+            const sel = ov.selection_process_fee != null
+              ? Number(ov.selection_process_fee)
+              : baseSelectionFee + (deps * 150);
+            selPaid = sel || 0;
+          }
         }
 
-        // Scholarship Fee (mesma lógica do super admin)
+        // Scholarship Fee - usar valor real pago se disponível, senão calcular
         let schPaid = 0;
         if (p?.is_scholarship_fee_paid) {
-          const baseScholarshipFee = p?.system_type === 'simplified' ? 550 : 900;
-          const schol = ov.scholarship_fee != null
-            ? Number(ov.scholarship_fee)
-            : baseScholarshipFee;
-          schPaid = schol || 0;
+          if (realPaid.scholarship !== undefined) {
+            // Usar valor real pago (já com desconto e convertido se PIX)
+            schPaid = realPaid.scholarship;
+          } else {
+            // Fallback: cálculo fixo para dados antigos sem registro
+            const baseScholarshipFee = p?.system_type === 'simplified' ? 550 : 900;
+            const schol = ov.scholarship_fee != null
+              ? Number(ov.scholarship_fee)
+              : baseScholarshipFee;
+            schPaid = schol || 0;
+          }
         }
 
-        // I-20 Control Fee (mesma lógica do super admin)
+        // I-20 Control Fee - usar valor real pago se disponível, senão calcular
         let i20Paid = 0;
         if (p?.is_scholarship_fee_paid && p?.has_paid_i20_control_fee) {
-          const baseI20Fee = 900; // Sempre 900 para ambos os sistemas
-          const i20 = ov.i20_control_fee != null
-            ? Number(ov.i20_control_fee)
-            : baseI20Fee;
-          i20Paid = i20 || 0;
+          if (realPaid.i20_control !== undefined) {
+            // Usar valor real pago (já com desconto e convertido se PIX)
+            i20Paid = realPaid.i20_control;
+          } else {
+            // Fallback: cálculo fixo para dados antigos sem registro
+            const baseI20Fee = 900; // Sempre 900 para ambos os sistemas
+            const i20 = ov.i20_control_fee != null
+              ? Number(ov.i20_control_fee)
+              : baseI20Fee;
+            i20Paid = i20 || 0;
+          }
         }
 
         const studentTotal = selPaid + schPaid + i20Paid;
@@ -243,44 +283,100 @@ const PaymentManagement: React.FC = () => {
       console.log('Total students:', profiles.length);
       console.groupEnd();
 
-      // 5. Calcular receita manual (pagamentos por fora) - apenas pagamentos com payment_method = 'manual'
+      // 6. Buscar valores de pagamentos manuais de individual_fee_payments
+      const manualPaidAmountsMap: Record<string, { selection_process?: number; scholarship?: number; i20_control?: number }> = {};
+      
+      // Buscar apenas pagamentos manuais para cada estudante
+      await Promise.all(profiles.map(async (p: any) => {
+        if (!p.user_id) return;
+        
+        try {
+          const { data: manualPayments, error } = await supabase
+            .from('individual_fee_payments')
+            .select('fee_type, amount')
+            .eq('user_id', p.user_id)
+            .eq('payment_method', 'manual')
+            .in('fee_type', ['selection_process', 'scholarship', 'i20_control']);
+          
+          if (error) {
+            console.error(`[PaymentManagement] Erro ao buscar pagamentos manuais para user_id ${p.user_id}:`, error);
+            return;
+          }
+          
+          const amounts: { selection_process?: number; scholarship?: number; i20_control?: number } = {};
+          manualPayments?.forEach((payment: any) => {
+            const amount = Number(payment.amount);
+            if (payment.fee_type === 'selection_process') {
+              amounts.selection_process = amount;
+            } else if (payment.fee_type === 'scholarship') {
+              amounts.scholarship = amount;
+            } else if (payment.fee_type === 'i20_control') {
+              amounts.i20_control = amount;
+            }
+          });
+          
+          if (Object.keys(amounts).length > 0) {
+            manualPaidAmountsMap[p.user_id] = amounts;
+          }
+        } catch (error) {
+          console.error(`[PaymentManagement] Exceção ao buscar pagamentos manuais para user_id ${p.user_id}:`, error);
+        }
+      }));
+
+      // 7. Calcular receita manual usando valores reais pagos, com fallback para cálculo fixo
       const manualRevenueBreakdown: Array<{profile_id: string, selection: number, scholarship: number, i20: number, total: number}> = [];
       const manualRevenue = (profiles || []).reduce((sum: number, p: any) => {
         const deps = Number(p?.dependents || 0);
         const ov = overridesMap[p?.user_id] || {};
         const methods = paymentMethodsMap[p?.profile_id] || {};
+        const manualPaid = manualPaidAmountsMap[p?.user_id] || {};
         
-        // Selection Process manual (mesma lógica de cálculo, mas só se payment_method = 'manual')
+        // Selection Process manual - usar valor real pago se disponível, senão calcular
         let selManual = 0;
         if (p?.has_paid_selection_process_fee && methods.selection_process === 'manual') {
-          const baseSelectionFee = p?.system_type === 'simplified' ? 350 : 400;
-          const sel = ov.selection_process_fee != null
-            ? Number(ov.selection_process_fee)
-            : baseSelectionFee + (deps * 150);
-          selManual = sel || 0;
+          if (manualPaid.selection_process !== undefined) {
+            selManual = manualPaid.selection_process;
+          } else {
+            // Fallback: cálculo fixo para dados antigos sem registro
+            const baseSelectionFee = p?.system_type === 'simplified' ? 350 : 400;
+            const sel = ov.selection_process_fee != null
+              ? Number(ov.selection_process_fee)
+              : baseSelectionFee + (deps * 150);
+            selManual = sel || 0;
+          }
         }
 
-        // Scholarship manual (se qualquer application estiver paga via manual)
+        // Scholarship manual - usar valor real pago se disponível, senão calcular
         let schManual = 0;
         const hasScholarshipPaidManual = Array.isArray(methods.scholarship)
           ? methods.scholarship.some((a: any) => !!a?.is_paid && a?.method === 'manual')
           : false;
         if (hasScholarshipPaidManual) {
-          const baseScholarshipFee = p?.system_type === 'simplified' ? 550 : 900;
-          const schol = ov.scholarship_fee != null
-            ? Number(ov.scholarship_fee)
-            : baseScholarshipFee;
-          schManual = schol || 0;
+          if (manualPaid.scholarship !== undefined) {
+            schManual = manualPaid.scholarship;
+          } else {
+            // Fallback: cálculo fixo para dados antigos sem registro
+            const baseScholarshipFee = p?.system_type === 'simplified' ? 550 : 900;
+            const schol = ov.scholarship_fee != null
+              ? Number(ov.scholarship_fee)
+              : baseScholarshipFee;
+            schManual = schol || 0;
+          }
         }
 
-        // I-20 Control manual (seguir mesma regra base: exigir scholarship pago para contar I-20)
+        // I-20 Control manual - usar valor real pago se disponível, senão calcular
         let i20Manual = 0;
         if (p?.is_scholarship_fee_paid && p?.has_paid_i20_control_fee && methods.i20_control === 'manual') {
-          const baseI20Fee = 900; // Sempre 900 para ambos os sistemas
-          const i20 = ov.i20_control_fee != null
-            ? Number(ov.i20_control_fee)
-            : baseI20Fee;
-          i20Manual = i20 || 0;
+          if (manualPaid.i20_control !== undefined) {
+            i20Manual = manualPaid.i20_control;
+          } else {
+            // Fallback: cálculo fixo para dados antigos sem registro
+            const baseI20Fee = 900; // Sempre 900 para ambos os sistemas
+            const i20 = ov.i20_control_fee != null
+              ? Number(ov.i20_control_fee)
+              : baseI20Fee;
+            i20Manual = i20 || 0;
+          }
         }
 
         const studentManualTotal = selManual + schManual + i20Manual;
@@ -783,8 +879,27 @@ const PaymentManagement: React.FC = () => {
             </div>
 
             {loadingRequests ? (
-              <div className="flex items-center justify-center h-64">
-                <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+              <div className="p-6 animate-pulse">
+                <div className="space-y-4">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <div key={i} className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-4 flex-1">
+                          <div className="w-12 h-12 bg-slate-200 rounded-lg"></div>
+                          <div className="flex-1">
+                            <div className="h-5 w-32 bg-slate-200 rounded mb-2"></div>
+                            <div className="h-4 w-48 bg-slate-200 rounded mb-1"></div>
+                            <div className="h-3 w-24 bg-slate-200 rounded"></div>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-4">
+                          <div className="h-6 w-20 bg-slate-200 rounded"></div>
+                          <div className="h-8 w-24 bg-slate-200 rounded"></div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             ) : affiliatePaymentRequests.length === 0 ? (
               <div className="text-center py-16">

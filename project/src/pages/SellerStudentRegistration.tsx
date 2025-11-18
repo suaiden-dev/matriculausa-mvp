@@ -11,6 +11,9 @@ const SellerStudentRegistration: React.FC = () => {
   const [searchParams] = useSearchParams();
   const sellerCode = searchParams.get('ref') || '';
   
+  // Detectar se é código SUAIDEN (Direct Sales)
+  const isSuaidenCode = sellerCode.toUpperCase() === 'SUAIDEN';
+  
   const [formData, setFormData] = useState<{
     full_name: string;
     email: string;
@@ -28,10 +31,10 @@ const SellerStudentRegistration: React.FC = () => {
     confirmPassword: '',
     phone: '',
     sellerReferralCode: sellerCode,
-    // Selecionar por padrão o pacote principal fixo
-    selectedPackage: '1',
-    // ✅ Definir desiredScholarshipRange correspondente ao pacote padrão (3800 para pacote 1)
-    desiredScholarshipRange: 3800, // Valor padrão quando pacote 1 é selecionado
+    // Se for SUAIDEN, aplicar Package 3 automaticamente, senão pacote 1
+    selectedPackage: isSuaidenCode ? '3' : '1',
+    // Se for SUAIDEN, aplicar desired_scholarship_range = 4500 (Package 3), senão 3800 (Package 1)
+    desiredScholarshipRange: isSuaidenCode ? 4500 : 3800,
     dependents: 0
   });
   
@@ -168,6 +171,8 @@ const SellerStudentRegistration: React.FC = () => {
         if (!termsAccepted) newErrors.terms = 'You must accept the terms and conditions';
         if (!sellerReferralCodeValid) newErrors.sellerCode = 'Invalid seller referral code';
         if (formData.dependents < 0) newErrors.dependents = 'Dependents cannot be negative';
+        // Se for código SUAIDEN, dependentes são obrigatórios
+        // Validação removida - dependents pode ser 0 para SUAIDEN também
         break;
       case 2:
         if (!formData.selectedPackage) newErrors.package = 'Please select a scholarship package';
@@ -206,10 +211,13 @@ const SellerStudentRegistration: React.FC = () => {
       // Garantir que o seller_referral_code seja sempre o da URL se existir
       const finalSellerCode = sellerCode || formData.sellerReferralCode;
       
+      // Se for código SUAIDEN, forçar Package 3 e desired_scholarship_range = 4500
+      const finalIsSuaiden = finalSellerCode.toUpperCase() === 'SUAIDEN';
+      const finalPackageNumber = finalIsSuaiden ? 3 : parseInt(formData.selectedPackage);
+      
       // Usar o hook useAuth para registrar o usuário
       // Simplificar os dados para evitar conflitos
       // ✅ Garantir que desired_scholarship_range seja definido mesmo se o usuário não selecionou explicitamente
-      const packageNumber = parseInt(formData.selectedPackage);
       const rangeMapping: { [key: number]: number } = {
         1: 3800,
         2: 4200,
@@ -217,7 +225,7 @@ const SellerStudentRegistration: React.FC = () => {
         4: 5000,
         5: 5500
       };
-      const finalDesiredRange = formData.desiredScholarshipRange || rangeMapping[packageNumber] || 3800;
+      const finalDesiredRange = finalIsSuaiden ? 4500 : (formData.desiredScholarshipRange || rangeMapping[finalPackageNumber] || 3800);
       
       const registerData = {
         full_name: formData.full_name,
@@ -225,8 +233,8 @@ const SellerStudentRegistration: React.FC = () => {
         role: 'student' as const,
         seller_referral_code: finalSellerCode,
         dependents: formData.dependents,
-        scholarship_package_number: parseInt(formData.selectedPackage),
-        desired_scholarship_range: formData.desiredScholarshipRange,
+        scholarship_package_number: finalPackageNumber,
+        desired_scholarship_range: finalDesiredRange,
         // Como esta página é exclusiva do fluxo legacy, persistimos o system_type
         system_type: 'legacy'
       };
@@ -458,7 +466,7 @@ const SellerStudentRegistration: React.FC = () => {
                   {/* Dependents Input - moved to Step 1 */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Dependents
+                      Dependents {isSuaidenCode && <span className="text-red-500">*</span>}
                     </label>
                     <select
                       name="dependents"
@@ -468,7 +476,7 @@ const SellerStudentRegistration: React.FC = () => {
                         errors.dependents ? 'border-red-300' : 'border-gray-300'
                       }`}
                     >
-                      <option value={0}>0 Dependents</option>
+                      {!isSuaidenCode && <option value={0}>0 Dependents</option>}
                       <option value={1}>1 Dependent</option>
                       <option value={2}>2 Dependents</option>
                       <option value={3}>3 Dependents</option>
@@ -589,7 +597,15 @@ const SellerStudentRegistration: React.FC = () => {
           {currentStep === 2 && (
             <>
               <h2 className="text-2xl font-bold text-gray-900 mb-6">Choose Your Package</h2>
-              <p className="text-lg text-gray-600 mb-6">Select the scholarship package that best fits your needs</p>
+              {isSuaidenCode ? (
+                <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-lg text-blue-800 font-medium">
+                    Package 3 has been automatically selected for your registration.
+                  </p>
+                </div>
+              ) : (
+                <p className="text-lg text-gray-600 mb-6">Select the scholarship package that best fits your needs</p>
+              )}
               
               {error && (
                 <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
@@ -611,27 +627,48 @@ const SellerStudentRegistration: React.FC = () => {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-                  {packages.map((pkg) => (
-                    <div
-                      key={pkg.id}
-                      className={`p-6 border-2 rounded-xl cursor-pointer transition-all hover:shadow-lg ${
-                        formData.selectedPackage === pkg.package_number.toString()
-                          ? 'border-blue-500 bg-blue-50 shadow-lg'
-                          : 'border-gray-200 hover:border-gray-300 bg-white'
-                      }`}
-                      onClick={() => handlePackageSelect(pkg.package_number)}
-                    >
-                      <div className="text-center mb-4">
-                        <h3 className="font-bold text-xl text-gray-900 mb-2">{pkg.name}</h3>
-                        <div className="text-3xl font-bold text-blue-600 mb-1">${pkg.scholarship_amount}</div>
-                        <p className="text-sm text-gray-500">Scholarships starting from</p>
+                  {packages.map((pkg) => {
+                    const isSelected = formData.selectedPackage === pkg.package_number.toString();
+                    const isPackage3 = pkg.package_number === 3;
+                    const isDisabled = isSuaidenCode && !isPackage3;
+                    
+                    return (
+                      <div
+                        key={pkg.id}
+                        className={`p-6 border-2 rounded-xl transition-all ${
+                          isDisabled
+                            ? 'border-gray-200 bg-gray-100 opacity-50 cursor-not-allowed'
+                            : isSelected
+                            ? 'border-blue-500 bg-blue-50 shadow-lg cursor-pointer'
+                            : 'border-gray-200 hover:border-gray-300 bg-white cursor-pointer hover:shadow-lg'
+                        }`}
+                        onClick={() => {
+                          if (!isDisabled) {
+                            handlePackageSelect(pkg.package_number);
+                          }
+                        }}
+                      >
+                        <div className="text-center mb-4">
+                          <h3 className="font-bold text-xl text-gray-900 mb-2">
+                            {pkg.name}
+                            {isSuaidenCode && isPackage3 && (
+                              <span className="ml-2 text-sm text-blue-600 font-normal">(Selected)</span>
+                            )}
+                          </h3>
+                          <div className="text-3xl font-bold text-blue-600 mb-1">${pkg.scholarship_amount}</div>
+                          <p className="text-sm text-gray-500">Scholarships starting from</p>
+                        </div>
+                        
+                        {pkg.description && (
+                          <p className="mt-2 text-xs text-gray-500">{pkg.description}</p>
+                        )}
+                        
+                        {isDisabled && (
+                          <p className="mt-2 text-xs text-red-600 font-medium">Not available for this registration</p>
+                        )}
                       </div>
-                      
-                      {pkg.description && (
-                        <p className="mt-2 text-xs text-gray-500">{pkg.description}</p>
-                      )}
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
 

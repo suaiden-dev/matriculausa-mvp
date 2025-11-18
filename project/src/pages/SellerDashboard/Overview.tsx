@@ -2,6 +2,7 @@ import React from 'react';
 import { supabase } from '../../lib/supabase';
 import { useState as useStateReact, useEffect } from 'react';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
+import { getRealPaidAmounts } from '../../utils/paymentConverter';
 import {
   GraduationCap,
   DollarSign,
@@ -31,6 +32,7 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
   const [studentDependents, setStudentDependents] = useStateReact<{[key: string]: number}>({});
   const [studentFeeOverrides, setStudentFeeOverrides] = useStateReact<{[key: string]: any}>({});
   const [studentSystemTypes, setStudentSystemTypes] = useStateReact<{[key: string]: string}>({});
+  const [studentRealPaidAmounts, setStudentRealPaidAmounts] = useStateReact<{[key: string]: { selection_process?: number; scholarship?: number; i20_control?: number }}>({});
   const [loadingCalc, setLoadingCalc] = useStateReact<boolean>(false);
 
   // Debug específico para investigar discrepância de receita
@@ -61,7 +63,8 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
       const idsToLoadFees = ids.filter((id: string) => studentPackageFees[id] === undefined);
       const idsToLoadDeps = ids.filter((id: string) => studentDependents[id] === undefined);
       const idsToLoadOverrides = ids.filter((id: string) => studentFeeOverrides[id] === undefined);
-      if (ids.length === 0 || (idsToLoadFees.length === 0 && idsToLoadDeps.length === 0 && idsToLoadOverrides.length === 0)) return;
+      const idsToLoadRealPaid = ids.filter((id: string) => studentRealPaidAmounts[id] === undefined);
+      if (ids.length === 0 || (idsToLoadFees.length === 0 && idsToLoadDeps.length === 0 && idsToLoadOverrides.length === 0 && idsToLoadRealPaid.length === 0)) return;
       setLoadingCalc(true);
       try {
         // 🚨 CRITICAL: Usar mesma lógica do MyStudents.tsx para consistência
@@ -173,6 +176,33 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
           });
           setStudentPackageFees(prev => ({ ...prev, ...newFees }));
         }
+
+        // Buscar valores reais pagos de individual_fee_payments
+        if (idsToLoadRealPaid.length > 0) {
+          console.log('🔄 [OVERVIEW] Carregando valores reais pagos para:', idsToLoadRealPaid.length, 'estudantes');
+          
+          const results = await Promise.allSettled(idsToLoadRealPaid.map(async (id: string) => {
+            try {
+              const amounts = await getRealPaidAmounts(id, ['selection_process', 'scholarship', 'i20_control']);
+              return { id, amounts };
+            } catch (error) {
+              console.warn('⚠️ [OVERVIEW] Erro ao carregar valores pagos para', id, ':', error);
+              return { id, amounts: {} };
+            }
+          }));
+          
+          const newRealPaid: {[key: string]: { selection_process?: number; scholarship?: number; i20_control?: number }} = {};
+          results.forEach((res: any, idx: number) => {
+            const id = idsToLoadRealPaid[idx];
+            if (res.status === 'fulfilled' && res.value) {
+              newRealPaid[id] = res.value.amounts;
+            } else {
+              newRealPaid[id] = {};
+            }
+          });
+          
+          setStudentRealPaidAmounts(prev => ({ ...prev, ...newRealPaid }));
+        }
       } finally {
         setLoadingCalc(false);
       }
@@ -184,55 +214,26 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
 
   const calculateStudentAdjustedPaid = (student: any): number => {
     let total = 0;
-    const deps = studentDependents[student.id] || 0;
-    // 🚨 CRITICAL: Usar overrides como no MyStudents.tsx para consistência
-    const overrides = studentFeeOverrides[student.id];
-
-    // Calculando total para o estudante
+    // ✅ CORREÇÃO: Usar apenas valores reais pagos (líquidos, sem taxas do Stripe)
+    // Sem fallbacks - se não houver valor real pago, retorna 0
+    const realPaid = studentRealPaidAmounts[student.id] || studentRealPaidAmounts[student.user_id] || {};
 
     if (student.has_paid_selection_process_fee) {
       // � CORREÇÃO: Usar mesma lógica do MyStudents.tsx - verificar override primeiro
-      if (overrides && overrides.selection_process_fee !== undefined && overrides.selection_process_fee !== null) {
-        // ✅ Se há override, usar exatamente o valor do override (já inclui dependentes)
-        const selectionAmount = Number(overrides.selection_process_fee);
-        total += selectionAmount;
-
-      } else {
-        // Sem override: usar taxa baseada no system_type + dependentes
-        const systemType = studentSystemTypes[student.id] || 'legacy';
-        const baseSelectionFee = systemType === 'simplified' ? 350 : 400;
-        const selectionAmount = baseSelectionFee + (deps * 150);
-        total += selectionAmount;
-
+      // Selection Process Fee - apenas valor real pago
+      if (realPaid.selection_process !== undefined && realPaid.selection_process > 0) {
+        total += realPaid.selection_process;
       }
     }
     
-    if (student.is_scholarship_fee_paid) {
-      // 🚨 CORREÇÃO: Usar mesma lógica do MyStudents.tsx - verificar override primeiro
-      if (overrides && overrides.scholarship_fee !== undefined && overrides.scholarship_fee !== null) {
-        // ✅ Se há override, usar exatamente o valor do override
-        const scholarshipAmount = Number(overrides.scholarship_fee);
-        total += scholarshipAmount;
-
-      } else {
-        // Sem override: usar taxa baseada no system_type
-        const systemType = studentSystemTypes[student.id] || 'legacy';
-        const scholarshipFee = systemType === 'simplified' ? 550 : 900;
-        total += scholarshipFee;
-      }
+    // Scholarship Fee - apenas valor real pago
+    if (student.is_scholarship_fee_paid && realPaid.scholarship !== undefined && realPaid.scholarship > 0) {
+      total += realPaid.scholarship;
     }
     
-    if (student.has_paid_i20_control_fee) {
-      // 🚨 CORREÇÃO: Usar mesma lógica do MyStudents.tsx - verificar override primeiro
-      if (overrides && overrides.i20_control_fee !== undefined && overrides.i20_control_fee !== null) {
-        // ✅ Se há override, usar exatamente o valor do override
-        const i20Amount = Number(overrides.i20_control_fee);
-        total += i20Amount;
-      } else {
-        // Sem override: I-20 Control Fee é sempre $900 para ambos os sistemas
-        const baseI20Fee = 900;
-        total += baseI20Fee;
-      }
+    // I-20 Control Fee - apenas valor real pago
+    if (student.has_paid_i20_control_fee && realPaid.i20_control !== undefined && realPaid.i20_control > 0) {
+      total += realPaid.i20_control;
     }
     
     // Application fee não entra na receita do seller
@@ -264,7 +265,7 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
     const total = uniqueStudents.reduce((sum: number, s: any) => sum + calculateStudentAdjustedPaid(s), 0);
     
     return total;
-  }, [getUniqueStudents, studentPackageFees, studentDependents, studentFeeOverrides]);
+  }, [getUniqueStudents, studentPackageFees, studentDependents, studentFeeOverrides, studentRealPaidAmounts]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
