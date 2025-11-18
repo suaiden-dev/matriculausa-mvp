@@ -269,6 +269,9 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
       
       // Armazenar no window para uso no checkout
       (window as any).__checkout_promotional_coupon = normalizedCode;
+      // ✅ Salvar valor final com desconto no window para uso no checkout PIX/Stripe
+      (window as any).__checkout_final_amount = result.final_amount;
+      console.log('[ScholarshipConfirmationModal] Valor final com desconto salvo no window:', result.final_amount);
       
       // ✅ REMOVIDO: Não salvar mais no localStorage - apenas no banco de dados
       
@@ -323,6 +326,9 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
           
           // Restaurar no window
           (window as any).__checkout_promotional_coupon = couponUsage.coupon_code;
+          // ✅ Restaurar valor final com desconto no window
+          (window as any).__checkout_final_amount = Number(couponUsage.final_amount);
+          console.log('[ScholarshipConfirmationModal] Valor final com desconto restaurado do banco:', couponUsage.final_amount);
           
           console.log('[ScholarshipConfirmationModal] Cupom carregado do banco:', couponUsage.coupon_code);
         }
@@ -386,6 +392,7 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
     
     // Limpar window
     delete (window as any).__checkout_promotional_coupon;
+    delete (window as any).__checkout_final_amount;
     
     // Limpar localStorage se existir
     localStorage.removeItem('__promotional_coupon_scholarship_fee');

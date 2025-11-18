@@ -135,7 +135,9 @@ Deno.serve(async (req)=>{
     });
     if (session.payment_status === 'paid' && session.status === 'complete') {
       const userId = session.client_reference_id;
-      const paymentMethod = session.metadata?.payment_method || 'stripe';
+      // Para pagamentos via Stripe (incluindo PIX), sempre usar 'stripe' como payment_method
+      // O payment_method real (pix, card, etc) está em session.payment_method_types
+      const paymentMethod = 'stripe';
       
       if (!userId) {
         return corsResponse({
@@ -182,11 +184,14 @@ Deno.serve(async (req)=>{
           : enableNetAmountFetchEnv === 'false' ? false // Força desativar
           : !config.environment.isProduction;   // Auto: busca só em test/staging (não em produção)
         
+        // Detectar se é PIX através dos payment_method_types da sessão
+        const isPixPayment = session.payment_method_types?.includes('pix') || session.metadata?.payment_method === 'pix';
+        
         // Debug: Log das condições
-        console.log(`[Individual Fee Payment] DEBUG - currency: ${currency}, paymentMethod: ${paymentMethod}, paymentIntentId: ${paymentIntentId}, shouldFetchNetAmount: ${shouldFetchNetAmount}, enableNetAmountFetchEnv: ${enableNetAmountFetchEnv}, isProduction: ${config.environment.isProduction}`);
+        console.log(`[Individual Fee Payment] DEBUG - currency: ${currency}, isPixPayment: ${isPixPayment}, paymentIntentId: ${paymentIntentId}, shouldFetchNetAmount: ${shouldFetchNetAmount}, enableNetAmountFetchEnv: ${enableNetAmountFetchEnv}, isProduction: ${config.environment.isProduction}`);
         
         let paymentAmount = paymentAmountRaw;
-        if ((currency === 'BRL' || paymentMethod === 'pix') && paymentIntentId && shouldFetchNetAmount) {
+        if ((currency === 'BRL' || isPixPayment) && paymentIntentId && shouldFetchNetAmount) {
           console.log(`✅ Buscando valor líquido do Stripe (ambiente: ${config.environment.environment})`);
           try {
             // Buscar PaymentIntent com latest_charge expandido para obter balance_transaction
@@ -252,7 +257,7 @@ Deno.serve(async (req)=>{
               }
             }
           }
-        } else if ((currency === 'BRL' || paymentMethod === 'pix') && !shouldFetchNetAmount) {
+        } else if ((currency === 'BRL' || isPixPayment) && !shouldFetchNetAmount) {
           // Em produção (ou quando desativado), usar exchange_rate do metadata
           console.log(`⚠️ Busca de valor líquido DESATIVADA (ambiente: ${config.environment.environment}), usando exchange_rate do metadata`);
           if (session.metadata?.exchange_rate) {
@@ -271,7 +276,7 @@ Deno.serve(async (req)=>{
           }
         } else {
           // Debug: Se não entrou em nenhum bloco
-          console.log(`[Individual Fee Payment] DEBUG - Não entrou em nenhum bloco de conversão. currency: ${currency}, paymentMethod: ${paymentMethod}, hasExchangeRate: ${!!session.metadata?.exchange_rate}`);
+          console.log(`[Individual Fee Payment] DEBUG - Não entrou em nenhum bloco de conversão. currency: ${currency}, isPixPayment: ${isPixPayment}, hasExchangeRate: ${!!session.metadata?.exchange_rate}`);
         }
         
         console.log('[Individual Fee Payment] Recording i20_control fee payment...');
