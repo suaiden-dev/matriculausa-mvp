@@ -8,7 +8,7 @@ interface TransformInputs {
   userSystemTypesMap: Map<string, string>;
   individualPaymentDates: Map<string, Map<string, string>>;
   getFeeAmount: (key: 'i20_control_fee' | 'application_fee') => number;
-  realPaymentAmounts?: Map<string, number>;
+  realPaymentAmounts?: Map<string, { selection_process?: number; scholarship?: number; i20_control?: number }>;
 }
 
 export function transformPaymentsToRecordsAndStats({
@@ -42,10 +42,13 @@ export function transformPaymentsToRecordsAndStats({
     const dependents = Number(student?.dependents) || 0;
     const dependentCost = dependents * 150; // apenas selection process
     const userOverrides = overridesMap[student?.user_id] || {};
+    const realPaid = realPaymentAmounts?.get(student?.user_id);
 
-    // Selection Process Fee
+    // Selection Process Fee - Prioridade: valor real pago > override > cálculo fixo
     let selectionProcessFee: number;
-    if (userOverrides.selection_process_fee !== undefined) {
+    if (realPaid?.selection_process !== undefined && realPaid.selection_process > 0) {
+      selectionProcessFee = Math.round(realPaid.selection_process * 100);
+    } else if (userOverrides.selection_process_fee !== undefined) {
       selectionProcessFee = Math.round(userOverrides.selection_process_fee * 100);
     } else {
       const systemType = userSystemTypesMap.get(student.user_id) || 'legacy';
@@ -53,17 +56,21 @@ export function transformPaymentsToRecordsAndStats({
       selectionProcessFee = Math.round((baseAmount + dependentCost) * 100);
     }
 
-    // I-20 Control Fee
+    // I-20 Control Fee - Prioridade: valor real pago > override > cálculo fixo
     let i20ControlFee: number;
-    if (userOverrides.i20_control_fee !== undefined) {
+    if (realPaid?.i20_control !== undefined && realPaid.i20_control > 0) {
+      i20ControlFee = Math.round(realPaid.i20_control * 100);
+    } else if (userOverrides.i20_control_fee !== undefined) {
       i20ControlFee = Math.round(userOverrides.i20_control_fee * 100);
     } else {
       i20ControlFee = Math.round(getFeeAmount('i20_control_fee') * 100);
     }
 
-    // Scholarship Fee
+    // Scholarship Fee - Prioridade: valor real pago > override > cálculo fixo
     let scholarshipFee: number;
-    if (userOverrides.scholarship_fee !== undefined) {
+    if (realPaid?.scholarship !== undefined && realPaid.scholarship > 0) {
+      scholarshipFee = Math.round(realPaid.scholarship * 100);
+    } else if (userOverrides.scholarship_fee !== undefined) {
       scholarshipFee = Math.round(userOverrides.scholarship_fee * 100);
     } else {
       const systemType = userSystemTypesMap.get(student.user_id) || 'legacy';
@@ -336,11 +343,12 @@ export function transformPaymentsToRecordsAndStats({
     const dependents = Number(stripeUser?.dependents) || 0;
     const dependentCost = dependents * 150;
     const userOverrides = overridesMap[stripeUser?.user_id] || {};
+    const realPaid = realPaymentAmounts?.get(stripeUser?.user_id);
 
+    // Selection Process Fee - Prioridade: valor real pago > override > cálculo fixo
     let selectionProcessFee: number;
-    const realAmount = realPaymentAmounts?.get(stripeUser?.user_id);
-    if (realAmount !== undefined) {
-      selectionProcessFee = Math.round(realAmount * 100);
+    if (realPaid?.selection_process !== undefined && realPaid.selection_process > 0) {
+      selectionProcessFee = Math.round(realPaid.selection_process * 100);
     } else if (userOverrides.selection_process_fee !== undefined) {
       selectionProcessFee = Math.round(userOverrides.selection_process_fee * 100);
     } else {
@@ -349,18 +357,21 @@ export function transformPaymentsToRecordsAndStats({
       selectionProcessFee = Math.round((baseAmount + dependentCost) * 100);
     }
 
+    // I-20 Control Fee - Prioridade: valor real pago > override > cálculo fixo
     let i20ControlFee: number;
-    const realI20Amount = realPaymentAmounts?.get(stripeUser?.user_id);
-    if (realI20Amount !== undefined) {
-      i20ControlFee = Math.round(realI20Amount * 100);
+    if (realPaid?.i20_control !== undefined && realPaid.i20_control > 0) {
+      i20ControlFee = Math.round(realPaid.i20_control * 100);
     } else if (userOverrides.i20_control_fee !== undefined) {
       i20ControlFee = Math.round(userOverrides.i20_control_fee * 100);
     } else {
       i20ControlFee = Math.round(getFeeAmount('i20_control_fee') * 100);
     }
 
+    // Scholarship Fee - Prioridade: valor real pago > override > cálculo fixo
     let scholarshipFee: number;
-    if (userOverrides.scholarship_fee !== undefined) {
+    if (realPaid?.scholarship !== undefined && realPaid.scholarship > 0) {
+      scholarshipFee = Math.round(realPaid.scholarship * 100);
+    } else if (userOverrides.scholarship_fee !== undefined) {
       scholarshipFee = Math.round(userOverrides.scholarship_fee * 100);
     } else {
       const systemType = userSystemTypesMap.get(stripeUser.user_id) || 'legacy';

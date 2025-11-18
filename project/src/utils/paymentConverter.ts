@@ -241,3 +241,77 @@ export async function getRealPaidAmount(
   return amounts[feeType] || null;
 }
 
+/**
+ * Busca valores brutos pagos (COM taxas do Stripe) de individual_fee_payments
+ * Usado no Payment Management do superADMIN para mostrar o valor que o aluno realmente pagou
+ */
+export async function getGrossPaidAmounts(
+  userId: string,
+  feeTypes: ('selection_process' | 'scholarship' | 'i20_control' | 'application')[]
+): Promise<Record<string, number>> {
+  try {
+    const { data: payments, error } = await supabase
+      .from('individual_fee_payments')
+      .select('fee_type, amount, payment_method, payment_intent_id')
+      .eq('user_id', userId)
+      .in('fee_type', feeTypes);
+
+    if (error) {
+      console.error('[paymentConverter] Erro ao buscar pagamentos:', error);
+      return {};
+    }
+
+    const amounts: Record<string, number> = {};
+
+    // Processar cada pagamento
+    for (const payment of payments || []) {
+      let amountUSD = Number(payment.amount);
+
+      // Se for pagamento Stripe, manter o valor BRUTO (com taxas do Stripe)
+      if (payment.payment_method === 'stripe' && payment.payment_intent_id) {
+        // Buscar informações do Payment Intent para verificar se é PIX
+        const paymentInfo = await getPaymentIntentInfoFromStripe(payment.payment_intent_id);
+        const isPIX = paymentInfo?.isPIX || false;
+        
+        if (isPIX) {
+          // Para PIX: o valor em individual_fee_payments está em BRL (valor bruto)
+          // Converter BRL para USD usando exchange_rate
+          const exchangeRate = paymentInfo?.exchange_rate || await getExchangeRateFromStripe(payment.payment_intent_id);
+          
+          if (exchangeRate) {
+            // Converter BRL bruto para USD bruto (mantendo as taxas)
+            amountUSD = convertBRLToUSD(amountUSD, exchangeRate);
+            console.log(`[paymentConverter] ✅ PIX bruto: ${payment.amount} BRL → ${amountUSD.toFixed(2)} USD (bruto, com taxas)`);
+          } else {
+            console.warn(`[paymentConverter] Taxa de câmbio não encontrada para payment_intent_id: ${payment.payment_intent_id}`);
+            continue;
+          }
+        } else {
+          // Para cartão: o valor em individual_fee_payments já está em USD (valor bruto)
+          // Manter como está (já é bruto, com taxas)
+          console.log(`[paymentConverter] ✅ Cartão bruto: ${amountUSD.toFixed(2)} USD (bruto, com taxas)`);
+        }
+      }
+      // Para Zelle: o valor já está correto (não passa pelo Stripe)
+
+      // Mapear fee_type para a chave correta
+      const feeTypeKey = payment.fee_type === 'selection_process' ? 'selection_process' :
+                        payment.fee_type === 'scholarship' ? 'scholarship' :
+                        payment.fee_type === 'i20_control' ? 'i20_control' :
+                        payment.fee_type === 'application' ? 'application' : null;
+
+      if (feeTypeKey) {
+        // Se já existe um valor para este fee_type, usar o maior (mais recente)
+        if (!amounts[feeTypeKey] || amountUSD > amounts[feeTypeKey]) {
+          amounts[feeTypeKey] = amountUSD;
+        }
+      }
+    }
+
+    return amounts;
+  } catch (error) {
+    console.error('[paymentConverter] Exceção ao buscar valores brutos pagos:', error);
+    return {};
+  }
+}
+
