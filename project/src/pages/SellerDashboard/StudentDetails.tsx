@@ -15,6 +15,7 @@ import { getDocumentStatusDisplay } from '../../utils/documentStatusMapper';
 import DocumentViewerModal from '../../components/DocumentViewerModal';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
 import { useStudentDetails } from '../../components/EnhancedStudentTracking/hooks/useStudentDetails';
+import { getRealPaidAmounts } from '../../utils/paymentConverter';
 
 interface StudentInfo {
   student_id: string;
@@ -97,6 +98,8 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
   // Estados para taxas dinâmicas do estudante
   const [studentPackageFees, setStudentPackageFees] = useState<any>(null);
   const [dependents, setDependents] = useState<number>(0);
+  // Estado para valores reais pagos
+  const [realPaidAmounts, setRealPaidAmounts] = useState<{ selection_process?: number; scholarship?: number; i20_control?: number } | null>(null);
 
 
   // Função para obter valores corretos baseados no sistema do estudante
@@ -548,6 +551,25 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
       loadStudentDetails();
     }
   }, [studentId]); // Remover loadStudentDetails das dependências
+
+  // Carregar valores reais pagos quando o studentId mudar
+  useEffect(() => {
+    const loadRealPaidAmounts = async () => {
+      if (!studentId) {
+        setRealPaidAmounts(null);
+        return;
+      }
+      
+      try {
+        const amounts = await getRealPaidAmounts(studentId, ['selection_process', 'scholarship', 'i20_control']);
+        setRealPaidAmounts(amounts);
+      } catch (error) {
+        console.error(`Erro ao buscar valores pagos para user_id ${studentId}:`, error);
+        setRealPaidAmounts(null);
+      }
+    };
+    loadRealPaidAmounts();
+  }, [studentId]);
 
   // ✅ REMOVIDO: loadDocumentRequests - agora usa o hook useStudentDetails
   // ✅ REMOVIDO: loadStudentDocuments - agora usa o hook useStudentDetails
@@ -1735,18 +1757,20 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                            </span>
                            <span className="text-xs text-slate-500">
                             {(() => {
-                              // Para sistema simplificado, usar valores fixos
+                              // ✅ CORREÇÃO: Priorizar valor real pago (líquido, sem taxas do Stripe)
+                              if (studentInfo?.has_paid_selection_process_fee && realPaidAmounts?.selection_process !== undefined && realPaidAmounts.selection_process > 0) {
+                                return formatFeeAmount(realPaidAmounts.selection_process);
+                              }
+                              
+                              // Fallback para valores calculados (apenas se não houver valor real pago)
                               if (studentFees.isSimplified) {
                                 return `$${studentFees.selectionProcessFee.toFixed(2)}`;
                               }
                               
-                              // Para sistema legacy, usar lógica de overrides
                               const hasCustomOverride = hasOverride('selection_process');
                               if (hasCustomOverride) {
-                                // Com override: usar valor exato do override
                                 return formatFeeAmount(getFeeAmount('selection_process'));
                               } else {
-                                // Sem override: valor padrão + dependentes
                                 const baseFee = Number(getFeeAmount('selection_process'));
                                 const total = baseFee + (dependents * 150);
                                 return formatFeeAmount(total);
@@ -1808,21 +1832,23 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                          </span>
                          <span className="text-xs text-slate-500">
                            {(() => {
-                             // Para sistema simplificado, usar valores fixos
+                             // ✅ CORREÇÃO: Priorizar valor real pago (líquido, sem taxas do Stripe)
+                             if (studentInfo?.is_scholarship_fee_paid && realPaidAmounts?.scholarship !== undefined && realPaidAmounts.scholarship > 0) {
+                               return formatFeeAmount(realPaidAmounts.scholarship);
+                             }
+                             
+                             // Fallback para valores calculados (apenas se não houver valor real pago)
                              if (studentFees.isSimplified) {
                                return `$${studentFees.scholarshipFee.toFixed(2)}`;
                              }
                              
-                             // Para sistema legacy, usar lógica de overrides
                              if (hasOverride('scholarship_fee')) {
                                return formatFeeAmount(getFeeAmount('scholarship_fee'));
                              }
-                             // Se não há override, usar valor da scholarship específica se disponível
                              if (studentInfo?.scholarship?.scholarship_fee_amount) {
                                const amount = Number(studentInfo.scholarship.scholarship_fee_amount);
                                return formatFeeAmount(amount);
                              }
-                             // Fallback para valor padrão
                              return formatFeeAmount(getFeeAmount('scholarship_fee'));
                            })()}
                          </span>
@@ -1842,12 +1868,16 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                            </span>
                            <span className="text-xs text-slate-500">
                              {(() => {
-                               // Para sistema simplificado, usar valores fixos
+                               // ✅ CORREÇÃO: Priorizar valor real pago (líquido, sem taxas do Stripe)
+                               if (studentInfo?.has_paid_i20_control_fee && realPaidAmounts?.i20_control !== undefined && realPaidAmounts.i20_control > 0) {
+                                 return formatFeeAmount(realPaidAmounts.i20_control);
+                               }
+                               
+                               // Fallback para valores calculados (apenas se não houver valor real pago)
                                if (studentFees.isSimplified) {
                                  return `$${studentFees.i20ControlFee.toFixed(2)}`;
                                }
                                
-                               // Para sistema legacy, usar lógica de overrides
                                // I-20 Control Fee sempre usa override se disponível, senão valor padrão
                                // I-20 nunca soma dependentes
                                return formatFeeAmount(getFeeAmount('i20_control_fee'));

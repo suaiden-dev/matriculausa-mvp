@@ -144,6 +144,7 @@ const MyApplications: React.FC = () => {
   };
 
   // Função para buscar valores reais pagos de individual_fee_payments
+  // IMPORTANTE: Não usa valores de pagamentos PIX (que estão em BRL), apenas valores em USD
   const fetchRealPaidAmounts = React.useCallback(async () => {
     if (!user?.id) {
       setRealPaidAmounts({});
@@ -153,7 +154,7 @@ const MyApplications: React.FC = () => {
     try {
       const { data: payments, error } = await supabase
         .from('individual_fee_payments')
-        .select('fee_type, amount')
+        .select('fee_type, amount, payment_method')
         .eq('user_id', user.id);
       
       if (error) {
@@ -164,10 +165,23 @@ const MyApplications: React.FC = () => {
       
       const amounts: typeof realPaidAmounts = {};
       payments?.forEach(payment => {
+        const amount = Number(payment.amount);
+        
+        // Se o valor for muito alto (> 1000), provavelmente é BRL de um pagamento PIX
+        // Não usar esse valor, deixar undefined para usar os valores das taxas configuradas
+        const isLikelyBRL = amount > 1000;
+        
+        // Se for pagamento via stripe e o valor for alto, provavelmente é PIX (BRL)
+        // Não usar valores de PIX, apenas valores em USD
+        if (isLikelyBRL && payment.payment_method === 'stripe') {
+          console.log(`[Dashboard] Ignorando valor de PIX (BRL) para ${payment.fee_type}: ${amount}`);
+          return; // Não definir o valor, deixar usar os valores das taxas configuradas
+        }
+        
         if (payment.fee_type === 'application') {
-          amounts.application = Number(payment.amount);
+          amounts.application = amount;
         } else if (payment.fee_type === 'scholarship') {
-          amounts.scholarship = Number(payment.amount);
+          amounts.scholarship = amount;
         }
       });
       

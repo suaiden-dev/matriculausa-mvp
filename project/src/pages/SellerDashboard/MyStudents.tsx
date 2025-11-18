@@ -19,6 +19,7 @@ import { supabase } from '../../lib/supabase';
 import SellerI20DeadlineTimer from '../../components/SellerI20DeadlineTimer';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
 import { useState as useStateReact, useEffect } from 'react';
+import { getRealPaidAmounts } from '../../utils/paymentConverter';
 
 interface Student {
   id: string;
@@ -96,6 +97,8 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
   const [studentFeeOverrides, setStudentFeeOverrides] = useStateReact<{[key: string]: any}>({});
   // Estado para armazenar system_type por estudante
   const [studentSystemTypes, setStudentSystemTypes] = useStateReact<{[key: string]: string}>({});
+  // Estado para armazenar valores reais pagos por estudante
+  const [studentRealPaidAmounts, setStudentRealPaidAmounts] = useStateReact<Record<string, { selection_process?: number; scholarship?: number; i20_control?: number }>>({});
   // Estado para controlar requisições em andamento
   const [loadingRequests, setLoadingRequests] = useStateReact<Set<string>>(new Set());
   // Métodos de pagamento por estudante (para calcular valor pago manualmente)
@@ -369,6 +372,31 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
 
     return () => clearTimeout(timeoutId);
   }, [students, userFeeOverridesDisabled]);
+
+  // Carregar valores reais pagos para todos os estudantes
+  useEffect(() => {
+    const loadRealPaidAmounts = async () => {
+      const uniqueUserIds = Array.from(new Set((students || []).map((s) => s.id).filter(Boolean)));
+      if (uniqueUserIds.length === 0) {
+        setStudentRealPaidAmounts({});
+        return;
+      }
+      
+      const amountsMap: Record<string, { selection_process?: number; scholarship?: number; i20_control?: number }> = {};
+      
+      await Promise.allSettled(uniqueUserIds.map(async (userId) => {
+        try {
+          const amounts = await getRealPaidAmounts(userId, ['selection_process', 'scholarship', 'i20_control']);
+          amountsMap[userId] = amounts;
+        } catch (error) {
+          console.error(`Erro ao buscar valores pagos para user_id ${userId}:`, error);
+        }
+      }));
+      
+      setStudentRealPaidAmounts(amountsMap);
+    };
+    loadRealPaidAmounts();
+  }, [students]);
   
   // Estado dos filtros
   const [filters, setFilters] = useState<FilterState>({
@@ -689,114 +717,26 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
   // Função para calcular o total pago por um aluno
   const calculateStudentTotalPaid = (student: Student): number => {
     let total = 0;
-    const deps = studentDependents[student.id] || 0;
-    const overrides = studentFeeOverrides[student.id];
+    // ✅ CORREÇÃO: Usar apenas valores reais pagos (líquidos, sem taxas do Stripe)
+    // Sem fallbacks - se não houver valor real pago, retorna 0
+    const realPaid = studentRealPaidAmounts[student.id] || studentRealPaidAmounts[student.user_id] || {};
 
-    // Debug específico para crashroiali0@gmail.com
-    if (student.email === 'crashroiali0@gmail.com') {
-      console.log('🚨🚨🚨 [CRASHROI_DEBUG] ===== CALCULANDO TOTAL PARA crashroiali0@gmail.com =====');
-      console.log('🚨🚨🚨 [CRASHROI_DEBUG] Student data:', {
-        id: student.id,
-        email: student.email,
-        has_paid_selection_process_fee: student.has_paid_selection_process_fee,
-        has_paid_i20_control_fee: student.has_paid_i20_control_fee,
-        is_scholarship_fee_paid: student.is_scholarship_fee_paid,
-        is_application_fee_paid: student.is_application_fee_paid
-      });
-      console.log('🚨🚨🚨 [CRASHROI_DEBUG] Dependents:', deps);
-      console.log('🚨🚨🚨 [CRASHROI_DEBUG] Overrides:', overrides);
-      console.log('🚨🚨🚨 [CRASHROI_DEBUG] Package fees:', studentPackageFees[student.id]);
-    }
-
-    // Debug específico para zhenhua4777@uorak.com
-    if (student.email === 'zhenhua4777@uorak.com') {
-      console.log('🚨🚨🚨 [ZHENHUA_DEBUG] ===== CALCULANDO TOTAL PARA zhenhua4777@uorak.com =====');
-      console.log('🚨🚨🚨 [ZHENHUA_DEBUG] Student data:', {
-        id: student.id,
-        email: student.email,
-        has_paid_selection_process_fee: student.has_paid_selection_process_fee,
-        has_paid_i20_control_fee: student.has_paid_i20_control_fee,
-        is_scholarship_fee_paid: student.is_scholarship_fee_paid,
-        is_application_fee_paid: student.is_application_fee_paid
-      });
-      console.log('🚨🚨🚨 [ZHENHUA_DEBUG] Dependents:', deps);
-      console.log('🚨🚨🚨 [ZHENHUA_DEBUG] Overrides:', overrides);
-      console.log('🚨🚨🚨 [ZHENHUA_DEBUG] Package fees:', studentPackageFees[student.id]);
-    }
-
-    if (student.has_paid_selection_process_fee) {
-      // Para Selection Process, verificar se há override primeiro
-      if (overrides && overrides.selection_process_fee !== undefined && overrides.selection_process_fee !== null) {
-        // ✅ CORREÇÃO: Se há override, usar exatamente o valor do override (já inclui dependentes)
-        const selectionAmount = Number(overrides.selection_process_fee);
-        total += selectionAmount;
-        if (student.email === 'wilfried8078@uorak.com' || student.email === 'crashroiali0@gmail.com' || student.email === 'zhenhua4777@uorak.com') {
-          console.log('🔍 [MYSTUDENTS_DEBUG] Selection Process (override):', selectionAmount, 'de', overrides.selection_process_fee);
-        }
-      } else {
-        // Sem override: usar taxa baseada no system_type + dependentes
-        const systemType = studentSystemTypes[student.id] || 'legacy';
-        const baseSelectionFee = systemType === 'simplified' ? 350 : 400;
-        const selectionAmount = baseSelectionFee + (deps * 150);
-        total += selectionAmount;
-        if (student.email === 'wilfried8078@uorak.com' || student.email === 'crashroiali0@gmail.com' || student.email === 'zhenhua4777@uorak.com') {
-          console.log('🔍 [MYSTUDENTS_DEBUG] Selection Process (padrão + deps):', selectionAmount, '=', baseSelectionFee, '+', (deps * 150));
-        }
-      }
+    // Selection Process Fee - apenas valor real pago
+    if (student.has_paid_selection_process_fee && realPaid.selection_process !== undefined && realPaid.selection_process > 0) {
+      total += realPaid.selection_process;
     }
     
-    if (student.has_paid_i20_control_fee) {
-      // ✅ CORREÇÃO: Usar lógica consistente que considera dependentes para I-20 também se não há override
-      if (overrides && overrides.i20_control_fee !== undefined && overrides.i20_control_fee !== null) {
-        // Se há override, usar exatamente o valor do override
-        const i20Amount = Number(overrides.i20_control_fee);
-        total += i20Amount;
-        if (student.email === 'wilfried8078@uorak.com' || student.email === 'crashroiali0@gmail.com' || student.email === 'zhenhua4777@uorak.com') {
-          console.log('🔍 [MYSTUDENTS_DEBUG] I-20 Control (override):', i20Amount, 'de', overrides.i20_control_fee);
-        }
-      } else {
-        // Sem override: I-20 Control Fee é sempre $900 para ambos os sistemas
-        const baseI20Fee = 900;
-        total += baseI20Fee;
-        if (student.email === 'wilfried8078@uorak.com' || student.email === 'crashroiali0@gmail.com' || student.email === 'zhenhua4777@uorak.com') {
-          console.log('🔍 [MYSTUDENTS_DEBUG] I-20 Control (padrão):', baseI20Fee);
-        }
-      }
+    // Scholarship Fee - apenas valor real pago
+    if (student.is_scholarship_fee_paid && realPaid.scholarship !== undefined && realPaid.scholarship > 0) {
+      total += realPaid.scholarship;
     }
     
-    if (student.is_scholarship_fee_paid) {
-      // ✅ CORREÇÃO: Usar lógica consistente para scholarship fee
-      if (overrides && overrides.scholarship_fee !== undefined && overrides.scholarship_fee !== null) {
-        // Se há override, usar exatamente o valor do override
-        const scholarshipAmount = Number(overrides.scholarship_fee);
-        total += scholarshipAmount;
-        if (student.email === 'wilfried8078@uorak.com' || student.email === 'crashroiali0@gmail.com' || student.email === 'zhenhua4777@uorak.com') {
-          console.log('🔍 [MYSTUDENTS_DEBUG] Scholarship (override):', scholarshipAmount, 'de', overrides.scholarship_fee);
-        }
-      } else {
-        // Sem override: usar taxa baseada no system_type
-        const systemType = studentSystemTypes[student.id] || 'legacy';
-        const scholarshipFee = systemType === 'simplified' ? 550 : 900;
-        total += scholarshipFee;
-        if (student.email === 'wilfried8078@uorak.com' || student.email === 'crashroiali0@gmail.com' || student.email === 'zhenhua4777@uorak.com') {
-          console.log('🔍 [MYSTUDENTS_DEBUG] Scholarship (padrão):', scholarshipFee);
-        }
-      }
-    } else {
-      // Log para quando scholarship_fee NÃO foi pago
-      if (student.email === 'crashroiali0@gmail.com') {
-        console.log('🚨🚨🚨 [CRASHROI_DEBUG] Scholarship fee NÃO foi pago - is_scholarship_fee_paid:', student.is_scholarship_fee_paid);
-        console.log('🚨🚨🚨 [CRASHROI_DEBUG] Overrides scholarship_fee:', overrides?.scholarship_fee);
-        console.log('🚨🚨🚨 [CRASHROI_DEBUG] Package fees scholarship_fee:', studentPackageFees[student.id]?.scholarship_fee);
-      }
+    // I-20 Control Fee - apenas valor real pago
+    if (student.has_paid_i20_control_fee && realPaid.i20_control !== undefined && realPaid.i20_control > 0) {
+      total += realPaid.i20_control;
     }
     
     // Application fee não é contabilizada na receita do seller (é exclusiva da universidade)
-
-    if (student.email === 'wilfried8078@uorak.com' || student.email === 'crashroiali0@gmail.com' || student.email === 'zhenhua4777@uorak.com') {
-      console.log('🔍 [MYSTUDENTS_DEBUG] Total final:', total);
-      console.log('🔍 [MYSTUDENTS_DEBUG] =================================');
-    }
 
     return total;
   };

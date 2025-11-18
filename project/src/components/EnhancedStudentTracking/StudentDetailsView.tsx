@@ -17,6 +17,7 @@ export interface StudentDetailsViewProps {
   onTabChange: (tab: 'details' | 'documents') => void;
   onViewDocument: (doc: any) => void;
   onDownloadDocument: (doc: any) => void;
+  realPaidAmounts?: { selection_process?: number; scholarship?: number; i20_control?: number };
 }
 
 const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
@@ -27,7 +28,8 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
   activeTab,
   onTabChange,
   onViewDocument,
-  onDownloadDocument
+  onDownloadDocument,
+  realPaidAmounts = {}
 }) => {
   // Hook para configurações dinâmicas de taxas (usando student_id para ver overrides do estudante)
   const { getFeeAmount, formatFeeAmount } = useFeeConfig(studentDetails?.student_id);
@@ -741,12 +743,18 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                           </span>
                           <span className="text-xs text-slate-500">
                             {(() => {
-                              // ✅ CORREÇÃO: Usar mesma lógica simples do EnhancedStudentTrackingRefactored
-                              const systemType = (studentDetails as any)?.system_type || 'legacy';
-                              const isSimplified = systemType === 'simplified';
-                              const baseSelectionFee = isSimplified ? 350 : 400;
-                              const finalAmount = baseSelectionFee + (studentDependents * 150);
-                              return formatFeeAmount(finalAmount);
+                              // ✅ CORREÇÃO: Usar valor real pago se disponível, senão calcular
+                              if (studentDetails?.has_paid_selection_process_fee && realPaidAmounts?.selection_process !== undefined && realPaidAmounts.selection_process > 0) {
+                                // Usar valor real pago (já com desconto e convertido se PIX)
+                                return formatFeeAmount(realPaidAmounts.selection_process);
+                              } else {
+                                // Fallback: cálculo fixo para dados antigos sem registro
+                                const systemType = (studentDetails as any)?.system_type || 'legacy';
+                                const isSimplified = systemType === 'simplified';
+                                const baseSelectionFee = isSimplified ? 350 : 400;
+                                const finalAmount = baseSelectionFee + (studentDependents * 150);
+                                return formatFeeAmount(finalAmount);
+                              }
                             })()}
                           </span>
                         </div>
@@ -805,11 +813,18 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                           </span>
                            <span className="text-xs text-slate-500">
                              {(() => {
-                               // ✅ CORREÇÃO: Usar mesma lógica simples do EnhancedStudentTrackingRefactored
-                               const systemType = (studentDetails as any)?.system_type || 'legacy';
-                               const isSimplified = systemType === 'simplified';
-                               const scholarshipFee = isSimplified ? 550 : 900;
-                               return formatFeeAmount(scholarshipFee);
+                               // ✅ CORREÇÃO: Usar valor real pago se disponível, senão calcular
+                               const hasAnyScholarshipPaid = scholarshipApplication?.is_scholarship_fee_paid || false;
+                               if (hasAnyScholarshipPaid && realPaidAmounts?.scholarship !== undefined && realPaidAmounts.scholarship > 0) {
+                                 // Usar valor real pago (já com desconto e convertido se PIX)
+                                 return formatFeeAmount(realPaidAmounts.scholarship);
+                               } else {
+                                 // Fallback: cálculo fixo para dados antigos sem registro
+                                 const systemType = (studentDetails as any)?.system_type || 'legacy';
+                                 const isSimplified = systemType === 'simplified';
+                                 const scholarshipFee = isSimplified ? 550 : 900;
+                                 return formatFeeAmount(scholarshipFee);
+                               }
                              })()}
                            </span>
                         </div>
@@ -829,9 +844,16 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                           </span>
                           <span className="text-xs text-slate-500">
                             {(() => {
-                              // ✅ CORREÇÃO: Usar mesma lógica simples do EnhancedStudentTrackingRefactored
-                              // I-20 Control Fee - sempre 900 para ambos os sistemas (sem dependentes)
-                              return formatFeeAmount(900);
+                              // ✅ CORREÇÃO: Usar valor real pago se disponível, senão calcular
+                              const hasAnyScholarshipPaid = scholarshipApplication?.is_scholarship_fee_paid || false;
+                              if (hasAnyScholarshipPaid && studentDetails?.has_paid_i20_control_fee && realPaidAmounts?.i20_control !== undefined && realPaidAmounts.i20_control > 0) {
+                                // Usar valor real pago (já com desconto e convertido se PIX)
+                                return formatFeeAmount(realPaidAmounts.i20_control);
+                              } else {
+                                // Fallback: cálculo fixo para dados antigos sem registro
+                                // I-20 Control Fee - sempre 900 para ambos os sistemas (sem dependentes)
+                                return formatFeeAmount(900);
+                              }
                             })()}
                           </span>
                         </div>
