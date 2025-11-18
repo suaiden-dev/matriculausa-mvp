@@ -119,9 +119,42 @@ Deno.serve(async (req)=>{
         
         if (recentProcessingLogs.length > 1) {
           console.log(`[DUPLICAÇÃO] Múltiplos logs de processamento detectados para session ${sessionId}, retornando sucesso para evitar duplicação.`);
+          // Mesmo com duplicação, ainda precisamos retornar os dados do pagamento
+          // Buscar a sessão do Stripe para extrair os dados
+          const session = await stripe.checkout.sessions.retrieve(sessionId, {
+            expand: ['payment_intent']
+          });
+          
+          // Extrair informações do pagamento
+          const amountPaid = session.amount_total ? session.amount_total / 100 : null;
+          const currency = session.currency?.toUpperCase() || 'USD';
+          const promotionalCouponReturn = session.metadata?.promotional_coupon || null;
+          const originalAmountReturn = session.metadata?.original_amount ? parseFloat(session.metadata.original_amount) : null;
+          let finalAmountReturn: number | null = null;
+          if (session.metadata?.final_amount) {
+            const parsed = parseFloat(session.metadata.final_amount);
+            if (!isNaN(parsed) && parsed > 0) {
+              finalAmountReturn = parsed;
+            }
+          }
+          
+          let amountPaidUSD = amountPaid || 0;
+          if (currency === 'BRL' && session.metadata?.exchange_rate && amountPaid) {
+            const exchangeRate = parseFloat(session.metadata.exchange_rate);
+            if (exchangeRate > 0) {
+              amountPaidUSD = amountPaid / exchangeRate;
+            }
+          }
+          
           return corsResponse({
             status: 'complete',
-            message: 'Multiple processing logs detected, avoiding duplication.'
+            message: 'Multiple processing logs detected, avoiding duplication.',
+            amount_paid: amountPaidUSD || amountPaid || 0,
+            amount_paid_original: amountPaid || 0,
+            currency: currency,
+            promotional_coupon: promotionalCouponReturn,
+            original_amount: originalAmountReturn,
+            final_amount: finalAmountReturn
           }, 200);
         }
       }
@@ -422,9 +455,37 @@ Deno.serve(async (req)=>{
               
               if (notificationLogs.length > 1) {
                 console.log(`[DUPLICAÇÃO] Múltiplos logs de notificações detectados para session ${sessionId}, retornando sucesso para evitar duplicação.`);
+                // Mesmo com duplicação, ainda precisamos retornar os dados do pagamento
+                // A sessão já foi recuperada anteriormente, então vamos extrair os dados
+                const amountPaid = session.amount_total ? session.amount_total / 100 : null;
+                const currency = session.currency?.toUpperCase() || 'USD';
+                const promotionalCouponReturn = session.metadata?.promotional_coupon || null;
+                const originalAmountReturn = session.metadata?.original_amount ? parseFloat(session.metadata.original_amount) : null;
+                let finalAmountReturn: number | null = null;
+                if (session.metadata?.final_amount) {
+                  const parsed = parseFloat(session.metadata.final_amount);
+                  if (!isNaN(parsed) && parsed > 0) {
+                    finalAmountReturn = parsed;
+                  }
+                }
+                
+                let amountPaidUSD = amountPaid || 0;
+                if (currency === 'BRL' && session.metadata?.exchange_rate && amountPaid) {
+                  const exchangeRate = parseFloat(session.metadata.exchange_rate);
+                  if (exchangeRate > 0) {
+                    amountPaidUSD = amountPaid / exchangeRate;
+                  }
+                }
+                
                 return corsResponse({
                   status: 'complete',
-                  message: 'Multiple notification logs detected, avoiding duplication'
+                  message: 'Multiple notification logs detected, avoiding duplication',
+                  amount_paid: amountPaidUSD || amountPaid || 0,
+                  amount_paid_original: amountPaid || 0,
+                  currency: currency,
+                  promotional_coupon: promotionalCouponReturn,
+                  original_amount: originalAmountReturn,
+                  final_amount: finalAmountReturn
                 }, 200);
               }
             }
@@ -778,7 +839,25 @@ Deno.serve(async (req)=>{
       const currency = session.currency?.toUpperCase() || 'USD';
       const promotionalCouponReturn = session.metadata?.promotional_coupon || null;
       const originalAmountReturn = session.metadata?.original_amount ? parseFloat(session.metadata.original_amount) : null;
-      const finalAmountReturn = session.metadata?.final_amount ? parseFloat(session.metadata.final_amount) : null;
+      // Melhorar parsing do final_amount para tratar strings vazias ou inválidas
+      let finalAmountReturn: number | null = null;
+      if (session.metadata?.final_amount) {
+        const parsed = parseFloat(session.metadata.final_amount);
+        if (!isNaN(parsed) && parsed > 0) {
+          finalAmountReturn = parsed;
+        }
+      }
+      
+      // Log para debug
+      console.log('[verify-stripe-session-i20-control-fee] 📊 Dados extraídos do metadata:', {
+        promotional_coupon: promotionalCouponReturn,
+        original_amount: originalAmountReturn,
+        final_amount: finalAmountReturn,
+        amount_paid: amountPaid,
+        currency: currency
+      });
+      console.log('[verify-stripe-session-i20-control-fee] 📊 Metadata completo da sessão:', JSON.stringify(session.metadata, null, 2));
+      console.log('[verify-stripe-session-i20-control-fee] 📊 final_amount RAW do metadata:', session.metadata?.final_amount, 'tipo:', typeof session.metadata?.final_amount);
       
       // Se for PIX (BRL), converter para USD usando a taxa de câmbio do metadata
       let amountPaidUSD = amountPaid || 0;
