@@ -276,15 +276,25 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
         const isRecentValidation = hoursDiff < 24 || couponUsage.metadata?.is_validation === true;
         
         if (isRecentValidation) {
-          // Verificar se o final_amount está correto (deve ser menor que original_amount se houver desconto)
+          // Usar valores do banco de dados
           const originalAmount = Number(couponUsage.original_amount);
           const discountAmount = Number(couponUsage.discount_amount);
           const finalAmountFromDB = Number(couponUsage.final_amount);
           
-          // Se final_amount está igual ao original_amount, recalcular baseado no desconto
-          const finalAmount = finalAmountFromDB < originalAmount 
-            ? finalAmountFromDB 
-            : originalAmount - discountAmount;
+          // ✅ CORREÇÃO: Sempre recalcular o finalAmount baseado no originalAmount e discountAmount
+          // Isso garante que o desconto seja aplicado corretamente
+          const finalAmount = Math.max(originalAmount - discountAmount, 0);
+          
+          // Verificar se há inconsistência nos dados do banco
+          if (Math.abs(finalAmount - finalAmountFromDB) > 0.01) {
+            console.warn('[PreCheckoutModal] ⚠️ Inconsistência nos dados do banco:', {
+              original_amount: originalAmount,
+              discount_amount: discountAmount,
+              final_amount_from_db: finalAmountFromDB,
+              final_amount_calculado: finalAmount,
+              diferenca: Math.abs(finalAmount - finalAmountFromDB)
+            });
+          }
           
           console.log('[PreCheckoutModal] Carregando cupom do banco:', {
             coupon_code: couponUsage.coupon_code,
@@ -292,7 +302,8 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
             discount_amount: discountAmount,
             final_amount_from_db: finalAmountFromDB,
             final_amount_calculated: finalAmount,
-            computedBasePrice
+            computedBasePrice,
+            discount_applied: originalAmount - finalAmount
           });
           
           // Carregar cupom do banco
@@ -1204,7 +1215,9 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
               ) : (
                 <ModalContent
                   productName={productName}
-                  computedBasePrice={computedBasePrice}
+                  computedBasePrice={promotionalCouponValidation?.isValid && promotionalCouponValidation.discountAmount 
+                    ? (promotionalCouponValidation.finalAmount || 0) + (promotionalCouponValidation.discountAmount || 0)
+                    : computedBasePrice}
                   hasUsedReferralCode={hasUsedReferralCode}
                   hasSellerReferralCode={Boolean(hasSellerReferralCode)}
                   activeDiscount={activeDiscount}
@@ -1282,7 +1295,9 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
             <div className="flex-1 overflow-y-auto p-4 sm:p-6">
               <ModalContent
                 productName={productName}
-                computedBasePrice={finalPrice}
+                computedBasePrice={promotionalCouponValidation?.isValid && promotionalCouponValidation.discountAmount 
+                  ? (promotionalCouponValidation.finalAmount || 0) + (promotionalCouponValidation.discountAmount || 0)
+                  : computedBasePrice}
                 hasUsedReferralCode={hasUsedReferralCode}
                 hasSellerReferralCode={!!hasSellerReferralCode}
                 activeDiscount={activeDiscount}
@@ -1308,6 +1323,7 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
                 promotionalCouponValidation={promotionalCouponValidation}
                 isValidatingPromotionalCoupon={isValidatingPromotionalCoupon}
                 validatePromotionalCoupon={validatePromotionalCoupon}
+                removePromotionalCoupon={removePromotionalCoupon}
                 feeType={feeType}
                 canUsePromotionalCoupon={Boolean(canUsePromotionalCoupon)}
               />
