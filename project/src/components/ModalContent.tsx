@@ -83,7 +83,7 @@ export const ModalContent: React.FC<ModalContentProps> = ({
       <div className="text-center">
         <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2 sm:mb-3">{productName}</h3>
         <div className="mb-3">
-          {promotionalCouponValidation?.isValid && promotionalCouponValidation.finalAmount ? (
+          {promotionalCouponValidation?.isValid && promotionalCouponValidation.finalAmount && promotionalCouponValidation.discountAmount ? (
             // Mostrar valor com desconto quando cupom está aplicado
             <>
               <div className="text-3xl font-bold text-blue-700">
@@ -93,7 +93,7 @@ export const ModalContent: React.FC<ModalContentProps> = ({
                 Valor com desconto
               </p>
               <p className="text-xs text-gray-500 mt-1 line-through">
-                ${computedBasePrice.toFixed(2)} (original)
+                ${(promotionalCouponValidation.finalAmount + promotionalCouponValidation.discountAmount).toFixed(2)} (original)
               </p>
             </>
           ) : (

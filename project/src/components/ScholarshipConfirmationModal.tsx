@@ -269,6 +269,9 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
       
       // Armazenar no window para uso no checkout
       (window as any).__checkout_promotional_coupon = normalizedCode;
+      // ✅ Salvar valor final com desconto no window para uso no checkout PIX/Stripe
+      (window as any).__checkout_final_amount = result.final_amount;
+      console.log('[ScholarshipConfirmationModal] Valor final com desconto salvo no window:', result.final_amount);
       
       // ✅ REMOVIDO: Não salvar mais no localStorage - apenas no banco de dados
       
@@ -323,6 +326,9 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
           
           // Restaurar no window
           (window as any).__checkout_promotional_coupon = couponUsage.coupon_code;
+          // ✅ Restaurar valor final com desconto no window
+          (window as any).__checkout_final_amount = Number(couponUsage.final_amount);
+          console.log('[ScholarshipConfirmationModal] Valor final com desconto restaurado do banco:', couponUsage.final_amount);
           
           console.log('[ScholarshipConfirmationModal] Cupom carregado do banco:', couponUsage.coupon_code);
         }
@@ -386,6 +392,7 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
     
     // Limpar window
     delete (window as any).__checkout_promotional_coupon;
+    delete (window as any).__checkout_final_amount;
     
     // Limpar localStorage se existir
     localStorage.removeItem('__promotional_coupon_scholarship_fee');
@@ -499,7 +506,7 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
 
   // Componente de conteúdo comum para Drawer e Dialog
   const ModalContent = ({ isInDrawer = false }: { isInDrawer?: boolean }) => (
-    <div className={isInDrawer ? 'flex flex-col min-h-0' : 'relative'}>
+    <div className={isInDrawer ? 'flex flex-col min-h-0 h-full' : 'flex flex-col h-full min-h-0'}>
       {/* Loading Overlay */}
       {(isProcessing || submitting) && spinnerVisible && (
         <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex items-center justify-center">
@@ -522,7 +529,7 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
           </DrawerDescription>
         </DrawerHeader>
       ) : (
-        <div className="relative bg-gradient-to-r from-blue-600 to-blue-800 text-white p-4 sm:p-6 flex-shrink-0">
+        <div className="relative bg-gradient-to-r from-blue-600 to-blue-800 text-white p-4 sm:p-6 flex-shrink-0 border-b border-blue-700">
           <button
             onClick={onClose}
             disabled={isProcessing || submitting}
@@ -549,7 +556,7 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
       )}
 
       {/* Content */}
-      <div className={`${isInDrawer ? 'flex-1 overflow-y-auto p-4 min-h-0' : 'flex-1 overflow-y-auto p-4 sm:p-6'} space-y-4`}>
+      <div className={`${isInDrawer ? 'flex-1 overflow-y-auto p-4 min-h-0' : 'flex-1 overflow-y-auto p-4 sm:p-6 min-h-0'} space-y-4`}>
         {/* Scholarship Info */}
         <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
           <h3 className="font-semibold text-gray-900 mb-2 text-sm sm:text-base">{t('scholarshipConfirmationModal.labels.selectedScholarship')}</h3>
@@ -824,7 +831,7 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
           </button>
         </DrawerFooter>
       ) : (
-        <div className="bg-gray-50 px-4 sm:px-6 py-3 sm:py-4 flex gap-2 sm:gap-3 flex-shrink-0 border-t border-gray-100">
+        <div className="bg-gray-50 px-4 sm:px-6 py-3 sm:py-4 flex gap-2 sm:gap-3 flex-shrink-0 border-t border-gray-100 mt-auto">
           <button
             onClick={onClose}
             disabled={isProcessing || submitting}
@@ -867,7 +874,7 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
     <Dialog open={isOpen} onClose={onClose} className="relative z-50">
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-30" aria-hidden="true" />
       <div className="fixed inset-0 flex items-center justify-center p-4 z-30">
-        <Dialog.Panel className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden relative border-0 max-h-[80vh] flex flex-col">
+        <Dialog.Panel className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden relative border-0 max-h-[90vh] flex flex-col">
           <ModalContent isInDrawer={false} />
         </Dialog.Panel>
       </div>
