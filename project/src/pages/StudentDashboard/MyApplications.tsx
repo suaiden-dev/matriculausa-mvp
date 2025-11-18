@@ -1695,9 +1695,7 @@ const MyApplications: React.FC = () => {
                         <div className="flex items-center justify-between mb-3">
                           <span className="font-semibold text-gray-900 text-sm">{t('studentDashboard.myApplications.paymentStatus.applicationFee')}</span>
                           <span className="text-base font-bold text-gray-700">
-                            {applicationFeePaid && realPaidAmounts.application
-                              ? formatAmount(realPaidAmounts.application) // Valor real pago (já inclui desconto se aplicável)
-                              : formatAmount(getApplicationFeeWithDependents(Number(scholarship.application_fee_amount || 35000)))}
+                            {formatAmount(getApplicationFeeWithDependents(Number(scholarship.application_fee_amount || 35000)))}
                           </span>
                         </div>
                         {applicationFeePaid ? (
@@ -1745,16 +1743,15 @@ const MyApplications: React.FC = () => {
                       <div className="bg-white border-2 border-slate-200 rounded-xl p-3 shadow-sm">
                         <div className="flex items-center justify-between mb-3">
                           <span className="font-semibold text-gray-900 text-sm">{t('studentDashboard.myApplications.paymentStatus.scholarshipFee')}</span>
-                          {scholarshipFeePaid && realPaidAmounts.scholarship ? (
-                            // Se já pagou, mostrar valor real pago (já inclui desconto se aplicável)
-                            <span className="text-base font-bold text-gray-700">{formatAmount(realPaidAmounts.scholarship)}</span>
-                          ) : scholarshipFeePromotionalCoupon ? (
+                          {scholarshipFeePromotionalCoupon ? (
+                            // Se há cupom promocional, mostrar valor com desconto
                             <div className="text-right">
                               <div className="text-base font-bold text-gray-400 line-through">{formatAmount(Number(getFeeAmount('scholarship_fee')))}</div>
                               <div className="text-base font-bold text-green-600">{formatAmount(scholarshipFeePromotionalCoupon.finalAmount)}</div>
                             </div>
                           ) : (
-                          <span className="text-base font-bold text-gray-700">{formatAmount(Number(getFeeAmount('scholarship_fee')))}</span>
+                            // Sem cupom, mostrar valor normal da taxa
+                            <span className="text-base font-bold text-gray-700">{formatAmount(Number(getFeeAmount('scholarship_fee')))}</span>
                           )}
                         </div>
                         {scholarshipFeePaid ? (
