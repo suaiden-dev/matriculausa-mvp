@@ -63,6 +63,7 @@ const CompletedApplicationsView: React.FC = () => {
   const [completionStartDate, setCompletionStartDate] = useState<dayjs.Dayjs | null>(null);
   const [completionEndDate, setCompletionEndDate] = useState<dayjs.Dayjs | null>(null);
   const [onlyBlackCouponUsers, setOnlyBlackCouponUsers] = useState(false);
+  const [showCurrentStudents, setShowCurrentStudents] = useState(false);
   const [blackCouponUsers, setBlackCouponUsers] = useState<Set<string>>(new Set());
 
   // React Query Hooks
@@ -147,6 +148,9 @@ const CompletedApplicationsView: React.FC = () => {
 
   // Chave para localStorage
   const FILTERS_STORAGE_KEY = 'admin_completed_filters';
+  
+  // Lista de bolsas a ocultar por padrão
+  const HIDDEN_SCHOLARSHIPS = ['Current Students Scholarship'];
 
   // Função para salvar filtros no localStorage
   const saveFiltersToStorage = () => {
@@ -160,6 +164,7 @@ const CompletedApplicationsView: React.FC = () => {
       completionStartDate: completionStartDate?.toISOString() || null,
       completionEndDate: completionEndDate?.toISOString() || null,
       onlyBlackCouponUsers,
+      showCurrentStudents,
       currentPage
     };
     localStorage.setItem(FILTERS_STORAGE_KEY, JSON.stringify(filters));
@@ -180,6 +185,7 @@ const CompletedApplicationsView: React.FC = () => {
         setCompletionStartDate(filters.completionStartDate ? dayjs(filters.completionStartDate) : null);
         setCompletionEndDate(filters.completionEndDate ? dayjs(filters.completionEndDate) : null);
         setOnlyBlackCouponUsers(filters.onlyBlackCouponUsers || false);
+        setShowCurrentStudents(filters.showCurrentStudents || false);
         setCurrentPage(filters.currentPage || 1);
       }
     } catch (error) {
@@ -199,6 +205,7 @@ const CompletedApplicationsView: React.FC = () => {
     setCompletionStartDate(null);
     setCompletionEndDate(null);
     setOnlyBlackCouponUsers(false);
+    setShowCurrentStudents(false);
     setCurrentPage(1);
   };
 
@@ -219,10 +226,16 @@ const CompletedApplicationsView: React.FC = () => {
     completionStartDate,
     completionEndDate,
     onlyBlackCouponUsers,
+    showCurrentStudents,
     currentPage
   ]);
 
   const filteredStudents = completedStudents.filter((student: StudentRecord) => {
+    // Ocultar estudantes de Current Students Scholarship por padrão (a menos que o toggle esteja ativo)
+    if (!showCurrentStudents && student.scholarship_title && HIDDEN_SCHOLARSHIPS.includes(student.scholarship_title)) {
+      return false;
+    }
+
     // Em produção, ocultar usuários de teste com email contendo "uorak"
     if (isProductionHost && (student.student_email || '').toLowerCase().includes('uorak')) {
       return false;
@@ -592,18 +605,33 @@ const CompletedApplicationsView: React.FC = () => {
           
           {/* Checkbox e botão de limpar filtros */}
           <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="onlyBlackCouponUsers"
-                checked={onlyBlackCouponUsers}
-                onChange={(e) => setOnlyBlackCouponUsers(e.target.checked)}
-                className="h-4 w-4 text-[#05294E] focus:ring-[#05294E] border-gray-300 rounded"
-              />
-              <label htmlFor="onlyBlackCouponUsers" className="text-sm font-medium text-gray-700 flex items-center space-x-1">
-                <Sparkles className="h-4 w-4 text-purple-600" />
-                <span>Show only students who used BLACK coupon</span>
-              </label>
+            <div className="flex items-center gap-4 flex-wrap">
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="onlyBlackCouponUsers"
+                  checked={onlyBlackCouponUsers}
+                  onChange={(e) => setOnlyBlackCouponUsers(e.target.checked)}
+                  className="h-4 w-4 text-[#05294E] focus:ring-[#05294E] border-gray-300 rounded"
+                />
+                <label htmlFor="onlyBlackCouponUsers" className="text-sm font-medium text-gray-700 flex items-center space-x-1">
+                  <Sparkles className="h-4 w-4 text-purple-600" />
+                  <span>Show only students who used BLACK coupon</span>
+                </label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="showCurrentStudentsCompleted"
+                  checked={showCurrentStudents}
+                  onChange={(e) => setShowCurrentStudents(e.target.checked)}
+                  className="h-4 w-4 text-[#05294E] focus:ring-[#05294E] border-gray-300 rounded"
+                />
+                <label htmlFor="showCurrentStudentsCompleted" className="text-sm font-medium text-gray-700 flex items-center space-x-1">
+                  <CheckCircle className="h-4 w-4 text-blue-600" />
+                  <span>Show Current Students Scholarship</span>
+                </label>
+              </div>
             </div>
             <button
               onClick={clearSavedFilters}
