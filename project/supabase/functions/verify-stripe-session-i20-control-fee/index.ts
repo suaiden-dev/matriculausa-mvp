@@ -160,13 +160,25 @@ Deno.serve(async (req)=>{
       let individualFeePaymentId = null;
       try {
         const paymentDate = new Date().toISOString();
-        const paymentAmount = session.amount_total ? session.amount_total / 100 : 0;
+        const paymentAmountRaw = session.amount_total ? session.amount_total / 100 : 0;
+        const currency = session.currency?.toUpperCase() || 'USD';
+        
+        // Converter BRL para USD se necessário (sempre registrar em USD)
+        let paymentAmount = paymentAmountRaw;
+        if (currency === 'BRL' && session.metadata?.exchange_rate) {
+          const exchangeRate = parseFloat(session.metadata.exchange_rate);
+          if (exchangeRate > 0) {
+            paymentAmount = paymentAmountRaw / exchangeRate;
+            console.log(`[Individual Fee Payment] Convertendo BRL para USD: ${paymentAmountRaw} BRL / ${exchangeRate} = ${paymentAmount} USD`);
+          }
+        }
         
         console.log('[Individual Fee Payment] Recording i20_control fee payment...');
+        console.log(`[Individual Fee Payment] Valor original: ${paymentAmountRaw} ${currency}, Valor em USD: ${paymentAmount} USD`);
         const { data: insertResult, error: insertError } = await supabase.rpc('insert_individual_fee_payment', {
           p_user_id: userId,
           p_fee_type: 'i20_control',
-          p_amount: paymentAmount,
+          p_amount: paymentAmount, // Sempre em USD
           p_payment_date: paymentDate,
           p_payment_method: paymentMethod,
           p_payment_intent_id: paymentIntentId as string || null,
