@@ -131,18 +131,6 @@ const DirectSalesLink: React.FC = () => {
         </button>
       </div>
 
-      {/* Instructions */}
-      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-        <h4 className="font-medium text-gray-900 mb-2">How to use:</h4>
-        <ol className="text-sm text-gray-700 space-y-1 list-decimal list-inside">
-          <li>Copy the registration link above</li>
-          <li>Use it in your advertisements (social media, email, etc.)</li>
-          <li>Students who click the link will register with Package 3 automatically</li>
-          <li>Students must provide dependents information during registration</li>
-          <li>All registrations will be tracked under "Direct Sales" seller</li>
-        </ol>
-      </div>
-
       {/* Technical Details */}
       <div className="mt-4 pt-4 border-t border-gray-200">
         <div className="text-xs text-gray-500 space-y-1">

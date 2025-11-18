@@ -1,7 +1,7 @@
 import { supabase } from '../lib/supabase';
 
 export interface PaymentIntentInfo {
-  currency: string;
+  currency: string; // 'usd' ou 'brl' - moeda original do pagamento
   isPIX: boolean;
   exchange_rate: number | null;
   base_amount: number | null; // Valor líquido (sem taxa do Stripe)
@@ -173,40 +173,63 @@ export async function getRealPaidAmounts(
     for (const payment of payments || []) {
       let amountUSD = Number(payment.amount);
 
-      // Se for pagamento Stripe, calcular o valor LÍQUIDO (sem taxas do Stripe)
+      // ✅ LÓGICA BASEADA EM METADADOS DO STRIPE (não em thresholds arbitrários)
+      // Se for pagamento Stripe COM payment_intent_id, usar metadados para determinar moeda
       if (payment.payment_method === 'stripe' && payment.payment_intent_id) {
-        // Buscar informações do Payment Intent (incluindo base_amount se disponível)
+        // Buscar informações do Payment Intent (incluindo currency e base_amount)
         const paymentInfo = await getPaymentIntentInfoFromStripe(payment.payment_intent_id);
-        const isPIX = paymentInfo?.isPIX || false;
         
-        // ✅ PRIORIDADE 1: Usar base_amount do metadata se disponível (já é líquido)
-        if (paymentInfo?.base_amount !== null && paymentInfo?.base_amount !== undefined) {
+        if (!paymentInfo) {
+          console.warn(`[paymentConverter] ⚠️ Não foi possível buscar informações do Payment Intent ${payment.payment_intent_id}, pulando pagamento`);
+          continue;
+        }
+        
+        const originalCurrency = paymentInfo.currency?.toLowerCase() || 'usd';
+        const isPIX = paymentInfo.isPIX || false;
+        const isBRL = originalCurrency === 'brl' || isPIX;
+        
+        // ✅ PRIORIDADE 1: Usar base_amount do metadata se disponível (já é líquido e em USD)
+        if (paymentInfo.base_amount !== null && paymentInfo.base_amount !== undefined) {
           amountUSD = paymentInfo.base_amount;
           console.log(`[paymentConverter] ✅ Usando base_amount (líquido) do metadata: ${amountUSD.toFixed(2)} USD para payment_intent_id: ${payment.payment_intent_id}`);
-        } else {
-          // ✅ PRIORIDADE 2: Calcular valor líquido removendo taxas do Stripe
-          if (isPIX) {
-            // Para PIX: o valor em individual_fee_payments está em BRL (valor bruto)
-            // Converter BRL para USD primeiro
-            const exchangeRate = paymentInfo?.exchange_rate || await getExchangeRateFromStripe(payment.payment_intent_id);
-            
-            if (exchangeRate) {
-              // Converter BRL bruto para USD bruto
-              const grossAmountUSD = convertBRLToUSD(amountUSD, exchangeRate);
-              // Remover taxas do Stripe para obter valor líquido
-              amountUSD = calculateNetAmountFromGross(grossAmountUSD, true);
-              console.log(`[paymentConverter] ✅ Calculado PIX líquido: ${payment.amount} BRL → ${grossAmountUSD.toFixed(2)} USD (bruto) → ${amountUSD.toFixed(2)} USD (líquido)`);
-            } else {
-              console.warn(`[paymentConverter] Taxa de câmbio não encontrada para payment_intent_id: ${payment.payment_intent_id}`);
-              continue;
-            }
-          } else {
-            // Para cartão: o valor em individual_fee_payments já está em USD (valor bruto)
+        } else if (isBRL) {
+          // ✅ MOEDA ORIGINAL É BRL: converter BRL para USD usando exchange_rate
+          const exchangeRate = paymentInfo.exchange_rate || await getExchangeRateFromStripe(payment.payment_intent_id);
+          
+          if (exchangeRate && exchangeRate > 0) {
+            // Converter BRL bruto para USD bruto
+            const grossAmountUSD = convertBRLToUSD(amountUSD, exchangeRate);
             // Remover taxas do Stripe para obter valor líquido
+            amountUSD = calculateNetAmountFromGross(grossAmountUSD, true);
+            console.log(`[paymentConverter] ✅ Convertido BRL para USD (via metadata): ${payment.amount} BRL → ${grossAmountUSD.toFixed(2)} USD (bruto) → ${amountUSD.toFixed(2)} USD (líquido)`);
+          } else {
+            console.warn(`[paymentConverter] ⚠️ Moeda é BRL mas exchange_rate não encontrada para payment_intent_id: ${payment.payment_intent_id}, pulando pagamento`);
+            continue;
+          }
+        } else {
+          // ✅ MOEDA ORIGINAL É USD: apenas remover taxas do Stripe
+          // Determinar se é PIX ou cartão para aplicar a taxa correta
+          if (isPIX) {
+            amountUSD = calculateNetAmountFromGross(amountUSD, true);
+            console.log(`[paymentConverter] ✅ PIX em USD: ${Number(payment.amount).toFixed(2)} USD (bruto) → ${amountUSD.toFixed(2)} USD (líquido)`);
+          } else {
             amountUSD = calculateNetAmountFromGross(amountUSD, false);
-            console.log(`[paymentConverter] ✅ Calculado cartão líquido: ${Number(payment.amount).toFixed(2)} USD (bruto) → ${amountUSD.toFixed(2)} USD (líquido)`);
+            console.log(`[paymentConverter] ✅ Cartão em USD: ${Number(payment.amount).toFixed(2)} USD (bruto) → ${amountUSD.toFixed(2)} USD (líquido)`);
           }
         }
+      } else if (payment.payment_method === 'zelle') {
+        // ✅ Zelle sempre está em USD, usar diretamente
+        amountUSD = amountUSD;
+        console.log(`[paymentConverter] ✅ Zelle payment: ${amountUSD.toFixed(2)} USD`);
+      } else if (payment.payment_method === 'stripe' && !payment.payment_intent_id) {
+        // ✅ Stripe sem payment_intent_id: não podemos determinar moeda, IGNORAR
+        // Isso evita contar valores BRL antigos como USD quando não temos metadados
+        console.warn(`[paymentConverter] ⚠️ Stripe payment sem payment_intent_id para ${payment.fee_type}, não é possível determinar moeda - IGNORANDO (use valores fixos como fallback)`);
+        continue;
+      } else {
+        // ✅ Outros métodos (manual/outside): não processar, deixar usar valores fixos
+        console.log(`[paymentConverter] ℹ️ Payment method '${payment.payment_method}' sem payment_intent_id, não processando - use valores fixos como fallback`);
+        continue;
       }
 
       // Mapear fee_type para a chave correta
@@ -244,6 +267,9 @@ export async function getRealPaidAmount(
 /**
  * Busca valores brutos pagos (COM taxas do Stripe) de individual_fee_payments
  * Usado no Payment Management do superADMIN para mostrar o valor que o aluno realmente pagou
+ * 
+ * IMPORTANTE: Os valores em individual_fee_payments.amount já estão em USD (convertidos na hora do registro).
+ * Não precisa fazer conversão adicional - apenas retornar os valores diretamente.
  */
 export async function getGrossPaidAmounts(
   userId: string,
@@ -252,7 +278,7 @@ export async function getGrossPaidAmounts(
   try {
     const { data: payments, error } = await supabase
       .from('individual_fee_payments')
-      .select('fee_type, amount, payment_method, payment_intent_id')
+      .select('fee_type, amount, payment_method')
       .eq('user_id', userId)
       .in('fee_type', feeTypes);
 
@@ -265,34 +291,9 @@ export async function getGrossPaidAmounts(
 
     // Processar cada pagamento
     for (const payment of payments || []) {
-      let amountUSD = Number(payment.amount);
-
-      // Se for pagamento Stripe, manter o valor BRUTO (com taxas do Stripe)
-      if (payment.payment_method === 'stripe' && payment.payment_intent_id) {
-        // Buscar informações do Payment Intent para verificar se é PIX
-        const paymentInfo = await getPaymentIntentInfoFromStripe(payment.payment_intent_id);
-        const isPIX = paymentInfo?.isPIX || false;
-        
-        if (isPIX) {
-          // Para PIX: o valor em individual_fee_payments está em BRL (valor bruto)
-          // Converter BRL para USD usando exchange_rate
-          const exchangeRate = paymentInfo?.exchange_rate || await getExchangeRateFromStripe(payment.payment_intent_id);
-          
-          if (exchangeRate) {
-            // Converter BRL bruto para USD bruto (mantendo as taxas)
-            amountUSD = convertBRLToUSD(amountUSD, exchangeRate);
-            console.log(`[paymentConverter] ✅ PIX bruto: ${payment.amount} BRL → ${amountUSD.toFixed(2)} USD (bruto, com taxas)`);
-          } else {
-            console.warn(`[paymentConverter] Taxa de câmbio não encontrada para payment_intent_id: ${payment.payment_intent_id}`);
-            continue;
-          }
-        } else {
-          // Para cartão: o valor em individual_fee_payments já está em USD (valor bruto)
-          // Manter como está (já é bruto, com taxas)
-          console.log(`[paymentConverter] ✅ Cartão bruto: ${amountUSD.toFixed(2)} USD (bruto, com taxas)`);
-        }
-      }
-      // Para Zelle: o valor já está correto (não passa pelo Stripe)
+      // Os valores em individual_fee_payments já estão em USD (convertidos na hora do registro)
+      // Apenas usar o valor diretamente
+      const amountUSD = Number(payment.amount);
 
       // Mapear fee_type para a chave correta
       const feeTypeKey = payment.fee_type === 'selection_process' ? 'selection_process' :

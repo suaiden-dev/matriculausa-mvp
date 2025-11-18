@@ -43,39 +43,84 @@ export function transformPaymentsToRecordsAndStats({
     const dependentCost = dependents * 150; // apenas selection process
     const userOverrides = overridesMap[student?.user_id] || {};
     const realPaid = realPaymentAmounts?.get(student?.user_id);
+    const systemType = userSystemTypesMap.get(student.user_id) || 'legacy';
 
-    // Selection Process Fee - Prioridade: valor real pago > override > cálculo fixo
+    // Helper: Verifica se o valor está dentro de uma faixa razoável (50% de tolerância)
+    const isValueReasonable = (realValue: number, expectedValue: number): boolean => {
+      const tolerance = 0.5; // 50% de tolerância
+      const min = expectedValue * (1 - tolerance);
+      const max = expectedValue * (1 + tolerance);
+      return realValue >= min && realValue <= max;
+    };
+
+    // Selection Process Fee - Prioridade: valor real pago (se razoável) > override > cálculo fixo
     let selectionProcessFee: number;
+    const expectedSelectionProcess = systemType === 'simplified' ? 350 : 400;
+    const expectedSelectionProcessWithDeps = expectedSelectionProcess + dependentCost;
+    
     if (realPaid?.selection_process !== undefined && realPaid.selection_process > 0) {
-      selectionProcessFee = Math.round(realPaid.selection_process * 100);
+      // Verificar se o valor está razoável (dentro de 50% do esperado)
+      if (isValueReasonable(realPaid.selection_process, expectedSelectionProcessWithDeps)) {
+        selectionProcessFee = Math.round(realPaid.selection_process * 100);
+      } else {
+        // Valor muito discrepante, usar cálculo fixo
+        console.log(`[PaymentManagement] Valor de selection_process muito discrepante para ${studentEmail}: ${realPaid.selection_process} (esperado ~${expectedSelectionProcessWithDeps}), usando cálculo fixo`);
+        if (userOverrides.selection_process_fee !== undefined) {
+          selectionProcessFee = Math.round(userOverrides.selection_process_fee * 100);
+        } else {
+          selectionProcessFee = Math.round((expectedSelectionProcess + dependentCost) * 100);
+        }
+      }
     } else if (userOverrides.selection_process_fee !== undefined) {
       selectionProcessFee = Math.round(userOverrides.selection_process_fee * 100);
     } else {
-      const systemType = userSystemTypesMap.get(student.user_id) || 'legacy';
-      const baseAmount = systemType === 'simplified' ? 350 : 400;
-      selectionProcessFee = Math.round((baseAmount + dependentCost) * 100);
+      selectionProcessFee = Math.round((expectedSelectionProcess + dependentCost) * 100);
     }
 
-    // I-20 Control Fee - Prioridade: valor real pago > override > cálculo fixo
+    // I-20 Control Fee - Prioridade: valor real pago (se razoável) > override > cálculo fixo
     let i20ControlFee: number;
+    const expectedI20Control = getFeeAmount('i20_control_fee');
+    
     if (realPaid?.i20_control !== undefined && realPaid.i20_control > 0) {
-      i20ControlFee = Math.round(realPaid.i20_control * 100);
+      // Verificar se o valor está razoável (dentro de 50% do esperado)
+      if (isValueReasonable(realPaid.i20_control, expectedI20Control)) {
+        i20ControlFee = Math.round(realPaid.i20_control * 100);
+      } else {
+        // Valor muito discrepante, usar cálculo fixo
+        console.log(`[PaymentManagement] Valor de i20_control muito discrepante para ${studentEmail}: ${realPaid.i20_control} (esperado ~${expectedI20Control}), usando cálculo fixo`);
+        if (userOverrides.i20_control_fee !== undefined) {
+          i20ControlFee = Math.round(userOverrides.i20_control_fee * 100);
+        } else {
+          i20ControlFee = Math.round(expectedI20Control * 100);
+        }
+      }
     } else if (userOverrides.i20_control_fee !== undefined) {
       i20ControlFee = Math.round(userOverrides.i20_control_fee * 100);
     } else {
-      i20ControlFee = Math.round(getFeeAmount('i20_control_fee') * 100);
+      i20ControlFee = Math.round(expectedI20Control * 100);
     }
 
-    // Scholarship Fee - Prioridade: valor real pago > override > cálculo fixo
+    // Scholarship Fee - Prioridade: valor real pago (se razoável) > override > cálculo fixo
     let scholarshipFee: number;
+    const expectedScholarship = systemType === 'simplified' ? 550 : 900;
+    
     if (realPaid?.scholarship !== undefined && realPaid.scholarship > 0) {
-      scholarshipFee = Math.round(realPaid.scholarship * 100);
+      // Verificar se o valor está razoável (dentro de 50% do esperado)
+      if (isValueReasonable(realPaid.scholarship, expectedScholarship)) {
+        scholarshipFee = Math.round(realPaid.scholarship * 100);
+      } else {
+        // Valor muito discrepante, usar cálculo fixo
+        console.log(`[PaymentManagement] Valor de scholarship muito discrepante para ${studentEmail}: ${realPaid.scholarship} (esperado ~${expectedScholarship}), usando cálculo fixo`);
+        if (userOverrides.scholarship_fee !== undefined) {
+          scholarshipFee = Math.round(userOverrides.scholarship_fee * 100);
+        } else {
+          scholarshipFee = Math.round(expectedScholarship * 100);
+        }
+      }
     } else if (userOverrides.scholarship_fee !== undefined) {
       scholarshipFee = Math.round(userOverrides.scholarship_fee * 100);
     } else {
-      const systemType = userSystemTypesMap.get(student.user_id) || 'legacy';
-      const amount = systemType === 'simplified' ? 550 : 900;
-      scholarshipFee = Math.round(amount * 100);
+      scholarshipFee = Math.round(expectedScholarship * 100);
     }
 
     // Application Fee (pode vir da scholarship)
@@ -86,7 +131,6 @@ export function transformPaymentsToRecordsAndStats({
     } else {
       applicationFee = Math.round(getFeeAmount('application_fee') * 100);
     }
-    const systemType = userSystemTypesMap.get(student.user_id) || 'legacy';
     if (systemType === 'legacy' && dependents > 0) {
       applicationFee += dependents * 10000; // $100 por dependente
     }
@@ -344,39 +388,84 @@ export function transformPaymentsToRecordsAndStats({
     const dependentCost = dependents * 150;
     const userOverrides = overridesMap[stripeUser?.user_id] || {};
     const realPaid = realPaymentAmounts?.get(stripeUser?.user_id);
+    const systemType = userSystemTypesMap.get(stripeUser.user_id) || 'legacy';
 
-    // Selection Process Fee - Prioridade: valor real pago > override > cálculo fixo
+    // Helper: Verifica se o valor está dentro de uma faixa razoável (50% de tolerância)
+    const isValueReasonable = (realValue: number, expectedValue: number): boolean => {
+      const tolerance = 0.5; // 50% de tolerância
+      const min = expectedValue * (1 - tolerance);
+      const max = expectedValue * (1 + tolerance);
+      return realValue >= min && realValue <= max;
+    };
+
+    // Selection Process Fee - Prioridade: valor real pago (se razoável) > override > cálculo fixo
     let selectionProcessFee: number;
+    const expectedSelectionProcess = systemType === 'simplified' ? 350 : 400;
+    const expectedSelectionProcessWithDeps = expectedSelectionProcess + dependentCost;
+    
     if (realPaid?.selection_process !== undefined && realPaid.selection_process > 0) {
-      selectionProcessFee = Math.round(realPaid.selection_process * 100);
+      // Verificar se o valor está razoável (dentro de 50% do esperado)
+      if (isValueReasonable(realPaid.selection_process, expectedSelectionProcessWithDeps)) {
+        selectionProcessFee = Math.round(realPaid.selection_process * 100);
+      } else {
+        // Valor muito discrepante, usar cálculo fixo
+        console.log(`[PaymentManagement] Valor de selection_process muito discrepante para ${studentName} (${studentEmail}): ${realPaid.selection_process} (esperado ~${expectedSelectionProcessWithDeps}), usando cálculo fixo`);
+        if (userOverrides.selection_process_fee !== undefined) {
+          selectionProcessFee = Math.round(userOverrides.selection_process_fee * 100);
+        } else {
+          selectionProcessFee = Math.round((expectedSelectionProcess + dependentCost) * 100);
+        }
+      }
     } else if (userOverrides.selection_process_fee !== undefined) {
       selectionProcessFee = Math.round(userOverrides.selection_process_fee * 100);
     } else {
-      const systemType = userSystemTypesMap.get(stripeUser.user_id) || 'legacy';
-      const baseAmount = systemType === 'simplified' ? 350 : 400;
-      selectionProcessFee = Math.round((baseAmount + dependentCost) * 100);
+      selectionProcessFee = Math.round((expectedSelectionProcess + dependentCost) * 100);
     }
 
-    // I-20 Control Fee - Prioridade: valor real pago > override > cálculo fixo
+    // I-20 Control Fee - Prioridade: valor real pago (se razoável) > override > cálculo fixo
     let i20ControlFee: number;
+    const expectedI20Control = getFeeAmount('i20_control_fee');
+    
     if (realPaid?.i20_control !== undefined && realPaid.i20_control > 0) {
-      i20ControlFee = Math.round(realPaid.i20_control * 100);
+      // Verificar se o valor está razoável (dentro de 50% do esperado)
+      if (isValueReasonable(realPaid.i20_control, expectedI20Control)) {
+        i20ControlFee = Math.round(realPaid.i20_control * 100);
+      } else {
+        // Valor muito discrepante, usar cálculo fixo
+        console.log(`[PaymentManagement] Valor de i20_control muito discrepante para ${studentName} (${studentEmail}): ${realPaid.i20_control} (esperado ~${expectedI20Control}), usando cálculo fixo`);
+        if (userOverrides.i20_control_fee !== undefined) {
+          i20ControlFee = Math.round(userOverrides.i20_control_fee * 100);
+        } else {
+          i20ControlFee = Math.round(expectedI20Control * 100);
+        }
+      }
     } else if (userOverrides.i20_control_fee !== undefined) {
       i20ControlFee = Math.round(userOverrides.i20_control_fee * 100);
     } else {
-      i20ControlFee = Math.round(getFeeAmount('i20_control_fee') * 100);
+      i20ControlFee = Math.round(expectedI20Control * 100);
     }
 
-    // Scholarship Fee - Prioridade: valor real pago > override > cálculo fixo
+    // Scholarship Fee - Prioridade: valor real pago (se razoável) > override > cálculo fixo
     let scholarshipFee: number;
+    const expectedScholarship = systemType === 'simplified' ? 550 : 900;
+    
     if (realPaid?.scholarship !== undefined && realPaid.scholarship > 0) {
-      scholarshipFee = Math.round(realPaid.scholarship * 100);
+      // Verificar se o valor está razoável (dentro de 50% do esperado)
+      if (isValueReasonable(realPaid.scholarship, expectedScholarship)) {
+        scholarshipFee = Math.round(realPaid.scholarship * 100);
+      } else {
+        // Valor muito discrepante, usar cálculo fixo
+        console.log(`[PaymentManagement] Valor de scholarship muito discrepante para ${studentName} (${studentEmail}): ${realPaid.scholarship} (esperado ~${expectedScholarship}), usando cálculo fixo`);
+        if (userOverrides.scholarship_fee !== undefined) {
+          scholarshipFee = Math.round(userOverrides.scholarship_fee * 100);
+        } else {
+          scholarshipFee = Math.round(expectedScholarship * 100);
+        }
+      }
     } else if (userOverrides.scholarship_fee !== undefined) {
       scholarshipFee = Math.round(userOverrides.scholarship_fee * 100);
     } else {
-      const systemType = userSystemTypesMap.get(stripeUser.user_id) || 'legacy';
-      const amount = systemType === 'simplified' ? 550 : 900;
-      scholarshipFee = Math.round(amount * 100);
+      scholarshipFee = Math.round(expectedScholarship * 100);
     }
     const applicationFee = Math.round(getFeeAmount('application_fee') * 100);
 
