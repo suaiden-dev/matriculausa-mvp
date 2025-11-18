@@ -201,51 +201,7 @@ Deno.serve(async (req)=>{
         // Não quebra o fluxo - continua normalmente
       }
 
-      // Registrar uso do cupom promocional se houver
-      const promotionalCoupon = session.metadata?.promotional_coupon || null;
-      const promotionalDiscountAmount = session.metadata?.promotional_discount_amount ? parseFloat(session.metadata.promotional_discount_amount) : null;
-      const originalAmount = session.metadata?.original_amount ? parseFloat(session.metadata.original_amount) : null;
-      const finalAmount = session.metadata?.final_amount ? parseFloat(session.metadata.final_amount) : null;
-      
-      if (promotionalCoupon && promotionalDiscountAmount && originalAmount && finalAmount) {
-        try {
-          console.log('[Promotional Coupon Usage] Registrando uso do cupom promocional:', {
-            coupon_code: promotionalCoupon,
-            fee_type: 'scholarship_fee',
-            original_amount: originalAmount,
-            discount_amount: promotionalDiscountAmount,
-            final_amount: finalAmount
-          });
-          
-          const { error: couponUsageError } = await supabase
-            .from('promotional_coupon_usage')
-            .insert({
-              user_id: userId,
-              coupon_code: promotionalCoupon,
-              fee_type: 'scholarship_fee',
-              payment_id: sessionId,
-              payment_method: 'stripe',
-              original_amount: originalAmount,
-              discount_amount: promotionalDiscountAmount,
-              final_amount: finalAmount,
-              stripe_session_id: sessionId,
-              individual_fee_payment_id: individualFeePaymentId,
-              metadata: {
-                coupon_id: session.metadata?.promotional_coupon_id || null,
-                stripe_coupon_id: session.metadata?.stripe_coupon_id || null
-              }
-            });
-          
-          if (couponUsageError) {
-            console.warn('[Promotional Coupon Usage] Warning: Could not record coupon usage:', couponUsageError);
-          } else {
-            console.log('[Promotional Coupon Usage] ✅ Uso do cupom promocional registrado com sucesso!');
-          }
-        } catch (couponUsageException) {
-          console.warn('[Promotional Coupon Usage] Warning: Failed to record coupon usage:', couponUsageException);
-          // Não quebra o fluxo - continua normalmente
-        }
-      }
+      // ✅ REMOVIDO: Registro de uso do cupom promocional - agora é feito apenas na validação (record-promotional-coupon-validation)
 
       // Atualiza status das aplicações relacionadas para 'approved' (usando userProfile.id)
       const scholarshipIdsArray = scholarshipsIds.split(',').map((id)=>id.trim());

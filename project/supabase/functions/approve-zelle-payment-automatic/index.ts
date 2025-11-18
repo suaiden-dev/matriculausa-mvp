@@ -173,48 +173,9 @@ serve(async (req) => {
           .eq('id', paymentId)
           .single();
         
-        if (!zellePaymentError && zellePaymentData?.metadata) {
-          const promotionalCoupon = zellePaymentData.metadata.promotional_coupon || null;
-          const promotionalDiscountAmount = zellePaymentData.metadata.promotional_discount_amount ? parseFloat(zellePaymentData.metadata.promotional_discount_amount) : null;
-          const originalAmount = zellePaymentData.metadata.original_amount ? parseFloat(zellePaymentData.metadata.original_amount) : null;
-          const finalAmount = zellePaymentData.metadata.final_amount ? parseFloat(zellePaymentData.metadata.final_amount) : paymentAmount;
-          
-          if (promotionalCoupon && promotionalDiscountAmount && originalAmount) {
-            console.log('[Promotional Coupon Usage] Registrando uso do cupom promocional no Zelle (selection_process):', {
-              coupon_code: promotionalCoupon,
-              fee_type: 'selection_process',
-              original_amount: originalAmount,
-              discount_amount: promotionalDiscountAmount,
-              final_amount: finalAmount
-            });
-            
-            const { error: couponUsageError } = await supabaseClient
-              .from('promotional_coupon_usage')
-              .insert({
-                user_id: user_id,
-                coupon_code: promotionalCoupon,
-                fee_type: 'selection_process',
-                payment_id: paymentId,
-                payment_method: 'zelle',
-                original_amount: originalAmount,
-                discount_amount: promotionalDiscountAmount,
-                final_amount: finalAmount,
-                zelle_payment_id: paymentId,
-                individual_fee_payment_id: individualFeePaymentId,
-                metadata: {
-                  coupon_id: zellePaymentData.metadata.promotional_coupon_id || null
-                }
-              });
-            
-            if (couponUsageError) {
-              console.warn('[Promotional Coupon Usage] Warning: Could not record coupon usage:', couponUsageError);
-            } else {
-              console.log('[Promotional Coupon Usage] ✅ Uso do cupom promocional registrado com sucesso!');
-            }
-          }
-        }
+        // ✅ REMOVIDO: Registro de uso do cupom promocional - agora é feito apenas na validação (record-promotional-coupon-validation)
       } catch (couponUsageException) {
-        console.warn('[Promotional Coupon Usage] Warning: Failed to record coupon usage:', couponUsageException);
+        // Mantido para compatibilidade, mas não faz mais nada
       }
 
       // Log the payment action
@@ -333,48 +294,9 @@ serve(async (req) => {
           .eq('id', paymentId)
           .single();
         
-        if (!zellePaymentError && zellePaymentData?.metadata) {
-          const promotionalCoupon = zellePaymentData.metadata.promotional_coupon || null;
-          const promotionalDiscountAmount = zellePaymentData.metadata.promotional_discount_amount ? parseFloat(zellePaymentData.metadata.promotional_discount_amount) : null;
-          const originalAmount = zellePaymentData.metadata.original_amount ? parseFloat(zellePaymentData.metadata.original_amount) : null;
-          const finalAmount = zellePaymentData.metadata.final_amount ? parseFloat(zellePaymentData.metadata.final_amount) : paymentAmount;
-          
-          if (promotionalCoupon && promotionalDiscountAmount && originalAmount) {
-            console.log('[Promotional Coupon Usage] Registrando uso do cupom promocional no Zelle (i20_control):', {
-              coupon_code: promotionalCoupon,
-              fee_type: 'i20_control_fee',
-              original_amount: originalAmount,
-              discount_amount: promotionalDiscountAmount,
-              final_amount: finalAmount
-            });
-            
-            const { error: couponUsageError } = await supabaseClient
-              .from('promotional_coupon_usage')
-              .insert({
-                user_id: user_id,
-                coupon_code: promotionalCoupon,
-                fee_type: 'i20_control_fee',
-                payment_id: paymentId,
-                payment_method: 'zelle',
-                original_amount: originalAmount,
-                discount_amount: promotionalDiscountAmount,
-                final_amount: finalAmount,
-                zelle_payment_id: paymentId,
-                individual_fee_payment_id: individualFeePaymentId,
-                metadata: {
-                  coupon_id: zellePaymentData.metadata.promotional_coupon_id || null
-                }
-              });
-            
-            if (couponUsageError) {
-              console.warn('[Promotional Coupon Usage] Warning: Could not record coupon usage:', couponUsageError);
-            } else {
-              console.log('[Promotional Coupon Usage] ✅ Uso do cupom promocional registrado com sucesso!');
-            }
-          }
-        }
+        // ✅ REMOVIDO: Registro de uso do cupom promocional - agora é feito apenas na validação (record-promotional-coupon-validation)
       } catch (couponUsageException) {
-        console.warn('[Promotional Coupon Usage] Warning: Failed to record coupon usage:', couponUsageException);
+        // Mantido para compatibilidade, mas não faz mais nada
       }
 
       // Log the payment action
@@ -563,49 +485,9 @@ serve(async (req) => {
               .eq('id', paymentId)
               .single();
             
-            if (!zellePaymentError && zellePaymentData?.metadata) {
-              const promotionalCoupon = zellePaymentData.metadata.promotional_coupon || null;
-              const promotionalDiscountAmount = zellePaymentData.metadata.promotional_discount_amount ? parseFloat(zellePaymentData.metadata.promotional_discount_amount) : null;
-              const originalAmount = zellePaymentData.metadata.original_amount ? parseFloat(zellePaymentData.metadata.original_amount) : null;
-              const finalAmount = zellePaymentData.metadata.final_amount ? parseFloat(zellePaymentData.metadata.final_amount) : paymentAmount;
-              
-              if (promotionalCoupon && promotionalDiscountAmount && originalAmount) {
-                console.log('[Promotional Coupon Usage] Registrando uso do cupom promocional no Zelle:', {
-                  coupon_code: promotionalCoupon,
-                  fee_type: normalizedFeeTypeGlobal,
-                  original_amount: originalAmount,
-                  discount_amount: promotionalDiscountAmount,
-                  final_amount: finalAmount
-                });
-                
-                const { error: couponUsageError } = await supabaseClient
-                  .from('promotional_coupon_usage')
-                  .insert({
-                    user_id: user_id,
-                    coupon_code: promotionalCoupon,
-                    fee_type: normalizedFeeTypeGlobal === 'application_fee' ? 'application_fee' : normalizedFeeTypeGlobal === 'scholarship_fee' ? 'scholarship_fee' : normalizedFeeTypeGlobal,
-                    payment_id: paymentId,
-                    payment_method: 'zelle',
-                    original_amount: originalAmount,
-                    discount_amount: promotionalDiscountAmount,
-                    final_amount: finalAmount,
-                    zelle_payment_id: paymentId,
-                    individual_fee_payment_id: individualFeePaymentId,
-                    metadata: {
-                      coupon_id: zellePaymentData.metadata.promotional_coupon_id || null
-                    }
-                  });
-                
-                if (couponUsageError) {
-                  console.warn('[Promotional Coupon Usage] Warning: Could not record coupon usage:', couponUsageError);
-                } else {
-                  console.log('[Promotional Coupon Usage] ✅ Uso do cupom promocional registrado com sucesso!');
-                }
-              }
-            }
+            // ✅ REMOVIDO: Registro de uso do cupom promocional - agora é feito apenas na validação (record-promotional-coupon-validation)
           } catch (couponUsageException) {
-            console.warn('[Promotional Coupon Usage] Warning: Failed to record coupon usage:', couponUsageException);
-            // Não quebra o fluxo - continua normalmente
+            // Mantido para compatibilidade, mas não faz mais nada
           }
 
           // APENAS DEPOIS de criar o registro individual, marcar como pago
