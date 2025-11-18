@@ -64,7 +64,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
     finalAmount: number;
     code: string;
   } | null>(null);
-  
+
   const [i20ControlFeePromotionalCoupon, setI20ControlFeePromotionalCoupon] = useState<{
     discountAmount: number;
     finalAmount: number;
@@ -200,12 +200,12 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
     const handleCouponValidation = (event: CustomEvent) => {
       if (event.detail?.isValid && event.detail?.discountAmount) {
         if (normalizedFeeType === 'scholarship_fee') {
-          const baseAmount = scholarshipFee ? parseFloat(scholarshipFee.replace('$', '')) : 0;
-          setScholarshipFeePromotionalCoupon({
-            discountAmount: event.detail.discountAmount,
-            finalAmount: event.detail.finalAmount || (baseAmount - event.detail.discountAmount),
-            code: (window as any).__checkout_promotional_coupon || 'BLACK'
-          });
+        const baseAmount = scholarshipFee ? parseFloat(scholarshipFee.replace('$', '')) : 0;
+        setScholarshipFeePromotionalCoupon({
+          discountAmount: event.detail.discountAmount,
+          finalAmount: event.detail.finalAmount || (baseAmount - event.detail.discountAmount),
+          code: (window as any).__checkout_promotional_coupon || 'BLACK'
+        });
         } else if (normalizedFeeType === 'i20_control') {
           const baseAmount = i20ControlFee ? parseFloat(i20ControlFee.replace('$', '')) : 0;
           setI20ControlFeePromotionalCoupon({
@@ -217,9 +217,9 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
       } else {
         // Se o cupom foi removido, limpar estado
         if (normalizedFeeType === 'scholarship_fee') {
-          const savedCoupon = localStorage.getItem('__promotional_coupon_scholarship_fee');
-          if (!savedCoupon) {
-            setScholarshipFeePromotionalCoupon(null);
+        const savedCoupon = localStorage.getItem('__promotional_coupon_scholarship_fee');
+        if (!savedCoupon) {
+          setScholarshipFeePromotionalCoupon(null);
           }
         } else if (normalizedFeeType === 'i20_control') {
           const savedCoupon = localStorage.getItem('__promotional_coupon_i20_control_fee');
@@ -342,7 +342,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
     {
       type: 'i20_control',
       amount: (() => {
-        // ✅ CORREÇÃO: Usar sempre useDynamicFees que já considera system_type
+      // ✅ CORREÇÃO: Usar sempre useDynamicFees que já considera system_type
         if (!i20ControlFee) return 0; // Aguardar carregamento
         const baseAmount = parseFloat(i20ControlFee.replace('$', ''));
         
