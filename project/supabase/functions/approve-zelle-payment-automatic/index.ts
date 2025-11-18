@@ -141,6 +141,43 @@ serve(async (req) => {
       console.log('✅ [approve-zelle-payment-automatic] has_paid_selection_process_fee marcado como true')
       console.log('🔍 [approve-zelle-payment-automatic] Dados atualizados:', updateData)
 
+      // Registrar pagamento na tabela individual_fee_payments
+      let individualFeePaymentId = null;
+      try {
+        const { data: feePaymentData, error: feePaymentError } = await supabaseClient.rpc('insert_individual_fee_payment', {
+          p_user_id: user_id,
+          p_fee_type: 'selection_process',
+          p_amount: paymentAmount,
+          p_payment_date: new Date().toISOString(),
+          p_payment_method: 'zelle',
+          p_payment_intent_id: null,
+          p_stripe_charge_id: null,
+          p_zelle_payment_id: paymentId
+        });
+
+        if (feePaymentError) {
+          console.warn('[Individual Fee Payment] Warning: Could not record fee payment:', feePaymentError);
+        } else {
+          console.log('[Individual Fee Payment] Selection process fee recorded successfully:', feePaymentData);
+          individualFeePaymentId = feePaymentData?.id || null;
+        }
+      } catch (recordError) {
+        console.warn('[Individual Fee Payment] Warning: Failed to record individual fee payment:', recordError);
+      }
+
+      // Registrar uso do cupom promocional se houver
+      try {
+        const { data: zellePaymentData, error: zellePaymentError } = await supabaseClient
+          .from('zelle_payments')
+          .select('metadata, amount')
+          .eq('id', paymentId)
+          .single();
+        
+        // ✅ REMOVIDO: Registro de uso do cupom promocional - agora é feito apenas na validação (record-promotional-coupon-validation)
+      } catch (couponUsageException) {
+        // Mantido para compatibilidade, mas não faz mais nada
+      }
+
       // Log the payment action
       try {
         await supabaseClient.rpc('log_student_action', {
@@ -224,6 +261,43 @@ serve(async (req) => {
 
       console.log('✅ [approve-zelle-payment-automatic] has_paid_i20_control_fee marcado como true')
       console.log('🔍 [approve-zelle-payment-automatic] Dados atualizados:', updateData)
+
+      // Registrar pagamento na tabela individual_fee_payments
+      let individualFeePaymentId = null;
+      try {
+        const { data: feePaymentData, error: feePaymentError } = await supabaseClient.rpc('insert_individual_fee_payment', {
+          p_user_id: user_id,
+          p_fee_type: 'i20_control',
+          p_amount: paymentAmount,
+          p_payment_date: new Date().toISOString(),
+          p_payment_method: 'zelle',
+          p_payment_intent_id: null,
+          p_stripe_charge_id: null,
+          p_zelle_payment_id: paymentId
+        });
+
+        if (feePaymentError) {
+          console.warn('[Individual Fee Payment] Warning: Could not record fee payment:', feePaymentError);
+        } else {
+          console.log('[Individual Fee Payment] I20 control fee recorded successfully:', feePaymentData);
+          individualFeePaymentId = feePaymentData?.id || null;
+        }
+      } catch (recordError) {
+        console.warn('[Individual Fee Payment] Warning: Failed to record individual fee payment:', recordError);
+      }
+
+      // Registrar uso do cupom promocional se houver
+      try {
+        const { data: zellePaymentData, error: zellePaymentError } = await supabaseClient
+          .from('zelle_payments')
+          .select('metadata, amount')
+          .eq('id', paymentId)
+          .single();
+        
+        // ✅ REMOVIDO: Registro de uso do cupom promocional - agora é feito apenas na validação (record-promotional-coupon-validation)
+      } catch (couponUsageException) {
+        // Mantido para compatibilidade, mas não faz mais nada
+      }
 
       // Log the payment action
       try {
@@ -377,6 +451,7 @@ serve(async (req) => {
           console.log(`📝 [approve-zelle-payment-automatic] Criando individual_fee_payments ANTES de marcar como pago...`)
           console.log(`🔍 [approve-zelle-payment-automatic] fee_type normalizado: ${normalizedFeeType}, amount: ${paymentAmount}`)
           
+          let individualFeePaymentId = null;
           try {
             const { data: feePaymentData, error: feePaymentError } = await supabaseClient.rpc('insert_individual_fee_payment', {
               p_user_id: user_id,
@@ -395,9 +470,24 @@ serve(async (req) => {
             }
 
             console.log(`✅ [approve-zelle-payment-automatic] individual_fee_payments criado com sucesso:`, feePaymentData)
+            individualFeePaymentId = feePaymentData?.id || null;
           } catch (feePaymentException) {
             console.error(`❌ [approve-zelle-payment-automatic] Exceção ao criar individual_fee_payments:`, feePaymentException)
             throw feePaymentException // Não marcar como pago se o registro individual falhar
+          }
+
+          // Registrar uso do cupom promocional se houver
+          try {
+            // Buscar dados do pagamento Zelle para obter informações do cupom do metadata
+            const { data: zellePaymentData, error: zellePaymentError } = await supabaseClient
+              .from('zelle_payments')
+              .select('metadata, amount')
+              .eq('id', paymentId)
+              .single();
+            
+            // ✅ REMOVIDO: Registro de uso do cupom promocional - agora é feito apenas na validação (record-promotional-coupon-validation)
+          } catch (couponUsageException) {
+            // Mantido para compatibilidade, mas não faz mais nada
           }
 
           // APENAS DEPOIS de criar o registro individual, marcar como pago

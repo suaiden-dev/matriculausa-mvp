@@ -160,16 +160,29 @@ Deno.serve(async (req)=>{
       console.log('User profile updated - scholarship fee paid');
 
       // Registrar pagamento na tabela individual_fee_payments
+      let individualFeePaymentId = null;
       try {
         const paymentDate = new Date().toISOString();
-        const paymentAmount = session.amount_total ? session.amount_total / 100 : 0;
+        const paymentAmountRaw = session.amount_total ? session.amount_total / 100 : 0;
+        const currency = session.currency?.toUpperCase() || 'USD';
         const paymentIntentId = session.payment_intent as string || '';
         
+        // Converter BRL para USD se necessário (sempre registrar em USD)
+        let paymentAmount = paymentAmountRaw;
+        if (currency === 'BRL' && session.metadata?.exchange_rate) {
+          const exchangeRate = parseFloat(session.metadata.exchange_rate);
+          if (exchangeRate > 0) {
+            paymentAmount = paymentAmountRaw / exchangeRate;
+            console.log(`[Individual Fee Payment] Convertendo BRL para USD: ${paymentAmountRaw} BRL / ${exchangeRate} = ${paymentAmount} USD`);
+          }
+        }
+        
         console.log('[Individual Fee Payment] Recording scholarship fee payment...');
+        console.log(`[Individual Fee Payment] Valor original: ${paymentAmountRaw} ${currency}, Valor em USD: ${paymentAmount} USD`);
         const { data: insertResult, error: insertError } = await supabase.rpc('insert_individual_fee_payment', {
           p_user_id: userId,
           p_fee_type: 'scholarship',
-          p_amount: paymentAmount,
+          p_amount: paymentAmount, // Sempre em USD
           p_payment_date: paymentDate,
           p_payment_method: 'stripe',
           p_payment_intent_id: paymentIntentId,
@@ -181,11 +194,14 @@ Deno.serve(async (req)=>{
           console.warn('[Individual Fee Payment] Warning: Could not record fee payment:', insertError);
         } else {
           console.log('[Individual Fee Payment] Scholarship fee recorded successfully:', insertResult);
+          individualFeePaymentId = insertResult?.id || null;
         }
       } catch (recordError) {
         console.warn('[Individual Fee Payment] Warning: Failed to record individual fee payment:', recordError);
         // Não quebra o fluxo - continua normalmente
       }
+
+      // ✅ REMOVIDO: Registro de uso do cupom promocional - agora é feito apenas na validação (record-promotional-coupon-validation)
 
       // Atualiza status das aplicações relacionadas para 'approved' (usando userProfile.id)
       const scholarshipIdsArray = scholarshipsIds.split(',').map((id)=>id.trim());
@@ -495,13 +511,13 @@ Deno.serve(async (req)=>{
       // amount_total está em centavos da moeda da sessão (USD ou BRL)
       const amountPaid = session.amount_total ? session.amount_total / 100 : null;
       const currency = session.currency?.toUpperCase() || 'USD';
-      const promotionalCoupon = session.metadata?.promotional_coupon || null;
-      const originalAmount = session.metadata?.original_amount ? parseFloat(session.metadata.original_amount) : null;
-      const finalAmount = session.metadata?.final_amount ? parseFloat(session.metadata.final_amount) : null;
+      const promotionalCouponReturn = session.metadata?.promotional_coupon || null;
+      const originalAmountReturn = session.metadata?.original_amount ? parseFloat(session.metadata.original_amount) : null;
+      const finalAmountReturn = session.metadata?.final_amount ? parseFloat(session.metadata.final_amount) : null;
       
       // Se for PIX (BRL), converter para USD usando a taxa de câmbio do metadata
-      let amountPaidUSD = amountPaid;
-      if (currency === 'BRL' && session.metadata?.exchange_rate) {
+      let amountPaidUSD = amountPaid || 0;
+      if (currency === 'BRL' && session.metadata?.exchange_rate && amountPaid) {
         const exchangeRate = parseFloat(session.metadata.exchange_rate);
         if (exchangeRate > 0) {
           amountPaidUSD = amountPaid / exchangeRate;
@@ -512,12 +528,12 @@ Deno.serve(async (req)=>{
         status: 'complete',
         message: 'Session verified and processed successfully.',
         application_ids: updatedApps?.map((app)=>app.id) || [],
-        amount_paid: amountPaidUSD || amountPaid, // Retornar em USD para exibição
-        amount_paid_original: amountPaid, // Valor original na moeda da sessão
+        amount_paid: amountPaidUSD || amountPaid || 0, // Retornar em USD para exibição
+        amount_paid_original: amountPaid || 0, // Valor original na moeda da sessão
         currency: currency,
-        promotional_coupon: promotionalCoupon,
-        original_amount: originalAmount,
-        final_amount: finalAmount
+        promotional_coupon: promotionalCouponReturn,
+        original_amount: originalAmountReturn,
+        final_amount: finalAmountReturn
       }, 200);
     } else {
       console.log('Session not paid or complete.');
