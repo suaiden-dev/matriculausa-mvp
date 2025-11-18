@@ -858,7 +858,32 @@ const AdminStudentDetails: React.FC = () => {
   }, [rejectDocData, rejectDocument, student, setStudent]);
 
   const handleViewDocument = useCallback((doc: { file_url: string; filename: string }) => {
-    window.open(doc.file_url, '_blank');
+    // ✅ Aceitar tanto file_url quanto url (fallback)
+    const fileUrl: string | undefined = doc?.file_url || (doc as any)?.url;
+    if (!doc || !fileUrl) {
+      console.error('Documento ou file_url/url está vazio ou undefined');
+      return;
+    }
+    
+    try {
+      // ✅ CORREÇÃO: Se já é uma URL completa do Supabase, usar diretamente
+      if (fileUrl && (fileUrl.startsWith('https://') || fileUrl.startsWith('http://'))) {
+        // Se já é uma URL completa, usar diretamente
+        window.open(fileUrl, '_blank');
+      } else {
+        // Se file_url é um path do storage, converter para URL pública
+        const publicUrl = supabase.storage
+          .from('student-documents')
+          .getPublicUrl(fileUrl)
+          .data.publicUrl;
+        
+        window.open(publicUrl, '_blank');
+      }
+    } catch (error) {
+      console.error('Erro ao gerar URL pública:', error);
+      // Fallback: tentar usar a URL original
+      window.open(fileUrl, '_blank');
+    }
   }, []);
 
   const handleUploadDocument = useCallback(async (appId: string, docType: string, _file: File) => {
