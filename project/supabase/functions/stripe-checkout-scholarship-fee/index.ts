@@ -78,38 +78,7 @@ Deno.serve(async (req) => {
     console.log('[stripe-checkout-scholarship-fee] ✅ User authenticated:', user.id);
     console.log('[stripe-checkout-scholarship-fee] 📋 Payload validation:', { price_id, success_url, cancel_url, mode, amount, payment_method, promotional_coupon });
 
-    // Verificar se há cupom promocional (BLACK, etc) - ANTES de buscar desconto ativo
-    let promotionalCouponData: any = null;
-    if (promotional_coupon && promotional_coupon.trim()) {
-      try {
-        const normalizedCoupon = promotional_coupon.trim().toUpperCase();
-        console.log('[stripe-checkout-scholarship-fee] 🎟️ Validando cupom promocional:', normalizedCoupon);
-        
-        const { data: couponValidation, error: couponError } = await supabase
-          .rpc('validate_promotional_coupon', {
-            user_id_param: user.id,
-            coupon_code_param: normalizedCoupon,
-            fee_type_param: 'scholarship_fee',
-            purchase_amount_param: amount || 0
-          });
-
-        if (couponError) {
-          console.error('[stripe-checkout-scholarship-fee] ❌ Erro ao validar cupom promocional:', couponError);
-        } else if (couponValidation && couponValidation.success) {
-          promotionalCouponData = couponValidation;
-          console.log('[stripe-checkout-scholarship-fee] ✅ Cupom promocional válido!');
-          console.log('[stripe-checkout-scholarship-fee] Coupon ID:', promotionalCouponData.coupon_id);
-          console.log('[stripe-checkout-scholarship-fee] Discount Amount:', promotionalCouponData.discount_amount);
-          console.log('[stripe-checkout-scholarship-fee] Final Amount:', promotionalCouponData.final_amount);
-        } else {
-          console.log('[stripe-checkout-scholarship-fee] ⚠️ Cupom promocional inválido:', couponValidation?.error);
-        }
-      } catch (error) {
-        console.error('[stripe-checkout-scholarship-fee] ❌ Erro ao verificar cupom promocional:', error);
-      }
-    }
-
-    // Buscar taxas do pacote do usuário
+    // Buscar taxas do pacote do usuário PRIMEIRO (para ter valor original antes de validar cupom)
     type UserPackageFees = {
       package_name: string;
       selection_process_fee: number;
@@ -131,6 +100,50 @@ Deno.serve(async (req) => {
       }
     } catch (err) {
       console.error('[stripe-checkout-scholarship-fee] ❌ Erro ao buscar taxas do pacote:', err);
+    }
+
+    // IMPORTANTE: Determinar valor ORIGINAL (sem desconto) para validar o cupom
+    // O amount pode vir com desconto do frontend, então usar metadata.original_amount se existir
+    // Se não, usar valor do pacote (ajustando $400 para $900) ou padrão $900
+    const originalAmountForCouponValidation = metadata?.original_amount 
+      ? parseFloat(metadata.original_amount.toString())
+      : (metadata?.scholarship_fee_amount 
+          ? parseFloat(metadata.scholarship_fee_amount.toString())
+          : (userPackageFees?.scholarship_fee === 400 ? 900 : (userPackageFees?.scholarship_fee || 900))); // Valor padrão: $900
+
+    console.log('[stripe-checkout-scholarship-fee] 💰 Valor original para validação do cupom:', originalAmountForCouponValidation);
+    console.log('[stripe-checkout-scholarship-fee] 💰 Valor recebido no amount (pode ter desconto):', amount);
+
+    // Verificar se há cupom promocional (BLACK, etc) - usando valor ORIGINAL
+    let promotionalCouponData: any = null;
+    if (promotional_coupon && promotional_coupon.trim()) {
+      try {
+        const normalizedCoupon = promotional_coupon.trim().toUpperCase();
+        console.log('[stripe-checkout-scholarship-fee] 🎟️ Validando cupom promocional:', normalizedCoupon);
+        console.log('[stripe-checkout-scholarship-fee] 💰 Usando valor ORIGINAL para validação:', originalAmountForCouponValidation);
+        
+        const { data: couponValidation, error: couponError } = await supabase
+          .rpc('validate_promotional_coupon', {
+            user_id_param: user.id,
+            coupon_code_param: normalizedCoupon,
+            fee_type_param: 'scholarship_fee',
+            purchase_amount_param: originalAmountForCouponValidation // ✅ Usar valor ORIGINAL, não o amount que pode ter desconto
+          });
+
+        if (couponError) {
+          console.error('[stripe-checkout-scholarship-fee] ❌ Erro ao validar cupom promocional:', couponError);
+        } else if (couponValidation && couponValidation.success) {
+          promotionalCouponData = couponValidation;
+          console.log('[stripe-checkout-scholarship-fee] ✅ Cupom promocional válido!');
+          console.log('[stripe-checkout-scholarship-fee] Coupon ID:', promotionalCouponData.coupon_id);
+          console.log('[stripe-checkout-scholarship-fee] Discount Amount:', promotionalCouponData.discount_amount);
+          console.log('[stripe-checkout-scholarship-fee] Final Amount (USD):', promotionalCouponData.final_amount);
+        } else {
+          console.log('[stripe-checkout-scholarship-fee] ⚠️ Cupom promocional inválido:', couponValidation?.error);
+        }
+      } catch (error) {
+        console.error('[stripe-checkout-scholarship-fee] ❌ Erro ao verificar cupom promocional:', error);
+      }
     }
 
     // Normaliza scholarships_ids para string (comma-separated) e monta o metadata

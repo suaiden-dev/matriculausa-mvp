@@ -311,11 +311,15 @@ const StudentApplicationsView: React.FC = () => {
   const [endDate, setEndDate] = useState<dayjs.Dayjs | null>(null);
   const [onlyPaidSelectionFee, setOnlyPaidSelectionFee] = useState(false);
   const [onlyBlackCouponUsers, setOnlyBlackCouponUsers] = useState(false);
+  const [showCurrentStudents, setShowCurrentStudents] = useState(false);
   
   // Dados para os filtros - agora vêm do React Query (filterDataQuery)
 
   // Chave para localStorage
   const FILTERS_STORAGE_KEY = 'admin_student_filters';
+  
+  // Lista de bolsas a ocultar por padrão
+  const HIDDEN_SCHOLARSHIPS = ['Current Students Scholarship'];
 
   // Função para salvar filtros no localStorage
   const saveFiltersToStorage = () => {
@@ -331,6 +335,7 @@ const StudentApplicationsView: React.FC = () => {
       endDate: endDate?.toISOString() || null,
       onlyPaidSelectionFee,
       onlyBlackCouponUsers,
+      showCurrentStudents,
       currentPage
     };
     localStorage.setItem(FILTERS_STORAGE_KEY, JSON.stringify(filters));
@@ -353,6 +358,7 @@ const StudentApplicationsView: React.FC = () => {
         setEndDate(filters.endDate ? dayjs(filters.endDate) : null);
         setOnlyPaidSelectionFee(filters.onlyPaidSelectionFee || false);
         setOnlyBlackCouponUsers(filters.onlyBlackCouponUsers || false);
+        setShowCurrentStudents(filters.showCurrentStudents || false);
         setCurrentPage(filters.currentPage || 1);
       }
     } catch (error) {
@@ -375,6 +381,7 @@ const StudentApplicationsView: React.FC = () => {
     setEndDate(null);
     setOnlyPaidSelectionFee(false);
     setOnlyBlackCouponUsers(false);
+    setShowCurrentStudents(false);
     setCurrentPage(1);
   };
 
@@ -472,6 +479,7 @@ const StudentApplicationsView: React.FC = () => {
     endDate,
     onlyPaidSelectionFee,
     onlyBlackCouponUsers,
+    showCurrentStudents,
     currentPage
   ]);
 
@@ -561,6 +569,16 @@ const StudentApplicationsView: React.FC = () => {
   };
 
   const filteredStudents = students.filter((student: StudentRecord) => {
+    // Excluir estudantes com status enrolled (eles aparecem na aba Completed)
+    if (student.application_status === 'enrolled') {
+      return false;
+    }
+
+    // Ocultar estudantes de Current Students Scholarship por padrão (a menos que o toggle esteja ativo)
+    if (!showCurrentStudents && student.scholarship_title && HIDDEN_SCHOLARSHIPS.includes(student.scholarship_title)) {
+      return false;
+    }
+
     // Em produção, ocultar usuários de teste com email contendo "uorak"
     if (isProductionHost && (student.student_email || '').toLowerCase().includes('uorak')) {
       return false;
@@ -1104,7 +1122,7 @@ const StudentApplicationsView: React.FC = () => {
           
           {/* Checkboxes para filtros e botão para limpar filtros */}
           <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-            <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex flex-col sm:flex-row gap-4 flex-wrap">
               <div className="flex items-center space-x-2">
                 <input
                   type="checkbox"
@@ -1128,6 +1146,19 @@ const StudentApplicationsView: React.FC = () => {
                 <label htmlFor="onlyBlackCouponUsers" className="text-sm font-medium text-gray-700 flex items-center space-x-1">
                   <Sparkles className="h-4 w-4 text-purple-600" />
                   <span>Show only students who used BLACK coupon</span>
+                </label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="showCurrentStudents"
+                  checked={showCurrentStudents}
+                  onChange={(e) => setShowCurrentStudents(e.target.checked)}
+                  className="h-4 w-4 text-[#05294E] focus:ring-[#05294E] border-gray-300 rounded"
+                />
+                <label htmlFor="showCurrentStudents" className="text-sm font-medium text-gray-700 flex items-center space-x-1">
+                  <GraduationCap className="h-4 w-4 text-blue-600" />
+                  <span>Show Current Students Scholarship</span>
                 </label>
               </div>
             </div>

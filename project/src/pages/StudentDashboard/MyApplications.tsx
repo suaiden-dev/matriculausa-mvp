@@ -1212,11 +1212,15 @@ const MyApplications: React.FC = () => {
       // Ativar loading
       setIsProcessingScholarshipFeeCheckout(true);
       
-      const scholarshipFeeAmount = getFeeAmount('scholarship_fee');
+      // ✅ Priorizar valor com desconto do window, caso contrário usar valor original
+      const baseAmount = getFeeAmount('scholarship_fee');
+      const finalAmount = (window as any).__checkout_final_amount || baseAmount;
+      
       console.log('Iniciando checkout Stripe para scholarship fee:');
       console.log('- Application ID:', pendingScholarshipFeeApplication.id);
       console.log('- Scholarship ID:', pendingScholarshipFeeApplication.scholarship_id);
-      console.log('- Fee Amount:', scholarshipFeeAmount);
+      console.log('- Valor original:', baseAmount);
+      console.log('- Valor com desconto:', finalAmount);
       
       // Chamar diretamente a Edge Function do Stripe para scholarship fee
       const { data: sessionData } = await supabase.auth.getSession();
@@ -1238,14 +1242,16 @@ const MyApplications: React.FC = () => {
         mode: 'payment',
         payment_type: 'scholarship_fee',
         fee_type: 'scholarship_fee',
-        amount: scholarshipFeeAmount, // Valor da scholarship fee do useFeeConfig
+        amount: finalAmount, // ✅ Usar valor com desconto se existir
         promotional_coupon: promotionalCoupon, // Cupom promocional (BLACK, etc)
         metadata: {
           application_id: pendingScholarshipFeeApplication.id,
           selected_scholarship_id: pendingScholarshipFeeApplication.scholarship_id,
           fee_type: 'scholarship_fee',
-          amount: scholarshipFeeAmount,
-          scholarship_fee_amount: scholarshipFeeAmount
+          amount: finalAmount, // ✅ Usar valor com desconto
+          scholarship_fee_amount: finalAmount, // ✅ Usar valor com desconto
+          original_amount: baseAmount, // Valor original para referência
+          final_amount: finalAmount // Valor final com desconto
         },
         scholarships_ids: [pendingScholarshipFeeApplication.scholarship_id],
       };
@@ -1310,8 +1316,13 @@ const MyApplications: React.FC = () => {
 
       const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout-scholarship-fee`;
       
-      // Extrair código promocional do window se existir (passado pelo ScholarshipConfirmationModal)
+      // Extrair código promocional e valor final com desconto do window se existir (passado pelo ScholarshipConfirmationModal)
       const promotionalCoupon = (window as any).__checkout_promotional_coupon || null;
+      // ✅ Priorizar valor com desconto do window, caso contrário usar valor original
+      const finalAmount = (window as any).__checkout_final_amount || getFeeAmount('scholarship_fee');
+      const baseAmount = getFeeAmount('scholarship_fee'); // Valor original para referência
+      
+      console.log('[MyApplications] PIX Checkout - Valor original:', baseAmount, 'Valor com desconto:', finalAmount);
       
       const response = await fetch(apiUrl, {
         method: 'POST',
@@ -1328,12 +1339,15 @@ const MyApplications: React.FC = () => {
           fee_type: 'scholarship_fee',
           payment_method: 'pix', // Especificar PIX
           promotional_coupon: promotionalCoupon, // Cupom promocional (BLACK, etc)
+          amount: finalAmount, // ✅ Usar valor com desconto se existir
           metadata: {
             application_id: pendingScholarshipFeeApplication.id,
             selected_scholarship_id: pendingScholarshipFeeApplication.scholarship_id,
             fee_type: 'scholarship_fee',
-            amount: getFeeAmount('scholarship_fee'),
-            scholarship_fee_amount: getFeeAmount('scholarship_fee')
+            amount: finalAmount, // ✅ Usar valor com desconto
+            scholarship_fee_amount: finalAmount, // ✅ Usar valor com desconto
+            original_amount: baseAmount, // Valor original para referência
+            final_amount: finalAmount // Valor final com desconto
           },
           scholarships_ids: [pendingScholarshipFeeApplication.scholarship_id],
         }),
@@ -1744,12 +1758,14 @@ const MyApplications: React.FC = () => {
                         <div className="flex items-center justify-between mb-3">
                           <span className="font-semibold text-gray-900 text-sm">{t('studentDashboard.myApplications.paymentStatus.scholarshipFee')}</span>
                           {scholarshipFeePromotionalCoupon ? (
+                            // Se há cupom promocional, mostrar valor com desconto
                             <div className="text-right">
                               <div className="text-base font-bold text-gray-400 line-through">{formatAmount(Number(getFeeAmount('scholarship_fee')))}</div>
                               <div className="text-base font-bold text-green-600">{formatAmount(scholarshipFeePromotionalCoupon.finalAmount)}</div>
                             </div>
                           ) : (
-                          <span className="text-base font-bold text-gray-700">{formatAmount(Number(getFeeAmount('scholarship_fee')))}</span>
+                            // Sem cupom, mostrar valor normal da taxa
+                            <span className="text-base font-bold text-gray-700">{formatAmount(Number(getFeeAmount('scholarship_fee')))}</span>
                           )}
                         </div>
                         {scholarshipFeePaid ? (

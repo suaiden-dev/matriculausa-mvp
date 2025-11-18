@@ -85,18 +85,46 @@ Deno.serve(async (req)=>{
       .eq('metadata->>session_id', sessionId)
       .single();
     
-    if (existingLog) {
-      console.log(`[DUPLICAÇÃO] Session ${sessionId} já foi processada, retornando sucesso sem reprocessar.`);
-      return corsResponse({
-        status: 'complete',
-        message: 'Session already processed successfully.'
-      }, 200);
-    }
-    
     // Expandir payment_intent para obter o ID completo
     const session = await stripe.checkout.sessions.retrieve(sessionId, {
       expand: ['payment_intent']
     });
+    
+    if (existingLog) {
+      console.log(`[DUPLICAÇÃO] Session ${sessionId} já foi processada, retornando sucesso sem reprocessar.`);
+      // Mesmo sendo duplicação, ainda precisamos retornar os dados do pagamento
+      // Extrair informações do pagamento
+      const amountPaid = session.amount_total ? session.amount_total / 100 : null;
+      const currency = session.currency?.toUpperCase() || 'USD';
+      const promotionalCouponReturn = session.metadata?.promotional_coupon || null;
+      const originalAmountReturn = session.metadata?.original_amount ? parseFloat(session.metadata.original_amount) : null;
+      let finalAmountReturn: number | null = null;
+      if (session.metadata?.final_amount) {
+        const parsed = parseFloat(session.metadata.final_amount);
+        if (!isNaN(parsed) && parsed > 0) {
+          finalAmountReturn = parsed;
+        }
+      }
+      
+      let amountPaidUSD = amountPaid || 0;
+      if (currency === 'BRL' && session.metadata?.exchange_rate && amountPaid) {
+        const exchangeRate = parseFloat(session.metadata.exchange_rate);
+        if (exchangeRate > 0) {
+          amountPaidUSD = amountPaid / exchangeRate;
+        }
+      }
+      
+      return corsResponse({
+        status: 'complete',
+        message: 'Session already processed successfully.',
+        amount_paid: amountPaidUSD || amountPaid || 0,
+        amount_paid_original: amountPaid || 0,
+        currency: currency,
+        promotional_coupon: promotionalCouponReturn,
+        original_amount: originalAmountReturn,
+        final_amount: finalAmountReturn
+      }, 200);
+    }
     console.log(`Session status: ${session.status}, Payment status: ${session.payment_status}`);
     if (session.payment_status === 'paid' && session.status === 'complete') {
       const userId = session.client_reference_id;
@@ -339,9 +367,39 @@ Deno.serve(async (req)=>{
       const isPixPayment = session.payment_method_types?.includes('pix') || session.metadata?.payment_method === 'pix';
       if (isPixPayment) {
         console.log(`[NOTIFICAÇÃO] Pagamento via PIX detectado. Notificações já foram enviadas pelo webhook. Pulando envio de notificações para evitar duplicação.`);
+        
+        // Mesmo sendo PIX, ainda precisamos retornar os dados do pagamento
+        // Extrair informações do pagamento para retornar ao frontend
+        const amountPaid = session.amount_total ? session.amount_total / 100 : null;
+        const currency = session.currency?.toUpperCase() || 'USD';
+        const promotionalCouponReturn = session.metadata?.promotional_coupon || null;
+        const originalAmountReturn = session.metadata?.original_amount ? parseFloat(session.metadata.original_amount) : null;
+        let finalAmountReturn: number | null = null;
+        if (session.metadata?.final_amount) {
+          const parsed = parseFloat(session.metadata.final_amount);
+          if (!isNaN(parsed) && parsed > 0) {
+            finalAmountReturn = parsed;
+          }
+        }
+        
+        let amountPaidUSD = amountPaid || 0;
+        if (currency === 'BRL' && session.metadata?.exchange_rate && amountPaid) {
+          const exchangeRate = parseFloat(session.metadata.exchange_rate);
+          if (exchangeRate > 0) {
+            amountPaidUSD = amountPaid / exchangeRate;
+          }
+        }
+        
         return corsResponse({
           status: 'complete',
-          message: 'Session verified and processed successfully. Notifications sent via webhook (PIX payment).'
+          message: 'Session verified and processed successfully. Notifications sent via webhook (PIX payment).',
+          application_ids: updatedApps?.map((app)=>app.id) || [],
+          amount_paid: amountPaidUSD || amountPaid || 0,
+          amount_paid_original: amountPaid || 0,
+          currency: currency,
+          promotional_coupon: promotionalCouponReturn,
+          original_amount: originalAmountReturn,
+          final_amount: finalAmountReturn
         }, 200);
       }
       
@@ -355,9 +413,38 @@ Deno.serve(async (req)=>{
         const adminPhone = adminProfile?.phone || "";
         if (alunoError || !alunoData) {
           console.error('[NOTIFICAÇÃO] Erro ao buscar dados do aluno:', alunoError);
+          // Mesmo com erro, ainda precisamos retornar os dados do pagamento
+          // Extrair informações do pagamento para retornar ao frontend
+          const amountPaid = session.amount_total ? session.amount_total / 100 : null;
+          const currency = session.currency?.toUpperCase() || 'USD';
+          const promotionalCouponReturn = session.metadata?.promotional_coupon || null;
+          const originalAmountReturn = session.metadata?.original_amount ? parseFloat(session.metadata.original_amount) : null;
+          let finalAmountReturn: number | null = null;
+          if (session.metadata?.final_amount) {
+            const parsed = parseFloat(session.metadata.final_amount);
+            if (!isNaN(parsed) && parsed > 0) {
+              finalAmountReturn = parsed;
+            }
+          }
+          
+          let amountPaidUSD = amountPaid || 0;
+          if (currency === 'BRL' && session.metadata?.exchange_rate && amountPaid) {
+            const exchangeRate = parseFloat(session.metadata.exchange_rate);
+            if (exchangeRate > 0) {
+              amountPaidUSD = amountPaid / exchangeRate;
+            }
+          }
+          
           return corsResponse({
             status: 'complete',
-            message: 'Session verified and processed successfully.'
+            message: 'Session verified and processed successfully.',
+            application_ids: updatedApps?.map((app)=>app.id) || [],
+            amount_paid: amountPaidUSD || amountPaid || 0,
+            amount_paid_original: amountPaid || 0,
+            currency: currency,
+            promotional_coupon: promotionalCouponReturn,
+            original_amount: originalAmountReturn,
+            final_amount: finalAmountReturn
           }, 200);
         }
         // Para cada scholarship, enviar notificações
@@ -613,7 +700,25 @@ Deno.serve(async (req)=>{
       const currency = session.currency?.toUpperCase() || 'USD';
       const promotionalCouponReturn = session.metadata?.promotional_coupon || null;
       const originalAmountReturn = session.metadata?.original_amount ? parseFloat(session.metadata.original_amount) : null;
-      const finalAmountReturn = session.metadata?.final_amount ? parseFloat(session.metadata.final_amount) : null;
+      // Melhorar parsing do final_amount para tratar strings vazias ou inválidas
+      let finalAmountReturn: number | null = null;
+      if (session.metadata?.final_amount) {
+        const parsed = parseFloat(session.metadata.final_amount);
+        if (!isNaN(parsed) && parsed > 0) {
+          finalAmountReturn = parsed;
+        }
+      }
+      
+      // Log para debug
+      console.log('[verify-stripe-session-scholarship-fee] 📊 Dados extraídos do metadata:', {
+        promotional_coupon: promotionalCouponReturn,
+        original_amount: originalAmountReturn,
+        final_amount: finalAmountReturn,
+        amount_paid: amountPaid,
+        currency: currency
+      });
+      console.log('[verify-stripe-session-scholarship-fee] 📊 Metadata completo da sessão:', JSON.stringify(session.metadata, null, 2));
+      console.log('[verify-stripe-session-scholarship-fee] 📊 final_amount RAW do metadata:', session.metadata?.final_amount, 'tipo:', typeof session.metadata?.final_amount);
       
       // Se for PIX (BRL), converter para USD usando a taxa de câmbio do metadata
       let amountPaidUSD = amountPaid || 0;

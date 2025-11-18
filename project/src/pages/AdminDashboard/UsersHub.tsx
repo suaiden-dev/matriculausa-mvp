@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { GraduationCap, DollarSign, MessageSquare } from 'lucide-react';
+import { GraduationCap, DollarSign, MessageSquare, CheckCircle } from 'lucide-react';
 import StudentApplicationsView from '../../components/AdminDashboard/StudentApplicationsView';
+import CompletedApplicationsView from '../../components/AdminDashboard/CompletedApplicationsView';
 import FeeManagement from '../../components/AdminDashboard/FeeManagement';
 import AdminChatPage from './AdminChatPage';
 import { useUnreadMessagesCount } from '../../hooks/useUnreadMessagesCount';
 
 const UsersHub: React.FC = () => {
   const [searchParams] = useSearchParams();
-  const [activeTab, setActiveTab] = useState<'applications' | 'feeManagement' | 'messages'>('applications');
+  const [activeTab, setActiveTab] = useState<'applications' | 'completed' | 'feeManagement' | 'messages'>('applications');
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [selectedRecipientId, setSelectedRecipientId] = useState<string | null>(null);
   const { unreadCount } = useUnreadMessagesCount();
@@ -23,6 +24,8 @@ const UsersHub: React.FC = () => {
       setActiveTab('messages');
     } else if (tab === 'feeManagement') {
       setActiveTab('feeManagement');
+    } else if (tab === 'completed') {
+      setActiveTab('completed');
     } else {
       setActiveTab('applications');
     }
@@ -51,6 +54,19 @@ const UsersHub: React.FC = () => {
             <div className="flex items-center space-x-2">
               <GraduationCap className="h-5 w-5" />
               <span>Application Tracking</span>
+            </div>
+          </button>
+          <button
+            onClick={() => setActiveTab('completed')}
+            className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'completed'
+                ? 'border-green-600 text-green-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            <div className="flex items-center space-x-2">
+              <CheckCircle className="h-5 w-5" />
+              <span>Completed</span>
             </div>
           </button>
           <button
@@ -89,6 +105,8 @@ const UsersHub: React.FC = () => {
 
       {activeTab === 'applications' ? (
         <StudentApplicationsView />
+      ) : activeTab === 'completed' ? (
+        <CompletedApplicationsView />
       ) : activeTab === 'feeManagement' ? (
         <FeeManagement />
       ) : (
