@@ -99,9 +99,9 @@ export const ModalContent: React.FC<ModalContentProps> = ({
           ) : (
             // Mostrar valor normal quando não há cupom
             <>
-              <div className="text-3xl font-bold text-blue-700">
-                ${computedBasePrice.toFixed(2)}
-              </div>
+          <div className="text-3xl font-bold text-blue-700">
+            ${computedBasePrice.toFixed(2)}
+          </div>
               <p className="text-xs text-gray-600 mt-1">
                 {t('preCheckoutModal.totalAmount')}
               </p>
@@ -368,5 +368,5 @@ export const ModalContent: React.FC<ModalContentProps> = ({
       </button>
     </div>
   </div>
-  );
+);
 };

@@ -218,7 +218,7 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
         return productPrice;
     }
   })();
-
+  
   // Preço final considerando desconto promocional
   const finalPrice = promotionalCouponValidation?.isValid && promotionalCouponValidation.finalAmount
     ? promotionalCouponValidation.finalAmount
@@ -1124,7 +1124,7 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
       onClose();
       return;
     }
-
+    
     // ✅ CORREÇÃO: Para usuários com seller_referral_code, não precisa de código de desconto
     if (hasSellerReferralCode) {
       console.log('🔍 [PreCheckoutModal] ✅ Usuário com seller_referral_code - prosseguindo sem validação de código');
