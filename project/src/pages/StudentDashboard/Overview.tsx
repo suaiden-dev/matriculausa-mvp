@@ -70,21 +70,13 @@ const Overview: React.FC<OverviewProps> = ({
   const [documentsLoading, setDocumentsLoading] = useState(true);
   const [promotionalCouponDiscount, setPromotionalCouponDiscount] = useState<{ discountAmount: number; finalAmount: number } | null>(null);
   const [scholarshipFeePromotionalCoupon, setScholarshipFeePromotionalCoupon] = useState<{ discountAmount: number; finalAmount: number } | null>(null);
+  const [i20PromotionalCoupon, setI20PromotionalCoupon] = useState<{ discountAmount: number; finalAmount: number } | null>(null);
+  // ✅ realPaidAmounts mantido para outras funcionalidades (não usado para exibição)
   const [realPaidAmounts, setRealPaidAmounts] = useState<{
     selection_process?: number;
     scholarship?: number;
     i20_control?: number;
   }>({});
-  const [pendingPaymentWithCoupon, setPendingPaymentWithCoupon] = useState<{
-    originalAmount: number;
-    finalAmount: number;
-    discountAmount: number;
-  } | null>(null);
-  const [pendingScholarshipPaymentWithCoupon, setPendingScholarshipPaymentWithCoupon] = useState<{
-    originalAmount: number;
-    finalAmount: number;
-    discountAmount: number;
-  } | null>(null);
   
   // Verificar se há pagamento Zelle pendente do tipo selection_process
   const hasPendingSelectionProcessPayment = isBlocked && pendingPayment && pendingPayment.fee_type === 'selection_process';
@@ -372,246 +364,134 @@ const Overview: React.FC<OverviewProps> = ({
   const selectionWithDependents = selectionBase; // Já inclui dependentes
   const i20WithDependents = i20Base + i20Extra;
 
-  // Verificar se há cupom promocional validado no modal (DEPOIS de selectionWithDependents ser definido)
+  // Buscar cupons promocionais validados do banco de dados para cada tipo de taxa
   useEffect(() => {
-    const checkPromotionalCoupon = () => {
-      // Verificar se há cupom promocional validado armazenado no window
-      const storedCoupon = (window as any).__promotional_coupon_validation;
-      if (storedCoupon && storedCoupon.isValid && storedCoupon.discountAmount) {
-        setPromotionalCouponDiscount({
-          discountAmount: storedCoupon.discountAmount,
-          finalAmount: storedCoupon.finalAmount || Math.max(selectionWithDependents - storedCoupon.discountAmount, 0)
-        });
-      } else {
-        setPromotionalCouponDiscount(null);
+    const fetchPromotionalCoupons = async () => {
+      if (!user?.id) return;
+
+      try {
+        // Buscar cupom para selection_process
+        const { data: selectionCoupon, error: selectionError } = await supabase
+          .from('promotional_coupon_usage')
+          .select('original_amount, discount_amount, final_amount, coupon_code, metadata, payment_id, created_at')
+          .eq('user_id', user.id)
+          .eq('fee_type', 'selection_process')
+          .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (!selectionError && selectionCoupon) {
+          const isValidation = selectionCoupon.metadata?.is_validation === true || 
+                               (selectionCoupon.payment_id && selectionCoupon.payment_id.startsWith('validation_'));
+          if (isValidation || (new Date(selectionCoupon.created_at).getTime() > Date.now() - 24 * 60 * 60 * 1000)) {
+            setPromotionalCouponDiscount({
+              discountAmount: Number(selectionCoupon.discount_amount),
+              finalAmount: Number(selectionCoupon.final_amount)
+            });
+          } else {
+            setPromotionalCouponDiscount(null);
+          }
+        } else {
+          setPromotionalCouponDiscount(null);
+        }
+
+        // Buscar cupom para scholarship_fee
+        const { data: scholarshipCoupon, error: scholarshipError } = await supabase
+          .from('promotional_coupon_usage')
+          .select('original_amount, discount_amount, final_amount, coupon_code, metadata, payment_id, created_at')
+          .eq('user_id', user.id)
+          .eq('fee_type', 'scholarship_fee')
+          .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (!scholarshipError && scholarshipCoupon) {
+          const isValidation = scholarshipCoupon.metadata?.is_validation === true || 
+                               (scholarshipCoupon.payment_id && scholarshipCoupon.payment_id.startsWith('validation_'));
+          if (isValidation || (new Date(scholarshipCoupon.created_at).getTime() > Date.now() - 24 * 60 * 60 * 1000)) {
+            setScholarshipFeePromotionalCoupon({
+              discountAmount: Number(scholarshipCoupon.discount_amount),
+              finalAmount: Number(scholarshipCoupon.final_amount)
+            });
+          } else {
+            setScholarshipFeePromotionalCoupon(null);
+          }
+        } else {
+          setScholarshipFeePromotionalCoupon(null);
+        }
+
+        // Buscar cupom para i20_control
+        const { data: i20Coupon, error: i20Error } = await supabase
+          .from('promotional_coupon_usage')
+          .select('original_amount, discount_amount, final_amount, coupon_code, metadata, payment_id, created_at')
+          .eq('user_id', user.id)
+          .eq('fee_type', 'i20_control')
+          .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (!i20Error && i20Coupon) {
+          const isValidation = i20Coupon.metadata?.is_validation === true || 
+                               (i20Coupon.payment_id && i20Coupon.payment_id.startsWith('validation_'));
+          if (isValidation || (new Date(i20Coupon.created_at).getTime() > Date.now() - 24 * 60 * 60 * 1000)) {
+            setI20PromotionalCoupon({
+              discountAmount: Number(i20Coupon.discount_amount),
+              finalAmount: Number(i20Coupon.final_amount)
+            });
+          } else {
+            setI20PromotionalCoupon(null);
+          }
+        } else {
+          setI20PromotionalCoupon(null);
+        }
+      } catch (error) {
+        console.error('[Overview] Erro ao buscar cupons promocionais:', error);
       }
     };
 
-    // Verificar imediatamente
-    checkPromotionalCoupon();
+    fetchPromotionalCoupons();
 
-    // Verificar periodicamente enquanto o modal pode estar aberto
-    const interval = setInterval(checkPromotionalCoupon, 500);
-    
     // Escutar eventos customizados de validação de cupom
     const handleCouponValidation = (event: CustomEvent) => {
       if (event.detail?.isValid && event.detail?.discountAmount) {
-        setPromotionalCouponDiscount({
-          discountAmount: event.detail.discountAmount,
-          finalAmount: event.detail.finalAmount || Math.max(selectionWithDependents - event.detail.discountAmount, 0)
-        });
-      } else {
-        setPromotionalCouponDiscount(null);
+        // Verificar qual tipo de taxa baseado no window ou evento
+        const couponCode = (window as any).__checkout_promotional_coupon;
+        if (couponCode) {
+          // O tipo será determinado pela lógica de busca acima
+          fetchPromotionalCoupons();
+        }
       }
     };
 
     window.addEventListener('promotionalCouponValidated', handleCouponValidation as EventListener);
     
     return () => {
-      clearInterval(interval);
       window.removeEventListener('promotionalCouponValidated', handleCouponValidation as EventListener);
     };
-  }, [selectionWithDependents]);
+  }, [user?.id]);
 
-  // Buscar informações do cupom promocional do pagamento Zelle pendente
-  useEffect(() => {
-    const fetchPendingPaymentCoupon = async () => {
-      if (!pendingPayment || !user?.id || pendingPayment.fee_type !== 'selection_process') {
-        setPendingPaymentWithCoupon(null);
-        return;
-      }
-
-      try {
-        // Buscar o pagamento Zelle pendente
-        const { data: zellePayment, error: zelleError } = await supabase
-          .from('zelle_payments')
-          .select('amount')
-          .eq('id', pendingPayment.id)
-          .eq('user_id', user.id)
-          .in('status', ['pending_verification', 'pending'])
-          .single();
-
-        if (zelleError || !zellePayment) {
-          console.log('[Overview] Nenhum pagamento Zelle pendente encontrado ou erro:', zelleError);
-          setPendingPaymentWithCoupon(null);
-          return;
-        }
-
-        const paymentAmount = parseFloat(zellePayment.amount.toString());
-        
-        // Buscar registro de validação do cupom promocional na tabela promotional_coupon_usage
-        // Verificar se há um registro recente (últimas 24 horas) para este usuário e fee_type
-        const { data: couponUsage, error: couponError } = await supabase
-          .from('promotional_coupon_usage')
-          .select('original_amount, discount_amount, final_amount, coupon_code, created_at')
-          .eq('user_id', user.id)
-          .eq('fee_type', 'selection_process')
-          .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()) // Últimas 24 horas
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single();
-
-        if (!couponError && couponUsage) {
-          // Encontrou registro de cupom promocional
-          const originalAmount = parseFloat(couponUsage.original_amount.toString());
-          const finalAmount = parseFloat(couponUsage.final_amount.toString());
-          const discountAmount = parseFloat(couponUsage.discount_amount.toString());
-          
-          console.log('[Overview] Cupom promocional encontrado no registro de uso:', {
-            coupon: couponUsage.coupon_code,
-            originalAmount,
-            finalAmount,
-            discountAmount,
-            paymentAmount
-          });
-          
-          // Verificar se o valor do pagamento corresponde ao valor com desconto
-          if (Math.abs(paymentAmount - finalAmount) < 0.01) { // Tolerância de 1 centavo
-            setPendingPaymentWithCoupon({
-              originalAmount,
-              finalAmount,
-              discountAmount
-            });
-            return;
-          }
-        }
-
-        // Se não encontrou cupom no registro, mas o valor do pagamento é menor que o base, calcular desconto
-        if (paymentAmount < selectionWithDependents) {
-          const calculatedDiscount = selectionWithDependents - paymentAmount;
-          console.log('[Overview] Desconto detectado pela diferença de valores:', {
-            originalAmount: selectionWithDependents,
-            paymentAmount,
-            calculatedDiscount
-          });
-          setPendingPaymentWithCoupon({
-            originalAmount: selectionWithDependents,
-            finalAmount: paymentAmount,
-            discountAmount: calculatedDiscount
-          });
-        } else {
-          setPendingPaymentWithCoupon(null);
-        }
-      } catch (error) {
-        console.error('[Overview] Erro ao buscar cupom do pagamento pendente:', error);
-        setPendingPaymentWithCoupon(null);
-      }
-    };
-
-    fetchPendingPaymentCoupon();
-  }, [pendingPayment, user?.id, selectionWithDependents]);
-
-  // Buscar informações do cupom promocional do pagamento Zelle pendente para Scholarship Fee
-  useEffect(() => {
-    const fetchPendingScholarshipPaymentCoupon = async () => {
-      if (!user?.id) {
-        setPendingScholarshipPaymentWithCoupon(null);
-        return;
-      }
-
-      try {
-        // Buscar pagamentos Zelle pendentes para scholarship_fee
-        const { data: zellePayments, error: zelleError } = await supabase
-          .from('zelle_payments')
-          .select('id, amount')
-          .eq('user_id', user.id)
-          .eq('fee_type', 'scholarship_fee')
-          .in('status', ['pending_verification', 'pending'])
-          .order('created_at', { ascending: false })
-          .limit(1);
-
-        if (zelleError || !zellePayments || zellePayments.length === 0) {
-          setPendingScholarshipPaymentWithCoupon(null);
-          return;
-        }
-
-        const zellePayment = zellePayments[0];
-        const paymentAmount = parseFloat(zellePayment.amount.toString());
-        
-        // Buscar registro de validação do cupom promocional na tabela promotional_coupon_usage
-        const { data: couponUsage, error: couponError } = await supabase
-          .from('promotional_coupon_usage')
-          .select('original_amount, discount_amount, final_amount, coupon_code, created_at')
-          .eq('user_id', user.id)
-          .eq('fee_type', 'scholarship_fee')
-          .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()) // Últimas 24 horas
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single();
-
-        if (!couponError && couponUsage) {
-          // Encontrou registro de cupom promocional
-          const originalAmount = parseFloat(couponUsage.original_amount.toString());
-          const finalAmount = parseFloat(couponUsage.final_amount.toString());
-          const discountAmount = parseFloat(couponUsage.discount_amount.toString());
-          
-          console.log('[Overview] Cupom promocional encontrado para scholarship_fee:', {
-            coupon: couponUsage.coupon_code,
-            originalAmount,
-            finalAmount,
-            discountAmount,
-            paymentAmount
-          });
-          
-          // Verificar se o valor do pagamento corresponde ao valor com desconto
-          if (Math.abs(paymentAmount - finalAmount) < 0.01) { // Tolerância de 1 centavo
-            setPendingScholarshipPaymentWithCoupon({
-              originalAmount,
-              finalAmount,
-              discountAmount
-            });
-            return;
-          }
-        }
-
-        // Se não encontrou cupom no registro, mas o valor do pagamento é menor que o base, calcular desconto
-        if (paymentAmount < scholarshipBase) {
-          const calculatedDiscount = scholarshipBase - paymentAmount;
-          console.log('[Overview] Desconto detectado para scholarship_fee pela diferença de valores:', {
-            originalAmount: scholarshipBase,
-            paymentAmount,
-            calculatedDiscount
-          });
-          setPendingScholarshipPaymentWithCoupon({
-            originalAmount: scholarshipBase,
-            finalAmount: paymentAmount,
-            discountAmount: calculatedDiscount
-          });
-        } else {
-          setPendingScholarshipPaymentWithCoupon(null);
-        }
-      } catch (error) {
-        console.error('[Overview] Erro ao buscar cupom do pagamento scholarship pendente:', error);
-        setPendingScholarshipPaymentWithCoupon(null);
-      }
-    };
-
-    fetchPendingScholarshipPaymentCoupon();
-  }, [user?.id, scholarshipBase]);
+  // ✅ REMOVIDO: Lógica de buscar cupom de pagamentos Zelle pendentes
+  // Agora buscamos diretamente do promotional_coupon_usage no useEffect acima
 
   // Valores das taxas para o ProgressBar (Application fee é variável)
-  // ✅ CORREÇÃO: Se o pagamento já foi feito, usar o valor REAL pago (que pode ter desconto)
-  // Caso contrário, aplicar desconto na barra de progresso se houver activeDiscount ou cupom promocional
-  // ✅ NOVO: Se houver pagamento Zelle pendente com cupom, usar o valor com desconto
-  const selectionFeeToDisplay = userProfile?.has_paid_selection_process_fee && realPaidAmounts.selection_process
-    ? realPaidAmounts.selection_process // Valor real pago (já inclui desconto se aplicável)
-    : pendingPaymentWithCoupon
-      ? pendingPaymentWithCoupon.finalAmount // Valor com desconto do pagamento pendente
-      : promotionalCouponDiscount
-        ? promotionalCouponDiscount.finalAmount
-        : activeDiscount?.has_discount 
-          ? Math.max(selectionWithDependents - (activeDiscount.discount_amount || 0), 0)
-          : selectionWithDependents;
+  // ✅ NOVO: Sempre mostrar valor base, mas aplicar desconto se houver cupom promocional validado
+  // NÃO usar valores de individual_fee_payments para exibição
+  const selectionFeeToDisplay = promotionalCouponDiscount
+    ? promotionalCouponDiscount.finalAmount // Valor com desconto do cupom promocional
+    : activeDiscount?.has_discount 
+      ? Math.max(selectionWithDependents - (activeDiscount.discount_amount || 0), 0)
+      : selectionWithDependents; // Valor base normal
 
-  const scholarshipFeeToDisplay = userProfile?.is_scholarship_fee_paid && realPaidAmounts.scholarship
-    ? realPaidAmounts.scholarship // Valor real pago (já inclui desconto se aplicável)
-    : pendingScholarshipPaymentWithCoupon
-      ? pendingScholarshipPaymentWithCoupon.finalAmount // Valor com desconto do pagamento pendente
-      : scholarshipBase;
+  const scholarshipFeeToDisplay = scholarshipFeePromotionalCoupon
+    ? scholarshipFeePromotionalCoupon.finalAmount // Valor com desconto do cupom promocional
+    : scholarshipBase; // Valor base normal
 
-  const i20FeeToDisplay = userProfile?.has_paid_i20_control_fee && realPaidAmounts.i20_control
-    ? realPaidAmounts.i20_control // Valor real pago (já inclui desconto se aplicável)
-    : i20WithDependents;
+  const i20FeeToDisplay = i20PromotionalCoupon
+    ? i20PromotionalCoupon.finalAmount // Valor com desconto do cupom promocional
+    : i20WithDependents; // Valor base normal
 
   const dynamicFeeValues = [
     isFeesLoading ? <FeeSkeleton /> : `$${selectionFeeToDisplay.toFixed(2)}`, // Selection Process Fee (valor real pago ou com desconto se aplicável)
@@ -810,28 +690,10 @@ const Overview: React.FC<OverviewProps> = ({
                 <div className="text-left sm:text-right">
                   {feesLoading ? (
                     <div className="inline-block w-24 h-6 bg-white/30 rounded animate-pulse" />
-                  ) : userProfile?.has_paid_selection_process_fee && realPaidAmounts.selection_process ? (
-                    // Se já pagou, mostrar valor real pago (já inclui desconto se aplicável)
-                    <div className="text-lg sm:text-xl md:text-2xl font-bold text-white">
-                      ${realPaidAmounts.selection_process.toFixed(2)}
-                    </div>
-                  ) : pendingPaymentWithCoupon ? (
-                    // Se há pagamento pendente com cupom, mostrar valor com desconto
-                    <div className="flex flex-col sm:text-center">
-                      <div className="text-lg sm:text-xl md:text-2xl font-bold text-white line-through">${pendingPaymentWithCoupon.originalAmount.toFixed(2)}</div>
-                      <div className="text-base sm:text-lg md:text-xl font-bold text-green-300">
-                        ${pendingPaymentWithCoupon.finalAmount.toFixed(2)}
-                      </div>
-                      <div className="flex items-center sm:justify-center mt-1">
-                        <Tag className="h-3 w-3 text-green-300 mr-1" />
-                        <span className="text-xs text-green-300 font-medium">
-                          Cupom aplicado -${pendingPaymentWithCoupon.discountAmount.toFixed(2)}
-                        </span>
-                      </div>
-                    </div>
                   ) : promotionalCouponDiscount ? (
+                    // Se há cupom promocional validado, mostrar valor com desconto
                     <div className="flex flex-col sm:text-center">
-                      <div className="text-lg sm:text-xl md:text-2xl font-bold text-white line-through">${selectionWithDependents}</div>
+                      <div className="text-lg sm:text-xl md:text-2xl font-bold text-white line-through">${selectionWithDependents.toFixed(2)}</div>
                       <div className="text-base sm:text-lg md:text-xl font-bold text-green-300">
                         ${promotionalCouponDiscount.finalAmount.toFixed(2)}
                       </div>
@@ -844,9 +706,9 @@ const Overview: React.FC<OverviewProps> = ({
                     </div>
                   ) : activeDiscount?.has_discount ? (
                     <div className="flex flex-col sm:text-center">
-                      <div className="text-lg sm:text-xl md:text-2xl font-bold text-white line-through">${selectionWithDependents}</div>
+                      <div className="text-lg sm:text-xl md:text-2xl font-bold text-white line-through">${selectionWithDependents.toFixed(2)}</div>
                       <div className="text-base sm:text-lg md:text-xl font-bold text-green-300">
-                        ${Math.max(selectionWithDependents - (activeDiscount.discount_amount || 0), 0)}
+                        ${Math.max(selectionWithDependents - (activeDiscount.discount_amount || 0), 0).toFixed(2)}
                       </div>
                       <div className="flex items-center sm:justify-center mt-1">
                         <Tag className="h-3 w-3 text-green-300 mr-1" />
@@ -856,7 +718,8 @@ const Overview: React.FC<OverviewProps> = ({
                       </div>
                     </div>
                   ) : (
-                    <div className="text-lg sm:text-xl md:text-2xl font-bold text-white">${selectionWithDependents}</div>
+                    // Valor normal sem desconto
+                    <div className="text-lg sm:text-xl md:text-2xl font-bold text-white">${selectionWithDependents.toFixed(2)}</div>
                   )}
                 </div>
               </div>
