@@ -396,13 +396,24 @@ export const PaymentMethodSelectorDrawer: React.FC<PaymentMethodSelectorDrawerPr
                     />
                     <button
                       onClick={validatePromotionalCoupon}
-                      disabled={isValidatingPromotionalCoupon || !promotionalCoupon.trim()}
-                      className="px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl transform whitespace-nowrap"
+                      disabled={isValidatingPromotionalCoupon || !promotionalCoupon.trim() || promotionalCouponValidation?.isValid}
+                      className={`px-6 py-3 rounded-xl font-semibold transition-all shadow-lg hover:shadow-xl transform whitespace-nowrap ${
+                        promotionalCouponValidation?.isValid
+                          ? 'bg-green-600 text-white hover:bg-green-700 cursor-default'
+                          : isValidatingPromotionalCoupon || !promotionalCoupon.trim()
+                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                          : 'bg-blue-600 text-white hover:bg-blue-700'
+                      }`}
                     >
                       {isValidatingPromotionalCoupon ? (
                         <div className="flex items-center justify-center space-x-2">
                           <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                           <span className="hidden sm:inline">Validando...</span>
+                        </div>
+                      ) : promotionalCouponValidation?.isValid ? (
+                        <div className="flex items-center justify-center space-x-2">
+                          <CheckCircle className="w-5 h-5" />
+                          <span className="hidden sm:inline">Validado</span>
                         </div>
                       ) : (
                         'Validar'
@@ -543,13 +554,24 @@ export const PaymentMethodSelectorDrawer: React.FC<PaymentMethodSelectorDrawerPr
                     />
                     <button
                       onClick={validatePromotionalCoupon}
-                      disabled={isValidatingPromotionalCoupon || !promotionalCoupon.trim()}
-                      className="px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl transform whitespace-nowrap"
+                      disabled={isValidatingPromotionalCoupon || !promotionalCoupon.trim() || promotionalCouponValidation?.isValid}
+                      className={`px-6 py-3 rounded-xl font-semibold transition-all shadow-lg hover:shadow-xl transform whitespace-nowrap ${
+                        promotionalCouponValidation?.isValid
+                          ? 'bg-green-600 text-white hover:bg-green-700 cursor-default'
+                          : isValidatingPromotionalCoupon || !promotionalCoupon.trim()
+                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                          : 'bg-blue-600 text-white hover:bg-blue-700'
+                      }`}
                     >
                       {isValidatingPromotionalCoupon ? (
                         <div className="flex items-center justify-center space-x-2">
                           <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                           <span>Validando...</span>
+                        </div>
+                      ) : promotionalCouponValidation?.isValid ? (
+                        <div className="flex items-center justify-center space-x-2">
+                          <CheckCircle className="w-5 h-5" />
+                          <span>Validado</span>
                         </div>
                       ) : (
                         'Validar'

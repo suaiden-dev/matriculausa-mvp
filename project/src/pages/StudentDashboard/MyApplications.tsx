@@ -1740,7 +1740,7 @@ const MyApplications: React.FC = () => {
                               <div className="text-base font-bold text-green-600">{formatAmount(scholarshipFeePromotionalCoupon.finalAmount)}</div>
                             </div>
                           ) : (
-                            <span className="text-base font-bold text-gray-700">{formatAmount(Number(getFeeAmount('scholarship_fee')))}</span>
+                          <span className="text-base font-bold text-gray-700">{formatAmount(Number(getFeeAmount('scholarship_fee')))}</span>
                           )}
                         </div>
                         {scholarshipFeePaid ? (
