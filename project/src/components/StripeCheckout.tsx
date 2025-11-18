@@ -362,7 +362,7 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
 
       // Extrair código promocional do window se existir (passado pelo PreCheckoutModal)
       const promotionalCoupon = (window as any).__checkout_promotional_coupon || null;
-      
+
       const requestBody = {
         price_id: product.priceId,
         amount: finalAmount, // Incluir valor final calculado

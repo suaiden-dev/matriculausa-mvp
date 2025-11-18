@@ -10,6 +10,8 @@ const I20ControlFeeSuccess: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAnimation, setShowAnimation] = useState(false);
+  const [paidAmount, setPaidAmount] = useState<number | null>(null);
+  const [promotionalCoupon, setPromotionalCoupon] = useState<string | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
   const params = new URLSearchParams(location.search);
@@ -59,6 +61,17 @@ const I20ControlFeeSuccess: React.FC = () => {
         }
 
         console.log('✅ [I20ControlFeeSuccess] Sessão verificada com sucesso:', data);
+        
+        // Extrair informações do pagamento
+        if (data.final_amount) {
+          setPaidAmount(data.final_amount);
+        } else if (data.amount_paid) {
+          setPaidAmount(data.amount_paid);
+        }
+        if (data.promotional_coupon) {
+          setPromotionalCoupon(data.promotional_coupon);
+        }
+        
         setLoading(false);
         setShowAnimation(true);
         
@@ -152,12 +165,18 @@ const I20ControlFeeSuccess: React.FC = () => {
 
   // Se deve mostrar animação, usar o overlay
   if (showAnimation && !loading && !error) {
+    const displayAmount = paidAmount ? paidAmount.toFixed(2) : (getFeeAmount('i20_control_fee')?.toFixed(2) || '900.00');
+    const baseMessage = `${t('successPages.common.paymentProcessedAmount', { amount: displayAmount })} ${t('successPages.i20ControlFee.message')}`;
+    const messageText = promotionalCoupon 
+      ? `${baseMessage} (Cupom ${promotionalCoupon} aplicado)`
+      : baseMessage;
+    
     return (
       <div className="min-h-screen bg-green-50 flex flex-col items-center justify-center px-4 relative">
         <PaymentSuccessOverlay
           isSuccess={true}
           title={t('successPages.i20ControlFee.title')}
-          message={`${t('successPages.common.paymentProcessedAmount', { amount: '900.00' })} ${t('successPages.i20ControlFee.message')}`}
+          message={messageText}
         />
       </div>
     );

@@ -186,59 +186,101 @@ const MyApplications: React.FC = () => {
     fetchRealPaidAmounts();
   }, [userProfile?.id, fetchRealPaidAmounts]);
 
-  // Carregar cupom promocional do localStorage e ouvir eventos de validação
+  // Carregar cupom promocional do banco de dados (promotional_coupon_usage) e ouvir eventos de validação
   useEffect(() => {
     // Verificar se o usuário pode usar cupom promocional
     const hasSellerReferralCode = userProfile?.seller_referral_code && userProfile.seller_referral_code.trim() !== '';
     const isLegacySystem = userProfile?.system_type === 'legacy';
     const canUsePromotionalCoupon = hasSellerReferralCode && isLegacySystem;
     
-    if (!canUsePromotionalCoupon) {
+    if (!canUsePromotionalCoupon || !user?.id) {
       setScholarshipFeePromotionalCoupon(null);
       return;
     }
 
-    // Carregar do localStorage (sem chamar getFeeAmount para evitar loops)
-    const checkPromotionalCoupon = () => {
+    // Buscar cupom promocional do banco de dados
+    const checkPromotionalCouponFromDatabase = async () => {
       try {
-        const savedCoupon = localStorage.getItem('__promotional_coupon_scholarship_fee');
-        if (savedCoupon) {
-          const couponData = JSON.parse(savedCoupon);
-          // Verificar se o cupom ainda é válido (menos de 24 horas)
-          const isExpired = Date.now() - couponData.timestamp > 24 * 60 * 60 * 1000;
+        // Buscar registro de validação do cupom promocional na tabela promotional_coupon_usage
+        const { data: couponUsage, error: couponError } = await supabase
+          .from('promotional_coupon_usage')
+          .select('original_amount, discount_amount, final_amount, coupon_code, created_at, metadata, payment_id')
+          .eq('user_id', user.id)
+          .eq('fee_type', 'scholarship_fee')
+          .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()) // Últimas 24 horas
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (!couponError && couponUsage) {
+          // Verificar se é um registro de validação (não pagamento confirmado)
+          const isValidation = couponUsage.metadata?.is_validation === true || 
+                              (couponUsage.payment_id && String(couponUsage.payment_id).startsWith('validation_'));
           
-          if (!isExpired && couponData.validation && couponData.validation.isValid) {
-            // Usar apenas o valor do localStorage, sem chamar getFeeAmount
+          if (isValidation) {
+            const originalAmount = parseFloat(couponUsage.original_amount.toString());
+            const finalAmount = parseFloat(couponUsage.final_amount.toString());
+            const discountAmount = parseFloat(couponUsage.discount_amount.toString());
+            
+            console.log('[MyApplications] Cupom promocional encontrado no banco:', {
+              coupon: couponUsage.coupon_code,
+              originalAmount,
+              finalAmount,
+              discountAmount
+            });
+            
             const newCoupon = {
-              discountAmount: couponData.validation.discountAmount || 0,
-              finalAmount: couponData.validation.finalAmount || 0
+              discountAmount,
+              finalAmount
             };
             
             // Só atualizar se o valor mudou para evitar loops
             setScholarshipFeePromotionalCoupon(prev => {
               if (prev?.discountAmount === newCoupon.discountAmount && prev?.finalAmount === newCoupon.finalAmount) {
-                return prev; // Não atualizar se o valor não mudou
+                return prev;
               }
               return newCoupon;
             });
-          } else {
-            // Remover cupom expirado
-            localStorage.removeItem('__promotional_coupon_scholarship_fee');
-            setScholarshipFeePromotionalCoupon(null);
+            return;
           }
-        } else {
-          setScholarshipFeePromotionalCoupon(null);
         }
+        
+        // Se não encontrou no banco, verificar localStorage como fallback
+        const savedCoupon = localStorage.getItem('__promotional_coupon_scholarship_fee');
+        if (savedCoupon) {
+          const couponData = JSON.parse(savedCoupon);
+          const isExpired = Date.now() - couponData.timestamp > 24 * 60 * 60 * 1000;
+          
+          if (!isExpired && couponData.validation && couponData.validation.isValid) {
+            const newCoupon = {
+              discountAmount: couponData.validation.discountAmount || 0,
+              finalAmount: couponData.validation.finalAmount || 0
+            };
+            
+            setScholarshipFeePromotionalCoupon(prev => {
+              if (prev?.discountAmount === newCoupon.discountAmount && prev?.finalAmount === newCoupon.finalAmount) {
+                return prev;
+              }
+              return newCoupon;
+            });
+            return;
+          } else {
+            localStorage.removeItem('__promotional_coupon_scholarship_fee');
+          }
+        }
+        
+        // Se não encontrou nem no banco nem no localStorage, limpar estado
+        setScholarshipFeePromotionalCoupon(null);
       } catch (error) {
-        console.error('[MyApplications] Erro ao carregar cupom do localStorage:', error);
+        console.error('[MyApplications] Erro ao buscar cupom do banco:', error);
         setScholarshipFeePromotionalCoupon(null);
       }
     };
 
-    checkPromotionalCoupon();
+    checkPromotionalCouponFromDatabase();
     
     // Verificar periodicamente (aumentar intervalo para reduzir re-renders)
-    const interval = setInterval(checkPromotionalCoupon, 5000); // 5 segundos em vez de 1
+    const interval = setInterval(checkPromotionalCouponFromDatabase, 5000); // 5 segundos
     
     // Ouvir eventos de validação de cupom do modal
     const handleCouponValidation = (event: CustomEvent) => {
@@ -256,11 +298,8 @@ const MyApplications: React.FC = () => {
           return newCoupon;
         });
       } else {
-        // Se o cupom foi removido, limpar estado
-        const savedCoupon = localStorage.getItem('__promotional_coupon_scholarship_fee');
-        if (!savedCoupon) {
-          setScholarshipFeePromotionalCoupon(null);
-        }
+        // Se o cupom foi removido, verificar novamente no banco
+        checkPromotionalCouponFromDatabase();
       }
     };
 
@@ -270,7 +309,7 @@ const MyApplications: React.FC = () => {
       clearInterval(interval);
       window.removeEventListener('promotionalCouponValidated', handleCouponValidation as EventListener);
     };
-  }, [userProfile?.seller_referral_code, userProfile?.system_type]);
+  }, [userProfile?.seller_referral_code, userProfile?.system_type, user?.id]);
 
   useEffect(() => {
     let isMounted = true;
@@ -1701,7 +1740,7 @@ const MyApplications: React.FC = () => {
                               <div className="text-base font-bold text-green-600">{formatAmount(scholarshipFeePromotionalCoupon.finalAmount)}</div>
                             </div>
                           ) : (
-                            <span className="text-base font-bold text-gray-700">{formatAmount(Number(getFeeAmount('scholarship_fee')))}</span>
+                          <span className="text-base font-bold text-gray-700">{formatAmount(Number(getFeeAmount('scholarship_fee')))}</span>
                           )}
                         </div>
                         {scholarshipFeePaid ? (
