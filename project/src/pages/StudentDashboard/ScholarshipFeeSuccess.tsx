@@ -55,8 +55,11 @@ const ScholarshipFeeSuccess: React.FC = () => {
           return;
         }
         
-        // Extrair informações do pagamento (mesma lógica do SelectionProcessFeeSuccess)
-        if (result.final_amount) {
+        // Extrair informações do pagamento
+        // Priorizar gross_amount_usd (valor bruto que o aluno realmente pagou), senão usar final_amount ou amount_paid
+        if (result.gross_amount_usd !== null && result.gross_amount_usd !== undefined) {
+          setPaidAmount(result.gross_amount_usd);
+        } else if (result.final_amount) {
           setPaidAmount(result.final_amount);
         } else if (result.amount_paid) {
           setPaidAmount(result.amount_paid);

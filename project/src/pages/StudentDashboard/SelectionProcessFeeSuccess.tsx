@@ -65,7 +65,10 @@ const SelectionProcessFeeSuccess: React.FC = () => {
         console.log(`[PIX] Resposta da API (tentativa ${attempts}):`, data);
         
         // Extrair informações do pagamento
-        if (data.final_amount) {
+        // Priorizar gross_amount_usd (valor bruto que o aluno realmente pagou), senão usar final_amount ou amount_paid
+        if (data.gross_amount_usd !== null && data.gross_amount_usd !== undefined) {
+          setPaidAmount(data.gross_amount_usd);
+        } else if (data.final_amount) {
           setPaidAmount(data.final_amount);
         } else if (data.amount_paid) {
           setPaidAmount(data.amount_paid);
@@ -214,7 +217,10 @@ const SelectionProcessFeeSuccess: React.FC = () => {
         console.log('[PIX] Resposta da verificação:', data);
         
         // Extrair informações do pagamento
-        if (data.final_amount) {
+        // Priorizar gross_amount_usd (valor bruto que o aluno realmente pagou), senão usar final_amount ou amount_paid
+        if (data.gross_amount_usd !== null && data.gross_amount_usd !== undefined) {
+          setPaidAmount(data.gross_amount_usd);
+        } else if (data.final_amount) {
           setPaidAmount(data.final_amount);
         } else if (data.amount_paid) {
           setPaidAmount(data.amount_paid);

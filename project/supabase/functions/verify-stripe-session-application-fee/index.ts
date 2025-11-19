@@ -255,17 +255,19 @@ Deno.serve(async (req)=>{
       console.log('User profile updated - application fee paid');
 
       // Registrar pagamento na tabela individual_fee_payments
+      // Obter payment_intent_id: pode ser string ou objeto PaymentIntent (definir antes do try para usar depois)
+      let paymentIntentId = '';
+      if (typeof session.payment_intent === 'string') {
+        paymentIntentId = session.payment_intent;
+      } else if (session.payment_intent && typeof session.payment_intent === 'object' && 'id' in session.payment_intent) {
+        paymentIntentId = (session.payment_intent as any).id;
+      }
+      
+      let individualFeePaymentId = null;
       try {
         const paymentDate = new Date().toISOString();
         const paymentAmountRaw = session.amount_total ? session.amount_total / 100 : 0;
         const currency = session.currency?.toUpperCase() || 'USD';
-        // Obter payment_intent_id: pode ser string ou objeto PaymentIntent
-        let paymentIntentId = '';
-        if (typeof session.payment_intent === 'string') {
-          paymentIntentId = session.payment_intent;
-        } else if (session.payment_intent && typeof session.payment_intent === 'object' && 'id' in session.payment_intent) {
-          paymentIntentId = (session.payment_intent as any).id;
-        }
         
         // Para pagamentos PIX (BRL), buscar o valor líquido recebido em USD do BalanceTransaction
         // Controle de ambiente: só buscar em test/staging por padrão, ou se variável de ambiente forçar
@@ -282,7 +284,8 @@ Deno.serve(async (req)=>{
         let grossAmountUsd: number | null = null;
         let feeAmountUsd: number | null = null;
         
-        if ((currency === 'BRL' || paymentMethod === 'pix') && paymentIntentId && shouldFetchNetAmount) {
+        // Para TODOS os pagamentos Stripe (USD ou BRL), buscar gross_amount_usd e fee_amount_usd quando possível
+        if (paymentIntentId && shouldFetchNetAmount) {
           console.log(`✅ Buscando valor líquido, bruto e taxas do Stripe (ambiente: ${config.environment.environment})`);
           try {
             // Buscar PaymentIntent com latest_charge expandido para obter balance_transaction
@@ -371,6 +374,47 @@ Deno.serve(async (req)=>{
               console.log(`[Individual Fee Payment] Usando exchange_rate do metadata: ${paymentAmountRaw} BRL / ${exchangeRate} = ${paymentAmount} USD`);
             }
           }
+        } else if (currency === 'USD' && paymentIntentId && shouldFetchNetAmount) {
+          // Para pagamentos em USD (cartão), também buscar gross_amount_usd e fee_amount_usd
+          console.log(`✅ Buscando valor bruto e taxas do Stripe para pagamento USD (ambiente: ${config.environment.environment})`);
+          try {
+            const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId, {
+              expand: ['latest_charge.balance_transaction']
+            });
+            
+            if (paymentIntent.latest_charge) {
+              const charge = typeof paymentIntent.latest_charge === 'string' 
+                ? await stripe.charges.retrieve(paymentIntent.latest_charge, {
+                    expand: ['balance_transaction']
+                  })
+                : paymentIntent.latest_charge;
+              
+              if (charge.balance_transaction) {
+                const balanceTransaction = typeof charge.balance_transaction === 'string'
+                  ? await stripe.balanceTransactions.retrieve(charge.balance_transaction)
+                  : charge.balance_transaction;
+                
+                // Para USD, o valor bruto é o amount_total da sessão (já está em USD)
+                if (balanceTransaction.amount && balanceTransaction.currency === 'usd') {
+                  grossAmountUsd = balanceTransaction.amount / 100; // amount está em centavos
+                  console.log(`[Individual Fee Payment] Valor bruto recebido do Stripe: ${grossAmountUsd} USD`);
+                }
+                
+                // Buscar taxas (fee) em USD
+                if (balanceTransaction.fee && balanceTransaction.currency === 'usd') {
+                  feeAmountUsd = balanceTransaction.fee / 100; // fee está em centavos
+                  console.log(`[Individual Fee Payment] Taxas recebidas do Stripe: ${feeAmountUsd} USD`);
+                }
+              }
+            }
+          } catch (stripeError) {
+            console.error('[Individual Fee Payment] Erro ao buscar valor bruto do Stripe para USD:', stripeError);
+            // Para USD, usar o amount_total como gross_amount_usd se não conseguir buscar do Stripe
+            if (!grossAmountUsd) {
+              grossAmountUsd = paymentAmountRaw;
+              console.log(`[Individual Fee Payment] Usando amount_total como gross_amount_usd: ${grossAmountUsd} USD`);
+            }
+          }
         } else if (currency === 'BRL' && session.metadata?.exchange_rate) {
           // Para outros pagamentos BRL (não PIX), usar exchange_rate do metadata
           const exchangeRate = parseFloat(session.metadata.exchange_rate);
@@ -378,6 +422,10 @@ Deno.serve(async (req)=>{
             paymentAmount = paymentAmountRaw / exchangeRate;
             console.log(`[Individual Fee Payment] Convertendo BRL para USD: ${paymentAmountRaw} BRL / ${exchangeRate} = ${paymentAmount} USD`);
           }
+        } else if (currency === 'USD' && !shouldFetchNetAmount) {
+          // Para USD quando não está buscando do Stripe, usar amount_total como gross_amount_usd
+          grossAmountUsd = paymentAmountRaw;
+          console.log(`[Individual Fee Payment] Usando amount_total como gross_amount_usd (busca desativada): ${grossAmountUsd} USD`);
         } else {
           // Debug: Se não entrou em nenhum bloco
           console.log(`[Individual Fee Payment] DEBUG - Não entrou em nenhum bloco de conversão. currency: ${currency}, paymentMethod: ${paymentMethod}, hasExchangeRate: ${!!session.metadata?.exchange_rate}`);
@@ -402,6 +450,7 @@ Deno.serve(async (req)=>{
           console.warn('[Individual Fee Payment] Warning: Could not record fee payment:', insertError);
         } else {
           console.log('[Individual Fee Payment] Application fee recorded successfully:', insertResult);
+          individualFeePaymentId = insertResult?.id || null;
         }
       } catch (recordError) {
         console.warn('[Individual Fee Payment] Warning: Failed to record individual fee payment:', recordError);
@@ -844,6 +893,74 @@ Deno.serve(async (req)=>{
       }
       // --- FIM DAS NOTIFICAÇÕES ---
       
+      // Buscar gross_amount_usd do registro em individual_fee_payments (valor bruto que o aluno realmente pagou)
+      // Priorizar buscar pelo individualFeePaymentId recém-criado, senão buscar pelo payment_intent_id
+      let grossAmountUsdFromDB = null;
+      try {
+        let paymentRecord = null;
+        
+        // Primeiro, tentar buscar pelo ID recém-criado (mais preciso)
+        if (individualFeePaymentId) {
+          const { data: recordById } = await supabase
+            .from('individual_fee_payments')
+            .select('gross_amount_usd, amount')
+            .eq('id', individualFeePaymentId)
+            .single();
+          
+          if (recordById) {
+            paymentRecord = recordById;
+            console.log(`[Response] Registro encontrado pelo individualFeePaymentId: ${individualFeePaymentId}`);
+          }
+        }
+        
+        // Se não encontrou pelo ID, buscar pelo payment_intent_id
+        if (!paymentRecord && paymentIntentId) {
+          const { data: recordsByIntent } = await supabase
+            .from('individual_fee_payments')
+            .select('gross_amount_usd, amount')
+            .eq('user_id', userId)
+            .eq('fee_type', 'application')
+            .eq('payment_method', 'stripe')
+            .eq('payment_intent_id', paymentIntentId)
+            .order('payment_date', { ascending: false })
+            .limit(1);
+          
+          if (recordsByIntent && recordsByIntent.length > 0) {
+            paymentRecord = recordsByIntent[0];
+            console.log(`[Response] Registro encontrado pelo payment_intent_id: ${paymentIntentId}`);
+          }
+        }
+        
+        // Se ainda não encontrou, buscar pelo mais recente (fallback)
+        if (!paymentRecord) {
+          const { data: recordsRecent } = await supabase
+            .from('individual_fee_payments')
+            .select('gross_amount_usd, amount')
+            .eq('user_id', userId)
+            .eq('fee_type', 'application')
+            .eq('payment_method', 'stripe')
+            .order('payment_date', { ascending: false })
+            .limit(1);
+          
+          if (recordsRecent && recordsRecent.length > 0) {
+            paymentRecord = recordsRecent[0];
+            console.log(`[Response] Registro encontrado pelo mais recente (fallback)`);
+          }
+        }
+        
+        if (paymentRecord) {
+          // Usar gross_amount_usd quando disponível, senão usar amount
+          grossAmountUsdFromDB = paymentRecord.gross_amount_usd 
+            ? Number(paymentRecord.gross_amount_usd) 
+            : (paymentRecord.amount ? Number(paymentRecord.amount) : null);
+          console.log(`[Response] gross_amount_usd encontrado no banco: ${grossAmountUsdFromDB}`);
+        } else {
+          console.warn('[Response] Nenhum registro encontrado em individual_fee_payments');
+        }
+      } catch (dbError) {
+        console.warn('[Response] Erro ao buscar gross_amount_usd do banco:', dbError);
+      }
+      
       // Para PIX, retornar resposta especial que força redirecionamento
       if (paymentMethod === 'pix') {
         console.log('[PIX] Forçando redirecionamento para PIX...');
@@ -852,7 +969,8 @@ Deno.serve(async (req)=>{
           message: 'PIX payment verified and processed successfully.',
           payment_method: 'pix',
           redirect_required: true,
-          redirect_url: 'http://localhost:5173/student/dashboard/application-fee-success'
+          redirect_url: 'http://localhost:5173/student/dashboard/application-fee-success',
+          gross_amount_usd: grossAmountUsdFromDB !== null ? grossAmountUsdFromDB : undefined
         }, 200);
       }
       
@@ -860,7 +978,8 @@ Deno.serve(async (req)=>{
         status: 'complete',
         message: 'Session verified and processed successfully.',
         applicationId: applicationId,
-        studentProcessType: application.student_process_type || session.metadata?.student_process_type
+        studentProcessType: application.student_process_type || session.metadata?.student_process_type,
+        gross_amount_usd: grossAmountUsdFromDB !== null ? grossAmountUsdFromDB : undefined
       }, 200);
     } else {
       console.log('Session not paid or complete.');
