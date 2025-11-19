@@ -198,7 +198,7 @@ const ApplicationFeeSuccess: React.FC = () => {
         <PaymentSuccessOverlay
           isSuccess={true}
           title={t('successPages.applicationFee.title')}
-          message={`${t('successPages.common.paymentProcessedAmount', { amount: applicationFeeAmount.toFixed(2) })} ${t('successPages.applicationFee.message')}`}
+          message={`${t('successPages.common.paymentProcessedAmount')} ${t('successPages.applicationFee.message')}`}
         />
       </div>
     );

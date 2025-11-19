@@ -2,3 +2,6 @@
 
 # Local Netlify folder
 .netlify
+
+# temp-v0-design folder (not a submodule)
+temp-v0-design/

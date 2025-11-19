@@ -440,36 +440,30 @@ Deno.serve(async (req)=>{
 
       // Registrar pagamento na tabela individual_fee_payments
       let individualFeePaymentId = null;
-      // Obter payment_intent_id: pode ser string ou objeto PaymentIntent (definir antes do try para usar depois)
-      let paymentIntentId = '';
-      if (typeof session.payment_intent === 'string') {
-        paymentIntentId = session.payment_intent;
-      } else if (session.payment_intent && typeof session.payment_intent === 'object' && 'id' in session.payment_intent) {
-        paymentIntentId = (session.payment_intent as any).id;
-      }
-      
       try {
         const paymentDate = new Date().toISOString();
         const paymentAmountRaw = session.amount_total ? session.amount_total / 100 : 0;
         const currency = session.currency?.toUpperCase() || 'USD';
+        // Obter payment_intent_id: pode ser string ou objeto PaymentIntent
+        let paymentIntentId = '';
+        if (typeof session.payment_intent === 'string') {
+          paymentIntentId = session.payment_intent;
+        } else if (session.payment_intent && typeof session.payment_intent === 'object' && 'id' in session.payment_intent) {
+          paymentIntentId = (session.payment_intent as any).id;
+        }
         
         // Para pagamentos PIX (BRL), buscar o valor líquido recebido em USD do BalanceTransaction
-        // Controle de ambiente: só buscar em test/staging por padrão, ou se variável de ambiente forçar
-        const enableNetAmountFetchEnv = Deno.env.get('ENABLE_STRIPE_NET_AMOUNT_FETCH');
-        const shouldFetchNetAmount = 
-          enableNetAmountFetchEnv === 'true'   ? true  // Força ativar
-          : enableNetAmountFetchEnv === 'false' ? false // Força desativar
-          : !config.environment.isProduction;   // Auto: busca só em test/staging (não em produção)
+        // Sempre buscar o valor líquido, independente do ambiente
+        const shouldFetchNetAmount = true;
         
         // Debug: Log das condições
-        console.log(`[Individual Fee Payment] DEBUG - currency: ${currency}, paymentMethod: ${paymentMethod}, paymentIntentId: ${paymentIntentId}, shouldFetchNetAmount: ${shouldFetchNetAmount}, enableNetAmountFetchEnv: ${enableNetAmountFetchEnv}, isProduction: ${config.environment.isProduction}`);
+        console.log(`[Individual Fee Payment] DEBUG - currency: ${currency}, paymentMethod: ${paymentMethod}, paymentIntentId: ${paymentIntentId}, shouldFetchNetAmount: ${shouldFetchNetAmount}, isProduction: ${config.environment.isProduction}`);
         
         let paymentAmount = paymentAmountRaw;
         let grossAmountUsd: number | null = null;
         let feeAmountUsd: number | null = null;
         
-        // Para TODOS os pagamentos Stripe (USD ou BRL), buscar gross_amount_usd e fee_amount_usd quando possível
-        if (paymentIntentId && shouldFetchNetAmount) {
+        if ((currency === 'BRL' || paymentMethod === 'pix') && paymentIntentId && shouldFetchNetAmount) {
           console.log(`✅ Buscando valor líquido, bruto e taxas do Stripe (ambiente: ${config.environment.environment})`);
           try {
             // Buscar PaymentIntent com latest_charge expandido para obter balance_transaction
@@ -558,47 +552,6 @@ Deno.serve(async (req)=>{
               console.log(`[Individual Fee Payment] Usando exchange_rate do metadata: ${paymentAmountRaw} BRL / ${exchangeRate} = ${paymentAmount} USD`);
             }
           }
-        } else if (currency === 'USD' && paymentIntentId && shouldFetchNetAmount) {
-          // Para pagamentos em USD (cartão), também buscar gross_amount_usd e fee_amount_usd
-          console.log(`✅ Buscando valor bruto e taxas do Stripe para pagamento USD (ambiente: ${config.environment.environment})`);
-          try {
-            const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId, {
-              expand: ['latest_charge.balance_transaction']
-            });
-            
-            if (paymentIntent.latest_charge) {
-              const charge = typeof paymentIntent.latest_charge === 'string' 
-                ? await stripe.charges.retrieve(paymentIntent.latest_charge, {
-                    expand: ['balance_transaction']
-                  })
-                : paymentIntent.latest_charge;
-              
-              if (charge.balance_transaction) {
-                const balanceTransaction = typeof charge.balance_transaction === 'string'
-                  ? await stripe.balanceTransactions.retrieve(charge.balance_transaction)
-                  : charge.balance_transaction;
-                
-                // Para USD, o valor bruto é o amount_total da sessão (já está em USD)
-                if (balanceTransaction.amount && balanceTransaction.currency === 'usd') {
-                  grossAmountUsd = balanceTransaction.amount / 100; // amount está em centavos
-                  console.log(`[Individual Fee Payment] Valor bruto recebido do Stripe: ${grossAmountUsd} USD`);
-                }
-                
-                // Buscar taxas (fee) em USD
-                if (balanceTransaction.fee && balanceTransaction.currency === 'usd') {
-                  feeAmountUsd = balanceTransaction.fee / 100; // fee está em centavos
-                  console.log(`[Individual Fee Payment] Taxas recebidas do Stripe: ${feeAmountUsd} USD`);
-                }
-              }
-            }
-          } catch (stripeError) {
-            console.error('[Individual Fee Payment] Erro ao buscar valor bruto do Stripe para USD:', stripeError);
-            // Para USD, usar o amount_total como gross_amount_usd se não conseguir buscar do Stripe
-            if (!grossAmountUsd) {
-              grossAmountUsd = paymentAmountRaw;
-              console.log(`[Individual Fee Payment] Usando amount_total como gross_amount_usd: ${grossAmountUsd} USD`);
-            }
-          }
         } else if (currency === 'BRL' && session.metadata?.exchange_rate) {
           // Para outros pagamentos BRL (não PIX), usar exchange_rate do metadata
           const exchangeRate = parseFloat(session.metadata.exchange_rate);
@@ -606,10 +559,6 @@ Deno.serve(async (req)=>{
             paymentAmount = paymentAmountRaw / exchangeRate;
             console.log(`[Individual Fee Payment] Convertendo BRL para USD: ${paymentAmountRaw} BRL / ${exchangeRate} = ${paymentAmount} USD`);
           }
-        } else if (currency === 'USD' && !shouldFetchNetAmount) {
-          // Para USD quando não está buscando do Stripe, usar amount_total como gross_amount_usd
-          grossAmountUsd = paymentAmountRaw;
-          console.log(`[Individual Fee Payment] Usando amount_total como gross_amount_usd (busca desativada): ${grossAmountUsd} USD`);
         } else {
           // Debug: Se não entrou em nenhum bloco
           console.log(`[Individual Fee Payment] DEBUG - Não entrou em nenhum bloco de conversão. currency: ${currency}, paymentMethod: ${paymentMethod}, hasExchangeRate: ${!!session.metadata?.exchange_rate}`);
@@ -1201,6 +1150,27 @@ Deno.serve(async (req)=>{
           }
         }
         
+        // Obter gross_amount_usd do metadata (valor bruto que o aluno realmente pagou, com markup)
+        // IMPORTANTE: Se for PIX, o gross_amount está em BRL, precisa converter para USD
+        let grossAmountUsdFromMetadata: number | null = null;
+        if (session.metadata?.gross_amount) {
+          const grossAmountRaw = parseFloat(session.metadata.gross_amount);
+          // Se for PIX (currency BRL), converter para USD usando exchange_rate
+          if (currency === 'BRL' && session.metadata?.exchange_rate) {
+            const exchangeRate = parseFloat(session.metadata.exchange_rate);
+            if (exchangeRate > 0) {
+              grossAmountUsdFromMetadata = grossAmountRaw / exchangeRate;
+              console.log(`[verify-stripe-session-selection-process-fee] 💱 Convertendo gross_amount de BRL para USD: ${grossAmountRaw} BRL / ${exchangeRate} = ${grossAmountUsdFromMetadata} USD`);
+            } else {
+              grossAmountUsdFromMetadata = grossAmountRaw; // Fallback se exchange_rate inválido
+            }
+          } else {
+            // Se não for PIX, já está em USD
+            grossAmountUsdFromMetadata = grossAmountRaw;
+          }
+        }
+        const grossAmountUsd = grossAmountUsdFromMetadata || amountPaidUSD || amountPaid || 0;
+        
         return corsResponse({
           status: 'complete',
           message: 'PIX payment verified and processed successfully.',
@@ -1208,6 +1178,7 @@ Deno.serve(async (req)=>{
           redirect_required: true,
           redirect_url: 'http://localhost:5173/student/dashboard/scholarships',
           amount_paid: amountPaidUSD || amountPaid || 0,
+          gross_amount_usd: grossAmountUsd, // Valor bruto em USD (valor que o aluno realmente pagou, com markup)
           amount_paid_original: amountPaid || 0,
           currency: currency,
           promotional_coupon: promotionalCouponReturn,
@@ -1223,72 +1194,24 @@ Deno.serve(async (req)=>{
       const originalAmountReturn = session.metadata?.original_amount ? parseFloat(session.metadata.original_amount) : null;
       const finalAmountReturn = session.metadata?.final_amount ? parseFloat(session.metadata.final_amount) : null;
       
-      // Buscar gross_amount_usd do registro em individual_fee_payments (valor bruto que o aluno realmente pagou)
-      // Priorizar buscar pelo individualFeePaymentId recém-criado, senão buscar pelo payment_intent_id
-      let grossAmountUsdFromDB = null;
-      try {
-        let paymentRecord = null;
-        
-        // Primeiro, tentar buscar pelo ID recém-criado (mais preciso)
-        if (individualFeePaymentId) {
-          const { data: recordById } = await supabase
-            .from('individual_fee_payments')
-            .select('gross_amount_usd, amount')
-            .eq('id', individualFeePaymentId)
-            .single();
-          
-          if (recordById) {
-            paymentRecord = recordById;
-            console.log(`[Response] Registro encontrado pelo individualFeePaymentId: ${individualFeePaymentId}`);
+      // Obter gross_amount_usd do metadata (valor bruto que o aluno realmente pagou, com markup)
+      // IMPORTANTE: Se for PIX, o gross_amount está em BRL, precisa converter para USD
+      let grossAmountUsdFromMetadata: number | null = null;
+      if (session.metadata?.gross_amount) {
+        const grossAmountRaw = parseFloat(session.metadata.gross_amount);
+        // Se for PIX (currency BRL), converter para USD usando exchange_rate
+        if (currency === 'BRL' && session.metadata?.exchange_rate) {
+          const exchangeRate = parseFloat(session.metadata.exchange_rate);
+          if (exchangeRate > 0) {
+            grossAmountUsdFromMetadata = grossAmountRaw / exchangeRate;
+            console.log(`[verify-stripe-session-selection-process-fee] 💱 Convertendo gross_amount de BRL para USD: ${grossAmountRaw} BRL / ${exchangeRate} = ${grossAmountUsdFromMetadata} USD`);
+          } else {
+            grossAmountUsdFromMetadata = grossAmountRaw; // Fallback se exchange_rate inválido
           }
-        }
-        
-        // Se não encontrou pelo ID, buscar pelo payment_intent_id
-        if (!paymentRecord && paymentIntentId) {
-          const { data: recordsByIntent } = await supabase
-            .from('individual_fee_payments')
-            .select('gross_amount_usd, amount')
-            .eq('user_id', userId)
-            .eq('fee_type', 'selection_process')
-            .eq('payment_method', 'stripe')
-            .eq('payment_intent_id', paymentIntentId)
-            .order('payment_date', { ascending: false })
-            .limit(1);
-          
-          if (recordsByIntent && recordsByIntent.length > 0) {
-            paymentRecord = recordsByIntent[0];
-            console.log(`[Response] Registro encontrado pelo payment_intent_id: ${paymentIntentId}`);
-          }
-        }
-        
-        // Se ainda não encontrou, buscar pelo mais recente (fallback)
-        if (!paymentRecord) {
-          const { data: recordsRecent } = await supabase
-            .from('individual_fee_payments')
-            .select('gross_amount_usd, amount')
-            .eq('user_id', userId)
-            .eq('fee_type', 'selection_process')
-            .eq('payment_method', 'stripe')
-            .order('payment_date', { ascending: false })
-            .limit(1);
-          
-          if (recordsRecent && recordsRecent.length > 0) {
-            paymentRecord = recordsRecent[0];
-            console.log(`[Response] Registro encontrado pelo mais recente (fallback)`);
-          }
-        }
-        
-        if (paymentRecord) {
-          // Usar gross_amount_usd quando disponível, senão usar amount
-          grossAmountUsdFromDB = paymentRecord.gross_amount_usd 
-            ? Number(paymentRecord.gross_amount_usd) 
-            : (paymentRecord.amount ? Number(paymentRecord.amount) : null);
-          console.log(`[Response] gross_amount_usd encontrado no banco: ${grossAmountUsdFromDB}`);
         } else {
-          console.warn('[Response] Nenhum registro encontrado em individual_fee_payments');
+          // Se não for PIX, já está em USD
+          grossAmountUsdFromMetadata = grossAmountRaw;
         }
-      } catch (dbError) {
-        console.warn('[Response] Erro ao buscar gross_amount_usd do banco:', dbError);
       }
       
       // Se for PIX (BRL), converter para USD usando a taxa de câmbio do metadata
@@ -1300,19 +1223,19 @@ Deno.serve(async (req)=>{
         }
       }
       
-      // Priorizar gross_amount_usd do banco quando disponível (valor bruto que o aluno realmente pagou)
-      const displayAmount = grossAmountUsdFromDB !== null ? grossAmountUsdFromDB : (finalAmountReturn || amountPaidUSD || amountPaid || 0);
+      // Priorizar gross_amount_usd do metadata (valor bruto pago), senão usar amountPaidUSD
+      const grossAmountUsd = grossAmountUsdFromMetadata || amountPaidUSD || amountPaid || 0;
       
       return corsResponse({
         status: 'complete',
         message: 'Session verified and processed successfully.',
-        amount_paid: amountPaidUSD || amountPaid || 0, // Retornar em USD para exibição (mantido para compatibilidade)
+        amount_paid: amountPaidUSD || amountPaid || 0, // Valor líquido em USD (após taxas)
+        gross_amount_usd: grossAmountUsd, // Valor bruto em USD (valor que o aluno realmente pagou, com markup)
         amount_paid_original: amountPaid || 0, // Valor original na moeda da sessão
-        gross_amount_usd: grossAmountUsdFromDB !== null ? grossAmountUsdFromDB : undefined, // Valor bruto em USD (quando disponível)
         currency: currency,
         promotional_coupon: promotionalCouponReturn,
         original_amount: originalAmountReturn,
-        final_amount: displayAmount // Usar gross_amount_usd quando disponível, senão usar final_amount ou amount_paid
+        final_amount: finalAmountReturn
       }, 200);
     }
     

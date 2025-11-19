@@ -17,7 +17,7 @@ interface PaymentMethodSelectorDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   selectedMethod: 'stripe' | 'zelle' | 'pix' | null;
-  onMethodSelect: (method: 'stripe' | 'zelle' | 'pix') => void;
+  onMethodSelect: (method: 'stripe' | 'zelle' | 'pix', exchangeRate?: number) => void;
   feeType: 'selection_process' | 'application_fee' | 'enrollment_fee' | 'scholarship_fee' | 'i20_control_fee';
   amount: number;
 }

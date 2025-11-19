@@ -331,13 +331,7 @@ const SelectionProcessFeeSuccess: React.FC = () => {
             : t('successPages.selectionProcessFee.errorTitle')
           }
           message={animationSuccess
-            ? (() => {
-                const displayAmount = paidAmount ? paidAmount.toFixed(2) : (selectionProcessFeeAmount?.toFixed(2) || '400.00');
-                const baseMessage = t('successPages.common.paymentProcessedAmount', { amount: displayAmount });
-                return promotionalCoupon 
-                  ? `${baseMessage} (Cupom ${promotionalCoupon} aplicado)`
-                  : baseMessage;
-              })()
+            ? t('successPages.common.paymentProcessedAmount')
             : t('successPages.common.paymentError')
           }
         />

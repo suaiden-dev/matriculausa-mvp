@@ -3269,7 +3269,7 @@
     },
     "common": {
       "redirecting": "Redirecionando em instantes...",
-      "paymentProcessedAmount": "Seu pagamento de ${{amount}} foi processado com sucesso!",
+      "paymentProcessedAmount": "Seu pagamento foi processado com sucesso!",
       "paymentError": "Houve um problema ao processar seu pagamento."
     },
     "i20ControlFee": {

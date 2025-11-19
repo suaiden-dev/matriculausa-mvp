@@ -3162,7 +3162,7 @@
     },
     "common": {
       "redirecting": "Redirecting in a moment...",
-      "paymentProcessedAmount": "Your payment of ${{amount}} was processed successfully!",
+      "paymentProcessedAmount": "Your payment was processed successfully!",
       "paymentError": "There was a problem processing your payment."
     },
     "i20ControlFee": {
