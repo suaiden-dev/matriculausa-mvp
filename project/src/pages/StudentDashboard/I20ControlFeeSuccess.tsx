@@ -66,19 +66,24 @@ const I20ControlFeeSuccess: React.FC = () => {
         console.log('✅ [I20ControlFeeSuccess] amount_paid:', data.amount_paid, 'tipo:', typeof data.amount_paid);
         console.log('✅ [I20ControlFeeSuccess] promotional_coupon:', data.promotional_coupon);
         
-        // Extrair informações do pagamento (mesma lógica do SelectionProcessFeeSuccess)
+        // Extrair informações do pagamento
+        // Priorizar gross_amount_usd (valor bruto que o aluno realmente pagou), senão usar final_amount ou amount_paid
         // Converter para número se necessário e verificar se é válido
+        const grossAmountUsd = data.gross_amount_usd != null ? Number(data.gross_amount_usd) : null;
         const finalAmount = data.final_amount != null ? Number(data.final_amount) : null;
         const amountPaid = data.amount_paid != null ? Number(data.amount_paid) : null;
         
-        if (finalAmount != null && !isNaN(finalAmount) && finalAmount > 0) {
+        if (grossAmountUsd != null && !isNaN(grossAmountUsd) && grossAmountUsd > 0) {
+          console.log('✅ [I20ControlFeeSuccess] Usando gross_amount_usd:', grossAmountUsd);
+          setPaidAmount(grossAmountUsd);
+        } else if (finalAmount != null && !isNaN(finalAmount) && finalAmount > 0) {
           console.log('✅ [I20ControlFeeSuccess] Usando final_amount:', finalAmount);
           setPaidAmount(finalAmount);
         } else if (amountPaid != null && !isNaN(amountPaid) && amountPaid > 0) {
           console.log('✅ [I20ControlFeeSuccess] Usando amount_paid:', amountPaid);
           setPaidAmount(amountPaid);
         } else {
-          console.warn('⚠️ [I20ControlFeeSuccess] Nenhum valor válido encontrado! final_amount:', finalAmount, 'amount_paid:', amountPaid);
+          console.warn('⚠️ [I20ControlFeeSuccess] Nenhum valor válido encontrado! gross_amount_usd:', grossAmountUsd, 'final_amount:', finalAmount, 'amount_paid:', amountPaid);
         }
         if (data.promotional_coupon) {
           console.log('✅ [I20ControlFeeSuccess] Cupom promocional detectado:', data.promotional_coupon);
