@@ -42,14 +42,14 @@ export function usePaymentsQuery(enabled: boolean = true) {
         batches.push(uniqueUserIds.slice(i, i + batchSize));
       }
       
-      const realPaymentAmounts = new Map<string, { selection_process?: number; scholarship?: number; i20_control?: number }>();
+      const realPaymentAmounts = new Map<string, { selection_process?: number; scholarship?: number; i20_control?: number; application?: number }>();
       
       // Processar batches em paralelo
       const batchPromises = batches.map(async (batch) => {
         const batchResults = await Promise.allSettled(
           batch.map(async (userId) => {
             try {
-              const amounts = await getGrossPaidAmounts(userId, ['selection_process', 'scholarship', 'i20_control']);
+              const amounts = await getGrossPaidAmounts(userId, ['selection_process', 'scholarship', 'i20_control', 'application']);
               return { userId, amounts };
             } catch (error) {
               console.error(`Erro ao buscar valores brutos pagos para user_id ${userId}:`, error);
@@ -65,6 +65,7 @@ export function usePaymentsQuery(enabled: boolean = true) {
               selection_process: amounts.selection_process,
               scholarship: amounts.scholarship,
               i20_control: amounts.i20_control,
+              application: amounts.application,
             });
           }
         });

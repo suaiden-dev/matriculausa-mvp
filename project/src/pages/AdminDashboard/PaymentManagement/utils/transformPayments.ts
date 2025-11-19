@@ -8,7 +8,7 @@ interface TransformInputs {
   userSystemTypesMap: Map<string, string>;
   individualPaymentDates: Map<string, Map<string, string>>;
   getFeeAmount: (key: 'i20_control_fee' | 'application_fee') => number;
-  realPaymentAmounts?: Map<string, { selection_process?: number; scholarship?: number; i20_control?: number }>;
+  realPaymentAmounts?: Map<string, { selection_process?: number; scholarship?: number; i20_control?: number; application?: number }>;
 }
 
 export function transformPaymentsToRecordsAndStats({
@@ -123,16 +123,45 @@ export function transformPaymentsToRecordsAndStats({
       scholarshipFee = Math.round(expectedScholarship * 100);
     }
 
-    // Application Fee (pode vir da scholarship)
+    // Application Fee - Prioridade: valor real pago (se razoável) > scholarship.application_fee_amount > cálculo fixo
     let applicationFee: number;
-    if (scholarship?.application_fee_amount) {
+    const expectedApplicationFee = scholarship?.application_fee_amount 
+      ? (parseFloat(scholarship.application_fee_amount) > 1000 
+          ? parseFloat(scholarship.application_fee_amount) 
+          : parseFloat(scholarship.application_fee_amount) * 100)
+      : getFeeAmount('application_fee') * 100;
+    const expectedApplicationFeeWithDeps = systemType === 'legacy' && dependents > 0
+      ? expectedApplicationFee + (dependents * 10000) // $100 por dependente
+      : expectedApplicationFee;
+    
+    if (realPaid?.application !== undefined && realPaid.application > 0) {
+      // Verificar se o valor está razoável (dentro de 50% do esperado)
+      if (isValueReasonable(realPaid.application, expectedApplicationFeeWithDeps / 100)) {
+        applicationFee = Math.round(realPaid.application * 100);
+      } else {
+        // Valor muito discrepante, usar cálculo fixo
+        console.log(`[PaymentManagement] Valor de application muito discrepante para ${studentEmail}: ${realPaid.application} (esperado ~${expectedApplicationFeeWithDeps / 100}), usando cálculo fixo`);
+        if (scholarship?.application_fee_amount) {
+          const rawValue = parseFloat(scholarship.application_fee_amount);
+          applicationFee = rawValue > 1000 ? Math.round(rawValue) : Math.round(rawValue * 100);
+        } else {
+          applicationFee = Math.round(getFeeAmount('application_fee') * 100);
+        }
+        if (systemType === 'legacy' && dependents > 0) {
+          applicationFee += dependents * 10000; // $100 por dependente
+        }
+      }
+    } else if (scholarship?.application_fee_amount) {
       const rawValue = parseFloat(scholarship.application_fee_amount);
       applicationFee = rawValue > 1000 ? Math.round(rawValue) : Math.round(rawValue * 100);
+      if (systemType === 'legacy' && dependents > 0) {
+        applicationFee += dependents * 10000; // $100 por dependente
+      }
     } else {
       applicationFee = Math.round(getFeeAmount('application_fee') * 100);
-    }
-    if (systemType === 'legacy' && dependents > 0) {
-      applicationFee += dependents * 10000; // $100 por dependente
+      if (systemType === 'legacy' && dependents > 0) {
+        applicationFee += dependents * 10000; // $100 por dependente
+      }
     }
 
     // Selection Process (global)
@@ -467,7 +496,32 @@ export function transformPaymentsToRecordsAndStats({
     } else {
       scholarshipFee = Math.round(expectedScholarship * 100);
     }
-    const applicationFee = Math.round(getFeeAmount('application_fee') * 100);
+
+    // Application Fee - Prioridade: valor real pago (se razoável) > cálculo fixo
+    let applicationFee: number;
+    const expectedApplicationFee = getFeeAmount('application_fee');
+    const expectedApplicationFeeWithDeps = systemType === 'legacy' && dependents > 0
+      ? expectedApplicationFee + (dependents * 100) // $100 por dependente
+      : expectedApplicationFee;
+    
+    if (realPaid?.application !== undefined && realPaid.application > 0) {
+      // Verificar se o valor está razoável (dentro de 50% do esperado)
+      if (isValueReasonable(realPaid.application, expectedApplicationFeeWithDeps)) {
+        applicationFee = Math.round(realPaid.application * 100);
+      } else {
+        // Valor muito discrepante, usar cálculo fixo
+        console.log(`[PaymentManagement] Valor de application muito discrepante para ${studentName} (${studentEmail}): ${realPaid.application} (esperado ~${expectedApplicationFeeWithDeps}), usando cálculo fixo`);
+        applicationFee = Math.round(expectedApplicationFee * 100);
+        if (systemType === 'legacy' && dependents > 0) {
+          applicationFee += dependents * 10000; // $100 por dependente
+        }
+      }
+    } else {
+      applicationFee = Math.round(expectedApplicationFee * 100);
+      if (systemType === 'legacy' && dependents > 0) {
+        applicationFee += dependents * 10000; // $100 por dependente
+      }
+    }
 
     if (stripeUser.has_paid_selection_process_fee) {
       paymentRecords.push({

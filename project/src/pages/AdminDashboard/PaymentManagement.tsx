@@ -269,10 +269,11 @@ const PaymentManagement = (): React.JSX.Element => {
           setPayments(paymentsQuery.data.paymentRecords);
           setStats(paymentsQuery.data.stats);
         }
-        // Quando query está habilitada (shouldLoadPayments = true), usar isLoading da query
+        // Quando query está habilitada (shouldLoadPayments = true), usar isLoading/isFetching da query
+        // isFetching garante que mostra loading mesmo quando há dados em cache sendo recalculados
         // Quando desabilitada, isLoading é false por padrão no React Query
         if (shouldLoadPayments) {
-          setLoading(paymentsQuery.isLoading);
+          setLoading(paymentsQuery.isLoading || paymentsQuery.isFetching);
       } else {
           // Se não deve carregar, não está em loading
           setLoading(false);
@@ -286,7 +287,7 @@ const PaymentManagement = (): React.JSX.Element => {
         setPayments([]);
       }
       }
-  }, [activeTab, filters?.university, paymentsQuery.data, paymentsQuery.isLoading, shouldLoadPayments]);
+  }, [activeTab, filters?.university, paymentsQuery.data, paymentsQuery.isLoading, paymentsQuery.isFetching, shouldLoadPayments]);
 
   // Realtime updates for Affiliate Requests - invalidar query quando houver mudança
   useEffect(() => {
@@ -742,8 +743,11 @@ const PaymentManagement = (): React.JSX.Element => {
 
   // clearSelection incorporado no PaymentsTab
 
-  // ✅ Só mostrar skeleton se está carregando e não há dados E está na aba payments
-  if (activeTab === 'payments' && loading && payments.length === 0) {
+  // ✅ Mostrar skeleton se está carregando/buscando dados E está na aba payments
+  // Mostrar skeleton quando está carregando pela primeira vez (isLoading) ou quando não há dados e está buscando
+  const isFetchingPayments = shouldLoadPayments && (paymentsQuery.isFetching || paymentsQuery.isLoading);
+  const shouldShowSkeleton = activeTab === 'payments' && isFetchingPayments && (paymentsQuery.isLoading || payments.length === 0);
+  if (shouldShowSkeleton) {
     return <PaymentManagementSkeleton />;
   }
 
