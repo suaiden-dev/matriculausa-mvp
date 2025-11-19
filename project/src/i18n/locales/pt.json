@@ -2590,7 +2590,8 @@
     },
     "manualVerification": "Processamento pode levar até 48 horas",
     "important": "Importante:",
-    "zelleUploadNote": "Após o pagamento via Zelle, você precisará enviar o comprovante para verificação manual."
+    "zelleUploadNote": "Após o pagamento via Zelle, você precisará enviar o comprovante para verificação manual.",
+    "includesProcessingFees": "* Inclui taxas de processamento"
   },
   "preCheckoutModal": {
     "securePayment": "Pagamento Seguro",
