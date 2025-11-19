@@ -55,6 +55,14 @@ const ApplicationChatPage: React.FC = () => {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'stripe' | 'zelle' | 'pix' | null>(null);
   // Ajustar tipo de activeTab para remover 'chat'
   const [activeTab, setActiveTab] = useState<'welcome' | 'details' | 'i20' | 'documents'>('welcome');
+  // Estado para cupom promocional do I-20 Control Fee
+  const [i20PromotionalCoupon, setI20PromotionalCoupon] = useState<{
+    originalAmount: number;
+    finalAmount: number;
+    discountAmount: number;
+  } | null>(null);
+  // Estado para valor real pago do I-20 (incluindo descontos)
+  const [realI20PaidAmount, setRealI20PaidAmount] = useState<number | null>(null);
   
   // Estados para controlar document requests (removidos - não mais utilizados)
 
@@ -159,6 +167,116 @@ const ApplicationChatPage: React.FC = () => {
     fetchScholarshipFeeDeadline();
   }, [userProfile]);
 
+  // Buscar cupom promocional do I-20 Control Fee do banco de dados
+  useEffect(() => {
+    const checkI20PromotionalCoupon = async () => {
+      // Verificar se o usuário pode usar cupom promocional
+      const hasSellerReferralCode = userProfile?.seller_referral_code && userProfile.seller_referral_code.trim() !== '';
+      const isLegacySystem = userProfile?.system_type === 'legacy';
+      const canUsePromotionalCoupon = hasSellerReferralCode && isLegacySystem;
+      
+      if (!canUsePromotionalCoupon || !user?.id) {
+        setI20PromotionalCoupon(null);
+        return;
+      }
+
+      try {
+        // Buscar registro de validação do cupom promocional na tabela promotional_coupon_usage
+        const { data: couponUsage, error: couponError } = await supabase
+          .from('promotional_coupon_usage')
+          .select('original_amount, discount_amount, final_amount, coupon_code, created_at, metadata, payment_id')
+          .eq('user_id', user.id)
+          .eq('fee_type', 'i20_control')
+          .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()) // Últimas 24 horas
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (!couponError && couponUsage) {
+          // Verificar se é um registro de validação (não pagamento confirmado)
+          const isValidation = couponUsage.metadata?.is_validation === true || 
+                              (couponUsage.payment_id && String(couponUsage.payment_id).startsWith('validation_'));
+          
+          if (isValidation) {
+            const originalAmount = parseFloat(couponUsage.original_amount.toString());
+            const finalAmount = parseFloat(couponUsage.final_amount.toString());
+            const discountAmount = parseFloat(couponUsage.discount_amount.toString());
+            
+            console.log('[ApplicationChatPage] Cupom promocional encontrado para i20_control:', {
+              coupon: couponUsage.coupon_code,
+              originalAmount,
+              finalAmount,
+              discountAmount
+            });
+            
+            setI20PromotionalCoupon({
+              originalAmount,
+              finalAmount,
+              discountAmount
+            });
+            return;
+          }
+        }
+        
+        // Se não encontrou no banco, limpar estado
+        setI20PromotionalCoupon(null);
+      } catch (error) {
+        console.error('[ApplicationChatPage] Erro ao buscar cupom do I-20:', error);
+        setI20PromotionalCoupon(null);
+      }
+    };
+
+    checkI20PromotionalCoupon();
+    
+    // Verificar periodicamente
+    const interval = setInterval(checkI20PromotionalCoupon, 5000); // 5 segundos
+    
+    return () => clearInterval(interval);
+  }, [userProfile?.seller_referral_code, userProfile?.system_type, user?.id]);
+
+  // Buscar valor real pago do I-20 Control Fee
+  // Usa gross_amount_usd quando disponível, senão usa amount
+  useEffect(() => {
+    const fetchRealI20PaidAmount = async () => {
+      if (!user?.id) {
+        setRealI20PaidAmount(null);
+        return;
+      }
+
+      try {
+        const { data: payments, error } = await supabase
+          .from('individual_fee_payments')
+          .select('amount, gross_amount_usd')
+          .eq('user_id', user.id)
+          .eq('fee_type', 'i20_control')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        
+        if (error) {
+          console.error('[ApplicationChatPage] Erro ao buscar valor pago do I-20:', error);
+          setRealI20PaidAmount(null);
+          return;
+        }
+        
+        if (payments) {
+          // Usar gross_amount_usd quando disponível, senão usar amount
+          const displayAmount = payments.gross_amount_usd 
+            ? parseFloat(payments.gross_amount_usd.toString())
+            : parseFloat(payments.amount.toString());
+          setRealI20PaidAmount(displayAmount);
+        } else {
+          setRealI20PaidAmount(null);
+        }
+      } catch (error) {
+        console.error('[ApplicationChatPage] Erro inesperado ao buscar valor pago do I-20:', error);
+        setRealI20PaidAmount(null);
+      }
+    };
+
+    fetchRealI20PaidAmount();
+  }, [user?.id]);
+
   // Document requests logic removed - no longer needed
 
   // Cronômetro regressivo para a deadline
@@ -240,6 +358,10 @@ const ApplicationChatPage: React.FC = () => {
         const baseAmount = getFeeAmount('i20_control_fee');
         const finalAmount = baseAmount;
         
+        // Verificar se há cupom promocional válido
+        const promotionalCoupon = (window as any).__checkout_promotional_coupon || null;
+        const finalAmountWithDiscount = (window as any).__checkout_final_amount || finalAmount;
+        
         const res = await fetch(apiUrl, {
           method: 'POST',
           headers: {
@@ -250,8 +372,9 @@ const ApplicationChatPage: React.FC = () => {
             success_url: window.location.origin + '/student/dashboard/i20-control-fee-success?session_id={CHECKOUT_SESSION_ID}',
             cancel_url: window.location.origin + '/student/dashboard/i20-control-fee-error',
             price_id: STRIPE_PRODUCTS.controlFee.priceId,
-            amount: finalAmount, // Valor fixo do I-20 (sem dependentes)
-            payment_method: 'stripe'
+            amount: finalAmountWithDiscount, // Valor com desconto se houver cupom
+            payment_method: 'stripe',
+            promotional_coupon: promotionalCoupon // Passar cupom promocional
           }),
         });
         const data = await res.json();
@@ -273,6 +396,10 @@ const ApplicationChatPage: React.FC = () => {
         }
         const finalAmount = parseFloat(i20ControlFee.replace('$', ''));
         
+        // Verificar se há cupom promocional válido
+        const promotionalCoupon = (window as any).__checkout_promotional_coupon || null;
+        const finalAmountWithDiscount = (window as any).__checkout_final_amount || finalAmount;
+        
         const res = await fetch(apiUrl, {
           method: 'POST',
           headers: {
@@ -283,8 +410,9 @@ const ApplicationChatPage: React.FC = () => {
             success_url: window.location.origin + '/student/dashboard/i20-control-fee-success?session_id={CHECKOUT_SESSION_ID}',
             cancel_url: window.location.origin + '/student/dashboard/i20-control-fee-error',
             price_id: STRIPE_PRODUCTS.controlFee.priceId,
-            amount: finalAmount, // Valor fixo do I-20 (sem dependentes)
-            payment_method: 'pix'
+            amount: finalAmountWithDiscount, // Valor com desconto se houver cupom
+            payment_method: 'pix',
+            promotional_coupon: promotionalCoupon // Passar cupom promocional
           }),
         });
         const data = await res.json();
@@ -295,8 +423,10 @@ const ApplicationChatPage: React.FC = () => {
         }
       } else if (selectedPaymentMethod === 'zelle') {
         // Redirecionar para a página de pagamento Zelle (mesma rota das outras taxas)
-        // Usar valor dinâmico do I-20 Control Fee (com overrides se aplicável)
-        const i20Amount = getFeeAmount('i20_control_fee').toString();
+        // Verificar se há cupom promocional válido
+        const promotionalCoupon = (window as any).__checkout_promotional_coupon || null;
+        const finalAmountWithDiscount = (window as any).__checkout_final_amount || getFeeAmount('i20_control_fee');
+        const i20Amount = finalAmountWithDiscount.toString();
         
         const params = new URLSearchParams({
           feeType: 'i20_control_fee',
@@ -306,6 +436,11 @@ const ApplicationChatPage: React.FC = () => {
         
         // Adicionar campo específico para I-20 Control Fee
         params.append('i20ControlFeeAmount', i20Amount);
+        
+        // Adicionar cupom promocional se houver
+        if (promotionalCoupon) {
+          params.append('promotionalCoupon', promotionalCoupon);
+        }
         
         window.location.href = `/checkout/zelle?${params.toString()}`;
       }
@@ -957,7 +1092,22 @@ const ApplicationChatPage: React.FC = () => {
                     </div>
                     <div className="text-right">
                       <div className="text-gray-500 text-sm font-medium">{t('studentDashboard.applicationChatPage.i20ControlFee.valueLabel')}</div>
-                      <div className="text-2xl font-bold text-gray-900">{formatFeeAmount(getFeeAmount('i20_control_fee'))}</div>
+                      {realI20PaidAmount !== null ? (
+                        // Se há pagamento registrado, mostrar valor bruto (gross_amount_usd) ou amount
+                        <div className="text-2xl font-bold text-gray-900">{formatFeeAmount(realI20PaidAmount)}</div>
+                      ) : i20PromotionalCoupon ? (
+                        // Se há cupom promocional, mostrar valor com desconto
+                        <div className="space-y-1">
+                          <div className="text-xl font-bold text-gray-400 line-through">{formatFeeAmount(i20PromotionalCoupon.originalAmount)}</div>
+                          <div className="text-2xl font-bold text-green-600">{formatFeeAmount(i20PromotionalCoupon.finalAmount)}</div>
+                          <div className="text-xs text-green-600 font-medium">
+                            -{formatFeeAmount(i20PromotionalCoupon.discountAmount)} de desconto
+                          </div>
+                        </div>
+                      ) : (
+                        // Sem cupom, mostrar valor normal da taxa
+                        <div className="text-2xl font-bold text-gray-900">{formatFeeAmount(getFeeAmount('i20_control_fee'))}</div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1135,7 +1285,11 @@ const ApplicationChatPage: React.FC = () => {
                           </div>
                           <span className="text-sm font-medium text-blue-600">{t('studentDashboard.applicationChatPage.i20ControlFee.amountPaid')}</span>
                         </div>
-                        <div className="text-lg font-bold text-gray-900">{formatFeeAmount(getFeeAmount('i20_control_fee'))}</div>
+                        <div className="text-lg font-bold text-gray-900">
+                          {realI20PaidAmount 
+                            ? formatFeeAmount(realI20PaidAmount) // Valor real pago (já inclui desconto se aplicável)
+                            : formatFeeAmount(getFeeAmount('i20_control_fee'))}
+                        </div>
                       </div>
                       
                       <div className="bg-blue-50 rounded-2xl p-6 hover:bg-blue-100 transition-colors duration-200">

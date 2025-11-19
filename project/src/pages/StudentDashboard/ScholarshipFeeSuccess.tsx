@@ -12,6 +12,8 @@ const ScholarshipFeeSuccess: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [applicationId, setApplicationId] = useState<string | null>(null);
   const [showAnimation, setShowAnimation] = useState<boolean>(false);
+  const [paidAmount, setPaidAmount] = useState<number | null>(null);
+  const [promotionalCoupon, setPromotionalCoupon] = useState<string | null>(null);
   const navigate = useNavigate();
   const { userProfile } = useAuth();
 
@@ -41,12 +43,32 @@ const ScholarshipFeeSuccess: React.FC = () => {
           body: JSON.stringify({ sessionId })
         });
         const result = await response.json();
-        console.log('[ScholarshipFeeSuccess] Resposta do backend:', result);
+        console.log('[ScholarshipFeeSuccess] Resposta do backend (RAW):', JSON.stringify(result, null, 2));
+        console.log('[ScholarshipFeeSuccess] final_amount:', result.final_amount, 'tipo:', typeof result.final_amount);
+        console.log('[ScholarshipFeeSuccess] amount_paid:', result.amount_paid, 'tipo:', typeof result.amount_paid);
+        console.log('[ScholarshipFeeSuccess] promotional_coupon:', result.promotional_coupon);
+        
         if (!response.ok) throw new Error(result?.error || 'Failed to verify payment.');
         if (result.status !== 'complete') {
           console.log('[ScholarshipFeeSuccess] Pagamento não está completo:', result.status);
           navigate('/student/dashboard/scholarship-fee-error');
           return;
+        }
+        
+        // Extrair informações do pagamento (mesma lógica do SelectionProcessFeeSuccess)
+        if (result.final_amount) {
+          setPaidAmount(result.final_amount);
+        } else if (result.amount_paid) {
+          setPaidAmount(result.amount_paid);
+        }
+        
+        if (result.promotional_coupon) {
+          console.log('[ScholarshipFeeSuccess] Cupom promocional detectado:', result.promotional_coupon);
+          setPromotionalCoupon(result.promotional_coupon);
+          
+          // Limpar cupom do localStorage após pagamento bem-sucedido
+          localStorage.removeItem('__promotional_coupon_scholarship_fee');
+          console.log('[ScholarshipFeeSuccess] Cupom promocional removido do localStorage após pagamento bem-sucedido');
         }
         let appId = null;
         if (Array.isArray(result.application_ids) && result.application_ids.length > 0) {
@@ -71,6 +93,14 @@ const ScholarshipFeeSuccess: React.FC = () => {
               .order('updated_at', { ascending: false });
           }
         } catch {}
+        
+        console.log('[ScholarshipFeeSuccess] ✅ Dados extraídos do resultado:', {
+          final_amount: result.final_amount,
+          amount_paid: result.amount_paid,
+          promotional_coupon: result.promotional_coupon,
+          paidAmount_set: result.final_amount || result.amount_paid
+        });
+        
         setLoading(false);
         setShowAnimation(true);
         
@@ -179,12 +209,21 @@ const ScholarshipFeeSuccess: React.FC = () => {
 
   // Se deve mostrar animação, usar o overlay
   if (showAnimation && !loading && !error) {
+    // Mesma lógica do I20ControlFeeSuccess
+    console.log('[ScholarshipFeeSuccess] Exibindo animação - paidAmount:', paidAmount);
+    const displayAmount = paidAmount ? paidAmount.toFixed(2) : '900.00';
+    console.log('[ScholarshipFeeSuccess] displayAmount calculado:', displayAmount);
+    const messageText = promotionalCoupon 
+      ? `${t('successPages.common.paymentProcessedAmount', { amount: displayAmount })} ${t('successPages.scholarshipFee.message')} (Cupom ${promotionalCoupon} aplicado)`
+      : `${t('successPages.common.paymentProcessedAmount', { amount: displayAmount })} ${t('successPages.scholarshipFee.message')}`;
+    console.log('[ScholarshipFeeSuccess] Mensagem final:', messageText);
+    
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center bg-white px-4 relative">
         <PaymentSuccessOverlay
           isSuccess={true}
           title={t('successPages.scholarshipFee.title')}
-          message={`${t('successPages.common.paymentProcessedAmount', { amount: '900.00' })} ${t('successPages.scholarshipFee.message')}`}
+          message={messageText}
         />
       </div>
     );

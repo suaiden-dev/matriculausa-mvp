@@ -10,6 +10,8 @@ const I20ControlFeeSuccess: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAnimation, setShowAnimation] = useState(false);
+  const [paidAmount, setPaidAmount] = useState<number | null>(null);
+  const [promotionalCoupon, setPromotionalCoupon] = useState<string | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
   const params = new URLSearchParams(location.search);
@@ -59,6 +61,30 @@ const I20ControlFeeSuccess: React.FC = () => {
         }
 
         console.log('✅ [I20ControlFeeSuccess] Sessão verificada com sucesso:', data);
+        console.log('✅ [I20ControlFeeSuccess] Dados do pagamento (RAW):', JSON.stringify(data, null, 2));
+        console.log('✅ [I20ControlFeeSuccess] final_amount:', data.final_amount, 'tipo:', typeof data.final_amount);
+        console.log('✅ [I20ControlFeeSuccess] amount_paid:', data.amount_paid, 'tipo:', typeof data.amount_paid);
+        console.log('✅ [I20ControlFeeSuccess] promotional_coupon:', data.promotional_coupon);
+        
+        // Extrair informações do pagamento (mesma lógica do SelectionProcessFeeSuccess)
+        // Converter para número se necessário e verificar se é válido
+        const finalAmount = data.final_amount != null ? Number(data.final_amount) : null;
+        const amountPaid = data.amount_paid != null ? Number(data.amount_paid) : null;
+        
+        if (finalAmount != null && !isNaN(finalAmount) && finalAmount > 0) {
+          console.log('✅ [I20ControlFeeSuccess] Usando final_amount:', finalAmount);
+          setPaidAmount(finalAmount);
+        } else if (amountPaid != null && !isNaN(amountPaid) && amountPaid > 0) {
+          console.log('✅ [I20ControlFeeSuccess] Usando amount_paid:', amountPaid);
+          setPaidAmount(amountPaid);
+        } else {
+          console.warn('⚠️ [I20ControlFeeSuccess] Nenhum valor válido encontrado! final_amount:', finalAmount, 'amount_paid:', amountPaid);
+        }
+        if (data.promotional_coupon) {
+          console.log('✅ [I20ControlFeeSuccess] Cupom promocional detectado:', data.promotional_coupon);
+          setPromotionalCoupon(data.promotional_coupon);
+        }
+        
         setLoading(false);
         setShowAnimation(true);
         
@@ -152,12 +178,22 @@ const I20ControlFeeSuccess: React.FC = () => {
 
   // Se deve mostrar animação, usar o overlay
   if (showAnimation && !loading && !error) {
+    // Mesma lógica do SelectionProcessFeeSuccess
+    console.log('✅ [I20ControlFeeSuccess] Exibindo animação - paidAmount:', paidAmount);
+    const displayAmount = paidAmount ? paidAmount.toFixed(2) : (getFeeAmount('i20_control_fee')?.toFixed(2) || '900.00');
+    console.log('✅ [I20ControlFeeSuccess] displayAmount calculado:', displayAmount);
+    const baseMessage = `${t('successPages.common.paymentProcessedAmount', { amount: displayAmount })} ${t('successPages.i20ControlFee.message')}`;
+    const messageText = promotionalCoupon 
+      ? `${baseMessage} (Cupom ${promotionalCoupon} aplicado)`
+      : baseMessage;
+    console.log('✅ [I20ControlFeeSuccess] Mensagem final:', messageText);
+    
     return (
       <div className="min-h-screen bg-green-50 flex flex-col items-center justify-center px-4 relative">
         <PaymentSuccessOverlay
           isSuccess={true}
           title={t('successPages.i20ControlFee.title')}
-          message={`${t('successPages.common.paymentProcessedAmount', { amount: '900.00' })} ${t('successPages.i20ControlFee.message')}`}
+          message={messageText}
         />
       </div>
     );

@@ -209,8 +209,16 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
           handleCheckout('pix');
     } else if (method === 'zelle') {
       console.log('🔍 [StripeCheckout]  Zelle selecionado, redirecionando para checkout...');
-      // Redirecionar para a página de checkout do Zelle com valores dinâmicos
+      // ✅ CORREÇÃO: Priorizar valor com desconto do PreCheckoutModal se disponível
       const getDynamicAmount = () => {
+        // Se há valor final salvo no window (vem do PreCheckoutModal com desconto aplicado), usar esse valor
+        const finalAmountFromWindow = (window as any).__checkout_final_amount;
+        if (typeof finalAmountFromWindow === 'number' && !Number.isNaN(finalAmountFromWindow)) {
+          console.log('🔍 [StripeCheckout] ✅ Usando valor com desconto do PreCheckoutModal:', finalAmountFromWindow);
+          return finalAmountFromWindow.toString();
+        }
+        
+        // Caso contrário, calcular valor base
         if (feeType === 'selection_process') {
           // ✅ CORREÇÃO: Usar sempre os valores do useDynamicFees que já consideram o system_type
           if (!selectionProcessFee) {
@@ -238,11 +246,19 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
         return selectionProcessFee.replace('$', '');
       };
 
+      const amountToUse = getDynamicAmount();
       const params = new URLSearchParams({
         feeType: feeType,
-        amount: getDynamicAmount(),
+        amount: amountToUse,
         scholarshipsIds: scholarshipsIds?.join(',') || ''
       });
+      
+      // Se for scholarship_fee, adicionar parâmetro específico
+      if (feeType === 'scholarship_fee') {
+        params.append('scholarshipFeeAmount', amountToUse);
+      }
+      
+      console.log('🔍 [StripeCheckout] Navegando para Zelle com valor:', amountToUse);
       window.location.href = `/checkout/zelle?${params.toString()}`;
     }
     // Para Zelle, o usuário será redirecionado para a página de checkout
@@ -344,6 +360,9 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
         }
       }
 
+      // Extrair código promocional do window se existir (passado pelo PreCheckoutModal)
+      const promotionalCoupon = (window as any).__checkout_promotional_coupon || null;
+
       const requestBody = {
         price_id: product.priceId,
         amount: finalAmount, // Incluir valor final calculado
@@ -353,6 +372,7 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
         payment_type: paymentType,
         fee_type: feeType,
         payment_method: paymentMethod, // Adicionar método de pagamento (PIX, stripe, etc.)
+        promotional_coupon: promotionalCoupon, // Adicionar cupom promocional se houver
         metadata: {
           ...metadata,
           application_id: applicationId,

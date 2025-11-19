@@ -59,6 +59,7 @@ export async function loadZellePaymentsLoader(
         zelle_status: zellePayment.status as any,
         reviewed_by: zellePayment.admin_approved_by,
         reviewed_at: zellePayment.admin_approved_at,
+        metadata: zellePayment.metadata || null, // Incluir metadata para cupom promocional
       });
     }
   }

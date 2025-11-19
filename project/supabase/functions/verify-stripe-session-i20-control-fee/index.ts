@@ -119,9 +119,42 @@ Deno.serve(async (req)=>{
         
         if (recentProcessingLogs.length > 1) {
           console.log(`[DUPLICAÇÃO] Múltiplos logs de processamento detectados para session ${sessionId}, retornando sucesso para evitar duplicação.`);
+          // Mesmo com duplicação, ainda precisamos retornar os dados do pagamento
+          // Buscar a sessão do Stripe para extrair os dados
+          const session = await stripe.checkout.sessions.retrieve(sessionId, {
+            expand: ['payment_intent']
+          });
+          
+          // Extrair informações do pagamento
+          const amountPaid = session.amount_total ? session.amount_total / 100 : null;
+          const currency = session.currency?.toUpperCase() || 'USD';
+          const promotionalCouponReturn = session.metadata?.promotional_coupon || null;
+          const originalAmountReturn = session.metadata?.original_amount ? parseFloat(session.metadata.original_amount) : null;
+          let finalAmountReturn: number | null = null;
+          if (session.metadata?.final_amount) {
+            const parsed = parseFloat(session.metadata.final_amount);
+            if (!isNaN(parsed) && parsed > 0) {
+              finalAmountReturn = parsed;
+            }
+          }
+          
+          let amountPaidUSD = amountPaid || 0;
+          if (currency === 'BRL' && session.metadata?.exchange_rate && amountPaid) {
+            const exchangeRate = parseFloat(session.metadata.exchange_rate);
+            if (exchangeRate > 0) {
+              amountPaidUSD = amountPaid / exchangeRate;
+            }
+          }
+          
           return corsResponse({
             status: 'complete',
-            message: 'Multiple processing logs detected, avoiding duplication.'
+            message: 'Multiple processing logs detected, avoiding duplication.',
+            amount_paid: amountPaidUSD || amountPaid || 0,
+            amount_paid_original: amountPaid || 0,
+            currency: currency,
+            promotional_coupon: promotionalCouponReturn,
+            original_amount: originalAmountReturn,
+            final_amount: finalAmountReturn
           }, 200);
         }
       }
@@ -129,16 +162,29 @@ Deno.serve(async (req)=>{
       console.log(`[DUPLICAÇÃO] Session ${sessionId} tem logs mas notificações ainda não foram enviadas, continuando processamento.`);
     }
     
-    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    // Expandir payment_intent para obter o ID completo
+    const session = await stripe.checkout.sessions.retrieve(sessionId, {
+      expand: ['payment_intent']
+    });
     if (session.payment_status === 'paid' && session.status === 'complete') {
       const userId = session.client_reference_id;
-      const paymentIntentId = session.payment_intent;
-      const paymentMethod = session.metadata?.payment_method || 'stripe';
+      // Para pagamentos via Stripe (incluindo PIX), sempre usar 'stripe' como payment_method
+      // O payment_method real (pix, card, etc) está em session.payment_method_types
+      const paymentMethod = 'stripe';
       
       if (!userId) {
         return corsResponse({
           error: 'User ID (client_reference_id) missing in session.'
         }, 400);
+      }
+      
+      // Obter payment_intent_id: pode ser string ou objeto PaymentIntent
+      // Definir no escopo mais amplo para uso em múltiplos lugares
+      let paymentIntentId = '';
+      if (typeof session.payment_intent === 'string') {
+        paymentIntentId = session.payment_intent;
+      } else if (session.payment_intent && typeof session.payment_intent === 'object' && 'id' in session.payment_intent) {
+        paymentIntentId = (session.payment_intent as any).id;
       }
       
       // Obter informações de moeda
@@ -157,31 +203,158 @@ Deno.serve(async (req)=>{
       if (profileError) throw new Error(`Failed to update user_profiles: ${profileError.message}`);
 
       // Registrar pagamento na tabela individual_fee_payments
+      let individualFeePaymentId = null;
       try {
         const paymentDate = new Date().toISOString();
-        const paymentAmount = session.amount_total ? session.amount_total / 100 : 0;
+        const paymentAmountRaw = session.amount_total ? session.amount_total / 100 : 0;
+        const currency = session.currency?.toUpperCase() || 'USD';
+        
+        // Para pagamentos PIX (BRL), buscar o valor líquido recebido em USD do BalanceTransaction
+        // Controle de ambiente: só buscar em test/staging por padrão, ou se variável de ambiente forçar
+        const enableNetAmountFetchEnv = Deno.env.get('ENABLE_STRIPE_NET_AMOUNT_FETCH');
+        const shouldFetchNetAmount = 
+          enableNetAmountFetchEnv === 'true'   ? true  // Força ativar
+          : enableNetAmountFetchEnv === 'false' ? false // Força desativar
+          : !config.environment.isProduction;   // Auto: busca só em test/staging (não em produção)
+        
+        // Detectar se é PIX através dos payment_method_types da sessão
+        const isPixPayment = session.payment_method_types?.includes('pix') || session.metadata?.payment_method === 'pix';
+        
+        // Debug: Log das condições
+        console.log(`[Individual Fee Payment] DEBUG - currency: ${currency}, isPixPayment: ${isPixPayment}, paymentIntentId: ${paymentIntentId}, shouldFetchNetAmount: ${shouldFetchNetAmount}, enableNetAmountFetchEnv: ${enableNetAmountFetchEnv}, isProduction: ${config.environment.isProduction}`);
+        
+        let paymentAmount = paymentAmountRaw;
+        let grossAmountUsd: number | null = null;
+        let feeAmountUsd: number | null = null;
+        
+        if ((currency === 'BRL' || isPixPayment) && paymentIntentId && shouldFetchNetAmount) {
+          console.log(`✅ Buscando valor líquido, bruto e taxas do Stripe (ambiente: ${config.environment.environment})`);
+          try {
+            // Buscar PaymentIntent com latest_charge expandido para obter balance_transaction
+            const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId, {
+              expand: ['latest_charge.balance_transaction']
+            });
+            
+            if (paymentIntent.latest_charge) {
+              const charge = typeof paymentIntent.latest_charge === 'string' 
+                ? await stripe.charges.retrieve(paymentIntent.latest_charge, {
+                    expand: ['balance_transaction']
+                  })
+                : paymentIntent.latest_charge;
+              
+              if (charge.balance_transaction) {
+                const balanceTransaction = typeof charge.balance_transaction === 'string'
+                  ? await stripe.balanceTransactions.retrieve(charge.balance_transaction)
+                  : charge.balance_transaction;
+                
+                // O valor líquido (net) já está em USD e já considera taxas e conversão de moeda
+                if (balanceTransaction.net && balanceTransaction.currency === 'usd') {
+                  paymentAmount = balanceTransaction.net / 100; // net está em centavos
+                  
+                  // Buscar valor bruto (amount) em USD
+                  if (balanceTransaction.amount && balanceTransaction.currency === 'usd') {
+                    grossAmountUsd = balanceTransaction.amount / 100; // amount está em centavos
+                    console.log(`[Individual Fee Payment] Valor bruto recebido do Stripe: ${grossAmountUsd} USD`);
+                  }
+                  
+                  // Buscar taxas (fee) em USD
+                  if (balanceTransaction.fee && balanceTransaction.currency === 'usd') {
+                    feeAmountUsd = balanceTransaction.fee / 100; // fee está em centavos
+                    console.log(`[Individual Fee Payment] Taxas recebidas do Stripe: ${feeAmountUsd} USD`);
+                  }
+                  
+                  console.log(`[Individual Fee Payment] Valor líquido recebido do Stripe (após taxas e conversão): ${paymentAmount} USD`);
+                  console.log(`[Individual Fee Payment] Valor bruto: ${grossAmountUsd || balanceTransaction.amount / 100} ${balanceTransaction.currency}, Taxas: ${feeAmountUsd || (balanceTransaction.fee || 0) / 100} ${balanceTransaction.currency}`);
+                } else {
+                  // Fallback: usar exchange_rate do metadata se disponível
+                  if (session.metadata?.exchange_rate) {
+                    const exchangeRate = parseFloat(session.metadata.exchange_rate);
+                    if (exchangeRate > 0) {
+                      paymentAmount = paymentAmountRaw / exchangeRate;
+                      console.log(`[Individual Fee Payment] Usando exchange_rate do metadata: ${paymentAmountRaw} BRL / ${exchangeRate} = ${paymentAmount} USD`);
+                    }
+                  }
+                }
+              } else {
+                // Fallback: usar exchange_rate do metadata
+                if (session.metadata?.exchange_rate) {
+                  const exchangeRate = parseFloat(session.metadata.exchange_rate);
+                  if (exchangeRate > 0) {
+                    paymentAmount = paymentAmountRaw / exchangeRate;
+                    console.log(`[Individual Fee Payment] BalanceTransaction não disponível, usando exchange_rate do metadata: ${paymentAmountRaw} BRL / ${exchangeRate} = ${paymentAmount} USD`);
+                  }
+                }
+              }
+            } else {
+              // Fallback: usar exchange_rate do metadata
+              if (session.metadata?.exchange_rate) {
+                const exchangeRate = parseFloat(session.metadata.exchange_rate);
+                if (exchangeRate > 0) {
+                  paymentAmount = paymentAmountRaw / exchangeRate;
+                  console.log(`[Individual Fee Payment] PaymentIntent sem charge, usando exchange_rate do metadata: ${paymentAmountRaw} BRL / ${exchangeRate} = ${paymentAmount} USD`);
+                }
+              }
+            }
+          } catch (stripeError) {
+            console.error('[Individual Fee Payment] Erro ao buscar valor líquido do Stripe:', stripeError);
+            // Fallback: usar exchange_rate do metadata
+            if (session.metadata?.exchange_rate) {
+              const exchangeRate = parseFloat(session.metadata.exchange_rate);
+              if (exchangeRate > 0) {
+                paymentAmount = paymentAmountRaw / exchangeRate;
+                console.log(`[Individual Fee Payment] Erro ao buscar do Stripe, usando exchange_rate do metadata: ${paymentAmountRaw} BRL / ${exchangeRate} = ${paymentAmount} USD`);
+              }
+            }
+          }
+        } else if ((currency === 'BRL' || isPixPayment) && !shouldFetchNetAmount) {
+          // Em produção (ou quando desativado), usar exchange_rate do metadata
+          console.log(`⚠️ Busca de valor líquido DESATIVADA (ambiente: ${config.environment.environment}), usando exchange_rate do metadata`);
+          if (session.metadata?.exchange_rate) {
+            const exchangeRate = parseFloat(session.metadata.exchange_rate);
+            if (exchangeRate > 0) {
+              paymentAmount = paymentAmountRaw / exchangeRate;
+              console.log(`[Individual Fee Payment] Usando exchange_rate do metadata: ${paymentAmountRaw} BRL / ${exchangeRate} = ${paymentAmount} USD`);
+            }
+          }
+        } else if (currency === 'BRL' && session.metadata?.exchange_rate) {
+          // Para outros pagamentos BRL (não PIX), usar exchange_rate do metadata
+          const exchangeRate = parseFloat(session.metadata.exchange_rate);
+          if (exchangeRate > 0) {
+            paymentAmount = paymentAmountRaw / exchangeRate;
+            console.log(`[Individual Fee Payment] Convertendo BRL para USD: ${paymentAmountRaw} BRL / ${exchangeRate} = ${paymentAmount} USD`);
+          }
+        } else {
+          // Debug: Se não entrou em nenhum bloco
+          console.log(`[Individual Fee Payment] DEBUG - Não entrou em nenhum bloco de conversão. currency: ${currency}, isPixPayment: ${isPixPayment}, hasExchangeRate: ${!!session.metadata?.exchange_rate}`);
+        }
         
         console.log('[Individual Fee Payment] Recording i20_control fee payment...');
+        console.log(`[Individual Fee Payment] Valor original: ${paymentAmountRaw} ${currency}, Valor em USD (líquido): ${paymentAmount} USD${grossAmountUsd ? `, Valor bruto: ${grossAmountUsd} USD` : ''}${feeAmountUsd ? `, Taxas: ${feeAmountUsd} USD` : ''}`);
         const { data: insertResult, error: insertError } = await supabase.rpc('insert_individual_fee_payment', {
           p_user_id: userId,
           p_fee_type: 'i20_control',
-          p_amount: paymentAmount,
+          p_amount: paymentAmount, // Sempre em USD (líquido)
           p_payment_date: paymentDate,
           p_payment_method: paymentMethod,
-          p_payment_intent_id: paymentIntentId as string || null,
+          p_payment_intent_id: paymentIntentId || null,
           p_stripe_charge_id: null,
-          p_zelle_payment_id: null
+          p_zelle_payment_id: null,
+          p_gross_amount_usd: grossAmountUsd, // Valor bruto em USD (quando disponível)
+          p_fee_amount_usd: feeAmountUsd // Taxas em USD (quando disponível)
         });
         
         if (insertError) {
           console.warn('[Individual Fee Payment] Warning: Could not record fee payment:', insertError);
         } else {
           console.log('[Individual Fee Payment] I20 control fee recorded successfully:', insertResult);
+          individualFeePaymentId = insertResult?.id || null;
         }
       } catch (recordError) {
         console.warn('[Individual Fee Payment] Warning: Failed to record individual fee payment:', recordError);
         // Não quebra o fluxo - continua normalmente
       }
+
+      // ✅ REMOVIDO: Registro de uso do cupom promocional - agora é feito apenas na validação (record-promotional-coupon-validation)
 
       // Criar log ANTES de processar para evitar duplicação em chamadas simultâneas
       const { data: userProfile } = await supabase.from('user_profiles').select('id, full_name').eq('user_id', userId).single();
@@ -300,9 +473,37 @@ Deno.serve(async (req)=>{
               
               if (notificationLogs.length > 1) {
                 console.log(`[DUPLICAÇÃO] Múltiplos logs de notificações detectados para session ${sessionId}, retornando sucesso para evitar duplicação.`);
+                // Mesmo com duplicação, ainda precisamos retornar os dados do pagamento
+                // A sessão já foi recuperada anteriormente, então vamos extrair os dados
+                const amountPaid = session.amount_total ? session.amount_total / 100 : null;
+                const currency = session.currency?.toUpperCase() || 'USD';
+                const promotionalCouponReturn = session.metadata?.promotional_coupon || null;
+                const originalAmountReturn = session.metadata?.original_amount ? parseFloat(session.metadata.original_amount) : null;
+                let finalAmountReturn: number | null = null;
+                if (session.metadata?.final_amount) {
+                  const parsed = parseFloat(session.metadata.final_amount);
+                  if (!isNaN(parsed) && parsed > 0) {
+                    finalAmountReturn = parsed;
+                  }
+                }
+                
+                let amountPaidUSD = amountPaid || 0;
+                if (currency === 'BRL' && session.metadata?.exchange_rate && amountPaid) {
+                  const exchangeRate = parseFloat(session.metadata.exchange_rate);
+                  if (exchangeRate > 0) {
+                    amountPaidUSD = amountPaid / exchangeRate;
+                  }
+                }
+                
                 return corsResponse({
                   status: 'complete',
-                  message: 'Multiple notification logs detected, avoiding duplication'
+                  message: 'Multiple notification logs detected, avoiding duplication',
+                  amount_paid: amountPaidUSD || amountPaid || 0,
+                  amount_paid_original: amountPaid || 0,
+                  currency: currency,
+                  promotional_coupon: promotionalCouponReturn,
+                  original_amount: originalAmountReturn,
+                  final_amount: finalAmountReturn
                 }, 200);
               }
             }
@@ -651,10 +852,50 @@ Deno.serve(async (req)=>{
       }
       
       // --- FIM DAS NOTIFICAÇÕES ---
+      // Extrair informações do pagamento para retornar ao frontend
+      const amountPaid = session.amount_total ? session.amount_total / 100 : null;
+      const currency = session.currency?.toUpperCase() || 'USD';
+      const promotionalCouponReturn = session.metadata?.promotional_coupon || null;
+      const originalAmountReturn = session.metadata?.original_amount ? parseFloat(session.metadata.original_amount) : null;
+      // Melhorar parsing do final_amount para tratar strings vazias ou inválidas
+      let finalAmountReturn: number | null = null;
+      if (session.metadata?.final_amount) {
+        const parsed = parseFloat(session.metadata.final_amount);
+        if (!isNaN(parsed) && parsed > 0) {
+          finalAmountReturn = parsed;
+        }
+      }
+      
+      // Log para debug
+      console.log('[verify-stripe-session-i20-control-fee] 📊 Dados extraídos do metadata:', {
+        promotional_coupon: promotionalCouponReturn,
+        original_amount: originalAmountReturn,
+        final_amount: finalAmountReturn,
+        amount_paid: amountPaid,
+        currency: currency
+      });
+      console.log('[verify-stripe-session-i20-control-fee] 📊 Metadata completo da sessão:', JSON.stringify(session.metadata, null, 2));
+      console.log('[verify-stripe-session-i20-control-fee] 📊 final_amount RAW do metadata:', session.metadata?.final_amount, 'tipo:', typeof session.metadata?.final_amount);
+      
+      // Se for PIX (BRL), converter para USD usando a taxa de câmbio do metadata
+      let amountPaidUSD = amountPaid || 0;
+      if (currency === 'BRL' && session.metadata?.exchange_rate && amountPaid) {
+        const exchangeRate = parseFloat(session.metadata.exchange_rate);
+        if (exchangeRate > 0) {
+          amountPaidUSD = amountPaid / exchangeRate;
+        }
+      }
+      
       return corsResponse({
         status: 'complete',
         message: 'Session verified and processed successfully.',
-        application_id: applicationId
+        application_id: applicationId,
+        amount_paid: amountPaidUSD || amountPaid || 0, // Retornar em USD para exibição
+        amount_paid_original: amountPaid || 0, // Valor original na moeda da sessão
+        currency: currency,
+        promotional_coupon: promotionalCouponReturn,
+        original_amount: originalAmountReturn,
+        final_amount: finalAmountReturn
       }, 200);
     } else {
       return corsResponse({

@@ -3,13 +3,19 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
-import { useStudentDetails } from '../../hooks/useStudentDetails';
+import { useStudentDetailsQuery, useStudentSecondaryDataQuery, usePendingZellePaymentsQuery } from '../../hooks/useStudentDetailsQueries';
 import { useAdminStudentActions } from '../../hooks/useAdminStudentActions';
+import { useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '../../lib/queryKeys';
+import RefreshButton from '../../components/RefreshButton';
 import { useTransferForm } from '../../hooks/useTransferForm';
 import { useDocumentRequests } from '../../hooks/useDocumentRequests';
 import { useAdminNotes } from '../../hooks/useAdminNotes';
 import { useDocumentRequestHandlers } from '../../hooks/useDocumentRequestHandlers';
 import { generateTermAcceptancePDF, StudentTermAcceptanceData } from '../../utils/pdfGenerator';
+import { recordIndividualFeePayment } from '../../lib/paymentRecorder';
+import { useStudentLogs } from '../../hooks/useStudentLogs';
+import { getGrossPaidAmounts } from '../../utils/paymentConverter';
 
 // Componentes de UI Base
 import {
@@ -17,7 +23,6 @@ import {
   ExternalLink
 } from 'lucide-react';
 import SkeletonLoader from '../../components/AdminDashboard/StudentDetails/SkeletonLoader';
-import StudentDetailsHeader from '../../components/AdminDashboard/StudentDetails/StudentDetailsHeader';
 import StudentDetailsTabNavigation, { TabId } from '../../components/AdminDashboard/StudentDetails/StudentDetailsTabNavigation';
 
 // Componentes Overview - Lazy Load
@@ -68,11 +73,77 @@ const AdminStudentDetails: React.FC = () => {
   const { profileId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   
-  // Custom Hooks
-  const { student, setStudent, loading } = useStudentDetails(profileId);
+  // React Query Hooks
+  const studentDetailsQuery = useStudentDetailsQuery(profileId);
+  const student = studentDetailsQuery.data || null;
+  const loading = studentDetailsQuery.isLoading;
+  
+  // Dados secundários
+  const secondaryDataQuery = useStudentSecondaryDataQuery(student?.user_id);
+  const pendingZelleQuery = usePendingZellePaymentsQuery(student?.user_id);
+  
+  // Extrair dados secundários
+  const termAcceptances = secondaryDataQuery.data?.termAcceptances || [];
+  const [realPaidAmounts, setRealPaidAmounts] = useState<Record<string, number>>({});
+  const pendingZellePayments = pendingZelleQuery.data || [];
+  
+  // Buscar valores brutos pagos usando getGrossPaidAmounts (mostra o valor que o aluno realmente pagou, incluindo taxas do Stripe)
+  // Usa gross_amount_usd quando disponível, senão usa amount
+  React.useEffect(() => {
+    if (!student?.user_id) {
+      setRealPaidAmounts({});
+      return;
+    }
+    
+    const loadRealPaidAmounts = async () => {
+      try {
+        const amounts = await getGrossPaidAmounts(student.user_id, ['selection_process', 'scholarship', 'i20_control', 'application']);
+        setRealPaidAmounts(amounts);
+      } catch (error) {
+        console.error('[AdminStudentDetails] Erro ao buscar valores brutos pagos:', error);
+        setRealPaidAmounts({});
+      }
+    };
+    
+    loadRealPaidAmounts();
+  }, [student?.user_id]);
+  
+  // Função para atualizar student localmente (mantida para compatibilidade com hooks que dependem de setStudent)
+  const setStudent = React.useCallback((updater: any) => {
+    if (typeof updater === 'function') {
+      const current = studentDetailsQuery.data;
+      if (current) {
+        const updated = updater(current);
+        // Atualizar cache do React Query
+        queryClient.setQueryData(queryKeys.students.details(profileId), updated);
+      }
+    } else {
+      queryClient.setQueryData(queryKeys.students.details(profileId), updater);
+    }
+  }, [studentDetailsQuery.data, profileId, queryClient]);
+  
+  // Função para refresh de todos os dados
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await Promise.all([
+        studentDetailsQuery.refetch(),
+        secondaryDataQuery.refetch(),
+        pendingZelleQuery.refetch(),
+      ]);
+    } finally {
+      setTimeout(() => {
+        setIsRefreshing(false);
+      }, 300);
+    }
+  };
+  
   const { saving, saveProfile, markFeeAsPaid, approveDocument, rejectDocument } = useAdminStudentActions();
   const { getFeeAmount, formatFeeAmount, hasOverride, userSystemType, userFeeOverrides } = useFeeConfig(student?.user_id);
+  const { logAction } = useStudentLogs(student?.student_id || '');
   
   // Estados locais - Definir antes dos hooks personalizados que dependem deles
   const [documentRequests, setDocumentRequests] = useState<any[]>([]);
@@ -162,12 +233,10 @@ const AdminStudentDetails: React.FC = () => {
   const [rejectStudentReason, setRejectStudentReason] = useState('');
   const [pendingRejectAppId, setPendingRejectAppId] = useState<string | null>(null);
   
-  // Estados de dados secundários
-  const [termAcceptances, setTermAcceptances] = useState<any[]>([]);
+  // Estados de dados secundários (alguns ainda são locais)
   const [referralInfo, setReferralInfo] = useState<any>(null);
-  const [realPaidAmounts, setRealPaidAmounts] = useState<Record<string, number>>({});
   const [hasMatriculaRewardsDiscount, setHasMatriculaRewardsDiscount] = useState(false);
-  const [pendingZellePayments, setPendingZellePayments] = useState<any[]>([]);
+  // termAcceptances, realPaidAmounts e pendingZellePayments agora vêm dos React Query hooks (definidos acima)
   
   // Estados de edição
   const [isEditingProcessType, setIsEditingProcessType] = useState(false);
@@ -301,140 +370,23 @@ const AdminStudentDetails: React.FC = () => {
     checkMatriculaRewardsDiscount();
   }, [student?.user_id, student?.seller_referral_code]);
 
-  // Carregar dados secundários
+  // Carregar referral info quando necessário (ainda é local pois depende de seller_referral_code)
   React.useEffect(() => {
-    if (!student?.user_id) return;
-
-    const loadSecondaryData = async () => {
-      try {
-        // Tentar usar RPC consolidado
-        const { data: rpcData, error: rpcError } = await supabase.rpc(
-          'get_admin_student_secondary_data',
-          { target_user_id: student.user_id }
-        );
-
-        if (!rpcError && rpcData) {
-          const parsed = typeof rpcData === 'string' ? JSON.parse(rpcData) : rpcData;
-          
-          // Atualizar estados com dados da RPC
-          if (parsed.term_acceptances) {
-            // Garantir que os dados estão no formato correto
-            const mappedAcceptances = parsed.term_acceptances.map((acc: any) => ({
-              ...acc,
-              user_email: acc.user_email || student?.student_email,
-              user_full_name: acc.user_full_name || student?.student_name,
-              term_title: acc.term_title || 'Term',
-              term_content: acc.term_content || ''
-            }));
-            setTermAcceptances(mappedAcceptances);
-          }
-          if (parsed.referral_info) {
-            setReferralInfo(parsed.referral_info);
-          }
-          if (parsed.individual_fee_payments) {
-            const payments = parsed.individual_fee_payments;
-            const amounts: Record<string, number> = {};
-            payments.forEach((p: any) => {
-              amounts[p.fee_type] = p.amount_paid;
-            });
-            setRealPaidAmounts(amounts);
-          }
+    if (student?.seller_referral_code) {
+      fetchReferralInfo(student.seller_referral_code);
         } else {
-          // Fallback: carregar manualmente
-          await loadSecondaryDataFallback();
-        }
-      } catch (error) {
-        console.error('Error loading secondary data:', error);
-        await loadSecondaryDataFallback();
-      }
-    };
+      setReferralInfo(null);
+    }
+  }, [student?.seller_referral_code]);
 
-    const loadSecondaryDataFallback = async () => {
-      // Carregar referral info
-      if (student.seller_referral_code) {
-        await fetchReferralInfo(student.seller_referral_code);
-      }
-
-      // Carregar real paid amounts
-      const { data: payments } = await supabase
-        .from('individual_fee_payments')
-        .select('fee_type, amount_paid')
-        .eq('user_id', student.user_id);
-
-      if (payments) {
-        const amounts: Record<string, number> = {};
-        payments.forEach((p) => {
-          amounts[p.fee_type] = p.amount_paid;
-        });
-        setRealPaidAmounts(amounts);
-      }
-
-      // Carregar term acceptances com joins para obter dados completos
-      const { data: acceptances } = await supabase
-        .from('comprehensive_term_acceptance')
-        .select(`
-          *,
-          user_profiles!comprehensive_term_acceptance_user_id_fkey (
-            email,
-            full_name
-          ),
-          application_terms!comprehensive_term_acceptance_term_id_fkey (
-            title,
-            content
-          )
-        `)
-        .eq('user_id', student.user_id)
-        .order('accepted_at', { ascending: false });
-
-      if (acceptances) {
-        // Mapear os dados para o formato esperado
-        const mappedAcceptances = acceptances.map((acc: any) => ({
-          ...acc,
-          user_email: acc.user_profiles?.email || student.student_email,
-          user_full_name: acc.user_profiles?.full_name || student.student_name,
-          term_title: acc.application_terms?.title || 'Term',
-          term_content: acc.application_terms?.content || ''
-        }));
-        setTermAcceptances(mappedAcceptances);
-      }
-    };
-
-    loadSecondaryData();
-  }, [student?.user_id, student?.seller_referral_code]);
-
-  // Buscar pagamentos Zelle pendentes
-  React.useEffect(() => {
-    const fetchPendingZellePayments = async () => {
-      if (!student?.user_id) return;
-      
-      try {
-        const { data, error } = await supabase
-          .from('zelle_payments')
-          .select('*')
-          .eq('user_id', student.user_id)
-          .eq('status', 'pending_verification')
-          .order('created_at', { ascending: false });
-
-        if (error) {
-          console.error('Error fetching pending Zelle payments:', error);
-          return;
-        }
-
-        setPendingZellePayments(data || []);
-      } catch (error) {
-        console.error('Error fetching pending Zelle payments:', error);
-      }
-    };
-    
-    fetchPendingZellePayments();
-  }, [student]);
+  // Pagamentos Zelle pendentes agora vêm do usePendingZellePaymentsQuery hook
 
   // Admin notes agora são gerenciados pelo hook useAdminNotes
 
   // ✅ OTIMIZAÇÃO: Carregar document requests apenas quando necessário
   // Usa cache e debounce para evitar múltiplas queries
   React.useEffect(() => {
-    if (activeTab !== 'documents' || !student?.all_applications || student.all_applications.length === 0) {
+    if (activeTab !== 'documents' || !student?.all_applications || (student.all_applications && student.all_applications.length === 0)) {
       if (activeTab !== 'documents') {
         setDocumentRequests([]);
       }
@@ -444,6 +396,10 @@ const AdminStudentDetails: React.FC = () => {
     let cancelled = false;
     const loadDocumentRequests = async () => {
       try {
+        if (!student?.all_applications) {
+          if (!cancelled) setDocumentRequests([]);
+          return;
+        }
         const applicationIds = student.all_applications.map((app: any) => app.id).filter(Boolean);
         
         if (applicationIds.length === 0) {
@@ -651,11 +607,13 @@ const AdminStudentDetails: React.FC = () => {
 
     if (result.success) {
       setIsEditing(false);
+      // Invalidar queries relacionadas
+      queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
       alert('Profile saved successfully!');
     } else {
       alert('Error saving profile: ' + result.error);
     }
-  }, [student, dependents, saveProfile]);
+  }, [student, dependents, saveProfile, profileId, queryClient]);
 
   const handleMarkAsPaid = useCallback((feeType: string) => {
     setPendingPayment({ fee_type: feeType });
@@ -666,22 +624,169 @@ const AdminStudentDetails: React.FC = () => {
   const handleConfirmPayment = useCallback(async () => {
     if (!student || !pendingPayment) return;
 
+    const feeType = pendingPayment.fee_type as 'selection_process' | 'application' | 'scholarship' | 'i20_control';
+    let applicationId: string | undefined = undefined;
+
+    // Para Application Fee, buscar a aplicação aprovada ou mais recente
+    if (feeType === 'application') {
+      const approvedApps = student?.all_applications?.filter((app: any) => app.status === 'approved') || [];
+      
+      if (approvedApps.length > 1) {
+        // Com múltiplas aplicações, usar a primeira aprovada (ou implementar seleção se necessário)
+        applicationId = approvedApps[0]?.id;
+      } else if (approvedApps.length === 1) {
+        applicationId = approvedApps[0].id;
+      } else {
+        // Se não há aplicação aprovada, buscar a mais recente
+        const { data: applications, error: fetchError } = await supabase
+          .from('scholarship_applications')
+          .select('id, status')
+          .eq('student_id', student.student_id)
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        if (!fetchError && applications && applications.length > 0) {
+          applicationId = applications[0].id;
+        } else {
+          alert('No application found for this student');
+          return;
+        }
+      }
+    }
+
+    // Para Application Fee, calcular o valor correto baseado na bolsa
+    let finalPaymentAmount = paymentAmount;
+    if (feeType === 'application' && applicationId) {
+      try {
+        const { data: applicationData } = await supabase
+          .from('scholarship_applications')
+          .select(`
+            id,
+            scholarships (
+              application_fee_amount
+            )
+          `)
+          .eq('id', applicationId)
+          .single();
+
+        if (applicationData?.scholarships) {
+          const scholarship = Array.isArray(applicationData.scholarships) 
+            ? applicationData.scholarships[0] 
+            : applicationData.scholarships;
+          
+          if (scholarship?.application_fee_amount) {
+            finalPaymentAmount = Number(scholarship.application_fee_amount);
+          }
+        }
+
+        // Adicionar $100 por dependente apenas para sistema legacy
+        const systemType = userSystemType || 'legacy';
+        const studentDependents = dependents || Number(student.dependents || 0);
+        if (systemType === 'legacy' && studentDependents > 0) {
+          finalPaymentAmount += studentDependents * 100;
+        }
+      } catch (error) {
+        console.error('Error fetching application data for fee calculation:', error);
+      }
+    }
+
+    // Registrar pagamento na tabela individual_fee_payments
+    const paymentDate = new Date().toISOString();
+    const paymentMethodValue = (paymentMethod || 'manual') as 'stripe' | 'zelle' | 'manual';
+    
+    try {
+      await recordIndividualFeePayment(supabase, {
+        userId: student.user_id,
+        feeType: feeType,
+        amount: finalPaymentAmount,
+        paymentDate: paymentDate,
+        paymentMethod: paymentMethodValue,
+        paymentIntentId: null,
+        stripeChargeId: null,
+        zellePaymentId: null
+      });
+    } catch (recordError) {
+      console.error('Failed to record individual fee payment:', recordError);
+      // Não quebra o fluxo, mas loga o erro
+    }
+
+    // Marcar como pago usando o hook
     const result = await markFeeAsPaid(
       student.user_id,
-      pendingPayment.fee_type,
-      paymentAmount,
-      paymentMethod
+      feeType,
+      finalPaymentAmount,
+      paymentMethodValue,
+      applicationId
     );
 
     if (result.success) {
+      // Para Application Fee, atualizar o estado local com a bolsa comprometida
+      if (feeType === 'application' && applicationId) {
+        try {
+          const { data: updatedApplication } = await supabase
+            .from('scholarship_applications')
+            .select(`
+              id,
+              scholarships!inner (
+                title,
+                universities!inner (
+                  name
+                )
+              )
+            `)
+            .eq('id', applicationId)
+            .single();
+
+          if (updatedApplication?.scholarships) {
+            const scholarship = Array.isArray(updatedApplication.scholarships) 
+              ? updatedApplication.scholarships[0] 
+              : updatedApplication.scholarships;
+            
+            if (scholarship) {
+              setStudent((prev: any) => {
+                if (!prev) return prev;
+                const updatedStudent = { ...prev, is_application_fee_paid: true };
+                updatedStudent.scholarship_title = scholarship.title;
+                const university = Array.isArray(scholarship.universities) 
+                  ? scholarship.universities[0] 
+                  : scholarship.universities;
+                updatedStudent.university_name = university?.name;
+                return updatedStudent as any;
+              });
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching application details:', error);
+        }
+      }
+
+      // Log the action
+      try {
+        await logAction(
+          'fee_payment',
+          `${feeType === 'selection_process' ? 'Selection Process Fee' : feeType === 'application' ? 'Application Fee' : feeType === 'scholarship' ? 'Scholarship Fee' : 'I-20 Control Fee'} marked as paid via ${paymentMethodValue} payment`,
+          user?.id || '',
+          'admin',
+          {
+            fee_type: feeType,
+            payment_method: paymentMethodValue,
+            amount: finalPaymentAmount,
+            ...(applicationId && { application_id: applicationId })
+          }
+        );
+      } catch (logError) {
+        console.error('Failed to log action:', logError);
+      }
+
       setShowPaymentModal(false);
       setPendingPayment(null);
-      alert('Payment recorded successfully!');
-      window.location.reload();
+      // Invalidar queries relacionadas
+      queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.students.secondaryData(student?.user_id) });
     } else {
-      alert('Error recording payment: ' + result.error);
+      console.error('Error recording payment:', result.error);
     }
-  }, [student, pendingPayment, paymentAmount, paymentMethod, markFeeAsPaid]);
+  }, [student, pendingPayment, paymentAmount, paymentMethod, markFeeAsPaid, dependents, userSystemType, user, logAction, profileId, queryClient]);
 
   const handleApproveDocument = useCallback(async (appId: string, docType: string) => {
     if (!student) return;
@@ -701,13 +806,15 @@ const AdminStudentDetails: React.FC = () => {
         
         if (!fetchError && updatedApp) {
           // Atualizar o estado do student localmente sem reload
-          setStudent(prev => {
+          setStudent((prev: any) => {
             if (!prev) return prev;
             const updatedApps = (prev.all_applications || []).map((a: any) =>
               a.id === appId ? { ...a, documents: updatedApp.documents || [] } : a
             );
             return { ...prev, all_applications: updatedApps } as any;
           });
+          // Invalidar queries relacionadas
+          queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
         }
       } else {
         console.error('Error approving document:', result.error);
@@ -744,13 +851,15 @@ const AdminStudentDetails: React.FC = () => {
         
         if (!fetchError && updatedApp) {
           // Atualizar o estado do student localmente sem reload
-          setStudent(prev => {
+          setStudent((prev: any) => {
             if (!prev) return prev;
             const updatedApps = (prev.all_applications || []).map((a: any) =>
               a.id === rejectDocData.applicationId ? { ...a, documents: updatedApp.documents || [] } : a
             );
             return { ...prev, all_applications: updatedApps } as any;
           });
+          // Invalidar queries relacionadas
+          queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
         }
         
         // Fechar o modal de rejeição
@@ -765,14 +874,134 @@ const AdminStudentDetails: React.FC = () => {
   }, [rejectDocData, rejectDocument, student, setStudent]);
 
   const handleViewDocument = useCallback((doc: { file_url: string; filename: string }) => {
-    window.open(doc.file_url, '_blank');
+    // ✅ Aceitar tanto file_url quanto url (fallback)
+    const fileUrl: string | undefined = doc?.file_url || (doc as any)?.url;
+    if (!doc || !fileUrl) {
+      console.error('Documento ou file_url/url está vazio ou undefined');
+      return;
+    }
+    
+    try {
+      // ✅ CORREÇÃO: Se já é uma URL completa do Supabase, usar diretamente
+      if (fileUrl && (fileUrl.startsWith('https://') || fileUrl.startsWith('http://'))) {
+        // Se já é uma URL completa, usar diretamente
+        window.open(fileUrl, '_blank');
+      } else {
+        // Se file_url é um path do storage, converter para URL pública
+        const publicUrl = supabase.storage
+          .from('student-documents')
+          .getPublicUrl(fileUrl)
+          .data.publicUrl;
+        
+        window.open(publicUrl, '_blank');
+      }
+    } catch (error) {
+      console.error('Erro ao gerar URL pública:', error);
+      // Fallback: tentar usar a URL original
+      window.open(fileUrl, '_blank');
+    }
   }, []);
 
-  const handleUploadDocument = useCallback(async (appId: string, docType: string, _file: File) => {
-    setUploadingDocs(prev => ({ ...prev, [`${appId}:${docType}`]: true }));
-    // Implementation would go here
-    setUploadingDocs(prev => ({ ...prev, [`${appId}:${docType}`]: false }));
-  }, []);
+  const handleUploadDocument = useCallback(async (appId: string, docType: string, file: File) => {
+    if (!canUniversityManage || !student) return;
+    const k = `${appId}:${docType}`;
+    setUploadingDocs(prev => ({ ...prev, [k]: true }));
+    
+    try {
+      // Caminho no bucket
+      const safeDocType = docType.replace(/[^a-z0-9_\-]/gi, '').toLowerCase();
+      const timestamp = Date.now();
+      const storagePath = `${student.student_id}/${appId}/${safeDocType}_${timestamp}_${file.name}`;
+
+      // Upload no bucket student-documents (upsert para substituir)
+      const { error: uploadError } = await supabase.storage
+        .from('student-documents')
+        .upload(storagePath, file, { upsert: true, cacheControl: '3600' });
+      
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        alert('Error uploading document: ' + uploadError.message);
+        return;
+      }
+
+      // URL pública
+      const { data: pub } = supabase.storage.from('student-documents').getPublicUrl(storagePath);
+      const publicUrl = pub?.publicUrl || storagePath;
+
+      // Atualizar array de documentos na aplicação
+      const targetApp = student.all_applications?.find((a: any) => a.id === appId);
+      if (!targetApp) {
+        console.error('Application not found:', appId);
+        return;
+      }
+      
+      const currentDocs: any[] = Array.isArray(targetApp.documents) ? targetApp.documents : [];
+      let found = false;
+      const updatedDocs = currentDocs.map((d: any) => {
+        if (d?.type === docType) {
+          found = true;
+          return {
+            ...d,
+            url: publicUrl,
+            status: 'under_review',
+            uploaded_at: new Date().toISOString()
+          };
+        }
+        return d;
+      });
+      
+      const finalDocs = found
+        ? updatedDocs
+        : [...updatedDocs, { type: docType, url: publicUrl, status: 'under_review', uploaded_at: new Date().toISOString() }];
+
+      const { data, error } = await supabase
+        .from('scholarship_applications')
+        .update({ documents: finalDocs, updated_at: new Date().toISOString() })
+        .eq('id', appId)
+        .select('id, documents')
+        .single();
+      
+      if (error) {
+        console.error('Update documents error:', error);
+        alert('Error updating document: ' + error.message);
+        return;
+      }
+
+      // Atualizar estado local
+      setStudent((prev: any) => {
+        if (!prev) return prev;
+        const updatedApps = (prev.all_applications || []).map((a: any) => 
+          a.id === appId ? { ...a, documents: data?.documents || finalDocs } : a
+        );
+        return { ...prev, all_applications: updatedApps } as any;
+      });
+      
+      // Invalidar queries relacionadas
+      queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
+      
+      // Log the action
+      try {
+        await logAction(
+          'document_upload',
+          `Document ${docType} replaced/uploaded`,
+          user?.id || '',
+          'admin',
+          {
+            application_id: appId,
+            document_type: docType,
+            file_url: publicUrl
+          }
+        );
+      } catch (logError) {
+        console.error('Failed to log action:', logError);
+      }
+    } catch (error: any) {
+      console.error('Error uploading document:', error);
+      alert('Error uploading document: ' + (error.message || 'Unknown error'));
+    } finally {
+      setUploadingDocs(prev => ({ ...prev, [k]: false }));
+    }
+  }, [student, canUniversityManage, setStudent, user, logAction, profileId, queryClient]);
 
   // Funções para aprovar/rejeitar aplicação
   const approveApplication = useCallback(async (applicationId: string) => {
@@ -870,7 +1099,7 @@ const AdminStudentDetails: React.FC = () => {
       // Atualizar o estado local com os dados atualizados do banco
       if (updatedApp) {
         console.log('🔄 [APPROVE] Atualizando estado local...');
-        setStudent(prev => {
+        setStudent((prev: any) => {
           if (!prev) {
             console.warn('⚠️ [APPROVE] Student é null, não é possível atualizar');
             return prev;
@@ -904,6 +1133,9 @@ const AdminStudentDetails: React.FC = () => {
         });
         
         console.log('✅ [APPROVE] setStudent chamado, aguardando re-render...');
+          // Invalidar queries relacionadas
+          queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
+          queryClient.invalidateQueries({ queryKey: queryKeys.students.all });
       } else {
         console.warn('⚠️ [APPROVE] updatedApp é null ou undefined');
       }
@@ -912,7 +1144,7 @@ const AdminStudentDetails: React.FC = () => {
     } finally {
       setApprovingStudent(false);
     }
-  }, [student, isPlatformAdmin, user, setStudent]);
+  }, [student, isPlatformAdmin, user, setStudent, profileId, queryClient]);
 
   const rejectApplication = useCallback(async (applicationId: string) => {
     if (!student || !isPlatformAdmin) return;
@@ -938,7 +1170,7 @@ const AdminStudentDetails: React.FC = () => {
       
       // Atualizar o estado local com os dados atualizados do banco
       if (updatedApp) {
-        setStudent(prev => {
+        setStudent((prev: any) => {
           if (!prev) return prev;
           
           // Criar um novo array de aplicações com a aplicação atualizada
@@ -964,13 +1196,16 @@ const AdminStudentDetails: React.FC = () => {
         });
         
         console.log('✅ [REJECT] Estado local atualizado com sucesso');
+        // Invalidar queries relacionadas
+        queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
+        queryClient.invalidateQueries({ queryKey: queryKeys.students.all });
       }
     } catch (error: any) {
       console.error('Erro ao rejeitar aplicação:', error);
     } finally {
       setRejectingStudent(false);
     }
-  }, [student, isPlatformAdmin, rejectStudentReason, setStudent]);
+  }, [student, isPlatformAdmin, rejectStudentReason, setStudent, profileId, queryClient]);
 
   // Admin Notes handlers
   // Funções de Admin Notes agora vêm do useAdminNotes hook
@@ -1101,8 +1336,9 @@ const AdminStudentDetails: React.FC = () => {
       if (error) throw error;
 
       setEditingFees(null);
-      // Recarregar dados do estudante para refletir as mudanças
-      window.location.reload();
+      // Invalidar queries relacionadas
+      queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.students.secondaryData(student?.user_id) });
     } catch (error: any) {
       console.error('Error saving fee overrides:', error);
       alert('Erro ao salvar as taxas personalizadas: ' + error.message);
@@ -1127,8 +1363,9 @@ const AdminStudentDetails: React.FC = () => {
       if (error) throw error;
 
       setEditingFees(null);
-      // Recarregar dados do estudante para refletir as mudanças
-      window.location.reload();
+      // Invalidar queries relacionadas
+      queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.students.secondaryData(student?.user_id) });
     } catch (error: any) {
       console.error('Error resetting fees:', error);
       alert('Erro ao resetar as taxas: ' + error.message);
@@ -1230,8 +1467,9 @@ const AdminStudentDetails: React.FC = () => {
       }
       
       setEditingPaymentMethod(null);
+      // Invalidar queries relacionadas
+      queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
       alert('Payment method updated successfully!');
-      window.location.reload();
     } catch (error: any) {
       console.error('Error updating payment method:', error);
       alert('Error updating payment method: ' + error.message);
@@ -1248,11 +1486,40 @@ const AdminStudentDetails: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
       {/* Header */}
-      <StudentDetailsHeader
-        studentName={student.student_name}
-        onOpenChat={handleOpenChat}
-        onBack={handleBack}
-      />
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b border-gray-200">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Student Details</h1>
+          <p className="text-slate-600 mt-1">Detailed view for {student.student_name}</p>
+        </div>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="flex items-center bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
+            <button
+              onClick={handleOpenChat}
+              className="group relative px-4 py-2.5 text-slate-700 flex items-center space-x-2 transition-all duration-200 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-200 focus:ring-inset"
+              title="Send message to student"
+            >
+              <svg className="w-4 h-4 transition-transform duration-200 group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              </svg>
+              <span className="font-medium text-sm whitespace-nowrap">Send Message</span>
+            </button>
+            <div className="h-6 w-px bg-slate-200"></div>
+            <button
+              onClick={handleBack}
+              className="px-4 py-2.5 text-slate-600 hover:bg-slate-50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-slate-200 focus:ring-inset"
+            >
+              <span className="font-medium text-sm whitespace-nowrap">Back</span>
+            </button>
+          </div>
+          <div className="flex-shrink-0">
+            <RefreshButton
+              onClick={handleRefresh}
+              isRefreshing={isRefreshing}
+              title="Refresh student data"
+            />
+          </div>
+        </div>
+      </div>
 
       {/* Tab Navigation */}
       <StudentDetailsTabNavigation
@@ -1324,7 +1591,7 @@ const AdminStudentDetails: React.FC = () => {
                 onProcessTypeChange={setEditingProcessType}
               />
 
-              {student.seller_referral_code && (
+              {student.seller_referral_code && student.all_applications && (
                 <ReferralInfoCard
                   referralCode={student.seller_referral_code}
                   referralInfo={referralInfo}

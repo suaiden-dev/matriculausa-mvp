@@ -350,7 +350,10 @@ Deno.serve(async (req)=>{
     
     let session;
     try {
-      session = await stripe.checkout.sessions.retrieve(sessionId);
+      // Expandir payment_intent para obter o ID completo
+      session = await stripe.checkout.sessions.retrieve(sessionId, {
+        expand: ['payment_intent']
+      });
       console.log(`Session status: ${session.status}, Payment status: ${session.payment_status}`);
     } catch (stripeError) {
       console.error(`Stripe error retrieving session ${sessionId}:`, stripeError.message);
@@ -436,32 +439,162 @@ Deno.serve(async (req)=>{
       if (profileError) throw new Error(`Failed to update user_profiles: ${profileError.message}`);
 
       // Registrar pagamento na tabela individual_fee_payments
+      let individualFeePaymentId = null;
       try {
         const paymentDate = new Date().toISOString();
-        const paymentAmount = session.amount_total ? session.amount_total / 100 : 0;
-        const paymentIntentId = session.payment_intent as string || '';
+        const paymentAmountRaw = session.amount_total ? session.amount_total / 100 : 0;
+        const currency = session.currency?.toUpperCase() || 'USD';
+        // Obter payment_intent_id: pode ser string ou objeto PaymentIntent
+        let paymentIntentId = '';
+        if (typeof session.payment_intent === 'string') {
+          paymentIntentId = session.payment_intent;
+        } else if (session.payment_intent && typeof session.payment_intent === 'object' && 'id' in session.payment_intent) {
+          paymentIntentId = (session.payment_intent as any).id;
+        }
+        
+        // Para pagamentos PIX (BRL), buscar o valor líquido recebido em USD do BalanceTransaction
+        // Controle de ambiente: só buscar em test/staging por padrão, ou se variável de ambiente forçar
+        const enableNetAmountFetchEnv = Deno.env.get('ENABLE_STRIPE_NET_AMOUNT_FETCH');
+        const shouldFetchNetAmount = 
+          enableNetAmountFetchEnv === 'true'   ? true  // Força ativar
+          : enableNetAmountFetchEnv === 'false' ? false // Força desativar
+          : !config.environment.isProduction;   // Auto: busca só em test/staging (não em produção)
+        
+        // Debug: Log das condições
+        console.log(`[Individual Fee Payment] DEBUG - currency: ${currency}, paymentMethod: ${paymentMethod}, paymentIntentId: ${paymentIntentId}, shouldFetchNetAmount: ${shouldFetchNetAmount}, enableNetAmountFetchEnv: ${enableNetAmountFetchEnv}, isProduction: ${config.environment.isProduction}`);
+        
+        let paymentAmount = paymentAmountRaw;
+        let grossAmountUsd: number | null = null;
+        let feeAmountUsd: number | null = null;
+        
+        if ((currency === 'BRL' || paymentMethod === 'pix') && paymentIntentId && shouldFetchNetAmount) {
+          console.log(`✅ Buscando valor líquido, bruto e taxas do Stripe (ambiente: ${config.environment.environment})`);
+          try {
+            // Buscar PaymentIntent com latest_charge expandido para obter balance_transaction
+            const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId, {
+              expand: ['latest_charge.balance_transaction']
+            });
+            
+            if (paymentIntent.latest_charge) {
+              const charge = typeof paymentIntent.latest_charge === 'string' 
+                ? await stripe.charges.retrieve(paymentIntent.latest_charge, {
+                    expand: ['balance_transaction']
+                  })
+                : paymentIntent.latest_charge;
+              
+              if (charge.balance_transaction) {
+                const balanceTransaction = typeof charge.balance_transaction === 'string'
+                  ? await stripe.balanceTransactions.retrieve(charge.balance_transaction)
+                  : charge.balance_transaction;
+                
+                // O valor líquido (net) já está em USD e já considera taxas e conversão de moeda
+                if (balanceTransaction.net && balanceTransaction.currency === 'usd') {
+                  paymentAmount = balanceTransaction.net / 100; // net está em centavos
+                  
+                  // Buscar valor bruto (amount) em USD
+                  if (balanceTransaction.amount && balanceTransaction.currency === 'usd') {
+                    grossAmountUsd = balanceTransaction.amount / 100; // amount está em centavos
+                    console.log(`[Individual Fee Payment] Valor bruto recebido do Stripe: ${grossAmountUsd} USD`);
+                  }
+                  
+                  // Buscar taxas (fee) em USD
+                  if (balanceTransaction.fee && balanceTransaction.currency === 'usd') {
+                    feeAmountUsd = balanceTransaction.fee / 100; // fee está em centavos
+                    console.log(`[Individual Fee Payment] Taxas recebidas do Stripe: ${feeAmountUsd} USD`);
+                  }
+                  
+                  console.log(`[Individual Fee Payment] Valor líquido recebido do Stripe (após taxas e conversão): ${paymentAmount} USD`);
+                  console.log(`[Individual Fee Payment] Valor bruto: ${grossAmountUsd || balanceTransaction.amount / 100} ${balanceTransaction.currency}, Taxas: ${feeAmountUsd || (balanceTransaction.fee || 0) / 100} ${balanceTransaction.currency}`);
+                } else {
+                  // Fallback: usar exchange_rate do metadata se disponível
+                  if (session.metadata?.exchange_rate) {
+                    const exchangeRate = parseFloat(session.metadata.exchange_rate);
+                    if (exchangeRate > 0) {
+                      paymentAmount = paymentAmountRaw / exchangeRate;
+                      console.log(`[Individual Fee Payment] Usando exchange_rate do metadata: ${paymentAmountRaw} BRL / ${exchangeRate} = ${paymentAmount} USD`);
+                    }
+                  }
+                }
+              } else {
+                // Fallback: usar exchange_rate do metadata
+                if (session.metadata?.exchange_rate) {
+                  const exchangeRate = parseFloat(session.metadata.exchange_rate);
+                  if (exchangeRate > 0) {
+                    paymentAmount = paymentAmountRaw / exchangeRate;
+                    console.log(`[Individual Fee Payment] BalanceTransaction não disponível, usando exchange_rate do metadata: ${paymentAmountRaw} BRL / ${exchangeRate} = ${paymentAmount} USD`);
+                  }
+                }
+              }
+            } else {
+              // Fallback: usar exchange_rate do metadata
+              if (session.metadata?.exchange_rate) {
+                const exchangeRate = parseFloat(session.metadata.exchange_rate);
+                if (exchangeRate > 0) {
+                  paymentAmount = paymentAmountRaw / exchangeRate;
+                  console.log(`[Individual Fee Payment] PaymentIntent sem charge, usando exchange_rate do metadata: ${paymentAmountRaw} BRL / ${exchangeRate} = ${paymentAmount} USD`);
+                }
+              }
+            }
+          } catch (stripeError) {
+            console.error('[Individual Fee Payment] Erro ao buscar valor líquido do Stripe:', stripeError);
+            // Fallback: usar exchange_rate do metadata
+            if (session.metadata?.exchange_rate) {
+              const exchangeRate = parseFloat(session.metadata.exchange_rate);
+              if (exchangeRate > 0) {
+                paymentAmount = paymentAmountRaw / exchangeRate;
+                console.log(`[Individual Fee Payment] Erro ao buscar do Stripe, usando exchange_rate do metadata: ${paymentAmountRaw} BRL / ${exchangeRate} = ${paymentAmount} USD`);
+              }
+            }
+          }
+        } else if ((currency === 'BRL' || paymentMethod === 'pix') && !shouldFetchNetAmount) {
+          // Em produção (ou quando desativado), usar exchange_rate do metadata
+          console.log(`⚠️ Busca de valor líquido DESATIVADA (ambiente: ${config.environment.environment}), usando exchange_rate do metadata`);
+          if (session.metadata?.exchange_rate) {
+            const exchangeRate = parseFloat(session.metadata.exchange_rate);
+            if (exchangeRate > 0) {
+              paymentAmount = paymentAmountRaw / exchangeRate;
+              console.log(`[Individual Fee Payment] Usando exchange_rate do metadata: ${paymentAmountRaw} BRL / ${exchangeRate} = ${paymentAmount} USD`);
+            }
+          }
+        } else if (currency === 'BRL' && session.metadata?.exchange_rate) {
+          // Para outros pagamentos BRL (não PIX), usar exchange_rate do metadata
+          const exchangeRate = parseFloat(session.metadata.exchange_rate);
+          if (exchangeRate > 0) {
+            paymentAmount = paymentAmountRaw / exchangeRate;
+            console.log(`[Individual Fee Payment] Convertendo BRL para USD: ${paymentAmountRaw} BRL / ${exchangeRate} = ${paymentAmount} USD`);
+          }
+        } else {
+          // Debug: Se não entrou em nenhum bloco
+          console.log(`[Individual Fee Payment] DEBUG - Não entrou em nenhum bloco de conversão. currency: ${currency}, paymentMethod: ${paymentMethod}, hasExchangeRate: ${!!session.metadata?.exchange_rate}`);
+        }
         
         console.log('[Individual Fee Payment] Recording selection_process fee payment...');
+        console.log(`[Individual Fee Payment] Valor original: ${paymentAmountRaw} ${currency}, Valor em USD (líquido): ${paymentAmount} USD${grossAmountUsd ? `, Valor bruto: ${grossAmountUsd} USD` : ''}${feeAmountUsd ? `, Taxas: ${feeAmountUsd} USD` : ''}`);
         const { data: insertResult, error: insertError } = await supabase.rpc('insert_individual_fee_payment', {
           p_user_id: userId,
           p_fee_type: 'selection_process',
-          p_amount: paymentAmount,
+          p_amount: paymentAmount, // Valor líquido em USD (após taxas e conversão para PIX)
           p_payment_date: paymentDate,
           p_payment_method: 'stripe',
           p_payment_intent_id: paymentIntentId,
           p_stripe_charge_id: null,
-          p_zelle_payment_id: null
+          p_zelle_payment_id: null,
+          p_gross_amount_usd: grossAmountUsd, // Valor bruto em USD (quando disponível)
+          p_fee_amount_usd: feeAmountUsd // Taxas em USD (quando disponível)
         });
         
         if (insertError) {
           console.warn('[Individual Fee Payment] Warning: Could not record fee payment:', insertError);
         } else {
           console.log('[Individual Fee Payment] Selection process fee recorded successfully:', insertResult);
+          individualFeePaymentId = insertResult?.id || null;
         }
       } catch (recordError) {
         console.warn('[Individual Fee Payment] Warning: Failed to record individual fee payment:', recordError);
         // Não quebra o fluxo - continua normalmente
       }
+
+      // ✅ REMOVIDO: Registro de uso do cupom promocional - agora é feito apenas na validação (record-promotional-coupon-validation)
 
       // Log the payment action
       try {
@@ -1005,18 +1138,62 @@ Deno.serve(async (req)=>{
       // Para PIX, retornar resposta especial que força redirecionamento
       if (paymentMethod === 'pix') {
         console.log('[PIX] Forçando redirecionamento para PIX...');
+        // Extrair informações do pagamento para retornar ao frontend
+        const amountPaid = session.amount_total ? session.amount_total / 100 : null;
+        const currency = session.currency?.toUpperCase() || 'USD';
+        const promotionalCouponReturn = session.metadata?.promotional_coupon || null;
+        const originalAmountReturn = session.metadata?.original_amount ? parseFloat(session.metadata.original_amount) : null;
+        const finalAmountReturn = session.metadata?.final_amount ? parseFloat(session.metadata.final_amount) : null;
+        
+        // Se for PIX (BRL), converter para USD usando a taxa de câmbio do metadata
+        let amountPaidUSD = amountPaid || 0;
+        if (currency === 'BRL' && session.metadata?.exchange_rate && amountPaid) {
+          const exchangeRate = parseFloat(session.metadata.exchange_rate);
+          if (exchangeRate > 0) {
+            amountPaidUSD = amountPaid / exchangeRate;
+          }
+        }
+        
         return corsResponse({
           status: 'complete',
           message: 'PIX payment verified and processed successfully.',
           payment_method: 'pix',
           redirect_required: true,
-          redirect_url: 'http://localhost:5173/student/dashboard/scholarships'
+          redirect_url: 'http://localhost:5173/student/dashboard/scholarships',
+          amount_paid: amountPaidUSD || amountPaid || 0,
+          amount_paid_original: amountPaid || 0,
+          currency: currency,
+          promotional_coupon: promotionalCouponReturn,
+          original_amount: originalAmountReturn,
+          final_amount: finalAmountReturn
         }, 200);
+      }
+      
+      // Extrair informações do pagamento para retornar ao frontend
+      const amountPaid = session.amount_total ? session.amount_total / 100 : null;
+      const currency = session.currency?.toUpperCase() || 'USD';
+      const promotionalCouponReturn = session.metadata?.promotional_coupon || null;
+      const originalAmountReturn = session.metadata?.original_amount ? parseFloat(session.metadata.original_amount) : null;
+      const finalAmountReturn = session.metadata?.final_amount ? parseFloat(session.metadata.final_amount) : null;
+      
+      // Se for PIX (BRL), converter para USD usando a taxa de câmbio do metadata
+      let amountPaidUSD = amountPaid || 0;
+      if (currency === 'BRL' && session.metadata?.exchange_rate && amountPaid) {
+        const exchangeRate = parseFloat(session.metadata.exchange_rate);
+        if (exchangeRate > 0) {
+          amountPaidUSD = amountPaid / exchangeRate;
+        }
       }
       
       return corsResponse({
         status: 'complete',
-        message: 'Session verified and processed successfully.'
+        message: 'Session verified and processed successfully.',
+        amount_paid: amountPaidUSD || amountPaid || 0, // Retornar em USD para exibição
+        amount_paid_original: amountPaid || 0, // Valor original na moeda da sessão
+        currency: currency,
+        promotional_coupon: promotionalCouponReturn,
+        original_amount: originalAmountReturn,
+        final_amount: finalAmountReturn
       }, 200);
     }
     

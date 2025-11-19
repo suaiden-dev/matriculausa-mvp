@@ -24,6 +24,7 @@ import { supabase } from '../../lib/supabase';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
 import { AffiliatePaymentRequestService } from '../../services/AffiliatePaymentRequestService';
 import { useEnvironment } from '../../hooks/useEnvironment';
+import { getRealPaidAmounts } from '../../utils/paymentConverter';
 // import removido: useDynamicFeeCalculation não é usado aqui
 // import removido: useUserSpecificFees não é usado aqui
 interface FilterState {
@@ -122,6 +123,7 @@ const AffiliateManagement: React.FC = () => {
   const { feeConfig } = useFeeConfig();
   const [overridesMap, setOverridesMap] = useState<Record<string, any>>({}); // por user_id
   const [dependentsMap, setDependentsMap] = useState<Record<string, number>>({}); // por profile_id
+  const [realPaidAmountsMap, setRealPaidAmountsMap] = useState<Record<string, { selection_process?: number; scholarship?: number; i20_control?: number }>>({});
 
   // ===== Estados para informações de pagamento =====
   const [affiliatePaymentRequests, setAffiliatePaymentRequests] = useState<any[]>([]);
@@ -395,6 +397,58 @@ const AffiliateManagement: React.FC = () => {
     loadDependents();
   }, [filteredStudents]);
 
+  // Buscar valores reais pagos de individual_fee_payments
+  useEffect(() => {
+    let mounted = true;
+    const loadRealPaidAmounts = async () => {
+      try {
+        const uniqueUserIds = Array.from(new Set((filteredStudents || []).map((s: any) => s.user_id).filter(Boolean)));
+        if (uniqueUserIds.length === 0) {
+          if (mounted) setRealPaidAmountsMap({});
+          return;
+        }
+
+        // Buscar valores reais pagos em batches (10 por vez)
+        const BATCH_SIZE = 10;
+        const realPaidMap: Record<string, { selection_process?: number; scholarship?: number; i20_control?: number }> = {};
+        
+        for (let i = 0; i < uniqueUserIds.length; i += BATCH_SIZE) {
+          const batch = uniqueUserIds.slice(i, i + BATCH_SIZE);
+          
+          await Promise.allSettled(batch.map(async (userId) => {
+            if (!mounted) return;
+            
+            try {
+              const amounts = await getRealPaidAmounts(userId, ['selection_process', 'scholarship', 'i20_control']);
+              if (mounted) {
+                realPaidMap[userId] = {
+                  selection_process: amounts.selection_process,
+                  scholarship: amounts.scholarship,
+                  i20_control: amounts.i20_control
+                };
+                // Atualizar incrementalmente conforme valores são carregados
+                setRealPaidAmountsMap(prev => ({ ...prev, [userId]: realPaidMap[userId] }));
+              }
+            } catch (error) {
+              console.error(`[AffiliateManagement] Erro ao buscar valores pagos para user_id ${userId}:`, error);
+            }
+          }));
+        }
+
+        // Atualização final com todos os valores
+        if (mounted) {
+          setRealPaidAmountsMap(realPaidMap);
+        }
+      } catch (error) {
+        console.error('[AffiliateManagement] Erro ao carregar valores reais pagos:', error);
+        if (mounted) setRealPaidAmountsMap({});
+      }
+    };
+    
+    loadRealPaidAmounts();
+    return () => { mounted = false; };
+  }, [filteredStudents]);
+
   // Removido: calculateUserFees não é usado neste componente
 
   // Students com valores ajustados
@@ -402,6 +456,7 @@ const AffiliateManagement: React.FC = () => {
     const result = (filteredStudents || []).map((s: any) => {
       const o = overridesMap[s.user_id] || {};
       const dependents = Number(dependentsMap[s.profile_id]) || 0;
+      const realPaid = realPaidAmountsMap[s.user_id] || {};
       let total = 0;
       
       // Determinar valores base baseado no system_type do estudante
@@ -410,30 +465,53 @@ const AffiliateManagement: React.FC = () => {
       const baseScholarshipFee = systemType === 'simplified' ? 550 : 900;
       const baseI20Fee = 900; // Sempre 900 para ambos os sistemas
       
+      // Selection Process Fee - Prioridade: valor real pago > override > cálculo fixo
       if (s.has_paid_selection_process_fee) {
-        const sel = o.selection_process_fee != null
-          ? Number(o.selection_process_fee)
-          : baseSelectionFee + (dependents * 150);
+        let sel = 0;
+        // ✅ Usar valor real pago se disponível (já processado pelo paymentConverter com metadados)
+        if (realPaid.selection_process !== undefined && realPaid.selection_process > 0) {
+          sel = realPaid.selection_process;
+        } else if (o.selection_process_fee != null) {
+          sel = Number(o.selection_process_fee);
+        } else {
+          sel = baseSelectionFee + (dependents * 150);
+        }
         total += sel || 0;
       }
+      
+      // Scholarship Fee - Prioridade: valor real pago > override > cálculo fixo
       if (s.is_scholarship_fee_paid) {
-        const schol = o.scholarship_fee != null
-          ? Number(o.scholarship_fee)
-          : baseScholarshipFee;
+        let schol = 0;
+        // ✅ Usar valor real pago se disponível (já processado pelo paymentConverter com metadados)
+        if (realPaid.scholarship !== undefined && realPaid.scholarship > 0) {
+          schol = realPaid.scholarship;
+        } else if (o.scholarship_fee != null) {
+          schol = Number(o.scholarship_fee);
+        } else {
+          schol = baseScholarshipFee;
+        }
         total += schol || 0;
       }
+      
+      // I-20 Control Fee - Prioridade: valor real pago > override > cálculo fixo
       // ✅ CORREÇÃO: I-20 só conta se scholarship foi pago
       if (s.is_scholarship_fee_paid && s.has_paid_i20_control_fee) {
-        const i20 = o.i20_control_fee != null
-          ? Number(o.i20_control_fee)
-          : baseI20Fee;
+        let i20 = 0;
+        // ✅ Usar valor real pago se disponível (já processado pelo paymentConverter com metadados)
+        if (realPaid.i20_control !== undefined && realPaid.i20_control > 0) {
+          i20 = realPaid.i20_control;
+        } else if (o.i20_control_fee != null) {
+          i20 = Number(o.i20_control_fee);
+        } else {
+          i20 = baseI20Fee;
+        }
         total += i20 || 0;
       }
       
       return { ...s, total_paid_adjusted: total };
     });
     return result;
-  }, [filteredStudents, overridesMap, dependentsMap, feeConfig]);
+  }, [filteredStudents, overridesMap, dependentsMap, realPaidAmountsMap, feeConfig]);
 
   const adjustedStudentsBySellerId = useMemo(() => {
     const map: Record<string, any[]> = {};

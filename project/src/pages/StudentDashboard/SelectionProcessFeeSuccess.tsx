@@ -20,6 +20,8 @@ const SelectionProcessFeeSuccess: React.FC = () => {
   const hasRunRef = useRef(false);
   const { selectionProcessFeeAmount } = useDynamicFees();
   const { t } = useTranslation();
+  const [paidAmount, setPaidAmount] = useState<number | null>(null);
+  const [promotionalCoupon, setPromotionalCoupon] = useState<string | null>(null);
 
   // Função para fazer polling do status do PIX (otimizada para webhook)
   const pollPixPaymentStatus = async () => {
@@ -61,6 +63,16 @@ const SelectionProcessFeeSuccess: React.FC = () => {
         
         const data = await response.json();
         console.log(`[PIX] Resposta da API (tentativa ${attempts}):`, data);
+        
+        // Extrair informações do pagamento
+        if (data.final_amount) {
+          setPaidAmount(data.final_amount);
+        } else if (data.amount_paid) {
+          setPaidAmount(data.amount_paid);
+        }
+        if (data.promotional_coupon) {
+          setPromotionalCoupon(data.promotional_coupon);
+        }
         
         // Verificar se há erro de sessão não encontrada
         if (data.error && data.error.includes('Session not found')) {
@@ -201,6 +213,16 @@ const SelectionProcessFeeSuccess: React.FC = () => {
         const data = await response.json();
         console.log('[PIX] Resposta da verificação:', data);
         
+        // Extrair informações do pagamento
+        if (data.final_amount) {
+          setPaidAmount(data.final_amount);
+        } else if (data.amount_paid) {
+          setPaidAmount(data.amount_paid);
+        }
+        if (data.promotional_coupon) {
+          setPromotionalCoupon(data.promotional_coupon);
+        }
+        
         // Verificar se há erro de sessão não encontrada
         if (data.error && data.error.includes('Session not found')) {
           console.log('[PIX] ⚠️ Sessão não encontrada na verificação inicial - assumindo sucesso');
@@ -303,7 +325,13 @@ const SelectionProcessFeeSuccess: React.FC = () => {
             : t('successPages.selectionProcessFee.errorTitle')
           }
           message={animationSuccess
-            ? t('successPages.common.paymentProcessedAmount', { amount: selectionProcessFeeAmount?.toFixed(2) || '400.00' })
+            ? (() => {
+                const displayAmount = paidAmount ? paidAmount.toFixed(2) : (selectionProcessFeeAmount?.toFixed(2) || '400.00');
+                const baseMessage = t('successPages.common.paymentProcessedAmount', { amount: displayAmount });
+                return promotionalCoupon 
+                  ? `${baseMessage} (Cupom ${promotionalCoupon} aplicado)`
+                  : baseMessage;
+              })()
             : t('successPages.common.paymentError')
           }
         />

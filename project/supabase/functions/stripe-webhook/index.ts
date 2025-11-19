@@ -925,14 +925,26 @@ async function handleCheckoutSessionCompleted(session, stripe) {
       // Registrar pagamento na tabela individual_fee_payments
       try {
         const paymentDate = new Date().toISOString();
-        const paymentAmount = session.amount_total ? session.amount_total / 100 : 0;
+        const paymentAmountRaw = session.amount_total ? session.amount_total / 100 : 0;
+        const currency = session.currency?.toUpperCase() || 'USD';
         const paymentIntentId = session.payment_intent as string || '';
         
+        // Converter BRL para USD se necessário (sempre registrar em USD)
+        let paymentAmount = paymentAmountRaw;
+        if (currency === 'BRL' && session.metadata?.exchange_rate) {
+          const exchangeRate = parseFloat(session.metadata.exchange_rate);
+          if (exchangeRate > 0) {
+            paymentAmount = paymentAmountRaw / exchangeRate;
+            console.log(`[Individual Fee Payment] Convertendo BRL para USD: ${paymentAmountRaw} BRL / ${exchangeRate} = ${paymentAmount} USD`);
+          }
+        }
+        
         console.log('[Individual Fee Payment] Recording application fee payment via PIX/Stripe...');
+        console.log(`[Individual Fee Payment] Valor original: ${paymentAmountRaw} ${currency}, Valor em USD: ${paymentAmount} USD`);
         const { data: insertResult, error: insertError } = await supabase.rpc('insert_individual_fee_payment', {
           p_user_id: finalUserId,
           p_fee_type: 'application',
-          p_amount: paymentAmount,
+          p_amount: paymentAmount, // Sempre em USD
           p_payment_date: paymentDate,
           p_payment_method: 'stripe',
           p_payment_intent_id: paymentIntentId,
@@ -1189,14 +1201,26 @@ async function handleCheckoutSessionCompleted(session, stripe) {
         // Registrar pagamento na tabela individual_fee_payments
         try {
           const paymentDate = new Date().toISOString();
-          const paymentAmount = session.amount_total ? session.amount_total / 100 : 0;
+          const paymentAmountRaw = session.amount_total ? session.amount_total / 100 : 0;
+          const currency = session.currency?.toUpperCase() || 'USD';
           const paymentIntentId = session.payment_intent as string || '';
           
+          // Converter BRL para USD se necessário (sempre registrar em USD)
+          let paymentAmount = paymentAmountRaw;
+          if (currency === 'BRL' && session.metadata?.exchange_rate) {
+            const exchangeRate = parseFloat(session.metadata.exchange_rate);
+            if (exchangeRate > 0) {
+              paymentAmount = paymentAmountRaw / exchangeRate;
+              console.log(`[Individual Fee Payment] Convertendo BRL para USD: ${paymentAmountRaw} BRL / ${exchangeRate} = ${paymentAmount} USD`);
+            }
+          }
+          
           console.log('[Individual Fee Payment] Recording scholarship fee payment via PIX/Stripe...');
+          console.log(`[Individual Fee Payment] Valor original: ${paymentAmountRaw} ${currency}, Valor em USD: ${paymentAmount} USD`);
           const { data: insertResult, error: insertError } = await supabase.rpc('insert_individual_fee_payment', {
             p_user_id: userId,
             p_fee_type: 'scholarship',
-            p_amount: paymentAmount,
+            p_amount: paymentAmount, // Sempre em USD
             p_payment_date: paymentDate,
             p_payment_method: 'stripe',
             p_payment_intent_id: paymentIntentId,
@@ -1219,11 +1243,14 @@ async function handleCheckoutSessionCompleted(session, stripe) {
         const { data: usedCode, error: codeError } = await supabase.from('used_referral_codes').select('referrer_id, affiliate_code').eq('user_id', userId).single();
         if (!codeError && usedCode) {
           console.log('[FATURAMENTO] Registrando scholarship_fee para faturamento do seller:', usedCode.referrer_id);
+          // Usar valor base do metadata (sem markup) para comissões, se disponível
+          const baseAmount = metadata.base_amount ? Number(metadata.base_amount) : (amount_total ? amount_total / 100 : 0);
+          console.log('[FATURAMENTO] Valor base usado para comissão:', baseAmount, '(gross:', amount_total ? amount_total / 100 : 0, ')');
           const { error: upsertRefError } = await supabase.from('affiliate_referrals').upsert({
             referrer_id: usedCode.referrer_id,
             referred_id: userId,
             affiliate_code: usedCode.affiliate_code,
-            payment_amount: Number(amount_total ? amount_total / 100 : 0),
+            payment_amount: baseAmount, // Usar valor base, não o valor com markup
             credits_earned: 0,
             status: 'completed',
             payment_session_id: session.id,
@@ -1573,14 +1600,26 @@ async function handleCheckoutSessionCompleted(session, stripe) {
         // Registrar pagamento na tabela individual_fee_payments
         try {
           const paymentDate = new Date().toISOString();
-          const paymentAmount = session.amount_total ? session.amount_total / 100 : 0;
+          const paymentAmountRaw = session.amount_total ? session.amount_total / 100 : 0;
+          const currency = session.currency?.toUpperCase() || 'USD';
           const paymentIntentId = session.payment_intent as string || '';
           
+          // Converter BRL para USD se necessário (sempre registrar em USD)
+          let paymentAmount = paymentAmountRaw;
+          if (currency === 'BRL' && session.metadata?.exchange_rate) {
+            const exchangeRate = parseFloat(session.metadata.exchange_rate);
+            if (exchangeRate > 0) {
+              paymentAmount = paymentAmountRaw / exchangeRate;
+              console.log(`[Individual Fee Payment] Convertendo BRL para USD: ${paymentAmountRaw} BRL / ${exchangeRate} = ${paymentAmount} USD`);
+            }
+          }
+          
           console.log('[Individual Fee Payment] Recording i20_control fee payment via PIX/Stripe...');
+          console.log(`[Individual Fee Payment] Valor original: ${paymentAmountRaw} ${currency}, Valor em USD: ${paymentAmount} USD`);
           const { data: insertResult, error: insertError } = await supabase.rpc('insert_individual_fee_payment', {
             p_user_id: userId,
             p_fee_type: 'i20_control',
-            p_amount: paymentAmount,
+            p_amount: paymentAmount, // Sempre em USD
             p_payment_date: paymentDate,
             p_payment_method: 'stripe',
             p_payment_intent_id: paymentIntentId,
@@ -1626,14 +1665,26 @@ async function handleCheckoutSessionCompleted(session, stripe) {
       // Registrar pagamento na tabela individual_fee_payments
       try {
         const paymentDate = new Date().toISOString();
-        const paymentAmount = session.amount_total ? session.amount_total / 100 : 0;
+        const paymentAmountRaw = session.amount_total ? session.amount_total / 100 : 0;
+        const currency = session.currency?.toUpperCase() || 'USD';
         const paymentIntentId = session.payment_intent as string || '';
         
+        // Converter BRL para USD se necessário (sempre registrar em USD)
+        let paymentAmount = paymentAmountRaw;
+        if (currency === 'BRL' && session.metadata?.exchange_rate) {
+          const exchangeRate = parseFloat(session.metadata.exchange_rate);
+          if (exchangeRate > 0) {
+            paymentAmount = paymentAmountRaw / exchangeRate;
+            console.log(`[Individual Fee Payment] Convertendo BRL para USD: ${paymentAmountRaw} BRL / ${exchangeRate} = ${paymentAmount} USD`);
+          }
+        }
+        
         console.log('[Individual Fee Payment] Recording selection_process fee payment via PIX/Stripe...');
+        console.log(`[Individual Fee Payment] Valor original: ${paymentAmountRaw} ${currency}, Valor em USD: ${paymentAmount} USD`);
         const { data: insertResult, error: insertError } = await supabase.rpc('insert_individual_fee_payment', {
           p_user_id: userId,
           p_fee_type: 'selection_process',
-          p_amount: paymentAmount,
+          p_amount: paymentAmount, // Sempre em USD
           p_payment_date: paymentDate,
           p_payment_method: 'stripe',
           p_payment_intent_id: paymentIntentId,

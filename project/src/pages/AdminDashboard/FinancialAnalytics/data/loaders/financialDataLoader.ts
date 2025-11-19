@@ -119,12 +119,12 @@ async function loadApplicationsPrev(prevRange: DateRange): Promise<any[]> {
 /**
  * Busca pagamentos Zelle (período atual) com user_profiles
  */
-async function loadZellePayments(currentRange: DateRange): Promise<any[]> {
+async function loadZellePayments(_currentRange: DateRange): Promise<any[]> {
   const { data: zellePaymentsRaw, error } = await supabase
     .from('zelle_payments')
     .select('*')
-    .gte('created_at', currentRange.start.toISOString())
-    .lte('created_at', currentRange.end.toISOString());
+    .eq('status', 'approved');
+    // Removido filtro de período para igualar Payment Management
 
   if (error) throw error;
   

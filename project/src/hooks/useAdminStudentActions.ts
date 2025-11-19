@@ -1,6 +1,5 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
-import { recordIndividualFeePayment } from '../lib/paymentRecorder';
 
 /**
  * useAdminStudentActions - Hook for administrative actions on students
@@ -39,8 +38,8 @@ export const useAdminStudentActions = () => {
     try {
       setSaving(true);
 
-      // Record the payment
-      await recordIndividualFeePayment(userId, feeType, amount);
+      // Note: recordIndividualFeePayment is now called in the component before this hook
+      // to have access to all necessary data (paymentDate, etc.)
 
       // Update the appropriate fee status
       if (feeType === 'selection_process' || feeType === 'i20_control') {
@@ -78,6 +77,11 @@ export const useAdminStudentActions = () => {
           .eq('id', applicationId);
 
         if (error) throw error;
+      } else {
+        // Se é application ou scholarship fee mas não tem applicationId, retornar erro
+        if (feeType === 'application' || feeType === 'scholarship') {
+          throw new Error('Application ID is required for application and scholarship fees');
+        }
       }
 
       return { success: true };
