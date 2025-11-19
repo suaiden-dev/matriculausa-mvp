@@ -322,10 +322,19 @@ const ApplicationChatPage: React.FC = () => {
     console.log('🔍 [ApplicationChatPage] setShowI20ControlFeeModal(true) executado');
   };
 
+  // Estado para armazenar taxa de câmbio quando PIX é selecionado
+  const [exchangeRate, setExchangeRate] = useState<number | null>(null);
+
   // Função para lidar com a seleção do método de pagamento
-  const handlePaymentMethodSelect = (method: 'stripe' | 'zelle' | 'pix') => {
-    console.log('🔍 [ApplicationChatPage] Método de pagamento selecionado:', method);
+  const handlePaymentMethodSelect = (method: 'stripe' | 'zelle' | 'pix', exchangeRateParam?: number) => {
+    console.log('🔍 [ApplicationChatPage] Método de pagamento selecionado:', method, 'Taxa de câmbio:', exchangeRateParam);
     setSelectedPaymentMethod(method);
+    if (method === 'pix' && exchangeRateParam) {
+      setExchangeRate(exchangeRateParam);
+      console.log('🔍 [ApplicationChatPage] Taxa de câmbio armazenada:', exchangeRateParam);
+    } else {
+      setExchangeRate(null);
+    }
     console.log('🔍 [ApplicationChatPage] Estado setSelectedPaymentMethod atualizado para:', method);
   };
 
@@ -400,6 +409,13 @@ const ApplicationChatPage: React.FC = () => {
         const promotionalCoupon = (window as any).__checkout_promotional_coupon || null;
         const finalAmountWithDiscount = (window as any).__checkout_final_amount || finalAmount;
         
+        // Incluir taxa de câmbio no metadata se disponível (para garantir consistência entre frontend e backend)
+        const metadata: any = {};
+        if (exchangeRate && exchangeRate > 0) {
+          metadata.exchange_rate = exchangeRate.toString();
+          console.log('🔍 [ApplicationChatPage] Incluindo taxa de câmbio no metadata:', exchangeRate);
+        }
+        
         const res = await fetch(apiUrl, {
           method: 'POST',
           headers: {
@@ -412,7 +428,8 @@ const ApplicationChatPage: React.FC = () => {
             price_id: STRIPE_PRODUCTS.controlFee.priceId,
             amount: finalAmountWithDiscount, // Valor com desconto se houver cupom
             payment_method: 'pix',
-            promotional_coupon: promotionalCoupon // Passar cupom promocional
+            promotional_coupon: promotionalCoupon, // Passar cupom promocional
+            metadata: metadata // Incluir metadata com taxa de câmbio
           }),
         });
         const data = await res.json();
