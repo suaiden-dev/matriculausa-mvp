@@ -44,8 +44,8 @@ interface ScholarshipConfirmationModalProps {
   isOpen: boolean;
   onClose: () => void;
   scholarship: Scholarship;
-  onStripeCheckout: () => void;
-  onPixCheckout?: () => void;
+  onStripeCheckout: (exchangeRate?: number) => void;
+  onPixCheckout?: (exchangeRate?: number) => void;
   isProcessing?: boolean;
   feeType?: 'application_fee' | 'scholarship_fee';
 }
@@ -442,12 +442,12 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
       // O cupom será usado no checkout e depois removido quando o pagamento for confirmado
       
       if (selectedPaymentMethod === 'stripe') {
-        onStripeCheckout();
+        onStripeCheckout(exchangeRate || undefined);
       } else if (selectedPaymentMethod === 'pix') {
         if (onPixCheckout) {
-          onPixCheckout();
+          onPixCheckout(exchangeRate || undefined);
         } else {
-          onStripeCheckout();
+          onStripeCheckout(exchangeRate || undefined);
         }
       } else if (selectedPaymentMethod === 'zelle') {
         const params = new URLSearchParams({

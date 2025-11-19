@@ -44,7 +44,7 @@ export interface PaymentMethod {
 
 interface PaymentMethodSelectorProps {
   selectedMethod: 'stripe' | 'zelle' | 'pix' | null;
-  onMethodSelect: (method: 'stripe' | 'zelle' | 'pix') => void;
+  onMethodSelect: (method: 'stripe' | 'zelle' | 'pix', exchangeRate?: number) => void;
   feeType: 'selection_process' | 'application_fee' | 'enrollment_fee' | 'scholarship_fee' | 'i20_control_fee';
   amount: number;
   className?: string;
@@ -146,7 +146,8 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
       });
       
       console.log('🔍 [PaymentMethodSelector] Chamando callback onMethodSelect');
-      onMethodSelect(method);
+      // Passar taxa de câmbio quando for PIX para garantir consistência
+      onMethodSelect(method, method === 'pix' ? (exchangeRate || undefined) : undefined);
       
       // Reset após o callback ser chamado - tempo maior para Stripe
       setTimeout(() => {

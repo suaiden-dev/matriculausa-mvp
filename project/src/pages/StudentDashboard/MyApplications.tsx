@@ -172,9 +172,15 @@ const MyApplications: React.FC = () => {
           : Number(payment.amount);
         
         if (payment.fee_type === 'application') {
-          amounts.application = displayAmount;
+          // Se já existe um valor, usar o maior (mais recente ou com gross_amount_usd)
+          if (!amounts.application || displayAmount > amounts.application) {
+            amounts.application = displayAmount;
+          }
         } else if (payment.fee_type === 'scholarship') {
-          amounts.scholarship = displayAmount;
+          // Se já existe um valor, usar o maior (mais recente ou com gross_amount_usd)
+          if (!amounts.scholarship || displayAmount > amounts.scholarship) {
+            amounts.scholarship = displayAmount;
+          }
         }
       });
       
@@ -970,7 +976,7 @@ const MyApplications: React.FC = () => {
   };
 
   // Função para processar checkout Stripe
-  const handleStripeCheckout = async () => {
+  const handleStripeCheckout = async (exchangeRate?: number) => {
     if (!pendingApplication) return;
     
     try {
@@ -1037,7 +1043,7 @@ const MyApplications: React.FC = () => {
   };
 
   // Função para processar checkout PIX
-  const handlePixCheckout = async () => {
+  const handlePixCheckout = async (exchangeRate?: number) => {
     if (!pendingApplication) return;
     
     try {
@@ -1073,7 +1079,9 @@ const MyApplications: React.FC = () => {
             selected_scholarship_id: pendingApplication.scholarship_id,
             fee_type: 'application_fee',
             amount: getApplicationFeeWithDependents(pendingApplication.scholarships?.application_fee_amount || 35000),
-            application_fee_amount: getApplicationFeeWithDependents(pendingApplication.scholarships?.application_fee_amount || 35000)
+            application_fee_amount: getApplicationFeeWithDependents(pendingApplication.scholarships?.application_fee_amount || 35000),
+            // Incluir taxa de câmbio se disponível para garantir consistência
+            ...(exchangeRate ? { exchange_rate: exchangeRate.toString() } : {}),
           },
           scholarships_ids: [pendingApplication.scholarship_id],
         }),
@@ -1198,7 +1206,7 @@ const MyApplications: React.FC = () => {
   };
 
   // Função para processar checkout Stripe da Scholarship Fee
-  const handleScholarshipFeeCheckout = async () => {
+  const handleScholarshipFeeCheckout = async (exchangeRate?: number) => {
     if (!pendingScholarshipFeeApplication) return;
     
     try {
@@ -1214,6 +1222,7 @@ const MyApplications: React.FC = () => {
       console.log('- Scholarship ID:', pendingScholarshipFeeApplication.scholarship_id);
       console.log('- Valor original:', baseAmount);
       console.log('- Valor com desconto:', finalAmount);
+      console.log('- Exchange Rate:', exchangeRate);
       
       // Chamar diretamente a Edge Function do Stripe para scholarship fee
       const { data: sessionData } = await supabase.auth.getSession();
@@ -1244,7 +1253,9 @@ const MyApplications: React.FC = () => {
           amount: finalAmount, // ✅ Usar valor com desconto
           scholarship_fee_amount: finalAmount, // ✅ Usar valor com desconto
           original_amount: baseAmount, // Valor original para referência
-          final_amount: finalAmount // Valor final com desconto
+          final_amount: finalAmount, // Valor final com desconto
+          // Incluir taxa de câmbio se for PIX e estiver disponível
+          ...(exchangeRate ? { exchange_rate: exchangeRate.toString() } : {}),
         },
         scholarships_ids: [pendingScholarshipFeeApplication.scholarship_id],
       };
@@ -1292,13 +1303,14 @@ const MyApplications: React.FC = () => {
   };
 
   // Função para processar checkout PIX da Scholarship Fee
-  const handleScholarshipFeePixCheckout = async () => {
+  const handleScholarshipFeePixCheckout = async (exchangeRate?: number) => {
     if (!pendingScholarshipFeeApplication) return;
     
     try {
       setIsProcessingScholarshipFeeCheckout(true);
       
       console.log('Iniciando checkout PIX para scholarship fee com application ID:', pendingScholarshipFeeApplication.id);
+      console.log('[MyApplications] PIX Checkout - Exchange Rate:', exchangeRate);
       
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token;
@@ -1340,7 +1352,9 @@ const MyApplications: React.FC = () => {
             amount: finalAmount, // ✅ Usar valor com desconto
             scholarship_fee_amount: finalAmount, // ✅ Usar valor com desconto
             original_amount: baseAmount, // Valor original para referência
-            final_amount: finalAmount // Valor final com desconto
+            final_amount: finalAmount, // Valor final com desconto
+            // Incluir taxa de câmbio se estiver disponível
+            ...(exchangeRate ? { exchange_rate: exchangeRate.toString() } : {}),
           },
           scholarships_ids: [pendingScholarshipFeeApplication.scholarship_id],
         }),
