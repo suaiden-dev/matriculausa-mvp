@@ -1023,7 +1023,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
         </div>
 
         <div className="grid lg:grid-cols-3 gap-8">
-          {/* Payment Summary */}
+          {/* Payment Summary - Consolidado */}
           <div className="lg:col-span-2">
             <div className="bg-gray-50 rounded-lg border border-gray-200 p-6 mb-6">
               <div className="flex items-center gap-3 mb-4">
@@ -1036,17 +1036,16 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <div className="flex justify-between items-center p-4 bg-white rounded-lg border border-gray-200">
-                  <div className="flex items-center gap-3">
-                    <div>
-                      <h3 className="font-medium text-gray-900">
-                        {currentFee.description.split(' - ')[1] || currentFee.description}
-                      </h3>
-                      <p className="text-sm text-gray-600">
-                        {currentFee.description.split(' - ')[0] || ''}
-                      </p>
-                    </div>
+              <div className="bg-white rounded-lg border border-gray-200 p-4 space-y-4">
+                {/* Fee Info */}
+                <div className="flex justify-between items-center pb-4 border-b">
+                  <div>
+                    <h3 className="font-medium text-gray-900">
+                      {currentFee.description.split(' - ')[1] || currentFee.description}
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                      {currentFee.description.split(' - ')[0] || ''}
+                    </p>
                   </div>
                   <div className="text-right">
                     {feesLoading ? (
@@ -1084,55 +1083,11 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
                   </div>
                 </div>
 
-                <div className="border-t pt-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-lg font-medium text-gray-900">{t('zelleCheckout.amount')}</span>
-                    {feesLoading ? (
-                      <div className="w-24 h-7 bg-gray-200 rounded animate-pulse" />
-                    ) : scholarshipFeePromotionalCoupon && normalizedFeeType === 'scholarship_fee' ? (
-                      <div className="text-right">
-                        <div className="text-xl font-bold text-gray-400 line-through">
-                          ${scholarshipFee ? parseFloat(scholarshipFee.replace('$', '')) : currentFee.amount}
-                        </div>
-                        <span className="text-2xl font-bold text-green-600">
-                          ${currentFee.amount}
-                        </span>
-                      </div>
-                    ) : i20ControlFeePromotionalCoupon && normalizedFeeType === 'i20_control' ? (
-                      <div className="text-right">
-                        <div className="text-xl font-bold text-gray-400 line-through">
-                          ${i20ControlFee ? parseFloat(i20ControlFee.replace('$', '')) : currentFee.amount}
-                        </div>
-                        <span className="text-2xl font-bold text-green-600">
-                          ${currentFee.amount}
-                        </span>
-                      </div>
-                    ) : (
-                      <span className="text-2xl font-bold text-gray-900">
-                        ${currentFee.amount}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Zelle Payment Information */}
-            <div className="bg-gray-50 rounded-lg border border-gray-200 p-6 mb-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-                  <CreditCard className="w-5 h-5 text-gray-600" />
-                </div>
+                {/* Zelle Payment Details */}
                 <div>
-                  <h2 className="text-lg font-semibold text-gray-900">{t('zelleCheckout.zellePaymentDetails.title')}</h2>
-                  <p className="text-gray-600">{t('zelleCheckout.zellePaymentDetails.subtitle')}</p>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-lg border border-gray-200 p-4">
-                <div className="grid md:grid-cols-2 gap-4">
+                  <h3 className="text-sm font-medium text-gray-700 mb-3">{t('zelleCheckout.zellePaymentDetails.title')}</h3>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
                       {t('zelleCheckout.zellePaymentDetails.recipientEmail')}
                     </label>
                     <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
@@ -1140,31 +1095,11 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
                     </div>
                   </div>
                   
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      {t('zelleCheckout.zellePaymentDetails.paymentAmount')}
-                    </label>
-                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-                      {feesLoading ? (
-                        <div className="w-28 h-6 bg-gray-200 rounded animate-pulse" />
-                      ) : (
-                        <span className="text-lg font-bold text-gray-900">${currentFee.amount} USD</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                  <div className="flex items-start gap-2">
-                    <div className="w-5 h-5 bg-gray-200 rounded-full flex items-center justify-center mt-0.5">
-                      <span className="text-gray-600 text-xs font-bold">!</span>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-800 font-medium">{t('zelleCheckout.zellePaymentDetails.important')}</p>
-                      <p className="text-sm text-gray-700" dangerouslySetInnerHTML={{
-                        __html: t('zelleCheckout.zellePaymentDetails.importantMessage', { amount: currentFee.amount })
-                      }} />
-                    </div>
+                  <div className="mt-3 p-3 bg-blue-50 border-l-4 border-blue-500 rounded-r-lg">
+                    <p className="text-xs text-blue-900 font-medium">{t('zelleCheckout.zellePaymentDetails.important')}</p>
+                    <p className="text-xs text-blue-800 mt-1">
+                      {t('zelleCheckout.zellePaymentDetails.importantMessageSimple')}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -1175,56 +1110,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
               <h3 className="text-lg font-semibold text-gray-900 mb-6">{t('zelleCheckout.instructions')}</h3>
               
               <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Instruções Importantes */}
-                <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
-                  <h4 className="font-medium text-gray-900 mb-4">
-                    {t('zelleCheckout.requirements.title')}
-                  </h4>
-                  
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center">
-                        <span className="text-gray-700 font-medium text-sm">1</span>
-                      </div>
-                      <div>
-                        <h5 className="font-medium text-gray-900">{t('zelleCheckout.requirements.confirmationCode')}</h5>
-                        <p className="text-sm text-gray-600">{t('zelleCheckout.requirements.confirmationCodeDesc')}</p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-3">
-                      <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center">
-                        <span className="text-gray-700 font-medium text-sm">2</span>
-                      </div>
-                      <div>
-                        <h5 className="font-medium text-gray-900">{t('zelleCheckout.requirements.paymentDate')}</h5>
-                        <p className="text-sm text-gray-600">{t('zelleCheckout.requirements.paymentDateDesc')}</p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-3">
-                      <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center">
-                        <span className="text-gray-700 font-medium text-sm">3</span>
-                      </div>
-                      <div>
-                        <h5 className="font-medium text-gray-900">{t('zelleCheckout.requirements.paymentAmount')}</h5>
-                        <p className="text-sm text-gray-600">{t('zelleCheckout.requirements.paymentAmountDesc')} (${currentFee.amount} USD)</p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-3">
-                      <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center">
-                        <span className="text-gray-700 font-medium text-sm">4</span>
-                      </div>
-                      <div>
-                        <h5 className="font-medium text-gray-900">{t('zelleCheckout.requirements.recipient')}</h5>
-                        <p className="text-sm text-gray-600">{t('zelleCheckout.requirements.recipientDesc')}</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Passos do Processo */}
+                {/* Instruções Consolidadas */}
                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
                   <h4 className="font-medium text-gray-900 mb-4">
                     {t('zelleCheckout.steps.title')}
@@ -1233,13 +1119,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
                   <ol className="space-y-3 text-gray-700">
                     <li className="flex items-start gap-3">
                       <span className="w-5 h-5 bg-gray-200 text-gray-700 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0">1</span>
-                      <span>
-                        {t('zelleCheckout.steps.step1')} <strong>{feesLoading ? (
-                          <span className="inline-block w-16 h-4 align-middle bg-gray-200 rounded animate-pulse" />
-                        ) : (
-                          <>(${currentFee.amount} USD)</>
-                        )}</strong>
-                      </span>
+                      <span>{t('zelleCheckout.steps.step1')}</span>
                     </li>
                     <li className="flex items-start gap-3">
                       <span className="w-5 h-5 bg-gray-200 text-gray-700 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0">2</span>
@@ -1337,7 +1217,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
                         <div className="w-24 h-4 bg-white/30 rounded animate-pulse" />
                       </div>
                     ) : (
-                      `${t('zelleCheckout.submitPayment')} - $${currentFee.amount} USD`
+                      t('zelleCheckout.submitPayment')
                     )
                   )}
                 </button>

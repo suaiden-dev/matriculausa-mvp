@@ -175,7 +175,8 @@
       "recipientEmail": "Email do Destinatário",
       "paymentAmount": "Valor do Pagamento",
       "important": "Importante:",
-      "importantMessage": "Certifique-se de enviar o valor exato de <strong>{{amount}} USD</strong> para <strong>info@thefutureofenglish.com</strong> via Zelle. Qualquer discrepância no valor ou destinatário atrasará o processamento do seu pagamento."
+      "importantMessage": "Certifique-se de enviar o valor exato de <strong>{{amount}} USD</strong> para <strong>info@thefutureofenglish.com</strong> via Zelle. Qualquer discrepância no valor ou destinatário atrasará o processamento do seu pagamento.",
+      "importantMessageSimple": "Certifique-se de que o valor exato do pagamento corresponde ao valor mostrado acima."
     }
   },
   "zelleWaiting": {

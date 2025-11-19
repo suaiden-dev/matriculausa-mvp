@@ -170,12 +170,13 @@
     },
     "reviewDetails": "Review your payment details",
     "zellePaymentDetails": {
-      "title": "Zelle Payment Details",
-      "subtitle": "Send your payment to the following recipient",
-      "recipientEmail": "Recipient Email",
-      "paymentAmount": "Payment Amount",
-      "important": "Important:",
-      "importantMessage": "Make sure to send the exact amount of <strong>{{amount}} USD</strong> to <strong>info@thefutureofenglish.com</strong> via Zelle. Any discrepancy in amount or recipient will delay your payment processing."
+      "title": "Detalles del Pago Zelle",
+      "subtitle": "Envíe su pago al siguiente destinatario",
+      "recipientEmail": "Correo del Destinatario",
+      "paymentAmount": "Monto del Pago",
+      "important": "Importante:",
+      "importantMessage": "Asegúrese de enviar el monto exacto de <strong>{{amount}} USD</strong> a <strong>info@thefutureofenglish.com</strong> vía Zelle. Cualquier discrepancia en el monto o destinatario retrasará el procesamiento de su pago.",
+      "importantMessageSimple": "Asegúrese de que el monto exacto del pago coincida con el monto mostrado arriba."
     }
   },
   "zelleWaiting": {
