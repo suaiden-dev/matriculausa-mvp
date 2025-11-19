@@ -253,6 +253,12 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
                         <p className="text-sm text-gray-500 mt-1">
                           {method.description}
                         </p>
+                        {/* Tag "inclui taxa de processamento" para Stripe e PIX */}
+                        {(method.id === 'stripe' || method.id === 'pix') && (
+                          <p className="text-xs text-gray-400 mt-1">
+                            {t('paymentSelector.includesProcessingFees')}
+                          </p>
+                        )}
                       </div>
                       
                       {isSelected && !processingSelection && (
