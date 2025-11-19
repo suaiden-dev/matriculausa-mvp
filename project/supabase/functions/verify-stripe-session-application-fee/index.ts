@@ -268,15 +268,11 @@ Deno.serve(async (req)=>{
         }
         
         // Para pagamentos PIX (BRL), buscar o valor líquido recebido em USD do BalanceTransaction
-        // Controle de ambiente: só buscar em test/staging por padrão, ou se variável de ambiente forçar
-        const enableNetAmountFetchEnv = Deno.env.get('ENABLE_STRIPE_NET_AMOUNT_FETCH');
-        const shouldFetchNetAmount = 
-          enableNetAmountFetchEnv === 'true'   ? true  // Força ativar
-          : enableNetAmountFetchEnv === 'false' ? false // Força desativar
-          : !config.environment.isProduction;   // Auto: busca só em test/staging (não em produção)
+        // Sempre buscar o valor líquido, independente do ambiente
+        const shouldFetchNetAmount = true;
         
         // Debug: Log das condições
-        console.log(`[Individual Fee Payment] DEBUG - currency: ${currency}, paymentMethod: ${paymentMethod}, paymentIntentId: ${paymentIntentId}, shouldFetchNetAmount: ${shouldFetchNetAmount}, enableNetAmountFetchEnv: ${enableNetAmountFetchEnv}, isProduction: ${config.environment.isProduction}`);
+        console.log(`[Individual Fee Payment] DEBUG - currency: ${currency}, paymentMethod: ${paymentMethod}, paymentIntentId: ${paymentIntentId}, shouldFetchNetAmount: ${shouldFetchNetAmount}, isProduction: ${config.environment.isProduction}`);
         
         let paymentAmount = paymentAmountRaw;
         let grossAmountUsd: number | null = null;

@@ -198,7 +198,7 @@ const ApplicationFeePage: React.FC = () => {
   };
 
   // NOVA função para processar checkout Stripe
-  const handleStripeCheckout = async () => {
+  const handleStripeCheckout = async (exchangeRate?: number) => {
     if (!selectedScholarship) return;
     
     try {
@@ -218,6 +218,7 @@ const ApplicationFeePage: React.FC = () => {
       // Executar o StripeCheckout diretamente
       // Como não podemos chamar o StripeCheckout diretamente, vamos usar uma abordagem diferente
       // Vamos criar um StripeCheckout invisível que será executado automaticamente
+      // A taxa de câmbio será passada via prop exchangeRate para o StripeCheckout
       
     } catch (error) {
       console.error('Erro ao processar checkout:', error);
@@ -326,6 +327,7 @@ const ApplicationFeePage: React.FC = () => {
             }}
             studentProcessType={localStorage.getItem('studentProcessType') || null}
             scholarshipsIds={selectedScholarshipId ? [selectedScholarshipId] : []}
+            exchangeRate={undefined} // Será definido dinamicamente pelo PaymentMethodSelector
           />
         </div>
       )}

@@ -8,7 +8,7 @@ interface I20ControlFeeModalProps {
   isOpen: boolean;
   onClose: () => void;
   selectedPaymentMethod: 'stripe' | 'zelle' | 'pix' | null;
-  onPaymentMethodSelect: (method: 'stripe' | 'zelle' | 'pix') => void;
+  onPaymentMethodSelect: (method: 'stripe' | 'zelle' | 'pix', exchangeRate?: number) => void;
 }
 
 export const I20ControlFeeModal: React.FC<I20ControlFeeModalProps> = ({

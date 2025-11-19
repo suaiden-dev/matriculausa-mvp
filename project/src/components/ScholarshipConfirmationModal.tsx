@@ -44,8 +44,8 @@ interface ScholarshipConfirmationModalProps {
   isOpen: boolean;
   onClose: () => void;
   scholarship: Scholarship;
-  onStripeCheckout: () => void;
-  onPixCheckout?: () => void;
+  onStripeCheckout: (exchangeRate?: number) => void;
+  onPixCheckout?: (exchangeRate?: number) => void;
   isProcessing?: boolean;
   feeType?: 'application_fee' | 'scholarship_fee';
 }
@@ -442,12 +442,12 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
       // O cupom será usado no checkout e depois removido quando o pagamento for confirmado
       
       if (selectedPaymentMethod === 'stripe') {
-        onStripeCheckout();
+        onStripeCheckout(exchangeRate || undefined);
       } else if (selectedPaymentMethod === 'pix') {
         if (onPixCheckout) {
-          onPixCheckout();
+          onPixCheckout(exchangeRate || undefined);
         } else {
-          onStripeCheckout();
+          onStripeCheckout(exchangeRate || undefined);
         }
       } else if (selectedPaymentMethod === 'zelle') {
         const params = new URLSearchParams({
@@ -717,10 +717,11 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
                 <div className="p-1.5 sm:p-2 bg-blue-100 rounded-lg flex-shrink-0">
                   <CreditCard className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
                 </div>
-                <div className="min-w-0">
-                  <div className="font-medium text-gray-900 text-sm sm:text-base">{t('scholarshipConfirmationModal.payment.stripe.title')}</div>
-                  <div className="text-xs sm:text-sm text-gray-600">{t('scholarshipConfirmationModal.payment.stripe.description')}</div>
-                </div>
+                  <div className="min-w-0">
+                    <div className="font-medium text-gray-900 text-sm sm:text-base">{t('scholarshipConfirmationModal.payment.stripe.title')}</div>
+                    <div className="text-xs sm:text-sm text-gray-600">{t('scholarshipConfirmationModal.payment.stripe.description')}</div>
+                    <div className="text-xs text-gray-400 mt-0.5">{t('paymentSelector.includesProcessingFees')}</div>
+                  </div>
                 </div>
                 {feeAmount > 0 && (
                   <span className="text-sm font-semibold text-blue-700 whitespace-nowrap">
@@ -795,6 +796,7 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
                   <div className="min-w-0">
                     <div className="font-medium text-gray-900 text-sm sm:text-base">{t('scholarshipConfirmationModal.payment.pix.title')}</div>
                     <div className="text-xs sm:text-sm text-gray-600">{t('scholarshipConfirmationModal.payment.pix.description')}</div>
+                    <div className="text-xs text-gray-400 mt-0.5">{t('paymentSelector.includesProcessingFees')}</div>
                   </div>
                   </div>
                   {feeAmount > 0 && (

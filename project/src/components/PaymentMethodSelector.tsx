@@ -44,7 +44,7 @@ export interface PaymentMethod {
 
 interface PaymentMethodSelectorProps {
   selectedMethod: 'stripe' | 'zelle' | 'pix' | null;
-  onMethodSelect: (method: 'stripe' | 'zelle' | 'pix') => void;
+  onMethodSelect: (method: 'stripe' | 'zelle' | 'pix', exchangeRate?: number) => void;
   feeType: 'selection_process' | 'application_fee' | 'enrollment_fee' | 'scholarship_fee' | 'i20_control_fee';
   amount: number;
   className?: string;
@@ -146,7 +146,8 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
       });
       
       console.log('🔍 [PaymentMethodSelector] Chamando callback onMethodSelect');
-      onMethodSelect(method);
+      // Passar taxa de câmbio quando for PIX para garantir consistência
+      onMethodSelect(method, method === 'pix' ? (exchangeRate || undefined) : undefined);
       
       // Reset após o callback ser chamado - tempo maior para Stripe
       setTimeout(() => {
@@ -253,6 +254,12 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
                         <p className="text-sm text-gray-500 mt-1">
                           {method.description}
                         </p>
+                        {/* Tag "inclui taxa de processamento" para Stripe e PIX */}
+                        {(method.id === 'stripe' || method.id === 'pix') && (
+                          <p className="text-xs text-gray-400 mt-1">
+                            {t('paymentSelector.includesProcessingFees')}
+                          </p>
+                        )}
                       </div>
                       
                       {isSelected && !processingSelection && (

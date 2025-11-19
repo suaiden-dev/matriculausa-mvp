@@ -55,8 +55,11 @@ const ScholarshipFeeSuccess: React.FC = () => {
           return;
         }
         
-        // Extrair informações do pagamento (mesma lógica do SelectionProcessFeeSuccess)
-        if (result.final_amount) {
+        // Extrair informações do pagamento
+        // Priorizar gross_amount_usd (valor bruto que o aluno realmente pagou), senão usar final_amount ou amount_paid
+        if (result.gross_amount_usd !== null && result.gross_amount_usd !== undefined) {
+          setPaidAmount(result.gross_amount_usd);
+        } else if (result.final_amount) {
           setPaidAmount(result.final_amount);
         } else if (result.amount_paid) {
           setPaidAmount(result.amount_paid);
@@ -211,11 +214,7 @@ const ScholarshipFeeSuccess: React.FC = () => {
   if (showAnimation && !loading && !error) {
     // Mesma lógica do I20ControlFeeSuccess
     console.log('[ScholarshipFeeSuccess] Exibindo animação - paidAmount:', paidAmount);
-    const displayAmount = paidAmount ? paidAmount.toFixed(2) : '900.00';
-    console.log('[ScholarshipFeeSuccess] displayAmount calculado:', displayAmount);
-    const messageText = promotionalCoupon 
-      ? `${t('successPages.common.paymentProcessedAmount', { amount: displayAmount })} ${t('successPages.scholarshipFee.message')} (Cupom ${promotionalCoupon} aplicado)`
-      : `${t('successPages.common.paymentProcessedAmount', { amount: displayAmount })} ${t('successPages.scholarshipFee.message')}`;
+    const messageText = `${t('successPages.common.paymentProcessedAmount')} ${t('successPages.scholarshipFee.message')}`;
     console.log('[ScholarshipFeeSuccess] Mensagem final:', messageText);
     
     return (

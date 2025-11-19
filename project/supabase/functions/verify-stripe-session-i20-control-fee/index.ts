@@ -97,9 +97,100 @@ Deno.serve(async (req)=>{
       
       if (hasNotificationLog) {
         console.log(`[DUPLICAÇÃO] Session ${sessionId} já está processando ou processou notificações, retornando sucesso sem reprocessar.`);
+        // Mesmo com duplicação, ainda precisamos retornar os dados do pagamento
+        // Buscar a sessão do Stripe para extrair os dados
+        const session = await stripe.checkout.sessions.retrieve(sessionId, {
+          expand: ['payment_intent']
+        });
+        
+        // Extrair informações do pagamento
+        const amountPaid = session.amount_total ? session.amount_total / 100 : null;
+        const currency = session.currency?.toUpperCase() || 'USD';
+        const promotionalCouponReturn = session.metadata?.promotional_coupon || null;
+        const originalAmountReturn = session.metadata?.original_amount ? parseFloat(session.metadata.original_amount) : null;
+        let finalAmountReturn: number | null = null;
+        if (session.metadata?.final_amount) {
+          const parsed = parseFloat(session.metadata.final_amount);
+          if (!isNaN(parsed) && parsed > 0) {
+            finalAmountReturn = parsed;
+          }
+        }
+        
+        // Obter gross_amount_usd - PRIORIZAR valor do Stripe (balanceTransaction) se disponível
+        let grossAmountUsdFromStripe: number | null = null;
+        const paymentIntentIdForGross = session.payment_intent ? (typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent.id) : null;
+        const paymentMethodForGross = session.metadata?.payment_method || (session.payment_method_types && session.payment_method_types[0]) || 'card';
+
+        // Tentar buscar do balanceTransaction se for PIX
+        if ((currency === 'BRL' || paymentMethodForGross === 'pix') && paymentIntentIdForGross) {
+          try {
+            const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentIdForGross, {
+              expand: ['latest_charge.balance_transaction']
+            });
+
+            if (paymentIntent.latest_charge) {
+              const charge = typeof paymentIntent.latest_charge === 'string'
+                ? await stripe.charges.retrieve(paymentIntent.latest_charge, {
+                    expand: ['balance_transaction']
+                  })
+                : paymentIntent.latest_charge;
+
+              if (charge.balance_transaction) {
+                const balanceTransaction = typeof charge.balance_transaction === 'string'
+                  ? await stripe.balanceTransactions.retrieve(charge.balance_transaction)
+                  : charge.balance_transaction;
+
+                if (balanceTransaction.amount && balanceTransaction.currency === 'usd') {
+                  grossAmountUsdFromStripe = balanceTransaction.amount / 100;
+                  console.log(`[verify-stripe-session-i20-control-fee] ✅ [DUPLICAÇÃO] Valor bruto do Stripe (balanceTransaction): ${grossAmountUsdFromStripe} USD`);
+                }
+              }
+            }
+          } catch (stripeError) {
+            console.warn('[verify-stripe-session-i20-control-fee] ⚠️ [DUPLICAÇÃO] Erro ao buscar valor do Stripe:', stripeError);
+          }
+        }
+
+        // Se não tiver valor do Stripe, usar metadata (convertendo de BRL para USD se necessário)
+        let grossAmountUsdFromMetadata: number | null = null;
+        if (!grossAmountUsdFromStripe && session.metadata?.gross_amount) {
+          const grossAmountRaw = parseFloat(session.metadata.gross_amount);
+          // Se for PIX (currency BRL), converter para USD usando exchange_rate
+          if (currency === 'BRL' && session.metadata?.exchange_rate) {
+            const exchangeRate = parseFloat(session.metadata.exchange_rate);
+            if (exchangeRate > 0) {
+              grossAmountUsdFromMetadata = grossAmountRaw / exchangeRate;
+              console.log(`[verify-stripe-session-i20-control-fee] 💱 [DUPLICAÇÃO] Convertendo gross_amount de BRL para USD: ${grossAmountRaw} BRL / ${exchangeRate} = ${grossAmountUsdFromMetadata} USD`);
+            } else {
+              grossAmountUsdFromMetadata = grossAmountRaw; // Fallback se exchange_rate inválido
+            }
+          } else {
+            // Se não for PIX, já está em USD
+            grossAmountUsdFromMetadata = grossAmountRaw;
+          }
+        }
+
+        // Priorizar: Stripe > Metadata
+        const grossAmountUsd = grossAmountUsdFromStripe || grossAmountUsdFromMetadata || null;
+        
+        let amountPaidUSD = amountPaid || 0;
+        if (currency === 'BRL' && session.metadata?.exchange_rate && amountPaid) {
+          const exchangeRate = parseFloat(session.metadata.exchange_rate);
+          if (exchangeRate > 0) {
+            amountPaidUSD = amountPaid / exchangeRate;
+          }
+        }
+        
         return corsResponse({
           status: 'complete',
-          message: 'Session already processing or processed notifications.'
+          message: 'Session already processing or processed notifications.',
+          amount_paid: amountPaidUSD || amountPaid || 0,
+          amount_paid_original: amountPaid || 0,
+          currency: currency,
+          promotional_coupon: promotionalCouponReturn,
+          original_amount: originalAmountReturn,
+          final_amount: finalAmountReturn,
+          gross_amount_usd: grossAmountUsd // Valor bruto em USD (quando disponível)
         }, 200);
       }
       
@@ -138,6 +229,63 @@ Deno.serve(async (req)=>{
             }
           }
           
+          // Obter gross_amount_usd - PRIORIZAR valor do Stripe (balanceTransaction) se disponível
+          let grossAmountUsdFromStripe: number | null = null;
+          const paymentIntentIdForGross = session.payment_intent ? (typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent.id) : null;
+          const paymentMethodForGross = session.metadata?.payment_method || (session.payment_method_types && session.payment_method_types[0]) || 'card';
+
+          // Tentar buscar do balanceTransaction se for PIX
+          if ((currency === 'BRL' || paymentMethodForGross === 'pix') && paymentIntentIdForGross) {
+            try {
+              const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentIdForGross, {
+                expand: ['latest_charge.balance_transaction']
+              });
+
+              if (paymentIntent.latest_charge) {
+                const charge = typeof paymentIntent.latest_charge === 'string'
+                  ? await stripe.charges.retrieve(paymentIntent.latest_charge, {
+                      expand: ['balance_transaction']
+                    })
+                  : paymentIntent.latest_charge;
+
+                if (charge.balance_transaction) {
+                  const balanceTransaction = typeof charge.balance_transaction === 'string'
+                    ? await stripe.balanceTransactions.retrieve(charge.balance_transaction)
+                    : charge.balance_transaction;
+
+                  if (balanceTransaction.amount && balanceTransaction.currency === 'usd') {
+                    grossAmountUsdFromStripe = balanceTransaction.amount / 100;
+                    console.log(`[verify-stripe-session-i20-control-fee] ✅ [DUPLICAÇÃO] Valor bruto do Stripe (balanceTransaction): ${grossAmountUsdFromStripe} USD`);
+                  }
+                }
+              }
+            } catch (stripeError) {
+              console.warn('[verify-stripe-session-i20-control-fee] ⚠️ [DUPLICAÇÃO] Erro ao buscar valor do Stripe:', stripeError);
+            }
+          }
+
+          // Se não tiver valor do Stripe, usar metadata (convertendo de BRL para USD se necessário)
+          let grossAmountUsdFromMetadata: number | null = null;
+          if (!grossAmountUsdFromStripe && session.metadata?.gross_amount) {
+            const grossAmountRaw = parseFloat(session.metadata.gross_amount);
+            // Se for PIX (currency BRL), converter para USD usando exchange_rate
+            if (currency === 'BRL' && session.metadata?.exchange_rate) {
+              const exchangeRate = parseFloat(session.metadata.exchange_rate);
+              if (exchangeRate > 0) {
+                grossAmountUsdFromMetadata = grossAmountRaw / exchangeRate;
+                console.log(`[verify-stripe-session-i20-control-fee] 💱 [DUPLICAÇÃO] Convertendo gross_amount de BRL para USD: ${grossAmountRaw} BRL / ${exchangeRate} = ${grossAmountUsdFromMetadata} USD`);
+              } else {
+                grossAmountUsdFromMetadata = grossAmountRaw; // Fallback se exchange_rate inválido
+              }
+            } else {
+              // Se não for PIX, já está em USD
+              grossAmountUsdFromMetadata = grossAmountRaw;
+            }
+          }
+
+          // Priorizar: Stripe > Metadata
+          const grossAmountUsd = grossAmountUsdFromStripe || grossAmountUsdFromMetadata || null;
+          
           let amountPaidUSD = amountPaid || 0;
           if (currency === 'BRL' && session.metadata?.exchange_rate && amountPaid) {
             const exchangeRate = parseFloat(session.metadata.exchange_rate);
@@ -154,7 +302,8 @@ Deno.serve(async (req)=>{
             currency: currency,
             promotional_coupon: promotionalCouponReturn,
             original_amount: originalAmountReturn,
-            final_amount: finalAmountReturn
+            final_amount: finalAmountReturn,
+            gross_amount_usd: grossAmountUsd // Valor bruto em USD (quando disponível)
           }, 200);
         }
       }
@@ -210,18 +359,14 @@ Deno.serve(async (req)=>{
         const currency = session.currency?.toUpperCase() || 'USD';
         
         // Para pagamentos PIX (BRL), buscar o valor líquido recebido em USD do BalanceTransaction
-        // Controle de ambiente: só buscar em test/staging por padrão, ou se variável de ambiente forçar
-        const enableNetAmountFetchEnv = Deno.env.get('ENABLE_STRIPE_NET_AMOUNT_FETCH');
-        const shouldFetchNetAmount = 
-          enableNetAmountFetchEnv === 'true'   ? true  // Força ativar
-          : enableNetAmountFetchEnv === 'false' ? false // Força desativar
-          : !config.environment.isProduction;   // Auto: busca só em test/staging (não em produção)
+        // Sempre buscar o valor líquido, independente do ambiente
+        const shouldFetchNetAmount = true;
         
         // Detectar se é PIX através dos payment_method_types da sessão
         const isPixPayment = session.payment_method_types?.includes('pix') || session.metadata?.payment_method === 'pix';
         
         // Debug: Log das condições
-        console.log(`[Individual Fee Payment] DEBUG - currency: ${currency}, isPixPayment: ${isPixPayment}, paymentIntentId: ${paymentIntentId}, shouldFetchNetAmount: ${shouldFetchNetAmount}, enableNetAmountFetchEnv: ${enableNetAmountFetchEnv}, isProduction: ${config.environment.isProduction}`);
+        console.log(`[Individual Fee Payment] DEBUG - currency: ${currency}, isPixPayment: ${isPixPayment}, paymentIntentId: ${paymentIntentId}, shouldFetchNetAmount: ${shouldFetchNetAmount}, isProduction: ${config.environment.isProduction}`);
         
         let paymentAmount = paymentAmountRaw;
         let grossAmountUsd: number | null = null;
@@ -330,10 +475,15 @@ Deno.serve(async (req)=>{
         
         console.log('[Individual Fee Payment] Recording i20_control fee payment...');
         console.log(`[Individual Fee Payment] Valor original: ${paymentAmountRaw} ${currency}, Valor em USD (líquido): ${paymentAmount} USD${grossAmountUsd ? `, Valor bruto: ${grossAmountUsd} USD` : ''}${feeAmountUsd ? `, Taxas: ${feeAmountUsd} USD` : ''}`);
+        
+        // Usar gross_amount_usd como amount quando disponível (valor bruto que o aluno pagou)
+        // Isso garante que o valor exibido seja sempre o valor bruto, não o líquido
+        const amountToSave = grossAmountUsd || paymentAmount;
+        
         const { data: insertResult, error: insertError } = await supabase.rpc('insert_individual_fee_payment', {
           p_user_id: userId,
           p_fee_type: 'i20_control',
-          p_amount: paymentAmount, // Sempre em USD (líquido)
+          p_amount: amountToSave, // Valor bruto quando disponível, senão valor líquido
           p_payment_date: paymentDate,
           p_payment_method: paymentMethod,
           p_payment_intent_id: paymentIntentId || null,
@@ -866,13 +1016,74 @@ Deno.serve(async (req)=>{
         }
       }
       
+      // Obter gross_amount_usd - PRIORIZAR valor do Stripe (balanceTransaction) se disponível
+      // O valor do Stripe é o mais preciso pois é o valor real recebido
+      let grossAmountUsdFromStripe: number | null = null;
+
+      // Obter paymentIntentId para buscar valor do Stripe
+      const paymentIntentIdForGross = session.payment_intent ? (typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent.id) : null;
+      const paymentMethodForGross = session.metadata?.payment_method || (session.payment_method_types && session.payment_method_types[0]) || 'card';
+
+      // Tentar buscar do balanceTransaction se for PIX
+      if ((currency === 'BRL' || paymentMethodForGross === 'pix') && paymentIntentIdForGross) {
+        try {
+          const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentIdForGross, {
+            expand: ['latest_charge.balance_transaction']
+          });
+
+          if (paymentIntent.latest_charge) {
+            const charge = typeof paymentIntent.latest_charge === 'string'
+              ? await stripe.charges.retrieve(paymentIntent.latest_charge, {
+                  expand: ['balance_transaction']
+                })
+              : paymentIntent.latest_charge;
+
+            if (charge.balance_transaction) {
+              const balanceTransaction = typeof charge.balance_transaction === 'string'
+                ? await stripe.balanceTransactions.retrieve(charge.balance_transaction)
+                : charge.balance_transaction;
+
+              if (balanceTransaction.amount && balanceTransaction.currency === 'usd') {
+                grossAmountUsdFromStripe = balanceTransaction.amount / 100;
+                console.log(`[verify-stripe-session-i20-control-fee] ✅ Valor bruto do Stripe (balanceTransaction): ${grossAmountUsdFromStripe} USD`);
+              }
+            }
+          }
+        } catch (stripeError) {
+          console.warn('[verify-stripe-session-i20-control-fee] ⚠️ Erro ao buscar valor do Stripe:', stripeError);
+        }
+      }
+
+      // Se não tiver valor do Stripe, usar metadata (convertendo de BRL para USD se necessário)
+      let grossAmountUsdFromMetadata: number | null = null;
+      if (!grossAmountUsdFromStripe && session.metadata?.gross_amount) {
+        const grossAmountRaw = parseFloat(session.metadata.gross_amount);
+        // Se for PIX (currency BRL), converter para USD usando exchange_rate
+        if (currency === 'BRL' && session.metadata?.exchange_rate) {
+          const exchangeRate = parseFloat(session.metadata.exchange_rate);
+          if (exchangeRate > 0) {
+            grossAmountUsdFromMetadata = grossAmountRaw / exchangeRate;
+            console.log(`[verify-stripe-session-i20-control-fee] 💱 Convertendo gross_amount de BRL para USD: ${grossAmountRaw} BRL / ${exchangeRate} = ${grossAmountUsdFromMetadata} USD`);
+          } else {
+            grossAmountUsdFromMetadata = grossAmountRaw; // Fallback se exchange_rate inválido
+          }
+        } else {
+          // Se não for PIX, já está em USD
+          grossAmountUsdFromMetadata = grossAmountRaw;
+        }
+      }
+
+      // Priorizar: Stripe > Metadata > amountPaidUSD > amountPaid
+      const grossAmountUsd = grossAmountUsdFromStripe || grossAmountUsdFromMetadata || null;
+      
       // Log para debug
       console.log('[verify-stripe-session-i20-control-fee] 📊 Dados extraídos do metadata:', {
         promotional_coupon: promotionalCouponReturn,
         original_amount: originalAmountReturn,
         final_amount: finalAmountReturn,
         amount_paid: amountPaid,
-        currency: currency
+        currency: currency,
+        gross_amount_usd: grossAmountUsd
       });
       console.log('[verify-stripe-session-i20-control-fee] 📊 Metadata completo da sessão:', JSON.stringify(session.metadata, null, 2));
       console.log('[verify-stripe-session-i20-control-fee] 📊 final_amount RAW do metadata:', session.metadata?.final_amount, 'tipo:', typeof session.metadata?.final_amount);
@@ -895,7 +1106,8 @@ Deno.serve(async (req)=>{
         currency: currency,
         promotional_coupon: promotionalCouponReturn,
         original_amount: originalAmountReturn,
-        final_amount: finalAmountReturn
+        final_amount: finalAmountReturn,
+        gross_amount_usd: grossAmountUsd // Valor bruto em USD (quando disponível)
       }, 200);
     } else {
       return corsResponse({

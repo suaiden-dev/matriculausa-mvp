@@ -453,15 +453,11 @@ Deno.serve(async (req)=>{
         }
         
         // Para pagamentos PIX (BRL), buscar o valor líquido recebido em USD do BalanceTransaction
-        // Controle de ambiente: só buscar em test/staging por padrão, ou se variável de ambiente forçar
-        const enableNetAmountFetchEnv = Deno.env.get('ENABLE_STRIPE_NET_AMOUNT_FETCH');
-        const shouldFetchNetAmount = 
-          enableNetAmountFetchEnv === 'true'   ? true  // Força ativar
-          : enableNetAmountFetchEnv === 'false' ? false // Força desativar
-          : !config.environment.isProduction;   // Auto: busca só em test/staging (não em produção)
+        // Sempre buscar o valor líquido, independente do ambiente
+        const shouldFetchNetAmount = true;
         
         // Debug: Log das condições
-        console.log(`[Individual Fee Payment] DEBUG - currency: ${currency}, paymentMethod: ${paymentMethod}, paymentIntentId: ${paymentIntentId}, shouldFetchNetAmount: ${shouldFetchNetAmount}, enableNetAmountFetchEnv: ${enableNetAmountFetchEnv}, isProduction: ${config.environment.isProduction}`);
+        console.log(`[Individual Fee Payment] DEBUG - currency: ${currency}, paymentMethod: ${paymentMethod}, paymentIntentId: ${paymentIntentId}, shouldFetchNetAmount: ${shouldFetchNetAmount}, isProduction: ${config.environment.isProduction}`);
         
         let paymentAmount = paymentAmountRaw;
         let grossAmountUsd: number | null = null;
@@ -1154,6 +1150,27 @@ Deno.serve(async (req)=>{
           }
         }
         
+        // Obter gross_amount_usd do metadata (valor bruto que o aluno realmente pagou, com markup)
+        // IMPORTANTE: Se for PIX, o gross_amount está em BRL, precisa converter para USD
+        let grossAmountUsdFromMetadata: number | null = null;
+        if (session.metadata?.gross_amount) {
+          const grossAmountRaw = parseFloat(session.metadata.gross_amount);
+          // Se for PIX (currency BRL), converter para USD usando exchange_rate
+          if (currency === 'BRL' && session.metadata?.exchange_rate) {
+            const exchangeRate = parseFloat(session.metadata.exchange_rate);
+            if (exchangeRate > 0) {
+              grossAmountUsdFromMetadata = grossAmountRaw / exchangeRate;
+              console.log(`[verify-stripe-session-selection-process-fee] 💱 Convertendo gross_amount de BRL para USD: ${grossAmountRaw} BRL / ${exchangeRate} = ${grossAmountUsdFromMetadata} USD`);
+            } else {
+              grossAmountUsdFromMetadata = grossAmountRaw; // Fallback se exchange_rate inválido
+            }
+          } else {
+            // Se não for PIX, já está em USD
+            grossAmountUsdFromMetadata = grossAmountRaw;
+          }
+        }
+        const grossAmountUsd = grossAmountUsdFromMetadata || amountPaidUSD || amountPaid || 0;
+        
         return corsResponse({
           status: 'complete',
           message: 'PIX payment verified and processed successfully.',
@@ -1161,6 +1178,7 @@ Deno.serve(async (req)=>{
           redirect_required: true,
           redirect_url: 'http://localhost:5173/student/dashboard/scholarships',
           amount_paid: amountPaidUSD || amountPaid || 0,
+          gross_amount_usd: grossAmountUsd, // Valor bruto em USD (valor que o aluno realmente pagou, com markup)
           amount_paid_original: amountPaid || 0,
           currency: currency,
           promotional_coupon: promotionalCouponReturn,
@@ -1176,6 +1194,26 @@ Deno.serve(async (req)=>{
       const originalAmountReturn = session.metadata?.original_amount ? parseFloat(session.metadata.original_amount) : null;
       const finalAmountReturn = session.metadata?.final_amount ? parseFloat(session.metadata.final_amount) : null;
       
+      // Obter gross_amount_usd do metadata (valor bruto que o aluno realmente pagou, com markup)
+      // IMPORTANTE: Se for PIX, o gross_amount está em BRL, precisa converter para USD
+      let grossAmountUsdFromMetadata: number | null = null;
+      if (session.metadata?.gross_amount) {
+        const grossAmountRaw = parseFloat(session.metadata.gross_amount);
+        // Se for PIX (currency BRL), converter para USD usando exchange_rate
+        if (currency === 'BRL' && session.metadata?.exchange_rate) {
+          const exchangeRate = parseFloat(session.metadata.exchange_rate);
+          if (exchangeRate > 0) {
+            grossAmountUsdFromMetadata = grossAmountRaw / exchangeRate;
+            console.log(`[verify-stripe-session-selection-process-fee] 💱 Convertendo gross_amount de BRL para USD: ${grossAmountRaw} BRL / ${exchangeRate} = ${grossAmountUsdFromMetadata} USD`);
+          } else {
+            grossAmountUsdFromMetadata = grossAmountRaw; // Fallback se exchange_rate inválido
+          }
+        } else {
+          // Se não for PIX, já está em USD
+          grossAmountUsdFromMetadata = grossAmountRaw;
+        }
+      }
+      
       // Se for PIX (BRL), converter para USD usando a taxa de câmbio do metadata
       let amountPaidUSD = amountPaid || 0;
       if (currency === 'BRL' && session.metadata?.exchange_rate && amountPaid) {
@@ -1185,10 +1223,14 @@ Deno.serve(async (req)=>{
         }
       }
       
+      // Priorizar gross_amount_usd do metadata (valor bruto pago), senão usar amountPaidUSD
+      const grossAmountUsd = grossAmountUsdFromMetadata || amountPaidUSD || amountPaid || 0;
+      
       return corsResponse({
         status: 'complete',
         message: 'Session verified and processed successfully.',
-        amount_paid: amountPaidUSD || amountPaid || 0, // Retornar em USD para exibição
+        amount_paid: amountPaidUSD || amountPaid || 0, // Valor líquido em USD (após taxas)
+        gross_amount_usd: grossAmountUsd, // Valor bruto em USD (valor que o aluno realmente pagou, com markup)
         amount_paid_original: amountPaid || 0, // Valor original na moeda da sessão
         currency: currency,
         promotional_coupon: promotionalCouponReturn,
