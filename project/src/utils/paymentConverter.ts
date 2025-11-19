@@ -268,8 +268,8 @@ export async function getRealPaidAmount(
  * Busca valores brutos pagos (COM taxas do Stripe) de individual_fee_payments
  * Usado no Payment Management do superADMIN para mostrar o valor que o aluno realmente pagou
  * 
- * IMPORTANTE: Os valores em individual_fee_payments.amount já estão em USD (convertidos na hora do registro).
- * Não precisa fazer conversão adicional - apenas retornar os valores diretamente.
+ * IMPORTANTE: Usa gross_amount_usd quando disponível (valor bruto antes das taxas),
+ * senão usa amount (valor líquido após taxas).
  */
 export async function getGrossPaidAmounts(
   userId: string,
@@ -278,7 +278,7 @@ export async function getGrossPaidAmounts(
   try {
     const { data: payments, error } = await supabase
       .from('individual_fee_payments')
-      .select('fee_type, amount, payment_method')
+      .select('fee_type, amount, gross_amount_usd, payment_method')
       .eq('user_id', userId)
       .in('fee_type', feeTypes);
 
@@ -291,9 +291,10 @@ export async function getGrossPaidAmounts(
 
     // Processar cada pagamento
     for (const payment of payments || []) {
-      // Os valores em individual_fee_payments já estão em USD (convertidos na hora do registro)
-      // Apenas usar o valor diretamente
-      const amountUSD = Number(payment.amount);
+      // Usar gross_amount_usd quando disponível, senão usar amount
+      const amountUSD = payment.gross_amount_usd 
+        ? Number(payment.gross_amount_usd) 
+        : Number(payment.amount);
 
       // Mapear fee_type para a chave correta
       const feeTypeKey = payment.fee_type === 'selection_process' ? 'selection_process' :

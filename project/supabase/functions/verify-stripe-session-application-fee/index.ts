@@ -279,8 +279,11 @@ Deno.serve(async (req)=>{
         console.log(`[Individual Fee Payment] DEBUG - currency: ${currency}, paymentMethod: ${paymentMethod}, paymentIntentId: ${paymentIntentId}, shouldFetchNetAmount: ${shouldFetchNetAmount}, enableNetAmountFetchEnv: ${enableNetAmountFetchEnv}, isProduction: ${config.environment.isProduction}`);
         
         let paymentAmount = paymentAmountRaw;
+        let grossAmountUsd: number | null = null;
+        let feeAmountUsd: number | null = null;
+        
         if ((currency === 'BRL' || paymentMethod === 'pix') && paymentIntentId && shouldFetchNetAmount) {
-          console.log(`✅ Buscando valor líquido do Stripe (ambiente: ${config.environment.environment})`);
+          console.log(`✅ Buscando valor líquido, bruto e taxas do Stripe (ambiente: ${config.environment.environment})`);
           try {
             // Buscar PaymentIntent com latest_charge expandido para obter balance_transaction
             const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId, {
@@ -302,8 +305,21 @@ Deno.serve(async (req)=>{
                 // O valor líquido (net) já está em USD e já considera taxas e conversão de moeda
                 if (balanceTransaction.net && balanceTransaction.currency === 'usd') {
                   paymentAmount = balanceTransaction.net / 100; // net está em centavos
+                  
+                  // Buscar valor bruto (amount) em USD
+                  if (balanceTransaction.amount && balanceTransaction.currency === 'usd') {
+                    grossAmountUsd = balanceTransaction.amount / 100; // amount está em centavos
+                    console.log(`[Individual Fee Payment] Valor bruto recebido do Stripe: ${grossAmountUsd} USD`);
+                  }
+                  
+                  // Buscar taxas (fee) em USD
+                  if (balanceTransaction.fee && balanceTransaction.currency === 'usd') {
+                    feeAmountUsd = balanceTransaction.fee / 100; // fee está em centavos
+                    console.log(`[Individual Fee Payment] Taxas recebidas do Stripe: ${feeAmountUsd} USD`);
+                  }
+                  
                   console.log(`[Individual Fee Payment] Valor líquido recebido do Stripe (após taxas e conversão): ${paymentAmount} USD`);
-                  console.log(`[Individual Fee Payment] Valor bruto: ${balanceTransaction.amount / 100} ${balanceTransaction.currency}, Taxas: ${(balanceTransaction.fee || 0) / 100} ${balanceTransaction.currency}`);
+                  console.log(`[Individual Fee Payment] Valor bruto: ${grossAmountUsd || balanceTransaction.amount / 100} ${balanceTransaction.currency}, Taxas: ${feeAmountUsd || (balanceTransaction.fee || 0) / 100} ${balanceTransaction.currency}`);
                 } else {
                   // Fallback: usar exchange_rate do metadata se disponível
                   if (session.metadata?.exchange_rate) {
@@ -368,16 +384,18 @@ Deno.serve(async (req)=>{
         }
         
         console.log('[Individual Fee Payment] Recording application fee payment...');
-        console.log(`[Individual Fee Payment] Valor original: ${paymentAmountRaw} ${currency}, Valor em USD (líquido): ${paymentAmount} USD`);
+        console.log(`[Individual Fee Payment] Valor original: ${paymentAmountRaw} ${currency}, Valor em USD (líquido): ${paymentAmount} USD${grossAmountUsd ? `, Valor bruto: ${grossAmountUsd} USD` : ''}${feeAmountUsd ? `, Taxas: ${feeAmountUsd} USD` : ''}`);
         const { data: insertResult, error: insertError } = await supabase.rpc('insert_individual_fee_payment', {
           p_user_id: userId,
           p_fee_type: 'application',
-          p_amount: paymentAmount, // Sempre em USD
+          p_amount: paymentAmount, // Sempre em USD (líquido)
           p_payment_date: paymentDate,
           p_payment_method: 'stripe',
           p_payment_intent_id: paymentIntentId,
           p_stripe_charge_id: null,
-          p_zelle_payment_id: null
+          p_zelle_payment_id: null,
+          p_gross_amount_usd: grossAmountUsd, // Valor bruto em USD (quando disponível)
+          p_fee_amount_usd: feeAmountUsd // Taxas em USD (quando disponível)
         });
         
         if (insertError) {
