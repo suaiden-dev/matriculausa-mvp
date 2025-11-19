@@ -214,11 +214,7 @@ const ScholarshipFeeSuccess: React.FC = () => {
   if (showAnimation && !loading && !error) {
     // Mesma lógica do I20ControlFeeSuccess
     console.log('[ScholarshipFeeSuccess] Exibindo animação - paidAmount:', paidAmount);
-    const displayAmount = paidAmount ? paidAmount.toFixed(2) : '900.00';
-    console.log('[ScholarshipFeeSuccess] displayAmount calculado:', displayAmount);
-    const messageText = promotionalCoupon 
-      ? `${t('successPages.common.paymentProcessedAmount', { amount: displayAmount })} ${t('successPages.scholarshipFee.message')} (Cupom ${promotionalCoupon} aplicado)`
-      : `${t('successPages.common.paymentProcessedAmount', { amount: displayAmount })} ${t('successPages.scholarshipFee.message')}`;
+    const messageText = `${t('successPages.common.paymentProcessedAmount')} ${t('successPages.scholarshipFee.message')}`;
     console.log('[ScholarshipFeeSuccess] Mensagem final:', messageText);
     
     return (

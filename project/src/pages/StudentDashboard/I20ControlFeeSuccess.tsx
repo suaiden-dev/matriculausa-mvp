@@ -185,12 +185,7 @@ const I20ControlFeeSuccess: React.FC = () => {
   if (showAnimation && !loading && !error) {
     // Mesma lógica do SelectionProcessFeeSuccess
     console.log('✅ [I20ControlFeeSuccess] Exibindo animação - paidAmount:', paidAmount);
-    const displayAmount = paidAmount ? paidAmount.toFixed(2) : (getFeeAmount('i20_control_fee')?.toFixed(2) || '900.00');
-    console.log('✅ [I20ControlFeeSuccess] displayAmount calculado:', displayAmount);
-    const baseMessage = `${t('successPages.common.paymentProcessedAmount', { amount: displayAmount })} ${t('successPages.i20ControlFee.message')}`;
-    const messageText = promotionalCoupon 
-      ? `${baseMessage} (Cupom ${promotionalCoupon} aplicado)`
-      : baseMessage;
+    const messageText = `${t('successPages.common.paymentProcessedAmount')} ${t('successPages.i20ControlFee.message')}`;
     console.log('✅ [I20ControlFeeSuccess] Mensagem final:', messageText);
     
     return (
