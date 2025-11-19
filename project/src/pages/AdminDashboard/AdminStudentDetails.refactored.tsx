@@ -15,7 +15,7 @@ import { useDocumentRequestHandlers } from '../../hooks/useDocumentRequestHandle
 import { generateTermAcceptancePDF, StudentTermAcceptanceData } from '../../utils/pdfGenerator';
 import { recordIndividualFeePayment } from '../../lib/paymentRecorder';
 import { useStudentLogs } from '../../hooks/useStudentLogs';
-import { getRealPaidAmounts } from '../../utils/paymentConverter';
+import { getGrossPaidAmounts } from '../../utils/paymentConverter';
 
 // Componentes de UI Base
 import {
@@ -89,7 +89,8 @@ const AdminStudentDetails: React.FC = () => {
   const [realPaidAmounts, setRealPaidAmounts] = useState<Record<string, number>>({});
   const pendingZellePayments = pendingZelleQuery.data || [];
   
-  // Buscar valores reais pagos usando getRealPaidAmounts (converte BRL para USD e remove taxas do Stripe)
+  // Buscar valores brutos pagos usando getGrossPaidAmounts (mostra o valor que o aluno realmente pagou, incluindo taxas do Stripe)
+  // Usa gross_amount_usd quando disponível, senão usa amount
   React.useEffect(() => {
     if (!student?.user_id) {
       setRealPaidAmounts({});
@@ -98,10 +99,10 @@ const AdminStudentDetails: React.FC = () => {
     
     const loadRealPaidAmounts = async () => {
       try {
-        const amounts = await getRealPaidAmounts(student.user_id, ['selection_process', 'scholarship', 'i20_control', 'application']);
+        const amounts = await getGrossPaidAmounts(student.user_id, ['selection_process', 'scholarship', 'i20_control', 'application']);
         setRealPaidAmounts(amounts);
       } catch (error) {
-        console.error('[AdminStudentDetails] Erro ao buscar valores reais pagos:', error);
+        console.error('[AdminStudentDetails] Erro ao buscar valores brutos pagos:', error);
         setRealPaidAmounts({});
       }
     };

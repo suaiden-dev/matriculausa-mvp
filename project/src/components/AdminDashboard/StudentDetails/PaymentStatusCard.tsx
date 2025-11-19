@@ -149,7 +149,8 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
               ) : (
                 <dd className="text-sm font-semibold text-slate-700 mt-1 flex items-center">
                   {(() => {
-                    // Se o pagamento já foi feito E temos o valor real pago, mostrar o valor REAL pago
+                    // Se o pagamento já foi feito E temos o valor bruto pago (gross_amount_usd), mostrar o valor REAL pago
+                    // Este valor inclui as taxas do Stripe, mostrando o que o aluno realmente pagou
                     if (student?.has_paid_selection_process_fee && realPaidAmounts?.selection_process) {
                       return formatFeeAmount(realPaidAmounts.selection_process);
                     }
@@ -277,7 +278,8 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
               {student.is_application_fee_paid ? (
                 <dd className="text-sm font-semibold text-slate-700 mt-1">
                   {(() => {
-                    // Se o pagamento já foi feito E temos o valor real pago, mostrar o valor REAL pago
+                    // Se o pagamento já foi feito E temos o valor bruto pago (gross_amount_usd), mostrar o valor REAL pago
+                    // Este valor inclui as taxas do Stripe, mostrando o que o aluno realmente pagou
                     if (realPaidAmounts?.application) {
                       return formatFeeAmount(realPaidAmounts.application);
                     }
@@ -403,7 +405,8 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
               ) : (
                 <dd className="text-sm font-semibold text-slate-700 mt-1 flex items-center">
                   {(() => {
-                    // Se o pagamento já foi feito E temos o valor real pago, mostrar o valor REAL pago
+                    // Se o pagamento já foi feito E temos o valor bruto pago (gross_amount_usd), mostrar o valor REAL pago
+                    // Este valor inclui as taxas do Stripe, mostrando o que o aluno realmente pagou
                     if (student?.is_scholarship_fee_paid && realPaidAmounts?.scholarship) {
                       return formatFeeAmount(realPaidAmounts.scholarship);
                     }
@@ -518,7 +521,8 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
               ) : (
                 <dd className="text-sm font-semibold text-slate-700 mt-1 flex items-center">
                   {(() => {
-                    // Se o pagamento já foi feito E temos o valor real pago, mostrar o valor REAL pago
+                    // Se o pagamento já foi feito E temos o valor bruto pago (gross_amount_usd), mostrar o valor REAL pago
+                    // Este valor inclui as taxas do Stripe, mostrando o que o aluno realmente pagou
                     if (student?.has_paid_i20_control_fee && realPaidAmounts?.i20_control) {
                       return formatFeeAmount(realPaidAmounts.i20_control);
                     }
