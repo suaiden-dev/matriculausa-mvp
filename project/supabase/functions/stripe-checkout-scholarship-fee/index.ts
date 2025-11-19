@@ -218,7 +218,7 @@ Deno.serve(async (req) => {
       amountToUse = promotionalCouponData.final_amount;
       console.log('[stripe-checkout-scholarship-fee] 🎟️ Usando valor com desconto do cupom promocional:', amountToUse);
     }
-    
+
     // Definição das line_items priorizando amount explícito ou valor do pacote.
     // 1) PRIORIDADE: Se houver cupom promocional válido, usar final_amount do cupom
     // 2) Se veio final_amount no metadata, usa esse valor

@@ -144,6 +144,7 @@ const MyApplications: React.FC = () => {
   };
 
   // Função para buscar valores reais pagos de individual_fee_payments
+  // Usa gross_amount_usd quando disponível, senão usa amount
   const fetchRealPaidAmounts = React.useCallback(async () => {
     if (!user?.id) {
       setRealPaidAmounts({});
@@ -153,7 +154,7 @@ const MyApplications: React.FC = () => {
     try {
       const { data: payments, error } = await supabase
         .from('individual_fee_payments')
-        .select('fee_type, amount')
+        .select('fee_type, amount, gross_amount_usd')
         .eq('user_id', user.id);
       
       if (error) {
@@ -164,10 +165,15 @@ const MyApplications: React.FC = () => {
       
       const amounts: typeof realPaidAmounts = {};
       payments?.forEach(payment => {
+        // Usar gross_amount_usd quando disponível, senão usar amount
+        const displayAmount = payment.gross_amount_usd 
+          ? Number(payment.gross_amount_usd) 
+          : Number(payment.amount);
+        
         if (payment.fee_type === 'application') {
-          amounts.application = Number(payment.amount);
+          amounts.application = displayAmount;
         } else if (payment.fee_type === 'scholarship') {
-          amounts.scholarship = Number(payment.amount);
+          amounts.scholarship = displayAmount;
         }
       });
       
@@ -1695,7 +1701,9 @@ const MyApplications: React.FC = () => {
                         <div className="flex items-center justify-between mb-3">
                           <span className="font-semibold text-gray-900 text-sm">{t('studentDashboard.myApplications.paymentStatus.applicationFee')}</span>
                           <span className="text-base font-bold text-gray-700">
-                            {formatAmount(getApplicationFeeWithDependents(Number(scholarship.application_fee_amount || 35000)))}
+                            {realPaidAmounts.application !== undefined
+                              ? formatAmount(realPaidAmounts.application)
+                              : formatAmount(getApplicationFeeWithDependents(Number(scholarship.application_fee_amount || 35000)))}
                           </span>
                         </div>
                         {applicationFeePaid ? (
@@ -1743,7 +1751,10 @@ const MyApplications: React.FC = () => {
                       <div className="bg-white border-2 border-slate-200 rounded-xl p-3 shadow-sm">
                         <div className="flex items-center justify-between mb-3">
                           <span className="font-semibold text-gray-900 text-sm">{t('studentDashboard.myApplications.paymentStatus.scholarshipFee')}</span>
-                          {scholarshipFeePromotionalCoupon ? (
+                          {realPaidAmounts.scholarship !== undefined ? (
+                            // Se há pagamento registrado, mostrar valor bruto (gross_amount_usd) ou amount
+                            <span className="text-base font-bold text-gray-700">{formatAmount(realPaidAmounts.scholarship)}</span>
+                          ) : scholarshipFeePromotionalCoupon ? (
                             // Se há cupom promocional, mostrar valor com desconto
                             <div className="text-right">
                               <div className="text-base font-bold text-gray-400 line-through">{formatAmount(Number(getFeeAmount('scholarship_fee')))}</div>

@@ -216,7 +216,7 @@ export const PaymentMethodSelectorDrawer: React.FC<PaymentMethodSelectorDrawerPr
       if (!result.success) {
         console.warn('[PaymentMethodSelectorDrawer] ⚠️ Aviso: Não foi possível remover o cupom do banco:', result.error);
         // Continuar mesmo se falhar no banco - remover localmente
-      } else {
+          } else {
         console.log('[PaymentMethodSelectorDrawer] ✅ Cupom removido do banco com sucesso!');
       }
     } catch (error) {
@@ -236,8 +236,8 @@ export const PaymentMethodSelectorDrawer: React.FC<PaymentMethodSelectorDrawerPr
     
     // Limpar localStorage se existir
     if (feeType) {
-      localStorage.removeItem(`__promotional_coupon_${feeType}`);
-    }
+            localStorage.removeItem(`__promotional_coupon_${feeType}`);
+          }
     
     console.log('[PaymentMethodSelectorDrawer] Cupom removido com sucesso');
   };
@@ -293,7 +293,7 @@ export const PaymentMethodSelectorDrawer: React.FC<PaymentMethodSelectorDrawerPr
       }
     } catch (error) {
       console.error('[PaymentMethodSelectorDrawer] Erro ao verificar cupom no banco:', error);
-    }
+      }
   };
 
   // Verificar cupom no banco quando modal abre
@@ -426,7 +426,7 @@ export const PaymentMethodSelectorDrawer: React.FC<PaymentMethodSelectorDrawerPr
                     // Cupom válido - mostrar informações e botão para remover
                     <div className="bg-green-50 border-2 border-green-300 rounded-xl p-3 sm:p-4 space-y-3">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2">
+                      <div className="flex items-center space-x-2">
                           <CheckCircle className="w-5 h-5 text-green-600" />
                           <span className="font-semibold text-green-800">{promotionalCoupon}</span>
                         </div>
@@ -450,7 +450,7 @@ export const PaymentMethodSelectorDrawer: React.FC<PaymentMethodSelectorDrawerPr
                     // Erro de validação
                     <div className="p-3 rounded-xl border-2 bg-red-50 border-red-300 text-red-800">
                       <div className="flex items-center space-x-2">
-                        <AlertCircle className="w-5 h-5 text-red-600" />
+                          <AlertCircle className="w-5 h-5 text-red-600" />
                         <span className="font-medium text-sm">{promotionalCouponValidation.message}</span>
                       </div>
                     </div>
@@ -584,7 +584,7 @@ export const PaymentMethodSelectorDrawer: React.FC<PaymentMethodSelectorDrawerPr
                     // Cupom válido - mostrar informações e botão para remover
                     <div className="bg-green-50 border-2 border-green-300 rounded-xl p-3 sm:p-4 space-y-3">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2">
+                      <div className="flex items-center space-x-2">
                           <CheckCircle className="w-5 h-5 text-green-600" />
                           <span className="font-semibold text-green-800">{promotionalCoupon}</span>
                         </div>
@@ -608,7 +608,7 @@ export const PaymentMethodSelectorDrawer: React.FC<PaymentMethodSelectorDrawerPr
                     // Erro de validação
                     <div className="p-3 rounded-xl border-2 bg-red-50 border-red-300 text-red-800">
                       <div className="flex items-center space-x-2">
-                        <AlertCircle className="w-5 h-5 text-red-600" />
+                          <AlertCircle className="w-5 h-5 text-red-600" />
                         <span className="font-medium text-sm">{promotionalCouponValidation.message}</span>
                       </div>
                     </div>

@@ -235,6 +235,7 @@ const ApplicationChatPage: React.FC = () => {
   }, [userProfile?.seller_referral_code, userProfile?.system_type, user?.id]);
 
   // Buscar valor real pago do I-20 Control Fee
+  // Usa gross_amount_usd quando disponível, senão usa amount
   useEffect(() => {
     const fetchRealI20PaidAmount = async () => {
       if (!user?.id) {
@@ -245,7 +246,7 @@ const ApplicationChatPage: React.FC = () => {
       try {
         const { data: payments, error } = await supabase
           .from('individual_fee_payments')
-          .select('amount')
+          .select('amount, gross_amount_usd')
           .eq('user_id', user.id)
           .eq('fee_type', 'i20_control')
           .order('created_at', { ascending: false })
@@ -259,7 +260,11 @@ const ApplicationChatPage: React.FC = () => {
         }
         
         if (payments) {
-          setRealI20PaidAmount(parseFloat(payments.amount.toString()));
+          // Usar gross_amount_usd quando disponível, senão usar amount
+          const displayAmount = payments.gross_amount_usd 
+            ? parseFloat(payments.gross_amount_usd.toString())
+            : parseFloat(payments.amount.toString());
+          setRealI20PaidAmount(displayAmount);
         } else {
           setRealI20PaidAmount(null);
         }
@@ -1087,7 +1092,11 @@ const ApplicationChatPage: React.FC = () => {
                     </div>
                     <div className="text-right">
                       <div className="text-gray-500 text-sm font-medium">{t('studentDashboard.applicationChatPage.i20ControlFee.valueLabel')}</div>
-                      {i20PromotionalCoupon ? (
+                      {realI20PaidAmount !== null ? (
+                        // Se há pagamento registrado, mostrar valor bruto (gross_amount_usd) ou amount
+                        <div className="text-2xl font-bold text-gray-900">{formatFeeAmount(realI20PaidAmount)}</div>
+                      ) : i20PromotionalCoupon ? (
+                        // Se há cupom promocional, mostrar valor com desconto
                         <div className="space-y-1">
                           <div className="text-xl font-bold text-gray-400 line-through">{formatFeeAmount(i20PromotionalCoupon.originalAmount)}</div>
                           <div className="text-2xl font-bold text-green-600">{formatFeeAmount(i20PromotionalCoupon.finalAmount)}</div>
@@ -1096,6 +1105,7 @@ const ApplicationChatPage: React.FC = () => {
                           </div>
                         </div>
                       ) : (
+                        // Sem cupom, mostrar valor normal da taxa
                         <div className="text-2xl font-bold text-gray-900">{formatFeeAmount(getFeeAmount('i20_control_fee'))}</div>
                       )}
                     </div>

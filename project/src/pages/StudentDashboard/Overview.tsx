@@ -71,7 +71,7 @@ const Overview: React.FC<OverviewProps> = ({
   const [promotionalCouponDiscount, setPromotionalCouponDiscount] = useState<{ discountAmount: number; finalAmount: number } | null>(null);
   const [scholarshipFeePromotionalCoupon, setScholarshipFeePromotionalCoupon] = useState<{ discountAmount: number; finalAmount: number } | null>(null);
   const [i20PromotionalCoupon, setI20PromotionalCoupon] = useState<{ discountAmount: number; finalAmount: number } | null>(null);
-  // ✅ realPaidAmounts mantido para outras funcionalidades (não usado para exibição)
+  // ✅ realPaidAmounts agora usado para exibição com gross_amount_usd quando disponível
   const [realPaidAmounts, setRealPaidAmounts] = useState<{
     selection_process?: number;
     scholarship?: number;
@@ -117,6 +117,7 @@ const Overview: React.FC<OverviewProps> = ({
   }, [user?.id]);
 
   // Função para buscar valores reais pagos de individual_fee_payments
+  // Usa gross_amount_usd quando disponível, senão usa amount
   const fetchRealPaidAmounts = React.useCallback(async () => {
     if (!user?.id) {
       setRealPaidAmounts({});
@@ -126,7 +127,7 @@ const Overview: React.FC<OverviewProps> = ({
     try {
       const { data: payments, error } = await supabase
         .from('individual_fee_payments')
-        .select('fee_type, amount')
+        .select('fee_type, amount, gross_amount_usd')
         .eq('user_id', user.id);
       
       if (error) {
@@ -137,12 +138,17 @@ const Overview: React.FC<OverviewProps> = ({
       
       const amounts: typeof realPaidAmounts = {};
       payments?.forEach(payment => {
+        // Usar gross_amount_usd quando disponível, senão usar amount
+        const displayAmount = payment.gross_amount_usd 
+          ? Number(payment.gross_amount_usd) 
+          : Number(payment.amount);
+        
         if (payment.fee_type === 'selection_process') {
-          amounts.selection_process = Number(payment.amount);
+          amounts.selection_process = displayAmount;
         } else if (payment.fee_type === 'scholarship') {
-          amounts.scholarship = Number(payment.amount);
+          amounts.scholarship = displayAmount;
         } else if (payment.fee_type === 'i20_control') {
-          amounts.i20_control = Number(payment.amount);
+          amounts.i20_control = displayAmount;
         }
       });
       
@@ -477,21 +483,27 @@ const Overview: React.FC<OverviewProps> = ({
   // Agora buscamos diretamente do promotional_coupon_usage no useEffect acima
 
   // Valores das taxas para o ProgressBar (Application fee é variável)
-  // ✅ NOVO: Sempre mostrar valor base, mas aplicar desconto se houver cupom promocional validado
-  // NÃO usar valores de individual_fee_payments para exibição
-  const selectionFeeToDisplay = promotionalCouponDiscount
-    ? promotionalCouponDiscount.finalAmount // Valor com desconto do cupom promocional
-    : activeDiscount?.has_discount 
-      ? Math.max(selectionWithDependents - (activeDiscount.discount_amount || 0), 0)
-      : selectionWithDependents; // Valor base normal
+  // ✅ NOVO: Priorizar gross_amount_usd de individual_fee_payments quando disponível
+  // Se não houver pagamento registrado, usar valores de cupons promocionais ou valores base
+  const selectionFeeToDisplay = realPaidAmounts.selection_process !== undefined
+    ? realPaidAmounts.selection_process // Valor bruto (gross_amount_usd) ou amount quando disponível
+    : promotionalCouponDiscount
+      ? promotionalCouponDiscount.finalAmount // Valor com desconto do cupom promocional
+      : activeDiscount?.has_discount 
+        ? Math.max(selectionWithDependents - (activeDiscount.discount_amount || 0), 0)
+        : selectionWithDependents; // Valor base normal
 
-  const scholarshipFeeToDisplay = scholarshipFeePromotionalCoupon
-    ? scholarshipFeePromotionalCoupon.finalAmount // Valor com desconto do cupom promocional
-    : scholarshipBase; // Valor base normal
+  const scholarshipFeeToDisplay = realPaidAmounts.scholarship !== undefined
+    ? realPaidAmounts.scholarship // Valor bruto (gross_amount_usd) ou amount quando disponível
+    : scholarshipFeePromotionalCoupon
+      ? scholarshipFeePromotionalCoupon.finalAmount // Valor com desconto do cupom promocional
+      : scholarshipBase; // Valor base normal
 
-  const i20FeeToDisplay = i20PromotionalCoupon
-    ? i20PromotionalCoupon.finalAmount // Valor com desconto do cupom promocional
-    : i20WithDependents; // Valor base normal
+  const i20FeeToDisplay = realPaidAmounts.i20_control !== undefined
+    ? realPaidAmounts.i20_control // Valor bruto (gross_amount_usd) ou amount quando disponível
+    : i20PromotionalCoupon
+      ? i20PromotionalCoupon.finalAmount // Valor com desconto do cupom promocional
+      : i20WithDependents; // Valor base normal
 
   const dynamicFeeValues = [
     isFeesLoading ? <FeeSkeleton /> : `$${selectionFeeToDisplay.toFixed(2)}`, // Selection Process Fee (valor real pago ou com desconto se aplicável)
