@@ -180,59 +180,40 @@ const Overview = ({ stats, sellers = [], students = [], onRefresh }) => {
           return { total, revenueByReferral };
         };
 
-        // 1. Calcular e mostrar valores aproximados primeiro (rápido)
-        const initialRevenue = calculateRevenue({});
-        if (mounted) {
-          setClientAdjustedRevenue(initialRevenue.total);
-          setAdjustedRevenueByReferral(initialRevenue.revenueByReferral);
-          setLoadingAdjusted(false); // ✅ Mostrar valores aproximados imediatamente
-        }
-
-        // 2. Buscar valores reais pagos em background (pode demorar)
-        // Limitar a 10 chamadas simultâneas para não sobrecarregar
-        const BATCH_SIZE = 10;
+        // Buscar valores reais pagos (mantém loading até carregar tudo)
+        // Processar todos em paralelo para melhor performance
         const realPaidAmountsMap: Record<string, { selection_process?: number; scholarship?: number; i20_control?: number }> = {};
         
-        for (let i = 0; i < uniqueUserIds.length; i += BATCH_SIZE) {
-          const batch = uniqueUserIds.slice(i, i + BATCH_SIZE);
+        await Promise.allSettled(uniqueUserIds.map(async (userId) => {
+          if (!mounted) return;
           
-          await Promise.allSettled(batch.map(async (userId) => {
-            if (!mounted) return;
-            
-            try {
-              const amounts = await getRealPaidAmounts(userId, ['selection_process', 'scholarship', 'i20_control']);
+          try {
+            const amounts = await getRealPaidAmounts(userId, ['selection_process', 'scholarship', 'i20_control']);
+            if (mounted) {
               realPaidAmountsMap[userId] = {
                 selection_process: amounts.selection_process,
                 scholarship: amounts.scholarship,
                 i20_control: amounts.i20_control
               };
-            } catch (error) {
-              console.error(`[Overview] Erro ao buscar valores pagos para user_id ${userId}:`, error);
             }
-          }));
-
-          // Atualizar com valores reais conforme vão sendo carregados (opcional - pode comentar se quiser só atualizar no final)
-          if (mounted && Object.keys(realPaidAmountsMap).length > 0) {
-            const updatedRevenue = calculateRevenue(realPaidAmountsMap);
-            setClientAdjustedRevenue(updatedRevenue.total);
-            setAdjustedRevenueByReferral(updatedRevenue.revenueByReferral);
+          } catch (error) {
+            console.error(`[Overview] Erro ao buscar valores pagos para user_id ${userId}:`, error);
           }
-        }
+        }));
 
-        // 3. Atualização final com todos os valores reais
-        let finalRevenue = initialRevenue;
+        // Atualização final com todos os valores reais (apenas após carregar tudo)
         if (mounted) {
-          finalRevenue = calculateRevenue(realPaidAmountsMap);
+          const finalRevenue = calculateRevenue(realPaidAmountsMap);
           setClientAdjustedRevenue(finalRevenue.total);
           setAdjustedRevenueByReferral(finalRevenue.revenueByReferral);
-        }
 
-        console.log('🔍 [OVERVIEW] Revenue calculado:', {
-          total: finalRevenue.total,
-          revenueByReferral: finalRevenue.revenueByReferral,
-          profilesCount: profiles?.length || 0,
-          realPaidAmountsCount: Object.keys(realPaidAmountsMap).length
-        });
+          console.log('🔍 [OVERVIEW] Revenue calculado:', {
+            total: finalRevenue.total,
+            revenueByReferral: finalRevenue.revenueByReferral,
+            profilesCount: profiles?.length || 0,
+            realPaidAmountsCount: Object.keys(realPaidAmountsMap).length
+          });
+        }
       } catch (error) {
         console.error('[Overview] Erro ao calcular receita ajustada:', error);
         if (mounted) setClientAdjustedRevenue(null);

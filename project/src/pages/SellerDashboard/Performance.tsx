@@ -34,6 +34,7 @@ const Performance: React.FC<PerformanceProps> = ({ sellerProfile, students }) =>
   const [studentFeeOverrides, setStudentFeeOverrides] = useState<{[key: string]: any}>({});
   const [studentSystemTypes, setStudentSystemTypes] = useState<{[key: string]: string}>({});
   const [studentRealPaidAmounts, setStudentRealPaidAmounts] = useState<Record<string, { selection_process?: number; scholarship?: number; i20_control?: number }>>({});
+  const [loadingRealPaidAmounts, setLoadingRealPaidAmounts] = useState<boolean>(true);
   const [originalMonthlyData, setOriginalMonthlyData] = useState<PerformanceData['monthly_data']>([]);
   const [adjustedMonthlyData, setAdjustedMonthlyData] = useState<PerformanceData['monthly_data']>([]);
   const [rpcTotalRevenue, setRpcTotalRevenue] = useState<number>(0);
@@ -175,15 +176,17 @@ const Performance: React.FC<PerformanceProps> = ({ sellerProfile, students }) =>
     });
   }, [getUniqueStudents]); // Usar getUniqueStudents em vez de students
 
-  // Carregar valores reais pagos para todos os estudantes
+  // Carregar valores reais pagos para todos os estudantes (mantém loading até carregar tudo)
   useEffect(() => {
     const loadRealPaidAmounts = async () => {
       const uniqueUserIds = Array.from(new Set((students || []).map((s) => s.id).filter(Boolean)));
       if (uniqueUserIds.length === 0) {
         setStudentRealPaidAmounts({});
+        setLoadingRealPaidAmounts(false);
         return;
       }
       
+      setLoadingRealPaidAmounts(true);
       const amountsMap: Record<string, { selection_process?: number; scholarship?: number; i20_control?: number }> = {};
       
       await Promise.allSettled(uniqueUserIds.map(async (userId) => {
@@ -196,6 +199,7 @@ const Performance: React.FC<PerformanceProps> = ({ sellerProfile, students }) =>
       }));
       
       setStudentRealPaidAmounts(amountsMap);
+      setLoadingRealPaidAmounts(false);
     };
     loadRealPaidAmounts();
   }, [students]);

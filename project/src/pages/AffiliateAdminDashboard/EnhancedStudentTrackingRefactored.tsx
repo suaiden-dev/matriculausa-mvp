@@ -203,7 +203,7 @@ function EnhancedStudentTracking(props) {
   }, [students]);
 
   // Buscar valores reais pagos de individual_fee_payments (já com desconto e convertido se PIX)
-  // ✅ OTIMIZAÇÃO: Mostrar valores aproximados primeiro, depois atualizar com valores reais em background
+  // Mantém loading até carregar todos os valores reais
   useEffect(() => {
     const loadRealPaidAmounts = async () => {
       setLoadingRealPaidAmounts(true);
@@ -215,44 +215,37 @@ function EnhancedStudentTracking(props) {
           return;
         }
 
-        // ✅ Mostrar valores vazios primeiro (usa fallback) para exibir a página rapidamente
-        setRealPaidAmountsMap({});
-        setLoadingRealPaidAmounts(false);
-
-        // Buscar valores pagos para cada estudante em background (pode demorar)
-        // Limitar a 10 chamadas simultâneas para não sobrecarregar
-        const BATCH_SIZE = 10;
+        // Buscar valores pagos para cada estudante (mantém loading até carregar tudo)
+        // Processar todos em paralelo para melhor performance
         const amountsMap: Record<string, { selection_process?: number; scholarship?: number; i20_control?: number }> = {};
         
-        for (let i = 0; i < uniqueUserIds.length; i += BATCH_SIZE) {
-          const batch = uniqueUserIds.slice(i, i + BATCH_SIZE);
-          
-          await Promise.allSettled(batch.map(async (userId) => {
-            try {
-              const amounts = await getRealPaidAmounts(userId, ['selection_process', 'scholarship', 'i20_control']);
-              amountsMap[userId] = {
-                selection_process: amounts.selection_process,
-                scholarship: amounts.scholarship,
-                i20_control: amounts.i20_control
-              };
-            } catch (error) {
-              console.error(`[EnhancedStudentTrackingRefactored] Erro ao buscar valores pagos para user_id ${userId}:`, error);
-            }
-          }));
+        await Promise.allSettled(uniqueUserIds.map(async (userId) => {
+          try {
+            const amounts = await getRealPaidAmounts(userId, ['selection_process', 'scholarship', 'i20_control']);
+            amountsMap[userId] = {
+              selection_process: amounts.selection_process,
+              scholarship: amounts.scholarship,
+              i20_control: amounts.i20_control
+            };
+          } catch (error) {
+            console.error(`[EnhancedStudentTrackingRefactored] Erro ao buscar valores pagos para user_id ${userId}:`, error);
+          }
+        }));
 
-          // Atualizar conforme vão sendo carregados
-          setRealPaidAmountsMap({ ...amountsMap });
-        }
+        // Atualizar apenas após carregar todos os valores
+        setRealPaidAmountsMap(amountsMap);
       } catch (e) {
         console.error('🔍 [EnhancedStudentTrackingRefactored] Erro ao carregar valores reais pagos:', e);
         setRealPaidAmountsMap({});
+      } finally {
+        setLoadingRealPaidAmounts(false);
       }
     };
     loadRealPaidAmounts();
   }, [students]);
 
   // Calcular receita ajustada por estudante usando valores reais pagos quando disponíveis
-  // ✅ OTIMIZAÇÃO: Agora mostra valores aproximados primeiro (fallback) e atualiza com valores reais depois
+  // Usa valores reais pagos quando disponíveis, com fallback para cálculo fixo se não houver registro
   const adjustedStudents = useMemo(() => {
     const result = (filteredStudents || []).map((s) => {
       
