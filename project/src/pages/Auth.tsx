@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Mail, Lock, User, Building, UserCheck, GraduationCap, CheckCircle, X, Gift, Target, ChevronDown } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
@@ -14,6 +14,7 @@ interface AuthProps {
 
 const Auth: React.FC<AuthProps> = ({ mode }) => {
   const { t } = useTranslation();
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState<'student' | 'university'>('student');
   const [formData, setFormData] = useState({
     full_name: '',
@@ -45,6 +46,8 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
   const [isReferralCodeLocked, setIsReferralCodeLocked] = useState(false);
   // Terms acceptance state
   const [termsAccepted, setTermsAccepted] = useState(false);
+  // Ref para evitar múltiplas execuções
+  const referralCodeProcessedRef = useRef(false);
 
   
   const { login, register } = useAuth();
@@ -60,35 +63,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
     return () => clearTimeout(timer);
   }, []);
 
-  // Load referral codes from localStorage
-  useEffect(() => {
-    if (mode === 'register' && activeTab === 'student') {
-      console.log('[AUTH] Carregando códigos de referência do localStorage...');
-      
-      // ✅ NOVO: Carregar código unificado do localStorage
-      const pendingCode = localStorage.getItem('pending_referral_code');
-      const pendingType = localStorage.getItem('pending_referral_code_type');
-      
-      if (pendingCode) {
-        console.log('[AUTH] Código unificado encontrado:', pendingCode, 'Tipo:', pendingType);
-        setFormData(prev => ({ ...prev, referralCode: pendingCode }));
-        setReferralCodeType(pendingType as 'seller' | 'rewards');
-        setIsReferralCodeLocked(true);
-        
-        // Validar código de forma assíncrona para evitar travamentos
-        setTimeout(() => {
-          validateReferralCode(pendingCode);
-        }, 100);
-      }
-      
-      console.log('[AUTH] Estado final do campo unificado:', {
-        referralCode: pendingCode,
-        type: pendingType
-      });
-    }
-  }, [mode, activeTab]);
-
-  // ✅ NOVA: Função de validação unificada
+  // ✅ NOVA: Função de validação unificada (movida para cima para estar disponível)
   const validateReferralCode = async (code: string) => {
     if (!code || code.length < 4) {
       setReferralCodeValid(null);
@@ -148,6 +123,113 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
       setReferralCodeLoading(false);
     }
   };
+
+  // ✅ FUNÇÃO AUXILIAR: Processar código de referência
+  const processReferralCode = (code: string, type: 'seller' | 'rewards' | null = null) => {
+    if (!code || referralCodeProcessedRef.current) {
+      return;
+    }
+
+    console.log('[AUTH] Processando código de referência:', code, 'Tipo:', type);
+    
+    // Detectar tipo se não fornecido
+    let detectedType = type;
+    if (!detectedType) {
+      const directSalesCodes = ['SUAIDEN', 'BRANT'];
+      const codeUpper = code.toUpperCase();
+      const isDirectSalesCode = directSalesCodes.includes(codeUpper);
+      const isSeller = isDirectSalesCode || code.startsWith('SELLER_') || code.length > 8;
+      const isRewards = !isDirectSalesCode && (code.startsWith('MATR') || (code.length <= 8 && /^[A-Z0-9]+$/.test(code)));
+      
+      detectedType = isSeller ? 'seller' : isRewards ? 'rewards' : null;
+    }
+
+    setFormData(prev => ({ ...prev, referralCode: code }));
+    setReferralCodeType(detectedType);
+    setIsReferralCodeLocked(true);
+    referralCodeProcessedRef.current = true;
+    
+    // Validar código de forma assíncrona
+    setTimeout(() => {
+      validateReferralCode(code);
+    }, 100);
+  };
+
+  // Load referral codes from URL and localStorage
+  useEffect(() => {
+    if (mode === 'register' && activeTab === 'student') {
+      console.log('[AUTH] Carregando códigos de referência...');
+      
+      // ✅ PRIORIDADE 1: Verificar URL diretamente (para evitar race condition)
+      const urlParams = new URLSearchParams(location.search);
+      const refCodeFromUrl = urlParams.get('ref');
+      
+      if (refCodeFromUrl && !referralCodeProcessedRef.current) {
+        console.log('[AUTH] ✅ Código encontrado na URL:', refCodeFromUrl);
+        
+        // Detectar tipo do código
+        const directSalesCodes = ['SUAIDEN', 'BRANT'];
+        const codeUpper = refCodeFromUrl.toUpperCase();
+        const isDirectSalesCode = directSalesCodes.includes(codeUpper);
+        const isSeller = isDirectSalesCode || refCodeFromUrl.startsWith('SELLER_') || refCodeFromUrl.length > 8;
+        const isRewards = !isDirectSalesCode && (refCodeFromUrl.startsWith('MATR') || (refCodeFromUrl.length <= 8 && /^[A-Z0-9]+$/.test(refCodeFromUrl)));
+        const detectedType = isSeller ? 'seller' : isRewards ? 'rewards' : null;
+        
+        // Salvar no localStorage para consistência
+        localStorage.setItem('pending_referral_code', refCodeFromUrl);
+        localStorage.setItem('pending_referral_code_type', detectedType || 'rewards');
+        
+        processReferralCode(refCodeFromUrl, detectedType);
+        return;
+      }
+      
+      // ✅ PRIORIDADE 2: Carregar do localStorage
+      const pendingCode = localStorage.getItem('pending_referral_code');
+      const pendingType = localStorage.getItem('pending_referral_code_type');
+      
+      if (pendingCode && !referralCodeProcessedRef.current) {
+        console.log('[AUTH] ✅ Código encontrado no localStorage:', pendingCode, 'Tipo:', pendingType);
+        processReferralCode(pendingCode, pendingType as 'seller' | 'rewards' | null);
+      }
+      
+      console.log('[AUTH] Estado final do campo unificado:', {
+        referralCode: pendingCode || refCodeFromUrl,
+        type: pendingType
+      });
+    }
+  }, [mode, activeTab, location.search]);
+
+  // ✅ Listener para mudanças no localStorage (caso useReferralCodeCapture salve depois)
+  useEffect(() => {
+    if (mode === 'register' && activeTab === 'student' && !referralCodeProcessedRef.current) {
+      const handleStorageChange = (e: StorageEvent) => {
+        if (e.key === 'pending_referral_code' && e.newValue) {
+          console.log('[AUTH] ✅ Código detectado via storage event:', e.newValue);
+          const pendingType = localStorage.getItem('pending_referral_code_type');
+          processReferralCode(e.newValue, pendingType as 'seller' | 'rewards' | null);
+        }
+      };
+
+      window.addEventListener('storage', handleStorageChange);
+      
+      // Também verificar periodicamente (fallback para mesmo-origin)
+      const intervalId = setInterval(() => {
+        if (!referralCodeProcessedRef.current) {
+          const pendingCode = localStorage.getItem('pending_referral_code');
+          if (pendingCode && !formData.referralCode) {
+            console.log('[AUTH] ✅ Código detectado via polling:', pendingCode);
+            const pendingType = localStorage.getItem('pending_referral_code_type');
+            processReferralCode(pendingCode, pendingType as 'seller' | 'rewards' | null);
+          }
+        }
+      }, 200); // Verificar a cada 200ms
+
+      return () => {
+        window.removeEventListener('storage', handleStorageChange);
+        clearInterval(intervalId);
+      };
+    }
+  }, [mode, activeTab, formData.referralCode]);
 
   // ✅ NOVA: Handle unified referral code change
   const handleReferralCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
