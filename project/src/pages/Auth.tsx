@@ -99,13 +99,15 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
     setReferralCodeLoading(true);
     
     // Detectar tipo automaticamente
-    // SUAIDEN é um código especial de seller (Direct Sales) que aplica Package 3 automaticamente
-    const isSuaidenCode = code.toUpperCase() === 'SUAIDEN';
-    const isSeller = isSuaidenCode || code.startsWith('SELLER_') || code.length > 8;
-    const isRewards = !isSuaidenCode && (code.startsWith('MATR') || (code.length <= 8 && /^[A-Z0-9]+$/.test(code)));
+    // SUAIDEN e BRANT são códigos especiais de seller (Direct Sales) que aplicam Package 3 automaticamente
+    const directSalesCodes = ['SUAIDEN', 'BRANT'];
+    const codeUpper = code.toUpperCase();
+    const isDirectSalesCode = directSalesCodes.includes(codeUpper);
+    const isSeller = isDirectSalesCode || code.startsWith('SELLER_') || code.length > 8;
+    const isRewards = !isDirectSalesCode && (code.startsWith('MATR') || (code.length <= 8 && /^[A-Z0-9]+$/.test(code)));
     
-     // Se for SUAIDEN, resetar dependents para 0 (será preenchido pelo usuário)
-     if (isSuaidenCode) {
+     // Se for código Direct Sales (SUAIDEN ou BRANT), resetar dependents para 0 (será preenchido pelo usuário)
+     if (isDirectSalesCode) {
        setFormData(prev => ({ ...prev, dependents: 0 }));
      }
     
@@ -262,11 +264,12 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
         
         console.log('✅ [AUTH] Validação de telefone passou:', formData.phone);
         
-        // Detectar se é código SUAIDEN para aplicar Package 3 automaticamente
-        const isSuaidenCode = formData.referralCode.toUpperCase() === 'SUAIDEN';
+        // Detectar se é código Direct Sales (SUAIDEN ou BRANT) para aplicar Package 3 automaticamente
+        const directSalesCodes = ['SUAIDEN', 'BRANT'];
+        const isDirectSalesCode = directSalesCodes.includes(formData.referralCode.toUpperCase());
         
-         // Validar dependents se for SUAIDEN (deve ser entre 0 e 5)
-         if (activeTab === 'student' && isSuaidenCode && (formData.dependents < 0 || formData.dependents > 5)) {
+         // Validar dependents se for código Direct Sales (deve ser entre 0 e 5)
+         if (activeTab === 'student' && isDirectSalesCode && (formData.dependents < 0 || formData.dependents > 5)) {
            setError('Please select between 0 and 5 dependents.');
            setLoading(false);
            return;
@@ -293,8 +296,8 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
             ...(referralCodeType === 'rewards' && formData.referralCode && {
               affiliate_code: formData.referralCode
             }),
-            // ✅ SUAIDEN: Aplicar Package 3 automaticamente e dependents obrigatório
-            ...(isSuaidenCode && {
+            // ✅ Direct Sales (SUAIDEN ou BRANT): Aplicar Package 3 automaticamente e dependents obrigatório
+            ...(isDirectSalesCode && {
               scholarship_package_number: 3,
               desired_scholarship_range: 4500,
               dependents: formData.dependents
@@ -752,11 +755,6 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                           <p className="text-green-600 flex items-center">
                             <CheckCircle className="h-3 w-3 mr-1" />
                             Detected: {referralCodeType === 'seller' ? t('authPage.register.sellerReferralCode.title') : t('authPage.register.referralCode.title')}
-                            {isReferralCodeLocked && (
-                              <span className="ml-2 text-blue-600">
-                                {t('authPage.register.referralCode.appliedFromLink')}
-                              </span>
-                            )}
                           </p>
                         )}
                         {referralCodeValid === false && (
@@ -769,11 +767,11 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                     )}
                   </div>
 
-                  {/* Dependents field - Only show for SUAIDEN code - placed right after Referral Code */}
-                  {activeTab === 'student' && formData.referralCode.toUpperCase() === 'SUAIDEN' && (
+                  {/* Dependents field - Only show for Direct Sales codes (SUAIDEN or BRANT) - placed right after Referral Code */}
+                  {activeTab === 'student' && ['SUAIDEN', 'BRANT'].includes(formData.referralCode.toUpperCase()) && (
                     <div className="lg:col-span-1">
                       <label htmlFor="dependents" className="block text-sm font-bold text-slate-900 mb-2">
-                        Dependents
+                        Dependents <span className="text-xs font-normal text-slate-500">- Family members (spouse and/or children)</span>
                       </label>
                       <div className="relative">
                         <User className="absolute left-4 top-4 h-5 w-5 text-slate-400 z-10" />

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Copy, Check, ExternalLink, Share2, Link as LinkIcon, Package } from 'lucide-react';
+import { Copy, Check, Link as LinkIcon, Package } from 'lucide-react';
 
 /**
  * Component for Direct Sales link generation
@@ -38,24 +38,6 @@ const DirectSalesLink: React.FC = () => {
       document.body.removeChild(textArea);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    }
-  };
-
-  const shareLink = () => {
-    const link = generateDirectSalesLink();
-    const text = `Join Matrícula USA! Register using this link: ${link}`;
-    
-    if (navigator.share) {
-      navigator.share({
-        title: 'Matrícula USA - Direct Registration',
-        text: text,
-        url: link
-      }).catch((err) => {
-        console.error('Error sharing:', err);
-        copyToClipboard(link);
-      });
-    } else {
-      copyToClipboard(link);
     }
   };
 
@@ -110,25 +92,6 @@ const DirectSalesLink: React.FC = () => {
             Link copied to clipboard!
           </p>
         )}
-      </div>
-
-      {/* Action Buttons */}
-      <div className="flex flex-wrap gap-2 mb-4">
-        <button
-          onClick={shareLink}
-          className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-        >
-          <Share2 className="w-4 h-4 mr-2" />
-          Share Link
-        </button>
-        
-        <button
-          onClick={() => window.open(generateDirectSalesLink(), '_blank')}
-          className="flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-        >
-          <ExternalLink className="w-4 h-4 mr-2" />
-          Test Link
-        </button>
       </div>
 
       {/* Technical Details */}

@@ -33,6 +33,7 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
   const [studentFeeOverrides, setStudentFeeOverrides] = useStateReact<{[key: string]: any}>({});
   const [studentSystemTypes, setStudentSystemTypes] = useStateReact<{[key: string]: string}>({});
   const [studentRealPaidAmounts, setStudentRealPaidAmounts] = useStateReact<{[key: string]: { selection_process?: number; scholarship?: number; i20_control?: number }}>({});
+  const [loadingRealPaidAmounts, setLoadingRealPaidAmounts] = useStateReact<boolean>(true);
   const [loadingCalc, setLoadingCalc] = useStateReact<boolean>(false);
 
   // Debug específico para investigar discrepância de receita
@@ -177,9 +178,10 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
           setStudentPackageFees(prev => ({ ...prev, ...newFees }));
         }
 
-        // Buscar valores reais pagos de individual_fee_payments
+        // Buscar valores reais pagos de individual_fee_payments (mantém loading até carregar tudo)
         if (idsToLoadRealPaid.length > 0) {
           console.log('🔄 [OVERVIEW] Carregando valores reais pagos para:', idsToLoadRealPaid.length, 'estudantes');
+          setLoadingRealPaidAmounts(true);
           
           const results = await Promise.allSettled(idsToLoadRealPaid.map(async (id: string) => {
             try {
@@ -202,6 +204,9 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
           });
           
           setStudentRealPaidAmounts(prev => ({ ...prev, ...newRealPaid }));
+          setLoadingRealPaidAmounts(false);
+        } else {
+          setLoadingRealPaidAmounts(false);
         }
       } finally {
         setLoadingCalc(false);
@@ -259,13 +264,16 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
   }, [students]);
 
   const adjustedTotalRevenue = React.useMemo(() => {
+    // Não calcular receita enquanto valores reais pagos estão carregando
+    if (loadingRealPaidAmounts) return 0;
+    
     const uniqueStudents = getUniqueStudents;
     if (!uniqueStudents || uniqueStudents.length === 0) return 0;
     
     const total = uniqueStudents.reduce((sum: number, s: any) => sum + calculateStudentAdjustedPaid(s), 0);
     
     return total;
-  }, [getUniqueStudents, studentPackageFees, studentDependents, studentFeeOverrides, studentRealPaidAmounts]);
+  }, [getUniqueStudents, studentPackageFees, studentDependents, studentFeeOverrides, studentRealPaidAmounts, loadingRealPaidAmounts]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -349,14 +357,14 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-500 mb-1">Total Revenue</p>
-              {loadingCalc ? (
+              {(loadingCalc || loadingRealPaidAmounts) ? (
                 <div className="h-8 w-40 bg-slate-200 rounded animate-pulse" />
               ) : (
               <p className="text-3xl font-bold text-slate-900">{formatCurrency(adjustedTotalRevenue)}</p>
               )}
               <div className="flex items-center mt-2">
                 <TrendingUp className="h-4 w-4 text-emerald-500 mr-1" />
-                {loadingCalc ? (
+                {(loadingCalc || loadingRealPaidAmounts) ? (
                   <div className="h-4 w-24 bg-slate-200 rounded animate-pulse" />
                 ) : (
                 <span className="text-sm font-medium text-emerald-600">
@@ -491,14 +499,14 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
                       <div className="text-left sm:text-right">
                         <div className="space-y-1">
                           <div className="flex items-center sm:justify-end space-x-2">
-                            {loadingCalc ? (
+                            {(loadingCalc || loadingRealPaidAmounts) ? (
                               <div className="h-6 w-28 bg-slate-200 rounded animate-pulse" />
                             ) : (
                             <span className="text-2xl font-bold text-slate-900 whitespace-nowrap">
                                 {formatCurrency(calculateStudentAdjustedPaid(student) || 0)}
                             </span>
                             )}
-                            {!loadingCalc && <span className="text-sm text-slate-500">revenue</span>}
+                            {!(loadingCalc || loadingRealPaidAmounts) && <span className="text-sm text-slate-500">revenue</span>}
                           </div>
                           <div className="text-sm font-medium text-slate-700">
                             {loadingCalc ? (

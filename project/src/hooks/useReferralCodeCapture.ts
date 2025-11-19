@@ -31,10 +31,11 @@ export const useReferralCodeCapture = () => {
       
       // LÓGICA SIMPLES: Igual ao Matricula Rewards
       // Detecta automaticamente o tipo de código baseado no formato
-      // SUAIDEN é um código especial de seller (Direct Sales)
-      const isSuaidenCode = refCode.toUpperCase() === 'SUAIDEN';
-      const isSellerCode = isSuaidenCode || refCode.startsWith('SELLER_') || refCode.length > 8;
-      const isMatriculaRewardsCode = !isSuaidenCode && (refCode.startsWith('MATR') || (refCode.length <= 8 && /^[A-Z0-9]+$/.test(refCode)));
+      // SUAIDEN e BRANT são códigos especiais de seller (Direct Sales)
+      const directSalesCodes = ['SUAIDEN', 'BRANT'];
+      const isDirectSalesCode = directSalesCodes.includes(refCode.toUpperCase());
+      const isSellerCode = isDirectSalesCode || refCode.startsWith('SELLER_') || refCode.length > 8;
+      const isMatriculaRewardsCode = !isDirectSalesCode && (refCode.startsWith('MATR') || (refCode.length <= 8 && /^[A-Z0-9]+$/.test(refCode)));
       
       console.log('[useReferralCodeCapture] Análise do código de referência:', {
         code: refCode,

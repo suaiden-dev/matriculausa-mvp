@@ -99,6 +99,8 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
   const [studentSystemTypes, setStudentSystemTypes] = useStateReact<{[key: string]: string}>({});
   // Estado para armazenar valores reais pagos por estudante
   const [studentRealPaidAmounts, setStudentRealPaidAmounts] = useStateReact<Record<string, { selection_process?: number; scholarship?: number; i20_control?: number }>>({});
+  // Estado para controlar loading dos valores reais pagos
+  const [loadingRealPaidAmounts, setLoadingRealPaidAmounts] = useStateReact<boolean>(true);
   // Estado para controlar requisições em andamento
   const [loadingRequests, setLoadingRequests] = useStateReact<Set<string>>(new Set());
   // Métodos de pagamento por estudante (para calcular valor pago manualmente)
@@ -373,15 +375,17 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
     return () => clearTimeout(timeoutId);
   }, [students, userFeeOverridesDisabled]);
 
-  // Carregar valores reais pagos para todos os estudantes
+  // Carregar valores reais pagos para todos os estudantes (mantém loading até carregar tudo)
   useEffect(() => {
     const loadRealPaidAmounts = async () => {
       const uniqueUserIds = Array.from(new Set((students || []).map((s) => s.id).filter(Boolean)));
       if (uniqueUserIds.length === 0) {
         setStudentRealPaidAmounts({});
+        setLoadingRealPaidAmounts(false);
         return;
       }
       
+      setLoadingRealPaidAmounts(true);
       const amountsMap: Record<string, { selection_process?: number; scholarship?: number; i20_control?: number }> = {};
       
       await Promise.allSettled(uniqueUserIds.map(async (userId) => {
@@ -394,6 +398,7 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
       }));
       
       setStudentRealPaidAmounts(amountsMap);
+      setLoadingRealPaidAmounts(false);
     };
     loadRealPaidAmounts();
   }, [students]);
@@ -724,12 +729,12 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
     // Selection Process Fee - apenas valor real pago
     if (student.has_paid_selection_process_fee && realPaid.selection_process !== undefined && realPaid.selection_process > 0) {
       total += realPaid.selection_process;
-    }
+        }
     
     // Scholarship Fee - apenas valor real pago
     if (student.is_scholarship_fee_paid && realPaid.scholarship !== undefined && realPaid.scholarship > 0) {
       total += realPaid.scholarship;
-    }
+        }
     
     // I-20 Control Fee - apenas valor real pago
     if (student.has_paid_i20_control_fee && realPaid.i20_control !== undefined && realPaid.i20_control > 0) {
@@ -785,6 +790,18 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
   };
 
   const stats = React.useMemo(() => {
+    // Não calcular receita enquanto valores reais pagos estão carregando
+    if (loadingRealPaidAmounts) {
+      return {
+        totalRevenue: 0,
+        activeStudents: 0,
+        manualRevenue: 0,
+        avgRevenuePerStudent: 0,
+        topPerformingUniversity: 'N/A',
+        totalUniqueStudents: 0
+      };
+    }
+    
     const totalRevenue = filteredStudents.reduce((sum, student) => sum + calculateStudentTotalPaid(student), 0);
     
     console.log('💰 [MYSTUDENTS_TOTAL] Total calculado no MyStudents.tsx:', totalRevenue);
@@ -828,7 +845,7 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
       topPerformingUniversity,
       totalUniqueStudents: uniqueStudentIds.size
     };
-  }, [filteredStudents, availableUniversities]);
+  }, [filteredStudents, availableUniversities, loadingRealPaidAmounts]);
 
   return (
     <div className="min-h-screen">
@@ -892,9 +909,15 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-600">Total Students</p>
-              <p className="text-3xl font-bold text-blue-600 mt-1">{stats.totalUniqueStudents}</p>
-              {filteredStudents.length > stats.totalUniqueStudents && (
-                <p className="text-xs text-slate-500 mt-1">{filteredStudents.length} applications total</p>
+              {loadingRealPaidAmounts ? (
+                <div className="h-10 w-20 bg-slate-200 rounded animate-pulse mt-1" />
+              ) : (
+                <>
+                  <p className="text-3xl font-bold text-blue-600 mt-1">{stats.totalUniqueStudents}</p>
+                  {filteredStudents.length > stats.totalUniqueStudents && (
+                    <p className="text-xs text-slate-500 mt-1">{filteredStudents.length} applications total</p>
+                  )}
+                </>
               )}
             </div>
             <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
@@ -907,7 +930,7 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-600">Manual Paid (Outside)</p>
-              {Object.keys(studentPaymentMethods).length === 0 && Object.keys(studentDependents).length === 0 && Object.keys(studentFeeOverrides).length === 0 ? (
+              {(Object.keys(studentPaymentMethods).length === 0 && Object.keys(studentDependents).length === 0 && Object.keys(studentFeeOverrides).length === 0) || loadingRealPaidAmounts ? (
                 <div className="h-8 w-40 bg-slate-200 rounded animate-pulse mt-1" />
               ) : (
                 <p className="text-3xl font-bold text-orange-600 mt-1">{formatCurrency(stats.manualRevenue)}</p>
@@ -923,8 +946,8 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-600">Total Revenue</p>
-              {/* Skeleton enquanto dependents/fees não carregaram completamente */}
-              {Object.keys(studentDependents).length === 0 && Object.keys(studentPackageFees).length === 0 ? (
+              {/* Skeleton enquanto dependents/fees/valores reais não carregaram completamente */}
+              {(Object.keys(studentDependents).length === 0 && Object.keys(studentPackageFees).length === 0) || loadingRealPaidAmounts ? (
                 <div className="h-8 w-40 bg-slate-200 rounded animate-pulse mt-1" />
               ) : (
                 <p className="text-3xl font-bold text-green-600 mt-1">{formatCurrency(stats.totalRevenue)}</p>
@@ -940,7 +963,11 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-600">Avg. Revenue/Student</p>
-              <p className="text-3xl font-bold text-purple-600 mt-1">{formatCurrency(stats.avgRevenuePerStudent)}</p>
+              {(Object.keys(studentDependents).length === 0 && Object.keys(studentPackageFees).length === 0) || loadingRealPaidAmounts ? (
+                <div className="h-8 w-40 bg-slate-200 rounded animate-pulse mt-1" />
+              ) : (
+                <p className="text-3xl font-bold text-purple-600 mt-1">{formatCurrency(stats.avgRevenuePerStudent)}</p>
+              )}
             </div>
             <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
               <Award className="h-6 w-6 text-purple-600" />
@@ -1252,7 +1279,7 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
                     
                     <div className="flex items-center text-sm font-medium text-green-600">
                       <DollarSign className="h-4 w-4 mr-1" />
-                      {studentDependents[student.id] === undefined ? (
+                      {(studentDependents[student.id] === undefined || loadingRealPaidAmounts) ? (
                         <div className="h-4 w-16 bg-slate-200 rounded animate-pulse" />
                       ) : (
                         formatCurrency(calculateStudentTotalPaid(student))

@@ -11,8 +11,9 @@ const SellerStudentRegistration: React.FC = () => {
   const [searchParams] = useSearchParams();
   const sellerCode = searchParams.get('ref') || '';
   
-  // Detectar se é código SUAIDEN (Direct Sales)
-  const isSuaidenCode = sellerCode.toUpperCase() === 'SUAIDEN';
+  // Detectar se é código Direct Sales (SUAIDEN ou BRANT)
+  const directSalesCodes = ['SUAIDEN', 'BRANT'];
+  const isDirectSalesCode = directSalesCodes.includes(sellerCode.toUpperCase());
   
   const [formData, setFormData] = useState<{
     full_name: string;
@@ -31,10 +32,10 @@ const SellerStudentRegistration: React.FC = () => {
     confirmPassword: '',
     phone: '',
     sellerReferralCode: sellerCode,
-    // Se for SUAIDEN, aplicar Package 3 automaticamente, senão pacote 1
-    selectedPackage: isSuaidenCode ? '3' : '1',
-    // Se for SUAIDEN, aplicar desired_scholarship_range = 4500 (Package 3), senão 3800 (Package 1)
-    desiredScholarshipRange: isSuaidenCode ? 4500 : 3800,
+    // Se for código Direct Sales (SUAIDEN ou BRANT), aplicar Package 3 automaticamente, senão pacote 1
+    selectedPackage: isDirectSalesCode ? '3' : '1',
+    // Se for código Direct Sales, aplicar desired_scholarship_range = 4500 (Package 3), senão 3800 (Package 1)
+    desiredScholarshipRange: isDirectSalesCode ? 4500 : 3800,
     dependents: 0
   });
   
@@ -171,8 +172,8 @@ const SellerStudentRegistration: React.FC = () => {
         if (!termsAccepted) newErrors.terms = 'You must accept the terms and conditions';
         if (!sellerReferralCodeValid) newErrors.sellerCode = 'Invalid seller referral code';
         if (formData.dependents < 0) newErrors.dependents = 'Dependents cannot be negative';
-        // Se for código SUAIDEN, dependentes são obrigatórios
-        // Validação removida - dependents pode ser 0 para SUAIDEN também
+        // Se for código Direct Sales (SUAIDEN ou BRANT), dependentes são obrigatórios
+        // Validação removida - dependents pode ser 0 para códigos Direct Sales também
         break;
       case 2:
         if (!formData.selectedPackage) newErrors.package = 'Please select a scholarship package';
@@ -211,9 +212,10 @@ const SellerStudentRegistration: React.FC = () => {
       // Garantir que o seller_referral_code seja sempre o da URL se existir
       const finalSellerCode = sellerCode || formData.sellerReferralCode;
       
-      // Se for código SUAIDEN, forçar Package 3 e desired_scholarship_range = 4500
-      const finalIsSuaiden = finalSellerCode.toUpperCase() === 'SUAIDEN';
-      const finalPackageNumber = finalIsSuaiden ? 3 : parseInt(formData.selectedPackage);
+      // Se for código Direct Sales (SUAIDEN ou BRANT), forçar Package 3 e desired_scholarship_range = 4500
+      const directSalesCodes = ['SUAIDEN', 'BRANT'];
+      const finalIsDirectSales = directSalesCodes.includes(finalSellerCode.toUpperCase());
+      const finalPackageNumber = finalIsDirectSales ? 3 : parseInt(formData.selectedPackage);
       
       // Usar o hook useAuth para registrar o usuário
       // Simplificar os dados para evitar conflitos
@@ -466,7 +468,7 @@ const SellerStudentRegistration: React.FC = () => {
                   {/* Dependents Input - moved to Step 1 */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Dependents {isSuaidenCode && <span className="text-red-500">*</span>}
+                      Dependents <span className="text-xs font-normal text-gray-500">- Family members (spouse and/or children)</span> {isDirectSalesCode && <span className="text-red-500">*</span>}
                     </label>
                     <select
                       name="dependents"
@@ -476,7 +478,7 @@ const SellerStudentRegistration: React.FC = () => {
                         errors.dependents ? 'border-red-300' : 'border-gray-300'
                       }`}
                     >
-                      {!isSuaidenCode && <option value={0}>0 Dependents</option>}
+                      {!isDirectSalesCode && <option value={0}>0 Dependents</option>}
                       <option value={1}>1 Dependent</option>
                       <option value={2}>2 Dependents</option>
                       <option value={3}>3 Dependents</option>
@@ -597,7 +599,7 @@ const SellerStudentRegistration: React.FC = () => {
           {currentStep === 2 && (
             <>
               <h2 className="text-2xl font-bold text-gray-900 mb-6">Choose Your Package</h2>
-              {isSuaidenCode ? (
+              {isDirectSalesCode ? (
                 <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                   <p className="text-lg text-blue-800 font-medium">
                     Package 3 has been automatically selected for your registration.
@@ -630,7 +632,7 @@ const SellerStudentRegistration: React.FC = () => {
                   {packages.map((pkg) => {
                     const isSelected = formData.selectedPackage === pkg.package_number.toString();
                     const isPackage3 = pkg.package_number === 3;
-                    const isDisabled = isSuaidenCode && !isPackage3;
+                    const isDisabled = isDirectSalesCode && !isPackage3;
                     
                     return (
                       <div
@@ -651,7 +653,7 @@ const SellerStudentRegistration: React.FC = () => {
                         <div className="text-center mb-4">
                           <h3 className="font-bold text-xl text-gray-900 mb-2">
                             {pkg.name}
-                            {isSuaidenCode && isPackage3 && (
+                            {isDirectSalesCode && isPackage3 && (
                               <span className="ml-2 text-sm text-blue-600 font-normal">(Selected)</span>
                             )}
                           </h3>
