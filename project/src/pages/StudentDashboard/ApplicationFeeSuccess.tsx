@@ -45,8 +45,13 @@ const ApplicationFeeSuccess: React.FC = () => {
           throw new Error(`Verification failed: ${sessionError.message}`);
         }
 
-        // Se a verificação foi bem-sucedida, buscar o valor da taxa da bolsa
-        if (sessionData?.applicationId) {
+        // Priorizar gross_amount_usd da resposta (valor bruto que o aluno realmente pagou)
+        // Se não estiver disponível, buscar o valor da taxa da bolsa como fallback
+        if (sessionData?.gross_amount_usd !== null && sessionData?.gross_amount_usd !== undefined) {
+          // Usar o valor bruto que o aluno realmente pagou (incluindo taxas do Stripe)
+          setApplicationFeeAmount(sessionData.gross_amount_usd);
+        } else if (sessionData?.applicationId) {
+          // Fallback: buscar o valor da taxa da bolsa
           try {
             const { data: application, error: appError } = await supabase
               .from('scholarship_applications')
