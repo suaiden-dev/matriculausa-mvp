@@ -118,6 +118,7 @@ const Overview: React.FC<OverviewProps> = ({
 
   // Função para buscar valores reais pagos de individual_fee_payments
   // Usa gross_amount_usd quando disponível, senão usa amount
+  // IMPORTANTE: Não usa valores de pagamentos PIX (que estão em BRL), apenas valores em USD
   const fetchRealPaidAmounts = React.useCallback(async () => {
     if (!user?.id) {
       setRealPaidAmounts({});
@@ -127,7 +128,7 @@ const Overview: React.FC<OverviewProps> = ({
     try {
       const { data: payments, error } = await supabase
         .from('individual_fee_payments')
-        .select('fee_type, amount, gross_amount_usd')
+        .select('fee_type, amount, gross_amount_usd, payment_method')
         .eq('user_id', user.id);
       
       if (error) {

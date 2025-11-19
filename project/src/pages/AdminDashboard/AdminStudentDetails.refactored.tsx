@@ -15,6 +15,7 @@ import { useDocumentRequestHandlers } from '../../hooks/useDocumentRequestHandle
 import { generateTermAcceptancePDF, StudentTermAcceptanceData } from '../../utils/pdfGenerator';
 import { recordIndividualFeePayment } from '../../lib/paymentRecorder';
 import { useStudentLogs } from '../../hooks/useStudentLogs';
+import { getRealPaidAmounts } from '../../utils/paymentConverter';
 
 // Componentes de UI Base
 import {
@@ -85,15 +86,28 @@ const AdminStudentDetails: React.FC = () => {
   
   // Extrair dados secundários
   const termAcceptances = secondaryDataQuery.data?.termAcceptances || [];
-  const realPaidAmounts = (() => {
-    const amounts: Record<string, number> = {};
-    (secondaryDataQuery.data?.individualFeePayments || []).forEach((p: any) => {
-      // O campo na tabela é 'amount', não 'amount_paid'
-      amounts[p.fee_type] = Number(p.amount || p.amount_paid || 0);
-    });
-    return amounts;
-  })();
+  const [realPaidAmounts, setRealPaidAmounts] = useState<Record<string, number>>({});
   const pendingZellePayments = pendingZelleQuery.data || [];
+  
+  // Buscar valores reais pagos usando getRealPaidAmounts (converte BRL para USD e remove taxas do Stripe)
+  React.useEffect(() => {
+    if (!student?.user_id) {
+      setRealPaidAmounts({});
+      return;
+    }
+    
+    const loadRealPaidAmounts = async () => {
+      try {
+        const amounts = await getRealPaidAmounts(student.user_id, ['selection_process', 'scholarship', 'i20_control', 'application']);
+        setRealPaidAmounts(amounts);
+      } catch (error) {
+        console.error('[AdminStudentDetails] Erro ao buscar valores reais pagos:', error);
+        setRealPaidAmounts({});
+      }
+    };
+    
+    loadRealPaidAmounts();
+  }, [student?.user_id]);
   
   // Função para atualizar student localmente (mantida para compatibilidade com hooks que dependem de setStudent)
   const setStudent = React.useCallback((updater: any) => {
