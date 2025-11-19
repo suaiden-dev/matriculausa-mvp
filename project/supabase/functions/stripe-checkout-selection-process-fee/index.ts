@@ -156,12 +156,12 @@ Deno.serve(async (req) => {
       sessionMetadata.user_has_package = 'false';
     }
 
-    console.log('[stripe-checkout-selection-process-fee] �� Metadata da sessão:', sessionMetadata);
+    console.log('[stripe-checkout-selection-process-fee]    Metadata da sessão:', sessionMetadata);
 
     // Verificar se usuário tem desconto ativo
     let activeDiscount = null;
     try {
-      console.log('[stripe-checkout-selection-process-fee] �� VERIFICANDO DESCONTO PARA USUÁRIO');
+      console.log('[stripe-checkout-selection-process-fee]    VERIFICANDO DESCONTO PARA USUÁRIO');
       console.log('[stripe-checkout-selection-process-fee] User ID:', user.id);
       console.log('[stripe-checkout-selection-process-fee] User Email:', user.email);
       
@@ -430,7 +430,7 @@ Deno.serve(async (req) => {
     }
     // Aplica desconto de código de referência se houver (e não houver cupom promocional)
     else if (activeDiscount && activeDiscount.stripe_coupon_id) {
-      console.log('[stripe-checkout-selection-process-fee] �� APLICANDO DESCONTO');
+      console.log('[stripe-checkout-selection-process-fee]    APLICANDO DESCONTO');
       console.log('[stripe-checkout-selection-process-fee] Coupon ID:', activeDiscount.stripe_coupon_id);
       console.log('[stripe-checkout-selection-process-fee] Discount Amount:', activeDiscount.discount_amount);
       

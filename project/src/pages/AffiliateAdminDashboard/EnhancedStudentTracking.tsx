@@ -15,7 +15,8 @@ import {
   BarChart3,
   TrendingUp,
   TrendingDown,
-  Filter
+  Filter,
+  Sparkles
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { getDocumentStatusDisplay } from '../../utils/documentStatusMapper';
@@ -153,6 +154,9 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
   
   // Estado para armazenar as taxas em falta de cada estudante
   const [studentMissingFees, setStudentMissingFees] = useState<{[key: string]: any[]}>({});
+  
+  // Estado para armazenar usuários que usaram cupom BLACK
+  const [blackCouponUsers, setBlackCouponUsers] = useState<Set<string>>(new Set());
 
   // Função para carregar as taxas em falta de todos os estudantes
   const loadAllStudentsMissingFees = async (studentsList: any[]) => {
@@ -1392,6 +1396,37 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
     loadData();
   }, [loadData]);
 
+  // Carregar estudantes que usaram cupom BLACK
+  useEffect(() => {
+    const loadBlackCouponUsers = async () => {
+      try {
+        // Buscar com ilike para ser case-insensitive
+        const { data, error } = await supabase
+          .from('promotional_coupon_usage')
+          .select('user_id, coupon_code')
+          .ilike('coupon_code', 'BLACK');
+
+        if (error) {
+          console.error('Error loading BLACK coupon users:', error);
+          return;
+        }
+
+        const userIds = new Set<string>();
+        (data || []).forEach((row: any) => {
+          if (row.user_id) {
+            userIds.add(row.user_id);
+          }
+        });
+        
+        setBlackCouponUsers(userIds);
+      } catch (e) {
+        console.error('Unexpected error loading BLACK coupon users:', e);
+      }
+    };
+
+    loadBlackCouponUsers();
+  }, [students]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -2588,7 +2623,15 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
                                         </span>
                                       </div>
                                       <div className="ml-4">
-                                        <div className="text-sm font-medium text-slate-900">{student.full_name}</div>
+                                        <div className="flex items-center">
+                                          <div className="text-sm font-medium text-slate-900">{student.full_name}</div>
+                                          {blackCouponUsers.has(student.user_id) && (
+                                            <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md" title="Student used BLACK promotional coupon">
+                                              <Sparkles className="h-3 w-3 mr-1" />
+                                              BLACK
+                                            </span>
+                                          )}
+                                        </div>
                                         <div className="text-sm text-slate-500">{student.email}</div>
                                         {student.country && (
                                           <div className="flex items-center text-xs text-slate-400 mt-1">
