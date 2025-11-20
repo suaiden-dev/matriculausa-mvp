@@ -87,6 +87,7 @@ const AdminStudentDetails: React.FC = () => {
   // Extrair dados secundários
   const termAcceptances = secondaryDataQuery.data?.termAcceptances || [];
   const [realPaidAmounts, setRealPaidAmounts] = useState<Record<string, number>>({});
+  const [loadingPaidAmounts, setLoadingPaidAmounts] = useState<Record<string, boolean>>({});
   const pendingZellePayments = pendingZelleQuery.data || [];
   
   // Buscar valores brutos pagos usando getGrossPaidAmounts (mostra o valor que o aluno realmente pagou, incluindo taxas do Stripe)
@@ -655,40 +656,22 @@ const AdminStudentDetails: React.FC = () => {
       }
     }
 
-    // Para Application Fee, calcular o valor correto baseado na bolsa
+    // ✅ CORREÇÃO: Para Application Fee, SEMPRE usar o valor informado pelo admin
+    // O admin deve ter controle total sobre o valor a ser registrado
+    // O valor da bolsa (application_fee_amount) é apenas uma referência, não deve sobrescrever o valor informado
     let finalPaymentAmount = paymentAmount;
+    
+    // Para Application Fee, o valor informado pelo admin deve ser respeitado
+    // Não sobrescrever com application_fee_amount da bolsa
     if (feeType === 'application' && applicationId) {
-      try {
-        const { data: applicationData } = await supabase
-          .from('scholarship_applications')
-          .select(`
-            id,
-            scholarships (
-              application_fee_amount
-            )
-          `)
-          .eq('id', applicationId)
-          .single();
-
-        if (applicationData?.scholarships) {
-          const scholarship = Array.isArray(applicationData.scholarships) 
-            ? applicationData.scholarships[0] 
-            : applicationData.scholarships;
-          
-          if (scholarship?.application_fee_amount) {
-            finalPaymentAmount = Number(scholarship.application_fee_amount);
-          }
-        }
-
-        // Adicionar $100 por dependente apenas para sistema legacy
-        const systemType = userSystemType || 'legacy';
-        const studentDependents = dependents || Number(student.dependents || 0);
-        if (systemType === 'legacy' && studentDependents > 0) {
-          finalPaymentAmount += studentDependents * 100;
-        }
-      } catch (error) {
-        console.error('Error fetching application data for fee calculation:', error);
-      }
+      // ✅ IMPORTANTE: Usar o valor informado pelo admin diretamente
+      // Se o admin informou $1200, registrar $1200, não sobrescrever com o valor da bolsa
+      console.log(`[PaymentStatusCard] Application Fee - Usando valor informado pelo admin: $${paymentAmount}`);
+      finalPaymentAmount = paymentAmount;
+      
+      // Nota: Se no futuro precisar adicionar dependentes automaticamente,
+      // isso deve ser feito apenas se o admin não informou um valor customizado
+      // Por enquanto, respeitamos sempre o valor informado
     }
 
     // Validar que applicationId está presente quando necessário
@@ -701,8 +684,21 @@ const AdminStudentDetails: React.FC = () => {
     const paymentDate = new Date().toISOString();
     const paymentMethodValue = (paymentMethod || 'manual') as 'stripe' | 'zelle' | 'manual';
     
+    // ✅ IMPORTANTE: Ativar loading ANTES de registrar o pagamento
+    // Isso evita mostrar o valor antigo enquanto o novo valor está sendo carregado
+    setLoadingPaidAmounts(prev => ({ ...prev, [feeType]: true }));
+    
+    // ✅ IMPORTANTE: Registrar pagamento na tabela individual_fee_payments ANTES de marcar como pago
+    // Isso garante que o registro seja feito mesmo se houver erro ao marcar como pago
     try {
-      await recordIndividualFeePayment(supabase, {
+      console.log('[PaymentStatusCard] Attempting to record individual fee payment:', {
+        fee_type: feeType,
+        user_id: student.user_id,
+        amount: finalPaymentAmount,
+        payment_method: paymentMethodValue
+      });
+      
+      const recordResult = await recordIndividualFeePayment(supabase, {
         userId: student.user_id,
         feeType: feeType,
         amount: finalPaymentAmount,
@@ -710,11 +706,29 @@ const AdminStudentDetails: React.FC = () => {
         paymentMethod: paymentMethodValue,
         paymentIntentId: null,
         stripeChargeId: null,
-        zellePaymentId: null
+        zellePaymentId: null,
+        grossAmountUsd: null, // Para pagamentos manuais, não há valor bruto do Stripe
+        feeAmountUsd: null // Para pagamentos manuais, não há taxas do Stripe
       });
-    } catch (recordError) {
-      console.error('Failed to record individual fee payment:', recordError);
-      // Não quebra o fluxo, mas loga o erro
+      
+      if (!recordResult.success) {
+        console.error('[PaymentStatusCard] ❌ Failed to record individual fee payment:', recordResult.error);
+        // Mostrar alerta ao admin sobre o erro, mas continuar o fluxo
+        alert(`Warning: Payment was marked as paid, but failed to record in individual_fee_payments table. Error: ${recordResult.error}`);
+      } else {
+        console.log('[PaymentStatusCard] ✅ Individual fee payment recorded successfully:', {
+          payment_id: recordResult.paymentId,
+          fee_type: feeType
+        });
+      }
+    } catch (recordError: any) {
+      console.error('[PaymentStatusCard] ❌ Exception while recording individual fee payment:', {
+        error: recordError.message,
+        stack: recordError.stack,
+        fee_type: feeType
+      });
+      // Mostrar alerta ao admin sobre a exceção
+      alert(`Warning: Payment was marked as paid, but an exception occurred while recording in individual_fee_payments table. Error: ${recordError.message}`);
     }
 
     // Marcar como pago usando o hook
@@ -787,6 +801,21 @@ const AdminStudentDetails: React.FC = () => {
 
       setShowPaymentModal(false);
       setPendingPayment(null);
+      
+      // ✅ IMPORTANTE: Atualizar realPaidAmounts após registrar pagamento
+      // O loading já foi ativado antes de registrar o pagamento
+      // Buscar novamente os valores pagos para refletir o pagamento recém-registrado
+      try {
+        const updatedAmounts = await getGrossPaidAmounts(student.user_id, ['selection_process', 'scholarship', 'i20_control', 'application']);
+        setRealPaidAmounts(updatedAmounts);
+        console.log('[PaymentStatusCard] ✅ realPaidAmounts atualizado após pagamento:', updatedAmounts);
+      } catch (updateError) {
+        console.error('[PaymentStatusCard] Erro ao atualizar realPaidAmounts:', updateError);
+      } finally {
+        // Desativar loading após atualizar
+        setLoadingPaidAmounts(prev => ({ ...prev, [feeType]: false }));
+      }
+      
       // Invalidar queries relacionadas
       queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.students.secondaryData(student?.user_id) });
@@ -1676,6 +1705,7 @@ const AdminStudentDetails: React.FC = () => {
                   i20_control: getFeeAmount('i20_control_fee'),
                 }}
                 realPaidAmounts={realPaidAmounts}
+                loadingPaidAmounts={loadingPaidAmounts}
                 editingFees={editingFees}
                 editingPaymentMethod={editingPaymentMethod}
                 newPaymentMethod={paymentMethod}
