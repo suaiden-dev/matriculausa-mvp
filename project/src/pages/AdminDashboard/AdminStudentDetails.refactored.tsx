@@ -407,14 +407,15 @@ const AdminStudentDetails: React.FC = () => {
           return;
         }
 
-        // ✅ OTIMIZAÇÃO: Selecionar apenas campos necessários
+        // ✅ CORREÇÃO: Incluir uploads na query para garantir que apareçam no DocumentsView
         const fields = 'id,title,description,due_date,is_global,university_id,scholarship_application_id,created_at,updated_at,template_url,attachment_url';
+        const fieldsWithUploads = `${fields},document_request_uploads(*,reviewed_by,reviewed_at)`;
 
         // ✅ OTIMIZAÇÃO: Executar queries em paralelo
         const [specificResult, globalResult] = await Promise.all([
           supabase
             .from('document_requests')
-            .select(fields)
+            .select(fieldsWithUploads)
             .in('scholarship_application_id', applicationIds)
             .order('created_at', { ascending: false }),
           
@@ -430,7 +431,7 @@ const AdminStudentDetails: React.FC = () => {
             
             return supabase
               .from('document_requests')
-              .select(fields)
+              .select(fieldsWithUploads)
               .eq('is_global', true)
               .in('university_id', uniqueUniversityIds)
               .order('created_at', { ascending: false });
@@ -627,8 +628,8 @@ const AdminStudentDetails: React.FC = () => {
     const feeType = pendingPayment.fee_type as 'selection_process' | 'application' | 'scholarship' | 'i20_control';
     let applicationId: string | undefined = undefined;
 
-    // Para Application Fee, buscar a aplicação aprovada ou mais recente
-    if (feeType === 'application') {
+    // Para Application Fee e Scholarship Fee, buscar a aplicação aprovada ou mais recente
+    if (feeType === 'application' || feeType === 'scholarship') {
       const approvedApps = student?.all_applications?.filter((app: any) => app.status === 'approved') || [];
       
       if (approvedApps.length > 1) {
@@ -648,7 +649,7 @@ const AdminStudentDetails: React.FC = () => {
         if (!fetchError && applications && applications.length > 0) {
           applicationId = applications[0].id;
         } else {
-          alert('No application found for this student');
+          alert(`No application found for this student. ${feeType === 'application' ? 'Application' : 'Scholarship'} fee requires an application.`);
           return;
         }
       }
@@ -688,6 +689,12 @@ const AdminStudentDetails: React.FC = () => {
       } catch (error) {
         console.error('Error fetching application data for fee calculation:', error);
       }
+    }
+
+    // Validar que applicationId está presente quando necessário
+    if ((feeType === 'application' || feeType === 'scholarship') && !applicationId) {
+      alert(`Application ID is required for ${feeType === 'application' ? 'application' : 'scholarship'} fees. Please ensure the student has an approved application.`);
+      return;
     }
 
     // Registrar pagamento na tabela individual_fee_payments
@@ -785,6 +792,7 @@ const AdminStudentDetails: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.students.secondaryData(student?.user_id) });
     } else {
       console.error('Error recording payment:', result.error);
+      alert(`Error marking fee as paid: ${result.error || 'Unknown error'}`);
     }
   }, [student, pendingPayment, paymentAmount, paymentMethod, markFeeAsPaid, dependents, userSystemType, user, logAction, profileId, queryClient]);
 
@@ -1620,14 +1628,6 @@ const AdminStudentDetails: React.FC = () => {
 
               <SelectedScholarshipCard 
                 student={student} 
-                isPlatformAdmin={isPlatformAdmin}
-                approvingStudent={approvingStudent}
-                rejectingStudent={rejectingStudent}
-                onApproveApplication={approveApplication}
-                onRejectApplication={(appId) => {
-                  setPendingRejectAppId(appId);
-                  setShowRejectStudentModal(true);
-                }}
               />
 
               <StudentDocumentsCard
