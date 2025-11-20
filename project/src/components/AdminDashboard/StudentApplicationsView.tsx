@@ -1702,7 +1702,12 @@ const StudentApplicationsView: React.FC = () => {
                                   } else {
                                     // Sem override: valor padrão + dependentes
                                     const baseFee = Number(getFeeAmount('selection_process'));
-                                    const total = baseFee + (dependents * 150);
+                                    // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
+                                    // Dependentes só afetam Application Fee ($100 por dependente)
+                                    const systemType = student?.system_type || 'legacy';
+                                    const total = systemType === 'simplified' 
+                                      ? baseFee 
+                                      : baseFee + (dependents * 150);
                                     return formatFeeAmount(total);
                                   }
                                 })()}

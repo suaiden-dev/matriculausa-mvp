@@ -1693,7 +1693,10 @@ const AdminStudentDetails: React.FC = () => {
     if (!student) return;
     
     // Calcular valores atuais considerando dependentes e overrides
-    const dependentsExtra = dependents * 150; // $150 por dependente apenas no Selection Process
+    // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
+    // Dependentes só afetam Application Fee ($100 por dependente)
+    const systemType = student?.system_type || 'legacy';
+    const dependentsExtra = systemType === 'simplified' ? 0 : (dependents * 150); // $150 por dependente apenas no Selection Process (legacy)
     const baseSelectionProcess = Number(getFeeAmount('selection_process')); // Valor base dinâmico
     const currentSelectionProcess = hasOverride('selection_process') 
       ? getFeeAmount('selection_process') 
@@ -1894,7 +1897,12 @@ const AdminStudentDetails: React.FC = () => {
       if (feeType === 'selection_process') {
         // Calcular o valor do pagamento
         const base = Number(getFeeAmount('selection_process'));
-        const paymentAmount = base + (student?.dependents || 0) * 150;
+        // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
+        // Dependentes só afetam Application Fee ($100 por dependente)
+        const systemType = student?.system_type || 'legacy';
+        const paymentAmount = systemType === 'simplified' 
+          ? base 
+          : base + (student?.dependents || 0) * 150;
         const paymentDate = new Date().toISOString();
         const paymentMethod = (method || 'manual') as 'stripe' | 'zelle' | 'manual';
 
@@ -4782,7 +4790,12 @@ const AdminStudentDetails: React.FC = () => {
                       // Caso contrário, calcular valor esperado (para exibição antes do pagamento)
                       const hasCustomOverride = hasOverride('selection_process');
                       const base = Number(getFeeAmount('selection_process'));
-                      const finalAmount = hasCustomOverride ? getFeeAmount('selection_process') : base + dependents * 150;
+                      // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
+                      // Dependentes só afetam Application Fee ($100 por dependente)
+                      const systemType = student?.system_type || 'legacy';
+                      const finalAmount = hasCustomOverride 
+                        ? getFeeAmount('selection_process') 
+                        : (systemType === 'simplified' ? base : base + dependents * 150);
                       const formatted = formatFeeAmount(finalAmount);
                       
                       if (student?.user_id === '935e0eec-82c6-4a70-b013-e85dde6e63f7') {

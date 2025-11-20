@@ -474,7 +474,9 @@ const AffiliateManagement: React.FC = () => {
         } else if (o.selection_process_fee != null) {
           sel = Number(o.selection_process_fee);
         } else {
-          sel = baseSelectionFee + (dependents * 150);
+          // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
+          // Dependentes só afetam Application Fee ($100 por dependente)
+          sel = systemType === 'simplified' ? baseSelectionFee : baseSelectionFee + (dependents * 150);
         }
         total += sel || 0;
       }

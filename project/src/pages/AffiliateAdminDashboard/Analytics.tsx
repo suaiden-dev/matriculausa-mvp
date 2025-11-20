@@ -146,7 +146,11 @@ const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], userId }) =>
             // Fallback: cálculo fixo para dados antigos sem registro
             const baseSelDefault = p?.system_type === 'simplified' ? 350 : 400;
             const baseSel = ov.selection_process_fee != null ? Number(ov.selection_process_fee) : baseSelDefault;
-            selPaid = ov.selection_process_fee != null ? baseSel : baseSel + (deps * 150);
+            // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
+            // Dependentes só afetam Application Fee ($100 por dependente)
+            selPaid = ov.selection_process_fee != null 
+              ? baseSel 
+              : (p?.system_type === 'simplified' ? baseSel : baseSel + (deps * 150));
           }
         }
 
@@ -312,7 +316,11 @@ const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], userId }) =>
           // Usar valor baseado no system_type do aluno (350 para simplified, 400 para legacy)
           const baseSelDefault = p?.system_type === 'simplified' ? 350 : 400;
           const baseSel = ov.selection_process_fee != null ? Number(ov.selection_process_fee) : baseSelDefault;
-          selPaid = ov.selection_process_fee != null ? baseSel : baseSel + (deps * 150);
+          // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
+          // Dependentes só afetam Application Fee ($100 por dependente)
+          selPaid = ov.selection_process_fee != null 
+            ? baseSel 
+            : (p?.system_type === 'simplified' ? baseSel : baseSel + (deps * 150));
         }
 
         // Scholarship Fee (sem dependentes)
