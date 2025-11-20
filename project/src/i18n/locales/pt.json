@@ -410,6 +410,11 @@
     "title": "Como Funciona",
     "subtitle": "Seu caminho para uma universidade americana, passo a passo",
     "journey": "Sua Jornada",
+    "stats": {
+      "setup": "Configuração em 5 Minutos",
+      "success": "95% de Taxa de Sucesso",
+      "secure": "100% Seguro"
+    },
     "steps": {
       "profile": {
         "title": "Crie Seu Perfil",
@@ -417,12 +422,13 @@
         "items": [
           "Histórico acadêmico e conquistas",
           "Objetivos de carreira e preferências",
-          "Requisitos financeiros"
+          "Requisitos financeiros",
+          "Adicione dependentes (se houver)"
         ]
       },
       "selectionFee": {
-        "title": "Pague Taxa de Seleção (${{selectionProcessFee}})",
-        "description": "Desbloqueie todas as bolsas. Esta taxa é final e não reembolsável.",
+        "title": "Pague Taxa de Seleção ({{selectionProcessFee}})",
+        "description": "Desbloqueie todas as bolsas. Esta taxa é final e não reembolsável. (+$150 por dependente)",
         "items": [
           "Acesso para navegar pelas bolsas",
           "Iniciar processo de candidatura",
@@ -440,7 +446,7 @@
       },
       "applicationFee": {
         "title": "Pague Taxa de Matrícula (Conforme a universidade)",
-        "description": "Confirme sua universidade. Esta taxa é final e não reembolsável.",
+        "description": "Confirme sua universidade. Esta taxa é final e não reembolsável. (+$100 por dependente)",
         "items": [
           "Veja bolsas aprovadas",
           "Confirme escolha da universidade",
@@ -448,7 +454,7 @@
         ]
       },
       "scholarshipFee": {
-        "title": "Pague Taxa de Bolsa (${{scholarshipFee}})",
+        "title": "Pague Taxa de Bolsa ({{scholarshipFee}})",
         "description": "Obtenha chat direto com sua universidade. Esta taxa é final e não reembolsável.",
         "items": [
           "Chat direto com universidade",
@@ -457,7 +463,7 @@
         ]
       },
       "i20Fee": {
-        "title": "Pague Taxa de Controle I-20 (${{i20ControlFee}})",
+        "title": "Pague Taxa de Controle I-20 ({{i20ControlFee}})",
         "description": "Necessário para seu visto F-1. Esta taxa é final e não reembolsável.",
         "items": [
           "Essencial para visto de estudante F-1",
@@ -485,6 +491,34 @@
         "description": "Veja seu progresso e próximos passos em tempo real"
       }
     },
+    "successStories": {
+      "title": "Histórias de Sucesso",
+      "story1": {
+        "text": "\"Encontrei bolsas exclusivas que não estavam disponíveis em nenhum outro lugar. O MatriculaUSA realmente abre portas para oportunidades.\"",
+        "name": "Ana Chen",
+        "major": "Engenharia"
+      },
+      "story2": {
+        "text": "\"Graças ao MatriculaUSA, recebi uma bolsa integral e suporte durante todo o meu processo de visto. A equipe sempre esteve lá por mim!\"",
+        "name": "Lucas Silva",
+        "major": "Ciência da Computação"
+      },
+      "story3": {
+        "text": "\"O processo de candidatura foi tão fácil e transparente. Me senti apoiada em cada etapa. Recomendo muito!\"",
+        "name": "Priya Patel",
+        "major": "Negócios"
+      },
+      "story4": {
+        "text": "\"Eu nunca pensei que estudar nos EUA fosse possível para mim. O MatriculaUSA tornou meu sonho realidade!\"",
+        "name": "Ahmed Hassan",
+        "major": "Engenharia"
+      },
+      "story5": {
+        "text": "\"Desde o primeiro contato até minha chegada nos EUA, tudo foi tranquilo e profissional. Obrigado, MatriculaUSA!\"",
+        "name": "Maria Gomez",
+        "major": "Negócios"
+      }
+    },
     "faq": {
       "title": "Perguntas Frequentes",
       "q1": {
@@ -493,19 +527,43 @@
       },
       "q2": {
         "question": "O que é a Taxa de Processo de Seleção?",
-        "answer": "A Taxa de Processo de Seleção (US${{selectionProcessFee}}) é o primeiro pagamento obrigatório na plataforma MatriculaUSA. Ela desbloqueia seu acesso completo para visualizar todas as bolsas e iniciar seu processo de candidatura. Esta taxa é final e não reembolsável."
+        "answer": "A Taxa de Processo de Seleção (US{{selectionProcessFee}}) é o primeiro pagamento obrigatório na plataforma MatriculaUSA. Ela desbloqueia seu acesso completo para visualizar todas as bolsas e iniciar seu processo de candidatura. Esta taxa é final e não reembolsável."
       },
       "q3": {
         "question": "O que é a Taxa de Bolsa?",
-        "answer": "A Taxa de Bolsa (US${{scholarshipFee}}) é cobrada quando você prossegue com candidaturas para bolsas exclusivas através do MatriculaUSA. Esta taxa cobre custos de processamento e suporte personalizado para suas candidaturas de bolsa. Esta taxa é final e não reembolsável."
+        "answer": "A Taxa de Bolsa (US{{scholarshipFee}}) é cobrada quando você prossegue com candidaturas para bolsas exclusivas através do MatriculaUSA. Esta taxa cobre custos de processamento e suporte personalizado para suas candidaturas de bolsa. Esta taxa é final e não reembolsável."
       },
       "q4": {
         "question": "O que é a Taxa de Matrícula?",
-        "answer": "A Taxa de Matrícula varia conforme a universidade e é um pagamento necessário para processar formalmente sua candidatura após você ter sido aceito. Este valor confirma sua intenção de se matricular e é gerenciado diretamente pela plataforma. Esta taxa é final e não reembolsável."
+        "answer": "A Taxa de Matrícula varia por universidade e é um pagamento necessário para processar formalmente sua candidatura após você ter sido aceito. Este valor confirma sua intenção de se matricular e é gerenciado diretamente pela plataforma. Esta taxa é final e não reembolsável."
       },
       "q5": {
         "question": "O que é a Taxa de Controle I-20?",
-        "answer": "A Taxa de Controle I-20 (US${{i20ControlFee}}) é um pagamento obrigatório para estudantes que precisam obter o formulário I-20, essencial para solicitar o visto de estudante F-1. Esta taxa garante processamento rápido e preciso de seus documentos de visto. Esta taxa é final e não reembolsável."
+        "answer": "A Taxa de Controle I-20 (US{{i20ControlFee}}) é um pagamento obrigatório para estudantes que precisam obter o formulário I-20, essencial para solicitar o visto de estudante F-1. Esta taxa garante o processamento rápido e preciso dos seus documentos de visto. Esta taxa é final e não reembolsável."
+      },
+      "q6": {
+        "question": "Existem outras taxas que devo conhecer?",
+        "answer": "Todas as taxas obrigatórias para seu processo de candidatura e matrícula estão listadas em seu painel antes de qualquer pagamento. Algumas universidades podem ter taxas adicionais (ex: depósitos de moradia, taxas de orientação), mas estas serão sempre comunicadas diretamente pela universidade ou por nós com antecedência. Todas as taxas são finais e não reembolsáveis."
+      },
+      "q7": {
+        "question": "Como posso pagar essas taxas?",
+        "answer": "Você pode pagar todas as taxas diretamente através da plataforma MatriculaUSA usando cartões de crédito ou débito internacionais. Os pagamentos são processados com segurança via Stripe, e você receberá uma confirmação para cada transação. Todas as taxas são finais e não reembolsáveis."
+      },
+      "q8": {
+        "question": "Minhas informações de pagamento são seguras?",
+        "answer": "Sim. Todos os pagamentos são processados pelo Stripe, líder global em segurança de pagamentos. O MatriculaUSA não armazena os detalhes do seu cartão, e todas as transações são criptografadas para sua proteção."
+      },
+      "q9": {
+        "question": "Posso obter reembolso?",
+        "answer": "Você tem direito a reembolso total das taxas pagas se sua candidatura não for bem-sucedida ou se você não for aprovado para uma bolsa. No entanto, se você desistir do processo ou mudar de ideia após iniciar a candidatura, as taxas pagas não são reemboláveis, pois o processamento e suporte já terão começado. Todas as taxas são finais e não reembolsáveis."
+      },
+      "q10": {
+        "question": "Tenho que pagar todas as taxas de uma vez?",
+        "answer": "Não. As taxas são compras separadas e são pagas em etapas conforme você avança no processo. Você paga a Taxa de Processo de Seleção (US{{selectionProcessFee}}) primeiro, depois a Taxa de Bolsa (US{{scholarshipFee}}) (se aplicável), seguida pela Taxa de Matrícula, e finalmente a Taxa de Controle I-20 (US{{i20ControlFee}}). Todas são obrigatórias para o fluxo completo, mas não precisam ser pagas simultaneamente."
+      },
+      "q11": {
+        "question": "Quem posso contatar se tiver dúvidas sobre taxas ou pagamentos?",
+        "answer": "Nossa equipe de suporte está disponível via chat ou e-mail a qualquer momento para responder a quaisquer perguntas sobre taxas, pagamentos ou seu processo de candidatura. Estamos aqui para ajudar você em cada etapa!"
       }
     }
   },

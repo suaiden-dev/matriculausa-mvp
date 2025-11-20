@@ -407,105 +407,163 @@
     }
   },
   "howItWorks": {
-    "title": "How It Works",
-    "subtitle": "Your path to a U.S. university, step by step",
-    "journey": "Your Journey",
+    "title": "Cómo Funciona",
+    "subtitle": "Tu camino a una universidad de EE. UU., paso a paso",
+    "journey": "Tu Jornada",
+    "stats": {
+      "setup": "Configuración en 5 Minutos",
+      "success": "95% Tasa de Éxito",
+      "secure": "100% Seguro"
+    },
     "steps": {
       "profile": {
-        "title": "Create Your Profile",
-        "description": "Fill out your academic and personal info. Our AI finds your best options.",
+        "title": "Crea Tu Perfil",
+        "description": "Completa tu información académica y personal. Nuestra IA encuentra tus mejores opciones.",
         "items": [
-          "Academic history & achievements",
-          "Career goals & preferences",
-          "Financial requirements"
+          "Historial académico y logros",
+          "Objetivos profesionales y preferencias",
+          "Requisitos financieros",
+          "Añadir dependientes (si los hay)"
         ]
       },
       "selectionFee": {
-        "title": "Pay Selection Fee (${{selectionProcessFee}})",
-        "description": "Unlock all scholarships. This fee is final and non-refundable.",
+        "title": "Pagar Tarifa de Selección (${{selectionProcessFee}})",
+        "description": "Desbloquea todas las becas. Esta tarifa es final y no reembolsable. (+$150 por dependiente)",
         "items": [
-          "Access to scholarship browse",
-          "Initiate application process",
-          "One-time fee"
+          "Acceso para navegar becas",
+          "Iniciar proceso de solicitud",
+          "Tarifa única"
         ]
       },
       "documents": {
-        "title": "Choose Scholarships & Upload Docs",
-        "description": "Pick scholarships and upload your documents. Fast review.",
+        "title": "Elige Becas y Sube Documentos",
+        "description": "Elige becas y sube tus documentos. Revisión rápida.",
         "items": [
-          "Select multiple scholarships",
-          "Secure document upload",
-          "Automated initial analysis"
+          "Selecciona múltiples becas",
+          "Carga segura de documentos",
+          "Análisis inicial automatizado"
         ]
       },
       "applicationFee": {
-        "title": "Pay Application Fee (As per university)",
-        "description": "Confirm your university. This fee is final and non-refundable.",
+        "title": "Pagar Tarifa de Solicitud (Según universidad)",
+        "description": "Confirma tu universidad. Esta tarifa es final y no reembolsable. (+$100 por dependiente)",
         "items": [
-          "See approved scholarships",
-          "Confirm university choice",
-          "Secure your spot"
+          "Ver becas aprobadas",
+          "Confirmar elección de universidad",
+          "Asegura tu lugar"
         ]
       },
       "scholarshipFee": {
-        "title": "Pay Scholarship Fee (${{scholarshipFee}})",
-        "description": "Get direct chat with your university. This fee is final and non-refundable.",
+        "title": "Pagar Tarifa de Beca (${{scholarshipFee}})",
+        "description": "Obtén chat directo con tu universidad. Esta tarifa es final y no reembolsable.",
         "items": [
-          "Direct chat with university",
-          "Submit additional documents",
-          "Final scholarship commitment"
+          "Chat directo con universidad",
+          "Enviar documentos adicionales",
+          "Compromiso final de beca"
         ]
       },
       "i20Fee": {
-        "title": "Pay I-20 Control Fee (${{i20ControlFee}})",
-        "description": "Needed for your F-1 visa. This fee is final and non-refundable.",
+        "title": "Pagar Tarifa de Control I-20 (${{i20ControlFee}})",
+        "description": "Necesario para tu visa F-1. Esta tarifa es final y no reembolsable.",
         "items": [
-          "Essential for F-1 student visa",
-          "Covers I-20 processing",
-          "10-day payment window"
+          "Esencial para visa de estudiante F-1",
+          "Cubre procesamiento I-20",
+          "Ventana de pago de 10 días"
         ]
       }
     },
     "whyUs": {
-      "title": "Why MatriculaUSA?",
+      "title": "Por Qué MatriculaUSA?",
       "smartDiscovery": {
-        "title": "Smart Discovery",
-        "description": "AI finds the best scholarships for you"
+        "title": "Descubrimiento Inteligente",
+        "description": "IA encuentra las mejores becas para ti"
       },
       "documentManagement": {
-        "title": "Document Management",
-        "description": "Upload and track all your documents easily"
+        "title": "Gestión de Documentos",
+        "description": "Sube y rastrea todos tus documentos fácilmente"
       },
       "personalSupport": {
-        "title": "Personal Support",
-        "description": "Our team helps you at every step"
+        "title": "Soporte Personal",
+        "description": "Nuestro equipo te ayuda en cada paso"
       },
       "successTracking": {
-        "title": "Success Tracking",
-        "description": "See your progress and next steps in real time"
+        "title": "Seguimiento de Éxito",
+        "description": "Ve tu progreso y siguientes pasos en tiempo real"
+      }
+    },
+    "successStories": {
+      "title": "Historias de Éxito",
+      "story1": {
+        "text": "\"Encontré becas exclusivas que no estaban disponibles en ningún otro lugar. MatriculaUSA realmente abre puertas a oportunidades.\"",
+        "name": "Ana Chen",
+        "major": "Ingeniería"
+      },
+      "story2": {
+        "text": "\"Gracias a MatriculaUSA, recibí una beca completa y apoyo durante todo mi proceso de visa. ¡El equipo siempre estuvo ahí para mí!\"",
+        "name": "Lucas Silva",
+        "major": "Ciencias de la Computación"
+      },
+      "story3": {
+        "text": "\"El proceso de solicitud fue tan fácil y transparente. Me sentí apoyada en cada paso. ¡Muy recomendable!\"",
+        "name": "Priya Patel",
+        "major": "Negocios"
+      },
+      "story4": {
+        "text": "\"Nunca pensé que estudiar en EE. UU. fuera posible para mí. ¡MatriculaUSA hizo mi sueño realidad!\"",
+        "name": "Ahmed Hassan",
+        "major": "Ingeniería"
+      },
+      "story5": {
+        "text": "\"Desde el primer contacto hasta mi llegada a EE. UU., todo fue fluido y profesional. ¡Gracias, MatriculaUSA!\"",
+        "name": "Maria Gomez",
+        "major": "Negocios"
       }
     },
     "faq": {
-      "title": "Frequently Asked Questions",
+      "title": "Preguntas Frecuentes",
       "q1": {
-        "question": "What fees or payments are required to use MatriculaUSA?",
-        "answer": "MatriculaUSA is free to create your profile and explore universities. However, once you start the application process and are approved for a scholarship, all fees associated with the admission and enrollment flow become mandatory. They are clearly presented before any payment. All fees are final and non-refundable."
+        "question": "¿Qué tarifas o pagos se requieren para usar MatriculaUSA?",
+        "answer": "MatriculaUSA es gratuito para crear tu perfil y explorar universidades. Sin embargo, una vez que inicias el proceso de solicitud y eres aprobado para una beca, todas las tarifas asociadas con el flujo de admisión y matrícula se vuelven obligatorias. Se presentan claramente antes de cualquier pago. Todas las tarifas son finales y no reembolsables."
       },
       "q2": {
-        "question": "What is the Selection Process Fee?",
-        "answer": "The Selection Process Fee (US${{selectionProcessFee}}) is the first mandatory payment on the MatriculaUSA platform. It unlocks your full access to view all scholarships and start your application process. This fee is final and non-refundable."
+        "question": "¿Qué es la Tarifa de Proceso de Selección?",
+        "answer": "La Tarifa de Proceso de Selección (US{{selectionProcessFee}}) es el primer pago obligatorio en la plataforma MatriculaUSA. Desbloquea tu acceso completo para ver todas las becas e iniciar tu proceso de solicitud. Esta tarifa es final y no reembolsable."
       },
       "q3": {
-        "question": "What is the Scholarship Fee?",
-        "answer": "The Scholarship Fee (US${{scholarshipFee}}) is charged when you proceed with applications for exclusive scholarships through MatriculaUSA. This fee covers processing costs and personalized support for your scholarship applications."
+        "question": "¿Qué es la Tarifa de Beca?",
+        "answer": "La Tarifa de Beca (US{{scholarshipFee}}) se cobra cuando procedes con solicitudes para becas exclusivas a través de MatriculaUSA. Esta tarifa cubre costos de procesamiento y soporte personalizado para tus solicitudes de beca. Esta tarifa es final y no reembolsable."
       },
       "q4": {
-        "question": "What is the Application Fee?",
-        "answer": "The Application Fee varies by university and is a payment required to formally process your application after you have been accepted. This amount confirms your intention to enroll and is managed directly by the platform. This fee is final and non-refundable."
+        "question": "¿Qué es la Tarifa de Solicitud?",
+        "answer": "La Tarifa de Solicitud varía por universidad y es un pago requerido para procesar formalmente tu solicitud después de haber sido aceptado. Este monto confirma tu intención de inscribirte y es gestionado directamente por la plataforma. Esta tarifa es final y no reembolsable."
       },
       "q5": {
-        "question": "What is the I-20 Control Fee?",
-        "answer": "The I-20 Control Fee (US${{i20ControlFee}}) is a mandatory payment for students who need to obtain the I-20 form, essential for applying for the F-1 student visa. This fee ensures fast and accurate processing of your visa documents. This fee is final and non-refundable."
+        "question": "¿Qué es la Tarifa de Control I-20?",
+        "answer": "La Tarifa de Control I-20 (US{{i20ControlFee}}) es un pago obligatorio para estudiantes que necesitan obtener el formulario I-20, esencial para solicitar la visa de estudiante F-1. Esta tarifa asegura un procesamiento rápido y preciso de tus documentos de visa. Esta tarifa es final y no reembolsable."
+      },
+      "q6": {
+        "question": "¿Hay otras tarifas que deba conocer?",
+        "answer": "Todas las tarifas obligatorias para tu proceso de solicitud y matrícula están listadas en tu panel antes de cualquier pago. Algunas universidades pueden tener tarifas adicionales (ej: depósitos de vivienda, tarifas de orientación), pero estas siempre serán comunicadas directamente por la universidad o por nosotros con anticipación. Todas las tarifas son finales y no reembolsables."
+      },
+      "q7": {
+        "question": "¿Cómo puedo pagar estas tarifas?",
+        "answer": "Puedes pagar todas las tarifas directamente a través de la plataforma MatriculaUSA usando tarjetas de crédito o débito internacionales. Los pagos se procesan de forma segura vía Stripe, y recibirás una confirmación por cada transacción. Todas las tarifas son finales y no reembolsables."
+      },
+      "q8": {
+        "question": "¿Es segura mi información de pago?",
+        "answer": "Sí. Todos los pagos son procesados por Stripe, líder global en seguridad de pagos. MatriculaUSA no almacena los detalles de tu tarjeta, y todas las transacciones están encriptadas para tu protección."
+      },
+      "q9": {
+        "question": "¿Puedo obtener un reembolso?",
+        "answer": "Tienes derecho a un reembolso total de las tarifas pagadas si tu solicitud no es exitosa o no eres aprobado para una beca. Sin embargo, si te retiras del proceso o cambias de opinión después de iniciar la solicitud, las tarifas pagadas no son reembolsables, ya que el procesamiento y soporte ya habrán comenzado. Todas las tarifas son finales y no reembolsables."
+      },
+      "q10": {
+        "question": "¿Tengo que pagar todas las tarifas a la vez?",
+        "answer": "No. Las tarifas son compras separadas y se pagan en etapas a medida que avanzas en el proceso. Pagas la Tarifa de Proceso de Selección (US{{selectionProcessFee}}) primero, luego la Tarifa de Beca (US{{scholarshipFee}}) (si aplica), seguida por la Tarifa de Solicitud, y finalmente la Tarifa de Control I-20 (US{{i20ControlFee}}). Todas son obligatorias para el flujo completo, pero no necesitan pagarse simultáneamente."
+      },
+      "q11": {
+        "question": "¿A quién puedo contactar si tengo preguntas sobre tarifas o pagos?",
+        "answer": "Nuestro equipo de soporte está disponible vía chat o correo electrónico en cualquier momento para responder cualquier pregunta sobre tarifas, pagos o tu proceso de solicitud. ¡Estamos aquí para ayudarte en cada paso!"
       }
     }
   },
