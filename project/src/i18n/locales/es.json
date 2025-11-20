@@ -1940,7 +1940,9 @@
         "documentRequests": {
           "title": "Verificar Solicitudes de Documentos",
           "description": "Sube los documentos solicitados por la universidad para continuar tu proceso.",
-          "button": "Ir a Solicitudes de Documentos"
+          "button": "Ir a Solicitudes de Documentos",
+          "acceptanceLetterAvailable": "¡Carta de Aceptación disponible!",
+          "acceptanceLetterDescription": "Tu carta de aceptación ha sido enviada por la universidad. Accede a la pestaña Documentos para visualizarla."
         },
         "applicationDetails": {
           "title": "Ver Detalles de la Aplicación",
@@ -1950,7 +1952,11 @@
         "i20ControlFee": {
           "title": "Pagar Tarifa de Control I-20",
           "description": "Paga la Tarifa de Control I-20 para solicitar tu documento oficial. Plazo: 10 días después de carta de aceptación.",
-          "button": "Pagar Tarifa de Control I-20"
+          "button": "Pagar Tarifa de Control I-20",
+          "paidMessage": "¡Felicitaciones! La Tarifa de Control I-20 ha sido pagada exitosamente.",
+          "paidDescription": "Tu pago ha sido confirmado. Continúa siguiendo el progreso de tu solicitud.",
+          "paidDate": "Fecha de pago:",
+          "viewDetails": "Ver Detalles del Pago"
         }
       },
       "details": {
@@ -2070,6 +2076,13 @@
         "paymentSessionError": "Error al crear sesión de pago",
         "paymentRedirectError": "Error al redirigir al pago",
         "downloadFailed": "Error al descargar el archivo"
+      },
+      "status": {
+        "approved": "Aprobado",
+        "changesRequested": "Cambios Solicitados",
+        "underReview": "En Revisión",
+        "notSubmitted": "No Enviado",
+        "paid": "Pagado"
       },
       "hardcodedTexts": {
         "authenticating": "Autenticando...",

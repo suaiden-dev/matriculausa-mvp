@@ -1994,7 +1994,9 @@
         "documentRequests": {
           "title": "Check Document Requests",
           "description": "Upload the documents requested by the university to continue your process.",
-          "button": "Go to Document Requests"
+          "button": "Go to Document Requests",
+          "acceptanceLetterAvailable": "Acceptance Letter available!",
+          "acceptanceLetterDescription": "Your acceptance letter has been sent by the university. Go to the Documents tab to view it."
         },
         "applicationDetails": {
           "title": "View Application Details",
@@ -2004,7 +2006,11 @@
         "i20ControlFee": {
           "title": "Pay I-20 Control Fee",
           "description": "Pay the I-20 Control Fee to request your official document. Deadline: 10 days after acceptance letter.",
-          "button": "Pay I-20 Control Fee"
+          "button": "Pay I-20 Control Fee",
+          "paidMessage": "Congratulations! The I-20 Control Fee has been paid successfully.",
+          "paidDescription": "Your payment has been confirmed. Continue tracking your application progress.",
+          "paidDate": "Payment date:",
+          "viewDetails": "View Payment Details"
         }
       },
       "chat": {
@@ -2197,7 +2203,8 @@
         "approved": "Approved",
         "changesRequested": "Changes Requested",
         "underReview": "Under Review",
-        "notSubmitted": "Not Submitted"
+        "notSubmitted": "Not Submitted",
+        "paid": "Paid"
       },
       "hardcodedTexts": {
         "authenticating": "Authenticating...",

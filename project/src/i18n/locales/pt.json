@@ -2074,7 +2074,9 @@
         "documentRequests": {
           "title": "Verificar Solicitações de Documentos",
           "description": "Faça upload dos documentos solicitados pela universidade para continuar seu processo.",
-          "button": "Ir para Solicitações de Documentos"
+          "button": "Ir para Solicitações de Documentos",
+          "acceptanceLetterAvailable": "Carta de Aceitação disponível!",
+          "acceptanceLetterDescription": "Sua carta de aceitação foi enviada pela universidade. Acesse a aba Documentos para visualizar."
         },
         "applicationDetails": {
           "title": "Ver Detalhes da Aplicação",
@@ -2084,7 +2086,11 @@
         "i20ControlFee": {
           "title": "Pagar Taxa de Controle I-20",
           "description": "Pague a Taxa de Controle I-20 para solicitar seu documento oficial. Prazo: 10 dias após carta de aceitação.",
-          "button": "Pagar Taxa de Controle I-20"
+          "button": "Pagar Taxa de Controle I-20",
+          "paidMessage": "Parabéns! A Taxa de Controle I-20 foi paga com sucesso.",
+          "paidDescription": "Seu pagamento foi confirmado. Continue acompanhando o progresso da sua aplicação.",
+          "paidDate": "Data do pagamento:",
+          "viewDetails": "Ver Detalhes do Pagamento"
         }
       },
       "chat": {
@@ -2277,7 +2283,8 @@
         "approved": "Aprovado",
         "changesRequested": "Alterações Solicitadas",
         "underReview": "Em Revisão",
-        "notSubmitted": "Não Enviado"
+        "notSubmitted": "Não Enviado",
+        "paid": "Pago"
       },
       "hardcodedTexts": {
         "authenticating": "Autenticando...",
