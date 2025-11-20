@@ -228,10 +228,9 @@ const ApplicationChatPage: React.FC = () => {
 
     checkI20PromotionalCoupon();
     
-    // Verificar periodicamente
-    const interval = setInterval(checkI20PromotionalCoupon, 5000); // 5 segundos
-    
-    return () => clearInterval(interval);
+    // ✅ CORREÇÃO: Removido intervalo de 5 segundos - verificar apenas quando necessário
+    // O cupom promocional não muda com frequência, então não precisa verificar constantemente
+    // return () => clearInterval(interval); // Removido - não há mais intervalo
   }, [userProfile?.seller_referral_code, userProfile?.system_type, user?.id]);
 
   // Buscar valor real pago do I-20 Control Fee
@@ -1353,6 +1352,33 @@ const ApplicationChatPage: React.FC = () => {
               <p className="text-slate-200 text-xs sm:text-sm mt-1">{t('studentDashboard.applicationChatPage.documents.subtitle')}</p>
             </div>
             <div className="p-3 sm:p-6 space-y-6">
+              {/* Aviso sobre Acceptance Letter - Mostrar quando carta foi enviada mas I-20 ainda não foi pago */}
+              {applicationDetails.is_scholarship_fee_paid && 
+               applicationDetails.acceptance_letter_url && 
+               !(userProfile as any)?.has_paid_i20_control_fee && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 sm:p-6 mb-6">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-1">
+                      <h3 className="text-lg font-bold text-blue-900 mb-2">
+                        {t('studentDashboard.applicationChatPage.documents.acceptanceLetter.paymentRequiredTitle') || 'Acceptance Letter Available - Payment Required'}
+                      </h3>
+                      <p className="text-blue-800 text-sm mb-3">
+                        {t('studentDashboard.applicationChatPage.documents.acceptanceLetter.paymentRequiredDescription') || 'Your acceptance letter has been sent by the university. To view and download it, please complete the I-20 Control Fee payment.'}
+                      </p>
+                      <button
+                        onClick={() => setActiveTab('i20')}
+                        className="mt-3 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors flex items-center gap-2"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                        </svg>
+                        {t('studentDashboard.applicationChatPage.documents.acceptanceLetter.payI20Button') || 'Pay I-20 Control Fee'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
               {/* Aviso sobre Acceptance Letter - Mostrar quando I-20 foi pago mas carta ainda não enviada */}
               {applicationDetails.is_scholarship_fee_paid && 
                (userProfile as any)?.has_paid_i20_control_fee && 

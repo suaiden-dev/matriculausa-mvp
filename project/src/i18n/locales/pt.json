@@ -2247,6 +2247,8 @@
           "pendingI20Title": "Carta de Aceitação - Aguardando Pagamento do I-20",
           "pendingI20Description": "Sua carta de aceitação ficará disponível após você completar o pagamento da Taxa de Controle do I-20. Assim que o pagamento for confirmado e a universidade processar sua carta de aceitação, ela aparecerá aqui para download.",
           "payI20Button": "Pagar Taxa de Controle do I-20 Agora",
+          "paymentRequiredTitle": "Carta de Aceitação Disponível - Pagamento Necessário",
+          "paymentRequiredDescription": "Sua carta de aceitação foi enviada pela universidade. Para visualizar e baixar, complete o pagamento da Taxa de Controle do I-20.",
           "waitingForUniversityTitle": "Carta de Aceitação - Aguardando Universidade",
           "waitingForUniversityDescription": "Sua Taxa de Controle do I-20 foi paga com sucesso. A universidade está processando sua carta de aceitação. Ela aparecerá aqui assim que a universidade enviar."
         },

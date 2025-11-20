@@ -2167,6 +2167,8 @@
           "pendingI20Title": "Acceptance Letter - Pending I-20 Payment",
           "pendingI20Description": "Your acceptance letter will be available after you complete the I-20 Control Fee payment. Once the payment is confirmed and the university processes your acceptance letter, it will appear here for download.",
           "payI20Button": "Pay I-20 Control Fee Now",
+          "paymentRequiredTitle": "Acceptance Letter Available - Payment Required",
+          "paymentRequiredDescription": "Your acceptance letter has been sent by the university. To view and download it, please complete the I-20 Control Fee payment.",
           "waitingForUniversityTitle": "Acceptance Letter - Waiting for University",
           "waitingForUniversityDescription": "Your I-20 Control Fee has been paid successfully. The university is now processing your acceptance letter. It will appear here once they send it to you."
         },
