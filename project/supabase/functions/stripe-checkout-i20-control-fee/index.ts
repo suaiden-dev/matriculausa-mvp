@@ -60,8 +60,14 @@ Deno.serve(async (req) => {
       return corsResponse({ error: 'Invalid token' }, 401);
     }
 
-    // Buscar taxas do pacote do usuário PRIMEIRO para usar valor original na validação do cupom
-    let userPackageFees = null;
+    // Buscar taxas do pacote do usuário apenas para metadata (não usar valores do pacote)
+    type UserPackageFees = {
+      package_name: string;
+      selection_process_fee: number;
+      scholarship_fee: number;
+      i20_control_fee: number;
+    };
+    let userPackageFees: UserPackageFees | null = null;
     try {
       const { data: packageData, error: packageError } = await supabase
         .rpc('get_user_package_fees', {
@@ -79,19 +85,11 @@ Deno.serve(async (req) => {
     }
 
     // Determinar valor original para validação do cupom
-    // IMPORTANTE: SEMPRE usar valor do pacote quando disponível, NUNCA usar amount do frontend
+    // IMPORTANTE: Usar valor padrão fixo (900) para validação, NUNCA usar amount do frontend
     // pois o frontend pode estar enviando valor já com desconto aplicado
-    let originalAmountForCouponValidation = 0;
-    if (userPackageFees?.i20_control_fee) {
-      originalAmountForCouponValidation = userPackageFees.i20_control_fee;
-      console.log('[stripe-checkout-i20-control-fee] 💰 Usando valor do pacote para validação do cupom:', originalAmountForCouponValidation);
-    } else {
-      // Se não tem pacote, usar um valor padrão (não usar amount do frontend que pode ter desconto)
-      // O valor padrão do I-20 Control Fee é 900
-      originalAmountForCouponValidation = 900;
-      console.log('[stripe-checkout-i20-control-fee] ⚠️ Sem pacote, usando valor padrão (900) para validação do cupom');
-    }
-    console.log('[stripe-checkout-i20-control-fee] 💰 Valor original para validação do cupom:', originalAmountForCouponValidation);
+    // NOTA: Não usar valor do pacote pois pode estar incorreto
+    const originalAmountForCouponValidation = 900; // Valor padrão fixo do I-20 Control Fee
+    console.log('[stripe-checkout-i20-control-fee] 💰 Valor original para validação do cupom (fixo):', originalAmountForCouponValidation);
     console.log('[stripe-checkout-i20-control-fee] 💰 Amount recebido do frontend (pode ter desconto):', amount);
 
     // Verificar se há cupom promocional (BLACK, etc) - ANTES de buscar desconto ativo
@@ -249,6 +247,16 @@ Deno.serve(async (req) => {
       console.log('[stripe-checkout-i20-control-fee] ✅ Usando amount explícito');
       console.log('[stripe-checkout-i20-control-fee] 💰 Valor base (para comissões):', baseAmount);
       console.log('[stripe-checkout-i20-control-fee] 💰 Valor final (cobrado do aluno):', grossAmountInCents / 100);
+    } else {
+      // Se não foi enviado amount, usar price_id padrão
+      // NOTA: Não usar valor do pacote como fallback pois pode estar incorreto
+      sessionConfig.line_items = [
+        {
+          price: price_id,
+          quantity: 1,
+        },
+      ];
+      console.log('[stripe-checkout-i20-control-fee] ⚠️ Usando price_id padrão (amount não fornecido):', price_id);
     }
     
     // Aplica cupom promocional se houver (prioridade sobre código de referência)
@@ -265,68 +273,10 @@ Deno.serve(async (req) => {
       sessionMetadata.promotional_coupon = promotionalCouponData.coupon_code;
       sessionMetadata.promotional_discount = 'true';
       sessionMetadata.promotional_discount_amount = promotionalCouponData.discount_amount.toString();
-      sessionMetadata.original_amount = originalAmountForCouponValidation.toString(); // Usar valor original correto
+      sessionMetadata.original_amount = originalAmountForCouponValidation.toString(); // Usar valor original fixo (900)
       sessionMetadata.final_amount = promotionalCouponData.final_amount.toString();
       
       console.log('[stripe-checkout-i20-control-fee] ✅ Informações do cupom promocional adicionadas ao metadata!');
-    }
-    // Se o usuário tem pacote mas não foi enviado amount, usar preço dinâmico do pacote
-    else if (userPackageFees) {
-      // Garantir valor mínimo para pacote também
-      let packageAmount = userPackageFees.i20_control_fee < minAmount ? minAmount : userPackageFees.i20_control_fee;
-      
-      // Se houver cupom promocional válido, aplicar desconto no valor do pacote
-      if (promotionalCouponData && promotionalCouponData.success && promotionalCouponData.final_amount) {
-        packageAmount = promotionalCouponData.final_amount;
-        console.log('[stripe-checkout-i20-control-fee] 🎟️ Aplicando cupom promocional ao valor do pacote:', packageAmount);
-      }
-      
-      // Valor base (sem markup) - usado para comissões
-      const baseAmount = packageAmount;
-      
-      // Sempre aplicar markup de taxas do Stripe
-      let grossAmountInCents: number;
-      if (payment_method === 'pix') {
-        // Para PIX: calcular markup considerando taxa de câmbio
-        grossAmountInCents = calculatePIXAmountWithFees(baseAmount, exchangeRate);
-      } else {
-        // Para cartão: calcular markup
-        grossAmountInCents = calculateCardAmountWithFees(baseAmount);
-      }
-      console.log('[stripe-checkout-i20-control-fee] ✅ Markup ATIVADO (ambiente:', config.environment.environment, ')');
-      
-      // Adicionar valores base e gross ao metadata para uso em comissões
-      sessionMetadata.base_amount = baseAmount.toString();
-      sessionMetadata.gross_amount = (grossAmountInCents / 100).toString();
-      sessionMetadata.fee_type = 'stripe_processing';
-      sessionMetadata.fee_amount = ((grossAmountInCents / 100) - baseAmount).toString();
-      sessionMetadata.markup_enabled = 'true';
-      
-      sessionConfig.line_items = [
-        {
-          price_data: {
-            currency: payment_method === 'pix' ? 'brl' : 'usd',
-            product_data: {
-              name: 'I-20 Control Fee',
-              description: `I-20 Control Fee - ${userPackageFees.package_name}`,
-            },
-            unit_amount: grossAmountInCents,
-          },
-          quantity: 1,
-        },
-      ];
-      console.log('[stripe-checkout-i20-control-fee] ✅ Usando valor do pacote');
-      console.log('[stripe-checkout-i20-control-fee] 💰 Valor base (para comissões):', baseAmount);
-      console.log('[stripe-checkout-i20-control-fee] 💰 Valor final (cobrado do aluno):', grossAmountInCents / 100);
-    } else {
-      // Usar price_id padrão se não tiver pacote
-      sessionConfig.line_items = [
-        {
-          price: price_id,
-          quantity: 1,
-        },
-      ];
-      console.log('[stripe-checkout-i20-control-fee] ⚠️ Usando price_id padrão:', price_id);
     }
 
     const session = await stripe.checkout.sessions.create(sessionConfig);
@@ -345,7 +295,7 @@ Deno.serve(async (req) => {
             fee_type: 'i20_control_fee',
             payment_method: 'stripe',
             session_id: session.id,
-            amount: amount || userPackageFees?.i20_control_fee || null,
+            amount: amount || null,
             package_name: userPackageFees?.package_name || null
           }
         });
