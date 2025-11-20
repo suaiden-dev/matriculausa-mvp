@@ -90,27 +90,6 @@ const AdminStudentDetails: React.FC = () => {
   const [loadingPaidAmounts, setLoadingPaidAmounts] = useState<Record<string, boolean>>({});
   const pendingZellePayments = pendingZelleQuery.data || [];
   
-  // Buscar valores brutos pagos usando getGrossPaidAmounts (mostra o valor que o aluno realmente pagou, incluindo taxas do Stripe)
-  // Usa gross_amount_usd quando disponível, senão usa amount
-  React.useEffect(() => {
-    if (!student?.user_id) {
-      setRealPaidAmounts({});
-      return;
-    }
-    
-    const loadRealPaidAmounts = async () => {
-      try {
-        const amounts = await getGrossPaidAmounts(student.user_id, ['selection_process', 'scholarship', 'i20_control', 'application']);
-        setRealPaidAmounts(amounts);
-      } catch (error) {
-        console.error('[AdminStudentDetails] Erro ao buscar valores brutos pagos:', error);
-        setRealPaidAmounts({});
-      }
-    };
-    
-    loadRealPaidAmounts();
-  }, [student?.user_id]);
-  
   // Função para atualizar student localmente (mantida para compatibilidade com hooks que dependem de setStudent)
   const setStudent = React.useCallback((updater: any) => {
     if (typeof updater === 'function') {
@@ -145,7 +124,114 @@ const AdminStudentDetails: React.FC = () => {
   const { saving, saveProfile, markFeeAsPaid, approveDocument, rejectDocument } = useAdminStudentActions();
   const { getFeeAmount, formatFeeAmount, hasOverride, userSystemType, userFeeOverrides } = useFeeConfig(student?.user_id);
   const { logAction } = useStudentLogs(student?.student_id || '');
-  
+
+  /**
+   * Valida e normaliza valores pagos usando a mesma lógica do Payment Management
+   * Se o valor estiver muito discrepante (provavelmente BRL não convertido), usa valores fixos em dólar
+   */
+  const validateAndNormalizePaidAmounts = React.useCallback((
+    realPaidAmounts: Record<string, number>,
+    systemType: 'legacy' | 'simplified' | null,
+    feeOverrides: any,
+    feeAmountFn: (feeType: string) => number,
+    dependents: number = 0,
+    hasMatriculaRewardsDiscount: boolean = false,
+    studentHasSellerCode: boolean = false
+  ): Record<string, number> => {
+    const normalized: Record<string, number> = {};
+    
+    // Helper: Verifica se o valor está dentro de uma faixa razoável (50% de tolerância)
+    const isValueReasonable = (realValue: number, expectedValue: number): boolean => {
+      const tolerance = 0.5; // 50% de tolerância
+      const min = expectedValue * (1 - tolerance);
+      const max = expectedValue * (1 + tolerance);
+      return realValue >= min && realValue <= max;
+    };
+
+    const sysType = systemType || 'legacy';
+    const dependentCost = sysType === 'simplified' ? 0 : (dependents * 150);
+
+    // Selection Process Fee
+    if (realPaidAmounts.selection_process !== undefined && realPaidAmounts.selection_process > 0) {
+      // Considerar desconto Matricula ao calcular valor esperado
+      const hasMatrDiscount = hasMatriculaRewardsDiscount || studentHasSellerCode;
+      let expectedSelectionProcess: number;
+      if (hasMatrDiscount) {
+        expectedSelectionProcess = 350; // $400 - $50 desconto
+      } else {
+        expectedSelectionProcess = sysType === 'simplified' ? 350 : 400;
+      }
+      const expectedSelectionProcessWithDeps = expectedSelectionProcess + dependentCost;
+      
+      if (isValueReasonable(realPaidAmounts.selection_process, expectedSelectionProcessWithDeps)) {
+        normalized.selection_process = realPaidAmounts.selection_process;
+      } else {
+        // Valor muito discrepante, usar cálculo fixo
+        console.log(`[AdminStudentDetails] Valor de selection_process muito discrepante: ${realPaidAmounts.selection_process} (esperado ~${expectedSelectionProcessWithDeps}), usando cálculo fixo`);
+        if (feeOverrides?.selection_process_fee !== undefined) {
+          normalized.selection_process = feeOverrides.selection_process_fee;
+        } else {
+          normalized.selection_process = expectedSelectionProcess + dependentCost;
+        }
+      }
+    }
+
+    // Scholarship Fee
+    if (realPaidAmounts.scholarship !== undefined && realPaidAmounts.scholarship > 0) {
+      const expectedScholarship = sysType === 'simplified' ? 550 : 900;
+      
+      if (isValueReasonable(realPaidAmounts.scholarship, expectedScholarship)) {
+        normalized.scholarship = realPaidAmounts.scholarship;
+      } else {
+        // Valor muito discrepante, usar cálculo fixo
+        console.log(`[AdminStudentDetails] Valor de scholarship muito discrepante: ${realPaidAmounts.scholarship} (esperado ~${expectedScholarship}), usando cálculo fixo`);
+        if (feeOverrides?.scholarship_fee !== undefined) {
+          normalized.scholarship = feeOverrides.scholarship_fee;
+        } else {
+          normalized.scholarship = expectedScholarship;
+        }
+      }
+    }
+
+    // I-20 Control Fee
+    if (realPaidAmounts.i20_control !== undefined && realPaidAmounts.i20_control > 0) {
+      const expectedI20Control = feeAmountFn('i20_control_fee');
+      
+      if (isValueReasonable(realPaidAmounts.i20_control, expectedI20Control)) {
+        normalized.i20_control = realPaidAmounts.i20_control;
+      } else {
+        // Valor muito discrepante, usar cálculo fixo
+        console.log(`[AdminStudentDetails] Valor de i20_control muito discrepante: ${realPaidAmounts.i20_control} (esperado ~${expectedI20Control}), usando cálculo fixo`);
+        if (feeOverrides?.i20_control_fee !== undefined) {
+          normalized.i20_control = feeOverrides.i20_control_fee;
+        } else {
+          normalized.i20_control = expectedI20Control;
+        }
+      }
+    }
+
+    // Application Fee
+    if (realPaidAmounts.application !== undefined && realPaidAmounts.application > 0) {
+      const expectedApplicationFee = feeAmountFn('application_fee');
+      const expectedApplicationFeeWithDeps = dependents > 0
+        ? expectedApplicationFee + (dependents * 100)
+        : expectedApplicationFee;
+      
+      if (isValueReasonable(realPaidAmounts.application, expectedApplicationFeeWithDeps)) {
+        normalized.application = realPaidAmounts.application;
+      } else {
+        // Valor muito discrepante, usar cálculo fixo
+        console.log(`[AdminStudentDetails] Valor de application muito discrepante: ${realPaidAmounts.application} (esperado ~${expectedApplicationFeeWithDeps}), usando cálculo fixo`);
+        normalized.application = expectedApplicationFee;
+        if (dependents > 0) {
+          normalized.application += dependents * 100;
+        }
+      }
+    }
+
+    return normalized;
+  }, []);
+
   // Estados locais - Definir antes dos hooks personalizados que dependem deles
   const [documentRequests, setDocumentRequests] = useState<any[]>([]);
   const isPlatformAdmin = user?.role === 'admin';
@@ -370,6 +456,89 @@ const AdminStudentDetails: React.FC = () => {
 
     checkMatriculaRewardsDiscount();
   }, [student?.user_id, student?.seller_referral_code]);
+
+  // Buscar valores brutos pagos usando getGrossPaidAmounts (mostra o valor que o aluno realmente pagou, incluindo taxas do Stripe)
+  // Usa gross_amount_usd quando disponível, senão usa amount
+  // Aplica validação para garantir que valores em BRL não sejam exibidos como USD
+  // ✅ IMPORTANTE: Este useEffect deve vir DEPOIS das definições de userSystemType, userFeeOverrides, getFeeAmount, hasMatriculaRewardsDiscount e validateAndNormalizePaidAmounts
+  
+  // Usar useRef para rastrear se já carregamos os dados e evitar loops infinitos
+  const lastLoadedUserIdRef = React.useRef<string | null>(null);
+  const lastLoadedDepsRef = React.useRef<string>('');
+  const isLoadingRef = React.useRef<boolean>(false);
+  
+  React.useEffect(() => {
+    if (!student?.user_id) {
+      setRealPaidAmounts({});
+      lastLoadedUserIdRef.current = null;
+      lastLoadedDepsRef.current = '';
+      isLoadingRef.current = false;
+      return;
+    }
+    
+    // Criar uma string de dependências para comparação (sem getFeeAmount e validateAndNormalizePaidAmounts que são funções)
+    const depsKey = JSON.stringify({
+      userId: student.user_id,
+      systemType: userSystemType,
+      dependents: student?.dependents || 0,
+      hasDiscount: hasMatriculaRewardsDiscount,
+      sellerCode: student?.seller_referral_code || '',
+      // Serializar userFeeOverrides de forma estável
+      overrides: userFeeOverrides ? JSON.stringify(userFeeOverrides) : ''
+    });
+    
+    // Evitar re-executar se as dependências não mudaram ou se já está carregando
+    if (isLoadingRef.current || (lastLoadedUserIdRef.current === student.user_id && lastLoadedDepsRef.current === depsKey)) {
+      return;
+    }
+    
+    lastLoadedUserIdRef.current = student.user_id;
+    lastLoadedDepsRef.current = depsKey;
+    isLoadingRef.current = true;
+    
+    const loadRealPaidAmounts = async () => {
+      setLoadingPaidAmounts({
+        selection_process: true,
+        scholarship: true,
+        i20_control: true,
+        application: true,
+      });
+      try {
+        const amounts = await getGrossPaidAmounts(student.user_id, ['selection_process', 'scholarship', 'i20_control', 'application']);
+        
+        // ✅ APLICAR VALIDAÇÃO: Usar a mesma lógica do Payment Management
+        // Se valores estiverem muito discrepantes (provavelmente BRL não convertido), usar valores fixos em dólar
+        const hasMatrFromSellerCode = student?.seller_referral_code && /^MATR/i.test(student.seller_referral_code);
+        const normalizedAmounts = validateAndNormalizePaidAmounts(
+          amounts,
+          userSystemType,
+          userFeeOverrides,
+          getFeeAmount,
+          student?.dependents || 0,
+          hasMatriculaRewardsDiscount,
+          !!student?.seller_referral_code && hasMatrFromSellerCode
+        );
+        
+        setRealPaidAmounts(normalizedAmounts);
+        console.log('[AdminStudentDetails] ✅ realPaidAmounts carregado e normalizado:', normalizedAmounts);
+      } catch (error) {
+        console.error('[AdminStudentDetails] Erro ao buscar valores brutos pagos:', error);
+        setRealPaidAmounts({});
+      } finally {
+        setLoadingPaidAmounts({
+          selection_process: false,
+          scholarship: false,
+          i20_control: false,
+          application: false,
+        });
+        isLoadingRef.current = false;
+      }
+    };
+    
+    loadRealPaidAmounts();
+    // Remover validateAndNormalizePaidAmounts das dependências pois é estável (useCallback com [] vazio)
+    // Remover getFeeAmount também, pois pode mudar a cada render mas não afeta a lógica de quando carregar
+  }, [student?.user_id, userSystemType, userFeeOverrides, student?.dependents, hasMatriculaRewardsDiscount, student?.seller_referral_code]);
 
   // Carregar referral info quando necessário (ainda é local pois depende de seller_referral_code)
   React.useEffect(() => {
@@ -807,8 +976,21 @@ const AdminStudentDetails: React.FC = () => {
       // Buscar novamente os valores pagos para refletir o pagamento recém-registrado
       try {
         const updatedAmounts = await getGrossPaidAmounts(student.user_id, ['selection_process', 'scholarship', 'i20_control', 'application']);
-        setRealPaidAmounts(updatedAmounts);
-        console.log('[PaymentStatusCard] ✅ realPaidAmounts atualizado após pagamento:', updatedAmounts);
+        
+        // ✅ APLICAR VALIDAÇÃO: Usar a mesma lógica do Payment Management
+        const hasMatrFromSellerCode = student?.seller_referral_code && /^MATR/i.test(student.seller_referral_code);
+        const normalizedAmounts = validateAndNormalizePaidAmounts(
+          updatedAmounts,
+          userSystemType,
+          userFeeOverrides,
+          getFeeAmount,
+          student?.dependents || 0,
+          hasMatriculaRewardsDiscount,
+          !!student?.seller_referral_code && hasMatrFromSellerCode
+        );
+        
+        setRealPaidAmounts(normalizedAmounts);
+        console.log('[PaymentStatusCard] ✅ realPaidAmounts atualizado após pagamento:', normalizedAmounts);
       } catch (updateError) {
         console.error('[PaymentStatusCard] Erro ao atualizar realPaidAmounts:', updateError);
       } finally {
@@ -823,7 +1005,7 @@ const AdminStudentDetails: React.FC = () => {
       console.error('Error recording payment:', result.error);
       alert(`Error marking fee as paid: ${result.error || 'Unknown error'}`);
     }
-  }, [student, pendingPayment, paymentAmount, paymentMethod, markFeeAsPaid, dependents, userSystemType, user, logAction, profileId, queryClient]);
+  }, [student, pendingPayment, paymentAmount, paymentMethod, markFeeAsPaid, dependents, userSystemType, userFeeOverrides, getFeeAmount, hasMatriculaRewardsDiscount, user, logAction, profileId, queryClient, validateAndNormalizePaidAmounts]);
 
   const handleApproveDocument = useCallback(async (appId: string, docType: string) => {
     if (!student) return;
