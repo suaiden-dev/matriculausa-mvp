@@ -206,23 +206,50 @@ const Performance: React.FC<PerformanceProps> = ({ sellerProfile, students }) =>
 
   const calculateStudentAdjustedPaid = (student: any): number => {
     let total = 0;
-    // ✅ CORREÇÃO: Usar apenas valores reais pagos (líquidos, sem taxas do Stripe)
-    // Sem fallbacks - se não houver valor real pago, retorna 0
+    // ✅ CORREÇÃO: Usar valores reais pagos quando disponíveis, senão calcular com fallback
     const realPaid = studentRealPaidAmounts[student.id] || studentRealPaidAmounts[student.user_id] || {};
+    const studentId = student.id || student.user_id;
+    const deps = studentDependents[studentId] || 0;
+    const systemType = studentSystemTypes[studentId] || 'legacy';
+    const overrides = studentFeeOverrides[studentId] || {};
 
-    // Selection Process Fee - apenas valor real pago
-    if (student.has_paid_selection_process_fee && realPaid.selection_process !== undefined && realPaid.selection_process > 0) {
-      total += realPaid.selection_process;
+    // Selection Process Fee
+    if (student.has_paid_selection_process_fee) {
+      if (realPaid.selection_process !== undefined && realPaid.selection_process > 0) {
+        // Usar valor real pago quando disponível
+        total += realPaid.selection_process;
+      } else {
+        // Fallback: calcular baseado no system_type e dependents
+        const baseSelDefault = systemType === 'simplified' ? 350 : 400;
+        const baseSel = overrides.selection_process_fee != null ? Number(overrides.selection_process_fee) : baseSelDefault;
+        const selPaid = overrides.selection_process_fee != null ? baseSel : baseSel + (deps * 150);
+        total += selPaid;
+      }
     }
     
-    // Scholarship Fee - apenas valor real pago
-    if (student.is_scholarship_fee_paid && realPaid.scholarship !== undefined && realPaid.scholarship > 0) {
-      total += realPaid.scholarship;
+    // Scholarship Fee
+    if (student.is_scholarship_fee_paid) {
+      if (realPaid.scholarship !== undefined && realPaid.scholarship > 0) {
+        // Usar valor real pago quando disponível
+        total += realPaid.scholarship;
+      } else {
+        // Fallback: calcular baseado no system_type
+        const schBaseDefault = systemType === 'simplified' ? 550 : 900;
+        const schBase = overrides.scholarship_fee != null ? Number(overrides.scholarship_fee) : schBaseDefault;
+        total += schBase;
+      }
     }
     
-    // I-20 Control Fee - apenas valor real pago
-    if (student.has_paid_i20_control_fee && realPaid.i20_control !== undefined && realPaid.i20_control > 0) {
-      total += realPaid.i20_control;
+    // I-20 Control Fee
+    if (student.has_paid_i20_control_fee) {
+      if (realPaid.i20_control !== undefined && realPaid.i20_control > 0) {
+        // Usar valor real pago quando disponível
+        total += realPaid.i20_control;
+      } else {
+        // Fallback: usar override ou valor padrão
+        const i20Base = overrides.i20_control_fee != null ? Number(overrides.i20_control_fee) : 900;
+        total += i20Base;
+      }
     }
     
     // ⚠️ IMPORTANTE: Application fee NÃO é contabilizada na receita do seller (é exclusiva da universidade)

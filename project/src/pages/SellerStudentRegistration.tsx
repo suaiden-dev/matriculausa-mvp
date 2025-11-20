@@ -11,10 +11,6 @@ const SellerStudentRegistration: React.FC = () => {
   const [searchParams] = useSearchParams();
   const sellerCode = searchParams.get('ref') || '';
   
-  // Detectar se é código Direct Sales (SUAIDEN ou BRANT)
-  const directSalesCodes = ['SUAIDEN', 'BRANT'];
-  const isDirectSalesCode = directSalesCodes.includes(sellerCode.toUpperCase());
-  
   const [formData, setFormData] = useState<{
     full_name: string;
     email: string;
@@ -32,10 +28,8 @@ const SellerStudentRegistration: React.FC = () => {
     confirmPassword: '',
     phone: '',
     sellerReferralCode: sellerCode,
-    // Se for código Direct Sales (SUAIDEN ou BRANT), aplicar Package 3 automaticamente, senão pacote 1
-    selectedPackage: isDirectSalesCode ? '3' : '1',
-    // Se for código Direct Sales, aplicar desired_scholarship_range = 4500 (Package 3), senão 3800 (Package 1)
-    desiredScholarshipRange: isDirectSalesCode ? 4500 : 3800,
+    selectedPackage: '1', // Pacote padrão
+    desiredScholarshipRange: 3800, // Valor padrão (Package 1)
     dependents: 0
   });
   
@@ -172,8 +166,6 @@ const SellerStudentRegistration: React.FC = () => {
         if (!termsAccepted) newErrors.terms = 'You must accept the terms and conditions';
         if (!sellerReferralCodeValid) newErrors.sellerCode = 'Invalid seller referral code';
         if (formData.dependents < 0) newErrors.dependents = 'Dependents cannot be negative';
-        // Se for código Direct Sales (SUAIDEN ou BRANT), dependentes são obrigatórios
-        // Validação removida - dependents pode ser 0 para códigos Direct Sales também
         break;
       case 2:
         if (!formData.selectedPackage) newErrors.package = 'Please select a scholarship package';
@@ -212,14 +204,10 @@ const SellerStudentRegistration: React.FC = () => {
       // Garantir que o seller_referral_code seja sempre o da URL se existir
       const finalSellerCode = sellerCode || formData.sellerReferralCode;
       
-      // Se for código Direct Sales (SUAIDEN ou BRANT), forçar Package 3 e desired_scholarship_range = 4500
-      const directSalesCodes = ['SUAIDEN', 'BRANT'];
-      const finalIsDirectSales = directSalesCodes.includes(finalSellerCode.toUpperCase());
-      const finalPackageNumber = finalIsDirectSales ? 3 : parseInt(formData.selectedPackage);
-      
       // Usar o hook useAuth para registrar o usuário
       // Simplificar os dados para evitar conflitos
       // ✅ Garantir que desired_scholarship_range seja definido mesmo se o usuário não selecionou explicitamente
+      const finalPackageNumber = parseInt(formData.selectedPackage);
       const rangeMapping: { [key: number]: number } = {
         1: 3800,
         2: 4200,
@@ -227,7 +215,7 @@ const SellerStudentRegistration: React.FC = () => {
         4: 5000,
         5: 5500
       };
-      const finalDesiredRange = finalIsSuaiden ? 4500 : (formData.desiredScholarshipRange || rangeMapping[finalPackageNumber] || 3800);
+      const finalDesiredRange = formData.desiredScholarshipRange || rangeMapping[finalPackageNumber] || 3800;
       
       const registerData = {
         full_name: formData.full_name,
@@ -468,7 +456,7 @@ const SellerStudentRegistration: React.FC = () => {
                   {/* Dependents Input - moved to Step 1 */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Dependents <span className="text-xs font-normal text-gray-500">- Family members (spouse and/or children)</span> {isDirectSalesCode && <span className="text-red-500">*</span>}
+                      Dependents <span className="text-xs font-normal text-gray-500">- Family members (spouse and/or children)</span>
                     </label>
                     <select
                       name="dependents"
@@ -478,7 +466,7 @@ const SellerStudentRegistration: React.FC = () => {
                         errors.dependents ? 'border-red-300' : 'border-gray-300'
                       }`}
                     >
-                      {!isDirectSalesCode && <option value={0}>0 Dependents</option>}
+                      <option value={0}>0 Dependents</option>
                       <option value={1}>1 Dependent</option>
                       <option value={2}>2 Dependents</option>
                       <option value={3}>3 Dependents</option>
@@ -599,15 +587,7 @@ const SellerStudentRegistration: React.FC = () => {
           {currentStep === 2 && (
             <>
               <h2 className="text-2xl font-bold text-gray-900 mb-6">Choose Your Package</h2>
-              {isDirectSalesCode ? (
-                <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                  <p className="text-lg text-blue-800 font-medium">
-                    Package 3 has been automatically selected for your registration.
-                  </p>
-                </div>
-              ) : (
               <p className="text-lg text-gray-600 mb-6">Select the scholarship package that best fits your needs</p>
-              )}
               
               {error && (
                 <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
@@ -631,31 +611,22 @@ const SellerStudentRegistration: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
                   {packages.map((pkg) => {
                     const isSelected = formData.selectedPackage === pkg.package_number.toString();
-                    const isPackage3 = pkg.package_number === 3;
-                    const isDisabled = isDirectSalesCode && !isPackage3;
                     
                     return (
                     <div
                       key={pkg.id}
                         className={`p-6 border-2 rounded-xl transition-all ${
-                          isDisabled
-                            ? 'border-gray-200 bg-gray-100 opacity-50 cursor-not-allowed'
-                            : isSelected
+                          isSelected
                             ? 'border-blue-500 bg-blue-50 shadow-lg cursor-pointer'
                             : 'border-gray-200 hover:border-gray-300 bg-white cursor-pointer hover:shadow-lg'
                       }`}
                         onClick={() => {
-                          if (!isDisabled) {
                             handlePackageSelect(pkg.package_number);
-                          }
                         }}
                     >
                       <div className="text-center mb-4">
                           <h3 className="font-bold text-xl text-gray-900 mb-2">
                             {pkg.name}
-                            {isDirectSalesCode && isPackage3 && (
-                              <span className="ml-2 text-sm text-blue-600 font-normal">(Selected)</span>
-                            )}
                           </h3>
                         <div className="text-3xl font-bold text-blue-600 mb-1">${pkg.scholarship_amount}</div>
                         <p className="text-sm text-gray-500">Scholarships starting from</p>
@@ -663,10 +634,6 @@ const SellerStudentRegistration: React.FC = () => {
                       
                       {pkg.description && (
                         <p className="mt-2 text-xs text-gray-500">{pkg.description}</p>
-                      )}
-                        
-                        {isDisabled && (
-                          <p className="mt-2 text-xs text-red-600 font-medium">Not available for this registration</p>
                         )}
                     </div>
                     );
@@ -728,16 +695,55 @@ const SellerStudentRegistration: React.FC = () => {
           <div className="bg-white rounded-lg p-6 max-w-md w-full">
             <div className="text-center">
               <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Account Created Successfully!</h3>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Student Account Created Successfully!</h3>
               <p className="text-gray-600 mb-4">
-                Please check your email and click the verification link to activate your account.
+                The student account has been created and the email has been automatically confirmed. 
+                The student can now log in with their credentials at any time.
               </p>
-              <button
-                onClick={() => navigate('/login')}
-                className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Go to Login
-              </button>
+              <div className="space-y-2">
+                <button
+                  onClick={() => {
+                    setShowVerificationModal(false);
+                    // Reset form to allow registering another student
+                    setFormData({
+                      full_name: '',
+                      email: '',
+                      password: '',
+                      confirmPassword: '',
+                      phone: '',
+                      sellerReferralCode: sellerCode,
+                      selectedPackage: '1',
+                      desiredScholarshipRange: 3800,
+                      dependents: 0
+                    });
+                    setCurrentStep(1);
+                    setTermsAccepted(false);
+                  }}
+                  className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Register Another Student
+                </button>
+                <button
+                  onClick={() => {
+                    setShowVerificationModal(false);
+                    // Navigate to seller dashboard if seller is logged in
+                    if (user && (user.role === 'seller' || user.role === 'admin' || user.role === 'affiliate_admin')) {
+                      if (user.role === 'seller') {
+                        navigate('/seller/dashboard');
+                      } else if (user.role === 'admin') {
+                        navigate('/admin/dashboard');
+                      } else if (user.role === 'affiliate_admin') {
+                        navigate('/affiliate-admin/dashboard');
+                      }
+                    } else {
+                      navigate('/');
+                    }
+                  }}
+                  className="w-full bg-gray-200 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-300 transition-colors"
+                >
+                  Go to Dashboard
+                </button>
+              </div>
             </div>
           </div>
         </div>
