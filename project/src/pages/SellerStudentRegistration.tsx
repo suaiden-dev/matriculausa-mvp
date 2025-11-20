@@ -621,7 +621,7 @@ const SellerStudentRegistration: React.FC = () => {
                             : 'border-gray-200 hover:border-gray-300 bg-white cursor-pointer hover:shadow-lg'
                       }`}
                         onClick={() => {
-                          handlePackageSelect(pkg.package_number);
+                            handlePackageSelect(pkg.package_number);
                         }}
                     >
                       <div className="text-center mb-4">
@@ -634,7 +634,7 @@ const SellerStudentRegistration: React.FC = () => {
                       
                       {pkg.description && (
                         <p className="mt-2 text-xs text-gray-500">{pkg.description}</p>
-                      )}
+                        )}
                     </div>
                     );
                   })}
@@ -695,16 +695,55 @@ const SellerStudentRegistration: React.FC = () => {
           <div className="bg-white rounded-lg p-6 max-w-md w-full">
             <div className="text-center">
               <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Account Created Successfully!</h3>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Student Account Created Successfully!</h3>
               <p className="text-gray-600 mb-4">
-                Please check your email and click the verification link to activate your account.
+                The student account has been created and the email has been automatically confirmed. 
+                The student can now log in with their credentials at any time.
               </p>
-              <button
-                onClick={() => navigate('/login')}
-                className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Go to Login
-              </button>
+              <div className="space-y-2">
+                <button
+                  onClick={() => {
+                    setShowVerificationModal(false);
+                    // Reset form to allow registering another student
+                    setFormData({
+                      full_name: '',
+                      email: '',
+                      password: '',
+                      confirmPassword: '',
+                      phone: '',
+                      sellerReferralCode: sellerCode,
+                      selectedPackage: '1',
+                      desiredScholarshipRange: 3800,
+                      dependents: 0
+                    });
+                    setCurrentStep(1);
+                    setTermsAccepted(false);
+                  }}
+                  className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Register Another Student
+                </button>
+                <button
+                  onClick={() => {
+                    setShowVerificationModal(false);
+                    // Navigate to seller dashboard if seller is logged in
+                    if (user && (user.role === 'seller' || user.role === 'admin' || user.role === 'affiliate_admin')) {
+                      if (user.role === 'seller') {
+                        navigate('/seller/dashboard');
+                      } else if (user.role === 'admin') {
+                        navigate('/admin/dashboard');
+                      } else if (user.role === 'affiliate_admin') {
+                        navigate('/affiliate-admin/dashboard');
+                      }
+                    } else {
+                      navigate('/');
+                    }
+                  }}
+                  className="w-full bg-gray-200 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-300 transition-colors"
+                >
+                  Go to Dashboard
+                </button>
+              </div>
             </div>
           </div>
         </div>

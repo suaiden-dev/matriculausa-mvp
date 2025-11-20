@@ -135,6 +135,7 @@ const SellerRegistration: React.FC<SellerRegistrationProps> = () => {
 
       // 1. Criar usuário na autenticação
       console.log(`🔐 [SELLER_REG] ${timestamp} - Iniciando criação de usuário...`);
+      
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email.trim().toLowerCase(),
         password: formData.password,
