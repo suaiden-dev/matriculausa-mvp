@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Mail, Lock, User, Building, UserCheck, GraduationCap, CheckCircle, X, Gift, Target, ChevronDown } from 'lucide-react';
+import { Mail, Lock, User, Building, GraduationCap, CheckCircle, X, Gift, ChevronDown } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 
 import { supabase } from '../lib/supabase';
@@ -38,12 +38,14 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showVerificationModal, setShowVerificationModal] = useState(false);
-  const [showStudentVerificationNotice, setShowStudentVerificationNotice] = useState(false);
+  const [showStudentVerificationModal, setShowStudentVerificationModal] = useState(false);
   // Unified referral code validation states
   const [referralCodeValid, setReferralCodeValid] = useState<boolean | null>(null);
   const [referralCodeLoading, setReferralCodeLoading] = useState(false);
   const [referralCodeType, setReferralCodeType] = useState<'seller' | 'rewards' | null>(null);
   const [isReferralCodeLocked, setIsReferralCodeLocked] = useState(false);
+  // Estado para rastrear se o seller é do sistema simplificado
+  const [isSimplifiedSeller, setIsSimplifiedSeller] = useState(false);
   // Terms acceptance state
   const [termsAccepted, setTermsAccepted] = useState(false);
   // Ref para evitar múltiplas execuções
@@ -99,6 +101,32 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
         
         setReferralCodeValid(!error && !!data);
         console.log('[AUTH] Resultado validação seller:', { data, error, valid: !error && !!data });
+        
+        // ✅ NOVO: Verificar se o seller é do sistema simplificado
+        if (!error && data) {
+          try {
+            const { data: systemTypeData, error: systemTypeError } = await supabase
+              .rpc('get_seller_system_type_by_referral_code', { referral_code: code });
+            
+            if (!systemTypeError && systemTypeData) {
+              const isSimplified = systemTypeData === 'simplified';
+              setIsSimplifiedSeller(isSimplified);
+              console.log('[AUTH] System type do seller:', systemTypeData, 'isSimplified:', isSimplified);
+              
+              // Se for seller simplificado, resetar dependents para 0 (será preenchido pelo usuário)
+              if (isSimplified) {
+                setFormData(prev => ({ ...prev, dependents: 0 }));
+              }
+            } else {
+              setIsSimplifiedSeller(false);
+            }
+          } catch (err) {
+            console.error('[AUTH] Erro ao verificar system_type do seller:', err);
+            setIsSimplifiedSeller(false);
+          }
+        } else {
+          setIsSimplifiedSeller(false);
+        }
       } else if (isRewards) {
         setReferralCodeType('rewards');
         console.log('[AUTH] Validando código de Matricula Rewards:', code);
@@ -236,6 +264,9 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
     const code = e.target.value.toUpperCase();
     setFormData(prev => ({ ...prev, referralCode: code }));
     
+    // Resetar estado de simplified seller quando o código muda
+    setIsSimplifiedSeller(false);
+    
     if (code.length >= 4) {
       validateReferralCode(code);
     } else {
@@ -350,8 +381,8 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
         const directSalesCodes = ['SUAIDEN', 'BRANT'];
         const isDirectSalesCode = directSalesCodes.includes(formData.referralCode.toUpperCase());
         
-         // Validar dependents se for código Direct Sales (deve ser entre 0 e 5)
-         if (activeTab === 'student' && isDirectSalesCode && (formData.dependents < 0 || formData.dependents > 5)) {
+         // Validar dependents se for código Direct Sales ou seller simplificado (deve ser entre 0 e 5)
+         if (activeTab === 'student' && (isDirectSalesCode || (referralCodeType === 'seller' && isSimplifiedSeller)) && (formData.dependents < 0 || formData.dependents > 5)) {
            setError('Please select between 0 and 5 dependents.');
            setLoading(false);
            return;
@@ -383,6 +414,10 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
               scholarship_package_number: 3,
               desired_scholarship_range: 4500,
               dependents: formData.dependents
+            }),
+            // ✅ Seller Simplificado: Salvar dependents
+            ...(referralCodeType === 'seller' && isSimplifiedSeller && {
+              dependents: formData.dependents
             })
           })
         };
@@ -405,11 +440,15 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
           setShowVerificationModal(true);
           return;
         }
-        // Para estudante, mostrar aviso de verificação
-        if (activeTab === 'student') {
-          setShowStudentVerificationNotice(true);
+        
+        // ✅ NOVO: Para alunos com código Direct Sales (BRANT, SUAIDEN), mostrar modal de confirmação
+        // Reutilizar isDirectSalesCode já declarado acima
+        if (activeTab === 'student' && isDirectSalesCode) {
+          setShowStudentVerificationModal(true);
           return;
         }
+        
+        // Para outros alunos, o login já foi feito automaticamente, então o AuthRedirect vai redirecionar
         return;
       } else {
         await login(formData.email, formData.password);
@@ -468,13 +507,13 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
   };
 
   useEffect(() => {
-    if (showVerificationModal || showStudentVerificationNotice) {
+    if (showVerificationModal) {
       const timer = setTimeout(() => {
         navigate('/login');
       }, 9000); // 8 seconds
       return () => clearTimeout(timer);
     }
-  }, [showVerificationModal, showStudentVerificationNotice, navigate]);
+  }, [showVerificationModal, navigate]);
 
   if (mode === 'login') {
     return (
@@ -598,6 +637,30 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
               onClick={() => setShowVerificationModal(false)}
             >
               {t('authPage.modals.verification.gotIt')}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal for email verification after student registration (Direct Sales - BRANT, SUAIDEN) */}
+      {showStudentVerificationModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full text-center border border-slate-200">
+            <div className="mb-4">
+              <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-2" />
+              <h2 className="text-2xl font-bold text-slate-900 mb-2">Check your email!</h2>
+              <p className="text-slate-700 text-base mb-4">
+                A confirmation link has been sent to your email. Please check your inbox (and spam folder) to activate your account.
+              </p>
+            </div>
+            <button
+              className="bg-[#05294E] text-white px-6 py-3 rounded-xl font-bold hover:bg-[#02172b] transition-all duration-200"
+              onClick={() => {
+                setShowStudentVerificationModal(false);
+                navigate('/login');
+              }}
+            >
+              Got it
             </button>
           </div>
         </div>
@@ -849,8 +912,10 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                     )}
                   </div>
 
-                  {/* Dependents field - Only show for Direct Sales codes (SUAIDEN or BRANT) - placed right after Referral Code */}
-                  {activeTab === 'student' && ['SUAIDEN', 'BRANT'].includes(formData.referralCode.toUpperCase()) && (
+                  {/* Dependents field - Show for Direct Sales codes (SUAIDEN or BRANT) OR for simplified sellers - placed right after Referral Code */}
+                  {activeTab === 'student' && (
+                    (['SUAIDEN', 'BRANT'].includes(formData.referralCode.toUpperCase()) || 
+                     (referralCodeType === 'seller' && isSimplifiedSeller && referralCodeValid === true)) && (
                     <div className="lg:col-span-1">
                       <label htmlFor="dependents" className="block text-sm font-bold text-slate-900 mb-2">
                         Dependents <span className="text-xs font-normal text-slate-500">- Family members (spouse and/or children)</span>
@@ -876,8 +941,11 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                           <option value={5}>5 Dependents</option>
                         </select>
                       </div>
+                      <p className="text-xs text-slate-500 mt-1">
+                        $150 per dependent will be added to the Selection Process Fee and +$100 per dependent will be added to the Application Fee.
+                      </p>
                     </div>
-                  )}
+                  ))}
 
                 </div>
               </>
@@ -1088,12 +1156,6 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
 
 
           {/* Formulário de registro de estudante */}
-          {showStudentVerificationNotice && (
-            <div className="bg-blue-50 border border-blue-200 text-blue-900 px-4 py-3 rounded-2xl text-sm mb-4 mt-4">
-              <div className="font-bold mb-1">{t('authPage.messages.checkEmail')}</div>
-              {t('authPage.messages.studentVerification')}
-            </div>
-          )}
         </div>
       </div>
     </div>
