@@ -1396,6 +1396,7 @@
       "description": "Start your journey to American education by completing our comprehensive selection process.",
       "completeApplicationProcess": "Complete your application process",
       "discountApplied": "✨ You have a discount coupon applied!",
+      "couponAppliedLabel": "Coupon applied",
       "sellerReferralCodeBlocked": "Matricula Rewards Blocked",
       "sellerReferralCodeMessage": "You cannot use Matricula Rewards codes because you registered with a seller referral code. This is a system restriction to prevent conflicts between different referral systems.",
       "sellerReferralCodeInfo": "Seller referral code detected - Matricula Rewards not available",

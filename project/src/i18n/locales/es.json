@@ -1493,6 +1493,7 @@
       "description": "Comienza tu viaje a la educación americana completando nuestro proceso de selección integral.",
       "completeApplicationProcess": "Completa tu proceso de solicitud",
       "discountApplied": "✨ ¡Tienes un cupón de descuento aplicado!",
+      "couponAppliedLabel": "Cupón aplicado",
       "startButton": "Iniciar Proceso de Selección",
       "processingZellePayment": "Pago Zelle en verificación",
       "pendingPaymentMessage": "Tienes un pago Zelle pendiente de verificación. Por favor, espere la aprobación antes de iniciar un nuevo proceso."
