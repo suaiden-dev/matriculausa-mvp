@@ -278,9 +278,10 @@ export async function getGrossPaidAmounts(
   try {
     const { data: payments, error } = await supabase
       .from('individual_fee_payments')
-      .select('fee_type, amount, gross_amount_usd, payment_method')
+      .select('fee_type, amount, gross_amount_usd, payment_method, payment_date')
       .eq('user_id', userId)
-      .in('fee_type', feeTypes);
+      .in('fee_type', feeTypes)
+      .order('payment_date', { ascending: false }); // ✅ CORREÇÃO: Ordenar por data mais recente primeiro
 
     if (error) {
       console.error('[paymentConverter] Erro ao buscar pagamentos:', error);
@@ -303,9 +304,11 @@ export async function getGrossPaidAmounts(
                         payment.fee_type === 'application' ? 'application' : null;
 
       if (feeTypeKey) {
-        // Se já existe um valor para este fee_type, usar o maior (mais recente)
-        if (!amounts[feeTypeKey] || amountUSD > amounts[feeTypeKey]) {
+        // ✅ CORREÇÃO: Usar o primeiro registro (mais recente) para cada fee_type
+        // Como já está ordenado por payment_date DESC, o primeiro é o mais recente
+        if (!amounts[feeTypeKey]) {
           amounts[feeTypeKey] = amountUSD;
+          console.log(`[paymentConverter] ✅ Valor pago para ${feeTypeKey}: ${amountUSD} (gross_amount_usd: ${payment.gross_amount_usd || 'null'}, amount: ${payment.amount})`);
         }
       }
     }

@@ -1,5 +1,5 @@
 import React from 'react';
-import { User, ChevronDown, ChevronRight, MapPin, DollarSign, CheckCircle2, ChevronRight as ArrowRight, Building } from 'lucide-react';
+import { User, ChevronDown, ChevronRight, MapPin, DollarSign, CheckCircle2, ChevronRight as ArrowRight, Building, Sparkles } from 'lucide-react';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
 
 interface SellersListProps {
@@ -10,6 +10,7 @@ interface SellersListProps {
   onToggleSellerExpansion: (sellerId: string) => void;
   onToggleStudentExpansion: (studentId: string) => void;
   onViewStudentDetails: (studentId: string, profileId: string) => void;
+  blackCouponUsers?: Set<string>;
 }
 
 const SellersList: React.FC<SellersListProps> = ({
@@ -19,7 +20,8 @@ const SellersList: React.FC<SellersListProps> = ({
   expandedStudents,
   onToggleSellerExpansion,
   onToggleStudentExpansion,
-  onViewStudentDetails
+  onViewStudentDetails,
+  blackCouponUsers = new Set()
 }) => {
   const { getFeeAmount } = useFeeConfig();
   const formatCurrency = (amount: number) => {
@@ -46,18 +48,6 @@ const SellersList: React.FC<SellersListProps> = ({
   const getMissingFees = (student: any) => {
     const missingFees = [];
     
-    // Debug: Log dos dados do estudante para verificar os flags
-    if (student.email === 'kassandra969@uorak.com') {
-      console.log('🔍 [DEBUG] Kassandra payment flags:', {
-        email: student.email,
-        has_paid_selection_process_fee: student.has_paid_selection_process_fee,
-        has_paid_i20_control_fee: student.has_paid_i20_control_fee,
-        is_scholarship_fee_paid: student.is_scholarship_fee_paid,
-        is_application_fee_paid: student.is_application_fee_paid,
-        total_paid: student.total_paid
-      });
-    }
-    
     // ✅ ORDEM CORRETA: Selection Process → Application → Scholarship → I-20 Control
     
     // 1. Verificar Selection Process Fee - usar apenas o flag booleano
@@ -81,9 +71,6 @@ const SellersList: React.FC<SellersListProps> = ({
     }
     
     // Debug: Log do resultado final
-    if (student.email === 'kassandra969@uorak.com') {
-      console.log('🔍 [DEBUG] Kassandra missing fees result:', missingFees);
-    }
     
     return missingFees;
   };
@@ -217,8 +204,19 @@ const SellersList: React.FC<SellersListProps> = ({
                                   </span>
                                 </div>
                                 <div className="ml-4 flex-1">
-                                  <div className="flex items-center gap-2">
+                                  <div className="flex items-center gap-2 flex-wrap">
                                     <div className="text-sm font-medium text-slate-900">{student.full_name}</div>
+                                    {(() => {
+                                      const studentUserId = student.user_id || student.id || student.student_id;
+                                      const hasBlackCoupon = studentUserId && blackCouponUsers.has(studentUserId);
+                                      
+                                      return hasBlackCoupon ? (
+                                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md" title="Student used BLACK promotional coupon">
+                                          <Sparkles className="h-3 w-3 mr-1" />
+                                          BLACK
+                                        </span>
+                                      ) : null;
+                                    })()}
                                     {student.hasMultipleApplications && (
                                       <span className="inline-flex items-center px-2 py-1 text-xs font-medium text-amber-700 bg-amber-100 rounded-full">
                                         {student.applicationCount} Applications

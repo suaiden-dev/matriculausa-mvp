@@ -12,6 +12,8 @@ export interface RecordPaymentParams {
   paymentIntentId?: string | null;
   stripeChargeId?: string | null;
   zellePaymentId?: string | null;
+  grossAmountUsd?: number | null;
+  feeAmountUsd?: number | null;
 }
 
 /**
@@ -24,9 +26,13 @@ export async function recordIndividualFeePayment(
 ): Promise<{ success: boolean; paymentId?: string; error?: string }> {
   try {
     console.log('[Individual Fee Payment] Recording fee payment:', {
+      user_id: params.userId,
       fee_type: params.feeType,
       payment_method: params.paymentMethod,
-      amount: params.amount
+      amount: params.amount,
+      payment_date: params.paymentDate,
+      gross_amount_usd: params.grossAmountUsd,
+      fee_amount_usd: params.feeAmountUsd
     });
 
     const { data, error } = await supabase.rpc('insert_individual_fee_payment', {
@@ -37,18 +43,41 @@ export async function recordIndividualFeePayment(
       p_payment_method: params.paymentMethod,
       p_payment_intent_id: params.paymentIntentId || null,
       p_stripe_charge_id: params.stripeChargeId || null,
-      p_zelle_payment_id: params.zellePaymentId || null
+      p_zelle_payment_id: params.zellePaymentId || null,
+      p_gross_amount_usd: params.grossAmountUsd || null,
+      p_fee_amount_usd: params.feeAmountUsd || null
     });
 
     if (error) {
-      console.warn('[Individual Fee Payment] Warning: Could not record fee payment:', error);
+      console.error('[Individual Fee Payment] ❌ ERROR: Could not record fee payment:', {
+        error: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
+        fee_type: params.feeType,
+        user_id: params.userId
+      });
       return { success: false, error: error.message };
     }
 
-    console.log('[Individual Fee Payment] Fee recorded successfully');
-    return { success: true, paymentId: data?.payment_id };
+    // A função RPC retorna TABLE, então pode ser um array ou um objeto único
+    // Verificar se é array e pegar o primeiro elemento se necessário
+    const result = Array.isArray(data) ? data[0] : data;
+    
+    console.log('[Individual Fee Payment] ✅ Fee recorded successfully:', {
+      payment_id: result?.payment_id,
+      record_id: result?.id,
+      fee_type: params.feeType,
+      raw_data: data
+    });
+    return { success: true, paymentId: result?.payment_id || result?.id };
   } catch (error: any) {
-    console.warn('[Individual Fee Payment] Warning: Failed to record individual fee payment:', error);
+    console.error('[Individual Fee Payment] ❌ EXCEPTION: Failed to record individual fee payment:', {
+      error: error.message,
+      stack: error.stack,
+      fee_type: params.feeType,
+      user_id: params.userId
+    });
     return { success: false, error: error.message };
   }
 }

@@ -43,15 +43,17 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({
   // Verificar se o idioma detectado foi aplicado
   const detectedLanguageApplied = checkIfDetectedLanguageApplied();
 
-  const handleLanguageChange = (languageCode: string) => {
-    i18n.changeLanguage(languageCode);
+  const handleLanguageChange = async (languageCode: string) => {
+    await i18n.changeLanguage(languageCode);
     setIsOpen(false);
+    window.location.reload();
   };
 
   const handleResetToBrowserLanguage = async () => {
     if (browserLanguage && browserLanguage !== i18n.language) {
       await i18n.changeLanguage(browserLanguage);
       localStorage.setItem('i18nextLng', browserLanguage);
+      window.location.reload();
     }
     setIsOpen(false);
   };
@@ -59,6 +61,7 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({
   const handleForceApplyDetectedLanguage = async () => {
     await forceApplyDetectedLanguage();
     setIsOpen(false);
+    window.location.reload();
   };
 
   const baseClasses = "relative inline-block text-left";
