@@ -606,7 +606,7 @@ const SellerStudentRegistration: React.FC = () => {
                   </p>
                 </div>
               ) : (
-                <p className="text-lg text-gray-600 mb-6">Select the scholarship package that best fits your needs</p>
+              <p className="text-lg text-gray-600 mb-6">Select the scholarship package that best fits your needs</p>
               )}
               
               {error && (
@@ -635,40 +635,40 @@ const SellerStudentRegistration: React.FC = () => {
                     const isDisabled = isDirectSalesCode && !isPackage3;
                     
                     return (
-                      <div
-                        key={pkg.id}
+                    <div
+                      key={pkg.id}
                         className={`p-6 border-2 rounded-xl transition-all ${
                           isDisabled
                             ? 'border-gray-200 bg-gray-100 opacity-50 cursor-not-allowed'
                             : isSelected
                             ? 'border-blue-500 bg-blue-50 shadow-lg cursor-pointer'
                             : 'border-gray-200 hover:border-gray-300 bg-white cursor-pointer hover:shadow-lg'
-                        }`}
+                      }`}
                         onClick={() => {
                           if (!isDisabled) {
                             handlePackageSelect(pkg.package_number);
                           }
                         }}
-                      >
-                        <div className="text-center mb-4">
+                    >
+                      <div className="text-center mb-4">
                           <h3 className="font-bold text-xl text-gray-900 mb-2">
                             {pkg.name}
                             {isDirectSalesCode && isPackage3 && (
                               <span className="ml-2 text-sm text-blue-600 font-normal">(Selected)</span>
                             )}
                           </h3>
-                          <div className="text-3xl font-bold text-blue-600 mb-1">${pkg.scholarship_amount}</div>
-                          <p className="text-sm text-gray-500">Scholarships starting from</p>
-                        </div>
-                        
-                        {pkg.description && (
-                          <p className="mt-2 text-xs text-gray-500">{pkg.description}</p>
-                        )}
+                        <div className="text-3xl font-bold text-blue-600 mb-1">${pkg.scholarship_amount}</div>
+                        <p className="text-sm text-gray-500">Scholarships starting from</p>
+                      </div>
+                      
+                      {pkg.description && (
+                        <p className="mt-2 text-xs text-gray-500">{pkg.description}</p>
+                      )}
                         
                         {isDisabled && (
                           <p className="mt-2 text-xs text-red-600 font-medium">Not available for this registration</p>
                         )}
-                      </div>
+                    </div>
                     );
                   })}
                 </div>

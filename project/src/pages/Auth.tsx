@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Mail, Lock, User, Building, UserCheck, GraduationCap, CheckCircle, X, Gift, Target, ChevronDown } from 'lucide-react';
+import { Mail, Lock, User, Building, GraduationCap, CheckCircle, X, Gift, ChevronDown } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 
 import { supabase } from '../lib/supabase';
@@ -38,12 +38,14 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showVerificationModal, setShowVerificationModal] = useState(false);
-  const [showStudentVerificationNotice, setShowStudentVerificationNotice] = useState(false);
+  const [showStudentVerificationModal, setShowStudentVerificationModal] = useState(false);
   // Unified referral code validation states
   const [referralCodeValid, setReferralCodeValid] = useState<boolean | null>(null);
   const [referralCodeLoading, setReferralCodeLoading] = useState(false);
   const [referralCodeType, setReferralCodeType] = useState<'seller' | 'rewards' | null>(null);
   const [isReferralCodeLocked, setIsReferralCodeLocked] = useState(false);
+  // Estado para rastrear se o seller é do sistema simplificado
+  const [isSimplifiedSeller, setIsSimplifiedSeller] = useState(false);
   // Terms acceptance state
   const [termsAccepted, setTermsAccepted] = useState(false);
   // Ref para evitar múltiplas execuções
@@ -75,16 +77,35 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
     
     // Detectar tipo automaticamente
     // SUAIDEN e BRANT são códigos especiais de seller (Direct Sales) que aplicam Package 3 automaticamente
-    const directSalesCodes = ['SUAIDEN', 'BRANT'];
-    const codeUpper = code.toUpperCase();
-    const isDirectSalesCode = directSalesCodes.includes(codeUpper);
-    const isSeller = isDirectSalesCode || code.startsWith('SELLER_') || code.length > 8;
-    const isRewards = !isDirectSalesCode && (code.startsWith('MATR') || (code.length <= 8 && /^[A-Z0-9]+$/.test(code)));
-    
-     // Se for código Direct Sales (SUAIDEN ou BRANT), resetar dependents para 0 (será preenchido pelo usuário)
-     if (isDirectSalesCode) {
-       setFormData(prev => ({ ...prev, dependents: 0 }));
+     const directSalesCodes = ['SUAIDEN', 'BRANT'];
+     const codeUpper = code.toUpperCase();
+     const isDirectSalesCode = directSalesCodes.includes(codeUpper);
+     
+     // ✅ NOVO: Verificar primeiro se o código existe na tabela sellers (para Direct Sales como TFOE)
+     // Isso permite detectar códigos de Direct Sales que não estão na lista hardcoded
+     let isSellerCode = isDirectSalesCode || code.startsWith('SELLER_') || code.length > 8;
+     
+     // Se não for claramente um seller, verificar na tabela sellers antes de classificar como rewards
+     if (!isSellerCode && !code.startsWith('MATR')) {
+       try {
+         const { data: sellerCheck } = await supabase
+           .from('sellers')
+           .select('id')
+           .eq('referral_code', codeUpper)
+           .eq('is_active', true)
+           .maybeSingle();
+         
+         if (sellerCheck) {
+           isSellerCode = true;
+           console.log('[AUTH] Código encontrado na tabela sellers, tratando como seller:', code);
+         }
+       } catch (err) {
+         console.error('[AUTH] Erro ao verificar código na tabela sellers:', err);
+       }
      }
+     
+     const isSeller = isSellerCode;
+     const isRewards = !isDirectSalesCode && !isSellerCode && (code.startsWith('MATR') || (code.length <= 8 && /^[A-Z0-9]+$/.test(code)));
     
     try {
       if (isSeller) {
@@ -93,12 +114,33 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
         const { data, error } = await supabase
           .from('sellers')
           .select('id, name, referral_code, is_active')
-          .eq('referral_code', code)
+          .eq('referral_code', codeUpper)
           .eq('is_active', true)
           .single();
         
         setReferralCodeValid(!error && !!data);
         console.log('[AUTH] Resultado validação seller:', { data, error, valid: !error && !!data });
+        
+        // ✅ NOVO: Verificar se o seller é do sistema simplificado
+        if (!error && data) {
+          try {
+            const { data: systemTypeData, error: systemTypeError } = await supabase
+              .rpc('get_seller_system_type_by_referral_code', { referral_code: codeUpper });
+            
+             if (!systemTypeError && systemTypeData) {
+               const isSimplified = systemTypeData === 'simplified';
+               setIsSimplifiedSeller(isSimplified);
+               console.log('[AUTH] System type do seller:', systemTypeData, 'isSimplified:', isSimplified);
+             } else {
+               setIsSimplifiedSeller(false);
+             }
+          } catch (err) {
+            console.error('[AUTH] Erro ao verificar system_type do seller:', err);
+            setIsSimplifiedSeller(false);
+          }
+        } else {
+          setIsSimplifiedSeller(false);
+        }
       } else if (isRewards) {
         setReferralCodeType('rewards');
         console.log('[AUTH] Validando código de Matricula Rewards:', code);
@@ -125,7 +167,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
   };
 
   // ✅ FUNÇÃO AUXILIAR: Processar código de referência
-  const processReferralCode = (code: string, type: 'seller' | 'rewards' | null = null) => {
+  const processReferralCode = async (code: string, type: 'seller' | 'rewards' | null = null) => {
     if (!code || referralCodeProcessedRef.current) {
       return;
     }
@@ -138,8 +180,29 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
       const directSalesCodes = ['SUAIDEN', 'BRANT'];
       const codeUpper = code.toUpperCase();
       const isDirectSalesCode = directSalesCodes.includes(codeUpper);
-      const isSeller = isDirectSalesCode || code.startsWith('SELLER_') || code.length > 8;
-      const isRewards = !isDirectSalesCode && (code.startsWith('MATR') || (code.length <= 8 && /^[A-Z0-9]+$/.test(code)));
+      
+      // Verificar se é seller (incluindo Direct Sales)
+      let isSeller = isDirectSalesCode || code.startsWith('SELLER_') || code.length > 8;
+      
+      // Se não for claramente um seller, verificar na tabela sellers
+      if (!isSeller && !code.startsWith('MATR')) {
+        try {
+          const { data: sellerCheck } = await supabase
+            .from('sellers')
+            .select('id')
+            .eq('referral_code', codeUpper)
+            .eq('is_active', true)
+            .maybeSingle();
+          
+          if (sellerCheck) {
+            isSeller = true;
+          }
+        } catch (err) {
+          // Ignorar erro, continuar com detecção padrão
+        }
+      }
+      
+      const isRewards = !isDirectSalesCode && !isSeller && (code.startsWith('MATR') || (code.length <= 8 && /^[A-Z0-9]+$/.test(code)));
       
       detectedType = isSeller ? 'seller' : isRewards ? 'rewards' : null;
     }
@@ -157,69 +220,94 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
 
   // Load referral codes from URL and localStorage
   useEffect(() => {
-    if (mode === 'register' && activeTab === 'student') {
-      console.log('[AUTH] Carregando códigos de referência...');
-      
-      // ✅ PRIORIDADE 1: Verificar URL diretamente (para evitar race condition)
-      const urlParams = new URLSearchParams(location.search);
-      const refCodeFromUrl = urlParams.get('ref');
-      
-      if (refCodeFromUrl && !referralCodeProcessedRef.current) {
-        console.log('[AUTH] ✅ Código encontrado na URL:', refCodeFromUrl);
+    const loadReferralCodes = async () => {
+      if (mode === 'register' && activeTab === 'student') {
+        console.log('[AUTH] Carregando códigos de referência...');
         
-        // Detectar tipo do código
-        const directSalesCodes = ['SUAIDEN', 'BRANT'];
-        const codeUpper = refCodeFromUrl.toUpperCase();
-        const isDirectSalesCode = directSalesCodes.includes(codeUpper);
-        const isSeller = isDirectSalesCode || refCodeFromUrl.startsWith('SELLER_') || refCodeFromUrl.length > 8;
-        const isRewards = !isDirectSalesCode && (refCodeFromUrl.startsWith('MATR') || (refCodeFromUrl.length <= 8 && /^[A-Z0-9]+$/.test(refCodeFromUrl)));
-        const detectedType = isSeller ? 'seller' : isRewards ? 'rewards' : null;
+        // ✅ PRIORIDADE 1: Verificar URL diretamente (para evitar race condition)
+        const urlParams = new URLSearchParams(location.search);
+        const refCodeFromUrl = urlParams.get('ref');
         
-        // Salvar no localStorage para consistência
-        localStorage.setItem('pending_referral_code', refCodeFromUrl);
-        localStorage.setItem('pending_referral_code_type', detectedType || 'rewards');
+        if (refCodeFromUrl && !referralCodeProcessedRef.current) {
+          console.log('[AUTH] ✅ Código encontrado na URL:', refCodeFromUrl);
+          
+          // Detectar tipo do código
+          const directSalesCodes = ['SUAIDEN', 'BRANT'];
+          const codeUpper = refCodeFromUrl.toUpperCase();
+          const isDirectSalesCode = directSalesCodes.includes(codeUpper);
+          
+          // Verificar se é seller (incluindo Direct Sales)
+          let isSeller = isDirectSalesCode || refCodeFromUrl.startsWith('SELLER_') || refCodeFromUrl.length > 8;
+          
+          // Se não for claramente um seller, verificar na tabela sellers
+          if (!isSeller && !refCodeFromUrl.startsWith('MATR')) {
+            try {
+              const { data: sellerCheck } = await supabase
+                .from('sellers')
+                .select('id')
+                .eq('referral_code', codeUpper)
+                .eq('is_active', true)
+                .maybeSingle();
+              
+              if (sellerCheck) {
+                isSeller = true;
+              }
+            } catch (err) {
+              // Ignorar erro, continuar com detecção padrão
+            }
+          }
+          
+          const isRewards = !isDirectSalesCode && !isSeller && (refCodeFromUrl.startsWith('MATR') || (refCodeFromUrl.length <= 8 && /^[A-Z0-9]+$/.test(refCodeFromUrl)));
+          const detectedType = isSeller ? 'seller' : isRewards ? 'rewards' : null;
+          
+          // Salvar no localStorage para consistência
+          localStorage.setItem('pending_referral_code', refCodeFromUrl);
+          localStorage.setItem('pending_referral_code_type', detectedType || 'rewards');
+          
+          await processReferralCode(refCodeFromUrl, detectedType);
+          return;
+        }
         
-        processReferralCode(refCodeFromUrl, detectedType);
-        return;
+        // ✅ PRIORIDADE 2: Carregar do localStorage
+        const pendingCode = localStorage.getItem('pending_referral_code');
+        const pendingType = localStorage.getItem('pending_referral_code_type');
+        
+        if (pendingCode && !referralCodeProcessedRef.current) {
+          console.log('[AUTH] ✅ Código encontrado no localStorage:', pendingCode, 'Tipo:', pendingType);
+          await processReferralCode(pendingCode, pendingType as 'seller' | 'rewards' | null);
+        }
+        
+        console.log('[AUTH] Estado final do campo unificado:', {
+          referralCode: pendingCode || refCodeFromUrl,
+          type: pendingType
+        });
       }
-      
-      // ✅ PRIORIDADE 2: Carregar do localStorage
-      const pendingCode = localStorage.getItem('pending_referral_code');
-      const pendingType = localStorage.getItem('pending_referral_code_type');
-      
-      if (pendingCode && !referralCodeProcessedRef.current) {
-        console.log('[AUTH] ✅ Código encontrado no localStorage:', pendingCode, 'Tipo:', pendingType);
-        processReferralCode(pendingCode, pendingType as 'seller' | 'rewards' | null);
-      }
-      
-      console.log('[AUTH] Estado final do campo unificado:', {
-        referralCode: pendingCode || refCodeFromUrl,
-        type: pendingType
-      });
-    }
+    };
+
+    loadReferralCodes();
   }, [mode, activeTab, location.search]);
 
   // ✅ Listener para mudanças no localStorage (caso useReferralCodeCapture salve depois)
   useEffect(() => {
     if (mode === 'register' && activeTab === 'student' && !referralCodeProcessedRef.current) {
-      const handleStorageChange = (e: StorageEvent) => {
+      const handleStorageChange = async (e: StorageEvent) => {
         if (e.key === 'pending_referral_code' && e.newValue) {
           console.log('[AUTH] ✅ Código detectado via storage event:', e.newValue);
           const pendingType = localStorage.getItem('pending_referral_code_type');
-          processReferralCode(e.newValue, pendingType as 'seller' | 'rewards' | null);
+          await processReferralCode(e.newValue, pendingType as 'seller' | 'rewards' | null);
         }
       };
 
       window.addEventListener('storage', handleStorageChange);
       
       // Também verificar periodicamente (fallback para mesmo-origin)
-      const intervalId = setInterval(() => {
+      const intervalId = setInterval(async () => {
         if (!referralCodeProcessedRef.current) {
           const pendingCode = localStorage.getItem('pending_referral_code');
           if (pendingCode && !formData.referralCode) {
             console.log('[AUTH] ✅ Código detectado via polling:', pendingCode);
             const pendingType = localStorage.getItem('pending_referral_code_type');
-            processReferralCode(pendingCode, pendingType as 'seller' | 'rewards' | null);
+            await processReferralCode(pendingCode, pendingType as 'seller' | 'rewards' | null);
           }
         }
       }, 200); // Verificar a cada 200ms
@@ -235,6 +323,9 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
   const handleReferralCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const code = e.target.value.toUpperCase();
     setFormData(prev => ({ ...prev, referralCode: code }));
+    
+    // Resetar estado de simplified seller quando o código muda
+    setIsSimplifiedSeller(false);
     
     if (code.length >= 4) {
       validateReferralCode(code);
@@ -346,16 +437,16 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
         
         console.log('✅ [AUTH] Validação de telefone passou:', formData.phone);
         
-        // Detectar se é código Direct Sales (SUAIDEN ou BRANT) para aplicar Package 3 automaticamente
-        const directSalesCodes = ['SUAIDEN', 'BRANT'];
-        const isDirectSalesCode = directSalesCodes.includes(formData.referralCode.toUpperCase());
-        
-         // Validar dependents se for código Direct Sales (deve ser entre 0 e 5)
-         if (activeTab === 'student' && isDirectSalesCode && (formData.dependents < 0 || formData.dependents > 5)) {
-           setError('Please select between 0 and 5 dependents.');
-           setLoading(false);
-           return;
-         }
+         // Detectar se é código Direct Sales (SUAIDEN ou BRANT) para aplicar Package 3 automaticamente
+         const directSalesCodes = ['SUAIDEN', 'BRANT'];
+         const isDirectSalesCode = directSalesCodes.includes(formData.referralCode.toUpperCase());
+         
+          // Validar dependents para todos os estudantes (deve ser entre 0 e 5)
+          if (activeTab === 'student' && (formData.dependents < 0 || formData.dependents > 5)) {
+            setError('Please select between 0 and 5 dependents.');
+            setLoading(false);
+            return;
+          }
         
         const userData = {
           full_name: activeTab === 'student' ? formData.full_name : formData.full_name,
@@ -368,23 +459,24 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
             location: formData.location || '',
             phone: formData.phone || ''
           }),
-          // Add phone for student
-          ...(activeTab === 'student' && {
-            phone: formData.phone || '',
-            // ✅ NOVO: Salvar no campo correto baseado no tipo detectado
-            ...(referralCodeType === 'seller' && formData.referralCode && {
-              seller_referral_code: formData.referralCode
-            }),
-            ...(referralCodeType === 'rewards' && formData.referralCode && {
-              affiliate_code: formData.referralCode
-            }),
-            // ✅ Direct Sales (SUAIDEN ou BRANT): Aplicar Package 3 automaticamente e dependents obrigatório
-            ...(isDirectSalesCode && {
-              scholarship_package_number: 3,
-              desired_scholarship_range: 4500,
-              dependents: formData.dependents
-            })
-          })
+           // Add phone for student
+           ...(activeTab === 'student' && {
+             phone: formData.phone || '',
+             // ✅ NOVO: Salvar no campo correto baseado no tipo detectado
+             ...(referralCodeType === 'seller' && formData.referralCode && {
+               seller_referral_code: formData.referralCode
+             }),
+             ...(referralCodeType === 'rewards' && formData.referralCode && {
+               affiliate_code: formData.referralCode
+             }),
+             // ✅ Direct Sales (SUAIDEN ou BRANT): Aplicar Package 3 automaticamente
+             ...(isDirectSalesCode && {
+               scholarship_package_number: 3,
+               desired_scholarship_range: 4500
+             }),
+             // ✅ Dependents: Sempre salvar para todos os estudantes
+             dependents: formData.dependents
+           })
         };
 
         console.log('🔍 [AUTH] userData criado:', userData);
@@ -405,11 +497,15 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
           setShowVerificationModal(true);
           return;
         }
-        // Para estudante, mostrar aviso de verificação
-        if (activeTab === 'student') {
-          setShowStudentVerificationNotice(true);
+        
+        // ✅ NOVO: Para alunos com código Direct Sales (BRANT, SUAIDEN), mostrar modal de confirmação
+        // Reutilizar isDirectSalesCode já declarado acima
+        if (activeTab === 'student' && isDirectSalesCode) {
+          setShowStudentVerificationModal(true);
           return;
         }
+        
+        // Para outros alunos, o login já foi feito automaticamente, então o AuthRedirect vai redirecionar
         return;
       } else {
         await login(formData.email, formData.password);
@@ -468,13 +564,13 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
   };
 
   useEffect(() => {
-    if (showVerificationModal || showStudentVerificationNotice) {
+    if (showVerificationModal) {
       const timer = setTimeout(() => {
         navigate('/login');
       }, 9000); // 8 seconds
       return () => clearTimeout(timer);
     }
-  }, [showVerificationModal, showStudentVerificationNotice, navigate]);
+  }, [showVerificationModal, navigate]);
 
   if (mode === 'login') {
     return (
@@ -598,6 +694,30 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
               onClick={() => setShowVerificationModal(false)}
             >
               {t('authPage.modals.verification.gotIt')}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal for email verification after student registration (Direct Sales - BRANT, SUAIDEN) */}
+      {showStudentVerificationModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full text-center border border-slate-200">
+            <div className="mb-4">
+              <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-2" />
+              <h2 className="text-2xl font-bold text-slate-900 mb-2">Check your email!</h2>
+              <p className="text-slate-700 text-base mb-4">
+                A confirmation link has been sent to your email. Please check your inbox (and spam folder) to activate your account.
+              </p>
+            </div>
+            <button
+              className="bg-[#05294E] text-white px-6 py-3 rounded-xl font-bold hover:bg-[#02172b] transition-all duration-200"
+              onClick={() => {
+                setShowStudentVerificationModal(false);
+                navigate('/login');
+              }}
+            >
+              Got it
             </button>
           </div>
         </div>
@@ -849,8 +969,8 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                     )}
                   </div>
 
-                  {/* Dependents field - Only show for Direct Sales codes (SUAIDEN or BRANT) - placed right after Referral Code */}
-                  {activeTab === 'student' && ['SUAIDEN', 'BRANT'].includes(formData.referralCode.toUpperCase()) && (
+                  {/* Dependents field - Always shown for all students - placed right after Referral Code */}
+                  {activeTab === 'student' && (
                     <div className="lg:col-span-1">
                       <label htmlFor="dependents" className="block text-sm font-bold text-slate-900 mb-2">
                         Dependents <span className="text-xs font-normal text-slate-500">- Family members (spouse and/or children)</span>
@@ -876,6 +996,9 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                           <option value={5}>5 Dependents</option>
                         </select>
                       </div>
+                      <p className="text-xs text-slate-500 mt-1">
+                        $150 per dependent will be added to the Selection Process Fee and +$100 per dependent will be added to the Application Fee.
+                      </p>
                     </div>
                   )}
 
@@ -1088,12 +1211,6 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
 
 
           {/* Formulário de registro de estudante */}
-          {showStudentVerificationNotice && (
-            <div className="bg-blue-50 border border-blue-200 text-blue-900 px-4 py-3 rounded-2xl text-sm mb-4 mt-4">
-              <div className="font-bold mb-1">{t('authPage.messages.checkEmail')}</div>
-              {t('authPage.messages.studentVerification')}
-            </div>
-          )}
         </div>
       </div>
     </div>

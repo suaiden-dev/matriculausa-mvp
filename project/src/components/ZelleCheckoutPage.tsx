@@ -297,11 +297,10 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
           }
         }
 
-        // Fallback: calcular localmente (base + $100 por dependente para legacy)
+        // Fallback: calcular localmente (base + $100 por dependente para ambos os sistemas)
         const baseAmount = getFeeAmount('application_fee');
-        const systemType = userProfile?.system_type || 'legacy';
         const dependents = Number(userProfile?.dependents) || 0;
-        return systemType === 'legacy' && dependents > 0
+        return dependents > 0
           ? baseAmount + dependents * 100
           : baseAmount;
       })(),

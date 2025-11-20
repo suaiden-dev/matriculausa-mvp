@@ -571,6 +571,36 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           localStorage.setItem('cached_user_profile', JSON.stringify(profile));
         }
 
+        // ✅ NOVO: Refetch do perfil após um pequeno delay para garantir que o trigger do banco
+        // tenha atualizado o system_type e outros campos calculados
+        // Isso é especialmente importante após o registro de novos usuários
+        if (profile && profile.role === 'student') {
+          setTimeout(async () => {
+            try {
+              const { data: refreshedProfile, error: refreshError } = await supabase
+                .from('user_profiles')
+                .select('*')
+                .eq('user_id', session.user.id)
+                .single();
+              
+              if (!refreshError && refreshedProfile) {
+                console.log('✅ [USEAUTH] Perfil atualizado após delay:', refreshedProfile);
+                setUserProfile(refreshedProfile as UserProfile);
+                
+                // Atualizar cache também
+                const refreshedUser = await buildUser(session.user, refreshedProfile);
+                if (refreshedUser) {
+                  setUser(refreshedUser);
+                  localStorage.setItem('cached_user', JSON.stringify(refreshedUser));
+                  localStorage.setItem('cached_user_profile', JSON.stringify(refreshedProfile));
+                }
+              }
+            } catch (err) {
+              console.error('❌ [USEAUTH] Erro ao refetch do perfil:', err);
+            }
+          }, 1500); // 1.5 segundos de delay para permitir que o trigger do banco execute
+        }
+
         // Sincronizar telefone do user_metadata se o perfil não tiver
         if (profile && !profile.phone && session.user.user_metadata?.phone) {
           try {
@@ -893,6 +923,87 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     
     console.log('✅ [USEAUTH] SignUp bem-sucedido');
     console.log('🔍 [USEAUTH] data.user:', data?.user);
+    
+    // ✅ REATIVADO: Auto-confirmar email para todos os alunos (role student)
+    if (data?.user && userData.role === 'student') {
+      try {
+        // Verificar se é um registro de vendedor (tem seller_referral_code E está em seller_registrations)
+        let isSellerRegistration = false;
+        
+        if (userData.seller_referral_code) {
+          // Verificar se existe registro pendente em seller_registrations
+          const { data: sellerReg, error: sellerRegError } = await supabase
+            .from('seller_registrations')
+            .select('id')
+            .eq('user_id', data.user.id)
+            .eq('status', 'pending')
+            .maybeSingle();
+          
+          if (!sellerRegError && sellerReg) {
+            isSellerRegistration = true;
+            console.log('🔍 [USEAUTH] Usuário é vendedor em registro, NÃO auto-confirmar email');
+          }
+        }
+        
+        // Auto-confirmar apenas se NÃO for registro de vendedor
+        if (!isSellerRegistration) {
+          console.log('🔍 [USEAUTH] Auto-confirmando email para aluno...', {
+            userId: data.user.id,
+            email: normalizedEmail,
+            role: userData.role,
+            seller_referral_code: userData.seller_referral_code
+          });
+          
+          // Chamar Edge Function para confirmar email
+          const { data: confirmData, error: confirmError } = await supabase.functions.invoke('auto-confirm-student-email', {
+            body: {
+              userId: data.user.id,
+              role: userData.role
+            }
+          });
+          
+          if (confirmError) {
+            console.error('❌ [USEAUTH] Erro ao auto-confirmar email:', confirmError);
+            console.error('❌ [USEAUTH] Detalhes do erro:', {
+              message: confirmError.message,
+              status: confirmError.status,
+              name: confirmError.name
+            });
+            // Não falhar o registro se a confirmação falhar
+          } else {
+            console.log('✅ [USEAUTH] Email auto-confirmado com sucesso', confirmData);
+            
+            // Aguardar um pouco para garantir que a confirmação foi processada
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            // Fazer login automático após confirmação
+            console.log('🔍 [USEAUTH] Fazendo login automático...');
+            const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
+              email: normalizedEmail,
+              password,
+            });
+            
+            if (loginError) {
+              console.error('❌ [USEAUTH] Erro ao fazer login automático:', loginError);
+              console.error('❌ [USEAUTH] Detalhes do erro de login:', {
+                message: loginError.message,
+                status: loginError.status,
+                name: loginError.name
+              });
+              // Não falhar, o usuário pode fazer login manualmente depois
+            } else {
+              console.log('✅ [USEAUTH] Login automático realizado com sucesso', loginData);
+              // O onAuthStateChange vai detectar a mudança e atualizar o estado
+            }
+          }
+        } else {
+          console.log('⚠️ [USEAUTH] Registro de vendedor detectado, NÃO auto-confirmando email');
+        }
+      } catch (err) {
+        console.warn('⚠️ [USEAUTH] Erro ao tentar auto-confirmar email e fazer login:', err);
+        // Não falhar o registro se houver erro
+      }
+    }
     
     // Se o usuário tem scholarship_package_number, converter para scholarship_package_id
     if (userData.scholarship_package_number && data?.user) {

@@ -223,7 +223,7 @@ Deno.serve(async (req) => {
       console.log('[stripe-checkout-application-fee] Nenhum scholarship_id encontrado na aplicação');
     }
 
-    // Adicionar custo por dependente apenas para sistema legacy
+    // Adicionar custo por dependente para ambos os sistemas (legacy e simplified)
     const systemType = userProfile.system_type || 'legacy';
     const dependents = Number(userProfile.dependents) || 0;
     
@@ -233,12 +233,12 @@ Deno.serve(async (req) => {
       baseApplicationFee: applicationFeeAmount
     });
     
-    if (systemType === 'legacy' && dependents > 0) {
-      const dependentsCost = dependents * 100; // $100 por dependente
+    if (dependents > 0) {
+      const dependentsCost = dependents * 100; // $100 por dependente (para ambos os sistemas)
       applicationFeeAmount += dependentsCost;
       console.log(`[stripe-checkout-application-fee] ✅ Adicionado $${dependentsCost} por ${dependents} dependente(s). Novo valor: $${applicationFeeAmount}`);
     } else {
-      console.log('[stripe-checkout-application-fee] Sem custo adicional de dependentes (sistema:', systemType, ', dependentes:', dependents, ')');
+      console.log('[stripe-checkout-application-fee] Sem custo adicional de dependentes (dependentes:', dependents, ')');
     }
 
     // Garantir valor mínimo de $0.50 USD

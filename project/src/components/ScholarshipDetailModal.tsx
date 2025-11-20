@@ -46,6 +46,13 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
 }) => {
   const { t } = useTranslation();
   
+  // Helper: calcular Application Fee exibida considerando dependentes (legacy e simplified)
+  const getApplicationFeeWithDependents = (base: number): number => {
+    const deps = Number(userProfile?.dependents) || 0;
+    // ✅ CORREÇÃO: Adicionar $100 por dependente para ambos os sistemas (legacy e simplified)
+    return deps > 0 ? base + deps * 100 : base;
+  };
+  
   // Controlar o scroll do body quando o modal estiver aberto
   React.useEffect(() => {
     if (isOpen) {
@@ -324,7 +331,9 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
                         </div>
                         <div className="text-right">
                           <span className="font-semibold text-purple-600 text-lg">
-                            ${scholarship.application_fee_amount ? Number(scholarship.application_fee_amount).toFixed(2) : '350.00'}
+                            ${scholarship.application_fee_amount 
+                              ? getApplicationFeeWithDependents(Number(scholarship.application_fee_amount)).toFixed(2) 
+                              : getApplicationFeeWithDependents(350).toFixed(2)}
                           </span>
                           <div className="text-xs text-slate-400">
                             {scholarship.application_fee_amount && Number(scholarship.application_fee_amount) !== 350 ? 
