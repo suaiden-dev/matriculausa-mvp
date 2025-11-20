@@ -269,7 +269,9 @@ function EnhancedStudentTracking(props) {
           // Fallback: cálculo fixo para dados antigos sem registro
           const systemType = s.system_type || 'legacy';
           const baseSelectionFee = systemType === 'simplified' ? 350 : 400;
-          total += baseSelectionFee + (dependents * 150);
+          // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
+          // Dependentes só afetam Application Fee ($100 por dependente)
+          total += systemType === 'simplified' ? baseSelectionFee : baseSelectionFee + (dependents * 150);
         }
       }
       

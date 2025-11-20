@@ -162,6 +162,8 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                     // realPaymentAmounts se existir, mesmo que o aluno não tenha pago ainda
                     // Vamos calcular manualmente baseado no system_type, Matricula Rewards e overrides
                     let base: number;
+                    // Declarar systemType no escopo correto para estar disponível em todo o bloco
+                    const systemType = userSystemType || 'legacy';
                     
                     if (hasCustomOverride && userFeeOverrides?.selection_process_fee !== undefined) {
                       // Se tem override, usar o valor do override diretamente (sem adicionar dependents)
@@ -177,15 +179,17 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                         base = 350;
                       } else {
                         // Se não tem override, calcular baseado no system_type
-                        const systemType = userSystemType || 'legacy';
                         if (systemType === 'simplified') {
                           base = 350;
                         } else {
                           base = 400; // legacy
                         }
                       }
-                      // Adicionar dependents * 150 apenas se não for override
-                      base = base + dependents * 150;
+                      // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
+                      // Dependentes só afetam Application Fee ($100 por dependente)
+                      if (systemType !== 'simplified') {
+                        base = base + dependents * 150;
+                      }
                     }
                     
                     return formatFeeAmount(base);

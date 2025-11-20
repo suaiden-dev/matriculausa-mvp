@@ -225,7 +225,9 @@ const PaymentManagement: React.FC = () => {
             const baseSelectionFee = p?.system_type === 'simplified' ? 350 : 400;
             const sel = ov.selection_process_fee != null
               ? Number(ov.selection_process_fee)
-              : baseSelectionFee + (deps * 150);
+              // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
+              // Dependentes só afetam Application Fee ($100 por dependente)
+              : (p?.system_type === 'simplified' ? baseSelectionFee : baseSelectionFee + (deps * 150));
             selPaid = sel || 0;
           }
         }
@@ -341,7 +343,9 @@ const PaymentManagement: React.FC = () => {
             const baseSelectionFee = p?.system_type === 'simplified' ? 350 : 400;
             const sel = ov.selection_process_fee != null
               ? Number(ov.selection_process_fee)
-              : baseSelectionFee + (deps * 150);
+              // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
+              // Dependentes só afetam Application Fee ($100 por dependente)
+              : (p?.system_type === 'simplified' ? baseSelectionFee : baseSelectionFee + (deps * 150));
             selManual = sel || 0;
           }
         }

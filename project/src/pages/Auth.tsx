@@ -942,12 +942,9 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                           <option value={4}>4 Dependents</option>
                           <option value={5}>5 Dependents</option>
                         </select>
-                      </div>
-                      <p className="text-xs text-slate-500 mt-1">
-                        $150 per dependent will be added to the Selection Process Fee and +$100 per dependent will be added to the Application Fee.
-                      </p>
-                    </div>
-                  )}
+                </div>
+              </div>
+            )}
 
                 </div>
               </>

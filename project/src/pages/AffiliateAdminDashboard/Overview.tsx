@@ -143,7 +143,11 @@ const Overview = ({ stats, sellers = [], students = [], onRefresh }) => {
               } else {
                 const baseSelDefault = p?.system_type === 'simplified' ? 350 : 400;
                 const baseSel = ov.selection_process_fee != null ? Number(ov.selection_process_fee) : baseSelDefault;
-                selPaid = ov.selection_process_fee != null ? baseSel : baseSel + (deps * 150);
+                // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
+                // Dependentes só afetam Application Fee ($100 por dependente)
+                selPaid = ov.selection_process_fee != null 
+                  ? baseSel 
+                  : (p?.system_type === 'simplified' ? baseSel : baseSel + (deps * 150));
               }
             }
 

@@ -249,7 +249,11 @@ export const useAffiliateData = () => {
                   if (profile.has_paid_selection_process_fee) {
                     const baseSelectionFee = systemType === 'simplified' ? 350 : 400;
                     const dependents = Number(profile.dependents || 0);
-                    studentRevenue += baseSelectionFee + (dependents * 150);
+                    // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
+                    // Dependentes só afetam Application Fee ($100 por dependente)
+                    studentRevenue += systemType === 'simplified' 
+                      ? baseSelectionFee 
+                      : baseSelectionFee + (dependents * 150);
                   }
                   
                   // Scholarship Fee
