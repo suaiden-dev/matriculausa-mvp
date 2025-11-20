@@ -77,10 +77,20 @@ const ApplicationChatPage: React.FC = () => {
         .then(({ data }) => {
           console.log('🔍 [ApplicationChatPage] Application details loaded:', data);
           console.log('🔍 [ApplicationChatPage] Student process type:', data?.student_process_type);
+          
+          // ✅ SEGURANÇA: Ocultar acceptance_letter_url se o I-20 não foi pago
+          // Isso previne que o aluno veja a URL no Network tab do DevTools
+          // Mas mantém o status visível para que o aluno saiba que a carta foi enviada
+          if (data && !(userProfile as any)?.has_paid_i20_control_fee) {
+            data.acceptance_letter_url = null;
+            // Manter acceptance_letter_status e acceptance_letter_sent_at visíveis
+            // para que o aluno saiba que a carta foi enviada
+          }
+          
           setApplicationDetails(data);
         });
     }
-  }, [applicationId]);
+  }, [applicationId, userProfile]);
 
   // useEffect para detectar parâmetro de URL e definir aba ativa
   useEffect(() => {
@@ -1353,8 +1363,11 @@ const ApplicationChatPage: React.FC = () => {
             </div>
             <div className="p-3 sm:p-6 space-y-6">
               {/* Aviso sobre Acceptance Letter - Mostrar quando carta foi enviada mas I-20 ainda não foi pago */}
+              {/* ✅ UX: Verificar status em vez de URL para mostrar aviso mesmo quando URL está oculta */}
               {applicationDetails.is_scholarship_fee_paid && 
-               applicationDetails.acceptance_letter_url && 
+               (applicationDetails.acceptance_letter_status === 'sent' || 
+                applicationDetails.acceptance_letter_status === 'approved' ||
+                applicationDetails.acceptance_letter_sent_at) && 
                !(userProfile as any)?.has_paid_i20_control_fee && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 sm:p-6 mb-6">
                   <div className="flex items-start gap-3">
