@@ -12,7 +12,6 @@ export const useSystemType = (): {
   const [systemType, setSystemType] = useState<SystemType>('legacy');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [hasChecked, setHasChecked] = useState(false);
   const { user, userProfile } = useAuth();
 
   useEffect(() => {
@@ -22,11 +21,6 @@ export const useSystemType = (): {
         console.log('🔍 [useSystemType] Usuário não logado, usando sistema legacy por padrão');
         setSystemType('legacy');
         setLoading(false);
-        return;
-      }
-
-      // Se já verificou, não executar novamente
-      if (hasChecked) {
         return;
       }
 
@@ -50,12 +44,38 @@ export const useSystemType = (): {
           return;
         }
 
-        // Se veio via seller (tem seller_referral_code), forçar legacy para todo o fluxo
+        // ✅ CORREÇÃO: Não forçar legacy apenas por ter seller_referral_code
+        // O system_type deve ser herdado do seller (simplified ou legacy)
+        // Se tem seller_referral_code, verificar o system_type do seller
         if (userProfile.seller_referral_code) {
-          console.log('✅ [useSystemType] seller_referral_code presente -> forçando legacy');
-          setSystemType('legacy');
+          console.log('🔍 [useSystemType] seller_referral_code presente, verificando system_type do seller:', userProfile.seller_referral_code);
+          
+          // Se já tem system_type definido no perfil, usar ele (já foi herdado do seller)
+          if (userProfile.system_type) {
+            console.log('✅ [useSystemType] Usando system_type do perfil (herdado do seller):', userProfile.system_type);
+            setSystemType(userProfile.system_type as SystemType);
+            setLoading(false);
+            return;
+          }
+          
+          // Se não tem system_type, detectar baseado no seller
+          try {
+            const { data, error } = await supabase
+              .rpc('get_seller_admin_system_type_by_code', { seller_code: userProfile.seller_referral_code });
+            
+            if (error) {
+              console.error('Erro ao detectar sistema do seller:', error);
+              setSystemType('legacy');
+            } else {
+              console.log('✅ [useSystemType] Sistema detectado baseado no seller:', data);
+              setSystemType(data as SystemType);
+            }
+          } catch (err) {
+            console.error('Erro ao detectar sistema do seller:', err);
+            setSystemType('legacy');
+          }
+          
           setLoading(false);
-          setHasChecked(true);
           return;
         }
 
@@ -96,12 +116,11 @@ export const useSystemType = (): {
         setSystemType('legacy'); // Default to legacy on error
       } finally {
         setLoading(false);
-        setHasChecked(true);
       }
     };
 
     detectSystemType();
-  }, [user, userProfile, hasChecked]);
+  }, [user, userProfile]); // ✅ CORREÇÃO: Remover hasChecked, sempre re-executar quando userProfile mudar
 
   return {
     systemType,

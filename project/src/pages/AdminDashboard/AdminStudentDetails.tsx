@@ -2007,10 +2007,9 @@ const AdminStudentDetails: React.FC = () => {
           paymentAmount = getFeeAmount('application_fee');
         }
 
-        // Adicionar $100 por dependente apenas para sistema legacy
-        const systemType = userSystemType || 'legacy';
+        // Adicionar $100 por dependente para ambos os sistemas (legacy e simplified)
         const studentDependents = dependents || Number(student.dependents || 0);
-        if (systemType === 'legacy' && studentDependents > 0) {
+        if (studentDependents > 0) {
           paymentAmount += studentDependents * 100;
         }
 

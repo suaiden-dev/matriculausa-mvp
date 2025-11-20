@@ -235,8 +235,8 @@ export const usePayments = (universityId: string | undefined) => {
             const applicationFeeAmount = scholarship?.application_fee_amount || 0;
             const scholarshipAmount = scholarship?.amount || 0;
             const deps = Number((userProfile as any)?.dependents) || 0;
-            const systemType = ((userProfile as any)?.system_type as any) || 'legacy';
-            const finalApplicationFee = systemType === 'legacy' && deps > 0
+            // Adicionar $100 por dependente para ambos os sistemas (legacy e simplified)
+            const finalApplicationFee = deps > 0
               ? applicationFeeAmount + deps * 100
               : applicationFeeAmount;
             

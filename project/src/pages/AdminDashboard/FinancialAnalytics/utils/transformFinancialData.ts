@@ -64,8 +64,8 @@ function processApplications(
     } else {
       applicationFee = Math.round(getFeeAmount('application_fee') * 100);
     }
-    const systemType = userSystemTypesMap.get(student.user_id) || 'legacy';
-    if (systemType === 'legacy' && dependents > 0) {
+    // Adicionar $100 por dependente para ambos os sistemas (legacy e simplified)
+    if (dependents > 0) {
       applicationFee += dependents * 10000; // $100 por dependente
     }
 
