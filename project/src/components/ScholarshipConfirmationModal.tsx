@@ -138,10 +138,9 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
     // Converter centavos para dólares usando a função utilitária
     let applicationFeeAmount = convertCentsToDollars(applicationFeeAmountInCents);
     
-    // Aplicar +$100 por dependente quando sistema legacy
+    // ✅ CORREÇÃO: Aplicar +$100 por dependente para ambos os sistemas (legacy e simplified)
     const deps = Number(userProfile?.dependents) || 0;
-    const systemType = userProfile?.system_type || 'legacy';
-    const final = systemType === 'legacy' && deps > 0
+    const final = deps > 0
       ? applicationFeeAmount + deps * 100
       : applicationFeeAmount;
 

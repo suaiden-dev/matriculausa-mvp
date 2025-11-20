@@ -21,9 +21,9 @@ const ApplicationFeeSuccess: React.FC = () => {
 
   // Helper: calcular Application Fee exibida considerando dependentes (legacy) - mesma lógica do MyApplications
   const getApplicationFeeWithDependents = (base: number): number => {
-    const systemType = (userProfile?.system_type as any) || 'legacy';
     const deps = Number(userProfile?.dependents) || 0;
-    return systemType === 'legacy' && deps > 0 ? base + deps * 100 : base;
+    // ✅ CORREÇÃO: Adicionar $100 por dependente para ambos os sistemas (legacy e simplified)
+    return deps > 0 ? base + deps * 100 : base;
   };
 
   useEffect(() => {

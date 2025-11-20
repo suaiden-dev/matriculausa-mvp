@@ -19,11 +19,24 @@ export interface DynamicFeeValues {
 export const useDynamicFees = (): DynamicFeeValues => {
   const { userProfile } = useAuth();
   const { getFeeAmount, hasOverride, loading: feeLoading } = useFeeConfig(userProfile?.user_id);
-  const { systemType } = useSystemType();
+  const { systemType, loading: systemTypeLoading } = useSystemType();
   const { fee350, fee550, fee900, loading: simplifiedFeesLoading } = useSimplifiedFees();
   // Pacotes dinâmicos descontinuados com nova estrutura de preços
 
   return useMemo(() => {
+    // ✅ CORREÇÃO: Aguardar systemType estar pronto antes de calcular
+    if (systemTypeLoading) {
+      console.log('⏳ [useDynamicFees] SystemType ainda carregando, aguardando...');
+      return {
+        selectionProcessFee: undefined as any,
+        scholarshipFee: undefined as any,
+        i20ControlFee: undefined as any,
+        selectionProcessFeeAmount: undefined as any,
+        scholarshipFeeAmount: undefined as any,
+        i20ControlFeeAmount: undefined as any,
+        hasSellerPackage: false
+      };
+    }
     
     // Para sistema simplificado, usar valores fixos (PRIORIDADE MÁXIMA)
     if (systemType === 'simplified') {
@@ -42,11 +55,25 @@ export const useDynamicFees = (): DynamicFeeValues => {
         };
       }
       
+      // Para sistema simplificado, adicionar dependentes na Selection Process Fee
+      const dependents = Number(userProfile?.dependents) || 0;
+      const dependentsCost = dependents * 150; // $150 por dependente
+      const selectionProcessFeeWithDependents = fee350 + dependentsCost;
+      
+      console.log('💰 [useDynamicFees] Sistema simplificado - Cálculo:', {
+        fee350,
+        dependents,
+        dependentsCost,
+        selectionProcessFeeWithDependents,
+        userProfileSystemType: userProfile?.system_type,
+        userProfileDependents: userProfile?.dependents
+      });
+      
       return {
-        selectionProcessFee: `$${fee350.toFixed(2)}`,
+        selectionProcessFee: `$${selectionProcessFeeWithDependents.toFixed(2)}`,
         scholarshipFee: `$${fee550.toFixed(2)}`,
         i20ControlFee: `$${fee900.toFixed(2)}`,
-        selectionProcessFeeAmount: fee350,
+        selectionProcessFeeAmount: selectionProcessFeeWithDependents,
         scholarshipFeeAmount: fee550,
         i20ControlFeeAmount: fee900,
         hasSellerPackage: false
@@ -97,5 +124,5 @@ export const useDynamicFees = (): DynamicFeeValues => {
       i20ControlFeeAmount: baseI20,
       hasSellerPackage: false
     };
-  }, [systemType, simplifiedFeesLoading, feeLoading, fee350, fee550, fee900, userProfile, getFeeAmount, hasOverride]);
+  }, [systemType, systemTypeLoading, simplifiedFeesLoading, feeLoading, fee350, fee550, fee900, userProfile, getFeeAmount, hasOverride]);
 };

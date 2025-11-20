@@ -96,7 +96,7 @@ const FeeManagement: React.FC = () => {
         const baseScholarshipFee = systemType === 'simplified' ? 550 : 900;
         const baseI20Fee = 900; // Sempre 900 para ambos os sistemas
         const baseApplicationFee = Number(getFeeAmount('application_fee')) || 0;
-        const applicationDependentsExtra = systemType === 'legacy' && dependents > 0 ? dependents * 100 : 0;
+        const applicationDependentsExtra = dependents > 0 ? dependents * 100 : 0; // $100 por dependente para ambos os sistemas
 
         return {
           ...student,
