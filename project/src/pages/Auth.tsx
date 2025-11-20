@@ -37,8 +37,6 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showVerificationModal, setShowVerificationModal] = useState(false);
-  const [showStudentVerificationModal, setShowStudentVerificationModal] = useState(false);
   // Unified referral code validation states
   const [referralCodeValid, setReferralCodeValid] = useState<boolean | null>(null);
   const [referralCodeLoading, setReferralCodeLoading] = useState(false);
@@ -226,6 +224,13 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
         
         // ✅ PRIORIDADE 1: Verificar URL diretamente (para evitar race condition)
         const urlParams = new URLSearchParams(location.search);
+        
+        // Tratar mensagem de email já confirmado (não é erro, é informação)
+        const emailInfo = urlParams.get('info');
+        const infoMessage = urlParams.get('message');
+        if (emailInfo === 'email_already_confirmed' && infoMessage) {
+          setError(decodeURIComponent(infoMessage));
+        }
         const refCodeFromUrl = urlParams.get('ref');
         
         if (refCodeFromUrl && !referralCodeProcessedRef.current) {
@@ -492,20 +497,9 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
         localStorage.removeItem('pending_affiliate_code');
         localStorage.removeItem('pending_seller_referral_code');
 
-        // Se for registro de universidade, mostra modal e retorna
-        if (activeTab === 'university') {
-          setShowVerificationModal(true);
-          return;
-        }
-        
-        // ✅ NOVO: Para alunos com código Direct Sales (BRANT, SUAIDEN), mostrar modal de confirmação
-        // Reutilizar isDirectSalesCode já declarado acima
-        if (activeTab === 'student' && isDirectSalesCode) {
-          setShowStudentVerificationModal(true);
-          return;
-        }
-        
-        // Para outros alunos, o login já foi feito automaticamente, então o AuthRedirect vai redirecionar
+        // Para estudantes, o email já é confirmado automaticamente e o login é feito automaticamente
+        // O AuthRedirect vai redirecionar para o dashboard
+        // Para universidades, também não mostra modal - o email será confirmado normalmente
         return;
       } else {
         await login(formData.email, formData.password);
@@ -563,14 +557,6 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
     setActiveTab(tab);
   };
 
-  useEffect(() => {
-    if (showVerificationModal) {
-      const timer = setTimeout(() => {
-        navigate('/login');
-      }, 9000); // 8 seconds
-      return () => clearTimeout(timer);
-    }
-  }, [showVerificationModal, navigate]);
 
   if (mode === 'login') {
     return (
@@ -602,9 +588,13 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
           {/* Form */}
           <form className="mt-6 sm:mt-8 space-y-6 bg-slate-50 p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-3xl shadow-lg border border-slate-200" onSubmit={handleSubmit}>
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-2xl text-sm">
-                <div className="font-medium text-red-800 mb-1">{t('authPage.login.loginFailed')}</div>
-                {error}
+              <div className={`${error.includes('já foi confirmado') ? 'bg-green-50 border border-green-200 text-green-700' : 'bg-red-50 border border-red-200 text-red-700'} px-4 py-3 rounded-2xl text-sm`}>
+                <div className={`font-medium ${error.includes('já foi confirmado') ? 'text-green-800' : 'text-red-800'} mb-1`}>
+                  {error.includes('já foi confirmado') 
+                    ? 'Email Confirmado' 
+                    : t('authPage.login.loginFailed')}
+                </div>
+                <div>{error}</div>
               </div>
             )}
 
@@ -679,49 +669,6 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
 
   return (
     <div className="min-h-screen bg-white py-12 px-4 sm:px-6 lg:px-8">
-      {/* Modal for email verification after university registration */}
-      {showVerificationModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full text-center border border-slate-200">
-            <div className="mb-4">
-              <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-2" />
-              <h2 className="text-2xl font-bold text-slate-900 mb-2">{t('authPage.modals.verification.title')}</h2>
-              <p className="text-slate-700 text-base mb-4" dangerouslySetInnerHTML={{ __html: t('authPage.modals.verification.description') }}>
-              </p>
-            </div>
-            <button
-              className="bg-[#05294E] text-white px-6 py-3 rounded-xl font-bold hover:bg-[#02172b] transition-all duration-200"
-              onClick={() => setShowVerificationModal(false)}
-            >
-              {t('authPage.modals.verification.gotIt')}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Modal for email verification after student registration (Direct Sales - BRANT, SUAIDEN) */}
-      {showStudentVerificationModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full text-center border border-slate-200">
-            <div className="mb-4">
-              <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-2" />
-              <h2 className="text-2xl font-bold text-slate-900 mb-2">Check your email!</h2>
-              <p className="text-slate-700 text-base mb-4">
-                A confirmation link has been sent to your email. Please check your inbox (and spam folder) to activate your account.
-              </p>
-            </div>
-            <button
-              className="bg-[#05294E] text-white px-6 py-3 rounded-xl font-bold hover:bg-[#02172b] transition-all duration-200"
-              onClick={() => {
-                setShowStudentVerificationModal(false);
-                navigate('/login');
-              }}
-            >
-              Got it
-            </button>
-          </div>
-        </div>
-      )}
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8 sm:mb-12">
