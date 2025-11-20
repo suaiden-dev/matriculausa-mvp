@@ -73,12 +73,12 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
   // Obter dados do usuário primeiro
   const { userProfile, user, refetchUserProfile } = useAuth();
 
-  // Helper: calcular Application Fee exibida considerando dependentes (legacy)
+  // Helper: calcular Application Fee exibida considerando dependentes (legacy e simplified)
   const getApplicationFeeWithDependents = (sch: any): string => {
     const base = sch?.application_fee_amount ? Number(sch.application_fee_amount) : 350;
-    const systemType = userProfile?.system_type || 'legacy';
     const deps = Number(userProfile?.dependents) || 0;
-    const finalAmount = systemType === 'legacy' && deps > 0 ? base + deps * 100 : base;
+    // ✅ CORREÇÃO: Adicionar $100 por dependente para ambos os sistemas (legacy e simplified)
+    const finalAmount = deps > 0 ? base + deps * 100 : base;
     return finalAmount.toFixed(2);
   };
   

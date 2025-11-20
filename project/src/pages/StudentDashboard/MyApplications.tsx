@@ -50,14 +50,14 @@ const MyApplications: React.FC = () => {
     application?: number;
     scholarship?: number;
   }>({});
-  // Helper: calcular Application Fee exibida considerando dependentes (legacy)
+  // Helper: calcular Application Fee exibida considerando dependentes (legacy e simplified)
   // O valor vem em centavos do banco, precisa converter para dólares primeiro
   const getApplicationFeeWithDependents = (baseInCents: number): number => {
     // Converter centavos para dólares
     const baseInDollars = convertCentsToDollars(baseInCents);
-    const systemType = (userProfile?.system_type as any) || 'legacy';
     const deps = Number(userProfile?.dependents) || 0;
-    return systemType === 'legacy' && deps > 0 ? baseInDollars + deps * 100 : baseInDollars;
+    // ✅ CORREÇÃO: Adicionar $100 por dependente para ambos os sistemas (legacy e simplified)
+    return deps > 0 ? baseInDollars + deps * 100 : baseInDollars;
   };
   const [userProfileId, setUserProfileId] = useState<string | null>(null);
   

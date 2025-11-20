@@ -130,8 +130,8 @@ export function transformPaymentsToRecordsAndStats({
           ? parseFloat(scholarship.application_fee_amount) 
           : parseFloat(scholarship.application_fee_amount) * 100)
       : getFeeAmount('application_fee') * 100;
-    const expectedApplicationFeeWithDeps = systemType === 'legacy' && dependents > 0
-      ? expectedApplicationFee + (dependents * 10000) // $100 por dependente
+    const expectedApplicationFeeWithDeps = dependents > 0
+      ? expectedApplicationFee + (dependents * 10000) // $100 por dependente (para ambos os sistemas)
       : expectedApplicationFee;
     
     if (realPaid?.application !== undefined && realPaid.application > 0) {
@@ -147,20 +147,20 @@ export function transformPaymentsToRecordsAndStats({
         } else {
           applicationFee = Math.round(getFeeAmount('application_fee') * 100);
         }
-        if (systemType === 'legacy' && dependents > 0) {
-          applicationFee += dependents * 10000; // $100 por dependente
+        if (dependents > 0) {
+          applicationFee += dependents * 10000; // $100 por dependente (para ambos os sistemas)
         }
       }
     } else if (scholarship?.application_fee_amount) {
       const rawValue = parseFloat(scholarship.application_fee_amount);
       applicationFee = rawValue > 1000 ? Math.round(rawValue) : Math.round(rawValue * 100);
-      if (systemType === 'legacy' && dependents > 0) {
-        applicationFee += dependents * 10000; // $100 por dependente
+      if (dependents > 0) {
+        applicationFee += dependents * 10000; // $100 por dependente (para ambos os sistemas)
       }
     } else {
       applicationFee = Math.round(getFeeAmount('application_fee') * 100);
-      if (systemType === 'legacy' && dependents > 0) {
-        applicationFee += dependents * 10000; // $100 por dependente
+      if (dependents > 0) {
+        applicationFee += dependents * 10000; // $100 por dependente (para ambos os sistemas)
       }
     }
 
@@ -500,7 +500,7 @@ export function transformPaymentsToRecordsAndStats({
     // Application Fee - Prioridade: valor real pago (se razoável) > cálculo fixo
     let applicationFee: number;
     const expectedApplicationFee = getFeeAmount('application_fee');
-    const expectedApplicationFeeWithDeps = systemType === 'legacy' && dependents > 0
+    const expectedApplicationFeeWithDeps = dependents > 0
       ? expectedApplicationFee + (dependents * 100) // $100 por dependente
       : expectedApplicationFee;
     
