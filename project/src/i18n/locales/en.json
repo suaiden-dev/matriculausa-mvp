@@ -1248,6 +1248,55 @@
       "weakPassword": "Password is too weak. Please choose a stronger password.",
       "invalidEmail": "Please enter a valid email address.",
       "signupDisabled": "New registrations are currently disabled. Please contact support.",
+      "preCheckoutModal": {
+        "securePayment": "Secure Payment",
+        "closeModal": "Close modal",
+        "closeTerms": "Close terms",
+        "totalAmount": "Total amount",
+        "securePaymentGateway": "Secure payment gateway",
+        "promotionalCoupon": {
+          "title": "Promotional Coupon",
+          "enterCode": "Enter code",
+          "validate": "Validate",
+          "validating": "Validating...",
+          "remove": "Remove coupon",
+          "applied": "discount",
+          "discountedValue": "Discounted value",
+          "originalValue": "(original)",
+          "enterCodePlease": "Please enter the coupon code",
+          "successMessage": "Coupon {{code}} applied! Discount of ${{amount}} applied."
+        },
+        "referralCode": "Referral Code",
+        "codeAlreadyUsed": "Code already used",
+        "discountAlreadyApplied": "Discount already applied to your account",
+        "haveReferralCode": "Do you have a friend referral code?",
+        "placeholder": "Enter code here",
+        "validating": "Validating...",
+        "validate": "Validate Code",
+        "acceptContractTerms": "I have read and accept the contract terms and conditions",
+        "processingPayment": "Processing...",
+        "applyCodeAndContinue": "Apply Code and Continue",
+        "goToPayment": "Go to Payment",
+        "termsAndConditions": {
+          "title": "Terms and Conditions"
+        },
+        "scrollToBottomFirst": "Scroll to bottom to accept",
+        "readingTerms": "Reading terms...",
+        "acceptTerms": "Accept Terms",
+        "cancel": "Cancel",
+        "loading": "Loading...",
+        "validCode": "Valid referral code! You will receive $50 discount on the selection process fee.",
+        "pleaseEnterCode": "Please enter a code",
+        "sellerReferralCodeBlocked": "Users with seller code cannot use additional discount codes.",
+        "errorValidating": "Error validating code. Please try again.",
+        "mustAcceptTerms": "You must accept the terms and conditions to continue."
+      },
+      "errors": {
+        "serverError": "Error connecting to server",
+        "tryAgain": "Please try again",
+        "invalidCoupon": "Invalid coupon",
+        "connectionError": "Error validating coupon. Check your connection and try again."
+      },
       "registrationFailed": "Registration Failed",
       "emailAlreadyRegistered": "This email is already registered. Please sign in or use another email."
     }
@@ -2526,7 +2575,15 @@
     "readingTerms": "Please read the terms before accepting",
     "acceptContractTerms": "I accept the contract terms and conditions",
     "cancel": "Cancel",
-    "acceptTerms": "Accept Terms"
+    "acceptTerms": "Accept Terms",
+    "promotionalCoupon": {
+      "title": "Selection Process Fee",
+      "discountedValue": "Discounted Value",
+      "originalValue": "Original Value",
+      "applied": "Applied",
+      "successMessage": "Code {{code}} applied! You saved ${{amount}}",
+      "enterCodePlease": "Please enter a promotional code."
+    }
   },
   "footer": {
     "company": {

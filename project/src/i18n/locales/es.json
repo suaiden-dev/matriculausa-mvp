@@ -1346,6 +1346,55 @@
       "weakPassword": "Password is too weak. Please choose a stronger password.",
       "invalidEmail": "Please enter a valid email address.",
       "signupDisabled": "New registrations are currently disabled. Please contact support.",
+      "preCheckoutModal": {
+        "securePayment": "Pago Seguro",
+        "closeModal": "Cerrar modal",
+        "closeTerms": "Cerrar términos",
+        "totalAmount": "Monto total",
+        "securePaymentGateway": "Pasarela de pago segura",
+        "promotionalCoupon": {
+          "title": "Cupón Promocional",
+          "enterCode": "Ingrese el código",
+          "validate": "Validar",
+          "validating": "Validando...",
+          "remove": "Eliminar cupón",
+          "applied": "de descuento",
+          "discountedValue": "Valor con descuento",
+          "originalValue": "(original)",
+          "enterCodePlease": "Por favor, ingrese el código del cupón",
+          "successMessage": "¡Cupón {{code}} aplicado! Descuento de ${{amount}} aplicado."
+        },
+        "referralCode": "Código de Referencia",
+        "codeAlreadyUsed": "Código ya utilizado",
+        "discountAlreadyApplied": "Descuento ya aplicado a su cuenta",
+        "haveReferralCode": "¿Tienes un código de referencia de amigo?",
+        "placeholder": "Ingrese el código aquí",
+        "validating": "Validando...",
+        "validate": "Validar Código",
+        "acceptContractTerms": "He leído y acepto los términos y condiciones del contrato",
+        "processingPayment": "Procesando...",
+        "applyCodeAndContinue": "Aplicar Código y Continuar",
+        "goToPayment": "Ir al Pago",
+        "termsAndConditions": {
+          "title": "Términos y Condiciones"
+        },
+        "scrollToBottomFirst": "Desplázate hasta abajo para aceptar",
+        "readingTerms": "Leyendo términos...",
+        "acceptTerms": "Aceptar Términos",
+        "cancel": "Cancelar",
+        "loading": "Cargando...",
+        "validCode": "¡Código de referencia válido! Recibirás $50 de descuento en la tarifa del proceso de selección.",
+        "pleaseEnterCode": "Por favor, ingrese un código",
+        "sellerReferralCodeBlocked": "Los usuarios con código de vendedor no pueden usar códigos de descuento adicionales.",
+        "errorValidating": "Error al validar código. Inténtelo de nuevo.",
+        "mustAcceptTerms": "Debe aceptar los términos y condiciones para continuar."
+      },
+      "errors": {
+        "serverError": "Error al conectar con el servidor",
+        "tryAgain": "Por favor, inténtelo de nuevo",
+        "invalidCoupon": "Cupón inválido",
+        "connectionError": "Error al validar cupón. Verifique su conexión e intente nuevamente."
+      },
       "registrationFailed": "Registration Failed",
       "emailAlreadyRegistered": "This email is already registered. Please sign in or use another email."
     }
