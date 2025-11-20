@@ -218,11 +218,6 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
         return productPrice;
     }
   })();
-  
-  // Preço final considerando desconto promocional
-  const finalPrice = promotionalCouponValidation?.isValid && promotionalCouponValidation.finalAmount
-    ? promotionalCouponValidation.finalAmount
-    : computedBasePrice;
 
   // Terms acceptance states
   const [termsAccepted, setTermsAccepted] = useState(false);
@@ -310,7 +305,10 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
           setPromotionalCoupon(couponUsage.coupon_code);
           const validationData = {
             isValid: true,
-            message: `Cupom ${couponUsage.coupon_code} aplicado! Desconto de $${discountAmount.toFixed(2)} aplicado.`,
+            message: t('preCheckoutModal.promotionalCoupon.successMessage', { 
+              code: couponUsage.coupon_code, 
+              amount: discountAmount.toFixed(2) 
+            }),
             discountAmount: discountAmount,
             finalAmount: finalAmount
           };
@@ -868,7 +866,7 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
     if (!promotionalCoupon.trim()) {
       setPromotionalCouponValidation({
         isValid: false,
-        message: 'Por favor, digite o código do cupom'
+        message: t('preCheckoutModal.promotionalCoupon.enterCodePlease')
       });
       return;
     }
@@ -905,7 +903,7 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
         console.error('🔍 [PreCheckoutModal] Resposta de erro:', errorText);
         setPromotionalCouponValidation({
           isValid: false,
-          message: `Erro ao conectar com o servidor (${response.status}). Tente novamente.`
+          message: `${t('errors.serverError')} (${response.status}). ${t('errors.tryAgain')}`
         });
         return;
       }
@@ -916,7 +914,7 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
       if (!result.success) {
         setPromotionalCouponValidation({
           isValid: false,
-          message: result.error || 'Cupom inválido'
+          message: result.error || t('errors.invalidCoupon')
         });
         return;
       }
@@ -924,7 +922,10 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
       // Cupom válido
       const validationData = {
         isValid: true,
-        message: `Cupom ${normalizedCode} aplicado! Desconto de $${result.discount_amount.toFixed(2)} aplicado.`,
+        message: t('preCheckoutModal.promotionalCoupon.successMessage', { 
+          code: normalizedCode, 
+          amount: result.discount_amount.toFixed(2) 
+        }),
         discountAmount: result.discount_amount,
         finalAmount: result.final_amount
       };
@@ -974,7 +975,7 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
       console.error('🔍 [PreCheckoutModal] Erro ao validar cupom promocional:', error);
       setPromotionalCouponValidation({
         isValid: false,
-        message: error?.message || 'Erro ao validar cupom. Verifique sua conexão e tente novamente.'
+        message: error?.message || t('errors.connectionError')
       });
     } finally {
       setIsValidatingPromotionalCoupon(false);

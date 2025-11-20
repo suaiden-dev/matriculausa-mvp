@@ -11,6 +11,7 @@ interface PaymentStatusCardProps {
     i20_control: number;
   };
   realPaidAmounts: Record<string, number>;
+  loadingPaidAmounts?: Record<string, boolean>;
   editingFees: any;
   editingPaymentMethod: string | null;
   newPaymentMethod: string;
@@ -50,6 +51,7 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
     student,
     fees,
     realPaidAmounts,
+    loadingPaidAmounts = {},
     editingFees,
     editingPaymentMethod,
     newPaymentMethod,
@@ -149,10 +151,29 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
               ) : (
                 <dd className="text-sm font-semibold text-slate-700 mt-1 flex items-center">
                   {(() => {
-                    // Se o pagamento já foi feito E temos o valor bruto pago (gross_amount_usd), mostrar o valor REAL pago
-                    // Este valor inclui as taxas do Stripe, mostrando o que o aluno realmente pagou
-                    if (student?.has_paid_selection_process_fee && realPaidAmounts?.selection_process) {
-                      return formatFeeAmount(realPaidAmounts.selection_process);
+                    // ✅ CORREÇÃO: Se está carregando o valor correto, mostrar skeleton
+                    if (loadingPaidAmounts?.selection_process) {
+                      return (
+                        <div className="animate-pulse flex items-center gap-2">
+                          <div className="h-4 w-20 bg-slate-200 rounded"></div>
+                        </div>
+                      );
+                    }
+                    
+                    // ✅ CORREÇÃO: Se o pagamento já foi feito, SEMPRE tentar mostrar o valor REAL pago
+                    // Priorizar realPaidAmounts mesmo que seja 0 (pode ser um pagamento de valor zero)
+                    if (student?.has_paid_selection_process_fee) {
+                      if (realPaidAmounts?.selection_process !== undefined && realPaidAmounts?.selection_process !== null) {
+                        console.log('[PaymentStatusCard] Selection Process Fee - Usando valor real pago:', realPaidAmounts.selection_process);
+                        return formatFeeAmount(realPaidAmounts.selection_process);
+                      } else {
+                        // Se está marcado como pago mas não temos realPaidAmounts, mostrar skeleton
+                        return (
+                          <div className="animate-pulse flex items-center gap-2">
+                            <div className="h-4 w-20 bg-slate-200 rounded"></div>
+                          </div>
+                        );
+                      }
                     }
                     
                     // Caso contrário, calcular valor esperado (para exibição antes do pagamento)
@@ -282,24 +303,27 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
               {student.is_application_fee_paid ? (
                 <dd className="text-sm font-semibold text-slate-700 mt-1">
                   {(() => {
+                    // ✅ CORREÇÃO: Se está carregando o valor correto, mostrar skeleton
+                    if (loadingPaidAmounts?.application) {
+                      return (
+                        <div className="animate-pulse flex items-center gap-2">
+                          <div className="h-4 w-20 bg-slate-200 rounded"></div>
+                        </div>
+                      );
+                    }
+                    
                     // Se o pagamento já foi feito E temos o valor bruto pago (gross_amount_usd), mostrar o valor REAL pago
                     // Este valor inclui as taxas do Stripe, mostrando o que o aluno realmente pagou
-                    if (realPaidAmounts?.application) {
+                    if (realPaidAmounts?.application !== undefined && realPaidAmounts?.application !== null) {
                       return formatFeeAmount(realPaidAmounts.application);
                     }
                     
-                    // Caso contrário, usar valor da bolsa ou valor padrão
-                    const paidApplication = student.all_applications?.find((app: any) => app.is_application_fee_paid);
-                    if (paidApplication?.scholarships) {
-                      const scholarship = Array.isArray(paidApplication.scholarships)
-                        ? paidApplication.scholarships[0]
-                        : paidApplication.scholarships;
-                      let baseAmount = scholarship?.application_fee_amount 
-                        ? Number(scholarship.application_fee_amount) 
-                        : getFeeAmount('application_fee');
-                      return formatFeeAmount(baseAmount);
-                    }
-                    return formatFeeAmount(getFeeAmount('application_fee'));
+                    // Caso contrário, mostrar skeleton enquanto não carrega o valor correto
+                    return (
+                      <div className="animate-pulse flex items-center gap-2">
+                        <div className="h-4 w-20 bg-slate-200 rounded"></div>
+                      </div>
+                    );
                   })()}
                 </dd>
               ) : (
@@ -409,10 +433,28 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
               ) : (
                 <dd className="text-sm font-semibold text-slate-700 mt-1 flex items-center">
                   {(() => {
+                    // ✅ CORREÇÃO: Se está carregando o valor correto, mostrar skeleton
+                    if (loadingPaidAmounts?.scholarship) {
+                      return (
+                        <div className="animate-pulse flex items-center gap-2">
+                          <div className="h-4 w-20 bg-slate-200 rounded"></div>
+                        </div>
+                      );
+                    }
+                    
                     // Se o pagamento já foi feito E temos o valor bruto pago (gross_amount_usd), mostrar o valor REAL pago
                     // Este valor inclui as taxas do Stripe, mostrando o que o aluno realmente pagou
-                    if (student?.is_scholarship_fee_paid && realPaidAmounts?.scholarship) {
-                      return formatFeeAmount(realPaidAmounts.scholarship);
+                    if (student?.is_scholarship_fee_paid) {
+                      if (realPaidAmounts?.scholarship !== undefined && realPaidAmounts?.scholarship !== null) {
+                        return formatFeeAmount(realPaidAmounts.scholarship);
+                      } else {
+                        // Se está marcado como pago mas não temos realPaidAmounts, mostrar skeleton
+                        return (
+                          <div className="animate-pulse flex items-center gap-2">
+                            <div className="h-4 w-20 bg-slate-200 rounded"></div>
+                          </div>
+                        );
+                      }
                     }
                     
                     // Caso contrário, mostrar valor esperado
@@ -525,10 +567,28 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
               ) : (
                 <dd className="text-sm font-semibold text-slate-700 mt-1 flex items-center">
                   {(() => {
+                    // ✅ CORREÇÃO: Se está carregando o valor correto, mostrar skeleton
+                    if (loadingPaidAmounts?.i20_control) {
+                      return (
+                        <div className="animate-pulse flex items-center gap-2">
+                          <div className="h-4 w-20 bg-slate-200 rounded"></div>
+                        </div>
+                      );
+                    }
+                    
                     // Se o pagamento já foi feito E temos o valor bruto pago (gross_amount_usd), mostrar o valor REAL pago
                     // Este valor inclui as taxas do Stripe, mostrando o que o aluno realmente pagou
-                    if (student?.has_paid_i20_control_fee && realPaidAmounts?.i20_control) {
-                      return formatFeeAmount(realPaidAmounts.i20_control);
+                    if (student?.has_paid_i20_control_fee) {
+                      if (realPaidAmounts?.i20_control !== undefined && realPaidAmounts?.i20_control !== null) {
+                        return formatFeeAmount(realPaidAmounts.i20_control);
+                      } else {
+                        // Se está marcado como pago mas não temos realPaidAmounts, mostrar skeleton
+                        return (
+                          <div className="animate-pulse flex items-center gap-2">
+                            <div className="h-4 w-20 bg-slate-200 rounded"></div>
+                          </div>
+                        );
+                      }
                     }
                     
                     // Caso contrário, mostrar valor esperado

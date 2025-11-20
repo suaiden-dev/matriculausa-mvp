@@ -1,27 +1,18 @@
 import React from 'react';
-import { Award, Building, CheckCircle } from 'lucide-react';
+import { Award, Building } from 'lucide-react';
 import { StudentRecord } from './types';
 
 interface SelectedScholarshipCardProps {
   student: StudentRecord;
-  isPlatformAdmin?: boolean;
-  approvingStudent?: boolean;
-  rejectingStudent?: boolean;
-  onApproveApplication?: (applicationId: string) => void;
-  onRejectApplication?: (applicationId: string) => void;
 }
 
 /**
  * SelectedScholarshipCard - Displays selected scholarship details
  * Shows scholarship name, university, course, and annual value
+ * This is a read-only informational card, matching the original AdminStudentDetails.tsx implementation
  */
 const SelectedScholarshipCard: React.FC<SelectedScholarshipCardProps> = React.memo(({
   student,
-  isPlatformAdmin = false,
-  approvingStudent = false,
-  rejectingStudent = false,
-  onApproveApplication,
-  onRejectApplication,
 }) => {
   // Only show if scholarship is selected and application fee is paid
   if (!student.scholarship_title || !student.is_application_fee_paid) {
@@ -33,9 +24,6 @@ const SelectedScholarshipCard: React.FC<SelectedScholarshipCardProps> = React.me
   const scholarship = paidApplication?.scholarships
     ? (Array.isArray(paidApplication.scholarships) ? paidApplication.scholarships[0] : paidApplication.scholarships)
     : null;
-  
-  const applicationStatus = paidApplication?.status || 'pending';
-  const canApproveReject = isPlatformAdmin && applicationStatus !== 'approved' && applicationStatus !== 'rejected';
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
@@ -72,43 +60,6 @@ const SelectedScholarshipCard: React.FC<SelectedScholarshipCardProps> = React.me
             })()}
           </dd>
         </div>
-        
-        {/* Status e botões de aprovação/rejeição */}
-        {paidApplication && (
-          <div className="pt-4 border-t border-slate-200">
-            <div className="flex items-center justify-between">
-              {applicationStatus === 'approved' && (
-                <div className="flex items-center space-x-1 text-green-600">
-                  <CheckCircle className="w-4 h-4" />
-                  <span className="text-sm font-medium">Approved</span>
-                </div>
-              )}
-              {applicationStatus === 'rejected' && (
-                <div className="flex items-center space-x-1 text-red-600">
-                  <span className="text-sm font-medium">Rejected</span>
-                </div>
-              )}
-              {canApproveReject && (
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <button
-                    onClick={() => onRejectApplication && onRejectApplication(paidApplication.id)}
-                    disabled={approvingStudent || rejectingStudent}
-                    className="px-4 py-2 rounded-lg font-medium border transition-colors text-center text-sm text-red-600 border-red-200 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Reject Application
-                  </button>
-                  <button
-                    disabled={approvingStudent || rejectingStudent}
-                    onClick={() => onApproveApplication && onApproveApplication(paidApplication.id)}
-                    className="px-4 py-2 rounded-lg font-medium bg-[#05294E] text-white hover:bg-[#041f38] disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-center text-sm"
-                  >
-                    {approvingStudent ? 'Approving...' : 'Approve Application'}
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
@@ -116,9 +67,7 @@ const SelectedScholarshipCard: React.FC<SelectedScholarshipCardProps> = React.me
   return (
     prevProps.student.student_id === nextProps.student.student_id &&
     prevProps.student.scholarship_title === nextProps.student.scholarship_title &&
-    prevProps.student.is_application_fee_paid === nextProps.student.is_application_fee_paid &&
-    prevProps.approvingStudent === nextProps.approvingStudent &&
-    prevProps.rejectingStudent === nextProps.rejectingStudent
+    prevProps.student.is_application_fee_paid === nextProps.student.is_application_fee_paid
   );
 });
 

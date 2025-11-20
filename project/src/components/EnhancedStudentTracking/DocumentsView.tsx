@@ -155,10 +155,13 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
 
   // Função para buscar document requests internamente
   const fetchDocumentRequests = async (applicationId: string, universityId?: string) => {
-    if (!applicationId) return;
+    if (!applicationId) {
+      console.log('❌ [DOCUMENTS VIEW] fetchDocumentRequests: No applicationId provided');
+      return;
+    }
     
     try {
-      // Fetching document requests for application
+      console.log('🔍 [DOCUMENTS VIEW] fetchDocumentRequests: Starting fetch for applicationId:', applicationId, 'universityId:', universityId, 'studentId:', studentId);
       
       let allRequests: any[] = [];
       
@@ -176,7 +179,12 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
         .eq('scholarship_application_id', applicationId)
         .order('created_at', { ascending: false });
 
-      if (specificError) throw specificError;
+      if (specificError) {
+        console.error('❌ [DOCUMENTS VIEW] Error fetching specific requests:', specificError);
+        throw specificError;
+      }
+      
+      console.log('✅ [DOCUMENTS VIEW] Found specific requests:', specificRequests?.length || 0, specificRequests);
       allRequests = [...allRequests, ...(specificRequests || [])];
       
       // Buscar requests globais se tivermos university_id
@@ -210,6 +218,16 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
       // Remover busca de TODOS os requests globais - apenas mostrar os específicos do aluno
 
       // Found document requests
+      console.log('✅ [DOCUMENTS VIEW] Total requests found:', allRequests.length);
+      console.log('✅ [DOCUMENTS VIEW] Requests with uploads:', allRequests.filter(r => r.document_request_uploads && r.document_request_uploads.length > 0).length);
+      allRequests.forEach((req, idx) => {
+        console.log(`📄 [DOCUMENTS VIEW] Request ${idx + 1}:`, {
+          id: req.id,
+          title: req.title,
+          uploads_count: req.document_request_uploads?.length || 0,
+          uploads: req.document_request_uploads
+        });
+      });
       setInternalDocumentRequests(allRequests);
     } catch (error) {
       console.error('❌ [DOCUMENTS VIEW] Error fetching document requests:', error);
@@ -219,9 +237,13 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
   // Buscar a aplicação real do banco se não tivermos dados completos
   useEffect(() => {
     const fetchRealApplication = async () => {
-      // Se já temos uma aplicação com acceptance letter, não precisamos buscar
-      if (scholarshipApplication?.acceptance_letter_url) {
+      // Se já temos uma aplicação com acceptance letter, usar ela mas ainda buscar document requests
+      if (scholarshipApplication?.acceptance_letter_url && scholarshipApplication?.id) {
         setRealScholarshipApplication(scholarshipApplication);
+        // ✅ CORREÇÃO: Sempre buscar document requests mesmo quando há acceptance letter
+        const universityId = scholarshipApplication.scholarships?.universities?.id || 
+                            scholarshipApplication.university_id;
+        await fetchDocumentRequests(scholarshipApplication.id, universityId);
         return;
       }
 
@@ -434,6 +456,17 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
     fetchRealApplication();
   }, [scholarshipApplication, studentDocuments, studentId]);
 
+  // ✅ CORREÇÃO: Sempre buscar document requests quando temos uma aplicação disponível
+  useEffect(() => {
+    const currentApp = realScholarshipApplication || scholarshipApplication;
+    if (currentApp?.id && studentId) {
+      const universityId = currentApp.scholarships?.universities?.id || 
+                          currentApp.university_id;
+      console.log('🔍 [DOCUMENTS VIEW] Fetching document requests for application:', currentApp.id, 'university:', universityId, 'studentId:', studentId);
+      fetchDocumentRequests(currentApp.id, universityId);
+    }
+  }, [realScholarshipApplication?.id, scholarshipApplication?.id, studentId]);
+
   // Usar a aplicação real se disponível, senão usar a passada como prop
   const currentApplication = realScholarshipApplication || scholarshipApplication;
   
@@ -510,19 +543,24 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
             const internalRequests = internalDocumentRequests || [];
             
             // Criar um mapa para evitar duplicatas
+            // ✅ CORREÇÃO: Priorizar requests internos (que têm uploads) sobre os da prop
             const requestsMap = new Map();
             
-            // Adicionar requests da prop
+            // Adicionar requests da prop primeiro (serão sobrescritos se houver internos com mesmo id)
             propRequests.forEach(request => {
               if (request.id !== 'acceptance_letter') {
                 requestsMap.set(request.id, request);
               }
             });
             
-            // Adicionar requests internos (global requests)
+            // Adicionar requests internos (têm uploads incluídos) - sobrescrevem os da prop
             internalRequests.forEach(request => {
               if (request.id !== 'acceptance_letter') {
-                requestsMap.set(request.id, request);
+                // Priorizar requests internos que têm uploads ou dados mais completos
+                const existing = requestsMap.get(request.id);
+                if (!existing || (request.document_request_uploads && request.document_request_uploads.length > 0)) {
+                  requestsMap.set(request.id, request);
+                }
               }
             });
             
@@ -540,15 +578,21 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                 
                 const requestsMap = new Map();
                 
+                // Adicionar requests da prop primeiro
                 propRequests.forEach(request => {
                   if (request.id !== 'acceptance_letter') {
                     requestsMap.set(request.id, request);
                   }
                 });
                 
+                // Adicionar requests internos (têm uploads incluídos) - sobrescrevem os da prop
                 internalRequests.forEach(request => {
                   if (request.id !== 'acceptance_letter') {
-                    requestsMap.set(request.id, request);
+                    // Priorizar requests internos que têm uploads ou dados mais completos
+                    const existing = requestsMap.get(request.id);
+                    if (!existing || (request.document_request_uploads && request.document_request_uploads.length > 0)) {
+                      requestsMap.set(request.id, request);
+                    }
                   }
                 });
                 

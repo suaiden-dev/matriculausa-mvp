@@ -90,10 +90,10 @@ export const ModalContent: React.FC<ModalContentProps> = ({
                 ${promotionalCouponValidation.finalAmount.toFixed(2)}
               </div>
               <p className="text-xs text-gray-600 mt-1">
-                Valor com desconto
+                {t('preCheckoutModal.promotionalCoupon.discountedValue')}
               </p>
               <p className="text-xs text-gray-500 mt-1 line-through">
-                ${(promotionalCouponValidation.finalAmount + promotionalCouponValidation.discountAmount).toFixed(2)} (original)
+                ${(promotionalCouponValidation.finalAmount + promotionalCouponValidation.discountAmount).toFixed(2)} {t('preCheckoutModal.promotionalCoupon.originalValue')}
               </p>
             </>
           ) : (
@@ -121,7 +121,7 @@ export const ModalContent: React.FC<ModalContentProps> = ({
       <div className="space-y-4">
         <div className="text-center">
           <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            Cupom Promocional
+            {t('preCheckoutModal.promotionalCoupon.title')}
           </h3>
         </div>
 
@@ -135,14 +135,14 @@ export const ModalContent: React.FC<ModalContentProps> = ({
                   <span className="font-semibold text-green-800">{promotionalCoupon}</span>
                   {promotionalCouponValidation.discountAmount && (
                     <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded-full">
-                      -${promotionalCouponValidation.discountAmount.toFixed(2)} de desconto
+                      -${promotionalCouponValidation.discountAmount.toFixed(2)} {t('preCheckoutModal.promotionalCoupon.applied')}
                     </span>
                   )}
                 </div>
                 <button
                   onClick={removePromotionalCoupon}
                   className="p-2 hover:bg-green-100 rounded-lg transition-colors"
-                  title="Remover cupom"
+                  title={t('preCheckoutModal.promotionalCoupon.remove')}
                 >
                   <XCircle className="w-5 h-5 text-green-600 hover:text-red-600" />
                 </button>
@@ -177,7 +177,7 @@ export const ModalContent: React.FC<ModalContentProps> = ({
                     setPromotionalCoupon?.(upperValue);
                   }
                 }}
-                placeholder="Digite o código"
+                placeholder={t('preCheckoutModal.promotionalCoupon.enterCode')}
                 className="flex-1 px-4 sm:px-5 py-3 sm:py-4 border-2 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-center font-mono text-base sm:text-lg tracking-wider border-gray-300"
                 style={{ fontSize: '16px' }}
                 maxLength={20}
@@ -191,10 +191,10 @@ export const ModalContent: React.FC<ModalContentProps> = ({
                 {isValidatingPromotionalCoupon ? (
                   <div className="flex items-center justify-center space-x-2">
                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    <span className="hidden sm:inline">Validando...</span>
+                    <span className="hidden sm:inline">{t('preCheckoutModal.promotionalCoupon.validating')}</span>
                   </div>
                 ) : (
-                  'Validar'
+                  t('preCheckoutModal.promotionalCoupon.validate')
                 )}
               </button>
             </div>

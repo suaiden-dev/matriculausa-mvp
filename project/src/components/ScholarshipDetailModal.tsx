@@ -201,7 +201,7 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
                         <div className="text-center text-white">
                           <GraduationCap className="h-16 w-16 mx-auto mb-2 text-white/60" />
                           <p className="text-sm font-medium opacity-80">
-                            {t('scholarshipsPage.modal.unlockImage', { defaultValue: 'Faça login para desbloquear a imagem' })}
+                            {t('scholarshipsPage.modal.unlockImage')}
                           </p>
                         </div>
                       </div>
@@ -502,16 +502,12 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
                   )}
 
                   {/* University Info */}
-                  <div className={`bg-white rounded-2xl p-6 border border-slate-200 shadow-sm relative ${
-                    !user || (user?.role === 'student' && (!userProfile || !userProfile?.has_paid_selection_process_fee))
-                      ? 'blur-sm opacity-40' 
-                      : ''
-                  }`}>
+                  <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm relative">
                     <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
                       <Building className="h-5 w-5 text-slate-600" />
                       {t('scholarshipsPage.modal.universityInformation')}
                     </h4>
-                    {!user || (user?.role === 'student' && (!userProfile || !userProfile?.has_paid_selection_process_fee)) ? (
+                    {!canViewSensitive ? (
                       <div className="p-4 bg-blue-50 rounded-xl border border-blue-200">
                         <p className="text-blue-800 text-sm">
                           {!user ? t('scholarshipsPage.modal.loginRequired') : t('scholarshipsPage.modal.universityDetailsLocked')}
@@ -538,12 +534,15 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
                     )}
                     
                     {/* Overlay de bloqueio para usuários não logados ou não pagos */}
-                    {!user || (user?.role === 'student' && (!userProfile || !userProfile?.has_paid_selection_process_fee)) && (
-                      <div className="absolute inset-0 bg-white/80 rounded-2xl flex items-center justify-center">
-                        <div className="text-center">
-                          <Building className="h-8 w-8 mx-auto mb-2 text-slate-400" />
-                          <p className="text-sm font-medium text-slate-600">
+                    {!canViewSensitive && (
+                      <div className="absolute inset-0 bg-white/95 backdrop-blur-sm rounded-2xl flex items-center justify-center z-10">
+                        <div className="text-center p-6">
+                          <Building className="h-10 w-10 mx-auto mb-3 text-slate-400" />
+                          <p className="text-base font-semibold text-slate-700 mb-1">
                             {t('scholarshipsPage.modal.unlockUniversityInfo')}
+                          </p>
+                          <p className="text-sm text-slate-500">
+                            {!user ? t('scholarshipsPage.modal.loginRequired') : t('scholarshipsPage.modal.universityDetailsLocked')}
                           </p>
                         </div>
                       </div>
