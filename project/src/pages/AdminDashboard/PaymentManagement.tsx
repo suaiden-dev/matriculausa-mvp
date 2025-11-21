@@ -193,8 +193,6 @@ const PaymentManagement = (): React.JSX.Element => {
   const itemsPerPage = pageSize;
   const setItemsPerPage = (n: number) => setPageSize(n);
   const [backendTotalCount, setBackendTotalCount] = useState<number | null>(null);
-  const [currentPageZelle, setCurrentPageZelle] = useState(1);
-  // zelleTotalCount agora vem do React Query (zellePaymentsQuery.data?.count)
 
   // Estados para ordenação
   const [sortBy, setSortBy] = useState<keyof PaymentRecord>('payment_date');
@@ -215,7 +213,7 @@ const PaymentManagement = (): React.JSX.Element => {
   const shouldLoadAffiliateRequests = activeTab === 'affiliate-requests';
   
   const paymentsQuery = usePaymentsQuery(shouldLoadPayments);
-  const zellePaymentsQuery = useZellePaymentsQuery(currentPageZelle, itemsPerPage, shouldLoadZelle);
+  const zellePaymentsQuery = useZellePaymentsQuery(shouldLoadZelle);
   const universityRequestsQuery = useUniversityRequestsQuery(shouldLoadUniversityRequests);
   const affiliateRequestsQuery = useAffiliateRequestsQuery(shouldLoadAffiliateRequests);
   // Universities e Affiliates são sempre carregados (são referências usadas em filtros)
@@ -242,7 +240,6 @@ const PaymentManagement = (): React.JSX.Element => {
   const universityRequests = universityRequestsQuery.data || [];
   const affiliateRequests = affiliateRequestsQuery.data || [];
   const zellePayments = zellePaymentsQuery.data?.records || [];
-  const zelleTotalCount = zellePaymentsQuery.data?.count || 0;
   const loadingZellePayments = zellePaymentsQuery.isLoading;
   const loadingUniversityRequests = universityRequestsQuery.isLoading;
   const loadingAffiliateRequests = affiliateRequestsQuery.isLoading;
@@ -866,17 +863,6 @@ const PaymentManagement = (): React.JSX.Element => {
           openZelleProofModal={openZelleProofModal}
           openZelleReviewModal={openZelleReviewModal}
           openZelleNotesModal={openZelleNotesModal}
-          currentPage={currentPageZelle}
-          totalPages={Math.max(1, Math.ceil(zelleTotalCount / itemsPerPage))}
-          totalItems={zelleTotalCount}
-          itemsPerPage={itemsPerPage}
-          onPageChange={(page: number) => { 
-            setCurrentPageZelle(page); 
-          }}
-          onItemsPerPageChange={(newItemsPerPage: number) => {
-            setItemsPerPage(newItemsPerPage);
-            setCurrentPageZelle(1);
-          }}
         />
       )}
       {/* Payment Details Modal */}
