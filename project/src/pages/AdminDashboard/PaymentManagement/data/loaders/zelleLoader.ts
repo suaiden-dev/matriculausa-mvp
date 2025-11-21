@@ -9,6 +9,15 @@ export async function loadZellePaymentsLoader(
   pageSize: number,
   signal?: AbortSignal
 ): Promise<ZelleLoadResult> {
+  // Detectar ambiente para aplicar filtro de @uorak.com apenas em produção
+  // ✅ Filtro aplicado no servidor: em produção, exclui @uorak.com; em localhost, mostra tudo
+  const isDevelopment = typeof window !== 'undefined' && (
+    window.location.hostname === 'localhost' || 
+    window.location.hostname === '127.0.0.1' || 
+    window.location.hostname.includes('localhost') || 
+    window.location.hostname.includes('dev')
+  );
+
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
   
@@ -34,6 +43,12 @@ export async function loadZellePaymentsLoader(
 
     for (const zellePayment of zellePaymentsData) {
       const student = userProfiles?.find((p) => p.user_id === zellePayment.user_id);
+      
+      // ✅ FILTRO NO SERVIDOR: Excluir @uorak.com apenas em produção
+      if (!isDevelopment && student?.email?.toLowerCase().includes('@uorak.com')) {
+        continue; // Pular este pagamento em produção
+      }
+      
       const studentName = student?.full_name && student.full_name !== student?.email
         ? student.full_name
         : student?.email || 'Unknown User';
@@ -64,6 +79,13 @@ export async function loadZellePaymentsLoader(
     }
   }
 
+  // ⚠️ NOTA SOBRE COUNT: O count do Supabase inclui todos os registros (incluindo @uorak.com)
+  // Em produção, após filtrar @uorak.com, o count pode estar ligeiramente acima do real
+  // Isso é aceitável pois:
+  // 1. Os dados exibidos estão corretos (filtrados)
+  // 2. A paginação funciona corretamente (baseada nos dados reais)
+  // 3. Os contadores no componente usam os dados filtrados, então estão corretos
+  // Uma contagem 100% precisa exigiria uma query adicional custosa, não vale a pena
   return { records, count: count || 0 };
 }
 

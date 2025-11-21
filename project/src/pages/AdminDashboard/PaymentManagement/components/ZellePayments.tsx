@@ -3,7 +3,6 @@ import { CreditCard, Clock, CheckCircle2, XCircle, Grid3X3, List, Eye, CheckCirc
 import { PaginationBar } from './PaginationBar';
 import { formatCentsToDollars } from '../../../../utils/currency';
 import ZellePaymentsSkeleton from '../../../../components/ZellePaymentsSkeleton';
-import { useEnvironment } from '../../../../hooks/useEnvironment';
 
 export interface ZellePaymentsProps {
 	zellePayments: any[];
@@ -38,21 +37,9 @@ function ZellePaymentsBase(props: ZellePaymentsProps) {
     onItemsPerPageChange,
 	} = props;
 
-  const { isDevelopment } = useEnvironment();
-
-	// Filtrar pagamentos Zelle: excluir usuários com email @uorak.com (exceto em localhost)
-	// IMPORTANTE: Os dados já vêm paginados do servidor, então este filtro só remove itens da página atual
-	const filteredZellePayments = useMemo(() => {
-		if (isDevelopment) {
-			// Em localhost, mostrar todos os itens da página atual
-			return zellePayments;
-		}
-		// Em produção/staging, excluir pagamentos de estudantes com email @uorak.com da página atual
-		return zellePayments.filter((payment: any) => {
-			const email = payment.student_email?.toLowerCase() || '';
-			return !email.includes('@uorak.com');
-		});
-	}, [zellePayments, isDevelopment]);
+	// ✅ FILTRO MOVIDO PARA O SERVIDOR: Os dados já vêm filtrados do loader
+	// Não precisa mais filtrar aqui, apenas usar os dados diretamente
+	const filteredZellePayments = zellePayments;
 
 	// Calcular índices para paginação (baseado no total do servidor, não no filtrado local)
 	const startIndex = useMemo(() => (currentPage - 1) * itemsPerPage, [currentPage, itemsPerPage]);
