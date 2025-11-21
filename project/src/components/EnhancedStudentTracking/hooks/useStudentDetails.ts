@@ -13,6 +13,7 @@ export const useStudentDetails = () => {
   const [loadingStudentDetails, setLoadingStudentDetails] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [i20ControlFeeDeadline, setI20ControlFeeDeadline] = useState<Date | null>(null);
+  const [allApplications, setAllApplications] = useState<any[]>([]);
 
 
   // Usar o contexto de autenticação
@@ -152,6 +153,8 @@ export const useStudentDetails = () => {
             scholarships (
               id,
               title,
+              field_of_study,
+              annual_value_with_scholarship,
               application_fee_amount,
               scholarship_fee_amount,
               universities (
@@ -169,6 +172,9 @@ export const useStudentDetails = () => {
         
         // Usar a aplicação mais recente para dados de exibição
         const applicationData = allApplications?.[0] || null;
+
+        // ✅ NOVO: Armazenar todas as aplicações para exibição (fallback)
+        setAllApplications(allApplications || []);
 
         let sellerData = null;
         if (profileData.seller_referral_code) {
@@ -301,6 +307,8 @@ export const useStudentDetails = () => {
             scholarships (
               id,
               title,
+              field_of_study,
+              annual_value_with_scholarship,
               application_fee_amount,
               scholarship_fee_amount,
               universities (
@@ -321,38 +329,57 @@ export const useStudentDetails = () => {
         // Usar a aplicação mais recente para dados de exibição
         const applicationData = allApplications?.[0] || null;
 
+        // ✅ NOVO: Armazenar todas as aplicações para exibição
+        setAllApplications(allApplications || []);
 
         studentData.documents = applicationData?.documents;
         setStudentDocuments(applicationData?.documents);
 
         // Buscar document requests da universidade para este estudante
-        if (applicationData?.scholarship_id) {
+        // ✅ CORREÇÃO: Buscar requests para TODAS as aplicações, não apenas a primeira
+        if (allApplications && allApplications.length > 0) {
           
           try {
-            // ✅ CORREÇÃO: Seguir o mesmo padrão da universidade
-            // Primeiro, buscar document_requests para esta aplicação
-            const { data: requestsForApp, error: requestsError } = await supabase
-              .from('document_requests')
-              .select('*')
-              .eq('scholarship_application_id', applicationData.id);
+            // ✅ CORREÇÃO: Buscar document_requests para TODAS as aplicações do estudante
+            const applicationIds = allApplications.map(app => app.id).filter(Boolean);
             
-            if (requestsError) {
-              console.log('❌ [DOCUMENT REQUEST] Error fetching requests:', requestsError);
+            let requestsForApp: any[] = [];
+            if (applicationIds.length > 0) {
+              const { data: requestsData, error: requestsError } = await supabase
+                .from('document_requests')
+                .select('*')
+                .in('scholarship_application_id', applicationIds);
+              
+              if (requestsError) {
+                console.log('❌ [DOCUMENT REQUEST] Error fetching requests:', requestsError);
+              } else {
+                console.log('✅ [DOCUMENT REQUEST] Requests found for all applications:', requestsData);
+                requestsForApp = requestsData || [];
+              }
             } else {
-              console.log('✅ [DOCUMENT REQUEST] Requests found:', requestsForApp);
+              console.log('⚠️ [DOCUMENT REQUEST] No application IDs found');
             }
             
-            // Buscar requests globais da universidade
+            // Buscar requests globais de todas as universidades das aplicações
             let globalRequests: any[] = [];
-            if (applicationData?.scholarships?.universities?.id) {
-              const universityId = applicationData.scholarships.universities.id;
-              console.log('🔍 [DOCUMENT REQUEST] Fetching global requests for university:', universityId);
+            const universityIds = allApplications
+              .map(app => {
+                const scholarship = app.scholarships 
+                  ? (Array.isArray(app.scholarships) ? app.scholarships[0] : app.scholarships)
+                  : null;
+                return scholarship?.universities?.id;
+              })
+              .filter(Boolean)
+              .filter((id, index, self) => self.indexOf(id) === index); // Remove duplicatas
+            
+            if (universityIds.length > 0) {
+              console.log('🔍 [DOCUMENT REQUEST] Fetching global requests for universities:', universityIds);
               
               const { data: globalData, error: globalError } = await supabase
                 .from('document_requests')
                 .select('*')
                 .eq('is_global', true)
-                .eq('university_id', universityId);
+                .in('university_id', universityIds);
               
               if (globalError) {
                 console.log('❌ [DOCUMENT REQUEST] Error fetching global requests:', globalError);
@@ -362,15 +389,15 @@ export const useStudentDetails = () => {
               }
             }
 
-            // Buscar requests específicos do estudante criados pelo super admin
+            // Buscar requests específicos do estudante criados pelo super admin para TODAS as aplicações
             let studentSpecificRequests: any[] = [];
-            if (applicationData?.id) {
-              console.log('🔍 [DOCUMENT REQUEST] Fetching student-specific requests for application:', applicationData.id);
+            if (applicationIds.length > 0) {
+              console.log('🔍 [DOCUMENT REQUEST] Fetching student-specific requests for all applications:', applicationIds);
               
               const { data: studentData, error: studentError } = await supabase
                 .from('document_requests')
                 .select('*')
-                .eq('scholarship_application_id', applicationData.id)
+                .in('scholarship_application_id', applicationIds)
                 .eq('is_global', false);
               
               if (studentError) {
@@ -390,11 +417,22 @@ export const useStudentDetails = () => {
               const requestIds = allRequestsForApp.map(req => req.id);
               
               // ✅ CORREÇÃO CRÍTICA: Filtrar uploads apenas do estudante atual
+              // uploaded_by pode ser user_id (auth.users) ou profile_id (user_profiles)
+              // Buscar usando ambos os IDs possíveis
+              const studentUserId = studentData.student_id; // user_id do auth.users
+              const studentProfileId = profile_id; // id da tabela user_profiles
+              const searchIds = [studentUserId];
+              if (studentProfileId && studentProfileId !== studentUserId) {
+                searchIds.push(studentProfileId);
+              }
+              
+              console.log('🔍 [DOCUMENT REQUEST] Searching uploads with IDs:', searchIds);
+              
               const { data: uploadsForRequests, error: uploadsError } = await supabase
                 .from('document_request_uploads')
                 .select('*')
                 .in('document_request_id', requestIds)
-                .eq('uploaded_by', studentData.student_id);  // ✅ Filtrar por estudante
+                .in('uploaded_by', searchIds);  // ✅ Filtrar por estudante (user_id ou profile_id)
               
               if (uploadsError) {
                 console.log('❌ [DOCUMENT REQUEST] Error fetching uploads for requests:', uploadsError);
@@ -530,6 +568,13 @@ export const useStudentDetails = () => {
               // Por fim, distribuir os uploads pelos requests correspondentes
               uploads.forEach(upload => {
                 const requestId = upload.document_request_id;
+                console.log('🔍 [DOCUMENT REQUEST] Processing upload:', {
+                  uploadId: upload.id,
+                  requestId: requestId,
+                  hasRequestInMap: requestId ? documentRequestsMap.has(requestId) : false,
+                  status: upload.status
+                });
+                
                 if (requestId && documentRequestsMap.has(requestId)) {
                   // Formatar o upload para exibição
                   let filename = 'Document';
@@ -553,6 +598,13 @@ export const useStudentDetails = () => {
                   };
                   
                   documentRequestsMap.get(requestId).document_request_uploads.push(formattedUpload);
+                  console.log('✅ [DOCUMENT REQUEST] Upload added to request:', requestId);
+                } else {
+                  console.log('⚠️ [DOCUMENT REQUEST] Upload not associated with any request:', {
+                    uploadId: upload.id,
+                    requestId: requestId,
+                    availableRequestIds: Array.from(documentRequestsMap.keys())
+                  });
                 }
               });
               
@@ -793,6 +845,7 @@ export const useStudentDetails = () => {
     setStudentDocuments([]);
     setDocumentRequests([]);
     setI20ControlFeeDeadline(null);
+    setAllApplications([]);
     setError(null);
   }, []);
 
@@ -804,6 +857,7 @@ export const useStudentDetails = () => {
     studentDocuments,
     documentRequests,
     i20ControlFeeDeadline,
+    allApplications,
     loadingStudentDetails,
     error,
     loadStudentDetails,

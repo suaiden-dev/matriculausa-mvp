@@ -53,24 +53,86 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user }) => {
     }
   });
 
-  // Sincronizar dados do usuário
+  // Carregar dados do perfil diretamente do banco de dados
   useEffect(() => {
-    if (user) {
-      setFormData({
-        name: user.name || '',
-        phone: user.phone || '',
-        territory: user.territory || '',
-        company_name: user.company_name || '',
-        website: user.website || '',
-        notifications: {
-          email: user.notifications?.email ?? true,
-          sms: user.notifications?.sms ?? false,
-          push: user.notifications?.push ?? true
+    const loadUserProfile = async () => {
+      if (!authUser) return;
+      
+      try {
+        console.log('🔄 [ProfileSettings] Carregando perfil do banco de dados para user_id:', authUser.id);
+        const { data: profile, error } = await supabase
+          .from('user_profiles')
+          .select('full_name, phone, territory, company_name, website, notifications, avatar_url')
+          .eq('user_id', authUser.id)
+          .single();
+        
+        if (error) {
+          console.error('❌ [ProfileSettings] Erro ao carregar perfil:', error);
+          // Fallback para dados do user prop
+          if (user) {
+            setFormData({
+              name: user.name || '',
+              phone: user.phone || '',
+              territory: user.territory || '',
+              company_name: user.company_name || '',
+              website: user.website || '',
+              notifications: {
+                email: user.notifications?.email ?? true,
+                sms: user.notifications?.sms ?? false,
+                push: user.notifications?.push ?? true
+              }
+            });
+            setAvatarUrl(user.avatar_url);
+          }
+          return;
         }
-      });
-      setAvatarUrl(user.avatar_url);
-    }
-  }, [user]);
+        
+        if (profile) {
+          console.log('✅ [ProfileSettings] Perfil carregado do banco:', {
+            full_name: profile.full_name,
+            company_name: profile.company_name,
+            website: profile.website,
+            territory: profile.territory,
+            notifications: profile.notifications
+          });
+          
+          setFormData({
+            name: profile.full_name || user?.name || '',
+            phone: profile.phone || user?.phone || '',
+            territory: profile.territory || user?.territory || '',
+            company_name: profile.company_name || user?.company_name || '',
+            website: profile.website || user?.website || '',
+            notifications: (profile.notifications as any) || {
+              email: user?.notifications?.email ?? true,
+              sms: user?.notifications?.sms ?? false,
+              push: user?.notifications?.push ?? true
+            }
+          });
+          setAvatarUrl(profile.avatar_url || user?.avatar_url);
+        }
+      } catch (error) {
+        console.error('❌ [ProfileSettings] Erro ao carregar perfil:', error);
+        // Fallback para dados do user prop
+        if (user) {
+          setFormData({
+            name: user.name || '',
+            phone: user.phone || '',
+            territory: user.territory || '',
+            company_name: user.company_name || '',
+            website: user.website || '',
+            notifications: {
+              email: user.notifications?.email ?? true,
+              sms: user.notifications?.sms ?? false,
+              push: user.notifications?.push ?? true
+            }
+          });
+          setAvatarUrl(user.avatar_url);
+        }
+      }
+    };
+    
+    loadUserProfile();
+  }, [authUser, user]);
 
   const handleInputChange = (field: string, value: any) => {
     if (field.includes('.')) {
@@ -171,7 +233,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user }) => {
 
     try {
       // Update user profile
-      const { error: updateError } = await supabase
+      const { data: updatedProfile, error: updateError } = await supabase
         .from('user_profiles')
         .update({
           full_name: formData.name,
@@ -182,15 +244,49 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user }) => {
           notifications: formData.notifications,
           updated_at: new Date().toISOString()
         })
-        .eq('user_id', authUser.id);
+        .eq('user_id', authUser.id)
+        .select()
+        .single();
 
       if (updateError) {
         throw new Error(`Erro ao salvar: ${updateError.message}`);
       }
 
+      // Atualizar o estado local com os dados salvos
+      if (updatedProfile) {
+        console.log('✅ [ProfileSettings] Perfil atualizado com sucesso:', {
+          full_name: updatedProfile.full_name,
+          company_name: updatedProfile.company_name,
+          website: updatedProfile.website,
+          territory: updatedProfile.territory,
+          notifications: updatedProfile.notifications
+        });
+        
+        setFormData({
+          name: updatedProfile.full_name || formData.name,
+          phone: updatedProfile.phone || '',
+          territory: updatedProfile.territory || '',
+          company_name: updatedProfile.company_name || '',
+          website: updatedProfile.website || '',
+          notifications: (updatedProfile.notifications as any) || formData.notifications
+        });
+      }
+
       setSuccessMessage('Perfil atualizado com sucesso!');
       setTimeout(() => setSuccessMessage(null), 3000);
       setIsEditing(false);
+
+      // Recarregar os dados do perfil após salvar
+      if (updatedProfile) {
+        setFormData({
+          name: updatedProfile.full_name || formData.name,
+          phone: updatedProfile.phone || formData.phone,
+          territory: updatedProfile.territory || formData.territory,
+          company_name: updatedProfile.company_name || formData.company_name,
+          website: updatedProfile.website || formData.website,
+          notifications: (updatedProfile.notifications as any) || formData.notifications
+        });
+      }
 
     } catch (error: any) {
       setSaveError(error.message);
@@ -432,7 +528,12 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user }) => {
               </div>
               
               <div>
-                <h3 className="text-2xl font-bold text-slate-900 mb-2">{user?.name || 'Admin de Afiliados'}</h3>
+                <h3 className="text-2xl font-bold text-slate-900 mb-2">
+                  {formData.company_name && formData.company_name.trim() 
+                    ? formData.company_name 
+                    : (formData.name || user?.name || 'Admin de Afiliados')
+                  }
+                </h3>
                 <p className="text-slate-600 mb-3">{user?.email}</p>
                 <div className="flex items-center space-x-4">
                   <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
@@ -486,7 +587,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user }) => {
                     <User className="h-5 w-5 text-slate-400 mr-3" />
                     <div>
                       <label className="text-sm font-medium text-slate-500">Nome Completo</label>
-                      <p className="text-slate-900">{user?.name || 'Não fornecido'}</p>
+                      <p className="text-slate-900">{formData.name || user?.name || 'Não fornecido'}</p>
                     </div>
                   </div>
                   
@@ -502,7 +603,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user }) => {
                     <Phone className="h-5 w-5 text-slate-400 mr-3" />
                     <div>
                       <label className="text-sm font-medium text-slate-500">Telefone</label>
-                      <p className="text-slate-900">{user?.phone || 'Não fornecido'}</p>
+                      <p className="text-slate-900">{formData.phone || user?.phone || 'Não fornecido'}</p>
                     </div>
                   </div>
                   
@@ -510,7 +611,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user }) => {
                     <MapPin className="h-5 w-5 text-slate-400 mr-3" />
                     <div>
                       <label className="text-sm font-medium text-slate-500">Território/Região</label>
-                      <p className="text-slate-900">{user?.territory || 'Não fornecido'}</p>
+                      <p className="text-slate-900">{formData.territory || user?.territory || 'Não fornecido'}</p>
                     </div>
                   </div>
                 </div>
@@ -523,7 +624,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user }) => {
                     <Building className="h-5 w-5 text-slate-400 mr-3" />
                     <div>
                       <label className="text-sm font-medium text-slate-500">Nome da Empresa</label>
-                      <p className="text-slate-900">{user?.company_name || 'Não fornecido'}</p>
+                      <p className="text-slate-900">{formData.company_name || user?.company_name || 'Não fornecido'}</p>
                     </div>
                   </div>
                   
@@ -531,7 +632,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user }) => {
                     <Globe className="h-5 w-5 text-slate-400 mr-3" />
                     <div>
                       <label className="text-sm font-medium text-slate-500">Website</label>
-                      <p className="text-slate-900">{user?.website || 'Não fornecido'}</p>
+                      <p className="text-slate-900">{formData.website || user?.website || 'Não fornecido'}</p>
                     </div>
                   </div>
                   
@@ -540,7 +641,10 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user }) => {
                     <div>
                       <label className="text-sm font-medium text-slate-500">Notificações por Email</label>
                       <p className="text-slate-900">
-                        {user?.notifications?.email ? 'Ativadas' : 'Desativadas'}
+                        {formData.notifications?.email !== undefined 
+                          ? (formData.notifications.email ? 'Ativadas' : 'Desativadas')
+                          : (user?.notifications?.email ? 'Ativadas' : 'Desativadas')
+                        }
                       </p>
                     </div>
                   </div>
