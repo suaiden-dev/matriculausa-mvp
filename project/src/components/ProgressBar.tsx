@@ -81,8 +81,28 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({ steps, feeValues: cust
     i20ControlFee || `$${getFeeAmount('i20_control_fee')}`, // I-20 Control Fee
   ];
   
+  // Debug para loida4121@uorak.com
+  if (user?.email === 'loida4121@uorak.com') {
+    console.log('🔍 [ProgressBar] Debug valores:', {
+      customFeeValues,
+      defaultFeeValues,
+      selectionProcessFee,
+      isFeesLoading
+    });
+  }
+  
   // Usar valores customizados se fornecidos, senão usar os padrão
   const feeValues = customFeeValues || defaultFeeValues;
+  
+  // Debug qual array está sendo usado
+  if (user?.email === 'loida4121@uorak.com') {
+    console.log('🔍 [ProgressBar] Array sendo usado:', {
+      usingCustom: !!customFeeValues,
+      feeValues,
+      'customFeeValues[0]': customFeeValues?.[0],
+      'defaultFeeValues[0]': defaultFeeValues?.[0]
+    });
+  }
   
   // Para a application fee (índice 1), usar mensagem genérica se não houver valor específico
   const displayFeeValues = feeValues.map((value, index) => {
@@ -91,6 +111,11 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({ steps, feeValues: cust
     }
     return value;
   });
+  
+  // Debug final para loida4121@uorak.com
+  if (user?.email === 'loida4121@uorak.com') {
+    console.log('🔍 [ProgressBar] Valores finais displayFeeValues:', displayFeeValues);
+  }
   return (
     <div className="w-full flex flex-col items-center pb-8 md:pb-16 mb-4 md:mb-8">
       {/* Desktop: horizontal, Mobile: vertical */}

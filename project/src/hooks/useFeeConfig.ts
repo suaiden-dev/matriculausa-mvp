@@ -140,9 +140,9 @@ export const useFeeConfig = (userId?: string) => {
     if (!userId) return;
 
     try {
-      // Usar função RPC com SECURITY DEFINER para bypassar RLS
+      // ✅ Usar nova função que retorna TODOS os valores pagos (gross_amount_usd ou amount)
       const { data, error } = await supabase
-        .rpc('get_real_payment_amount', {
+        .rpc('get_user_paid_fees_display', {
           user_id_param: userId
         });
 
@@ -152,21 +152,23 @@ export const useFeeConfig = (userId?: string) => {
         return;
       }
 
-      if (data && data.length > 0 && data[0].payment_amount) {
-        setRealPaymentAmounts({
-          selection_process: data[0].payment_amount
+      if (data && data.length > 0) {
+        // Mapear os dados para um objeto { fee_type: amount }
+        const amounts: {[key: string]: number} = {};
+        data.forEach((fee: any) => {
+          amounts[fee.fee_type] = Number(fee.display_amount);
         });
         
-        // Debug para jolie8862@uorak.com
-        if (userId === '935e0eec-82c6-4a70-b013-e85dde6e63f7') {
-          console.log('🔍 [useFeeConfig] jolie8862@uorak.com - Real payment amount loaded:', data[0].payment_amount);
-        }
+        setRealPaymentAmounts(amounts);
+        
+        // Debug - Sempre logar para facilitar troubleshooting
+        console.log('🔍 [useFeeConfig] Real payment amounts loaded for user:', userId, amounts);
       } else {
         setRealPaymentAmounts({});
         
         // Debug para jolie8862@uorak.com
         if (userId === '935e0eec-82c6-4a70-b013-e85dde6e63f7') {
-          console.log('🔍 [useFeeConfig] jolie8862@uorak.com - No real payment amount found');
+          console.log('🔍 [useFeeConfig] jolie8862@uorak.com - No real payment amounts found');
         }
       }
     } catch (err) {
@@ -311,38 +313,7 @@ export const useFeeConfig = (userId?: string) => {
       return customAmount;
     }
 
-    // PRIORIDADE 1: Verificar se há valor real pago na tabela affiliate_referrals
-    if (realPaymentAmounts && Object.keys(realPaymentAmounts).length > 0) {
-      switch (feeType) {
-        case 'selection_process':
-          if (realPaymentAmounts.selection_process !== undefined) {
-            // Debug para jolie8862@uorak.com
-            if (userId === '935e0eec-82c6-4a70-b013-e85dde6e63f7') {
-              console.log('🔍 [useFeeConfig] jolie8862@uorak.com - Using REAL payment amount:', realPaymentAmounts.selection_process);
-            }
-            return realPaymentAmounts.selection_process;
-          }
-          break;
-      }
-    }
-
-    // PRIORIDADE 1.5: Para selection_process sem valor real pago, usar system_type
-    // MAS APENAS se não houver override personalizado
-    if (feeType === 'selection_process' && (!realPaymentAmounts || !realPaymentAmounts.selection_process)) {
-      // Verificar se há override primeiro
-      if (userFeeOverrides && userFeeOverrides.selection_process_fee !== undefined) {
-        // Se há override, não usar system_type, deixar para a verificação de override abaixo
-      } else {
-        // Só usar system_type se não houver override
-        if (userSystemType === 'simplified') {
-          return 350;
-        } else {
-          return 400; // legacy
-        }
-      }
-    }
-
-    // PRIORIDADE 2: Verificar se há override personalizado para este usuário
+    // PRIORIDADE 1: Verificar se há override personalizado para este usuário (MÁXIMA PRIORIDADE)
     if (userFeeOverrides) {
       switch (feeType) {
         case 'selection_process':
@@ -373,7 +344,28 @@ export const useFeeConfig = (userId?: string) => {
       }
     }
 
-    // PRIORIDADE 3: Usar valores baseados no system_type do usuário
+    // PRIORIDADE 2: Verificar se há valor real pago na tabela individual_fee_payments
+    if (realPaymentAmounts && Object.keys(realPaymentAmounts).length > 0) {
+      // Normalizar nome da taxa para match (remover sufixo _fee se existir)
+      const normalizedFeeType = feeType.replace(/_fee$/, '');
+      
+      if (realPaymentAmounts[normalizedFeeType] !== undefined) {
+        // Debug
+        console.log(`🔍 [useFeeConfig] Using REAL payment amount for ${normalizedFeeType}:`, realPaymentAmounts[normalizedFeeType]);
+        return realPaymentAmounts[normalizedFeeType];
+      }
+    }
+
+    // PRIORIDADE 3: Usar system_type para cálculo padrão
+    if (feeType === 'selection_process') {
+      if (userSystemType === 'simplified') {
+        return 350;
+      } else {
+        return 400; // legacy
+      }
+    }
+
+    // PRIORIDADE 4: Usar valores baseados no system_type do usuário
     // Para scholarship_fee, usar valores diferentes baseados no sistema
     if (feeType === 'scholarship_fee') {
       // Usar system_type carregado diretamente da tabela user_profiles
