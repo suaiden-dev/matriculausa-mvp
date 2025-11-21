@@ -305,10 +305,7 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
           setPromotionalCoupon(couponUsage.coupon_code);
           const validationData = {
             isValid: true,
-            message: t('preCheckoutModal.promotionalCoupon.successMessage', { 
-              code: couponUsage.coupon_code, 
-              amount: discountAmount.toFixed(2) 
-            }),
+            message: `Coupon ${couponUsage.coupon_code} applied! You saved $${discountAmount.toFixed(2)}`,
             discountAmount: discountAmount,
             finalAmount: finalAmount
           };
@@ -866,7 +863,7 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
     if (!promotionalCoupon.trim()) {
       setPromotionalCouponValidation({
         isValid: false,
-        message: t('preCheckoutModal.promotionalCoupon.enterCodePlease')
+        message: 'Please enter a coupon code'
       });
       return;
     }
@@ -877,84 +874,80 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
     setPromotionalCouponValidation(null);
 
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData.session?.access_token;
-
-      if (!token) {
-        throw new Error('Usuário não autenticado');
-      }
-
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/validate-promotional-coupon`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          coupon_code: normalizedCode,
-          fee_type: feeType,
-          purchase_amount: computedBasePrice
-        }),
+      // ✅ Use new RPC that validates AND increments usage count for admin coupons
+      const { data: result, error } = await supabase.rpc('validate_and_apply_admin_promotional_coupon', {
+        p_code: normalizedCode,
+        p_fee_type: feeType,
+        p_user_id: user?.id
       });
 
-      if (!response.ok) {
-        console.error('🔍 [PreCheckoutModal] Erro HTTP:', response.status, response.statusText);
-        const errorText = await response.text();
-        console.error('🔍 [PreCheckoutModal] Resposta de erro:', errorText);
-        setPromotionalCouponValidation({
-          isValid: false,
-          message: `${t('errors.serverError')} (${response.status}). ${t('errors.tryAgain')}`
-        });
-        return;
+      if (error) {
+        console.error('🔍 [PreCheckoutModal] Erro RPC:', error);
+        throw error;
       }
 
-      const result = await response.json();
       console.log('🔍 [PreCheckoutModal] Resultado da validação do cupom promocional:', result);
 
-      if (!result.success) {
+      if (!result || !result.valid) {
         setPromotionalCouponValidation({
           isValid: false,
-          message: result.error || t('errors.invalidCoupon')
+          message: result?.message || 'Invalid coupon code'
         });
         return;
       }
+
+      // Calculate discount locally based on RPC result
+      let discountAmount = 0;
+      if (result.discount_type === 'percentage') {
+        discountAmount = (computedBasePrice * result.discount_value) / 100;
+      } else {
+        discountAmount = result.discount_value;
+      }
+      
+      // Ensure discount doesn't exceed price
+      discountAmount = Math.min(discountAmount, computedBasePrice);
+      const finalAmount = Math.max(0, computedBasePrice - discountAmount);
 
       // Cupom válido
       const validationData = {
         isValid: true,
-        message: t('preCheckoutModal.promotionalCoupon.successMessage', { 
-          code: normalizedCode, 
-          amount: result.discount_amount.toFixed(2) 
-        }),
-        discountAmount: result.discount_amount,
-        finalAmount: result.final_amount
+        message: `Coupon ${normalizedCode} applied! You saved $${discountAmount.toFixed(2)}`,
+        discountAmount: discountAmount,
+        finalAmount: finalAmount,
+        couponId: result.id // Store coupon ID for later use
       };
       
       setPromotionalCouponValidation(validationData);
       
       // ✅ Registrar uso do cupom no banco de dados
       try {
-        console.log('[PreCheckoutModal] Registrando uso do cupom promocional...');
-        const recordResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/record-promotional-coupon-validation`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            coupon_code: normalizedCode,
-            fee_type: feeType,
-            original_amount: computedBasePrice,
-            discount_amount: result.discount_amount,
-            final_amount: result.final_amount
-          }),
-        });
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData.session?.access_token;
 
-        const recordResult = await recordResponse.json();
-        if (recordResult.success) {
-          console.log('[PreCheckoutModal] ✅ Uso do cupom registrado com sucesso!');
-        } else {
-          console.warn('[PreCheckoutModal] ⚠️ Aviso: Não foi possível registrar o uso do cupom:', recordResult.error);
+        if (token) {
+          console.log('[PreCheckoutModal] Registrando uso do cupom promocional...');
+          const recordResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/record-promotional-coupon-validation`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              coupon_code: normalizedCode,
+              coupon_id: result.id,
+              fee_type: feeType,
+              original_amount: computedBasePrice,
+              discount_amount: discountAmount,
+              final_amount: finalAmount
+            }),
+          });
+
+          const recordResult = await recordResponse.json();
+          if (recordResult.success) {
+            console.log('[PreCheckoutModal] ✅ Uso do cupom registrado com sucesso!');
+          } else {
+            console.warn('[PreCheckoutModal] ⚠️ Aviso: Não foi possível registrar o uso do cupom:', recordResult.error);
+          }
         }
       } catch (recordError) {
         console.warn('[PreCheckoutModal] ⚠️ Aviso: Erro ao registrar uso do cupom:', recordError);
@@ -968,14 +961,12 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
       window.dispatchEvent(new CustomEvent('promotionalCouponValidated', {
         detail: validationData
       }));
-      
-      // ✅ REMOVIDO: Não salvar mais no localStorage - apenas no banco de dados
 
     } catch (error: any) {
       console.error('🔍 [PreCheckoutModal] Erro ao validar cupom promocional:', error);
       setPromotionalCouponValidation({
         isValid: false,
-        message: error?.message || t('errors.connectionError')
+        message: error?.message || 'Connection error. Please try again.'
       });
     } finally {
       setIsValidatingPromotionalCoupon(false);
