@@ -153,21 +153,27 @@ const AdminStudentDetails: React.FC = () => {
 
     // Selection Process Fee
     if (realPaidAmounts.selection_process !== undefined && realPaidAmounts.selection_process > 0) {
-      // Considerar desconto Matricula ao calcular valor esperado
-      const hasMatrDiscount = hasMatriculaRewardsDiscount || studentHasSellerCode;
-      let expectedSelectionProcess: number;
-      if (hasMatrDiscount) {
-        expectedSelectionProcess = 350; // $400 - $50 desconto
-      } else {
-        expectedSelectionProcess = sysType === 'simplified' ? 350 : 400;
-      }
-      const expectedSelectionProcessWithDeps = expectedSelectionProcess + dependentCost;
+      // ✅ CORREÇÃO: Valores que vêm de getGrossPaidAmounts já foram processados corretamente
+      // e podem ter pequenas variações devido a taxas do Stripe, conversão de moeda, etc.
+      // Para valores razoáveis (entre $50 e $2000), sempre aceitar o valor real pago
+      const isReasonableRange = realPaidAmounts.selection_process >= 50 && realPaidAmounts.selection_process <= 2000;
       
-      if (isValueReasonable(realPaidAmounts.selection_process, expectedSelectionProcessWithDeps)) {
+      if (isReasonableRange) {
+        // Valor está em range razoável, aceitar diretamente (já foi processado pelo paymentConverter)
         normalized.selection_process = realPaidAmounts.selection_process;
+        console.log(`[AdminStudentDetails] ✅ Aceitando valor real pago para selection_process: ${realPaidAmounts.selection_process}`);
       } else {
-        // Valor muito discrepante, usar cálculo fixo
-        console.log(`[AdminStudentDetails] Valor de selection_process muito discrepante: ${realPaidAmounts.selection_process} (esperado ~${expectedSelectionProcessWithDeps}), usando cálculo fixo`);
+        // Valor fora do range razoável, pode ser BRL não convertido ou erro
+        console.log(`[AdminStudentDetails] ⚠️ Valor de selection_process fora do range razoável: ${realPaidAmounts.selection_process}, usando cálculo fixo`);
+        // Considerar desconto Matricula ao calcular valor esperado
+        const hasMatrDiscount = hasMatriculaRewardsDiscount || studentHasSellerCode;
+        let expectedSelectionProcess: number;
+        if (hasMatrDiscount) {
+          expectedSelectionProcess = 350; // $400 - $50 desconto
+        } else {
+          expectedSelectionProcess = sysType === 'simplified' ? 350 : 400;
+        }
+        
         if (feeOverrides?.selection_process_fee !== undefined) {
           normalized.selection_process = feeOverrides.selection_process_fee;
         } else {

@@ -16,6 +16,8 @@ import DocumentViewerModal from '../../components/DocumentViewerModal';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
 import { useStudentDetails } from '../../components/EnhancedStudentTracking/hooks/useStudentDetails';
 import { getRealPaidAmounts } from '../../utils/paymentConverter';
+import SelectedScholarshipCard from '../../components/AdminDashboard/StudentDetails/SelectedScholarshipCard';
+import StudentScholarshipsList from '../../components/EnhancedStudentTracking/StudentScholarshipsList';
 
 interface StudentInfo {
   student_id: string;
@@ -49,6 +51,7 @@ interface StudentInfo {
     application_fee_amount?: number;
     scholarship_fee_amount?: number;
   };
+  system_type?: string;
 }
 
 
@@ -69,6 +72,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
     studentDocuments: hookStudentDocuments,
     documentRequests: hookDocumentRequests,
     scholarshipApplication: hookScholarshipApplication,
+    allApplications: hookAllApplications,
     loadStudentDetails: hookLoadStudentDetails
   } = useStudentDetails();
   
@@ -416,105 +420,45 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
     }
   };
 
-  // Buscar a aplicação real com acceptance letter
+  // Buscar a aplicação real com acceptance letter de todas as aplicações
   useEffect(() => {
     const fetchRealApplication = async () => {
+      // Primeiro, verificar se a aplicação principal já tem acceptance letter
       if (scholarshipApplication?.acceptance_letter_url) {
         setRealScholarshipApplication(scholarshipApplication);
-      return;
-    }
+        return;
+      }
 
-      if (studentDocuments && studentDocuments.length > 0) {
+      // Se não, verificar todas as aplicações do hook
+      if (hookAllApplications && hookAllApplications.length > 0) {
         setLoadingApplication(true);
         try {
-          let applications = null;
-          let error = null;
-          
-          if (scholarshipApplication?.id) {
-            console.log('🔍 [DOCUMENTS VIEW] Checking existing application:', scholarshipApplication.id);
-            const { data, error: appError } = await supabase
-              .from('scholarship_applications')
-              .select(`
-                *,
-                scholarships (
-                  id,
-                  title,
-                  universities (
-                    id,
-                    name
-                  )
-                )
-              `)
-              .eq('id', scholarshipApplication.id)
-              .single();
-            
-            if (!appError && data) {
-              console.log('✅ [DOCUMENTS VIEW] Found existing application:', data);
-              applications = [data];
-            }
-          }
-          
-          if (!applications || applications.length === 0) {
-            console.log('🔍 [DOCUMENTS VIEW] Searching for application with acceptance letter...');
-            
-            const { data: odinaApp, error: odinaError } = await supabase
-              .from('scholarship_applications')
-              .select(`
-                *,
-                scholarships (
-                  id,
-                  title,
-                  universities (
-                    id,
-                    name
-                  )
-                )
-              `)
-              .eq('is_application_fee_paid', true)
-              .not('acceptance_letter_url', 'is', null)
-              .order('created_at', { ascending: false })
-              .limit(1);
-            
-            if (!odinaError && odinaApp && odinaApp.length > 0) {
-              console.log('✅ [DOCUMENTS VIEW] Found application with acceptance letter:', odinaApp);
-              applications = odinaApp;
-              error = null;
-        } else {
-              console.log('⚠️ [DOCUMENTS VIEW] No application with acceptance letter found, trying paid applications...');
-              
-              const { data, error: paidAppError } = await supabase
-                .from('scholarship_applications')
-                .select(`
-                  *,
-                  scholarships (
-                    id,
-                    title,
-                    universities (
-                      id,
-                      name
-                    )
-                  )
-                `)
-                .eq('is_application_fee_paid', true)
-                .order('created_at', { ascending: false })
-                .limit(1);
-            
-              if (!paidAppError && data && data.length > 0) {
-                console.log('✅ [DOCUMENTS VIEW] Found application with paid fee:', data);
-                applications = data;
-                error = null;
-              }
-            }
-          }
+          // Buscar a primeira aplicação que tenha acceptance_letter_url
+          const appWithAcceptanceLetter = hookAllApplications.find(
+            (app: any) => app.acceptance_letter_url && app.acceptance_letter_url.trim() !== ''
+          );
 
-          if (!error && applications && applications.length > 0) {
-            const app = applications[0];
-            console.log('🔍 [DOCUMENTS VIEW] Found real application:', app);
-            console.log('🔍 [DOCUMENTS VIEW] Acceptance letter URL:', app.acceptance_letter_url);
-            setRealScholarshipApplication(app);
+          if (appWithAcceptanceLetter) {
+            console.log('✅ [DOCUMENTS VIEW] Found application with acceptance letter from allApplications:', appWithAcceptanceLetter);
+            console.log('🔍 [DOCUMENTS VIEW] Acceptance letter URL:', appWithAcceptanceLetter.acceptance_letter_url);
+            setRealScholarshipApplication(appWithAcceptanceLetter);
+          } else {
+            // Se nenhuma tem acceptance letter, usar a primeira aplicação paga
+            const paidApp = hookAllApplications.find(
+              (app: any) => app.is_application_fee_paid === true
+            );
+            
+            if (paidApp) {
+              console.log('⚠️ [DOCUMENTS VIEW] No acceptance letter found, using first paid application:', paidApp);
+              setRealScholarshipApplication(paidApp);
+            } else if (hookAllApplications.length > 0) {
+              // Se não há aplicação paga, usar a primeira aplicação
+              console.log('⚠️ [DOCUMENTS VIEW] No paid application found, using first application:', hookAllApplications[0]);
+              setRealScholarshipApplication(hookAllApplications[0]);
+            }
           }
         } catch (error) {
-          console.error('Error fetching real application:', error);
+          console.error('❌ [DOCUMENTS VIEW] Error fetching real application:', error);
         } finally {
           setLoadingApplication(false);
         }
@@ -522,7 +466,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
     };
 
     fetchRealApplication();
-  }, [scholarshipApplication, studentDocuments]);
+  }, [hookAllApplications, scholarshipApplication]);
 
   // Buscar transfer form uploads quando a aplicação for carregada
   useEffect(() => {
@@ -1016,23 +960,34 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
       // Se file_url é um path do storage, converter para URL pública
       if (doc.file_url && !doc.file_url.startsWith('http')) {
         // Determinar o bucket correto baseado no tipo de documento
+        // Documentos normais (passport, diploma, funds_proof) SEMPRE vão para student-documents
+        // Transfer forms e acceptance letters podem estar em document-attachments
         let bucket = 'student-documents'; // default
         
-        // Se for transfer form, usar document-attachments
-        if (doc.filename && doc.filename.toLowerCase().includes('transfer')) {
-          bucket = 'document-attachments';
-        }
-        // Se for acceptance letter, usar document-attachments
-        else if (doc.filename && doc.filename.toLowerCase().includes('acceptance')) {
-          bucket = 'document-attachments';
+        // Verificar se é um documento de aplicação normal (passport, diploma, funds_proof)
+        // Se for, SEMPRE usar student-documents, independente do filename
+        const isNormalDoc = doc.type && ['passport', 'diploma', 'funds_proof'].includes(doc.type);
+        
+        // Apenas se NÃO for um documento normal, verificar filename para transfer/acceptance
+        if (!isNormalDoc && doc.filename) {
+          const filenameLower = doc.filename.toLowerCase();
+          // Apenas usar document-attachments se o filename claramente indicar transfer ou acceptance
+          // E não for um dos documentos normais
+          if ((filenameLower.includes('transfer') || filenameLower.includes('acceptance')) && 
+              !filenameLower.includes('passport') && 
+              !filenameLower.includes('diploma') && 
+              !filenameLower.includes('funds')) {
+            bucket = 'document-attachments';
+          }
         }
         
+        // Gerar URL pública com o bucket determinado
         const publicUrl = supabase.storage
           .from(bucket)
           .getPublicUrl(doc.file_url)
           .data.publicUrl;
         
-        console.log('URL pública gerada:', publicUrl);
+        console.log(`URL pública gerada com bucket ${bucket}:`, publicUrl);
         setPreviewUrl(publicUrl);
       } else {
         // Se já é uma URL completa, usar diretamente
@@ -1398,18 +1353,27 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                               const appStatus = (studentInfo as any)?.status || (studentInfo as any)?.application_status as string | undefined;
                               const documentsStatus = (studentInfo as any)?.documents_status as string | undefined;
                               
+                              // Verificar se há carta de aceite na aplicação atual
+                              const hasAcceptanceLetter = currentApplication?.acceptance_letter_url && 
+                                                         currentApplication.acceptance_letter_url.trim() !== '';
+                              
                               // Debug logs
                               console.log('🔍 [ENROLLMENT_STATUS] Debug:', {
                                 acceptanceStatus,
                                 appStatus,
                                 documentsStatus,
+                                hasAcceptanceLetter,
+                                currentApplicationAcceptanceLetter: currentApplication?.acceptance_letter_url,
                                 studentInfo: studentInfo
                               });
                               
                               // Para usuários com aplicação de bolsa: verificar status da aplicação
                               // Para usuários sem aplicação de bolsa: verificar documents_status
+                              // ✅ CORREÇÃO: Incluir verificação de 'sent' e presença de acceptance_letter_url
                               const isEnrolled = appStatus === 'enrolled' || 
                                                 acceptanceStatus === 'approved' || 
+                                                acceptanceStatus === 'sent' ||
+                                                hasAcceptanceLetter ||
                                                 (documentsStatus === 'approved' && !appStatus);
                               const label = isEnrolled ? 'Enrolled' : 'Pending Acceptance';
                               const color = isEnrolled ? 'text-green-700' : 'text-yellow-700';
@@ -1432,150 +1396,46 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                 </div>
               </div>
 
-              {/* Scholarship Information Card */}
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
-                <div className="bg-gradient-to-r rounded-t-2xl from-slate-700 to-slate-800 px-6 py-4">
-                  <h2 className="text-xl font-semibold text-white flex items-center">
-                    <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                    </svg>
-                    Scholarship Details
-                  </h2>
-                </div>
-                <div className="p-6">
-                  <div className="space-y-4">
-                    <div className="flex items-start space-x-3">
-                      <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
-                      <div className="flex-1">
-                        <dt className="text-sm font-medium text-slate-600">Scholarship Program</dt>
-                        <dd className="text-lg font-semibold text-slate-900">
-                          {studentInfo.scholarship_title || 'Scholarship information not available'}
-                        </dd>
-                      </div>
-                    </div>
-                    <div className="flex items-start space-x-3">
-                      <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
-                      <div className="flex-1">
-                        <dt className="text-sm font-medium text-slate-600">University</dt>
-                        <dd className="text-lg font-semibold text-slate-900">
-                          {studentInfo.university_name || 'University not specified'}
-                        </dd>
-                      </div>
-                    </div>
-                                         <div className="flex items-start space-x-3">
-                       <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
-                       <div className="flex-1">
-                         <dt className="text-sm font-medium text-slate-600">Application Status</dt>
-                         <dd className="text-base text-slate-700">
-                           {(() => {
-                             console.log('🔍 [STUDENT_DETAILS] Renderizando Application Status:');
-                             console.log('🔍 [STUDENT_DETAILS] studentInfo:', studentInfo);
-                             console.log('🔍 [STUDENT_DETAILS] studentInfo.application_status:', studentInfo?.application_status);
-                             console.log('🔍 [STUDENT_DETAILS] Tipo do application_status:', typeof studentInfo?.application_status);
-                             console.log('🔍 [STUDENT_DETAILS] studentInfo completo:', JSON.stringify(studentInfo, null, 2));
-                             
-                             if (studentInfo?.application_status) {
-                               const formattedStatus = studentInfo.application_status.charAt(0).toUpperCase() + studentInfo.application_status.slice(1);
-                               console.log('🔍 [STUDENT_DETAILS] Status formatado:', formattedStatus);
-                               return formattedStatus;
-                             } else {
-                               console.log('🔍 [STUDENT_DETAILS] Status não disponível, mostrando fallback');
-                               return 'Status not available';
-                             }
-                           })()}
-                         </dd>
-                       </div>
-                     </div>
-                  </div>
-                </div>
-              </div>
+              {/* Selected Scholarship Card */}
+              {studentInfo && hookAllApplications && hookAllApplications.length > 0 && studentInfo.is_application_fee_paid && (
+                <SelectedScholarshipCard
+                  student={{
+                    student_id: studentInfo.student_id,
+                    user_id: studentInfo.student_id,
+                    student_name: studentInfo.full_name,
+                    student_email: studentInfo.email,
+                    scholarship_title: studentInfo.scholarship_title || null,
+                    university_name: studentInfo.university_name || null,
+                    is_application_fee_paid: studentInfo.is_application_fee_paid || false,
+                    all_applications: hookAllApplications,
+                    student_created_at: studentInfo.registration_date || new Date().toISOString(),
+                    has_paid_selection_process_fee: studentInfo.has_paid_selection_process_fee || false,
+                    has_paid_i20_control_fee: studentInfo.has_paid_i20_control_fee || false,
+                    application_status: studentInfo.application_status || null,
+                    student_process_type: studentInfo.student_process_type || null,
+                    payment_status: null,
+                    reviewed_at: null,
+                    reviewed_by: null,
+                    scholarship_name: studentInfo.scholarship_title || null,
+                    total_applications: hookAllApplications.length,
+                    is_locked: false,
+                    seller_referral_code: studentInfo.seller_referral_code || null,
+                    application_id: null,
+                    scholarship_id: null,
+                    applied_at: null,
+                    is_scholarship_fee_paid: studentInfo.is_scholarship_fee_paid || false,
+                    acceptance_letter_status: null
+                  } as any}
+                />
+              )}
 
-                            {/* Student Documents Section */}
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
-                <div className="bg-gradient-to-r from-[#05294E] to-[#041f38] px-6 py-4">
-                  <h2 className="text-xl font-semibold text-white flex items-center">
-                    <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    Student Documents
-                  </h2>
-                  <p className="text-slate-200 text-sm mt-1">Review each document and their current status</p>
-                </div>
-                <div className="p-6">
-                  {loading || !documentsLoaded ? (
-                    <div className="text-center py-8">
-                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#05294E] mx-auto mb-4"></div>
-                      <p className="text-slate-600">Loading documents...</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {DOCUMENTS_INFO.map((doc, index) => {
-                        const d = latestDocByType(doc.key);
-                        const status = d?.status || 'pending';
-                      
-                      return (
-                        <div key={doc.key}>
-                          <div className="bg-white p-4 sm:p-6 rounded-xl border border-slate-200">
-                            <div className="flex flex-col sm:flex-row items-start gap-4">
-                              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                </svg>
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex flex-wrap gap-2 mb-1">
-                                  <p className="font-medium text-slate-900 break-words">{doc.label}</p>
-                                  <span className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
-                                    status === 'approved' ? 'bg-green-100 text-green-800' :
-                                    status === 'changes_requested' ? 'bg-red-100 text-red-800' :
-                                    status === 'under_review' ? 'bg-yellow-100 text-yellow-800' :
-                                    'bg-slate-100 text-slate-700'
-                                  }`}>
-                                    {status === 'approved' ? 'Approved' :
-                                     status === 'changes_requested' ? 'Changes Requested' :
-                                     status === 'under_review' ? 'Under Review' :
-                                     d?.file_url ? 'Submitted' : 'Not Submitted'}
-                                  </span>
-                                </div>
-                                <p className="text-sm text-slate-600 break-words">{doc.description}</p>
-                                {d?.file_url && (
-                                  <p className="text-xs text-slate-400 mt-1">
-                                    Uploaded: {d.uploaded_at ? formatDate(d.uploaded_at) : new Date().toLocaleDateString()}
-                                  </p>
-                                )}
-                                
-                                {/* Botões de ação */}
-                                <div className="flex flex-col sm:flex-row gap-2 mt-3">
-                                  {d?.file_url && (
-                                    <button 
-                                      onClick={() => handleViewDocument(d)}
-                                      className="bg-[#05294E] hover:bg-[#041f38] text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto text-center"
-                                    >
-                                      View Document
-                                    </button>
-                                  )}
-                                  {d?.file_url && (
-                                    <button 
-                                      onClick={() => handleDownloadDocument(d)}
-                                      className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto text-center"
-                                    >
-                                      Download
-                                    </button>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                          {index < DOCUMENTS_INFO.length - 1 && (
-                            <div className="border-t border-slate-200"></div>
-                          )}
-                        </div>
-                      );
-                    })}
-                    </div>
-                  )}
-                </div>
-              </div>
+              {/* Student Scholarships List - All Applications */}
+              {hookAllApplications && hookAllApplications.length > 0 && (
+                <StudentScholarshipsList
+                  applications={hookAllApplications}
+                  onViewDocument={handleViewDocument}
+                />
+              )}
             </div>
 
             {/* Sidebar */}
@@ -1641,7 +1501,12 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                 </div>
               </div>
 
-              {/* Scholarship Range Management Card */}
+              {/* Scholarship Range Management Card - Only show for non-simplified students */}
+              {(() => {
+                // Verificar se é simplified - se qualquer um dos valores for simplified, ocultar o card
+                const isSimplified = userSystemType === 'simplified' || (studentInfo as any)?.system_type === 'simplified';
+                return !isSimplified;
+              })() && (
               <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
                 <div className="bg-gradient-to-r rounded-t-2xl from-[#05294E] to-[#0a4a7a] px-6 py-4">
                   <div className="flex items-center justify-between">
@@ -1736,6 +1601,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                   )}
                 </div>
               </div>
+              )}
 
               {/* Fee Status Card */}
               <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
@@ -1992,7 +1858,21 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                             </h5>
                             
                             <div className="bg-white border border-slate-200 rounded-2xl p-3 sm:p-4">
-                              {request.uploads?.map((upload: any) => {
+                              {(() => {
+                                // Usar document_request_uploads se disponível, senão usar uploads (fallback)
+                                const uploads = request.document_request_uploads || request.uploads || [];
+                                if (uploads.length === 0) {
+                                  return (
+                                    <div className="text-center py-6">
+                                      <div className="mx-auto w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mb-3">
+                                        <FileText className="w-6 h-6 text-slate-400" />
+                                      </div>
+                                      <h4 className="text-sm font-medium text-slate-900 mb-1">No Documents Submitted</h4>
+                                      <p className="text-xs text-slate-500">Student has not uploaded any documents for this request yet.</p>
+                                    </div>
+                                  );
+                                }
+                                return uploads.map((upload: any) => {
                                 const { filename, fullUrl } = getDocumentInfo(upload);
                                 return (
                                   <div key={upload.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 last:mb-0">
@@ -2049,7 +1929,8 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                                     </div>
                                   </div>
                                 );
-                              })}
+                                });
+                              })()}
                             </div>
                           </div>
                         </div>

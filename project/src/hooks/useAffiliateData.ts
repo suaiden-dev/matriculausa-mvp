@@ -25,6 +25,7 @@ export interface Affiliate {
   id: string;
   user_id: string;
   full_name: string;
+  company_name?: string;
   email: string;
   phone?: string;
   country?: string;
@@ -131,6 +132,7 @@ export const useAffiliateData = () => {
         .select(`
           user_id,
           full_name,
+          company_name,
           email,
           phone,
           country,
@@ -327,6 +329,7 @@ export const useAffiliateData = () => {
               id: affiliateId,
               user_id: affiliateAdmin.user_id,
               full_name: userProfile?.full_name || 'Nome não disponível',
+              company_name: userProfile?.company_name,
               email: userProfile?.email || 'Email não disponível',
               phone: userProfile?.phone,
               country: userProfile?.country,
@@ -347,6 +350,7 @@ export const useAffiliateData = () => {
               id: affiliateAdmin.id,
               user_id: affiliateAdmin.user_id,
               full_name: userProfile?.full_name || 'Nome não disponível',
+              company_name: userProfile?.company_name,
               email: userProfile?.email || 'Email não disponível',
               phone: userProfile?.phone,
               country: userProfile?.country,

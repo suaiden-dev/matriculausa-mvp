@@ -564,6 +564,7 @@ const AffiliateManagement: React.FC = () => {
         const searchLower = filters.search.toLowerCase();
         const matchesSearch = 
           affiliate.full_name.toLowerCase().includes(searchLower) ||
+          (affiliate.company_name && affiliate.company_name.toLowerCase().includes(searchLower)) ||
           affiliate.email.toLowerCase().includes(searchLower) ||
           affiliate.country?.toLowerCase().includes(searchLower) ||
           affiliate.phone?.toLowerCase().includes(searchLower);
@@ -584,8 +585,10 @@ const AffiliateManagement: React.FC = () => {
       
       switch (filters.sortBy) {
         case 'name':
-          aValue = a.full_name.toLowerCase();
-          bValue = b.full_name.toLowerCase();
+          const aDisplayName = (a.company_name && a.company_name.trim() ? a.company_name : a.full_name).toLowerCase();
+          const bDisplayName = (b.company_name && b.company_name.trim() ? b.company_name : b.full_name).toLowerCase();
+          aValue = aDisplayName;
+          bValue = bDisplayName;
           break;
         case 'created_at':
           aValue = new Date(a.created_at).getTime();
@@ -1010,7 +1013,9 @@ const AffiliateManagement: React.FC = () => {
               <p>Total affiliates: {affiliates.length}</p>
               <p>First affiliate sample: {affiliates[0] ? JSON.stringify({
                 id: affiliates[0].id,
-                name: affiliates[0].full_name,
+                name: affiliates[0].company_name && affiliates[0].company_name.trim() 
+                  ? affiliates[0].company_name 
+                  : affiliates[0].full_name,
                 email: affiliates[0].email
               }) : 'None'}</p>
             </div>
@@ -1033,14 +1038,18 @@ const AffiliateManagement: React.FC = () => {
                     <div className="flex items-center space-x-4">
                       <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-md">
                         <span className="text-white font-bold text-lg">
-                          {affiliate.full_name.charAt(0).toUpperCase()}
+                          {(affiliate.company_name && affiliate.company_name.trim() 
+                            ? affiliate.company_name 
+                            : affiliate.full_name).charAt(0).toUpperCase()}
                         </span>
                       </div>
                       
                       <div className="flex-1">
                         <div className="flex items-center space-x-3">
                           <h3 className="text-lg font-semibold text-slate-900">
-                            {affiliate.full_name}
+                            {affiliate.company_name && affiliate.company_name.trim() 
+                              ? affiliate.company_name 
+                              : affiliate.full_name}
                           </h3>
                           {getStatusBadge(affiliate.status)}
                         </div>
