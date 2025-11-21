@@ -511,9 +511,7 @@ Deno.serve(async (req)=>{
             });
             
             if (insertError) {
-              console.warn('[Individual Fee Payment] Warning: Could not record fee payment:', insertError);
             } else {
-              console.log('[Individual Fee Payment] I20 control fee recorded successfully:', insertResult);
               individualFeePaymentId = insertResult?.id || null;
             }
           }
