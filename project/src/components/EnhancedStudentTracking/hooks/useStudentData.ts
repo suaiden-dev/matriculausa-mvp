@@ -110,10 +110,11 @@ export const useStudentData = (userId?: string) => {
               
               if (!studentsMap.has(studentId)) {
                 // Primeiro registro deste estudante
+                // NOTA: A função SQL retorna up.user_id as student_id, então row.student_id é o user_id real
                 studentsMap.set(studentId, {
                   id: studentId,
                   profile_id: row.profile_id,
-                  user_id: row.user_id,
+                  user_id: row.student_id, // student_id da função SQL é o user_id real (up.user_id as student_id)
                   full_name: row.student_name,
                   email: row.student_email,
                   country: row.country,
@@ -218,11 +219,12 @@ export const useStudentData = (userId?: string) => {
               
             } else {
               // Processar dados básicos (sem múltiplas aplicações)
+              // NOTA: A função SQL retorna up.user_id as student_id, então student.student_id é o user_id real
               processedStudents = realStudentsData.map((student: any) => {
                 const studentData = {
                   id: student.student_id,
                   profile_id: student.profile_id,
-                  user_id: student.student_id,
+                  user_id: student.student_id, // student_id da função SQL é na verdade o user_id real
                   full_name: student.student_name,
                   email: student.student_email,
                   country: student.country,

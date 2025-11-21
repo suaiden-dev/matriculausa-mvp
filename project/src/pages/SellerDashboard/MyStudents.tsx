@@ -644,7 +644,9 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
         // Sem override: usar taxa baseada no system_type + dependentes
         const systemType = studentSystemTypes[student.id] || 'legacy';
         const baseSelectionFee = systemType === 'simplified' ? 350 : 400;
-        selectionProcessFee = baseSelectionFee + (deps * 150);
+        // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
+        // Dependentes só afetam Application Fee ($100 por dependente)
+        selectionProcessFee = systemType === 'simplified' ? baseSelectionFee : baseSelectionFee + (deps * 150);
       }
       
       missingFees.push({ name: 'Selection Process', amount: selectionProcessFee, color: 'red' });
@@ -738,7 +740,11 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
         // Fallback: calcular baseado no system_type e dependents
         const baseSelDefault = systemType === 'simplified' ? 350 : 400;
         const baseSel = overrides.selection_process_fee != null ? Number(overrides.selection_process_fee) : baseSelDefault;
-        const selPaid = overrides.selection_process_fee != null ? baseSel : baseSel + (deps * 150);
+        // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
+        // Dependentes só afetam Application Fee ($100 por dependente)
+        const selPaid = overrides.selection_process_fee != null 
+          ? baseSel 
+          : (systemType === 'simplified' ? baseSel : baseSel + (deps * 150));
         total += selPaid;
       }
     }
@@ -787,7 +793,9 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
       } else {
         const systemType = studentSystemTypes[student.id] || 'legacy';
         const baseSelectionFee = systemType === 'simplified' ? 350 : 400;
-        total += baseSelectionFee + (deps * 150);
+        // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
+        // Dependentes só afetam Application Fee ($100 por dependente)
+        total += systemType === 'simplified' ? baseSelectionFee : baseSelectionFee + (deps * 150);
       }
     }
 

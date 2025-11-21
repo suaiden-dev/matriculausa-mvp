@@ -15,7 +15,8 @@ import {
   List,
   Grid3X3,
   UserPlus,
-  DollarSign
+  DollarSign,
+  Store
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import StudentApplicationsView from '../../components/AdminDashboard/StudentApplicationsView';
@@ -159,6 +160,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
       case 'affiliate_admin': return UserPlus;
       case 'school': return Building;
       case 'student': return GraduationCap;
+      case 'seller': return Store;
       default: return Users;
     }
   };
@@ -169,6 +171,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
       case 'affiliate_admin': return 'bg-orange-100 text-orange-800';
       case 'school': return 'bg-blue-100 text-blue-800';
       case 'student': return 'bg-green-100 text-green-800';
+      case 'seller': return 'bg-amber-100 text-amber-800';
       default: return 'bg-slate-100 text-slate-800';
     }
   };
@@ -314,6 +317,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
                   <option value="all">All Roles</option>
                   <option value="student">Students</option>
                   <option value="school">Universities</option>
+                  <option value="seller">Sellers</option>
                   <option value="admin">Admins</option>
                   <option value="affiliate_admin">Affiliate Admins</option>
                 </select>
@@ -383,17 +387,22 @@ const UserManagement: React.FC<UserManagementProps> = ({
                         <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
                           user.role === 'admin' ? 'bg-purple-100' : 
                           user.role === 'affiliate_admin' ? 'bg-orange-100' :
-                          user.role === 'school' ? 'bg-blue-100' : 'bg-green-100'
+                          user.role === 'school' ? 'bg-blue-100' :
+                          user.role === 'seller' ? 'bg-amber-100' : 'bg-green-100'
                         }`}>
                           <RoleIcon className={`h-6 w-6 ${
                             user.role === 'admin' ? 'text-purple-600' : 
                             user.role === 'affiliate_admin' ? 'text-orange-600' :
-                            user.role === 'school' ? 'text-blue-600' : 'text-green-600'
+                            user.role === 'school' ? 'text-blue-600' :
+                            user.role === 'seller' ? 'text-amber-600' : 'text-green-600'
                           }`} />
                         </div>
                         <div>
                           <h3 className="font-semibold text-slate-900">{user.full_name}</h3>
                           <p className="text-sm text-slate-500">{user.email}</p>
+                          <span className={`inline-block mt-1 px-2 py-1 rounded-full text-xs font-medium ${getRoleColor(user.role)}`}>
+                            {user.role}
+                          </span>
                         </div>
                       </div>
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(user.status)}`}>
@@ -477,6 +486,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
                       >
                         <option value="student">Student</option>
                         <option value="school">University</option>
+                        <option value="seller">Seller</option>
                         <option value="admin">Admin</option>
                         <option value="affiliate_admin">Affiliate Admin</option>
                       </select>
@@ -582,6 +592,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
                             >
                               <option value="student">Student</option>
                               <option value="school">University</option>
+                              <option value="seller">Seller</option>
                               <option value="admin">Admin</option>
                               <option value="affiliate_admin">Affiliate Admin</option>
                             </select>
@@ -745,13 +756,15 @@ const UserManagement: React.FC<UserManagementProps> = ({
                     <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${
                       selectedUser.role === 'admin' ? 'bg-purple-100' : 
                       selectedUser.role === 'affiliate_admin' ? 'bg-orange-100' :
-                      selectedUser.role === 'school' ? 'bg-blue-100' : 'bg-green-100'
+                      selectedUser.role === 'school' ? 'bg-blue-100' :
+                      selectedUser.role === 'seller' ? 'bg-amber-100' : 'bg-green-100'
                     }`}>
                       {React.createElement(getRoleIcon(selectedUser.role), {
                         className: `h-8 w-8 ${
                           selectedUser.role === 'admin' ? 'text-purple-600' : 
                           selectedUser.role === 'affiliate_admin' ? 'text-orange-600' :
-                          selectedUser.role === 'school' ? 'text-blue-600' : 'text-green-600'
+                          selectedUser.role === 'school' ? 'text-blue-600' :
+                          selectedUser.role === 'seller' ? 'text-amber-600' : 'text-green-600'
                         }`
                       })}
                     </div>
@@ -896,6 +909,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
                         >
                           <option value="student">Student</option>
                           <option value="school">University</option>
+                          <option value="seller">Seller</option>
                           <option value="admin">Admin</option>
                           <option value="affiliate_admin">Affiliate Admin</option>
                         </select>

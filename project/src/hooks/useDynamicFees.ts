@@ -55,25 +55,14 @@ export const useDynamicFees = (): DynamicFeeValues => {
         };
       }
       
-      // Para sistema simplificado, adicionar dependentes na Selection Process Fee
-      const dependents = Number(userProfile?.dependents) || 0;
-      const dependentsCost = dependents * 150; // $150 por dependente
-      const selectionProcessFeeWithDependents = fee350 + dependentsCost;
-      
-      console.log('💰 [useDynamicFees] Sistema simplificado - Cálculo:', {
-        fee350,
-        dependents,
-        dependentsCost,
-        selectionProcessFeeWithDependents,
-        userProfileSystemType: userProfile?.system_type,
-        userProfileDependents: userProfile?.dependents
-      });
+      // ✅ CORREÇÃO: Para sistema simplificado, Selection Process Fee é fixo em $350 (sem dependentes)
+      // Dependentes só afetam Application Fee ($100 por dependente)
       
       return {
-        selectionProcessFee: `$${selectionProcessFeeWithDependents.toFixed(2)}`,
+        selectionProcessFee: `$${fee350.toFixed(2)}`,
         scholarshipFee: `$${fee550.toFixed(2)}`,
         i20ControlFee: `$${fee900.toFixed(2)}`,
-        selectionProcessFeeAmount: selectionProcessFeeWithDependents,
+        selectionProcessFeeAmount: fee350,
         scholarshipFeeAmount: fee550,
         i20ControlFeeAmount: fee900,
         hasSellerPackage: false

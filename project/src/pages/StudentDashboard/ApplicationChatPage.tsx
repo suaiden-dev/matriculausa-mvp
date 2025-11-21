@@ -77,10 +77,20 @@ const ApplicationChatPage: React.FC = () => {
         .then(({ data }) => {
           console.log('🔍 [ApplicationChatPage] Application details loaded:', data);
           console.log('🔍 [ApplicationChatPage] Student process type:', data?.student_process_type);
+          
+          // ✅ SEGURANÇA: Ocultar acceptance_letter_url se o I-20 não foi pago
+          // Isso previne que o aluno veja a URL no Network tab do DevTools
+          // Mas mantém o status visível para que o aluno saiba que a carta foi enviada
+          if (data && !(userProfile as any)?.has_paid_i20_control_fee) {
+            data.acceptance_letter_url = null;
+            // Manter acceptance_letter_status e acceptance_letter_sent_at visíveis
+            // para que o aluno saiba que a carta foi enviada
+          }
+          
           setApplicationDetails(data);
         });
     }
-  }, [applicationId]);
+  }, [applicationId, userProfile]);
 
   // useEffect para detectar parâmetro de URL e definir aba ativa
   useEffect(() => {
@@ -228,10 +238,9 @@ const ApplicationChatPage: React.FC = () => {
 
     checkI20PromotionalCoupon();
     
-    // Verificar periodicamente
-    const interval = setInterval(checkI20PromotionalCoupon, 5000); // 5 segundos
-    
-    return () => clearInterval(interval);
+    // ✅ CORREÇÃO: Removido intervalo de 5 segundos - verificar apenas quando necessário
+    // O cupom promocional não muda com frequência, então não precisa verificar constantemente
+    // return () => clearInterval(interval); // Removido - não há mais intervalo
   }, [userProfile?.seller_referral_code, userProfile?.system_type, user?.id]);
 
   // Buscar valor real pago do I-20 Control Fee
@@ -652,6 +661,23 @@ const ApplicationChatPage: React.FC = () => {
                         {t('studentDashboard.applicationChatPage.welcome.documentRequests.description')}
                       </p>
                       
+                      {/* Mostrar aviso sobre Acceptance Letter quando disponível */}
+                      {(applicationDetails.acceptance_letter_status === 'sent' || 
+                        applicationDetails.acceptance_letter_status === 'approved' ||
+                        applicationDetails.acceptance_letter_sent_at) && (
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-start gap-2">
+                          <CheckCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                          <div className="flex-1">
+                            <p className="text-blue-800 text-sm font-medium">
+                              {t('studentDashboard.applicationChatPage.welcome.documentRequests.acceptanceLetterAvailable') || 'Carta de Aceitação disponível!'}
+                            </p>
+                            <p className="text-blue-700 text-xs mt-1">
+                              {t('studentDashboard.applicationChatPage.welcome.documentRequests.acceptanceLetterDescription') || 'Sua carta de aceitação foi enviada pela universidade. Acesse a aba Documentos para visualizar.'}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                      
                       <button 
                         onClick={() => setActiveTab('documents')}
                         className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 group"
@@ -694,35 +720,99 @@ const ApplicationChatPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Step 3: I-20 Control Fee (if available) */}
+                {/* Step 3: I-20 Control Fee */}
                 {applicationDetails.is_scholarship_fee_paid && (
-                  <div className="group bg-white rounded-2xl p-6 sm:p-8 shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100 hover:border-[#D0151C]/20 transform hover:-translate-y-1">
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center ">
-                      
-                      <div className="flex-1 space-y-3">
-                        <div className="flex items-center gap-3">
-                          <span className="inline-flex items-center justify-center w-8 h-8 bg-red-100 text-[#D0151C] rounded-full text-sm font-bold">3</span>
-                          <h3 className="text-xl sm:text-2xl font-bold text-gray-900">
-                            {t('studentDashboard.applicationChatPage.welcome.i20ControlFee.title')}
-                          </h3>
+                  <>
+                    {/* Card quando ainda não foi pago */}
+                    {!hasPaid && (
+                      <div className="group bg-white rounded-2xl p-6 sm:p-8 shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100 hover:border-[#D0151C]/20 transform hover:-translate-y-1">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center ">
+                          
+                          <div className="flex-1 space-y-3">
+                            <div className="flex items-center gap-3">
+                              <span className="inline-flex items-center justify-center w-8 h-8 bg-red-100 text-[#D0151C] rounded-full text-sm font-bold">3</span>
+                              <h3 className="text-xl sm:text-2xl font-bold text-gray-900">
+                                {t('studentDashboard.applicationChatPage.welcome.i20ControlFee.title')}
+                              </h3>
+                            </div>
+                            
+                            <p className="text-gray-600 text-base sm:text-lg leading-relaxed">
+                              {t('studentDashboard.applicationChatPage.welcome.i20ControlFee.description')}
+                            </p>
+                            
+                            <button 
+                              onClick={() => setActiveTab('i20')}
+                              className="inline-flex items-center gap-2 bg-gradient-to-r from-[#D0151C] to-red-600 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 group"
+                            >
+                              {t('studentDashboard.applicationChatPage.welcome.i20ControlFee.button')}
+                              <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                              </svg>
+                            </button>
+                          </div>
                         </div>
-                        
-                        <p className="text-gray-600 text-base sm:text-lg leading-relaxed">
-                          {t('studentDashboard.applicationChatPage.welcome.i20ControlFee.description')}
-                        </p>
-                        
-                        <button 
-                          onClick={() => setActiveTab('i20')}
-                          className="inline-flex items-center gap-2 bg-gradient-to-r from-[#D0151C] to-red-600 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 group"
-                        >
-                          {t('studentDashboard.applicationChatPage.welcome.i20ControlFee.button')}
-                          <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                          </svg>
-                        </button>
                       </div>
-                    </div>
-                  </div>
+                    )}
+                    
+                    {/* Card quando já foi pago - Design de sucesso */}
+                    {hasPaid && (
+                      <div className="group bg-gradient-to-br from-green-50 via-emerald-50 to-green-100 rounded-2xl p-6 sm:p-8 shadow-lg hover:shadow-2xl transition-all duration-300 border-2 border-green-200 hover:border-green-300 transform hover:-translate-y-1 relative overflow-hidden">
+                        {/* Decorative background elements */}
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-green-200 rounded-full -translate-y-16 translate-x-16 opacity-20"></div>
+                        <div className="absolute bottom-0 left-0 w-24 h-24 bg-green-300 rounded-full translate-y-12 -translate-x-12 opacity-20"></div>
+                        
+                        <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center">
+                          <div className="flex-1 space-y-4">
+                            <div className="flex items-center gap-3">
+                              <div className="relative">
+                                <span className="inline-flex items-center justify-center w-10 h-10 bg-green-500 text-white rounded-full text-sm font-bold shadow-lg">
+                                  <CheckCircle className="w-6 h-6" />
+                                </span>
+                                <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-600 rounded-full border-2 border-white animate-pulse"></div>
+                              </div>
+                              <div className="flex-1">
+                                <h3 className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center gap-2">
+                                  {t('studentDashboard.applicationChatPage.welcome.i20ControlFee.title')}
+                                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs sm:text-sm font-semibold bg-green-500 text-white shadow-md">
+                                    <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                                    {t('studentDashboard.applicationChatPage.status.paid') || 'Pago'}
+                                  </span>
+                                </h3>
+                              </div>
+                            </div>
+                            
+                            <div className="bg-white/80 backdrop-blur-sm rounded-xl p-4 border border-green-200">
+                              <p className="text-green-800 text-base sm:text-lg font-medium leading-relaxed mb-2">
+                                {t('studentDashboard.applicationChatPage.welcome.i20ControlFee.paidMessage') || 'Parabéns! A Taxa de Controle I-20 foi paga com sucesso.'}
+                              </p>
+                              <p className="text-green-700 text-sm leading-relaxed">
+                                {t('studentDashboard.applicationChatPage.welcome.i20ControlFee.paidDescription') || 'Seu pagamento foi confirmado. Continue acompanhando o progresso da sua aplicação.'}
+                              </p>
+                              {paymentDate && (
+                                <p className="text-green-600 text-xs mt-3 pt-3 border-t border-green-200">
+                                  {t('studentDashboard.applicationChatPage.welcome.i20ControlFee.paidDate') || 'Data do pagamento:'} {new Date(paymentDate).toLocaleDateString('pt-BR', { 
+                                    day: '2-digit', 
+                                    month: 'long', 
+                                    year: 'numeric' 
+                                  })}
+                                </p>
+                              )}
+                            </div>
+                            
+                            <button 
+                              onClick={() => setActiveTab('i20')}
+                              className="inline-flex items-center gap-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 group"
+                            >
+                              {t('studentDashboard.applicationChatPage.welcome.i20ControlFee.viewDetails') || 'Ver Detalhes do Pagamento'}
+                              <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </div>
@@ -1353,6 +1443,36 @@ const ApplicationChatPage: React.FC = () => {
               <p className="text-slate-200 text-xs sm:text-sm mt-1">{t('studentDashboard.applicationChatPage.documents.subtitle')}</p>
             </div>
             <div className="p-3 sm:p-6 space-y-6">
+              {/* Aviso sobre Acceptance Letter - Mostrar quando carta foi enviada mas I-20 ainda não foi pago */}
+              {/* ✅ UX: Verificar status em vez de URL para mostrar aviso mesmo quando URL está oculta */}
+              {applicationDetails.is_scholarship_fee_paid && 
+               (applicationDetails.acceptance_letter_status === 'sent' || 
+                applicationDetails.acceptance_letter_status === 'approved' ||
+                applicationDetails.acceptance_letter_sent_at) && 
+               !(userProfile as any)?.has_paid_i20_control_fee && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 sm:p-6 mb-6">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-1">
+                      <h3 className="text-lg font-bold text-blue-900 mb-2">
+                        {t('studentDashboard.applicationChatPage.documents.acceptanceLetter.paymentRequiredTitle') || 'Acceptance Letter Available - Payment Required'}
+                      </h3>
+                      <p className="text-blue-800 text-sm mb-3">
+                        {t('studentDashboard.applicationChatPage.documents.acceptanceLetter.paymentRequiredDescription') || 'Your acceptance letter has been sent by the university. To view and download it, please complete the I-20 Control Fee payment.'}
+                      </p>
+                      <button
+                        onClick={() => setActiveTab('i20')}
+                        className="mt-3 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors flex items-center gap-2"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                        </svg>
+                        {t('studentDashboard.applicationChatPage.documents.acceptanceLetter.payI20Button') || 'Pay I-20 Control Fee'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
               {/* Aviso sobre Acceptance Letter - Mostrar quando I-20 foi pago mas carta ainda não enviada */}
               {applicationDetails.is_scholarship_fee_paid && 
                (userProfile as any)?.has_paid_i20_control_fee && 

@@ -598,7 +598,7 @@ async function handleCheckoutSessionFailed(session) {
           p_action_type: 'pix_payment_failed',
           p_action_description: `PIX payment failed for session ${session.id}`,
           p_performed_by: userId,
-          p_performed_by_type: 'admin',
+          p_performed_by_type: 'student', // ✅ CORREÇÃO: Falha de pagamento do estudante, não do admin
           p_metadata: {
             session_id: session.id,
             payment_method: 'pix',
@@ -714,7 +714,7 @@ async function handleCheckoutSessionCompleted(session, stripe) {
           p_action_type: 'checkout_session_processed',
           p_action_description: `Checkout session processing started: ${sessionId}`,
           p_performed_by: userId,
-          p_performed_by_type: 'admin',
+          p_performed_by_type: 'student', // ✅ CORREÇÃO: Ação iniciada pelo estudante, não pelo admin
           p_metadata: {
             session_id: sessionId,
             payment_method: metadata?.payment_method || 'stripe',

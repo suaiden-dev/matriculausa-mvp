@@ -713,7 +713,7 @@ const Overview: React.FC<OverviewProps> = ({
                       <div className="flex items-center sm:justify-center mt-1">
                         <Tag className="h-3 w-3 text-green-300 mr-1" />
                         <span className="text-xs text-green-300 font-medium">
-                          Cupom aplicado -${promotionalCouponDiscount.discountAmount.toFixed(2)}
+                          {t('studentDashboard.selectionProcess.couponAppliedLabel')} -${promotionalCouponDiscount.discountAmount.toFixed(2)}
                         </span>
                       </div>
                     </div>

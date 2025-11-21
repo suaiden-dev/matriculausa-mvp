@@ -36,15 +36,15 @@ const HowItWorks: React.FC = () => {
           <div className="flex flex-wrap justify-center items-center gap-8 mt-8 text-slate-300">
               <div className="flex items-center bg-white/10 backdrop-blur-sm rounded-xl px-4 py-2">
                 <Clock className="h-5 w-5 mr-2 text-green-400" />
-                <span className="text-sm font-medium">5 Minutes Setup</span>
+                <span className="text-sm font-medium">{t('howItWorks.stats.setup')}</span>
               </div>
               <div className="flex items-center bg-white/10 backdrop-blur-sm rounded-xl px-4 py-2">
               <Star className="h-5 w-5 mr-2 text-yellow-400" />
-                <span className="text-sm font-medium">95% Success Rate</span>
+                <span className="text-sm font-medium">{t('howItWorks.stats.success')}</span>
               </div>
               <div className="flex items-center bg-white/10 backdrop-blur-sm rounded-xl px-4 py-2">
                 <Shield className="h-5 w-5 mr-2 text-blue-400" />
-                <span className="text-sm font-medium">100% Secure</span>
+                <span className="text-sm font-medium">{t('howItWorks.stats.secure')}</span>
             </div>
           </div>
         </div>
@@ -76,7 +76,7 @@ const HowItWorks: React.FC = () => {
                   </div>
             <div>
               <h3 className="text-2xl font-bold mb-2 text-green-700">
-                2. Pay Selection Fee ({selectionProcessFee})
+                2. {t('howItWorks.steps.selectionFee.title', { selectionProcessFee })}
                 {hasSellerPackage && (
                   <span className="ml-2 text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
                     {packageName}
@@ -84,14 +84,14 @@ const HowItWorks: React.FC = () => {
                 )}
               </h3>
               <p className="text-slate-700 mb-2 text-lg">
-                Pay the Selection Process Fee of <strong className="text-green-600">{selectionProcessFee}</strong> and submit your documents <strong>{t('fees.finalNonRefundable')}</strong>
+                {t('howItWorks.steps.selectionFee.description')}
               </p>
               <ul className="list-disc list-inside text-slate-500 text-sm space-y-1">
-                <li>Access to scholarship browse</li>
-                <li>Initiate application process</li>
-                <li>One time fee</li>
+                {(t('howItWorks.steps.selectionFee.items', { returnObjects: true }) as string[]).map((item, index) => (
+                  <li key={index}>{item}</li>
+                ))}
               </ul>
-                    </div>
+            </div>
                   </div>
           {/* Step 3 */}
           <div className="bg-slate-50 rounded-3xl shadow-lg p-8 flex flex-col md:flex-row gap-8 items-center border border-slate-200">
@@ -115,13 +115,13 @@ const HowItWorks: React.FC = () => {
                   </div>
             <div>
               <h3 className="text-2xl font-bold mb-2 text-yellow-700">4. {t('howItWorks.steps.applicationFee.title')}</h3>
-              <p className="text-slate-700 mb-2 text-lg">{t('howItWorks.steps.applicationFee.description')} <strong>{t('fees.finalNonRefundable')}</strong></p>
+              <p className="text-slate-700 mb-2 text-lg">{t('howItWorks.steps.applicationFee.description')}</p>
               <ul className="list-disc list-inside text-slate-500 text-sm space-y-1">
                 {(t('howItWorks.steps.applicationFee.items', { returnObjects: true }) as string[]).map((item, index) => (
                   <li key={index}>{item}</li>
                 ))}
               </ul>
-                    </div>
+            </div>
                   </div>
           {/* Step 5 */}
           <div className="bg-slate-50 rounded-3xl shadow-lg p-8 flex flex-col md:flex-row gap-8 items-center border border-slate-200">
@@ -130,7 +130,7 @@ const HowItWorks: React.FC = () => {
             </div>
             <div>
               <h3 className="text-2xl font-bold mb-2 text-purple-700">
-                5. Pay Scholarship Fee ({scholarshipFee})
+                5. {t('howItWorks.steps.scholarshipFee.title', { scholarshipFee })}
                 {hasSellerPackage && (
                   <span className="ml-2 text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
                     {packageName}
@@ -138,14 +138,14 @@ const HowItWorks: React.FC = () => {
                 )}
               </h3>
               <p className="text-slate-700 mb-2 text-lg">
-                Pay the <strong className="text-purple-600">{scholarshipFee}</strong> Scholarship Fee to formalize the grant <strong>{t('fees.finalNonRefundable')}</strong>
+                {t('howItWorks.steps.scholarshipFee.description', { scholarshipFee })}
               </p>
               <ul className="list-disc list-inside text-slate-500 text-sm space-y-1">
-                <li>Direct chat with university</li>
-                <li>Submit additional documents</li>
-                <li>Final scholarship commitment</li>
+                {(t('howItWorks.steps.scholarshipFee.items', { returnObjects: true }) as string[]).map((item, index) => (
+                  <li key={index}>{item}</li>
+                ))}
               </ul>
-                  </div>
+            </div>
                 </div>
           {/* Step 6 */}
           <div className="bg-slate-50 rounded-3xl shadow-lg p-8 flex flex-col md:flex-row gap-8 items-center border border-slate-200">
@@ -154,7 +154,7 @@ const HowItWorks: React.FC = () => {
                   </div>
             <div>
               <h3 className="text-2xl font-bold mb-2 text-red-700">
-                6. Pay I-20 Control Fee ({i20ControlFee})
+                6. {t('howItWorks.steps.i20Fee.title', { i20ControlFee })}
                 {hasSellerPackage && (
                   <span className="ml-2 text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
                     {packageName}
@@ -162,12 +162,12 @@ const HowItWorks: React.FC = () => {
                 )}
               </h3>
               <p className="text-slate-700 mb-2 text-lg">
-                Pay the <strong className="text-red-600">{i20ControlFee}</strong> I-20 Control Fee (within 10 days after approval) <strong>{t('fees.finalNonRefundable')}</strong>
+                {t('howItWorks.steps.i20Fee.description', { i20ControlFee })}
               </p>
               <ul className="list-disc list-inside text-slate-500 text-sm space-y-1">
-                <li>Essential for F-1 student visa</li>
-                <li>Required for enrollment</li>
-                <li>Final step before visa application</li>
+                {(t('howItWorks.steps.i20Fee.items', { returnObjects: true }) as string[]).map((item, index) => (
+                  <li key={index}>{item}</li>
+                ))}
               </ul>
             </div>
           </div>
@@ -207,80 +207,14 @@ const HowItWorks: React.FC = () => {
       <section className="py-20 bg-white">
         <div className="max-w-4xl mx-auto px-4">
           <h2 className="text-3xl font-bold mb-8 text-center text-[#05294E]">{t('howItWorks.faq.title')}</h2>
-          {/* FAQ List - Copiado do FAQ revisado */}
+          {/* FAQ List */}
           <div className="flex flex-col gap-6 max-w-2xl mx-auto">
-            <div className="bg-slate-50 rounded-2xl p-6 shadow flex flex-col gap-2">
-              <h3 className="font-bold text-[#05294E]">1. {t('howItWorks.faq.q1.question')}</h3>
-              <p>{t('howItWorks.faq.q1.answer')}</p>
+            {Array.from({ length: 11 }, (_, i) => i + 1).map((num) => (
+              <div key={num} className="bg-slate-50 rounded-2xl p-6 shadow flex flex-col gap-2">
+                <h3 className="font-bold text-[#05294E]">{num}. {t(`howItWorks.faq.q${num}.question`, { selectionProcessFee, scholarshipFee, i20ControlFee })}</h3>
+                <p>{t(`howItWorks.faq.q${num}.answer`, { selectionProcessFee, scholarshipFee, i20ControlFee })}</p>
               </div>
-            <div className="bg-slate-50 rounded-2xl p-6 shadow flex flex-col gap-2">
-              <h3 className="font-bold text-[#05294E]">2. What is the Selection Process Fee?</h3>
-              <p>
-                The Selection Process Fee ({selectionProcessFee}) is the first mandatory payment on the MatriculaUSA platform. It unlocks your full access to view all scholarships and start your application process.
-                {hasSellerPackage && (
-                  <span className="ml-2 text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-                    {packageName}
-                  </span>
-                )}
-              </p>
-                    </div>
-            <div className="bg-slate-50 rounded-2xl p-6 shadow flex flex-col gap-2">
-              <h3 className="font-bold text-[#05294E]">3. What is the Scholarship Fee?</h3>
-              <p>
-                The Scholarship Fee ({scholarshipFee}) is charged when you proceed with applications for exclusive scholarships through MatriculaUSA. This fee covers processing costs and personalized support for your scholarship applications.
-                {hasSellerPackage && (
-                  <span className="ml-2 text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-                    {packageName}
-                  </span>
-                )}
-              </p>
-                  </div>
-            <div className="bg-slate-50 rounded-2xl p-6 shadow flex flex-col gap-2">
-              <h3 className="font-bold text-[#05294E]">4. What is the Application Fee?</h3>
-              <p>The Application Fee varies by university and is a payment required to formally process your application after you have been accepted. This amount confirms your intention to enroll and is managed directly by the platform.</p>
-                </div>
-            <div className="bg-slate-50 rounded-2xl p-6 shadow flex flex-col gap-2">
-              <h3 className="font-bold text-[#05294E]">5. What is the I-20 Control Fee?</h3>
-              <p>
-                The I-20 Control Fee ({i20ControlFee}) is a mandatory payment for students who need to obtain the I-20 form, essential for applying for the F-1 student visa. This fee ensures fast and accurate processing of your visa documents.
-                {hasSellerPackage && (
-                  <span className="ml-2 text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-                    {packageName}
-                  </span>
-                )}
-              </p>
-                    </div>
-            <div className="bg-slate-50 rounded-2xl p-6 shadow flex flex-col gap-2">
-              <h3 className="font-bold text-[#05294E]">6. Are there any other fees I should be aware of?</h3>
-              <p>All mandatory fees for your application and enrollment process are listed in your dashboard before any payment. Some universities may have additional fees (e.g., housing deposits, orientation fees), but these will always be communicated directly by the university or by us in advance. <strong>All fees are final and non-refundable.</strong></p>
-                  </div>
-            <div className="bg-slate-50 rounded-2xl p-6 shadow flex flex-col gap-2">
-              <h3 className="font-bold text-[#05294E]">7. How can I pay these fees?</h3>
-              <p>You can pay all fees directly through the MatriculaUSA platform using international credit or debit cards. Payments are securely processed via Stripe, and you will receive a confirmation for each transaction. <strong>All fees are final and non-refundable.</strong></p>
-            </div>
-            <div className="bg-slate-50 rounded-2xl p-6 shadow flex flex-col gap-2">
-              <h3 className="font-bold text-[#05294E]">8. Is my payment information secure?</h3>
-              <p>Yes. All payments are processed by Stripe, a global leader in payment security. MatriculaUSA does not store your card details, and all transactions are encrypted for your protection.</p>
-            </div>
-            <div className="bg-slate-50 rounded-2xl p-6 shadow flex flex-col gap-2">
-              <h3 className="font-bold text-[#05294E]">9. Can I get a refund?</h3>
-              <p>You are entitled to a full refund of fees paid if your application is not successful or you are not approved for a scholarship. However, if you withdraw from the process or change your mind after starting the application, the fees paid are non-refundable, as processing and support will have already begun. <strong>All fees are final and non-refundable.</strong></p>
-            </div>
-            <div className="bg-slate-50 rounded-2xl p-6 shadow flex flex-col gap-2">
-              <h3 className="font-bold text-[#05294E]">10. Do I have to pay all fees at once?</h3>
-              <p>
-                No. The fees are separate purchases and are paid in stages as you progress through the process. You pay the Selection Process Fee ({selectionProcessFee}) first, then the Scholarship Fee ({scholarshipFee}) (if applicable), followed by the Application Fee, and finally the I-20 Control Fee ({i20ControlFee}). All are mandatory for the complete flow, but do not need to be paid simultaneously.
-                {hasSellerPackage && (
-                  <span className="ml-2 text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-                    {packageName}
-                  </span>
-                )}
-              </p>
-            </div>
-            <div className="bg-slate-50 rounded-2xl p-6 shadow flex flex-col gap-2">
-              <h3 className="font-bold text-[#05294E]">11. Who can I contact if I have questions about fees or payments?</h3>
-              <p>Our support team is available via chat or email at any time to answer any questions about fees, payments, or your application process. We are here to help you every step of the way!</p>
-            </div>
+            ))}
           </div>
         </div>
       </section>
@@ -290,115 +224,37 @@ const HowItWorks: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl font-bold text-center mb-12 text-[#05294E]">Success Stories</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <div className="bg-white p-8 rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-300 border border-slate-200">
-              <div className="flex items-center mb-6">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <Star key={star} className="h-5 w-5 text-yellow-400 fill-current" />
-                ))}
-        </div>
-              <p className="text-slate-700 mb-6 text-lg leading-relaxed">
-                "I found exclusive scholarships that weren't available anywhere else. MatriculaUSA truly opens doors to opportunities."
-              </p>
-            <div className="flex items-center">
-                <img
-                  src="https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=1"
-                  alt="Ana Chen"
-                  className="w-14 h-14 rounded-2xl mr-4 shadow-lg"
-                />
-                <div>
-                  <div className="font-bold text-slate-900">Ana Chen</div>
-                  <div className="text-sm text-green-600 font-medium">Engineering</div>
-            </div>
-            </div>
-            </div>
-            {/* New Success Story 1 */}
-            <div className="bg-white p-8 rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-300 border border-slate-200">
-              <div className="flex items-center mb-6">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <Star key={star} className="h-5 w-5 text-yellow-400 fill-current" />
-                ))}
-              </div>
-              <p className="text-slate-700 mb-6 text-lg leading-relaxed">
-                "Thanks to MatriculaUSA, I received a full scholarship and support throughout my visa process. The team was always there for me!"
-              </p>
-              <div className="flex items-center">
-                <img
-                  src="https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=1"
-                  alt="Lucas Silva"
-                  className="w-14 h-14 rounded-2xl mr-4 shadow-lg"
-                />
-                <div>
-                  <div className="font-bold text-slate-900">Lucas Silva</div>
-                  <div className="text-sm text-blue-600 font-medium">Computer Science</div>
+            {Object.values(t('howItWorks.successStories', { returnObjects: true }))
+              .filter((item): item is { text: string; name: string; major: string } => typeof item === 'object' && item !== null && 'text' in item)
+              .map((story, index) => (
+              <div key={index} className="bg-white p-8 rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-300 border border-slate-200">
+                <div className="flex items-center mb-6">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <Star key={star} className="h-5 w-5 text-yellow-400 fill-current" />
+                  ))}
+                </div>
+                <p className="text-slate-700 mb-6 text-lg leading-relaxed">
+                  {story.text}
+                </p>
+                <div className="flex items-center">
+                  <img
+                    src={[
+                      "https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=1",
+                      "https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=1",
+                      "https://images.pexels.com/photos/1130626/pexels-photo-1130626.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=1",
+                      "https://images.pexels.com/photos/733872/pexels-photo-733872.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=1",
+                      "https://images.pexels.com/photos/1181696/pexels-photo-1181696.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=1"
+                    ][index] || "https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=1"}
+                    alt={story.name}
+                    className="w-14 h-14 rounded-2xl mr-4 shadow-lg"
+                  />
+                  <div>
+                    <div className="font-bold text-slate-900">{story.name}</div>
+                    <div className="text-sm text-green-600 font-medium">{story.major}</div>
+                  </div>
                 </div>
               </div>
-            </div>
-            {/* New Success Story 2 */}
-            <div className="bg-white p-8 rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-300 border border-slate-200">
-              <div className="flex items-center mb-6">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <Star key={star} className="h-5 w-5 text-yellow-400 fill-current" />
-                ))}
-              </div>
-              <p className="text-slate-700 mb-6 text-lg leading-relaxed">
-                "The application process was so easy and transparent. I felt supported every step of the way. Highly recommend!"
-              </p>
-              <div className="flex items-center">
-                <img
-                  src="https://images.pexels.com/photos/1130626/pexels-photo-1130626.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=1"
-                  alt="Priya Patel"
-                  className="w-14 h-14 rounded-2xl mr-4 shadow-lg"
-                />
-                <div>
-                  <div className="font-bold text-slate-900">Priya Patel</div>
-                  <div className="text-sm text-purple-600 font-medium">Business</div>
-                </div>
-              </div>
-            </div>
-            {/* New Success Story 3 */}
-            <div className="bg-white p-8 rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-300 border border-slate-200">
-              <div className="flex items-center mb-6">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <Star key={star} className="h-5 w-5 text-yellow-400 fill-current" />
-                ))}
-              </div>
-              <p className="text-slate-700 mb-6 text-lg leading-relaxed">
-                "I never thought studying in the U.S. was possible for me. MatriculaUSA made my dream come true!"
-              </p>
-              <div className="flex items-center">
-                <img
-                  src="https://images.pexels.com/photos/733872/pexels-photo-733872.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=1"
-                  alt="Ahmed Hassan"
-                  className="w-14 h-14 rounded-2xl mr-4 shadow-lg"
-                />
-                <div>
-                  <div className="font-bold text-slate-900">Ahmed Hassan</div>
-                  <div className="text-sm text-red-600 font-medium">Engineering</div>
-                </div>
-              </div>
-            </div>
-            {/* New Success Story 4 */}
-            <div className="bg-white p-8 rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-300 border border-slate-200">
-              <div className="flex items-center mb-6">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <Star key={star} className="h-5 w-5 text-yellow-400 fill-current" />
-                ))}
-              </div>
-              <p className="text-slate-700 mb-6 text-lg leading-relaxed">
-                "From the first contact to my arrival in the U.S., everything was smooth and professional. Thank you, MatriculaUSA!"
-              </p>
-              <div className="flex items-center">
-                <img
-                  src="https://images.pexels.com/photos/1181696/pexels-photo-1181696.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=1"
-                  alt="Maria Gomez"
-                  className="w-14 h-14 rounded-2xl mr-4 shadow-lg"
-                />
-                <div>
-                  <div className="font-bold text-slate-900">Maria Gomez</div>
-                  <div className="text-sm text-yellow-600 font-medium">Business</div>
-                </div>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
       </section>

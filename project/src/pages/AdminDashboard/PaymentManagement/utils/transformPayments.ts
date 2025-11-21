@@ -40,10 +40,12 @@ export function transformPaymentsToRecordsAndStats({
     if (!studentName || !universityName) return;
 
     const dependents = Number(student?.dependents) || 0;
-    const dependentCost = dependents * 150; // apenas selection process
     const userOverrides = overridesMap[student?.user_id] || {};
     const realPaid = realPaymentAmounts?.get(student?.user_id);
     const systemType = userSystemTypesMap.get(student.user_id) || 'legacy';
+    // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
+    // Dependentes só afetam Application Fee ($100 por dependente)
+    const dependentCost = systemType === 'simplified' ? 0 : (dependents * 150); // apenas selection process (legacy)
 
     // Helper: Verifica se o valor está dentro de uma faixa razoável (50% de tolerância)
     const isValueReasonable = (realValue: number, expectedValue: number): boolean => {
@@ -414,10 +416,12 @@ export function transformPaymentsToRecordsAndStats({
     if (hasZellePayment) return;
 
     const dependents = Number(stripeUser?.dependents) || 0;
-    const dependentCost = dependents * 150;
     const userOverrides = overridesMap[stripeUser?.user_id] || {};
     const realPaid = realPaymentAmounts?.get(stripeUser?.user_id);
     const systemType = userSystemTypesMap.get(stripeUser.user_id) || 'legacy';
+    // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
+    // Dependentes só afetam Application Fee ($100 por dependente)
+    const dependentCost = systemType === 'simplified' ? 0 : (dependents * 150);
 
     // Helper: Verifica se o valor está dentro de uma faixa razoável (50% de tolerância)
     const isValueReasonable = (realValue: number, expectedValue: number): boolean => {

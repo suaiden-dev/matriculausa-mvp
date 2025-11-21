@@ -68,20 +68,13 @@ function EnhancedStudentTracking(props) {
   const [realPaidAmountsMap, setRealPaidAmountsMap] = useState<Record<string, { selection_process?: number; scholarship?: number; i20_control?: number }>>({});
   // Estado de loading para valores reais pagos
   const [loadingRealPaidAmounts, setLoadingRealPaidAmounts] = useState(true);
+  // Estado para usuários que usaram cupom BLACK
+  const [blackCouponUsers, setBlackCouponUsers] = useState<Set<string>>(new Set());
   // Função para calcular taxas de um estudante específico
   const getStudentFees = (student: any) => {
     // Usar system_type do estudante para determinar os valores
     const systemType = student.system_type || 'legacy';
     const isSimplified = systemType === 'simplified';
-    
-    // Debug para jolie8862@uorak.com
-    if (student.email === 'jolie8862@uorak.com') {
-      console.log('🔍 [getStudentFees] jolie8862@uorak.com:', {
-        systemType: systemType,
-        isSimplified: isSimplified,
-        studentData: student
-      });
-    }
     
     return {
       selectionProcessFee: isSimplified ? 350 : (Number(feeConfig.selection_process_fee) || 400),
@@ -244,14 +237,41 @@ function EnhancedStudentTracking(props) {
     loadRealPaidAmounts();
   }, [students]);
 
+  // Carregar estudantes que usaram cupom BLACK
+  useEffect(() => {
+    const loadBlackCouponUsers = async () => {
+      try {
+        // Buscar com ilike para ser case-insensitive
+        const { data, error } = await supabase
+          .from('promotional_coupon_usage')
+          .select('user_id, coupon_code')
+          .ilike('coupon_code', 'BLACK');
+
+        if (error) {
+          return;
+        }
+
+        const userIds = new Set<string>();
+        (data || []).forEach((row: any) => {
+          if (row.user_id) {
+            userIds.add(row.user_id);
+          }
+        });
+        
+        setBlackCouponUsers(userIds);
+      } catch (e) {
+        // Silently fail - não é crítico se não conseguir carregar os cupons
+      }
+    };
+
+    loadBlackCouponUsers();
+  }, [students]);
+
   // Calcular receita ajustada por estudante usando valores reais pagos quando disponíveis
   // Usa valores reais pagos quando disponíveis, com fallback para cálculo fixo se não houver registro
   const adjustedStudents = useMemo(() => {
     const result = (filteredStudents || []).map((s) => {
       
-      if (!s.user_id) {
-        console.warn(`🔍 WARNING: Student ${s.email} has no user_id!`, s);
-      }
       const o = overridesMap[s.user_id] || {};
       const dependents = Number(dependentsMap[s.profile_id]) || 0;
       const realPaid = realPaidAmountsMap[s.user_id] || {};
@@ -269,7 +289,9 @@ function EnhancedStudentTracking(props) {
           // Fallback: cálculo fixo para dados antigos sem registro
           const systemType = s.system_type || 'legacy';
           const baseSelectionFee = systemType === 'simplified' ? 350 : 400;
-          total += baseSelectionFee + (dependents * 150);
+          // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
+          // Dependentes só afetam Application Fee ($100 por dependente)
+          total += systemType === 'simplified' ? baseSelectionFee : baseSelectionFee + (dependents * 150);
         }
       }
       
@@ -298,15 +320,6 @@ function EnhancedStudentTracking(props) {
         }
       }
       
-      console.log(`🔍 [ENHANCED_TRACKING] Calculado para ${s.email}:`, {
-          totalCalculated: total,
-          realPaid: realPaid,
-          breakdown: {
-            selectionPaid: s.has_paid_selection_process_fee,
-            scholarshipPaid: s.is_scholarship_fee_paid,  
-            i20Paid: s.has_paid_i20_control_fee
-          }
-        });
 
       const adjusted = { 
         ...s, 
@@ -413,16 +426,8 @@ function EnhancedStudentTracking(props) {
       
       if (!applicationError && applications && applications.length > 0) {
         const app = applications[0];
-        console.log('🔍 [TRANSFER_FORM] Real application found:', {
-          id: app.id,
-          student_process_type: app.student_process_type,
-          transfer_form_url: app.transfer_form_url,
-          transfer_form_status: app.transfer_form_status,
-          transfer_form_sent_at: app.transfer_form_sent_at
-        });
         setRealScholarshipApplication(app);
       } else {
-        console.log('❌ [TRANSFER_FORM] No application found for student');
         setRealScholarshipApplication(null);
       }
     } catch (err) {
@@ -460,15 +465,6 @@ function EnhancedStudentTracking(props) {
   const getTransferApplication = () => {
     // Usar a aplicação real se disponível, senão usar a passada como prop
     const currentApplication = realScholarshipApplication || scholarshipApplication;
-    
-    console.log('🔍 [TRANSFER_FORM_DEBUG] getTransferApplication called:', {
-      scholarshipApplication: !!scholarshipApplication,
-      realScholarshipApplication: !!realScholarshipApplication,
-      currentApplication: !!currentApplication,
-      student_process_type: currentApplication?.student_process_type,
-      transfer_form_url: currentApplication?.transfer_form_url,
-      transfer_form_status: currentApplication?.transfer_form_status
-    });
     
     return currentApplication?.student_process_type === 'transfer' ? currentApplication : null;
   };
@@ -912,6 +908,7 @@ function EnhancedStudentTracking(props) {
             onToggleSellerExpansion={toggleSellerExpansion}
             onToggleStudentExpansion={toggleStudentExpansion}
             onViewStudentDetails={loadStudentDetails}
+            blackCouponUsers={blackCouponUsers}
           />
         </div>
       </div>
