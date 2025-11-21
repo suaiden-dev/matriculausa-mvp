@@ -26,6 +26,7 @@ import AdminTransferManagement from './AdminTransferManagement';
 import AutoTransferSettings from './AutoTransferSettings';
 import FinancialAnalytics from './FinancialAnalytics';
 import TermsManagement from './TermsManagement';
+import CouponManagement from './CouponManagement';
 import AffiliateManagement from './AffiliateManagement';
 import AdminChatPage from './AdminChatPage';
 import AdminStudentDetails from './AdminStudentDetails';
@@ -694,9 +695,7 @@ const AdminDashboard: React.FC = () => {
         <Route path="/transfer-management" element={<AdminTransferManagement />} />
         <Route path="/transfer-settings" element={<AutoTransferSettings />} />
         <Route path="/financial-analytics" element={<FinancialAnalytics />} />
-        <Route path="/university-financial-management" element={<UniversityFinancialManagement />} />
-        <Route path="/affiliate-management" element={<AffiliateManagement />} />
-        <Route path="/chat" element={<AdminChatPage />} />
+        <Route path="/coupons" element={<CouponManagement />} />
         <Route path="/terms" element={<TermsManagement />} />
       </Routes>
 
