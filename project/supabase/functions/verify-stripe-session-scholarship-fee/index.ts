@@ -338,14 +338,13 @@ Deno.serve(async (req)=>{
             console.log('[Individual Fee Payment] Recording scholarship fee payment...');
             console.log(`[Individual Fee Payment] Valor original: ${paymentAmountRaw} ${currency}, Valor em USD (líquido): ${paymentAmount} USD${grossAmountUsd ? `, Valor bruto: ${grossAmountUsd} USD` : ''}${feeAmountUsd ? `, Taxas: ${feeAmountUsd} USD` : ''}`);
             
-            // Usar gross_amount_usd como amount quando disponível (valor bruto que o aluno pagou)
-            // Isso garante que o valor exibido seja sempre o valor bruto, não o líquido
-            const amountToSave = grossAmountUsd || paymentAmount;
-            
+            // ✅ CORREÇÃO: amount deve ser o valor líquido (paymentAmount), não o bruto
+            // O gross_amount_usd é o valor bruto que o aluno pagou (antes das taxas)
+            // O amount é o valor líquido que a plataforma recebe (após taxas)
             const { data: insertResult, error: insertError } = await supabase.rpc('insert_individual_fee_payment', {
               p_user_id: userId,
               p_fee_type: 'scholarship',
-              p_amount: amountToSave, // Valor bruto quando disponível, senão valor líquido
+              p_amount: paymentAmount, // ✅ Valor líquido (após taxas e conversão)
               p_payment_date: paymentDate,
               p_payment_method: 'stripe',
               p_payment_intent_id: paymentIntentId,
