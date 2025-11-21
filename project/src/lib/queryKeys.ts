@@ -14,7 +14,7 @@ export const queryKeys = {
     list: (filters?: any, pagination?: any) => ['payments', 'list', filters, pagination] as const,
     zelle: {
       all: ['payments', 'zelle'] as const,
-      list: (page?: number, pageSize?: number) => ['payments', 'zelle', 'list', page, pageSize] as const,
+      list: () => ['payments', 'zelle', 'list'] as const,
     },
     universityRequests: {
       all: ['payments', 'university-requests'] as const,
