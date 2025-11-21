@@ -379,25 +379,46 @@ Deno.serve(async (req)=>{
           console.log(`[Individual Fee Payment] DEBUG - Não entrou em nenhum bloco de conversão. currency: ${currency}, paymentMethod: ${paymentMethod}, hasExchangeRate: ${!!session.metadata?.exchange_rate}`);
         }
         
-        console.log('[Individual Fee Payment] Recording application fee payment...');
-        console.log(`[Individual Fee Payment] Valor original: ${paymentAmountRaw} ${currency}, Valor em USD (líquido): ${paymentAmount} USD${grossAmountUsd ? `, Valor bruto: ${grossAmountUsd} USD` : ''}${feeAmountUsd ? `, Taxas: ${feeAmountUsd} USD` : ''}`);
-        const { data: insertResult, error: insertError } = await supabase.rpc('insert_individual_fee_payment', {
-          p_user_id: userId,
-          p_fee_type: 'application',
-          p_amount: paymentAmount, // Sempre em USD (líquido)
-          p_payment_date: paymentDate,
-          p_payment_method: 'stripe',
-          p_payment_intent_id: paymentIntentId,
-          p_stripe_charge_id: null,
-          p_zelle_payment_id: null,
-          p_gross_amount_usd: grossAmountUsd, // Valor bruto em USD (quando disponível)
-          p_fee_amount_usd: feeAmountUsd // Taxas em USD (quando disponível)
-        });
-        
-        if (insertError) {
-          console.warn('[Individual Fee Payment] Warning: Could not record fee payment:', insertError);
+        // ✅ Verificar se já existe registro com este payment_intent_id para evitar duplicação
+        if (paymentIntentId) {
+          const { data: existingPayment, error: checkError } = await supabase
+            .from('individual_fee_payments')
+            .select('id, payment_intent_id')
+            .eq('payment_intent_id', paymentIntentId)
+            .eq('fee_type', 'application')
+            .eq('user_id', userId)
+            .maybeSingle();
+          
+          if (checkError) {
+            console.warn('[Individual Fee Payment] Warning: Erro ao verificar duplicação:', checkError);
+          } else if (existingPayment) {
+            console.log(`[DUPLICAÇÃO] Payment já registrado em individual_fee_payments com payment_intent_id: ${paymentIntentId}, pulando inserção.`);
+            // Não inserir novamente, mas continuar o fluxo normalmente
+          } else {
+            // Não existe, pode inserir
+            console.log('[Individual Fee Payment] Recording application fee payment...');
+            console.log(`[Individual Fee Payment] Valor original: ${paymentAmountRaw} ${currency}, Valor em USD (líquido): ${paymentAmount} USD${grossAmountUsd ? `, Valor bruto: ${grossAmountUsd} USD` : ''}${feeAmountUsd ? `, Taxas: ${feeAmountUsd} USD` : ''}`);
+            const { data: insertResult, error: insertError } = await supabase.rpc('insert_individual_fee_payment', {
+              p_user_id: userId,
+              p_fee_type: 'application',
+              p_amount: paymentAmount, // Sempre em USD (líquido)
+              p_payment_date: paymentDate,
+              p_payment_method: 'stripe',
+              p_payment_intent_id: paymentIntentId,
+              p_stripe_charge_id: null,
+              p_zelle_payment_id: null,
+              p_gross_amount_usd: grossAmountUsd, // Valor bruto em USD (quando disponível)
+              p_fee_amount_usd: feeAmountUsd // Taxas em USD (quando disponível)
+            });
+            
+            if (insertError) {
+              console.warn('[Individual Fee Payment] Warning: Could not record fee payment:', insertError);
+            } else {
+              console.log('[Individual Fee Payment] Application fee recorded successfully:', insertResult);
+            }
+          }
         } else {
-          console.log('[Individual Fee Payment] Application fee recorded successfully:', insertResult);
+          console.warn('[Individual Fee Payment] Warning: payment_intent_id não disponível, não é possível verificar duplicação. Pulando inserção.');
         }
       } catch (recordError) {
         console.warn('[Individual Fee Payment] Warning: Failed to record individual fee payment:', recordError);
