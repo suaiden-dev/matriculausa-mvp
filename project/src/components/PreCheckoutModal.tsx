@@ -869,7 +869,10 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
     }
 
     const normalizedCode = promotionalCoupon.trim().toUpperCase();
-    console.log('🔍 [PreCheckoutModal] Validando cupom promocional:', normalizedCode);
+    // ✅ CORREÇÃO: Normalizar feeType para corresponder ao banco (i20_control_fee -> i20_control)
+    const normalizedFeeType = feeType === 'i20_control_fee' ? 'i20_control' : feeType;
+    
+    console.log('🔍 [PreCheckoutModal] Validando cupom promocional:', normalizedCode, 'para feeType:', normalizedFeeType);
     setIsValidatingPromotionalCoupon(true);
     setPromotionalCouponValidation(null);
 
@@ -877,7 +880,7 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
       // ✅ Use new RPC that validates AND increments usage count for admin coupons
       const { data: result, error } = await supabase.rpc('validate_and_apply_admin_promotional_coupon', {
         p_code: normalizedCode,
-        p_fee_type: feeType,
+        p_fee_type: normalizedFeeType,
         p_user_id: user?.id
       });
 
