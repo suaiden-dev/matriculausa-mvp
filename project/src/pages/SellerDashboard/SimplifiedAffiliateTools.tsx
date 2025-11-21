@@ -57,7 +57,7 @@ const SimplifiedAffiliateTools: React.FC = () => {
             <div className="px-4 sm:px-6 lg:px-8 py-6">
               <div className="flex-1">
                 <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight">
-                  Referral Tools (Simplified)
+                  Referral Tools
                 </h1>
                 <p className="mt-2 text-sm sm:text-base text-slate-600">
                   Share your referral link to invite students to register.
