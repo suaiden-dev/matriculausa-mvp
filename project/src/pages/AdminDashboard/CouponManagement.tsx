@@ -9,19 +9,50 @@ import {
   Calendar, 
   Tag,
   Copy,
-  Loader2
+  Loader2,
+  User,
+  DollarSign
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { PromotionalCoupon } from '../../types/coupon';
 import { toast } from 'react-hot-toast';
 
+interface CouponUsage {
+  id: string;
+  user_id: string;
+  coupon_code: string;
+  fee_type: string;
+  original_amount: number;
+  discount_amount: number;
+  final_amount: number;
+  payment_method: string;
+  used_at: string;
+  user_email?: string;
+  user_name?: string;
+  individual_fee_payment_id?: string;
+  actual_paid_amount?: number; // Valor de gross_amount_usd ou amount de individual_fee_payments
+}
+
 const CouponManagement: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<'coupons' | 'usage'>('coupons');
   const [coupons, setCoupons] = useState<PromotionalCoupon[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCoupon, setEditingCoupon] = useState<PromotionalCoupon | null>(null);
   const [saving, setSaving] = useState(false);
+
+  // Usage tab state
+  const [usageData, setUsageData] = useState<CouponUsage[]>([]);
+  const [loadingUsage, setLoadingUsage] = useState(true);
+  const [usageFilters, setUsageFilters] = useState({
+    search: '',
+    couponCode: '',
+    feeType: '',
+    paymentMethod: '',
+    dateFrom: '',
+    dateTo: ''
+  });
 
   // Form state
   const [formData, setFormData] = useState({
@@ -45,8 +76,24 @@ const CouponManagement: React.FC = () => {
   ];
 
   useEffect(() => {
-    fetchCoupons();
-  }, []);
+    if (activeTab === 'coupons') {
+      fetchCoupons();
+    } else {
+      fetchUsage();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (activeTab === 'usage') {
+      const timeoutId = setTimeout(() => {
+        fetchUsage();
+      }, 300); // Debounce de 300ms para evitar muitas requisições
+      
+      return () => clearTimeout(timeoutId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [usageFilters.couponCode, usageFilters.feeType, usageFilters.paymentMethod, usageFilters.dateFrom, usageFilters.dateTo]);
 
   const fetchCoupons = async () => {
     try {
@@ -182,10 +229,216 @@ const CouponManagement: React.FC = () => {
     toast.success('Code copied to clipboard');
   };
 
+  const fetchUsage = async () => {
+    try {
+      setLoadingUsage(true);
+      
+      // Buscar usos dos cupons
+      let query = supabase
+        .from('promotional_coupon_usage')
+        .select('*')
+        .order('used_at', { ascending: false });
+
+      // Aplicar filtros
+      if (usageFilters.couponCode) {
+        query = query.ilike('coupon_code', `%${usageFilters.couponCode}%`);
+      }
+      if (usageFilters.feeType) {
+        query = query.eq('fee_type', usageFilters.feeType);
+      }
+      if (usageFilters.paymentMethod) {
+        query = query.eq('payment_method', usageFilters.paymentMethod);
+      }
+      if (usageFilters.dateFrom) {
+        query = query.gte('used_at', usageFilters.dateFrom);
+      }
+      if (usageFilters.dateTo) {
+        query = query.lte('used_at', usageFilters.dateTo + 'T23:59:59');
+      }
+
+      const { data: usageData, error } = await query;
+
+      if (error) throw error;
+
+      // Buscar informações dos usuários em lote
+      const userIds = [...new Set((usageData || []).map((item: any) => item.user_id))];
+      
+      let userProfilesMap: Record<string, { email: string; full_name: string }> = {};
+      
+      if (userIds.length > 0) {
+        const { data: profiles, error: profilesError } = await supabase
+          .from('user_profiles')
+          .select('user_id, email, full_name')
+          .in('user_id', userIds);
+
+        if (!profilesError && profiles) {
+          profiles.forEach((profile: any) => {
+            userProfilesMap[profile.user_id] = {
+              email: profile.email || 'N/A',
+              full_name: profile.full_name || 'N/A'
+            };
+          });
+        }
+      }
+
+      // Buscar dados de individual_fee_payments
+      // Primeiro, tentar usar individual_fee_payment_id se disponível
+      const individualFeePaymentIds = [...new Set((usageData || [])
+        .map((item: any) => item.individual_fee_payment_id)
+        .filter((id: string | null) => id !== null && id !== undefined))];
+      
+      let individualFeePaymentsByIdMap: Record<string, { gross_amount_usd: number | null; amount: number }> = {};
+      
+      if (individualFeePaymentIds.length > 0) {
+        const { data: feePayments, error: feePaymentsError } = await supabase
+          .from('individual_fee_payments')
+          .select('id, gross_amount_usd, amount')
+          .in('id', individualFeePaymentIds);
+
+        if (!feePaymentsError && feePayments) {
+          feePayments.forEach((payment: any) => {
+            individualFeePaymentsByIdMap[payment.id] = {
+              gross_amount_usd: payment.gross_amount_usd,
+              amount: payment.amount
+            };
+          });
+        }
+      }
+
+      // Para registros sem individual_fee_payment_id, buscar por user_id, fee_type e data próxima
+      const usageWithoutPaymentId = (usageData || []).filter((item: any) => !item.individual_fee_payment_id);
+      
+      // Buscar todos os pagamentos dos usuários e fee_types envolvidos
+      const userIdsForPayments = usageWithoutPaymentId.length > 0 
+        ? [...new Set(usageWithoutPaymentId.map((item: any) => item.user_id))]
+        : [];
+      
+      // Normalizar fee_types e incluir ambos os valores (i20_control_fee e i20_control)
+      const feeTypesForPayments = usageWithoutPaymentId.length > 0
+        ? [...new Set(usageWithoutPaymentId.map((item: any) => {
+            const normalized = item.fee_type === 'i20_control_fee' ? 'i20_control' : item.fee_type;
+            return normalized;
+          }))]
+        : [];
+      
+      // Adicionar também os fee_types originais para garantir que capturemos todos
+      const allFeeTypesForQuery = [...new Set([
+        ...feeTypesForPayments,
+        ...(usageWithoutPaymentId.map((item: any) => item.fee_type))
+      ])];
+      
+      let allFeePayments: any[] = [];
+      if (userIdsForPayments.length > 0 && allFeeTypesForQuery.length > 0) {
+        const { data: payments, error: allPaymentsError } = await supabase
+          .from('individual_fee_payments')
+          .select('id, user_id, fee_type, payment_date, gross_amount_usd, amount')
+          .in('user_id', userIdsForPayments)
+          .in('fee_type', allFeeTypesForQuery)
+          .order('payment_date', { ascending: false });
+
+        if (!allPaymentsError && payments) {
+          allFeePayments = payments;
+        }
+      }
+
+      // Processar dados para incluir informações do usuário e valores reais pagos
+      const processedData = (usageData || []).map((item: any) => {
+        let feePayment: { gross_amount_usd: number | null; amount: number } | null = null;
+        
+        // Primeiro, tentar usar individual_fee_payment_id
+        if (item.individual_fee_payment_id) {
+          feePayment = individualFeePaymentsByIdMap[item.individual_fee_payment_id] || null;
+        } 
+        // Se não tiver, buscar o pagamento mais próximo no tempo
+        else if (allFeePayments.length > 0) {
+          const usageDate = new Date(item.used_at);
+          
+          // Normalizar fee_type para correspondência (i20_control_fee -> i20_control)
+          const normalizedUsageFeeType = item.fee_type === 'i20_control_fee' ? 'i20_control' : item.fee_type;
+          
+          // Encontrar pagamentos do mesmo usuário e fee_type (normalizado)
+          const matchingPayments = allFeePayments.filter((payment: any) => {
+            const normalizedPaymentFeeType = payment.fee_type === 'i20_control_fee' ? 'i20_control' : payment.fee_type;
+            return payment.user_id === item.user_id && 
+                   normalizedPaymentFeeType === normalizedUsageFeeType;
+          });
+
+          if (matchingPayments.length > 0) {
+            // Encontrar o pagamento mais próximo no tempo (dentro de 2 horas)
+            let closestPayment: any = null;
+            let minTimeDiff = Infinity;
+
+            matchingPayments.forEach((payment: any) => {
+              const paymentDate = new Date(payment.payment_date);
+              const timeDiff = Math.abs(usageDate.getTime() - paymentDate.getTime());
+              
+              // Considerar apenas pagamentos dentro de 2 horas
+              if (timeDiff <= 2 * 60 * 60 * 1000 && timeDiff < minTimeDiff) {
+                minTimeDiff = timeDiff;
+                closestPayment = payment;
+              }
+            });
+
+            if (closestPayment) {
+              feePayment = {
+                gross_amount_usd: closestPayment.gross_amount_usd,
+                amount: closestPayment.amount
+              };
+            }
+          }
+        }
+        
+        // Usar gross_amount_usd se disponível, senão usar amount
+        const actualPaidAmount = feePayment
+          ? (feePayment.gross_amount_usd !== null && feePayment.gross_amount_usd !== undefined
+              ? Number(feePayment.gross_amount_usd)
+              : Number(feePayment.amount))
+          : null;
+
+        return {
+          ...item,
+          user_email: userProfilesMap[item.user_id]?.email || 'N/A',
+          user_name: userProfilesMap[item.user_id]?.full_name || 'N/A',
+          actual_paid_amount: actualPaidAmount
+        };
+      });
+
+      setUsageData(processedData);
+    } catch (error) {
+      console.error('Error fetching coupon usage:', error);
+      toast.error('Failed to load coupon usage');
+    } finally {
+      setLoadingUsage(false);
+    }
+  };
+
+  const filteredUsage = usageData.filter(usage => {
+    if (usageFilters.search) {
+      const searchLower = usageFilters.search.toLowerCase();
+      return (
+        usage.coupon_code.toLowerCase().includes(searchLower) ||
+        usage.user_email?.toLowerCase().includes(searchLower) ||
+        usage.user_name?.toLowerCase().includes(searchLower)
+      );
+    }
+    return true;
+  });
+
   const filteredCoupons = coupons.filter(coupon => 
     coupon.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
     coupon.description?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const formatFeeType = (feeType: string) => {
+    const feeTypeMap: Record<string, string> = {
+      'selection_process': 'Selection Process',
+      'application_fee': 'Application Fee',
+      'scholarship_fee': 'Scholarship Fee',
+      'i20_control': 'I-20 Control',
+      'i20_control_fee': 'I-20 Control'
+    };
+    return feeTypeMap[feeType] || feeType;
+  };
 
   return (
     <div className="space-y-6">
@@ -194,31 +447,67 @@ const CouponManagement: React.FC = () => {
           <h2 className="text-2xl font-bold text-slate-900">Coupon Management</h2>
           <p className="text-slate-600">Create and manage promotional coupons</p>
         </div>
-        <button
-          onClick={() => handleOpenModal()}
-          className="flex items-center px-4 py-2 bg-[#05294E] text-white rounded-lg hover:bg-[#0a3d70] transition-colors"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Create Coupon
-        </button>
+        {activeTab === 'coupons' && (
+          <button
+            onClick={() => handleOpenModal()}
+            className="flex items-center px-4 py-2 bg-[#05294E] text-white rounded-lg hover:bg-[#0a3d70] transition-colors"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Create Coupon
+          </button>
+        )}
       </div>
 
-      {/* Search and Filter */}
-      <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
-          <input
-            type="text"
-            placeholder="Search coupons..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
-          />
+      {/* Tabs */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200">
+        <div className="flex border-b border-slate-200">
+          <button
+            onClick={() => setActiveTab('coupons')}
+            className={`flex-1 px-6 py-3 text-sm font-medium transition-colors ${
+              activeTab === 'coupons'
+                ? 'text-[#05294E] border-b-2 border-[#05294E] bg-slate-50'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+            }`}
+          >
+            <div className="flex items-center justify-center space-x-2">
+              <Tag className="w-4 h-4" />
+              <span>Coupons</span>
+            </div>
+          </button>
+          <button
+            onClick={() => setActiveTab('usage')}
+            className={`flex-1 px-6 py-3 text-sm font-medium transition-colors ${
+              activeTab === 'usage'
+                ? 'text-[#05294E] border-b-2 border-[#05294E] bg-slate-50'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+            }`}
+          >
+            <div className="flex items-center justify-center space-x-2">
+              <DollarSign className="w-4 h-4" />
+              <span>Usage History</span>
+            </div>
+          </button>
         </div>
       </div>
 
-      {/* Coupons List */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      {activeTab === 'coupons' ? (
+        <>
+          {/* Search and Filter */}
+          <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
+              <input
+                type="text"
+                placeholder="Search coupons..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
+              />
+            </div>
+          </div>
+
+          {/* Coupons List */}
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         {loading ? (
           <div className="flex justify-center items-center p-12">
             <Loader2 className="w-8 h-8 text-[#05294E] animate-spin" />
@@ -317,7 +606,157 @@ const CouponManagement: React.FC = () => {
             </table>
           </div>
         )}
-      </div>
+          </div>
+        </>
+      ) : (
+        <>
+          {/* Usage Filters */}
+          <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+                <input
+                  type="text"
+                  placeholder="Search by code, user..."
+                  value={usageFilters.search}
+                  onChange={(e) => setUsageFilters({...usageFilters, search: e.target.value})}
+                  className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent text-sm"
+                />
+              </div>
+              
+              <div>
+                <input
+                  type="text"
+                  placeholder="Coupon Code"
+                  value={usageFilters.couponCode}
+                  onChange={(e) => setUsageFilters({...usageFilters, couponCode: e.target.value})}
+                  className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent text-sm"
+                />
+              </div>
+
+              <div>
+                <select
+                  value={usageFilters.feeType}
+                  onChange={(e) => setUsageFilters({...usageFilters, feeType: e.target.value})}
+                  className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent text-sm"
+                >
+                  <option value="">All Fee Types</option>
+                  {feeTypes.map((fee) => (
+                    <option key={fee.id} value={fee.id}>{fee.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <select
+                  value={usageFilters.paymentMethod}
+                  onChange={(e) => setUsageFilters({...usageFilters, paymentMethod: e.target.value})}
+                  className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent text-sm"
+                >
+                  <option value="">All Payment Methods</option>
+                  <option value="stripe">Stripe</option>
+                  <option value="zelle">Zelle</option>
+                  <option value="pix">PIX</option>
+                </select>
+              </div>
+
+              <div>
+                <input
+                  type="date"
+                  placeholder="From Date"
+                  value={usageFilters.dateFrom}
+                  onChange={(e) => setUsageFilters({...usageFilters, dateFrom: e.target.value})}
+                  className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent text-sm"
+                />
+              </div>
+
+              <div>
+                <input
+                  type="date"
+                  placeholder="To Date"
+                  value={usageFilters.dateTo}
+                  onChange={(e) => setUsageFilters({...usageFilters, dateTo: e.target.value})}
+                  className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent text-sm"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Usage Table */}
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            {loadingUsage ? (
+              <div className="flex justify-center items-center p-12">
+                <Loader2 className="w-8 h-8 text-[#05294E] animate-spin" />
+              </div>
+            ) : filteredUsage.length === 0 ? (
+              <div className="text-center p-12 text-slate-500">
+                No coupon usage found.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead className="bg-slate-50 border-b border-slate-200">
+                    <tr>
+                      <th className="px-6 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Date</th>
+                      <th className="px-6 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Coupon Code</th>
+                      <th className="px-6 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">User</th>
+                      <th className="px-6 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Fee Type</th>
+                      <th className="px-6 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Original Amount</th>
+                      <th className="px-6 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Discount</th>
+                      <th className="px-6 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Final Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {filteredUsage.map((usage) => (
+                      <tr key={usage.id} className="hover:bg-slate-50">
+                        <td className="px-6 py-4 text-sm text-slate-600">
+                          <div className="flex items-center">
+                            <Calendar className="w-3 h-3 mr-1 text-slate-400" />
+                            {new Date(usage.used_at).toLocaleDateString()}
+                            <span className="ml-2 text-xs text-slate-400">
+                              {new Date(usage.used_at).toLocaleTimeString()}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="font-mono font-bold text-slate-900">{usage.coupon_code}</span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center space-x-2">
+                            <User className="w-3 h-3 text-slate-400" />
+                            <div>
+                              <div className="text-sm font-medium text-slate-900">{usage.user_name}</div>
+                              <div className="text-xs text-slate-500">{usage.user_email}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                            {formatFeeType(usage.fee_type)}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-slate-600">
+                          {usage.actual_paid_amount !== null && usage.actual_paid_amount !== undefined
+                            ? `$${usage.actual_paid_amount.toFixed(2)}`
+                            : `$${Number(usage.original_amount).toFixed(2)}`}
+                        </td>
+                        <td className="px-6 py-4 text-sm font-semibold text-green-600">
+                          -${Number(usage.discount_amount).toFixed(2)}
+                        </td>
+                        <td className="px-6 py-4 text-sm font-bold text-slate-900">
+                          {usage.actual_paid_amount !== null && usage.actual_paid_amount !== undefined
+                            ? `$${usage.actual_paid_amount.toFixed(2)}`
+                            : `$${Number(usage.final_amount).toFixed(2)}`}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </>
+      )}
 
       {/* Modal */}
       {isModalOpen && (
