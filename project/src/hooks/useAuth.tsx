@@ -1041,27 +1041,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               console.log('🔍 [USEAUTH] Registro feito por staff, mas não há sessão para restaurar - fazendo logout');
               await supabase.auth.signOut();
             } else {
-              // Aguardar um pouco para garantir que a confirmação foi processada
-              await new Promise(resolve => setTimeout(resolve, 500));
-              
+            // Aguardar um pouco para garantir que a confirmação foi processada
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
               // Fazer login automático após confirmação apenas se não for registro por staff
-              console.log('🔍 [USEAUTH] Fazendo login automático...');
-              const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
-                email: normalizedEmail,
-                password,
+            console.log('🔍 [USEAUTH] Fazendo login automático...');
+            const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
+              email: normalizedEmail,
+              password,
+            });
+            
+            if (loginError) {
+              console.error('❌ [USEAUTH] Erro ao fazer login automático:', loginError);
+              console.error('❌ [USEAUTH] Detalhes do erro de login:', {
+                message: loginError.message,
+                status: loginError.status,
+                name: loginError.name
               });
-              
-              if (loginError) {
-                console.error('❌ [USEAUTH] Erro ao fazer login automático:', loginError);
-                console.error('❌ [USEAUTH] Detalhes do erro de login:', {
-                  message: loginError.message,
-                  status: loginError.status,
-                  name: loginError.name
-                });
-                // Não falhar, o usuário pode fazer login manualmente depois
-              } else {
-                console.log('✅ [USEAUTH] Login automático realizado com sucesso', loginData);
-                // O onAuthStateChange vai detectar a mudança e atualizar o estado
+              // Não falhar, o usuário pode fazer login manualmente depois
+            } else {
+              console.log('✅ [USEAUTH] Login automático realizado com sucesso', loginData);
+              // O onAuthStateChange vai detectar a mudança e atualizar o estado
               }
             }
           }
