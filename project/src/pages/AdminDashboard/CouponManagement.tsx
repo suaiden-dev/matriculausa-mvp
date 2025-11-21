@@ -49,7 +49,6 @@ const CouponManagement: React.FC = () => {
     search: '',
     couponCode: '',
     feeType: '',
-    paymentMethod: '',
     dateFrom: '',
     dateTo: ''
   });
@@ -93,7 +92,7 @@ const CouponManagement: React.FC = () => {
       return () => clearTimeout(timeoutId);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [usageFilters.couponCode, usageFilters.feeType, usageFilters.paymentMethod, usageFilters.dateFrom, usageFilters.dateTo]);
+  }, [usageFilters.couponCode, usageFilters.feeType, usageFilters.dateFrom, usageFilters.dateTo]);
 
   const fetchCoupons = async () => {
     try {
@@ -245,9 +244,6 @@ const CouponManagement: React.FC = () => {
       }
       if (usageFilters.feeType) {
         query = query.eq('fee_type', usageFilters.feeType);
-      }
-      if (usageFilters.paymentMethod) {
-        query = query.eq('payment_method', usageFilters.paymentMethod);
       }
       if (usageFilters.dateFrom) {
         query = query.gte('used_at', usageFilters.dateFrom);
@@ -644,19 +640,6 @@ const CouponManagement: React.FC = () => {
                   {feeTypes.map((fee) => (
                     <option key={fee.id} value={fee.id}>{fee.label}</option>
                   ))}
-                </select>
-              </div>
-
-              <div>
-                <select
-                  value={usageFilters.paymentMethod}
-                  onChange={(e) => setUsageFilters({...usageFilters, paymentMethod: e.target.value})}
-                  className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent text-sm"
-                >
-                  <option value="">All Payment Methods</option>
-                  <option value="stripe">Stripe</option>
-                  <option value="zelle">Zelle</option>
-                  <option value="pix">PIX</option>
                 </select>
               </div>
 
