@@ -380,7 +380,9 @@ Deno.serve(async (req)=>{
         }
         
         // ✅ Verificar se já existe registro com este payment_intent_id para evitar duplicação
+        // IMPORTANTE: Fazer verificação dupla para evitar race conditions
         if (paymentIntentId) {
+          // Primeira verificação
           const { data: existingPayment, error: checkError } = await supabase
             .from('individual_fee_payments')
             .select('id, payment_intent_id')
@@ -395,26 +397,60 @@ Deno.serve(async (req)=>{
             console.log(`[DUPLICAÇÃO] Payment já registrado em individual_fee_payments com payment_intent_id: ${paymentIntentId}, pulando inserção.`);
             // Não inserir novamente, mas continuar o fluxo normalmente
           } else {
-            // Não existe, pode inserir
-            console.log('[Individual Fee Payment] Recording application fee payment...');
-            console.log(`[Individual Fee Payment] Valor original: ${paymentAmountRaw} ${currency}, Valor em USD (líquido): ${paymentAmount} USD${grossAmountUsd ? `, Valor bruto: ${grossAmountUsd} USD` : ''}${feeAmountUsd ? `, Taxas: ${feeAmountUsd} USD` : ''}`);
-            const { data: insertResult, error: insertError } = await supabase.rpc('insert_individual_fee_payment', {
-              p_user_id: userId,
-              p_fee_type: 'application',
-              p_amount: paymentAmount, // Sempre em USD (líquido)
-              p_payment_date: paymentDate,
-              p_payment_method: 'stripe',
-              p_payment_intent_id: paymentIntentId,
-              p_stripe_charge_id: null,
-              p_zelle_payment_id: null,
-              p_gross_amount_usd: grossAmountUsd, // Valor bruto em USD (quando disponível)
-              p_fee_amount_usd: feeAmountUsd // Taxas em USD (quando disponível)
-            });
+            // ✅ SEGUNDA VERIFICAÇÃO imediatamente antes de inserir (para evitar race condition)
+            const { data: doubleCheckPayment, error: doubleCheckError } = await supabase
+              .from('individual_fee_payments')
+              .select('id, payment_intent_id')
+              .eq('payment_intent_id', paymentIntentId)
+              .eq('fee_type', 'application')
+              .eq('user_id', userId)
+              .maybeSingle();
             
-            if (insertError) {
-              console.warn('[Individual Fee Payment] Warning: Could not record fee payment:', insertError);
+            if (doubleCheckError) {
+              console.warn('[Individual Fee Payment] Warning: Erro na segunda verificação de duplicação:', doubleCheckError);
+            } else if (doubleCheckPayment) {
+              console.log(`[DUPLICAÇÃO] Payment já registrado (segunda verificação) com payment_intent_id: ${paymentIntentId}, pulando inserção.`);
+              // Não inserir novamente
             } else {
-              console.log('[Individual Fee Payment] Application fee recorded successfully:', insertResult);
+              // Não existe, pode inserir
+              console.log('[Individual Fee Payment] Recording application fee payment...');
+              console.log(`[Individual Fee Payment] Valor original: ${paymentAmountRaw} ${currency}, Valor em USD (líquido): ${paymentAmount} USD${grossAmountUsd ? `, Valor bruto: ${grossAmountUsd} USD` : ''}${feeAmountUsd ? `, Taxas: ${feeAmountUsd} USD` : ''}`);
+              const { data: insertResult, error: insertError } = await supabase.rpc('insert_individual_fee_payment', {
+                p_user_id: userId,
+                p_fee_type: 'application',
+                p_amount: paymentAmount, // Sempre em USD (líquido)
+                p_payment_date: paymentDate,
+                p_payment_method: 'stripe',
+                p_payment_intent_id: paymentIntentId,
+                p_stripe_charge_id: null,
+                p_zelle_payment_id: null,
+                p_gross_amount_usd: grossAmountUsd, // Valor bruto em USD (quando disponível)
+                p_fee_amount_usd: feeAmountUsd // Taxas em USD (quando disponível)
+              });
+              
+              if (insertError) {
+                // Se o erro for de constraint única ou duplicação, verificar novamente
+                if (insertError.code === '23505' || insertError.message?.includes('duplicate') || insertError.message?.includes('unique')) {
+                  console.log(`[DUPLICAÇÃO] Erro de constraint única detectado, verificando se o registro foi criado por outra chamada...`);
+                  const { data: finalCheckPayment } = await supabase
+                    .from('individual_fee_payments')
+                    .select('id, payment_intent_id')
+                    .eq('payment_intent_id', paymentIntentId)
+                    .eq('fee_type', 'application')
+                    .eq('user_id', userId)
+                    .maybeSingle();
+                  
+                  if (finalCheckPayment) {
+                    console.log(`[DUPLICAÇÃO] Registro foi criado por outra chamada simultânea, continuando normalmente.`);
+                  } else {
+                    console.warn('[Individual Fee Payment] Warning: Erro ao inserir mas registro não encontrado:', insertError);
+                  }
+                } else {
+                  console.warn('[Individual Fee Payment] Warning: Could not record fee payment:', insertError);
+                }
+              } else {
+                console.log('[Individual Fee Payment] Application fee recorded successfully:', insertResult);
+              }
             }
           }
         } else {
