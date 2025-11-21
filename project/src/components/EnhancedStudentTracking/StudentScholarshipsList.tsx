@@ -63,9 +63,11 @@ const StudentScholarshipsList: React.FC<StudentScholarshipsListProps> = ({
         <div className="space-y-4">
           {applications
             .sort((a: any, b: any) => {
-              // Aplicações aprovadas primeiro
-              if (a.status === 'approved' && b.status !== 'approved') return -1;
-              if (b.status === 'approved' && a.status !== 'approved') return 1;
+              // Priorizar enrolled e approved primeiro
+              const aIsPriority = a.status === 'approved' || a.status === 'enrolled';
+              const bIsPriority = b.status === 'approved' || b.status === 'enrolled';
+              if (aIsPriority && !bIsPriority) return -1;
+              if (bIsPriority && !aIsPriority) return 1;
               // Depois por data de criação (mais recente primeiro)
               const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
               const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
@@ -82,7 +84,7 @@ const StudentScholarshipsList: React.FC<StudentScholarshipsListProps> = ({
                 <div
                   key={appKey}
                   className={`border rounded-xl overflow-hidden ${
-                    app.status === 'approved'
+                    app.status === 'approved' || app.status === 'enrolled'
                       ? 'border-green-200 bg-green-50'
                       : app.status === 'rejected'
                       ? 'border-red-200 bg-red-50'
@@ -92,7 +94,7 @@ const StudentScholarshipsList: React.FC<StudentScholarshipsListProps> = ({
                   <button
                     onClick={() => setExpandedApps(p => ({ ...p, [appKey]: !isExpanded }))}
                     className={`w-full px-4 py-3 transition-colors text-left flex items-center justify-between ${
-                      app.status === 'approved'
+                      app.status === 'approved' || app.status === 'enrolled'
                         ? 'bg-green-50 hover:bg-green-100'
                         : app.status === 'rejected'
                         ? 'bg-red-50 hover:bg-red-100'
@@ -100,13 +102,13 @@ const StudentScholarshipsList: React.FC<StudentScholarshipsListProps> = ({
                     }`}
                   >
                     <div className="flex items-center space-x-3 flex-1">
-                      {app.status === 'approved' && (
+                      {(app.status === 'approved' || app.status === 'enrolled') && (
                         <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></div>
                       )}
                       {app.status === 'rejected' && (
                         <div className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0"></div>
                       )}
-                      {app.status !== 'approved' && app.status !== 'rejected' && (
+                      {app.status !== 'approved' && app.status !== 'rejected' && app.status !== 'enrolled' && (
                         <div className="w-2 h-2 bg-slate-400 rounded-full flex-shrink-0"></div>
                       )}
                       <div className="flex-1 min-w-0">
@@ -118,6 +120,11 @@ const StudentScholarshipsList: React.FC<StudentScholarshipsListProps> = ({
                           {app.status === 'approved' && (
                             <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 flex-shrink-0">
                               Approved
+                            </span>
+                          )}
+                          {app.status === 'enrolled' && (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 flex-shrink-0">
+                              Enrolled
                             </span>
                           )}
                           {app.status === 'rejected' && (

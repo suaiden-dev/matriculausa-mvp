@@ -4483,21 +4483,27 @@ const AdminStudentDetails: React.FC = () => {
                                         setPendingRejectAppId(app.id);
                                         setShowRejectStudentModal(true);
                                       }}
-                                      disabled={approvingStudent || rejectingStudent || app.status === 'approved' || app.status === 'rejected'}
+                                      disabled={approvingStudent || rejectingStudent || app.status === 'approved' || app.status === 'rejected' || app.status === 'enrolled'}
                                       className={`px-4 py-2 rounded-lg font-medium border transition-colors text-center text-sm ${
                                         app.status === 'rejected' 
                                           ? 'bg-red-100 text-red-700 border-red-300 cursor-not-allowed' 
                                           : 'text-red-600 border-red-200 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed'
                                       }`}
                                     >
-                                      {app.status === 'approved' ? 'Application Approved' : app.status === 'rejected' ? 'Application Rejected' : 'Reject Application'}
+                                      {app.status === 'approved' ? 'Application Approved' : app.status === 'rejected' ? 'Application Rejected' : app.status === 'enrolled' ? 'Application Enrolled' : 'Reject Application'}
                                     </button>
                                     <button
-                                      disabled={approvingStudent || rejectingStudent || app.status === 'approved' || app.status === 'rejected'}
+                                      disabled={approvingStudent || rejectingStudent || app.status === 'approved' || app.status === 'rejected' || app.status === 'enrolled'}
                                       onClick={() => approveApplication(app.id)}
-                                      className="px-4 py-2 rounded-lg font-medium bg-[#05294E] text-white hover:bg-[#041f38] disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-center text-sm"
+                                      className={`px-4 py-2 rounded-lg font-medium text-white transition-colors text-center text-sm ${
+                                        app.status === 'approved' || app.status === 'enrolled'
+                                          ? 'bg-green-600 hover:bg-green-700 cursor-not-allowed'
+                                          : app.status === 'rejected'
+                                          ? 'bg-red-600 hover:bg-red-700 cursor-not-allowed'
+                                          : 'bg-[#05294E] hover:bg-[#041f38] disabled:opacity-50 disabled:cursor-not-allowed'
+                                      }`}
                                     >
-                                      {app.status === 'approved' ? 'Approved' : app.status === 'rejected' ? 'Rejected' : (approvingStudent ? 'Approving...' : 'Approve Application')}
+                                      {app.status === 'approved' ? 'Approved' : app.status === 'rejected' ? 'Rejected' : app.status === 'enrolled' ? 'Enrolled' : (approvingStudent ? 'Approving...' : 'Approve Application')}
                                     </button>
                                   </div>
                                 </div>

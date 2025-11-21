@@ -645,7 +645,7 @@ function EnhancedStudentTracking(props) {
                     studentId={selectedStudent}
                     onViewDocument={handleViewDocument}
                     onDownloadDocument={handleDownloadDocument}
-                    isAdmin={user?.role === 'affiliate_admin'}
+                    isAdmin={false}
                   />
                 </div>
               </div>
