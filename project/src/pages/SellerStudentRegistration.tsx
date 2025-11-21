@@ -28,10 +28,8 @@ const SellerStudentRegistration: React.FC = () => {
     confirmPassword: '',
     phone: '',
     sellerReferralCode: sellerCode,
-    // Selecionar por padrão o pacote principal fixo
-    selectedPackage: '1',
-    // ✅ Definir desiredScholarshipRange correspondente ao pacote padrão (3800 para pacote 1)
-    desiredScholarshipRange: 3800, // Valor padrão quando pacote 1 é selecionado
+    selectedPackage: '1', // Pacote padrão
+    desiredScholarshipRange: 3800, // Valor padrão (Package 1)
     dependents: 0
   });
   
@@ -208,7 +206,7 @@ const SellerStudentRegistration: React.FC = () => {
       // Usar o hook useAuth para registrar o usuário
       // Simplificar os dados para evitar conflitos
       // ✅ Garantir que desired_scholarship_range seja definido mesmo se o usuário não selecionou explicitamente
-      const packageNumber = parseInt(formData.selectedPackage);
+      const finalPackageNumber = parseInt(formData.selectedPackage);
       const rangeMapping: { [key: number]: number } = {
         1: 3800,
         2: 4200,
@@ -216,7 +214,7 @@ const SellerStudentRegistration: React.FC = () => {
         4: 5000,
         5: 5500
       };
-      const finalDesiredRange = formData.desiredScholarshipRange || rangeMapping[packageNumber] || 3800;
+      const finalDesiredRange = formData.desiredScholarshipRange || rangeMapping[finalPackageNumber] || 3800;
       
       const registerData = {
         full_name: formData.full_name,
@@ -224,8 +222,8 @@ const SellerStudentRegistration: React.FC = () => {
         role: 'student' as const,
         seller_referral_code: finalSellerCode,
         dependents: formData.dependents,
-        scholarship_package_number: parseInt(formData.selectedPackage),
-        desired_scholarship_range: formData.desiredScholarshipRange,
+        scholarship_package_number: finalPackageNumber,
+        desired_scholarship_range: finalDesiredRange,
         // Como esta página é exclusiva do fluxo legacy, persistimos o system_type
         system_type: 'legacy'
       };
@@ -458,7 +456,7 @@ const SellerStudentRegistration: React.FC = () => {
                   {/* Dependents Input - moved to Step 1 */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Dependents
+                      Dependents <span className="text-xs font-normal text-gray-500">- Family members (spouse and/or children)</span>
                     </label>
                     <select
                       name="dependents"
@@ -611,27 +609,35 @@ const SellerStudentRegistration: React.FC = () => {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-                  {packages.map((pkg) => (
+                  {packages.map((pkg) => {
+                    const isSelected = formData.selectedPackage === pkg.package_number.toString();
+                    
+                    return (
                     <div
                       key={pkg.id}
-                      className={`p-6 border-2 rounded-xl cursor-pointer transition-all hover:shadow-lg ${
-                        formData.selectedPackage === pkg.package_number.toString()
-                          ? 'border-blue-500 bg-blue-50 shadow-lg'
-                          : 'border-gray-200 hover:border-gray-300 bg-white'
+                        className={`p-6 border-2 rounded-xl transition-all ${
+                          isSelected
+                            ? 'border-blue-500 bg-blue-50 shadow-lg cursor-pointer'
+                            : 'border-gray-200 hover:border-gray-300 bg-white cursor-pointer hover:shadow-lg'
                       }`}
-                      onClick={() => handlePackageSelect(pkg.package_number)}
+                        onClick={() => {
+                            handlePackageSelect(pkg.package_number);
+                        }}
                     >
                       <div className="text-center mb-4">
-                        <h3 className="font-bold text-xl text-gray-900 mb-2">{pkg.name}</h3>
+                          <h3 className="font-bold text-xl text-gray-900 mb-2">
+                            {pkg.name}
+                          </h3>
                         <div className="text-3xl font-bold text-blue-600 mb-1">${pkg.scholarship_amount}</div>
                         <p className="text-sm text-gray-500">Scholarships starting from</p>
                       </div>
                       
                       {pkg.description && (
                         <p className="mt-2 text-xs text-gray-500">{pkg.description}</p>
-                      )}
+                        )}
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
 
@@ -683,7 +689,65 @@ const SellerStudentRegistration: React.FC = () => {
         </div>
       </div>
 
-      {/* ✅ REMOVIDO: Verification Modal - login agora é automático após registro */}
+      {/* Verification Modal */}
+      {showVerificationModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <div className="text-center">
+              <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Student Account Created Successfully!</h3>
+              <p className="text-gray-600 mb-4">
+                The student account has been created and the email has been automatically confirmed. 
+                The student can now log in with their credentials at any time.
+              </p>
+              <div className="space-y-2">
+                <button
+                  onClick={() => {
+                    setShowVerificationModal(false);
+                    // Reset form to allow registering another student
+                    setFormData({
+                      full_name: '',
+                      email: '',
+                      password: '',
+                      confirmPassword: '',
+                      phone: '',
+                      sellerReferralCode: sellerCode,
+                      selectedPackage: '1',
+                      desiredScholarshipRange: 3800,
+                      dependents: 0
+                    });
+                    setCurrentStep(1);
+                    setTermsAccepted(false);
+                  }}
+                  className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Register Another Student
+                </button>
+                <button
+                  onClick={() => {
+                    setShowVerificationModal(false);
+                    // Navigate to seller dashboard if seller is logged in
+                    if (user && (user.role === 'seller' || user.role === 'admin' || user.role === 'affiliate_admin')) {
+                      if (user.role === 'seller') {
+                        navigate('/seller/dashboard');
+                      } else if (user.role === 'admin') {
+                        navigate('/admin/dashboard');
+                      } else if (user.role === 'affiliate_admin') {
+                        navigate('/affiliate-admin/dashboard');
+                      }
+                    } else {
+                      navigate('/');
+                    }
+                  }}
+                  className="w-full bg-gray-200 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-300 transition-colors"
+                >
+                  Go to Dashboard
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

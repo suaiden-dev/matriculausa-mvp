@@ -175,7 +175,8 @@
       "recipientEmail": "Recipient Email",
       "paymentAmount": "Payment Amount",
       "important": "Important:",
-      "importantMessage": "Make sure to send the exact amount of <strong>{{amount}} USD</strong> to <strong>info@thefutureofenglish.com</strong> via Zelle. Any discrepancy in amount or recipient will delay your payment processing."
+      "importantMessage": "Make sure to send the exact amount of <strong>{{amount}} USD</strong> to <strong>info@thefutureofenglish.com</strong> via Zelle. Any discrepancy in amount or recipient will delay your payment processing.",
+      "importantMessageSimple": "Make sure the exact payment amount matches the amount shown above."
     }
   },
   "zelleWaiting": {
@@ -409,6 +410,11 @@
     "title": "How It Works",
     "subtitle": "Your path to a U.S. university, step by step",
     "journey": "Your Journey",
+    "stats": {
+      "setup": "5 Minutes Setup",
+      "success": "95% Success Rate",
+      "secure": "100% Secure"
+    },
     "steps": {
       "profile": {
         "title": "Create Your Profile",
@@ -416,12 +422,13 @@
         "items": [
           "Academic history & achievements",
           "Career goals & preferences",
-          "Financial requirements"
+          "Financial requirements",
+          "Add dependents (if any)"
         ]
       },
       "selectionFee": {
-        "title": "Pay Selection Fee (${{selectionProcessFee}})",
-        "description": "Unlock all scholarships. This fee is final and non-refundable.",
+        "title": "Pay Selection Fee ({{selectionProcessFee}})",
+        "description": "Unlock all scholarships. This fee is final and non-refundable. (+$150 per dependent)",
         "items": [
           "Access to scholarship browse",
           "Initiate application process",
@@ -439,7 +446,7 @@
       },
       "applicationFee": {
         "title": "Pay Application Fee (As per university)",
-        "description": "Confirm your university. This fee is final and non-refundable.",
+        "description": "Confirm your university. This fee is final and non-refundable. (+$100 per dependent)",
         "items": [
           "See approved scholarships",
           "Confirm university choice",
@@ -447,7 +454,7 @@
         ]
       },
       "scholarshipFee": {
-        "title": "Pay Scholarship Fee (${{scholarshipFee}})",
+        "title": "Pay Scholarship Fee ({{scholarshipFee}})",
         "description": "Get direct chat with your university. This fee is final and non-refundable.",
         "items": [
           "Direct chat with university",
@@ -456,7 +463,7 @@
         ]
       },
       "i20Fee": {
-        "title": "Pay I-20 Control Fee (${{i20ControlFee}})",
+        "title": "Pay I-20 Control Fee ({{i20ControlFee}})",
         "description": "Needed for your F-1 visa. This fee is final and non-refundable.",
         "items": [
           "Essential for F-1 student visa",
@@ -484,6 +491,34 @@
         "description": "See your progress and next steps in real time"
       }
     },
+    "successStories": {
+      "title": "Success Stories",
+      "story1": {
+        "text": "\"I found exclusive scholarships that weren't available anywhere else. MatriculaUSA truly opens doors to opportunities.\"",
+        "name": "Ana Chen",
+        "major": "Engineering"
+      },
+      "story2": {
+        "text": "\"Thanks to MatriculaUSA, I received a full scholarship and support throughout my visa process. The team was always there for me!\"",
+        "name": "Lucas Silva",
+        "major": "Computer Science"
+      },
+      "story3": {
+        "text": "\"The application process was so easy and transparent. I felt supported every step of the way. Highly recommend!\"",
+        "name": "Priya Patel",
+        "major": "Business"
+      },
+      "story4": {
+        "text": "\"I never thought studying in the U.S. was possible for me. MatriculaUSA made my dream come true!\"",
+        "name": "Ahmed Hassan",
+        "major": "Engineering"
+      },
+      "story5": {
+        "text": "\"From the first contact to my arrival in the U.S., everything was smooth and professional. Thank you, MatriculaUSA!\"",
+        "name": "Maria Gomez",
+        "major": "Business"
+      }
+    },
     "faq": {
       "title": "Frequently Asked Questions",
       "q1": {
@@ -492,19 +527,43 @@
       },
       "q2": {
         "question": "What is the Selection Process Fee?",
-        "answer": "The Selection Process Fee (US${{selectionProcessFee}}) is the first mandatory payment on the MatriculaUSA platform. It unlocks your full access to view all scholarships and start your application process. This fee is final and non-refundable."
+        "answer": "The Selection Process Fee (US{{selectionProcessFee}}) is the first mandatory payment on the MatriculaUSA platform. It unlocks your full access to view all scholarships and start your application process. This fee is final and non-refundable."
       },
       "q3": {
         "question": "What is the Scholarship Fee?",
-        "answer": "The Scholarship Fee (US${{scholarshipFee}}) is charged when you proceed with applications for exclusive scholarships through MatriculaUSA. This fee covers processing costs and personalized support for your scholarship applications. This fee is final and non-refundable."
+        "answer": "The Scholarship Fee (US{{scholarshipFee}}) is charged when you proceed with applications for exclusive scholarships through MatriculaUSA. This fee covers processing costs and personalized support for your scholarship applications. This fee is final and non-refundable."
       },
       "q4": {
         "question": "What is the Application Fee?",
-        "answer": "The Application Fee varies by university and is a payment required to formally process your application after you have been accepted. This amount confirms your intention to enroll and is managed directly by the platform. This fee is final and non-refundable."
+        "answer": "The Application Fee varies by university and is a payment required to formally process your application after you have been accepted. This amount confirms your intention to enroll and is managed directly by the platform."
       },
       "q5": {
         "question": "What is the I-20 Control Fee?",
-        "answer": "The I-20 Control Fee (US${{i20ControlFee}}) is a mandatory payment for students who need to obtain the I-20 form, essential for applying for the F-1 student visa. This fee ensures fast and accurate processing of your visa documents. This fee is final and non-refundable."
+        "answer": "The I-20 Control Fee (US${{i20ControlFee}}) is a mandatory payment for students who need to obtain the I-20 form, essential for applying for the F-1 student visa. This fee ensures fast and accurate processing of your visa documents."
+      },
+      "q6": {
+        "question": "Are there any other fees I should be aware of?",
+        "answer": "All mandatory fees for your application and enrollment process are listed in your dashboard before any payment. Some universities may have additional fees (e.g., housing deposits, orientation fees), but these will always be communicated directly by the university or by us in advance. All fees are final and non-refundable."
+      },
+      "q7": {
+        "question": "How can I pay these fees?",
+        "answer": "You can pay all fees directly through the MatriculaUSA platform using international credit or debit cards. Payments are securely processed via Stripe, and you will receive a confirmation for each transaction. All fees are final and non-refundable."
+      },
+      "q8": {
+        "question": "Is my payment information secure?",
+        "answer": "Yes. All payments are processed by Stripe, a global leader in payment security. MatriculaUSA does not store your card details, and all transactions are encrypted for your protection."
+      },
+      "q9": {
+        "question": "Can I get a refund?",
+        "answer": "You are entitled to a full refund of fees paid if your application is not successful or you are not approved for a scholarship. However, if you withdraw from the process or change your mind after starting the application, the fees paid are non-refundable, as processing and support will have already begun. All fees are final and non-refundable."
+      },
+      "q10": {
+        "question": "Do I have to pay all fees at once?",
+        "answer": "No. The fees are separate purchases and are paid in stages as you progress through the process. You pay the Selection Process Fee (US${{selectionProcessFee}}) first, then the Scholarship Fee (US${{scholarshipFee}}) (if applicable), followed by the Application Fee, and finally the I-20 Control Fee (US${{i20ControlFee}}). All are mandatory for the complete flow, but do not need to be paid simultaneously."
+      },
+      "q11": {
+        "question": "Who can I contact if I have questions about fees or payments?",
+        "answer": "Our support team is available via chat or email at any time to answer any questions about fees, payments, or your application process. We are here to help you every step of the way!"
       }
     }
   },
@@ -642,6 +701,8 @@
       "universityNameAvailable": "University Name Available",
       "ranking": "Ranking:",
       "universityDetailsLocked": "🔒 University details available after Selection Process payment.",
+      "unlockUniversityInfo": "Unlock university information by paying the Selection Process",
+      "unlockImage": "Log in to unlock the image",
       "requirements": "Requirements",
       "additionalBenefits": "Additional Benefits",
       "expired": "Expired",
@@ -1247,6 +1308,55 @@
       "weakPassword": "Password is too weak. Please choose a stronger password.",
       "invalidEmail": "Please enter a valid email address.",
       "signupDisabled": "New registrations are currently disabled. Please contact support.",
+      "preCheckoutModal": {
+        "securePayment": "Secure Payment",
+        "closeModal": "Close modal",
+        "closeTerms": "Close terms",
+        "totalAmount": "Total amount",
+        "securePaymentGateway": "Secure payment gateway",
+        "promotionalCoupon": {
+          "title": "Promotional Coupon",
+          "enterCode": "Enter code",
+          "validate": "Validate",
+          "validating": "Validating...",
+          "remove": "Remove coupon",
+          "applied": "discount",
+          "discountedValue": "Discounted value",
+          "originalValue": "(original)",
+          "enterCodePlease": "Please enter the coupon code",
+          "successMessage": "Coupon {{code}} applied! Discount of ${{amount}} applied."
+        },
+        "referralCode": "Referral Code",
+        "codeAlreadyUsed": "Code already used",
+        "discountAlreadyApplied": "Discount already applied to your account",
+        "haveReferralCode": "Do you have a friend referral code?",
+        "placeholder": "Enter code here",
+        "validating": "Validating...",
+        "validate": "Validate Code",
+        "acceptContractTerms": "I have read and accept the contract terms and conditions",
+        "processingPayment": "Processing...",
+        "applyCodeAndContinue": "Apply Code and Continue",
+        "goToPayment": "Go to Payment",
+        "termsAndConditions": {
+          "title": "Terms and Conditions"
+        },
+        "scrollToBottomFirst": "Scroll to bottom to accept",
+        "readingTerms": "Reading terms...",
+        "acceptTerms": "Accept Terms",
+        "cancel": "Cancel",
+        "loading": "Loading...",
+        "validCode": "Valid referral code! You will receive $50 discount on the selection process fee.",
+        "pleaseEnterCode": "Please enter a code",
+        "sellerReferralCodeBlocked": "Users with seller code cannot use additional discount codes.",
+        "errorValidating": "Error validating code. Please try again.",
+        "mustAcceptTerms": "You must accept the terms and conditions to continue."
+      },
+      "errors": {
+        "serverError": "Error connecting to server",
+        "tryAgain": "Please try again",
+        "invalidCoupon": "Invalid coupon",
+        "connectionError": "Error validating coupon. Check your connection and try again."
+      },
       "registrationFailed": "Registration Failed",
       "emailAlreadyRegistered": "This email is already registered. Please sign in or use another email."
     }
@@ -1346,6 +1456,7 @@
       "description": "Start your journey to American education by completing our comprehensive selection process.",
       "completeApplicationProcess": "Complete your application process",
       "discountApplied": "✨ You have a discount coupon applied!",
+      "couponAppliedLabel": "Coupon applied",
       "sellerReferralCodeBlocked": "Matricula Rewards Blocked",
       "sellerReferralCodeMessage": "You cannot use Matricula Rewards codes because you registered with a seller referral code. This is a system restriction to prevent conflicts between different referral systems.",
       "sellerReferralCodeInfo": "Seller referral code detected - Matricula Rewards not available",
@@ -1889,7 +2000,9 @@
         "documentRequests": {
           "title": "Check Document Requests",
           "description": "Upload the documents requested by the university to continue your process.",
-          "button": "Go to Document Requests"
+          "button": "Go to Document Requests",
+          "acceptanceLetterAvailable": "Acceptance Letter available!",
+          "acceptanceLetterDescription": "Your acceptance letter has been sent by the university. Go to the Documents tab to view it."
         },
         "applicationDetails": {
           "title": "View Application Details",
@@ -1899,7 +2012,11 @@
         "i20ControlFee": {
           "title": "Pay I-20 Control Fee",
           "description": "Pay the I-20 Control Fee to request your official document. Deadline: 10 days after acceptance letter.",
-          "button": "Pay I-20 Control Fee"
+          "button": "Pay I-20 Control Fee",
+          "paidMessage": "Congratulations! The I-20 Control Fee has been paid successfully.",
+          "paidDescription": "Your payment has been confirmed. Continue tracking your application progress.",
+          "paidDate": "Payment date:",
+          "viewDetails": "View Payment Details"
         }
       },
       "chat": {
@@ -2062,6 +2179,8 @@
           "pendingI20Title": "Acceptance Letter - Pending I-20 Payment",
           "pendingI20Description": "Your acceptance letter will be available after you complete the I-20 Control Fee payment. Once the payment is confirmed and the university processes your acceptance letter, it will appear here for download.",
           "payI20Button": "Pay I-20 Control Fee Now",
+          "paymentRequiredTitle": "Acceptance Letter Available - Payment Required",
+          "paymentRequiredDescription": "Your acceptance letter has been sent by the university. To view and download it, please complete the I-20 Control Fee payment.",
           "waitingForUniversityTitle": "Acceptance Letter - Waiting for University",
           "waitingForUniversityDescription": "Your I-20 Control Fee has been paid successfully. The university is now processing your acceptance letter. It will appear here once they send it to you."
         },
@@ -2090,7 +2209,8 @@
         "approved": "Approved",
         "changesRequested": "Changes Requested",
         "underReview": "Under Review",
-        "notSubmitted": "Not Submitted"
+        "notSubmitted": "Not Submitted",
+        "paid": "Paid"
       },
       "hardcodedTexts": {
         "authenticating": "Authenticating...",
@@ -2529,7 +2649,15 @@
     "readingTerms": "Please read the terms before accepting",
     "acceptContractTerms": "I accept the contract terms and conditions",
     "cancel": "Cancel",
-    "acceptTerms": "Accept Terms"
+    "acceptTerms": "Accept Terms",
+    "promotionalCoupon": {
+      "title": "Selection Process Fee",
+      "discountedValue": "Discounted Value",
+      "originalValue": "Original Value",
+      "applied": "Applied",
+      "successMessage": "Code {{code}} applied! You saved ${{amount}}",
+      "enterCodePlease": "Please enter a promotional code."
+    }
   },
   "footer": {
     "company": {
@@ -3165,7 +3293,7 @@
     },
     "common": {
       "redirecting": "Redirecting in a moment...",
-      "paymentProcessedAmount": "Your payment of ${{amount}} was processed successfully!",
+      "paymentProcessedAmount": "Your payment was processed successfully!",
       "paymentError": "There was a problem processing your payment."
     },
     "i20ControlFee": {

@@ -595,27 +595,54 @@ const AdminStudentDetails: React.FC = () => {
   };
 
   // Função para buscar valores reais pagos de individual_fee_payments
+  // ✅ CORREÇÃO: Usar gross_amount_usd quando disponível (valor bruto em USD)
+  // Isso garante que mostramos o valor que o aluno realmente pagou, igual ao Payment Management
   const fetchRealPaidAmounts = async (userId: string) => {
     try {
       const { data: payments, error } = await supabase
         .from('individual_fee_payments')
-        .select('fee_type, amount')
-        .eq('user_id', userId);
+        .select('fee_type, amount, gross_amount_usd, payment_method, payment_date')
+        .eq('user_id', userId)
+        .order('payment_date', { ascending: false }); // Mais recente primeiro
       
       if (error) throw error;
       
       const amounts: typeof realPaidAmounts = {};
+      
+      // Processar cada pagamento, usando o mais recente para cada fee_type
       payments?.forEach(payment => {
+        // ✅ PRIORIDADE: Usar gross_amount_usd quando disponível (valor bruto em USD)
+        // Se não tiver, usar amount (mas pode estar em BRL para PIX, então verificar)
+        let amountUSD = payment.gross_amount_usd 
+          ? Number(payment.gross_amount_usd)
+          : Number(payment.amount);
+        
+        // Se não tem gross_amount_usd e o valor é muito alto, provavelmente é BRL
+        // Não usar esse valor para evitar mostrar valores incorretos
+        if (!payment.gross_amount_usd && amountUSD > 1000 && payment.payment_method === 'stripe') {
+          console.log(`[AdminDashboard] Ignorando valor provavelmente BRL para ${payment.fee_type}: ${amountUSD}`);
+          return;
+        }
+        
         const feeType = payment.fee_type as keyof typeof amounts;
-        if (feeType === 'selection_process') amounts.selection_process = Number(payment.amount);
-        else if (feeType === 'application') amounts.application = Number(payment.amount);
-        else if (feeType === 'scholarship') amounts.scholarship = Number(payment.amount);
-        else if (feeType === 'i20_control') amounts.i20_control = Number(payment.amount);
+        
+        // Só definir se ainda não foi definido (usar o mais recente, que vem primeiro devido ao order)
+        if (feeType === 'selection_process' && !amounts.selection_process) {
+          amounts.selection_process = amountUSD;
+        } else if (feeType === 'application' && !amounts.application) {
+          amounts.application = amountUSD;
+        } else if (feeType === 'scholarship' && !amounts.scholarship) {
+          amounts.scholarship = amountUSD;
+        } else if (feeType === 'i20_control' && !amounts.i20_control) {
+          amounts.i20_control = amountUSD;
+        }
       });
       
+      console.log('✅ [AdminStudentDetails] Real paid amounts loaded:', amounts);
       setRealPaidAmounts(amounts);
     } catch (error) {
-      console.error('Error fetching real paid amounts:', error);
+      console.error('❌ [AdminStudentDetails] Error fetching real paid amounts:', error);
+      setRealPaidAmounts({});
     }
   };
 
@@ -1679,7 +1706,10 @@ const AdminStudentDetails: React.FC = () => {
     if (!student) return;
     
     // Calcular valores atuais considerando dependentes e overrides
-    const dependentsExtra = dependents * 150; // $150 por dependente apenas no Selection Process
+    // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
+    // Dependentes só afetam Application Fee ($100 por dependente)
+    const systemType = student?.system_type || 'legacy';
+    const dependentsExtra = systemType === 'simplified' ? 0 : (dependents * 150); // $150 por dependente apenas no Selection Process (legacy)
     const baseSelectionProcess = Number(getFeeAmount('selection_process')); // Valor base dinâmico
     const currentSelectionProcess = hasOverride('selection_process') 
       ? getFeeAmount('selection_process') 
@@ -1880,7 +1910,12 @@ const AdminStudentDetails: React.FC = () => {
       if (feeType === 'selection_process') {
         // Calcular o valor do pagamento
         const base = Number(getFeeAmount('selection_process'));
-        const paymentAmount = base + (student?.dependents || 0) * 150;
+        // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
+        // Dependentes só afetam Application Fee ($100 por dependente)
+        const systemType = student?.system_type || 'legacy';
+        const paymentAmount = systemType === 'simplified' 
+          ? base 
+          : base + (student?.dependents || 0) * 150;
         const paymentDate = new Date().toISOString();
         const paymentMethod = (method || 'manual') as 'stripe' | 'zelle' | 'manual';
 
@@ -1993,10 +2028,9 @@ const AdminStudentDetails: React.FC = () => {
           paymentAmount = getFeeAmount('application_fee');
         }
 
-        // Adicionar $100 por dependente apenas para sistema legacy
-        const systemType = userSystemType || 'legacy';
+        // Adicionar $100 por dependente para ambos os sistemas (legacy e simplified)
         const studentDependents = dependents || Number(student.dependents || 0);
-        if (systemType === 'legacy' && studentDependents > 0) {
+        if (studentDependents > 0) {
           paymentAmount += studentDependents * 100;
         }
 
@@ -4449,21 +4483,27 @@ const AdminStudentDetails: React.FC = () => {
                                         setPendingRejectAppId(app.id);
                                         setShowRejectStudentModal(true);
                                       }}
-                                      disabled={approvingStudent || rejectingStudent || app.status === 'approved' || app.status === 'rejected'}
+                                      disabled={approvingStudent || rejectingStudent || app.status === 'approved' || app.status === 'rejected' || app.status === 'enrolled'}
                                       className={`px-4 py-2 rounded-lg font-medium border transition-colors text-center text-sm ${
                                         app.status === 'rejected' 
                                           ? 'bg-red-100 text-red-700 border-red-300 cursor-not-allowed' 
                                           : 'text-red-600 border-red-200 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed'
                                       }`}
                                     >
-                                      {app.status === 'approved' ? 'Application Approved' : app.status === 'rejected' ? 'Application Rejected' : 'Reject Application'}
+                                      {app.status === 'approved' ? 'Application Approved' : app.status === 'rejected' ? 'Application Rejected' : app.status === 'enrolled' ? 'Application Enrolled' : 'Reject Application'}
                                     </button>
                                     <button
-                                      disabled={approvingStudent || rejectingStudent || app.status === 'approved' || app.status === 'rejected'}
+                                      disabled={approvingStudent || rejectingStudent || app.status === 'approved' || app.status === 'rejected' || app.status === 'enrolled'}
                                       onClick={() => approveApplication(app.id)}
-                                      className="px-4 py-2 rounded-lg font-medium bg-[#05294E] text-white hover:bg-[#041f38] disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-center text-sm"
+                                      className={`px-4 py-2 rounded-lg font-medium text-white transition-colors text-center text-sm ${
+                                        app.status === 'approved' || app.status === 'enrolled'
+                                          ? 'bg-green-600 hover:bg-green-700 cursor-not-allowed'
+                                          : app.status === 'rejected'
+                                          ? 'bg-red-600 hover:bg-red-700 cursor-not-allowed'
+                                          : 'bg-[#05294E] hover:bg-[#041f38] disabled:opacity-50 disabled:cursor-not-allowed'
+                                      }`}
                                     >
-                                      {app.status === 'approved' ? 'Approved' : app.status === 'rejected' ? 'Rejected' : (approvingStudent ? 'Approving...' : 'Approve Application')}
+                                      {app.status === 'approved' ? 'Approved' : app.status === 'rejected' ? 'Rejected' : app.status === 'enrolled' ? 'Enrolled' : (approvingStudent ? 'Approving...' : 'Approve Application')}
                                     </button>
                                   </div>
                                 </div>
@@ -4769,7 +4809,12 @@ const AdminStudentDetails: React.FC = () => {
                       // Caso contrário, calcular valor esperado (para exibição antes do pagamento)
                       const hasCustomOverride = hasOverride('selection_process');
                       const base = Number(getFeeAmount('selection_process'));
-                      const finalAmount = hasCustomOverride ? getFeeAmount('selection_process') : base + dependents * 150;
+                      // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
+                      // Dependentes só afetam Application Fee ($100 por dependente)
+                      const systemType = student?.system_type || 'legacy';
+                      const finalAmount = hasCustomOverride 
+                        ? getFeeAmount('selection_process') 
+                        : (systemType === 'simplified' ? base : base + dependents * 150);
                       const formatted = formatFeeAmount(finalAmount);
                       
                       if (student?.user_id === '935e0eec-82c6-4a70-b013-e85dde6e63f7') {

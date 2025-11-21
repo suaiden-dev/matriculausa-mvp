@@ -15,6 +15,10 @@ import { getDocumentStatusDisplay } from '../../utils/documentStatusMapper';
 import DocumentViewerModal from '../../components/DocumentViewerModal';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
 import { useStudentDetails } from '../../components/EnhancedStudentTracking/hooks/useStudentDetails';
+import { getRealPaidAmounts } from '../../utils/paymentConverter';
+import SelectedScholarshipCard from '../../components/AdminDashboard/StudentDetails/SelectedScholarshipCard';
+import StudentScholarshipsList from '../../components/EnhancedStudentTracking/StudentScholarshipsList';
+import ApplicationProgressCard from '../../components/AdminDashboard/StudentDetails/ApplicationProgressCard';
 
 interface StudentInfo {
   student_id: string;
@@ -48,6 +52,7 @@ interface StudentInfo {
     application_fee_amount?: number;
     scholarship_fee_amount?: number;
   };
+  system_type?: string;
 }
 
 
@@ -68,6 +73,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
     studentDocuments: hookStudentDocuments,
     documentRequests: hookDocumentRequests,
     scholarshipApplication: hookScholarshipApplication,
+    allApplications: hookAllApplications,
     loadStudentDetails: hookLoadStudentDetails
   } = useStudentDetails();
   
@@ -85,6 +91,9 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
   const [transferFormUploads, setTransferFormUploads] = useState<any[]>([]);
   const [loadingTransferFormUploads, setLoadingTransferFormUploads] = useState(false);
   
+  // Estado para Application Progress Card
+  const [isProgressExpanded, setIsProgressExpanded] = useState(false);
+  
   // Usar dados do hook
   const scholarshipApplication = hookScholarshipApplication;
   const studentDocuments = hookStudentDocuments;
@@ -97,6 +106,8 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
   // Estados para taxas dinâmicas do estudante
   const [studentPackageFees, setStudentPackageFees] = useState<any>(null);
   const [dependents, setDependents] = useState<number>(0);
+  // Estado para valores reais pagos
+  const [realPaidAmounts, setRealPaidAmounts] = useState<{ selection_process?: number; scholarship?: number; i20_control?: number } | null>(null);
 
 
   // Função para obter valores corretos baseados no sistema do estudante
@@ -413,105 +424,45 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
     }
   };
 
-  // Buscar a aplicação real com acceptance letter
+  // Buscar a aplicação real com acceptance letter de todas as aplicações
   useEffect(() => {
     const fetchRealApplication = async () => {
+      // Primeiro, verificar se a aplicação principal já tem acceptance letter
       if (scholarshipApplication?.acceptance_letter_url) {
         setRealScholarshipApplication(scholarshipApplication);
-      return;
-    }
+        return;
+      }
 
-      if (studentDocuments && studentDocuments.length > 0) {
+      // Se não, verificar todas as aplicações do hook
+      if (hookAllApplications && hookAllApplications.length > 0) {
         setLoadingApplication(true);
         try {
-          let applications = null;
-          let error = null;
-          
-          if (scholarshipApplication?.id) {
-            console.log('🔍 [DOCUMENTS VIEW] Checking existing application:', scholarshipApplication.id);
-            const { data, error: appError } = await supabase
-              .from('scholarship_applications')
-              .select(`
-                *,
-                scholarships (
-                  id,
-                  title,
-                  universities (
-                    id,
-                    name
-                  )
-                )
-              `)
-              .eq('id', scholarshipApplication.id)
-              .single();
-            
-            if (!appError && data) {
-              console.log('✅ [DOCUMENTS VIEW] Found existing application:', data);
-              applications = [data];
-            }
-          }
-          
-          if (!applications || applications.length === 0) {
-            console.log('🔍 [DOCUMENTS VIEW] Searching for application with acceptance letter...');
-            
-            const { data: odinaApp, error: odinaError } = await supabase
-              .from('scholarship_applications')
-              .select(`
-                *,
-                scholarships (
-                  id,
-                  title,
-                  universities (
-                    id,
-                    name
-                  )
-                )
-              `)
-              .eq('is_application_fee_paid', true)
-              .not('acceptance_letter_url', 'is', null)
-              .order('created_at', { ascending: false })
-              .limit(1);
-            
-            if (!odinaError && odinaApp && odinaApp.length > 0) {
-              console.log('✅ [DOCUMENTS VIEW] Found application with acceptance letter:', odinaApp);
-              applications = odinaApp;
-              error = null;
-        } else {
-              console.log('⚠️ [DOCUMENTS VIEW] No application with acceptance letter found, trying paid applications...');
-              
-              const { data, error: paidAppError } = await supabase
-                .from('scholarship_applications')
-                .select(`
-                  *,
-                  scholarships (
-                    id,
-                    title,
-                    universities (
-                      id,
-                      name
-                    )
-                  )
-                `)
-                .eq('is_application_fee_paid', true)
-                .order('created_at', { ascending: false })
-                .limit(1);
-            
-              if (!paidAppError && data && data.length > 0) {
-                console.log('✅ [DOCUMENTS VIEW] Found application with paid fee:', data);
-                applications = data;
-                error = null;
-              }
-            }
-          }
+          // Buscar a primeira aplicação que tenha acceptance_letter_url
+          const appWithAcceptanceLetter = hookAllApplications.find(
+            (app: any) => app.acceptance_letter_url && app.acceptance_letter_url.trim() !== ''
+          );
 
-          if (!error && applications && applications.length > 0) {
-            const app = applications[0];
-            console.log('🔍 [DOCUMENTS VIEW] Found real application:', app);
-            console.log('🔍 [DOCUMENTS VIEW] Acceptance letter URL:', app.acceptance_letter_url);
-            setRealScholarshipApplication(app);
+          if (appWithAcceptanceLetter) {
+            console.log('✅ [DOCUMENTS VIEW] Found application with acceptance letter from allApplications:', appWithAcceptanceLetter);
+            console.log('🔍 [DOCUMENTS VIEW] Acceptance letter URL:', appWithAcceptanceLetter.acceptance_letter_url);
+            setRealScholarshipApplication(appWithAcceptanceLetter);
+          } else {
+            // Se nenhuma tem acceptance letter, usar a primeira aplicação paga
+            const paidApp = hookAllApplications.find(
+              (app: any) => app.is_application_fee_paid === true
+            );
+            
+            if (paidApp) {
+              console.log('⚠️ [DOCUMENTS VIEW] No acceptance letter found, using first paid application:', paidApp);
+              setRealScholarshipApplication(paidApp);
+            } else if (hookAllApplications.length > 0) {
+              // Se não há aplicação paga, usar a primeira aplicação
+              console.log('⚠️ [DOCUMENTS VIEW] No paid application found, using first application:', hookAllApplications[0]);
+              setRealScholarshipApplication(hookAllApplications[0]);
+            }
           }
         } catch (error) {
-          console.error('Error fetching real application:', error);
+          console.error('❌ [DOCUMENTS VIEW] Error fetching real application:', error);
         } finally {
           setLoadingApplication(false);
         }
@@ -519,7 +470,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
     };
 
     fetchRealApplication();
-  }, [scholarshipApplication, studentDocuments]);
+  }, [hookAllApplications, scholarshipApplication]);
 
   // Buscar transfer form uploads quando a aplicação for carregada
   useEffect(() => {
@@ -548,6 +499,25 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
       loadStudentDetails();
     }
   }, [studentId]); // Remover loadStudentDetails das dependências
+
+  // Carregar valores reais pagos quando o studentId mudar
+  useEffect(() => {
+    const loadRealPaidAmounts = async () => {
+      if (!studentId) {
+        setRealPaidAmounts(null);
+        return;
+      }
+      
+      try {
+        const amounts = await getRealPaidAmounts(studentId, ['selection_process', 'scholarship', 'i20_control']);
+        setRealPaidAmounts(amounts);
+      } catch (error) {
+        console.error(`Erro ao buscar valores pagos para user_id ${studentId}:`, error);
+        setRealPaidAmounts(null);
+      }
+    };
+    loadRealPaidAmounts();
+  }, [studentId]);
 
   // ✅ REMOVIDO: loadDocumentRequests - agora usa o hook useStudentDetails
   // ✅ REMOVIDO: loadStudentDocuments - agora usa o hook useStudentDetails
@@ -885,6 +855,77 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
     });
   };
 
+  // Application Progress Functions
+  const allSteps = [
+    { key: 'selection_fee', label: 'Selection Fee' },
+    { key: 'apply', label: 'Application' },
+    { key: 'review', label: 'Review' },
+    { key: 'application_fee', label: 'App Fee' },
+    { key: 'scholarship_fee', label: 'Scholarship Fee' },
+    { key: 'i20_fee', label: 'I-20 Fee' },
+    { key: 'acceptance_letter', label: 'Acceptance' },
+    { key: 'transfer_form', label: 'Transfer Form' },
+    { key: 'enrollment', label: 'Enrollment' }
+  ];
+
+  const steps = allSteps.filter(step => {
+    if (step.key === 'transfer_form') {
+      return studentInfo?.student_process_type === 'transfer';
+    }
+    return true;
+  });
+
+  const getStepStatus = useCallback((step: { key: string; label: string }) => {
+    if (!studentInfo) return 'pending';
+    
+    switch (step.key) {
+      case 'selection_fee':
+        return studentInfo.has_paid_selection_process_fee ? 'completed' : 'pending';
+      case 'apply':
+        return (hookAllApplications && hookAllApplications.length > 0) ? 'completed' : 'pending';
+      case 'review':
+        if (studentInfo.application_status === 'enrolled' || studentInfo.application_status === 'approved') return 'completed';
+        if (studentInfo.application_status === 'rejected') return 'rejected';
+        if (studentInfo.application_status === 'under_review') return 'in_progress';
+        return 'pending';
+      case 'application_fee':
+        return studentInfo.is_application_fee_paid ? 'completed' : 'pending';
+      case 'scholarship_fee':
+        return studentInfo.is_scholarship_fee_paid ? 'completed' : 'pending';
+      case 'i20_fee':
+        return studentInfo.has_paid_i20_control_fee ? 'completed' : 'pending';
+      case 'acceptance_letter':
+        const currentApp = realScholarshipApplication || scholarshipApplication;
+        if (currentApp?.acceptance_letter_status === 'approved' || currentApp?.acceptance_letter_status === 'sent') return 'completed';
+        return 'pending';
+      case 'transfer_form':
+        if (studentInfo.student_process_type !== 'transfer') return 'skipped';
+        const transferApp = hookAllApplications?.find((app: any) => 
+          app.student_process_type === 'transfer' && 
+          (app.transfer_form_status === 'approved' || app.transfer_form_status === 'sent')
+        );
+        return transferApp ? 'completed' : 'pending';
+      case 'enrollment':
+        return studentInfo.application_status === 'enrolled' ? 'completed' : 'pending';
+      default:
+        return 'pending';
+    }
+  }, [studentInfo, hookAllApplications, realScholarshipApplication, scholarshipApplication]);
+
+  const getCurrentStep = useCallback(() => {
+    if (!studentInfo) return null;
+    
+    for (let i = 0; i < steps.length; i++) {
+      const status = getStepStatus(steps[i]);
+      if (status === 'in_progress' || status === 'pending') {
+        return { step: steps[i], index: i, status };
+      }
+    }
+    
+    // Se todos estão completos, retorna o último
+    return { step: steps[steps.length - 1], index: steps.length - 1, status: 'completed' };
+  }, [studentInfo, steps, getStepStatus]);
+
   // Função para buscar o documento mais recente por tipo
   const latestDocByType = (type: string) => {
     console.log('=== DEBUG latestDocByType ===');
@@ -994,23 +1035,34 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
       // Se file_url é um path do storage, converter para URL pública
       if (doc.file_url && !doc.file_url.startsWith('http')) {
         // Determinar o bucket correto baseado no tipo de documento
+        // Documentos normais (passport, diploma, funds_proof) SEMPRE vão para student-documents
+        // Transfer forms e acceptance letters podem estar em document-attachments
         let bucket = 'student-documents'; // default
         
-        // Se for transfer form, usar document-attachments
-        if (doc.filename && doc.filename.toLowerCase().includes('transfer')) {
-          bucket = 'document-attachments';
-        }
-        // Se for acceptance letter, usar document-attachments
-        else if (doc.filename && doc.filename.toLowerCase().includes('acceptance')) {
-          bucket = 'document-attachments';
+        // Verificar se é um documento de aplicação normal (passport, diploma, funds_proof)
+        // Se for, SEMPRE usar student-documents, independente do filename
+        const isNormalDoc = doc.type && ['passport', 'diploma', 'funds_proof'].includes(doc.type);
+        
+        // Apenas se NÃO for um documento normal, verificar filename para transfer/acceptance
+        if (!isNormalDoc && doc.filename) {
+          const filenameLower = doc.filename.toLowerCase();
+          // Apenas usar document-attachments se o filename claramente indicar transfer ou acceptance
+          // E não for um dos documentos normais
+          if ((filenameLower.includes('transfer') || filenameLower.includes('acceptance')) && 
+              !filenameLower.includes('passport') && 
+              !filenameLower.includes('diploma') && 
+              !filenameLower.includes('funds')) {
+            bucket = 'document-attachments';
+          }
         }
         
+        // Gerar URL pública com o bucket determinado
         const publicUrl = supabase.storage
           .from(bucket)
           .getPublicUrl(doc.file_url)
           .data.publicUrl;
         
-        console.log('URL pública gerada:', publicUrl);
+        console.log(`URL pública gerada com bucket ${bucket}:`, publicUrl);
         setPreviewUrl(publicUrl);
       } else {
         // Se já é uma URL completa, usar diretamente
@@ -1070,8 +1122,147 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+      <div className="min-h-screen bg-slate-50 animate-pulse">
+        {/* Header Skeleton */}
+        <div className="bg-white shadow-sm border-b border-slate-200 rounded-t-3xl">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center sm:space-x-4 min-w-0 w-full">
+                <div className="h-10 w-32 bg-slate-200 rounded-lg mb-4 sm:mb-0"></div>
+                <div className="min-w-0 w-full">
+                  <div className="h-8 w-48 bg-slate-200 rounded-lg mb-2"></div>
+                  <div className="h-4 w-64 bg-slate-200 rounded-lg"></div>
+                </div>
+              </div>
+              <div className="flex items-center space-x-3">
+                <div className="h-8 w-24 bg-slate-200 rounded-full"></div>
+                <div className="h-10 w-10 bg-slate-200 rounded-lg"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Navigation Tabs Skeleton */}
+        <div className="bg-white border-b border-slate-300 rounded-b-3xl">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex space-x-8 py-4">
+              {[1, 2].map((i) => (
+                <div key={i} className="h-5 w-24 bg-slate-200 rounded"></div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Main Content Skeleton */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
+            {/* Main Content Skeleton */}
+            <div className="xl:col-span-8 space-y-6">
+              {/* Student Information Card Skeleton */}
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
+                <div className="bg-gradient-to-r from-slate-300 to-slate-400 rounded-t-2xl px-6 py-4">
+                  <div className="h-6 w-48 bg-slate-200 rounded"></div>
+                </div>
+                <div className="p-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="space-y-4">
+                        <div className="h-6 w-32 bg-slate-200 rounded mb-4"></div>
+                        <div className="space-y-3">
+                          {[1, 2, 3, 4].map((j) => (
+                            <div key={j} className="space-y-2">
+                              <div className="h-4 w-24 bg-slate-200 rounded"></div>
+                              <div className="h-5 w-full bg-slate-200 rounded"></div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Scholarship Card Skeleton */}
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
+                <div className="bg-gradient-to-r from-slate-300 to-slate-400 rounded-t-2xl px-6 py-4">
+                  <div className="h-6 w-40 bg-slate-200 rounded"></div>
+                </div>
+                <div className="p-6 space-y-4">
+                  {[1, 2].map((i) => (
+                    <div key={i} className="border border-slate-200 rounded-xl p-4">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="h-5 w-48 bg-slate-200 rounded"></div>
+                        <div className="h-6 w-20 bg-slate-200 rounded-full"></div>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="h-4 w-full bg-slate-200 rounded"></div>
+                        <div className="h-4 w-3/4 bg-slate-200 rounded"></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Sidebar Skeleton */}
+            <div className="xl:col-span-4 space-y-4">
+              {/* Application Progress Card Skeleton */}
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
+                <div className="px-6 py-4 border-b border-slate-200">
+                  <div className="h-6 w-40 bg-slate-200 rounded"></div>
+                </div>
+                <div className="p-6 space-y-4">
+                  <div className="p-4 bg-slate-50 rounded-xl border-2 border-slate-200">
+                    <div className="flex items-center space-x-3 mb-2">
+                      <div className="w-8 h-8 bg-slate-200 rounded-full"></div>
+                      <div className="flex-1">
+                        <div className="h-5 w-32 bg-slate-200 rounded mb-1"></div>
+                        <div className="h-4 w-48 bg-slate-200 rounded"></div>
+                      </div>
+                    </div>
+                    <div className="h-6 w-20 bg-slate-200 rounded-full ml-11"></div>
+                  </div>
+                  <div className="flex justify-center">
+                    <div className="h-8 w-32 bg-slate-200 rounded-lg"></div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Quick Stats Card Skeleton */}
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
+                <div className="bg-gradient-to-r from-slate-300 to-slate-400 rounded-t-2xl px-6 py-4">
+                  <div className="h-5 w-40 bg-slate-200 rounded"></div>
+                </div>
+                <div className="p-6 space-y-3">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="flex items-center justify-between">
+                      <div className="h-4 w-24 bg-slate-200 rounded"></div>
+                      <div className="h-4 w-32 bg-slate-200 rounded"></div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Recent Activity Card Skeleton */}
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
+                <div className="bg-gradient-to-r from-slate-300 to-slate-400 rounded-t-2xl px-6 py-4">
+                  <div className="h-5 w-32 bg-slate-200 rounded"></div>
+                </div>
+                <div className="p-6 space-y-3">
+                  {[1, 2].map((i) => (
+                    <div key={i} className="flex items-start space-x-3">
+                      <div className="w-2 h-2 bg-slate-200 rounded-full mt-2"></div>
+                      <div className="flex-1">
+                        <div className="h-4 w-32 bg-slate-200 rounded mb-1"></div>
+                        <div className="h-3 w-24 bg-slate-200 rounded"></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -1376,18 +1567,27 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                               const appStatus = (studentInfo as any)?.status || (studentInfo as any)?.application_status as string | undefined;
                               const documentsStatus = (studentInfo as any)?.documents_status as string | undefined;
                               
+                              // Verificar se há carta de aceite na aplicação atual
+                              const hasAcceptanceLetter = currentApplication?.acceptance_letter_url && 
+                                                         currentApplication.acceptance_letter_url.trim() !== '';
+                              
                               // Debug logs
                               console.log('🔍 [ENROLLMENT_STATUS] Debug:', {
                                 acceptanceStatus,
                                 appStatus,
                                 documentsStatus,
+                                hasAcceptanceLetter,
+                                currentApplicationAcceptanceLetter: currentApplication?.acceptance_letter_url,
                                 studentInfo: studentInfo
                               });
                               
                               // Para usuários com aplicação de bolsa: verificar status da aplicação
                               // Para usuários sem aplicação de bolsa: verificar documents_status
+                              // ✅ CORREÇÃO: Incluir verificação de 'sent' e presença de acceptance_letter_url
                               const isEnrolled = appStatus === 'enrolled' || 
                                                 acceptanceStatus === 'approved' || 
+                                                acceptanceStatus === 'sent' ||
+                                                hasAcceptanceLetter ||
                                                 (documentsStatus === 'approved' && !appStatus);
                               const label = isEnrolled ? 'Enrolled' : 'Pending Acceptance';
                               const color = isEnrolled ? 'text-green-700' : 'text-yellow-700';
@@ -1410,154 +1610,61 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                 </div>
               </div>
 
-              {/* Scholarship Information Card */}
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
-                <div className="bg-gradient-to-r rounded-t-2xl from-slate-700 to-slate-800 px-6 py-4">
-                  <h2 className="text-xl font-semibold text-white flex items-center">
-                    <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                    </svg>
-                    Scholarship Details
-                  </h2>
-                </div>
-                <div className="p-6">
-                  <div className="space-y-4">
-                    <div className="flex items-start space-x-3">
-                      <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
-                      <div className="flex-1">
-                        <dt className="text-sm font-medium text-slate-600">Scholarship Program</dt>
-                        <dd className="text-lg font-semibold text-slate-900">
-                          {studentInfo.scholarship_title || 'Scholarship information not available'}
-                        </dd>
-                      </div>
-                    </div>
-                    <div className="flex items-start space-x-3">
-                      <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
-                      <div className="flex-1">
-                        <dt className="text-sm font-medium text-slate-600">University</dt>
-                        <dd className="text-lg font-semibold text-slate-900">
-                          {studentInfo.university_name || 'University not specified'}
-                        </dd>
-                      </div>
-                    </div>
-                                         <div className="flex items-start space-x-3">
-                       <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
-                       <div className="flex-1">
-                         <dt className="text-sm font-medium text-slate-600">Application Status</dt>
-                         <dd className="text-base text-slate-700">
-                           {(() => {
-                             console.log('🔍 [STUDENT_DETAILS] Renderizando Application Status:');
-                             console.log('🔍 [STUDENT_DETAILS] studentInfo:', studentInfo);
-                             console.log('🔍 [STUDENT_DETAILS] studentInfo.application_status:', studentInfo?.application_status);
-                             console.log('🔍 [STUDENT_DETAILS] Tipo do application_status:', typeof studentInfo?.application_status);
-                             console.log('🔍 [STUDENT_DETAILS] studentInfo completo:', JSON.stringify(studentInfo, null, 2));
-                             
-                             if (studentInfo?.application_status) {
-                               const formattedStatus = studentInfo.application_status.charAt(0).toUpperCase() + studentInfo.application_status.slice(1);
-                               console.log('🔍 [STUDENT_DETAILS] Status formatado:', formattedStatus);
-                               return formattedStatus;
-                             } else {
-                               console.log('🔍 [STUDENT_DETAILS] Status não disponível, mostrando fallback');
-                               return 'Status not available';
-                             }
-                           })()}
-                         </dd>
-                       </div>
-                     </div>
-                  </div>
-                </div>
-              </div>
+              {/* Selected Scholarship Card */}
+              {studentInfo && hookAllApplications && hookAllApplications.length > 0 && studentInfo.is_application_fee_paid && (
+                <SelectedScholarshipCard
+                  student={{
+                    student_id: studentInfo.student_id,
+                    user_id: studentInfo.student_id,
+                    student_name: studentInfo.full_name,
+                    student_email: studentInfo.email,
+                    scholarship_title: studentInfo.scholarship_title || null,
+                    university_name: studentInfo.university_name || null,
+                    is_application_fee_paid: studentInfo.is_application_fee_paid || false,
+                    all_applications: hookAllApplications,
+                    student_created_at: studentInfo.registration_date || new Date().toISOString(),
+                    has_paid_selection_process_fee: studentInfo.has_paid_selection_process_fee || false,
+                    has_paid_i20_control_fee: studentInfo.has_paid_i20_control_fee || false,
+                    application_status: studentInfo.application_status || null,
+                    student_process_type: studentInfo.student_process_type || null,
+                    payment_status: null,
+                    reviewed_at: null,
+                    reviewed_by: null,
+                    scholarship_name: studentInfo.scholarship_title || null,
+                    total_applications: hookAllApplications.length,
+                    is_locked: false,
+                    seller_referral_code: studentInfo.seller_referral_code || null,
+                    application_id: null,
+                    scholarship_id: null,
+                    applied_at: null,
+                    is_scholarship_fee_paid: studentInfo.is_scholarship_fee_paid || false,
+                    acceptance_letter_status: null
+                  } as any}
+                />
+              )}
 
-                            {/* Student Documents Section */}
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
-                <div className="bg-gradient-to-r from-[#05294E] to-[#041f38] px-6 py-4">
-                  <h2 className="text-xl font-semibold text-white flex items-center">
-                    <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    Student Documents
-                  </h2>
-                  <p className="text-slate-200 text-sm mt-1">Review each document and their current status</p>
-                </div>
-                <div className="p-6">
-                  {loading || !documentsLoaded ? (
-                    <div className="text-center py-8">
-                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#05294E] mx-auto mb-4"></div>
-                      <p className="text-slate-600">Loading documents...</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {DOCUMENTS_INFO.map((doc, index) => {
-                        const d = latestDocByType(doc.key);
-                        const status = d?.status || 'pending';
-                      
-                      return (
-                        <div key={doc.key}>
-                          <div className="bg-white p-4 sm:p-6 rounded-xl border border-slate-200">
-                            <div className="flex flex-col sm:flex-row items-start gap-4">
-                              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                </svg>
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex flex-wrap gap-2 mb-1">
-                                  <p className="font-medium text-slate-900 break-words">{doc.label}</p>
-                                  <span className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
-                                    status === 'approved' ? 'bg-green-100 text-green-800' :
-                                    status === 'changes_requested' ? 'bg-red-100 text-red-800' :
-                                    status === 'under_review' ? 'bg-yellow-100 text-yellow-800' :
-                                    'bg-slate-100 text-slate-700'
-                                  }`}>
-                                    {status === 'approved' ? 'Approved' :
-                                     status === 'changes_requested' ? 'Changes Requested' :
-                                     status === 'under_review' ? 'Under Review' :
-                                     d?.file_url ? 'Submitted' : 'Not Submitted'}
-                                  </span>
-                                </div>
-                                <p className="text-sm text-slate-600 break-words">{doc.description}</p>
-                                {d?.file_url && (
-                                  <p className="text-xs text-slate-400 mt-1">
-                                    Uploaded: {d.uploaded_at ? formatDate(d.uploaded_at) : new Date().toLocaleDateString()}
-                                  </p>
-                                )}
-                                
-                                {/* Botões de ação */}
-                                <div className="flex flex-col sm:flex-row gap-2 mt-3">
-                                  {d?.file_url && (
-                                    <button 
-                                      onClick={() => handleViewDocument(d)}
-                                      className="bg-[#05294E] hover:bg-[#041f38] text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto text-center"
-                                    >
-                                      View Document
-                                    </button>
-                                  )}
-                                  {d?.file_url && (
-                                    <button 
-                                      onClick={() => handleDownloadDocument(d)}
-                                      className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto text-center"
-                                    >
-                                      Download
-                                    </button>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                          {index < DOCUMENTS_INFO.length - 1 && (
-                            <div className="border-t border-slate-200"></div>
-                          )}
-                        </div>
-                      );
-                    })}
-                    </div>
-                  )}
-                </div>
-              </div>
+              {/* Student Scholarships List - All Applications */}
+              {hookAllApplications && hookAllApplications.length > 0 && (
+                <StudentScholarshipsList
+                  applications={hookAllApplications}
+                  onViewDocument={handleViewDocument}
+                />
+              )}
             </div>
 
             {/* Sidebar */}
             <div className="xl:col-span-4 space-y-4">
+              {/* Application Progress Card */}
+              {studentInfo && (
+                <ApplicationProgressCard
+                  currentStep={getCurrentStep()}
+                  allSteps={steps}
+                  isExpanded={isProgressExpanded}
+                  onToggleExpand={() => setIsProgressExpanded(!isProgressExpanded)}
+                  getStepStatus={getStepStatus}
+                />
+              )}
+
               {/* Quick Stats Card */}
               <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
                 <div className="bg-gradient-to-r rounded-t-2xl from-[#05294E] to-[#041f38] px-6 py-4">
@@ -1619,7 +1726,12 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                 </div>
               </div>
 
-              {/* Scholarship Range Management Card */}
+              {/* Scholarship Range Management Card - Only show for non-simplified students */}
+              {(() => {
+                // Verificar se é simplified - se qualquer um dos valores for simplified, ocultar o card
+                const isSimplified = userSystemType === 'simplified' || (studentInfo as any)?.system_type === 'simplified';
+                return !isSimplified;
+              })() && (
               <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
                 <div className="bg-gradient-to-r rounded-t-2xl from-[#05294E] to-[#0a4a7a] px-6 py-4">
                   <div className="flex items-center justify-between">
@@ -1714,6 +1826,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                   )}
                 </div>
               </div>
+              )}
 
               {/* Fee Status Card */}
               <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
@@ -1735,20 +1848,27 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                            </span>
                            <span className="text-xs text-slate-500">
                             {(() => {
-                              // Para sistema simplificado, usar valores fixos
+                              // ✅ CORREÇÃO: Priorizar valor real pago (líquido, sem taxas do Stripe)
+                              if (studentInfo?.has_paid_selection_process_fee && realPaidAmounts?.selection_process !== undefined && realPaidAmounts.selection_process > 0) {
+                                return formatFeeAmount(realPaidAmounts.selection_process);
+                              }
+                              
+                              // Fallback para valores calculados (apenas se não houver valor real pago)
                               if (studentFees.isSimplified) {
                                 return `$${studentFees.selectionProcessFee.toFixed(2)}`;
                               }
                               
-                              // Para sistema legacy, usar lógica de overrides
                               const hasCustomOverride = hasOverride('selection_process');
                               if (hasCustomOverride) {
-                                // Com override: usar valor exato do override
                                 return formatFeeAmount(getFeeAmount('selection_process'));
                               } else {
-                                // Sem override: valor padrão + dependentes
                                 const baseFee = Number(getFeeAmount('selection_process'));
-                                const total = baseFee + (dependents * 150);
+                                // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
+                                // Dependentes só afetam Application Fee ($100 por dependente)
+                                const systemType = studentInfo?.system_type || 'legacy';
+                                const total = systemType === 'simplified' 
+                                  ? baseFee 
+                                  : baseFee + (dependents * 150);
                                 return formatFeeAmount(total);
                               }
                             })()}
@@ -1808,21 +1928,23 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                          </span>
                          <span className="text-xs text-slate-500">
                            {(() => {
-                             // Para sistema simplificado, usar valores fixos
+                             // ✅ CORREÇÃO: Priorizar valor real pago (líquido, sem taxas do Stripe)
+                             if (studentInfo?.is_scholarship_fee_paid && realPaidAmounts?.scholarship !== undefined && realPaidAmounts.scholarship > 0) {
+                               return formatFeeAmount(realPaidAmounts.scholarship);
+                             }
+                             
+                             // Fallback para valores calculados (apenas se não houver valor real pago)
                              if (studentFees.isSimplified) {
                                return `$${studentFees.scholarshipFee.toFixed(2)}`;
                              }
                              
-                             // Para sistema legacy, usar lógica de overrides
                              if (hasOverride('scholarship_fee')) {
                                return formatFeeAmount(getFeeAmount('scholarship_fee'));
                              }
-                             // Se não há override, usar valor da scholarship específica se disponível
                              if (studentInfo?.scholarship?.scholarship_fee_amount) {
                                const amount = Number(studentInfo.scholarship.scholarship_fee_amount);
                                return formatFeeAmount(amount);
                              }
-                             // Fallback para valor padrão
                              return formatFeeAmount(getFeeAmount('scholarship_fee'));
                            })()}
                          </span>
@@ -1842,12 +1964,16 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                            </span>
                            <span className="text-xs text-slate-500">
                              {(() => {
-                               // Para sistema simplificado, usar valores fixos
+                               // ✅ CORREÇÃO: Priorizar valor real pago (líquido, sem taxas do Stripe)
+                               if (studentInfo?.has_paid_i20_control_fee && realPaidAmounts?.i20_control !== undefined && realPaidAmounts.i20_control > 0) {
+                                 return formatFeeAmount(realPaidAmounts.i20_control);
+                               }
+                               
+                               // Fallback para valores calculados (apenas se não houver valor real pago)
                                if (studentFees.isSimplified) {
                                  return `$${studentFees.i20ControlFee.toFixed(2)}`;
                                }
                                
-                               // Para sistema legacy, usar lógica de overrides
                                // I-20 Control Fee sempre usa override se disponível, senão valor padrão
                                // I-20 nunca soma dependentes
                                return formatFeeAmount(getFeeAmount('i20_control_fee'));
@@ -1957,7 +2083,21 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                             </h5>
                             
                             <div className="bg-white border border-slate-200 rounded-2xl p-3 sm:p-4">
-                              {request.uploads?.map((upload: any) => {
+                              {(() => {
+                                // Usar document_request_uploads se disponível, senão usar uploads (fallback)
+                                const uploads = request.document_request_uploads || request.uploads || [];
+                                if (uploads.length === 0) {
+                                  return (
+                                    <div className="text-center py-6">
+                                      <div className="mx-auto w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mb-3">
+                                        <FileText className="w-6 h-6 text-slate-400" />
+                                      </div>
+                                      <h4 className="text-sm font-medium text-slate-900 mb-1">No Documents Submitted</h4>
+                                      <p className="text-xs text-slate-500">Student has not uploaded any documents for this request yet.</p>
+                                    </div>
+                                  );
+                                }
+                                return uploads.map((upload: any) => {
                                 const { filename, fullUrl } = getDocumentInfo(upload);
                                 return (
                                   <div key={upload.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 last:mb-0">
@@ -2014,7 +2154,8 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                                     </div>
                                   </div>
                                 );
-                              })}
+                                });
+                              })()}
                             </div>
                           </div>
                         </div>

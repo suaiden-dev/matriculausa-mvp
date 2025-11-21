@@ -19,6 +19,7 @@ import { supabase } from '../../lib/supabase';
 import SellerI20DeadlineTimer from '../../components/SellerI20DeadlineTimer';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
 import { useState as useStateReact, useEffect } from 'react';
+import { getRealPaidAmounts } from '../../utils/paymentConverter';
 
 interface Student {
   id: string;
@@ -96,6 +97,10 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
   const [studentFeeOverrides, setStudentFeeOverrides] = useStateReact<{[key: string]: any}>({});
   // Estado para armazenar system_type por estudante
   const [studentSystemTypes, setStudentSystemTypes] = useStateReact<{[key: string]: string}>({});
+  // Estado para armazenar valores reais pagos por estudante
+  const [studentRealPaidAmounts, setStudentRealPaidAmounts] = useStateReact<Record<string, { selection_process?: number; scholarship?: number; i20_control?: number }>>({});
+  // Estado para controlar loading dos valores reais pagos
+  const [loadingRealPaidAmounts, setLoadingRealPaidAmounts] = useStateReact<boolean>(true);
   // Estado para controlar requisições em andamento
   const [loadingRequests, setLoadingRequests] = useStateReact<Set<string>>(new Set());
   // Métodos de pagamento por estudante (para calcular valor pago manualmente)
@@ -369,6 +374,34 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
 
     return () => clearTimeout(timeoutId);
   }, [students, userFeeOverridesDisabled]);
+
+  // Carregar valores reais pagos para todos os estudantes (mantém loading até carregar tudo)
+  useEffect(() => {
+    const loadRealPaidAmounts = async () => {
+      const uniqueUserIds = Array.from(new Set((students || []).map((s) => s.id).filter(Boolean)));
+      if (uniqueUserIds.length === 0) {
+        setStudentRealPaidAmounts({});
+        setLoadingRealPaidAmounts(false);
+        return;
+      }
+      
+      setLoadingRealPaidAmounts(true);
+      const amountsMap: Record<string, { selection_process?: number; scholarship?: number; i20_control?: number }> = {};
+      
+      await Promise.allSettled(uniqueUserIds.map(async (userId) => {
+        try {
+          const amounts = await getRealPaidAmounts(userId, ['selection_process', 'scholarship', 'i20_control']);
+          amountsMap[userId] = amounts;
+        } catch (error) {
+          console.error(`Erro ao buscar valores pagos para user_id ${userId}:`, error);
+        }
+      }));
+      
+      setStudentRealPaidAmounts(amountsMap);
+      setLoadingRealPaidAmounts(false);
+    };
+    loadRealPaidAmounts();
+  }, [students]);
   
   // Estado dos filtros
   const [filters, setFilters] = useState<FilterState>({
@@ -611,7 +644,9 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
         // Sem override: usar taxa baseada no system_type + dependentes
         const systemType = studentSystemTypes[student.id] || 'legacy';
         const baseSelectionFee = systemType === 'simplified' ? 350 : 400;
-        selectionProcessFee = baseSelectionFee + (deps * 150);
+        // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
+        // Dependentes só afetam Application Fee ($100 por dependente)
+        selectionProcessFee = systemType === 'simplified' ? baseSelectionFee : baseSelectionFee + (deps * 150);
       }
       
       missingFees.push({ name: 'Selection Process', amount: selectionProcessFee, color: 'red' });
@@ -689,114 +724,57 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
   // Função para calcular o total pago por um aluno
   const calculateStudentTotalPaid = (student: Student): number => {
     let total = 0;
-    const deps = studentDependents[student.id] || 0;
-    const overrides = studentFeeOverrides[student.id];
+    // ✅ CORREÇÃO: Usar valores reais pagos quando disponíveis, senão calcular com fallback
+    const realPaid = studentRealPaidAmounts[student.id] || studentRealPaidAmounts[student.user_id] || {};
+    const studentId = student.id || student.user_id;
+    const deps = studentDependents[studentId] || 0;
+    const systemType = studentSystemTypes[studentId] || 'legacy';
+    const overrides = studentFeeOverrides[student.id] || {};
 
-    // Debug específico para crashroiali0@gmail.com
-    if (student.email === 'crashroiali0@gmail.com') {
-      console.log('🚨🚨🚨 [CRASHROI_DEBUG] ===== CALCULANDO TOTAL PARA crashroiali0@gmail.com =====');
-      console.log('🚨🚨🚨 [CRASHROI_DEBUG] Student data:', {
-        id: student.id,
-        email: student.email,
-        has_paid_selection_process_fee: student.has_paid_selection_process_fee,
-        has_paid_i20_control_fee: student.has_paid_i20_control_fee,
-        is_scholarship_fee_paid: student.is_scholarship_fee_paid,
-        is_application_fee_paid: student.is_application_fee_paid
-      });
-      console.log('🚨🚨🚨 [CRASHROI_DEBUG] Dependents:', deps);
-      console.log('🚨🚨🚨 [CRASHROI_DEBUG] Overrides:', overrides);
-      console.log('🚨🚨🚨 [CRASHROI_DEBUG] Package fees:', studentPackageFees[student.id]);
-    }
-
-    // Debug específico para zhenhua4777@uorak.com
-    if (student.email === 'zhenhua4777@uorak.com') {
-      console.log('🚨🚨🚨 [ZHENHUA_DEBUG] ===== CALCULANDO TOTAL PARA zhenhua4777@uorak.com =====');
-      console.log('🚨🚨🚨 [ZHENHUA_DEBUG] Student data:', {
-        id: student.id,
-        email: student.email,
-        has_paid_selection_process_fee: student.has_paid_selection_process_fee,
-        has_paid_i20_control_fee: student.has_paid_i20_control_fee,
-        is_scholarship_fee_paid: student.is_scholarship_fee_paid,
-        is_application_fee_paid: student.is_application_fee_paid
-      });
-      console.log('🚨🚨🚨 [ZHENHUA_DEBUG] Dependents:', deps);
-      console.log('🚨🚨🚨 [ZHENHUA_DEBUG] Overrides:', overrides);
-      console.log('🚨🚨🚨 [ZHENHUA_DEBUG] Package fees:', studentPackageFees[student.id]);
-    }
-
+    // Selection Process Fee
     if (student.has_paid_selection_process_fee) {
-      // Para Selection Process, verificar se há override primeiro
-      if (overrides && overrides.selection_process_fee !== undefined && overrides.selection_process_fee !== null) {
-        // ✅ CORREÇÃO: Se há override, usar exatamente o valor do override (já inclui dependentes)
-        const selectionAmount = Number(overrides.selection_process_fee);
-        total += selectionAmount;
-        if (student.email === 'wilfried8078@uorak.com' || student.email === 'crashroiali0@gmail.com' || student.email === 'zhenhua4777@uorak.com') {
-          console.log('🔍 [MYSTUDENTS_DEBUG] Selection Process (override):', selectionAmount, 'de', overrides.selection_process_fee);
-        }
+      if (realPaid.selection_process !== undefined && realPaid.selection_process > 0) {
+        // Usar valor real pago quando disponível
+        total += realPaid.selection_process;
       } else {
-        // Sem override: usar taxa baseada no system_type + dependentes
-        const systemType = studentSystemTypes[student.id] || 'legacy';
-        const baseSelectionFee = systemType === 'simplified' ? 350 : 400;
-        const selectionAmount = baseSelectionFee + (deps * 150);
-        total += selectionAmount;
-        if (student.email === 'wilfried8078@uorak.com' || student.email === 'crashroiali0@gmail.com' || student.email === 'zhenhua4777@uorak.com') {
-          console.log('🔍 [MYSTUDENTS_DEBUG] Selection Process (padrão + deps):', selectionAmount, '=', baseSelectionFee, '+', (deps * 150));
-        }
+        // Fallback: calcular baseado no system_type e dependents
+        const baseSelDefault = systemType === 'simplified' ? 350 : 400;
+        const baseSel = overrides.selection_process_fee != null ? Number(overrides.selection_process_fee) : baseSelDefault;
+        // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
+        // Dependentes só afetam Application Fee ($100 por dependente)
+        const selPaid = overrides.selection_process_fee != null 
+          ? baseSel 
+          : (systemType === 'simplified' ? baseSel : baseSel + (deps * 150));
+        total += selPaid;
       }
     }
     
-    if (student.has_paid_i20_control_fee) {
-      // ✅ CORREÇÃO: Usar lógica consistente que considera dependentes para I-20 também se não há override
-      if (overrides && overrides.i20_control_fee !== undefined && overrides.i20_control_fee !== null) {
-        // Se há override, usar exatamente o valor do override
-        const i20Amount = Number(overrides.i20_control_fee);
-        total += i20Amount;
-        if (student.email === 'wilfried8078@uorak.com' || student.email === 'crashroiali0@gmail.com' || student.email === 'zhenhua4777@uorak.com') {
-          console.log('🔍 [MYSTUDENTS_DEBUG] I-20 Control (override):', i20Amount, 'de', overrides.i20_control_fee);
-        }
-      } else {
-        // Sem override: I-20 Control Fee é sempre $900 para ambos os sistemas
-        const baseI20Fee = 900;
-        total += baseI20Fee;
-        if (student.email === 'wilfried8078@uorak.com' || student.email === 'crashroiali0@gmail.com' || student.email === 'zhenhua4777@uorak.com') {
-          console.log('🔍 [MYSTUDENTS_DEBUG] I-20 Control (padrão):', baseI20Fee);
-        }
-      }
-    }
-    
+    // Scholarship Fee
     if (student.is_scholarship_fee_paid) {
-      // ✅ CORREÇÃO: Usar lógica consistente para scholarship fee
-      if (overrides && overrides.scholarship_fee !== undefined && overrides.scholarship_fee !== null) {
-        // Se há override, usar exatamente o valor do override
-        const scholarshipAmount = Number(overrides.scholarship_fee);
-        total += scholarshipAmount;
-        if (student.email === 'wilfried8078@uorak.com' || student.email === 'crashroiali0@gmail.com' || student.email === 'zhenhua4777@uorak.com') {
-          console.log('🔍 [MYSTUDENTS_DEBUG] Scholarship (override):', scholarshipAmount, 'de', overrides.scholarship_fee);
-        }
+      if (realPaid.scholarship !== undefined && realPaid.scholarship > 0) {
+        // Usar valor real pago quando disponível
+        total += realPaid.scholarship;
       } else {
-        // Sem override: usar taxa baseada no system_type
-        const systemType = studentSystemTypes[student.id] || 'legacy';
-        const scholarshipFee = systemType === 'simplified' ? 550 : 900;
-        total += scholarshipFee;
-        if (student.email === 'wilfried8078@uorak.com' || student.email === 'crashroiali0@gmail.com' || student.email === 'zhenhua4777@uorak.com') {
-          console.log('🔍 [MYSTUDENTS_DEBUG] Scholarship (padrão):', scholarshipFee);
-        }
+        // Fallback: calcular baseado no system_type
+        const schBaseDefault = systemType === 'simplified' ? 550 : 900;
+        const schBase = overrides.scholarship_fee != null ? Number(overrides.scholarship_fee) : schBaseDefault;
+        total += schBase;
       }
-    } else {
-      // Log para quando scholarship_fee NÃO foi pago
-      if (student.email === 'crashroiali0@gmail.com') {
-        console.log('🚨🚨🚨 [CRASHROI_DEBUG] Scholarship fee NÃO foi pago - is_scholarship_fee_paid:', student.is_scholarship_fee_paid);
-        console.log('🚨🚨🚨 [CRASHROI_DEBUG] Overrides scholarship_fee:', overrides?.scholarship_fee);
-        console.log('🚨🚨🚨 [CRASHROI_DEBUG] Package fees scholarship_fee:', studentPackageFees[student.id]?.scholarship_fee);
+    }
+    
+    // I-20 Control Fee
+    if (student.has_paid_i20_control_fee) {
+      if (realPaid.i20_control !== undefined && realPaid.i20_control > 0) {
+        // Usar valor real pago quando disponível
+        total += realPaid.i20_control;
+      } else {
+        // Fallback: usar override ou valor padrão
+        const i20Base = overrides.i20_control_fee != null ? Number(overrides.i20_control_fee) : 900;
+        total += i20Base;
       }
     }
     
     // Application fee não é contabilizada na receita do seller (é exclusiva da universidade)
-
-    if (student.email === 'wilfried8078@uorak.com' || student.email === 'crashroiali0@gmail.com' || student.email === 'zhenhua4777@uorak.com') {
-      console.log('🔍 [MYSTUDENTS_DEBUG] Total final:', total);
-      console.log('🔍 [MYSTUDENTS_DEBUG] =================================');
-    }
 
     return total;
   };
@@ -815,7 +793,9 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
       } else {
         const systemType = studentSystemTypes[student.id] || 'legacy';
         const baseSelectionFee = systemType === 'simplified' ? 350 : 400;
-        total += baseSelectionFee + (deps * 150);
+        // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
+        // Dependentes só afetam Application Fee ($100 por dependente)
+        total += systemType === 'simplified' ? baseSelectionFee : baseSelectionFee + (deps * 150);
       }
     }
 
@@ -845,6 +825,18 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
   };
 
   const stats = React.useMemo(() => {
+    // Não calcular receita enquanto valores reais pagos estão carregando
+    if (loadingRealPaidAmounts) {
+      return {
+        totalRevenue: 0,
+        activeStudents: 0,
+        manualRevenue: 0,
+        avgRevenuePerStudent: 0,
+        topPerformingUniversity: 'N/A',
+        totalUniqueStudents: 0
+      };
+    }
+    
     const totalRevenue = filteredStudents.reduce((sum, student) => sum + calculateStudentTotalPaid(student), 0);
     
     console.log('💰 [MYSTUDENTS_TOTAL] Total calculado no MyStudents.tsx:', totalRevenue);
@@ -888,7 +880,7 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
       topPerformingUniversity,
       totalUniqueStudents: uniqueStudentIds.size
     };
-  }, [filteredStudents, availableUniversities]);
+  }, [filteredStudents, availableUniversities, loadingRealPaidAmounts]);
 
   return (
     <div className="min-h-screen">
@@ -952,9 +944,15 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-600">Total Students</p>
-              <p className="text-3xl font-bold text-blue-600 mt-1">{stats.totalUniqueStudents}</p>
-              {filteredStudents.length > stats.totalUniqueStudents && (
-                <p className="text-xs text-slate-500 mt-1">{filteredStudents.length} applications total</p>
+              {loadingRealPaidAmounts ? (
+                <div className="h-10 w-20 bg-slate-200 rounded animate-pulse mt-1" />
+              ) : (
+                <>
+                  <p className="text-3xl font-bold text-blue-600 mt-1">{stats.totalUniqueStudents}</p>
+                  {filteredStudents.length > stats.totalUniqueStudents && (
+                    <p className="text-xs text-slate-500 mt-1">{filteredStudents.length} applications total</p>
+                  )}
+                </>
               )}
             </div>
             <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
@@ -967,7 +965,7 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-600">Manual Paid (Outside)</p>
-              {Object.keys(studentPaymentMethods).length === 0 && Object.keys(studentDependents).length === 0 && Object.keys(studentFeeOverrides).length === 0 ? (
+              {(Object.keys(studentPaymentMethods).length === 0 && Object.keys(studentDependents).length === 0 && Object.keys(studentFeeOverrides).length === 0) || loadingRealPaidAmounts ? (
                 <div className="h-8 w-40 bg-slate-200 rounded animate-pulse mt-1" />
               ) : (
                 <p className="text-3xl font-bold text-orange-600 mt-1">{formatCurrency(stats.manualRevenue)}</p>
@@ -983,8 +981,8 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-600">Total Revenue</p>
-              {/* Skeleton enquanto dependents/fees não carregaram completamente */}
-              {Object.keys(studentDependents).length === 0 && Object.keys(studentPackageFees).length === 0 ? (
+              {/* Skeleton enquanto dependents/fees/valores reais não carregaram completamente */}
+              {(Object.keys(studentDependents).length === 0 && Object.keys(studentPackageFees).length === 0) || loadingRealPaidAmounts ? (
                 <div className="h-8 w-40 bg-slate-200 rounded animate-pulse mt-1" />
               ) : (
                 <p className="text-3xl font-bold text-green-600 mt-1">{formatCurrency(stats.totalRevenue)}</p>
@@ -1000,7 +998,11 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-600">Avg. Revenue/Student</p>
-              <p className="text-3xl font-bold text-purple-600 mt-1">{formatCurrency(stats.avgRevenuePerStudent)}</p>
+              {(Object.keys(studentDependents).length === 0 && Object.keys(studentPackageFees).length === 0) || loadingRealPaidAmounts ? (
+                <div className="h-8 w-40 bg-slate-200 rounded animate-pulse mt-1" />
+              ) : (
+                <p className="text-3xl font-bold text-purple-600 mt-1">{formatCurrency(stats.avgRevenuePerStudent)}</p>
+              )}
             </div>
             <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
               <Award className="h-6 w-6 text-purple-600" />
@@ -1312,7 +1314,7 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
                     
                     <div className="flex items-center text-sm font-medium text-green-600">
                       <DollarSign className="h-4 w-4 mr-1" />
-                      {studentDependents[student.id] === undefined ? (
+                      {(studentDependents[student.id] === undefined || loadingRealPaidAmounts) ? (
                         <div className="h-4 w-16 bg-slate-200 rounded animate-pulse" />
                       ) : (
                         formatCurrency(calculateStudentTotalPaid(student))

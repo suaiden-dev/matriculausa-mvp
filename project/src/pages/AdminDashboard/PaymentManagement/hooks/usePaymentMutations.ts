@@ -36,6 +36,7 @@ export function useApproveZellePaymentMutation() {
           created_at: payment.created_at,
           scholarships_ids: payment.scholarships_ids,
           scholarship_id: payment.scholarship_id || null,
+          metadata: payment.metadata || null, // Incluir metadata para cupom promocional
         },
       });
     },

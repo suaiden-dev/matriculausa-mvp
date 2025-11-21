@@ -193,8 +193,6 @@ const PaymentManagement = (): React.JSX.Element => {
   const itemsPerPage = pageSize;
   const setItemsPerPage = (n: number) => setPageSize(n);
   const [backendTotalCount, setBackendTotalCount] = useState<number | null>(null);
-  const [currentPageZelle, setCurrentPageZelle] = useState(1);
-  // zelleTotalCount agora vem do React Query (zellePaymentsQuery.data?.count)
 
   // Estados para ordenação
   const [sortBy, setSortBy] = useState<keyof PaymentRecord>('payment_date');
@@ -215,7 +213,7 @@ const PaymentManagement = (): React.JSX.Element => {
   const shouldLoadAffiliateRequests = activeTab === 'affiliate-requests';
   
   const paymentsQuery = usePaymentsQuery(shouldLoadPayments);
-  const zellePaymentsQuery = useZellePaymentsQuery(currentPageZelle, itemsPerPage, shouldLoadZelle);
+  const zellePaymentsQuery = useZellePaymentsQuery(shouldLoadZelle);
   const universityRequestsQuery = useUniversityRequestsQuery(shouldLoadUniversityRequests);
   const affiliateRequestsQuery = useAffiliateRequestsQuery(shouldLoadAffiliateRequests);
   // Universities e Affiliates são sempre carregados (são referências usadas em filtros)
@@ -242,7 +240,6 @@ const PaymentManagement = (): React.JSX.Element => {
   const universityRequests = universityRequestsQuery.data || [];
   const affiliateRequests = affiliateRequestsQuery.data || [];
   const zellePayments = zellePaymentsQuery.data?.records || [];
-  const zelleTotalCount = zellePaymentsQuery.data?.count || 0;
   const loadingZellePayments = zellePaymentsQuery.isLoading;
   const loadingUniversityRequests = universityRequestsQuery.isLoading;
   const loadingAffiliateRequests = affiliateRequestsQuery.isLoading;
@@ -269,10 +266,11 @@ const PaymentManagement = (): React.JSX.Element => {
           setPayments(paymentsQuery.data.paymentRecords);
           setStats(paymentsQuery.data.stats);
         }
-        // Quando query está habilitada (shouldLoadPayments = true), usar isLoading da query
+        // Quando query está habilitada (shouldLoadPayments = true), usar isLoading/isFetching da query
+        // isFetching garante que mostra loading mesmo quando há dados em cache sendo recalculados
         // Quando desabilitada, isLoading é false por padrão no React Query
         if (shouldLoadPayments) {
-          setLoading(paymentsQuery.isLoading);
+          setLoading(paymentsQuery.isLoading || paymentsQuery.isFetching);
       } else {
           // Se não deve carregar, não está em loading
           setLoading(false);
@@ -286,7 +284,7 @@ const PaymentManagement = (): React.JSX.Element => {
         setPayments([]);
       }
       }
-  }, [activeTab, filters?.university, paymentsQuery.data, paymentsQuery.isLoading, shouldLoadPayments]);
+  }, [activeTab, filters?.university, paymentsQuery.data, paymentsQuery.isLoading, paymentsQuery.isFetching, shouldLoadPayments]);
 
   // Realtime updates for Affiliate Requests - invalidar query quando houver mudança
   useEffect(() => {
@@ -418,11 +416,19 @@ const PaymentManagement = (): React.JSX.Element => {
   // Estado para controlar animação do botão refresh
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Função para forçar recarregamento quando necessário - usando refetch do React Query
+  // Função para forçar recarregamento quando necessário - usando invalidateQueries para garantir atualização completa
   const forceRefreshAll = async () => {
     setIsRefreshing(true);
     try {
-      // Aguardar todas as queries refetcharem
+      // Invalidar todas as queries de payments (incluindo todas as páginas de Zelle)
+      // Isso força uma nova busca e atualiza todos os componentes que dependem dessas queries
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.payments.all }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.payments.references.universities }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.payments.references.affiliates }),
+      ]);
+      
+      // Aguardar as queries refetcharem após a invalidação
       await Promise.all([
         paymentsQuery.refetch(),
         universitiesQuery.refetch(),
@@ -734,8 +740,11 @@ const PaymentManagement = (): React.JSX.Element => {
 
   // clearSelection incorporado no PaymentsTab
 
-  // ✅ Só mostrar skeleton se está carregando e não há dados E está na aba payments
-  if (activeTab === 'payments' && loading && payments.length === 0) {
+  // ✅ Mostrar skeleton se está carregando/buscando dados E está na aba payments
+  // Mostrar skeleton quando está carregando pela primeira vez (isLoading) ou quando não há dados e está buscando
+  const isFetchingPayments = shouldLoadPayments && (paymentsQuery.isFetching || paymentsQuery.isLoading);
+  const shouldShowSkeleton = activeTab === 'payments' && isFetchingPayments && (paymentsQuery.isLoading || payments.length === 0);
+  if (shouldShowSkeleton) {
     return <PaymentManagementSkeleton />;
   }
 
@@ -854,17 +863,6 @@ const PaymentManagement = (): React.JSX.Element => {
           openZelleProofModal={openZelleProofModal}
           openZelleReviewModal={openZelleReviewModal}
           openZelleNotesModal={openZelleNotesModal}
-          currentPage={currentPageZelle}
-          totalPages={Math.max(1, Math.ceil(zelleTotalCount / itemsPerPage))}
-          totalItems={zelleTotalCount}
-          itemsPerPage={itemsPerPage}
-          onPageChange={(page: number) => { 
-            setCurrentPageZelle(page); 
-          }}
-          onItemsPerPageChange={(newItemsPerPage: number) => {
-            setItemsPerPage(newItemsPerPage);
-            setCurrentPageZelle(1);
-          }}
         />
       )}
       {/* Payment Details Modal */}

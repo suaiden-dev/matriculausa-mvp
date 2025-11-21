@@ -3,6 +3,7 @@ import React from 'react';
 import { useState as useStateReact, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useNavigate } from 'react-router-dom';
+import { getRealPaidAmounts } from '../../utils/paymentConverter';
 import { 
   Users, 
   UserPlus, 
@@ -10,8 +11,9 @@ import {
   TrendingUp, 
   ArrowUpRight
 } from 'lucide-react';
+import DirectSalesLink from './DirectSalesLink';
 
-const Overview = ({ stats, sellers = [], onRefresh }) => {
+const Overview = ({ stats, sellers = [], students = [], onRefresh }) => {
   const navigate = useNavigate();
   const recentSellers = (sellers || []).slice(0, 5);
 
@@ -27,6 +29,9 @@ const Overview = ({ stats, sellers = [], onRefresh }) => {
   };
 
   const formatCurrency = (amount) => {
+    if (amount == null || isNaN(amount)) {
+      return '$0.00';
+    }
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD'
@@ -48,7 +53,7 @@ const Overview = ({ stats, sellers = [], onRefresh }) => {
   // Receita ajustada calculada no cliente (inclui dependentes) para o admin logado
   const [clientAdjustedRevenue, setClientAdjustedRevenue] = useStateReact(null);
   const [adjustedRevenueByReferral, setAdjustedRevenueByReferral] = useStateReact({});
-  const [loadingAdjusted, setLoadingAdjusted] = useStateReact(false);
+  const [loadingAdjusted, setLoadingAdjusted] = useStateReact(true); // Iniciar como true para mostrar skeleton imediatamente
 
   useEffect(() => {
     let mounted = true;
@@ -61,6 +66,7 @@ const Overview = ({ stats, sellers = [], onRefresh }) => {
           if (mounted) setClientAdjustedRevenue(null);
           return;
         }
+        
         // Descobrir affiliate_admin_id
         const { data: aaList, error: aaErr } = await supabase
           .from('affiliate_admins')
@@ -74,71 +80,146 @@ const Overview = ({ stats, sellers = [], onRefresh }) => {
         const affiliateAdminId = aaList[0].id;
 
         // Buscar sellers vinculados a este affiliate admin
-        const { data: sellers, error: sellersErr } = await supabase
+        const { data: sellersData, error: sellersErr } = await supabase
           .from('sellers')
           .select('referral_code')
           .eq('affiliate_admin_id', affiliateAdminId);
         
-        if (sellersErr || !sellers || sellers.length === 0) {
-          if (mounted) setClientAdjustedRevenue(null);
+        if (sellersErr || !sellersData || sellersData.length === 0) {
+          if (mounted) {
+            setClientAdjustedRevenue(0);
+            setAdjustedRevenueByReferral({});
+            setLoadingAdjusted(false);
+          }
           return;
         }
         
-        const referralCodes = sellers.map(s => s.referral_code);
-        
-        // ✅ CORREÇÃO: Usar a mesma lógica simples do Seller Dashboard
-        console.log('🔍 [OVERVIEW] Usando lógica simples do Seller Dashboard');
-        
-        // Calcular receita usando a mesma lógica do Seller Dashboard
-        let totalRevenue = 0;
-        const revenueByReferral = {};
-        
-        for (const seller of sellers || []) {
-          let sellerRevenue = 0;
-          
-          // Buscar estudantes deste seller
-          const sellerStudents = students.filter(s => s.referred_by_seller_id === seller.id);
-          
-          for (const student of sellerStudents) {
-            let studentTotal = 0;
-            const deps = Number(student.dependents || 0);
-            
-            // Selection Process Fee
-            if (student.has_paid_selection_process_fee) {
-              const systemType = student.system_type || 'legacy';
-              const baseSelectionFee = systemType === 'simplified' ? 350 : 400;
-              studentTotal += baseSelectionFee + (deps * 150);
-            }
-            
-            // Scholarship Fee
-            if (student.is_scholarship_fee_paid) {
-              const systemType = student.system_type || 'legacy';
-              const scholarshipFee = systemType === 'simplified' ? 550 : 900;
-              studentTotal += scholarshipFee;
-            }
-            
-            // I-20 Control Fee (só conta se scholarship foi pago)
-            if (student.is_scholarship_fee_paid && student.has_paid_i20_control_fee) {
-              studentTotal += 900; // Sempre $900 para ambos os sistemas
-            }
-            
-            sellerRevenue += studentTotal;
+        // ✅ CORREÇÃO: Buscar perfis usando RPC centralizada que verifica TODAS as aplicações
+        // Usar a mesma lógica do Analytics.tsx que funciona corretamente
+        const { data: profiles, error: profilesErr } = await supabase
+          .rpc('get_affiliate_admin_profiles_with_fees', { admin_user_id: currentUserId });
+        if (profilesErr || !profiles) {
+          if (mounted) {
+            setClientAdjustedRevenue(0);
+            setAdjustedRevenueByReferral({});
+            setLoadingAdjusted(false);
           }
-          
-          if (seller.referral_code) {
-            revenueByReferral[seller.referral_code] = sellerRevenue;
-          }
-          totalRevenue += sellerRevenue;
+          return;
         }
 
-        console.log('🔍 [OVERVIEW] Total calculado:', totalRevenue);
-        console.log('🔍 [OVERVIEW] Revenue por referral:', revenueByReferral);
+        // Preparar overrides por user_id (opcional, mas mantém compatibilidade)
+        const uniqueUserIds = Array.from(new Set((profiles || []).map((p) => p.user_id).filter(Boolean)));
+        const overrideEntries = await Promise.allSettled(uniqueUserIds.map(async (uid) => {
+          const { data, error } = await supabase.rpc('get_user_fee_overrides', { target_user_id: uid });
+          return [uid, error ? null : data];
+        }));
+        const overridesMap: Record<string, any> = overrideEntries.reduce((acc: Record<string, any>, res) => {
+          if (res.status === 'fulfilled') {
+            const arr = res.value;
+            const uid = arr[0];
+            const data = arr[1];
+            if (data) acc[uid] = {
+              selection_process_fee: data.selection_process_fee != null ? Number(data.selection_process_fee) : undefined,
+              scholarship_fee: data.scholarship_fee != null ? Number(data.scholarship_fee) : undefined,
+              i20_control_fee: data.i20_control_fee != null ? Number(data.i20_control_fee) : undefined,
+            };
+          }
+          return acc;
+        }, {});
 
+        // ✅ OTIMIZAÇÃO: Calcular primeiro com valores de fallback (rápido) e mostrar imediatamente
+        const calculateRevenue = (realPaidAmountsMap: Record<string, { selection_process?: number; scholarship?: number; i20_control?: number }> = {}) => {
+          const revenueByReferral: Record<string, number> = {};
+          const total = (profiles || []).reduce((sum, p) => {
+            const deps = Number(p?.dependents || 0);
+            const ov = overridesMap[p?.user_id] || {};
+            const realPaid = realPaidAmountsMap[p?.user_id] || {};
+
+            // Selection Process - usar valor real pago se disponível, senão calcular
+            let selPaid = 0;
+            if (p?.has_paid_selection_process_fee) {
+              if (realPaid.selection_process !== undefined) {
+                selPaid = realPaid.selection_process;
+              } else {
+                const baseSelDefault = p?.system_type === 'simplified' ? 350 : 400;
+                const baseSel = ov.selection_process_fee != null ? Number(ov.selection_process_fee) : baseSelDefault;
+                // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
+                // Dependentes só afetam Application Fee ($100 por dependente)
+                selPaid = ov.selection_process_fee != null 
+                  ? baseSel 
+                  : (p?.system_type === 'simplified' ? baseSel : baseSel + (deps * 150));
+              }
+            }
+
+            // Scholarship Fee - usar valor real pago se disponível, senão calcular
+            const hasAnyScholarshipPaid = p?.is_scholarship_fee_paid || false;
+            let schPaid = 0;
+            if (hasAnyScholarshipPaid) {
+              if (realPaid.scholarship !== undefined) {
+                schPaid = realPaid.scholarship;
+              } else {
+                const schBaseDefault = p?.system_type === 'simplified' ? 550 : 900;
+                const schBase = ov.scholarship_fee != null ? Number(ov.scholarship_fee) : schBaseDefault;
+                schPaid = schBase;
+              }
+            }
+
+            // I-20 Control Fee - usar valor real pago se disponível, senão calcular
+            let i20Paid = 0;
+            if (hasAnyScholarshipPaid && p?.has_paid_i20_control_fee) {
+              if (realPaid.i20_control !== undefined) {
+                i20Paid = realPaid.i20_control;
+              } else {
+                const i20Base = ov.i20_control_fee != null ? Number(ov.i20_control_fee) : 900;
+                i20Paid = i20Base;
+              }
+            }
+
+            const subtotal = selPaid + schPaid + i20Paid;
+            const ref = p?.seller_referral_code || '__unknown__';
+            revenueByReferral[ref] = (revenueByReferral[ref] || 0) + subtotal;
+            return sum + subtotal;
+          }, 0);
+
+          return { total, revenueByReferral };
+        };
+
+        // Buscar valores reais pagos (mantém loading até carregar tudo)
+        // Processar todos em paralelo para melhor performance
+        const realPaidAmountsMap: Record<string, { selection_process?: number; scholarship?: number; i20_control?: number }> = {};
+        
+        await Promise.allSettled(uniqueUserIds.map(async (userId) => {
+          if (!mounted) return;
+          
+          try {
+            const amounts = await getRealPaidAmounts(userId, ['selection_process', 'scholarship', 'i20_control']);
+            if (mounted) {
+              realPaidAmountsMap[userId] = {
+                selection_process: amounts.selection_process,
+                scholarship: amounts.scholarship,
+                i20_control: amounts.i20_control
+              };
+            }
+          } catch (error) {
+            console.error(`[Overview] Erro ao buscar valores pagos para user_id ${userId}:`, error);
+          }
+        }));
+
+        // Atualização final com todos os valores reais (apenas após carregar tudo)
         if (mounted) {
-          setClientAdjustedRevenue(totalRevenue);
-          setAdjustedRevenueByReferral(revenueByReferral);
+          const finalRevenue = calculateRevenue(realPaidAmountsMap);
+          setClientAdjustedRevenue(finalRevenue.total);
+          setAdjustedRevenueByReferral(finalRevenue.revenueByReferral);
+
+          console.log('🔍 [OVERVIEW] Revenue calculado:', {
+            total: finalRevenue.total,
+            revenueByReferral: finalRevenue.revenueByReferral,
+            profilesCount: profiles?.length || 0,
+            realPaidAmountsCount: Object.keys(realPaidAmountsMap).length
+          });
         }
-      } catch {
+      } catch (error) {
+        console.error('[Overview] Erro ao calcular receita ajustada:', error);
         if (mounted) setClientAdjustedRevenue(null);
       } finally {
         if (mounted) setLoadingAdjusted(false);
@@ -146,22 +227,45 @@ const Overview = ({ stats, sellers = [], onRefresh }) => {
     };
     loadAdjusted();
     return () => { mounted = false; };
-  }, []);
+  }, [students, sellers]);
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US');
   };
 
   // Sellers com receita ajustada (se disponível)
-  const displaySellers = (sellers || []).map((s) => ({
-    ...s,
-    total_revenue: adjustedRevenueByReferral[s?.referral_code] != null
-      ? adjustedRevenueByReferral[s.referral_code]
-      : (s.total_revenue || 0)
-  }));
+  // Priorizar adjustedRevenueByReferral que usa valores reais pagos
+  // ⚠️ Só calcular quando os valores reais pagos estiverem carregados para evitar mudança visual
+  const displaySellers = loadingAdjusted 
+    ? [] // Retornar array vazio enquanto carrega para evitar mostrar valores incorretos
+    : (sellers || []).map((s) => {
+      const adjustedRevenue = adjustedRevenueByReferral[s?.referral_code];
+      const finalRevenue = adjustedRevenue != null && adjustedRevenue !== undefined
+        ? adjustedRevenue
+        : (s.total_revenue || 0);
+      
+      // Log para debug
+      if (s?.referral_code === 'SUAIDEN') {
+        console.log('🔍 [OVERVIEW] SUAIDEN revenue:', {
+          referral_code: s.referral_code,
+          adjustedRevenue,
+          s_total_revenue: s.total_revenue,
+          finalRevenue,
+          adjustedRevenueByReferral: adjustedRevenueByReferral
+        });
+      }
+      
+      return {
+        ...s,
+        total_revenue: finalRevenue
+      };
+    });
 
   // Total para o card: alinhar com Top Sellers (soma do mapa ajustado)
-  const displayTotalRevenue = Object.values(adjustedRevenueByReferral || {}).reduce((acc: number, v: any) => acc + (Number(v) || 0), 0);
+  // ⚠️ Só calcular quando os valores reais pagos estiverem carregados
+  const displayTotalRevenue = loadingAdjusted 
+    ? 0 // Retornar 0 enquanto carrega para evitar mostrar valor incorreto
+    : Object.values(adjustedRevenueByReferral || {}).reduce((acc: number, v: any) => acc + (Number(v) || 0), 0);
 
   const quickActions = [
     {
@@ -260,19 +364,28 @@ const Overview = ({ stats, sellers = [], onRefresh }) => {
 
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-lg transition-all duration-300 group">
             <div className="flex items-center justify-between">
-              <div>
+              <div className="flex-1">
                 <p className="text-sm font-medium text-slate-500 mb-1">Total Revenue</p>
-                <p className="text-3xl font-bold text-slate-900">{formatCurrency(
-                  (displayTotalRevenue && displayTotalRevenue > 0)
-                    ? displayTotalRevenue
-                    : (typeof clientAdjustedRevenue === 'number' ? clientAdjustedRevenue : (typeof derivedTotalRevenue === 'number' ? derivedTotalRevenue : safeStats.totalRevenue))
-                )}</p>
-                <div className="flex items-center mt-2">
-                  <TrendingUp className="h-4 w-4 text-emerald-500 mr-1" />
-                  <span className="text-sm font-medium text-emerald-600">
-                    Performance tracking
-                  </span>
-                </div>
+                {loadingAdjusted ? (
+                  <div className="animate-pulse space-y-2">
+                    <div className="h-9 w-32 bg-slate-200 rounded"></div>
+                    <div className="h-4 w-40 bg-slate-200 rounded"></div>
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-3xl font-bold text-slate-900">{formatCurrency(
+                      (displayTotalRevenue && displayTotalRevenue > 0)
+                        ? displayTotalRevenue
+                        : (typeof clientAdjustedRevenue === 'number' ? clientAdjustedRevenue : (typeof derivedTotalRevenue === 'number' ? derivedTotalRevenue : safeStats.totalRevenue))
+                    )}</p>
+                    <div className="flex items-center mt-2">
+                      <TrendingUp className="h-4 w-4 text-emerald-500 mr-1" />
+                      <span className="text-sm font-medium text-emerald-600">
+                        Performance tracking
+                      </span>
+                    </div>
+                  </>
+                )}
               </div>
               <div className="w-14 h-14 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
                 <DollarSign className="h-7 w-7 text-white" />
@@ -281,6 +394,10 @@ const Overview = ({ stats, sellers = [], onRefresh }) => {
           </div>
         </div>
 
+      {/* Direct Sales Link Section */}
+      <div className="mt-8">
+        <DirectSalesLink />
+      </div>
 
       {/* Quick Actions */}
       <div>
@@ -333,18 +450,47 @@ const Overview = ({ stats, sellers = [], onRefresh }) => {
           </div>
           
           <div className="p-4 sm:p-6">
-            <div className="space-y-4">
-              {/* Top 3 Sellers */}
-              {displaySellers
-                .sort((a, b) => {
-                  // Sort by number of students first, then by revenue
-                  if (b.students_count !== a.students_count) {
-                    return b.students_count - a.students_count;
-                  }
-                  return (b.total_revenue || 0) - (a.total_revenue || 0);
-                })
-                .slice(0, 3)
-                .map((seller, index) => (
+            {loadingAdjusted ? (
+              <div className="space-y-4 animate-pulse">
+                {/* Top 3 Sellers Skeleton */}
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="bg-slate-50 rounded-xl p-4 border border-slate-200">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="flex items-center space-x-3 min-w-0">
+                        <div className="w-10 h-10 bg-slate-200 rounded-lg"></div>
+                        <div className="min-w-0 flex-1">
+                          <div className="h-5 w-32 bg-slate-200 rounded mb-2"></div>
+                          <div className="h-4 w-48 bg-slate-200 rounded mb-2"></div>
+                          <div className="flex items-center gap-2">
+                            <div className="h-5 w-20 bg-slate-200 rounded-full"></div>
+                            <div className="h-5 w-16 bg-slate-200 rounded-full"></div>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-left sm:text-right">
+                        <div className="space-y-1">
+                          <div className="h-6 w-24 bg-slate-200 rounded"></div>
+                          <div className="h-5 w-20 bg-slate-200 rounded"></div>
+                          <div className="h-4 w-28 bg-slate-200 rounded"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* Top 3 Sellers */}
+                {displaySellers
+                  .sort((a, b) => {
+                    // Sort by number of students first, then by revenue
+                    if (b.students_count !== a.students_count) {
+                      return b.students_count - a.students_count;
+                    }
+                    return (b.total_revenue || 0) - (a.total_revenue || 0);
+                  })
+                  .slice(0, 3)
+                  .map((seller, index) => (
                   <div 
                     key={seller.id} 
                     className="bg-slate-50 rounded-xl p-4 border border-slate-200 hover:bg-slate-100 transition-colors"
@@ -440,7 +586,8 @@ const Overview = ({ stats, sellers = [], onRefresh }) => {
                   </div>
                 </div>
               )}
-            </div>
+              </div>
+            )}
           </div>
         </div>
       )}

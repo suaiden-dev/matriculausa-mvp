@@ -619,9 +619,8 @@ const UniversityFinancialManagement: React.FC = () => {
                           const numericFee = typeof feeAmount === 'string' ? parseFloat(feeAmount) : feeAmount;
                           // Os dados do student vêm do hook useUniversityFinancialData que já inclui dependents e system_type
                           const deps = Number(student.dependents) || 0;
-                          const systemType = (student.system_type as any) || 'legacy';
-                          // Adicionar $100 por dependente apenas para sistema legacy (mesma lógica do AdminStudentDetails)
-                          feeAmount = systemType === 'legacy' && deps > 0 ? numericFee + deps * 100 : numericFee;
+                          // Adicionar $100 por dependente para ambos os sistemas (legacy e simplified)
+                          feeAmount = deps > 0 ? numericFee + deps * 100 : numericFee;
                         }
                         
                         return (

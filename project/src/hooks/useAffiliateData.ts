@@ -25,6 +25,7 @@ export interface Affiliate {
   id: string;
   user_id: string;
   full_name: string;
+  company_name?: string;
   email: string;
   phone?: string;
   country?: string;
@@ -131,6 +132,7 @@ export const useAffiliateData = () => {
         .select(`
           user_id,
           full_name,
+          company_name,
           email,
           phone,
           country,
@@ -249,7 +251,11 @@ export const useAffiliateData = () => {
                   if (profile.has_paid_selection_process_fee) {
                     const baseSelectionFee = systemType === 'simplified' ? 350 : 400;
                     const dependents = Number(profile.dependents || 0);
-                    studentRevenue += baseSelectionFee + (dependents * 150);
+                    // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
+                    // Dependentes só afetam Application Fee ($100 por dependente)
+                    studentRevenue += systemType === 'simplified' 
+                      ? baseSelectionFee 
+                      : baseSelectionFee + (dependents * 150);
                   }
                   
                   // Scholarship Fee
@@ -323,6 +329,7 @@ export const useAffiliateData = () => {
               id: affiliateId,
               user_id: affiliateAdmin.user_id,
               full_name: userProfile?.full_name || 'Nome não disponível',
+              company_name: userProfile?.company_name,
               email: userProfile?.email || 'Email não disponível',
               phone: userProfile?.phone,
               country: userProfile?.country,
@@ -343,6 +350,7 @@ export const useAffiliateData = () => {
               id: affiliateAdmin.id,
               user_id: affiliateAdmin.user_id,
               full_name: userProfile?.full_name || 'Nome não disponível',
+              company_name: userProfile?.company_name,
               email: userProfile?.email || 'Email não disponível',
               phone: userProfile?.phone,
               country: userProfile?.country,

@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { TrendingUp, Users, DollarSign, Calendar, Award, Target, Loader2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
+import { getRealPaidAmounts } from '../../utils/paymentConverter';
+import DateRangeFilter, { DateRange, DateRangePreset } from '../../components/DateRangeFilter';
 
 interface PerformanceProps {
   sellerProfile: any;
@@ -32,9 +34,13 @@ const Performance: React.FC<PerformanceProps> = ({ sellerProfile, students }) =>
   const [studentDependents, setStudentDependents] = useState<{[key: string]: number}>({});
   const [studentFeeOverrides, setStudentFeeOverrides] = useState<{[key: string]: any}>({});
   const [studentSystemTypes, setStudentSystemTypes] = useState<{[key: string]: string}>({});
+  const [studentRealPaidAmounts, setStudentRealPaidAmounts] = useState<Record<string, { selection_process?: number; scholarship?: number; i20_control?: number }>>({});
+  const [loadingRealPaidAmounts, setLoadingRealPaidAmounts] = useState<boolean>(true);
   const [originalMonthlyData, setOriginalMonthlyData] = useState<PerformanceData['monthly_data']>([]);
   const [adjustedMonthlyData, setAdjustedMonthlyData] = useState<PerformanceData['monthly_data']>([]);
   const [rpcTotalRevenue, setRpcTotalRevenue] = useState<number>(0);
+  const [dateRange, setDateRange] = useState<DateRange>({ startDate: null, endDate: null });
+  const [studentPaymentDates, setStudentPaymentDates] = useState<Record<string, { selection_process?: Date; scholarship?: Date; i20_control?: Date }>>({});
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -173,82 +179,133 @@ const Performance: React.FC<PerformanceProps> = ({ sellerProfile, students }) =>
     });
   }, [getUniqueStudents]); // Usar getUniqueStudents em vez de students
 
+  // Carregar valores reais pagos e datas de pagamento para todos os estudantes
+  useEffect(() => {
+    const loadRealPaidAmounts = async () => {
+      const uniqueUserIds = Array.from(new Set((students || []).map((s) => s.id).filter(Boolean)));
+      if (uniqueUserIds.length === 0) {
+        setStudentRealPaidAmounts({});
+        setStudentPaymentDates({});
+        setLoadingRealPaidAmounts(false);
+        return;
+      }
+      
+      setLoadingRealPaidAmounts(true);
+      const amountsMap: Record<string, { selection_process?: number; scholarship?: number; i20_control?: number }> = {};
+      const paymentDatesMap: Record<string, { selection_process?: Date; scholarship?: Date; i20_control?: Date }> = {};
+      
+      await Promise.allSettled(uniqueUserIds.map(async (userId) => {
+        try {
+          // Carregar valores pagos
+          const amounts = await getRealPaidAmounts(userId, ['selection_process', 'scholarship', 'i20_control']);
+          amountsMap[userId] = amounts;
+          
+          // Carregar datas de pagamento
+          const { data: payments, error } = await supabase
+            .from('individual_fee_payments')
+            .select('fee_type, payment_date')
+            .eq('user_id', userId)
+            .in('fee_type', ['selection_process', 'scholarship', 'i20_control'])
+            .order('payment_date', { ascending: false });
+          
+          if (!error && payments) {
+            const dates: { selection_process?: Date; scholarship?: Date; i20_control?: Date } = {};
+            payments.forEach((payment: any) => {
+              if (payment.payment_date) {
+                const feeType = payment.fee_type as 'selection_process' | 'scholarship' | 'i20_control';
+                if (!dates[feeType]) {
+                  // Usar a data mais recente para cada tipo de fee
+                  dates[feeType] = new Date(payment.payment_date);
+                }
+              }
+            });
+            paymentDatesMap[userId] = dates;
+          }
+        } catch (error) {
+          console.error(`Erro ao buscar valores pagos para user_id ${userId}:`, error);
+        }
+      }));
+      
+      setStudentRealPaidAmounts(amountsMap);
+      setStudentPaymentDates(paymentDatesMap);
+      setLoadingRealPaidAmounts(false);
+    };
+    loadRealPaidAmounts();
+  }, [students]);
 
+  // Verificar se uma data está dentro do range selecionado
+  const isDateInRange = (date: Date | null | undefined): boolean => {
+    if (!date || !dateRange.startDate || !dateRange.endDate) return true; // Se não há filtro, incluir tudo
+    return date >= dateRange.startDate && date <= dateRange.endDate;
+  };
 
   const calculateStudentAdjustedPaid = (student: any): number => {
     let total = 0;
-    const deps = studentDependents[student.id] || 0;
-    const overrides = studentFeeOverrides[student.id];
+    // ✅ CORREÇÃO: Usar valores reais pagos quando disponíveis, senão calcular com fallback
+    const realPaid = studentRealPaidAmounts[student.id] || studentRealPaidAmounts[student.user_id] || {};
+    const paymentDates = studentPaymentDates[student.id] || studentPaymentDates[student.user_id] || {};
+    const studentId = student.id || student.user_id;
+    const deps = studentDependents[studentId] || 0;
+    const systemType = studentSystemTypes[studentId] || 'legacy';
+    const overrides = studentFeeOverrides[studentId] || {};
 
-    // Calculando total para o estudante
-
+    // Selection Process Fee
     if (student.has_paid_selection_process_fee) {
-      // 🚨 CORREÇÃO: Usar mesma lógica do MyStudents.tsx - verificar override primeiro
-      if (overrides && overrides.selection_process_fee !== undefined && overrides.selection_process_fee !== null) {
-        // ✅ Se há override, usar exatamente o valor do override (já inclui dependentes)
-        const selectionAmount = Number(overrides.selection_process_fee);
-        total += selectionAmount;
-        if (isDebugStudent) {
-          console.log('🔍 [PERFORMANCE_DEBUG] Selection Process (override):', selectionAmount, 'de', overrides.selection_process_fee);
-        }
-      } else {
-        // Sem override: usar taxa baseada no system_type + dependentes
-        const systemType = studentSystemTypes[student.id] || 'legacy';
-        const baseSelectionFee = systemType === 'simplified' ? 350 : 400;
-        const selectionAmount = baseSelectionFee + (deps * 150);
-        total += selectionAmount;
-        if (isDebugStudent) {
-          console.log('🔍 [PERFORMANCE_DEBUG] Selection Process (system_type + deps):', selectionAmount, '=', baseSelectionFee, '+', (deps * 150), 'system_type:', systemType);
+      // Verificar se o pagamento está no período selecionado
+      const paymentDate = paymentDates.selection_process;
+      if (isDateInRange(paymentDate)) {
+        if (realPaid.selection_process !== undefined && realPaid.selection_process > 0) {
+          // Usar valor real pago quando disponível
+          total += realPaid.selection_process;
+        } else {
+          // Fallback: calcular baseado no system_type e dependents
+          const baseSelDefault = systemType === 'simplified' ? 350 : 400;
+          const baseSel = overrides.selection_process_fee != null ? Number(overrides.selection_process_fee) : baseSelDefault;
+          // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
+          // Dependentes só afetam Application Fee ($100 por dependente)
+          const selPaid = overrides.selection_process_fee != null 
+            ? baseSel 
+            : (systemType === 'simplified' ? baseSel : baseSel + (deps * 150));
+          total += selPaid;
         }
       }
     }
     
+    // Scholarship Fee
     if (student.is_scholarship_fee_paid) {
-      // 🚨 CORREÇÃO: Usar mesma lógica do MyStudents.tsx - verificar override primeiro
-      if (overrides && overrides.scholarship_fee !== undefined && overrides.scholarship_fee !== null) {
-        // ✅ Se há override, usar exatamente o valor do override
-        const scholarshipAmount = Number(overrides.scholarship_fee);
-        total += scholarshipAmount;
-        if (isDebugStudent) {
-          console.log('🔍 [PERFORMANCE_DEBUG] Scholarship (override):', scholarshipAmount, 'de', overrides.scholarship_fee);
-        }
-      } else {
-        // Sem override: usar taxa baseada no system_type
-        const systemType = studentSystemTypes[student.id] || 'legacy';
-        const scholarshipFee = systemType === 'simplified' ? 550 : 900;
-        total += scholarshipFee;
-        if (isDebugStudent) {
-          console.log('🔍 [PERFORMANCE_DEBUG] Scholarship (system_type):', scholarshipFee, 'system_type:', systemType);
+      // Verificar se o pagamento está no período selecionado
+      const paymentDate = paymentDates.scholarship;
+      if (isDateInRange(paymentDate)) {
+        if (realPaid.scholarship !== undefined && realPaid.scholarship > 0) {
+          // Usar valor real pago quando disponível
+          total += realPaid.scholarship;
+        } else {
+          // Fallback: calcular baseado no system_type
+          const schBaseDefault = systemType === 'simplified' ? 550 : 900;
+          const schBase = overrides.scholarship_fee != null ? Number(overrides.scholarship_fee) : schBaseDefault;
+          total += schBase;
         }
       }
     }
     
+    // I-20 Control Fee
     if (student.has_paid_i20_control_fee) {
-      // 🚨 CORREÇÃO: Usar mesma lógica do MyStudents.tsx - verificar override primeiro
-      if (overrides && overrides.i20_control_fee !== undefined && overrides.i20_control_fee !== null) {
-        // ✅ Se há override, usar exatamente o valor do override
-        const i20Amount = Number(overrides.i20_control_fee);
-        total += i20Amount;
-        if (isDebugStudent) {
-          console.log('🔍 [PERFORMANCE_DEBUG] I-20 Control (override):', i20Amount, 'de', overrides.i20_control_fee);
-        }
-      } else {
-        // Sem override: I-20 Control Fee é sempre $900 para ambos os sistemas
-        const baseI20Fee = 900;
-        total += baseI20Fee;
-        if (isDebugStudent) {
-          console.log('🔍 [PERFORMANCE_DEBUG] I-20 Control (padrão):', baseI20Fee);
+      // Verificar se o pagamento está no período selecionado
+      const paymentDate = paymentDates.i20_control;
+      if (isDateInRange(paymentDate)) {
+        if (realPaid.i20_control !== undefined && realPaid.i20_control > 0) {
+          // Usar valor real pago quando disponível
+          total += realPaid.i20_control;
+        } else {
+          // Fallback: usar override ou valor padrão
+          const i20Base = overrides.i20_control_fee != null ? Number(overrides.i20_control_fee) : 900;
+          total += i20Base;
         }
       }
     }
     
     // ⚠️ IMPORTANTE: Application fee NÃO é contabilizada na receita do seller (é exclusiva da universidade)
     // Por isso não incluímos student.is_application_fee_paid no cálculo
-
-    if (isDebugStudent) {
-      console.log('🔍 [PERFORMANCE_DEBUG] Total final:', total);
-      console.log('🔍 [PERFORMANCE_DEBUG] =================================');
-    }
 
     return total;
   };
@@ -354,7 +411,7 @@ const Performance: React.FC<PerformanceProps> = ({ sellerProfile, students }) =>
     loadPerformanceData();
   }, [sellerProfile?.referral_code]);
 
-  // Recalcular receita ajustada e monthly_data quando tivermos taxas/dependentes carregados
+  // Recalcular receita ajustada e monthly_data quando tivermos taxas/dependentes carregados ou quando o filtro de data mudar
   useEffect(() => {
     if (!performanceData) return;
     
@@ -366,22 +423,27 @@ const Performance: React.FC<PerformanceProps> = ({ sellerProfile, students }) =>
         
         const adjustedRevenue = uniqueStudents.reduce((sum: number, s: any) => sum + calculateStudentAdjustedPaid(s), 0);
         
+        // Contar estudantes únicos que têm pagamentos no período
+        const studentsInPeriod = uniqueStudents.filter((s: any) => {
+          const paymentDates = studentPaymentDates[s.id] || studentPaymentDates[s.user_id] || {};
+          return (
+            (s.has_paid_selection_process_fee && isDateInRange(paymentDates.selection_process)) ||
+            (s.is_scholarship_fee_paid && isDateInRange(paymentDates.scholarship)) ||
+            (s.has_paid_i20_control_fee && isDateInRange(paymentDates.i20_control))
+          );
+        }).length;
+        
         console.log('💰 [PERFORMANCE_TOTAL] Total calculado no Performance.tsx:', adjustedRevenue);
         console.log('💰 [PERFORMANCE_TOTAL] Estudantes únicos:', uniqueStudents.length, 'de', students.length, 'originais');
-        
-        // Debug para comparar com MyStudents.tsx
-        console.log('🔍 [PERFORMANCE_COMPARISON] Estudantes únicos no Performance:', uniqueStudents.map(s => ({ 
-          id: s.id, 
-          email: s.email,
-          has_paid_selection_process: s.has_paid_selection_process_fee,
-          has_paid_scholarship: s.is_scholarship_fee_paid,
-          has_paid_i20: s.has_paid_i20_control_fee,
-          calculated: calculateStudentAdjustedPaid(s)
-        })));
+        console.log('📅 [PERFORMANCE_FILTER] Estudantes no período selecionado:', studentsInPeriod);
         
         // Só atualizar se o valor mudou significativamente
         if (Math.abs(adjustedRevenue - (performanceData.total_revenue || 0)) > 1) {
-          setPerformanceData(prev => prev ? { ...prev, total_revenue: adjustedRevenue } : prev);
+          setPerformanceData(prev => prev ? { 
+            ...prev, 
+            total_revenue: adjustedRevenue,
+            total_students: studentsInPeriod
+          } : prev);
         }
         
         // Ajustar monthly_data proporcionalmente ao fator de ajuste
@@ -398,7 +460,7 @@ const Performance: React.FC<PerformanceProps> = ({ sellerProfile, students }) =>
     }, 100);
     
     return () => clearTimeout(timeoutId);
-  }, [getUniqueStudents, studentPackageFees, studentDependents, studentFeeOverrides, rpcTotalRevenue, originalMonthlyData, performanceData]); // Incluído getUniqueStudents
+  }, [getUniqueStudents, studentPackageFees, studentDependents, studentFeeOverrides, rpcTotalRevenue, originalMonthlyData, performanceData, dateRange, studentPaymentDates]); // Incluído dateRange e studentPaymentDates
 
   // Debug específico para checar discrepância do Irving
   useEffect(() => {
@@ -506,6 +568,15 @@ const Performance: React.FC<PerformanceProps> = ({ sellerProfile, students }) =>
       {/* Main Content */}
       <div className="px-4 sm:px-6 lg:px-8">
         <div className="space-y-6">
+          {/* Date Range Filter */}
+          <DateRangeFilter 
+            onDateRangeChange={(range) => {
+              console.log('📅 [PERFORMANCE] Date range changed:', range);
+              setDateRange(range);
+            }}
+            defaultPreset="30days"
+          />
+          
           {/* KPIs Principais */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-lg bg-white p-6 shadow-sm border border-gray-200">

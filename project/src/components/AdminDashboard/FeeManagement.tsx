@@ -88,15 +88,17 @@ const FeeManagement: React.FC = () => {
       const studentsWithFees: StudentWithFees[] = (studentsData || []).map(student => {
         const override = (overridesData || []).find(o => o.user_id === student.user_id);
         const dependents = student.dependents || 0;
-        const dependentsExtra = dependents * 150; // $150 por dependente apenas no Selection Process
+        // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
+        // Dependentes só afetam Application Fee ($100 por dependente)
+        const systemType = student.system_type || 'legacy';
+        const dependentsExtra = systemType === 'simplified' ? 0 : (dependents * 150); // $150 por dependente apenas no Selection Process (legacy)
         
         // Determinar valores base baseado no system_type do estudante
-        const systemType = student.system_type || 'legacy';
         const baseSelectionFee = systemType === 'simplified' ? 350 : 400;
         const baseScholarshipFee = systemType === 'simplified' ? 550 : 900;
         const baseI20Fee = 900; // Sempre 900 para ambos os sistemas
         const baseApplicationFee = Number(getFeeAmount('application_fee')) || 0;
-        const applicationDependentsExtra = systemType === 'legacy' && dependents > 0 ? dependents * 100 : 0;
+        const applicationDependentsExtra = dependents > 0 ? dependents * 100 : 0; // $100 por dependente para ambos os sistemas
 
         return {
           ...student,

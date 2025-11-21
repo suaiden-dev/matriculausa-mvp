@@ -11,6 +11,7 @@ import { PreCheckoutModal } from './PreCheckoutModal';
 import { PaymentMethodSelector } from './PaymentMethodSelector';
 import { PaymentMethodSelectorDrawer } from './PaymentMethodSelectorDrawer';
 import { getTranslatedProductNameByProductId } from '../lib/productNameUtils';
+import { getExchangeRate } from '../utils/stripeFeeCalculator';
 
 interface StripeCheckoutProps {
   productId: keyof typeof STRIPE_PRODUCTS;
@@ -27,6 +28,7 @@ interface StripeCheckoutProps {
   metadata?: { [key: string]: any };
   studentProcessType?: string | null;
   beforeCheckout?: () => Promise<{ applicationId: string } | undefined>;
+  exchangeRate?: number; // Taxa de câmbio para PIX (opcional)
 }
 
 export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
@@ -44,6 +46,7 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
   metadata = {},
   studentProcessType,
   beforeCheckout,
+  exchangeRate,
 }) => {
   const [showPreCheckoutModal, setShowPreCheckoutModal] = useState(false);
   const [showScholarshipFeeModal, setShowScholarshipFeeModal] = useState(false);
@@ -174,10 +177,19 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
 
   // Removido fluxo legado de aplicação de código aqui; agora o código é tratado no PreCheckoutModal
 
-  const handlePaymentMethodSelect = async (method: string) => {
-    console.log('🔍 [StripeCheckout] handlePaymentMethodSelect chamado com método:', method);
+  const [currentExchangeRate, setCurrentExchangeRate] = useState<number | undefined>(undefined);
+  
+  const handlePaymentMethodSelect = async (method: string, exchangeRate?: number) => {
+    console.log('🔍 [StripeCheckout] handlePaymentMethodSelect chamado com método:', method, 'exchangeRate:', exchangeRate);
     console.log('🔍 [StripeCheckout] Estado anterior - selectedPaymentMethod:', selectedPaymentMethod);
     setSelectedPaymentMethod(method as 'stripe' | 'zelle' | 'pix');
+    
+    // Salvar taxa de câmbio se for PIX
+    if (method === 'pix' && exchangeRate) {
+      setCurrentExchangeRate(exchangeRate);
+      console.log('[PIX] Taxa de câmbio recebida do PaymentMethodSelector:', exchangeRate);
+    }
+    
     console.log('🔍 [StripeCheckout] ✅ selectedPaymentMethod definido como:', method);
     
     // Salvar método de pagamento no localStorage para PIX
@@ -205,12 +217,21 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
           console.log('[PIX] 🎯 PIX selecionado no frontend');
           console.log('[PIX] 💰 Valor USD:', (window as any).__checkout_final_amount || 'calculando...');
           console.log('[PIX] 🔗 URL atual:', window.location.href);
-          console.log('[PIX] 🚀 Chamando handleCheckout com método PIX...');
-          handleCheckout('pix');
-    } else if (method === 'zelle') {
+          // Passar taxa de câmbio diretamente para evitar problema de timing com estado
+          console.log('[PIX] 🚀 Chamando handleCheckout com método PIX e taxa de câmbio:', exchangeRate);
+          handleCheckout('pix', exchangeRate);
+        } else if (method === 'zelle') {
       console.log('🔍 [StripeCheckout]  Zelle selecionado, redirecionando para checkout...');
-      // Redirecionar para a página de checkout do Zelle com valores dinâmicos
+      // ✅ CORREÇÃO: Priorizar valor com desconto do PreCheckoutModal se disponível
       const getDynamicAmount = () => {
+        // Se há valor final salvo no window (vem do PreCheckoutModal com desconto aplicado), usar esse valor
+        const finalAmountFromWindow = (window as any).__checkout_final_amount;
+        if (typeof finalAmountFromWindow === 'number' && !Number.isNaN(finalAmountFromWindow)) {
+          console.log('🔍 [StripeCheckout] ✅ Usando valor com desconto do PreCheckoutModal:', finalAmountFromWindow);
+          return finalAmountFromWindow.toString();
+        }
+        
+        // Caso contrário, calcular valor base
         if (feeType === 'selection_process') {
           // ✅ CORREÇÃO: Usar sempre os valores do useDynamicFees que já consideram o system_type
           if (!selectionProcessFee) {
@@ -238,11 +259,19 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
         return selectionProcessFee.replace('$', '');
       };
 
+      const amountToUse = getDynamicAmount();
       const params = new URLSearchParams({
         feeType: feeType,
-        amount: getDynamicAmount(),
+        amount: amountToUse,
         scholarshipsIds: scholarshipsIds?.join(',') || ''
       });
+      
+      // Se for scholarship_fee, adicionar parâmetro específico
+      if (feeType === 'scholarship_fee') {
+        params.append('scholarshipFeeAmount', amountToUse);
+      }
+      
+      console.log('🔍 [StripeCheckout] Navegando para Zelle com valor:', amountToUse);
       window.location.href = `/checkout/zelle?${params.toString()}`;
     }
     // Para Zelle, o usuário será redirecionado para a página de checkout
@@ -263,9 +292,26 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
     }
   }, [showPaymentMethodSelector]);
 
-  const handleCheckout = async (paymentMethod?: string) => {
+  const handleCheckout = async (paymentMethod?: string, exchangeRateParam?: number) => {
     setLoading(true);
     try {
+      // Se for PIX e não tiver taxa de câmbio, buscar uma antes de continuar
+      let finalExchangeRate = exchangeRateParam || currentExchangeRate || exchangeRate;
+      if (paymentMethod === 'pix' && !finalExchangeRate) {
+        console.log('[StripeCheckout] ⚠️ PIX selecionado mas taxa de câmbio não disponível, buscando...');
+        try {
+          finalExchangeRate = await getExchangeRate();
+          console.log('[StripeCheckout] ✅ Taxa de câmbio obtida:', finalExchangeRate);
+        } catch (error) {
+          console.error('[StripeCheckout] ❌ Erro ao buscar taxa de câmbio:', error);
+          finalExchangeRate = 5.6; // Fallback
+        }
+      }
+      
+      if (paymentMethod === 'pix' && finalExchangeRate) {
+        console.log('[StripeCheckout] 💱 Taxa de câmbio final para PIX:', finalExchangeRate);
+      }
+      
       let applicationId = metadata?.application_id;
       if (beforeCheckout) {
         const result = await beforeCheckout();
@@ -346,7 +392,21 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
 
       // Extrair código promocional do window se existir (passado pelo PreCheckoutModal)
       const promotionalCoupon = (window as any).__checkout_promotional_coupon || null;
-      
+
+      // Preparar taxa de câmbio para PIX
+      // Usar finalExchangeRate que já foi buscado se necessário
+      const exchangeRateToSend = paymentMethod === 'pix' ? finalExchangeRate : undefined;
+      if (paymentMethod === 'pix') {
+        console.log('[StripeCheckout] 💱 Taxa de câmbio para PIX:', {
+          exchangeRateParam,
+          currentExchangeRate,
+          exchangeRate,
+          finalExchangeRate,
+          exchangeRateToSend,
+          willSend: !!exchangeRateToSend
+        });
+      }
+
       const requestBody = {
         price_id: product.priceId,
         amount: finalAmount, // Incluir valor final calculado
@@ -362,9 +422,23 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
           application_id: applicationId,
           student_process_type: studentProcessType,
           final_amount: finalAmount, // Incluir no metadata também
+          // Incluir taxa de câmbio se for PIX e estiver disponível (priorizar currentExchangeRate do PaymentMethodSelector, senão usar prop exchangeRate)
+          ...(exchangeRateToSend ? { 
+            exchange_rate: exchangeRateToSend.toString() 
+          } : {}),
         },
         scholarships_ids: scholarshipsIds,
       };
+      
+      if (paymentMethod === 'pix' && exchangeRateToSend) {
+        console.log('[StripeCheckout] ✅ Taxa de câmbio incluída no metadata:', exchangeRateToSend);
+        console.log('[StripeCheckout] 📤 RequestBody metadata.exchange_rate:', requestBody.metadata.exchange_rate);
+      } else if (paymentMethod === 'pix' && !exchangeRateToSend) {
+        console.warn('[StripeCheckout] ⚠️ PIX selecionado mas taxa de câmbio não disponível!');
+        console.warn('[StripeCheckout] ⚠️ Debug - exchangeRateParam:', exchangeRateParam, 'currentExchangeRate:', currentExchangeRate, 'exchangeRate:', exchangeRate, 'finalExchangeRate:', finalExchangeRate);
+      }
+      
+      console.log('[StripeCheckout] 📤 Enviando requestBody (metadata):', JSON.stringify(requestBody.metadata, null, 2));
 
 
       const response = await fetch(apiUrl, {

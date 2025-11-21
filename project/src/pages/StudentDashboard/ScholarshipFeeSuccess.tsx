@@ -43,7 +43,11 @@ const ScholarshipFeeSuccess: React.FC = () => {
           body: JSON.stringify({ sessionId })
         });
         const result = await response.json();
-        console.log('[ScholarshipFeeSuccess] Resposta do backend:', result);
+        console.log('[ScholarshipFeeSuccess] Resposta do backend (RAW):', JSON.stringify(result, null, 2));
+        console.log('[ScholarshipFeeSuccess] final_amount:', result.final_amount, 'tipo:', typeof result.final_amount);
+        console.log('[ScholarshipFeeSuccess] amount_paid:', result.amount_paid, 'tipo:', typeof result.amount_paid);
+        console.log('[ScholarshipFeeSuccess] promotional_coupon:', result.promotional_coupon);
+        
         if (!response.ok) throw new Error(result?.error || 'Failed to verify payment.');
         if (result.status !== 'complete') {
           console.log('[ScholarshipFeeSuccess] Pagamento não está completo:', result.status);
@@ -51,23 +55,24 @@ const ScholarshipFeeSuccess: React.FC = () => {
           return;
         }
         
-        // Extrair informações do pagamento do resultado
-        // Prioridade: final_amount (já em USD) > amount_paid (convertido) > fallback 900
-        if (result.final_amount) {
+        // Extrair informações do pagamento
+        // Priorizar gross_amount_usd (valor bruto que o aluno realmente pagou), senão usar final_amount ou amount_paid
+        if (result.gross_amount_usd !== null && result.gross_amount_usd !== undefined) {
+          setPaidAmount(result.gross_amount_usd);
+        } else if (result.final_amount) {
           setPaidAmount(result.final_amount);
         } else if (result.amount_paid) {
           setPaidAmount(result.amount_paid);
         }
+        
         if (result.promotional_coupon) {
+          console.log('[ScholarshipFeeSuccess] Cupom promocional detectado:', result.promotional_coupon);
           setPromotionalCoupon(result.promotional_coupon);
           
           // Limpar cupom do localStorage após pagamento bem-sucedido
           localStorage.removeItem('__promotional_coupon_scholarship_fee');
           console.log('[ScholarshipFeeSuccess] Cupom promocional removido do localStorage após pagamento bem-sucedido');
         }
-        
-        console.log('[ScholarshipFeeSuccess] Valor pago:', result.final_amount || result.amount_paid);
-        console.log('[ScholarshipFeeSuccess] Cupom promocional:', result.promotional_coupon);
         let appId = null;
         if (Array.isArray(result.application_ids) && result.application_ids.length > 0) {
           appId = result.application_ids[result.application_ids.length - 1];
@@ -91,6 +96,14 @@ const ScholarshipFeeSuccess: React.FC = () => {
               .order('updated_at', { ascending: false });
           }
         } catch {}
+        
+        console.log('[ScholarshipFeeSuccess] ✅ Dados extraídos do resultado:', {
+          final_amount: result.final_amount,
+          amount_paid: result.amount_paid,
+          promotional_coupon: result.promotional_coupon,
+          paidAmount_set: result.final_amount || result.amount_paid
+        });
+        
         setLoading(false);
         setShowAnimation(true);
         
@@ -199,10 +212,10 @@ const ScholarshipFeeSuccess: React.FC = () => {
 
   // Se deve mostrar animação, usar o overlay
   if (showAnimation && !loading && !error) {
-    const displayAmount = paidAmount ? paidAmount.toFixed(2) : '900.00';
-    const messageText = promotionalCoupon 
-      ? `${t('successPages.common.paymentProcessedAmount', { amount: displayAmount })} ${t('successPages.scholarshipFee.message')} (Cupom ${promotionalCoupon} aplicado)`
-      : `${t('successPages.common.paymentProcessedAmount', { amount: displayAmount })} ${t('successPages.scholarshipFee.message')}`;
+    // Mesma lógica do I20ControlFeeSuccess
+    console.log('[ScholarshipFeeSuccess] Exibindo animação - paidAmount:', paidAmount);
+    const messageText = `${t('successPages.common.paymentProcessedAmount')} ${t('successPages.scholarshipFee.message')}`;
+    console.log('[ScholarshipFeeSuccess] Mensagem final:', messageText);
     
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center bg-white px-4 relative">

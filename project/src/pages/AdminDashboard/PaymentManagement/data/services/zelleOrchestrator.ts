@@ -14,6 +14,7 @@ type PaymentLike = {
   created_at: string;
   scholarships_ids?: string[];
   scholarship_id?: string | null;
+  metadata?: any; // Metadata do pagamento (inclui dados de cupom promocional)
 };
 
 export async function approveZelleFlow(params: {
@@ -38,7 +39,7 @@ export async function approveZelleFlow(params: {
 
     // Record payment (individual table)
     const approvedAt = payment.admin_approved_at || payment.created_at;
-    await recordIndividualFeePayment(supabase, {
+    const individualFeePaymentResult = await recordIndividualFeePayment(supabase, {
       userId: payment.user_id,
       feeType: 'selection_process',
       amount: payment.amount,
@@ -46,6 +47,9 @@ export async function approveZelleFlow(params: {
       paymentMethod: 'zelle',
       zellePaymentId: payment.id,
     });
+    const individualFeePaymentId = individualFeePaymentResult?.paymentId || null;
+
+    // ✅ REMOVIDO: Registro de uso do cupom promocional - agora é feito apenas na validação (record-promotional-coupon-validation)
 
     // Resolve dynamic amount from package overrides
     let correctAmount = payment.amount;
@@ -166,7 +170,7 @@ export async function approveZelleFlow(params: {
       .select();
 
     const approvedAt = payment.admin_approved_at || payment.created_at;
-    await recordIndividualFeePayment(supabase, {
+    const individualFeePaymentResult = await recordIndividualFeePayment(supabase, {
       userId: payment.user_id,
       feeType: 'i20_control',
       amount: payment.amount,
@@ -174,6 +178,9 @@ export async function approveZelleFlow(params: {
       paymentMethod: 'zelle',
       zellePaymentId: payment.id,
     });
+    const individualFeePaymentId = individualFeePaymentResult?.paymentId || null;
+
+    // ✅ REMOVIDO: Registro de uso do cupom promocional - agora é feito apenas na validação (record-promotional-coupon-validation)
 
     let correctAmount = payment.amount;
     try {
@@ -213,6 +220,25 @@ export async function approveZelleFlow(params: {
   // Application/Scholarship fees logic (applications table updates, logging, billing scholarship)
   if (payment.fee_type === 'application_fee' || payment.fee_type === 'scholarship_fee') {
     if (payment.scholarships_ids && payment.scholarships_ids.length > 0) {
+      // Registrar pagamento na tabela individual_fee_payments
+      const approvedAt = payment.admin_approved_at || payment.created_at;
+      const feeType = payment.fee_type === 'application_fee' ? 'application' : 'scholarship';
+      const individualFeePaymentResult = await recordIndividualFeePayment(supabase, {
+        userId: payment.user_id,
+        feeType: feeType as any,
+        amount: payment.amount,
+        paymentDate: approvedAt,
+        paymentMethod: 'zelle',
+        zellePaymentId: payment.id,
+      });
+      const individualFeePaymentId = individualFeePaymentResult?.paymentId || null;
+
+      // Registrar uso do cupom promocional se houver
+      if (payment.metadata && typeof payment.metadata === 'object') {
+        const metadata = payment.metadata as any;
+        // ✅ REMOVIDO: Registro de uso do cupom promocional - agora é feito apenas na validação (record-promotional-coupon-validation)
+      }
+
       const { data: updateData } = await supabase
         .from('scholarship_applications')
         .update({
@@ -263,7 +289,7 @@ export async function approveZelleFlow(params: {
 
       const approvedAt = payment.admin_approved_at || payment.created_at;
       const feeType = payment.fee_type === 'application_fee' ? 'application' : 'scholarship';
-      await recordIndividualFeePayment(supabase, {
+      const individualFeePaymentResult = await recordIndividualFeePayment(supabase, {
         userId: payment.user_id,
         feeType: feeType as any,
         amount: payment.amount,
@@ -271,6 +297,9 @@ export async function approveZelleFlow(params: {
         paymentMethod: 'zelle',
         zellePaymentId: payment.id,
       });
+      const individualFeePaymentId = individualFeePaymentResult?.paymentId || null;
+
+      // ✅ REMOVIDO: Registro de uso do cupom promocional - agora é feito apenas na validação (record-promotional-coupon-validation)
 
       await supabase.rpc('log_student_action', {
         p_student_id: payment.student_id,

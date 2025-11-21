@@ -17,7 +17,8 @@ import {
   Lock,
   CreditCard,
   Award,
-  BookOpen
+  BookOpen,
+  Sparkles
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
@@ -81,6 +82,7 @@ const StudentApplicationsView: React.FC = () => {
   const [dependents, setDependents] = useState<number>(0);
   const [approvingDocs, setApprovingDocs] = useState<{[key: string]: boolean}>({});
   const [pendingZelleByUser, setPendingZelleByUser] = useState<{ [userId: string]: number }>({});
+  const [blackCouponUsers, setBlackCouponUsers] = useState<Set<string>>(new Set());
 
   // React Query Hooks
   const studentsQuery = useStudentsQuery();
@@ -101,6 +103,21 @@ const StudentApplicationsView: React.FC = () => {
         studentsQuery.refetch(),
         filterDataQuery.refetch(),
       ]);
+      // Recarregar dados de cupom BLACK após refresh
+      const { data } = await supabase
+        .from('promotional_coupon_usage')
+        .select('user_id, coupon_code')
+        .ilike('coupon_code', 'BLACK');
+      
+      if (data) {
+        const userIds = new Set<string>();
+        data.forEach((row: any) => {
+          if (row.user_id) {
+            userIds.add(row.user_id);
+          }
+        });
+        setBlackCouponUsers(userIds);
+      }
     } finally {
       setTimeout(() => {
         setIsRefreshing(false);
@@ -293,11 +310,16 @@ const StudentApplicationsView: React.FC = () => {
   const [startDate, setStartDate] = useState<dayjs.Dayjs | null>(null);
   const [endDate, setEndDate] = useState<dayjs.Dayjs | null>(null);
   const [onlyPaidSelectionFee, setOnlyPaidSelectionFee] = useState(false);
+  const [onlyBlackCouponUsers, setOnlyBlackCouponUsers] = useState(false);
+  const [showCurrentStudents, setShowCurrentStudents] = useState(false);
   
   // Dados para os filtros - agora vêm do React Query (filterDataQuery)
 
   // Chave para localStorage
   const FILTERS_STORAGE_KEY = 'admin_student_filters';
+  
+  // Lista de bolsas a ocultar por padrão
+  const HIDDEN_SCHOLARSHIPS = ['Current Students Scholarship'];
 
   // Função para salvar filtros no localStorage
   const saveFiltersToStorage = () => {
@@ -312,6 +334,8 @@ const StudentApplicationsView: React.FC = () => {
       startDate: startDate?.toISOString() || null,
       endDate: endDate?.toISOString() || null,
       onlyPaidSelectionFee,
+      onlyBlackCouponUsers,
+      showCurrentStudents,
       currentPage
     };
     localStorage.setItem(FILTERS_STORAGE_KEY, JSON.stringify(filters));
@@ -333,6 +357,8 @@ const StudentApplicationsView: React.FC = () => {
         setStartDate(filters.startDate ? dayjs(filters.startDate) : null);
         setEndDate(filters.endDate ? dayjs(filters.endDate) : null);
         setOnlyPaidSelectionFee(filters.onlyPaidSelectionFee || false);
+        setOnlyBlackCouponUsers(filters.onlyBlackCouponUsers || false);
+        setShowCurrentStudents(filters.showCurrentStudents || false);
         setCurrentPage(filters.currentPage || 1);
       }
     } catch (error) {
@@ -354,6 +380,8 @@ const StudentApplicationsView: React.FC = () => {
     setStartDate(null);
     setEndDate(null);
     setOnlyPaidSelectionFee(false);
+    setOnlyBlackCouponUsers(false);
+    setShowCurrentStudents(false);
     setCurrentPage(1);
   };
 
@@ -398,6 +426,44 @@ const StudentApplicationsView: React.FC = () => {
     loadPendingZelle();
   }, [students]);
 
+  // Carregar estudantes que usaram cupom BLACK
+  useEffect(() => {
+    const loadBlackCouponUsers = async () => {
+      try {
+        // Buscar com ilike para ser case-insensitive
+        const { data, error } = await supabase
+          .from('promotional_coupon_usage')
+          .select('user_id, coupon_code')
+          .ilike('coupon_code', 'BLACK');
+
+        if (error) {
+          console.error('Error loading BLACK coupon users:', error);
+          return;
+        }
+
+        console.log('[BLACK Coupon] Total registros encontrados:', data?.length || 0);
+        console.log('[BLACK Coupon] Dados encontrados:', data);
+
+        const userIds = new Set<string>();
+        (data || []).forEach((row: any) => {
+          if (row.user_id) {
+            userIds.add(row.user_id);
+            console.log('[BLACK Coupon] Adicionando user_id:', row.user_id, 'com cupom:', row.coupon_code);
+          }
+        });
+        
+        console.log('[BLACK Coupon] Total de user_ids únicos:', userIds.size);
+        console.log('[BLACK Coupon] Lista de user_ids:', Array.from(userIds));
+        
+        setBlackCouponUsers(userIds);
+      } catch (e) {
+        console.error('Unexpected error loading BLACK coupon users:', e);
+      }
+    };
+
+    loadBlackCouponUsers();
+  }, [students]);
+
   // Salvar filtros no localStorage sempre que mudarem
   useEffect(() => {
     saveFiltersToStorage();
@@ -412,6 +478,8 @@ const StudentApplicationsView: React.FC = () => {
     startDate,
     endDate,
     onlyPaidSelectionFee,
+    onlyBlackCouponUsers,
+    showCurrentStudents,
     currentPage
   ]);
 
@@ -501,6 +569,16 @@ const StudentApplicationsView: React.FC = () => {
   };
 
   const filteredStudents = students.filter((student: StudentRecord) => {
+    // Excluir estudantes com status enrolled (eles aparecem na aba Completed)
+    if (student.application_status === 'enrolled') {
+      return false;
+    }
+
+    // Ocultar estudantes de Current Students Scholarship por padrão (a menos que o toggle esteja ativo)
+    if (!showCurrentStudents && student.scholarship_title && HIDDEN_SCHOLARSHIPS.includes(student.scholarship_title)) {
+      return false;
+    }
+
     // Em produção, ocultar usuários de teste com email contendo "uorak"
     if (isProductionHost && (student.student_email || '').toLowerCase().includes('uorak')) {
       return false;
@@ -520,6 +598,26 @@ const StudentApplicationsView: React.FC = () => {
     
     // Filtro para mostrar apenas usuários que pagaram a taxa de seleção
     const matchesSelectionFee = !onlyPaidSelectionFee || student.has_paid_selection_process_fee;
+    
+    // Filtro para mostrar apenas usuários que usaram cupom BLACK
+    const matchesBlackCoupon = !onlyBlackCouponUsers || blackCouponUsers.has(student.user_id);
+    
+    // Debug: verificar se o student.user_id está no Set
+    if (onlyBlackCouponUsers && student.user_id) {
+      const hasCoupon = blackCouponUsers.has(student.user_id);
+      if (!hasCoupon && blackCouponUsers.size > 0) {
+        // Log apenas uma vez para não poluir o console
+        if (!(window as any).__blackCouponDebugLogged) {
+          console.log('[BLACK Coupon Filter] Debug:', {
+            student_user_id: student.user_id,
+            blackCouponUsers_size: blackCouponUsers.size,
+            blackCouponUsers_list: Array.from(blackCouponUsers),
+            hasCoupon
+          });
+          (window as any).__blackCouponDebugLogged = true;
+        }
+      }
+    }
     
     // Filtro por etapa do processo (baseado no Application Flow)
     const matchesStage = stageFilter === 'all' || (() => {
@@ -631,7 +729,7 @@ const StudentApplicationsView: React.FC = () => {
       }
     })();
     
-    const finalResult = matchesSearch && matchesStatus && matchesSelectionFee && matchesStage && matchesScholarship && matchesUniversity && matchesAffiliate && matchesTime;
+    const finalResult = matchesSearch && matchesStatus && matchesSelectionFee && matchesBlackCoupon && matchesStage && matchesScholarship && matchesUniversity && matchesAffiliate && matchesTime;
     
     return finalResult;
   });
@@ -1022,19 +1120,47 @@ const StudentApplicationsView: React.FC = () => {
             </div>
           </div>
           
-          {/* Checkbox para filtrar apenas usuários que pagaram a taxa de seleção e botão para limpar filtros */}
+          {/* Checkboxes para filtros e botão para limpar filtros */}
           <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="onlyPaidSelectionFee"
-                checked={onlyPaidSelectionFee}
-                onChange={(e) => setOnlyPaidSelectionFee(e.target.checked)}
-                className="h-4 w-4 text-[#05294E] focus:ring-[#05294E] border-gray-300 rounded"
-              />
-              <label htmlFor="onlyPaidSelectionFee" className="text-sm font-medium text-gray-700">
-                Show only students who paid Selection Process Fee
-              </label>
+            <div className="flex flex-col sm:flex-row gap-4 flex-wrap">
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="onlyPaidSelectionFee"
+                  checked={onlyPaidSelectionFee}
+                  onChange={(e) => setOnlyPaidSelectionFee(e.target.checked)}
+                  className="h-4 w-4 text-[#05294E] focus:ring-[#05294E] border-gray-300 rounded"
+                />
+                <label htmlFor="onlyPaidSelectionFee" className="text-sm font-medium text-gray-700">
+                  Show only students who paid Selection Process Fee
+                </label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="onlyBlackCouponUsers"
+                  checked={onlyBlackCouponUsers}
+                  onChange={(e) => setOnlyBlackCouponUsers(e.target.checked)}
+                  className="h-4 w-4 text-[#05294E] focus:ring-[#05294E] border-gray-300 rounded"
+                />
+                <label htmlFor="onlyBlackCouponUsers" className="text-sm font-medium text-gray-700 flex items-center space-x-1">
+                  <Sparkles className="h-4 w-4 text-purple-600" />
+                  <span>Show only students who used BLACK coupon</span>
+                </label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="showCurrentStudents"
+                  checked={showCurrentStudents}
+                  onChange={(e) => setShowCurrentStudents(e.target.checked)}
+                  className="h-4 w-4 text-[#05294E] focus:ring-[#05294E] border-gray-300 rounded"
+                />
+                <label htmlFor="showCurrentStudents" className="text-sm font-medium text-gray-700 flex items-center space-x-1">
+                  <GraduationCap className="h-4 w-4 text-blue-600" />
+                  <span>Show Current Students Scholarship</span>
+                </label>
+              </div>
             </div>
             <button
               onClick={clearSavedFilters}
@@ -1101,6 +1227,12 @@ const StudentApplicationsView: React.FC = () => {
                           <div className="text-sm font-medium text-gray-900">
                             {student.student_name}
                           </div>
+                          {blackCouponUsers.has(student.user_id) && (
+                            <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md" title="Student used BLACK promotional coupon">
+                              <Sparkles className="h-3 w-3 mr-1" />
+                              BLACK
+                            </span>
+                          )}
                           {pendingZelleByUser[student.user_id] > 0 && (
                             <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800" title="Zelle payment awaiting admin approval">
                               Zelle pending approval
@@ -1570,7 +1702,12 @@ const StudentApplicationsView: React.FC = () => {
                                   } else {
                                     // Sem override: valor padrão + dependentes
                                     const baseFee = Number(getFeeAmount('selection_process'));
-                                    const total = baseFee + (dependents * 150);
+                                    // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
+                                    // Dependentes só afetam Application Fee ($100 por dependente)
+                                    const systemType = student?.system_type || 'legacy';
+                                    const total = systemType === 'simplified' 
+                                      ? baseFee 
+                                      : baseFee + (dependents * 150);
                                     return formatFeeAmount(total);
                                   }
                                 })()}

@@ -83,6 +83,60 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     console.log('[AuthRedirect] 🔍 useEffect executado - loading:', loading, 'user:', !!user, 'pathname:', location.pathname);
     console.log('[AuthRedirect] 🔍 Timestamp:', new Date().toISOString());
     
+    // Tratar erros de verificação de email no hash da URL
+    // IMPORTANTE: Para estudantes, o email é confirmado automaticamente via edge function
+    // Então quando o link é acessado, o token já foi usado e retorna erro otp_expired
+    // Nesse caso, verificamos se o usuário já está autenticado e redirecionamos para o dashboard
+    const hash = window.location.hash;
+    if (hash && !user && !loading) {
+      const hashParams = new URLSearchParams(hash.substring(1));
+      const error = hashParams.get('error');
+      const errorCode = hashParams.get('error_code');
+      const errorDescription = hashParams.get('error_description');
+      
+      if (error && errorCode) {
+        console.error('[AuthRedirect] ❌ Erro de verificação de email detectado:', { error, errorCode, errorDescription });
+        
+        // Se for erro de OTP expirado ou acesso negado
+        // Para estudantes, o email já foi confirmado automaticamente, então verificamos se há sessão ativa
+        if (errorCode === 'otp_expired' || error === 'access_denied') {
+          // Limpar hash da URL
+          window.history.replaceState(null, '', window.location.pathname + window.location.search);
+          
+          // Verificar se há sessão ativa do Supabase (usuário pode já estar logado)
+          supabase.auth.getSession().then(({ data: { session } }) => {
+            if (session?.user) {
+              // Usuário já está autenticado, redirecionar para dashboard baseado no role
+              console.log('[AuthRedirect] ✅ Sessão ativa detectada, redirecionando para dashboard');
+              const userRole = session.user.user_metadata?.role || 'student';
+              
+              if (userRole === 'student') {
+                navigate('/student/dashboard', { replace: true });
+              } else if (userRole === 'admin') {
+                navigate('/admin/dashboard', { replace: true });
+              } else if (userRole === 'seller') {
+                navigate('/seller/dashboard', { replace: true });
+              } else if (userRole === 'school') {
+                navigate('/school/dashboard', { replace: true });
+              } else {
+                navigate('/login?info=email_already_confirmed&message=' + encodeURIComponent('Seu email já foi confirmado! Você pode fazer login agora.'));
+              }
+            } else {
+              // Não há sessão ativa, redirecionar para login com mensagem positiva
+              console.log('[AuthRedirect] ℹ️ Nenhuma sessão ativa, redirecionando para login');
+              const friendlyMessage = 'Seu email já foi confirmado! Você pode fazer login agora com seu email e senha.';
+              navigate('/login?info=email_already_confirmed&message=' + encodeURIComponent(friendlyMessage));
+            }
+          });
+          return;
+        }
+      }
+    } else if (hash && user) {
+      // Se o usuário está autenticado, limpar o hash (registro/login foi bem-sucedido)
+      console.log('[AuthRedirect] ✅ Usuário autenticado detectado, limpando hash da URL');
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    }
+    
     if (loading || !user) {
       console.log('[AuthRedirect] ⚠️ Loading ou sem usuário, não executando redirecionamento');
       return;
@@ -261,19 +315,10 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
         setCheckingUniversity(false);
       }
 
-      // VERIFICAÇÃO ADICIONAL PARA ESTUDANTES - verificar pagamentos pendentes/rejeitados
-      // Aplicar quando acessa home, dashboard ou overview
-      if (user.role === 'student' && 
-          (currentPath === '/' || 
-           currentPath === '/student/dashboard' || 
-           currentPath.startsWith('/student/dashboard/overview'))) {
-        const hasPendingOrRejectedPayment = await checkSelectionProcessPayment(user.id);
-        
-        if (hasPendingOrRejectedPayment) {
-          // Redirecionar para a página de pagamento se houver pagamento pendente/rejeitado
-          navigate('/student/onboarding?step=selection_fee', { replace: true });
-          return;
-        }
+      // VERIFICAÇÃO ADICIONAL PARA ESTUDANTES - redirecionar da home para o dashboard
+      if (user.role === 'student' && currentPath === '/') {
+        navigate('/student/dashboard', { replace: true });
+        return;
       }
     };
 

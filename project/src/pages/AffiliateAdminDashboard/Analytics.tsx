@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BarChart3, TrendingUp, Users, DollarSign, Calendar, Award } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { getRealPaidAmounts } from '../../utils/paymentConverter';
 
 interface AnalyticsProps {
   stats: {
@@ -109,33 +110,77 @@ const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], userId }) =>
         return acc;
       }, {});
 
-      // Calcular total ajustado considerando dependentes quando não houver override e somar por referral_code
+      // Buscar valores reais pagos de individual_fee_payments
+      const realPaidAmountsMap: Record<string, { selection_process?: number; scholarship?: number; i20_control?: number }> = {};
+      
+      // Buscar valores pagos para cada estudante
+      await Promise.all(profiles.map(async (p: any) => {
+        if (!p.user_id) return;
+        
+        try {
+          const amounts = await getRealPaidAmounts(p.user_id, ['selection_process', 'scholarship', 'i20_control']);
+          realPaidAmountsMap[p.user_id] = {
+            selection_process: amounts.selection_process,
+            scholarship: amounts.scholarship,
+            i20_control: amounts.i20_control
+          };
+        } catch (error) {
+          console.error(`[Analytics] Erro ao buscar valores pagos para user_id ${p.user_id}:`, error);
+        }
+      }));
+
+      // Calcular total usando valores reais pagos, com fallback para cálculo fixo, e somar por referral_code
       const revenueByReferral: Record<string, number> = {};
       const total = (profiles || []).reduce((sum, p) => {
         const deps = Number(p?.dependents || 0);
         const ov = overridesMap[p?.user_id] || {};
+        const realPaid = realPaidAmountsMap[p?.user_id] || {};
 
-        // Selection Process
+        // Selection Process - usar valor real pago se disponível, senão calcular
         let selPaid = 0;
         if (p?.has_paid_selection_process_fee) {
-          // Usar valor baseado no system_type do aluno (350 para simplified, 400 para legacy)
-          const baseSelDefault = p?.system_type === 'simplified' ? 350 : 400;
-          const baseSel = ov.selection_process_fee != null ? Number(ov.selection_process_fee) : baseSelDefault;
-          selPaid = ov.selection_process_fee != null ? baseSel : baseSel + (deps * 150);
+          if (realPaid.selection_process !== undefined) {
+            // Usar valor real pago (já com desconto e convertido se PIX)
+            selPaid = realPaid.selection_process;
+          } else {
+            // Fallback: cálculo fixo para dados antigos sem registro
+            const baseSelDefault = p?.system_type === 'simplified' ? 350 : 400;
+            const baseSel = ov.selection_process_fee != null ? Number(ov.selection_process_fee) : baseSelDefault;
+            // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
+            // Dependentes só afetam Application Fee ($100 por dependente)
+            selPaid = ov.selection_process_fee != null 
+              ? baseSel 
+              : (p?.system_type === 'simplified' ? baseSel : baseSel + (deps * 150));
+          }
         }
 
-        // Scholarship Fee (sem dependentes)
-        // ✅ CORREÇÃO: Usar diretamente a flag já calculada pela RPC
+        // Scholarship Fee - usar valor real pago se disponível, senão calcular
         const hasAnyScholarshipPaid = p?.is_scholarship_fee_paid || false;
-        // Usar valor baseado no system_type do aluno (550 para simplified, 900 para legacy)
-        const schBaseDefault = p?.system_type === 'simplified' ? 550 : 900;
-        const schBase = ov.scholarship_fee != null ? Number(ov.scholarship_fee) : schBaseDefault;
-        const schPaid = hasAnyScholarshipPaid ? schBase : 0;
+        let schPaid = 0;
+        if (hasAnyScholarshipPaid) {
+          if (realPaid.scholarship !== undefined) {
+            // Usar valor real pago (já com desconto e convertido se PIX)
+            schPaid = realPaid.scholarship;
+          } else {
+            // Fallback: cálculo fixo para dados antigos sem registro
+            const schBaseDefault = p?.system_type === 'simplified' ? 550 : 900;
+            const schBase = ov.scholarship_fee != null ? Number(ov.scholarship_fee) : schBaseDefault;
+            schPaid = schBase;
+          }
+        }
 
-        // I-20 Control (sem dependentes) - sempre 900 para ambos os sistemas
-        const i20Base = ov.i20_control_fee != null ? Number(ov.i20_control_fee) : 900;
-        // Contar I-20 somente se a bolsa estiver paga (fluxo esperado)
-        const i20Paid = (hasAnyScholarshipPaid && p?.has_paid_i20_control_fee) ? i20Base : 0;
+        // I-20 Control Fee - usar valor real pago se disponível, senão calcular
+        let i20Paid = 0;
+        if (hasAnyScholarshipPaid && p?.has_paid_i20_control_fee) {
+          if (realPaid.i20_control !== undefined) {
+            // Usar valor real pago (já com desconto e convertido se PIX)
+            i20Paid = realPaid.i20_control;
+          } else {
+            // Fallback: cálculo fixo para dados antigos sem registro
+            const i20Base = ov.i20_control_fee != null ? Number(ov.i20_control_fee) : 900;
+            i20Paid = i20Base;
+          }
+        }
 
         const subtotal = selPaid + schPaid + i20Paid;
         const ref = p?.seller_referral_code || '__unknown__';
@@ -271,7 +316,11 @@ const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], userId }) =>
           // Usar valor baseado no system_type do aluno (350 para simplified, 400 para legacy)
           const baseSelDefault = p?.system_type === 'simplified' ? 350 : 400;
           const baseSel = ov.selection_process_fee != null ? Number(ov.selection_process_fee) : baseSelDefault;
-          selPaid = ov.selection_process_fee != null ? baseSel : baseSel + (deps * 150);
+          // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
+          // Dependentes só afetam Application Fee ($100 por dependente)
+          selPaid = ov.selection_process_fee != null 
+            ? baseSel 
+            : (p?.system_type === 'simplified' ? baseSel : baseSel + (deps * 150));
         }
 
         // Scholarship Fee (sem dependentes)

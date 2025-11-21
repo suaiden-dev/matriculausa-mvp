@@ -45,14 +45,19 @@ const MyApplications: React.FC = () => {
     discountAmount: number;
     finalAmount: number;
   } | null>(null);
-  // Helper: calcular Application Fee exibida considerando dependentes (legacy)
+  // Estado para valores reais pagos (incluindo descontos)
+  const [realPaidAmounts, setRealPaidAmounts] = useState<{
+    application?: number;
+    scholarship?: number;
+  }>({});
+  // Helper: calcular Application Fee exibida considerando dependentes (legacy e simplified)
   // O valor vem em centavos do banco, precisa converter para dólares primeiro
   const getApplicationFeeWithDependents = (baseInCents: number): number => {
     // Converter centavos para dólares
     const baseInDollars = convertCentsToDollars(baseInCents);
-    const systemType = (userProfile?.system_type as any) || 'legacy';
     const deps = Number(userProfile?.dependents) || 0;
-    return systemType === 'legacy' && deps > 0 ? baseInDollars + deps * 100 : baseInDollars;
+    // ✅ CORREÇÃO: Adicionar $100 por dependente para ambos os sistemas (legacy e simplified)
+    return deps > 0 ? baseInDollars + deps * 100 : baseInDollars;
   };
   const [userProfileId, setUserProfileId] = useState<string | null>(null);
   
@@ -138,70 +143,176 @@ const MyApplications: React.FC = () => {
     }
   };
 
+  // Função para buscar valores reais pagos de individual_fee_payments
+  // IMPORTANTE: Não usa valores de pagamentos PIX (que estão em BRL), apenas valores em USD
+  // Usa gross_amount_usd quando disponível, senão usa amount
+  const fetchRealPaidAmounts = React.useCallback(async () => {
+    if (!user?.id) {
+      setRealPaidAmounts({});
+      return;
+    }
+
+    try {
+      const { data: payments, error } = await supabase
+        .from('individual_fee_payments')
+        .select('fee_type, amount, gross_amount_usd, payment_method')
+        .eq('user_id', user.id);
+      
+      if (error) {
+        console.error('Erro ao buscar valores pagos:', error);
+        setRealPaidAmounts({});
+        return;
+      }
+      
+      const amounts: typeof realPaidAmounts = {};
+      payments?.forEach(payment => {
+        // Usar gross_amount_usd quando disponível, senão usar amount
+        const displayAmount = payment.gross_amount_usd 
+          ? Number(payment.gross_amount_usd) 
+          : Number(payment.amount);
+        
+        if (payment.fee_type === 'application') {
+          // Se já existe um valor, usar o maior (mais recente ou com gross_amount_usd)
+          if (!amounts.application || displayAmount > amounts.application) {
+            amounts.application = displayAmount;
+          }
+        } else if (payment.fee_type === 'scholarship') {
+          // Se já existe um valor, usar o maior (mais recente ou com gross_amount_usd)
+          if (!amounts.scholarship || displayAmount > amounts.scholarship) {
+            amounts.scholarship = displayAmount;
+          }
+        }
+      });
+      
+      setRealPaidAmounts(amounts);
+    } catch (error) {
+      console.error('Erro ao buscar valores pagos:', error);
+      setRealPaidAmounts({});
+    }
+  }, [user?.id]);
+
   useEffect(() => {
     setUserProfileId(userProfile?.id || null);
     // Mantemos o polling ativo para refletir mudanças de pagamento/edge imediatamente
     setIsPolling(true);
-  }, [userProfile?.id]);
+    // Buscar valores pagos quando o perfil mudar
+    fetchRealPaidAmounts();
+  }, [userProfile?.id, fetchRealPaidAmounts]);
 
-  // Carregar cupom promocional do localStorage e ouvir eventos de validação
+  // Carregar cupom promocional do banco de dados (promotional_coupon_usage) e ouvir eventos de validação
   useEffect(() => {
     // Verificar se o usuário pode usar cupom promocional
     const hasSellerReferralCode = userProfile?.seller_referral_code && userProfile.seller_referral_code.trim() !== '';
     const isLegacySystem = userProfile?.system_type === 'legacy';
     const canUsePromotionalCoupon = hasSellerReferralCode && isLegacySystem;
     
-    if (!canUsePromotionalCoupon) {
+    if (!canUsePromotionalCoupon || !user?.id) {
       setScholarshipFeePromotionalCoupon(null);
       return;
     }
 
-    // Carregar do localStorage
-    const checkPromotionalCoupon = () => {
+    // Buscar cupom promocional do banco de dados
+    const checkPromotionalCouponFromDatabase = async () => {
       try {
+        // Buscar registro de validação do cupom promocional na tabela promotional_coupon_usage
+        const { data: couponUsage, error: couponError } = await supabase
+          .from('promotional_coupon_usage')
+          .select('original_amount, discount_amount, final_amount, coupon_code, created_at, metadata, payment_id')
+          .eq('user_id', user.id)
+          .eq('fee_type', 'scholarship_fee')
+          .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()) // Últimas 24 horas
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (!couponError && couponUsage) {
+          // Verificar se é um registro de validação (não pagamento confirmado)
+          const isValidation = couponUsage.metadata?.is_validation === true || 
+                              (couponUsage.payment_id && String(couponUsage.payment_id).startsWith('validation_'));
+          
+          if (isValidation) {
+            const originalAmount = parseFloat(couponUsage.original_amount.toString());
+            const finalAmount = parseFloat(couponUsage.final_amount.toString());
+            const discountAmount = parseFloat(couponUsage.discount_amount.toString());
+            
+            console.log('[MyApplications] Cupom promocional encontrado no banco:', {
+              coupon: couponUsage.coupon_code,
+              originalAmount,
+              finalAmount,
+              discountAmount
+            });
+            
+            const newCoupon = {
+              discountAmount,
+              finalAmount
+            };
+            
+            // Só atualizar se o valor mudou para evitar loops
+            setScholarshipFeePromotionalCoupon(prev => {
+              if (prev?.discountAmount === newCoupon.discountAmount && prev?.finalAmount === newCoupon.finalAmount) {
+                return prev;
+              }
+              return newCoupon;
+            });
+            return;
+          }
+        }
+        
+        // Se não encontrou no banco, verificar localStorage como fallback
         const savedCoupon = localStorage.getItem('__promotional_coupon_scholarship_fee');
         if (savedCoupon) {
           const couponData = JSON.parse(savedCoupon);
-          // Verificar se o cupom ainda é válido (menos de 24 horas)
           const isExpired = Date.now() - couponData.timestamp > 24 * 60 * 60 * 1000;
           
           if (!isExpired && couponData.validation && couponData.validation.isValid) {
-            setScholarshipFeePromotionalCoupon({
+            const newCoupon = {
               discountAmount: couponData.validation.discountAmount || 0,
-              finalAmount: couponData.validation.finalAmount || getFeeAmount('scholarship_fee')
+              finalAmount: couponData.validation.finalAmount || 0
+            };
+            
+            setScholarshipFeePromotionalCoupon(prev => {
+              if (prev?.discountAmount === newCoupon.discountAmount && prev?.finalAmount === newCoupon.finalAmount) {
+                return prev;
+              }
+              return newCoupon;
             });
+            return;
           } else {
-            // Remover cupom expirado
             localStorage.removeItem('__promotional_coupon_scholarship_fee');
-            setScholarshipFeePromotionalCoupon(null);
           }
-        } else {
-          setScholarshipFeePromotionalCoupon(null);
         }
+        
+        // Se não encontrou nem no banco nem no localStorage, limpar estado
+        setScholarshipFeePromotionalCoupon(null);
       } catch (error) {
-        console.error('[MyApplications] Erro ao carregar cupom do localStorage:', error);
+        console.error('[MyApplications] Erro ao buscar cupom do banco:', error);
         setScholarshipFeePromotionalCoupon(null);
       }
     };
 
-    checkPromotionalCoupon();
+    checkPromotionalCouponFromDatabase();
     
-    // Verificar periodicamente e ouvir eventos
-    const interval = setInterval(checkPromotionalCoupon, 1000);
+    // Verificar periodicamente (aumentar intervalo para reduzir re-renders)
+    const interval = setInterval(checkPromotionalCouponFromDatabase, 5000); // 5 segundos
     
     // Ouvir eventos de validação de cupom do modal
     const handleCouponValidation = (event: CustomEvent) => {
       if (event.detail?.isValid && event.detail?.discountAmount) {
-        setScholarshipFeePromotionalCoupon({
+        const newCoupon = {
           discountAmount: event.detail.discountAmount,
-          finalAmount: event.detail.finalAmount || (getFeeAmount('scholarship_fee') - event.detail.discountAmount)
+          finalAmount: event.detail.finalAmount || 0
+        };
+        
+        // Só atualizar se o valor mudou
+        setScholarshipFeePromotionalCoupon(prev => {
+          if (prev?.discountAmount === newCoupon.discountAmount && prev?.finalAmount === newCoupon.finalAmount) {
+            return prev;
+          }
+          return newCoupon;
         });
       } else {
-        // Se o cupom foi removido, limpar estado
-        const savedCoupon = localStorage.getItem('__promotional_coupon_scholarship_fee');
-        if (!savedCoupon) {
-          setScholarshipFeePromotionalCoupon(null);
-        }
+        // Se o cupom foi removido, verificar novamente no banco
+        checkPromotionalCouponFromDatabase();
       }
     };
 
@@ -211,7 +322,7 @@ const MyApplications: React.FC = () => {
       clearInterval(interval);
       window.removeEventListener('promotionalCouponValidated', handleCouponValidation as EventListener);
     };
-  }, [userProfile?.seller_referral_code, userProfile?.system_type, getFeeAmount]);
+  }, [userProfile?.seller_referral_code, userProfile?.system_type, user?.id]);
 
   useEffect(() => {
     let isMounted = true;
@@ -408,18 +519,47 @@ const MyApplications: React.FC = () => {
         setLoading(false);
       };
       fetchApplications();
+      // Buscar valores pagos atualizados após retorno do pagamento
+      fetchRealPaidAmounts();
       // Remove o parâmetro da URL para evitar loops
       params.delete('from');
       window.history.replaceState({}, '', `${location.pathname}${params.toString() ? '?' + params.toString() : ''}`);
     }
-  }, [location.search, userProfile]);
+  }, [location.search, userProfile, fetchRealPaidAmounts]);
 
   // Sincronizar cart com banco de dados quando a página carrega
   useEffect(() => {
     if (user?.id) {
       syncCartWithDatabase(user.id);
+      fetchRealPaidAmounts();
     }
-  }, [user?.id, syncCartWithDatabase]);
+  }, [user?.id, syncCartWithDatabase, fetchRealPaidAmounts]);
+
+  // Configurar real-time subscription para atualizações de pagamentos
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const channel = supabase
+      .channel(`student-payments-myapplications-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'individual_fee_payments',
+          filter: `user_id=eq.${user.id}`
+        },
+        () => {
+          // Refetch valores pagos quando houver mudanças
+          fetchRealPaidAmounts();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, fetchRealPaidAmounts]);
 
   // Quando o aluno pagar a taxa de uma bolsa aprovada, escondemos as demais aprovadas não pagas
   const chosenPaidApp = applications.find(
@@ -836,7 +976,7 @@ const MyApplications: React.FC = () => {
   };
 
   // Função para processar checkout Stripe
-  const handleStripeCheckout = async () => {
+  const handleStripeCheckout = async (exchangeRate?: number) => {
     if (!pendingApplication) return;
     
     try {
@@ -903,7 +1043,7 @@ const MyApplications: React.FC = () => {
   };
 
   // Função para processar checkout PIX
-  const handlePixCheckout = async () => {
+  const handlePixCheckout = async (exchangeRate?: number) => {
     if (!pendingApplication) return;
     
     try {
@@ -939,7 +1079,9 @@ const MyApplications: React.FC = () => {
             selected_scholarship_id: pendingApplication.scholarship_id,
             fee_type: 'application_fee',
             amount: getApplicationFeeWithDependents(pendingApplication.scholarships?.application_fee_amount || 35000),
-            application_fee_amount: getApplicationFeeWithDependents(pendingApplication.scholarships?.application_fee_amount || 35000)
+            application_fee_amount: getApplicationFeeWithDependents(pendingApplication.scholarships?.application_fee_amount || 35000),
+            // Incluir taxa de câmbio se disponível para garantir consistência
+            ...(exchangeRate ? { exchange_rate: exchangeRate.toString() } : {}),
           },
           scholarships_ids: [pendingApplication.scholarship_id],
         }),
@@ -1064,18 +1206,23 @@ const MyApplications: React.FC = () => {
   };
 
   // Função para processar checkout Stripe da Scholarship Fee
-  const handleScholarshipFeeCheckout = async () => {
+  const handleScholarshipFeeCheckout = async (exchangeRate?: number) => {
     if (!pendingScholarshipFeeApplication) return;
     
     try {
       // Ativar loading
       setIsProcessingScholarshipFeeCheckout(true);
       
-      const scholarshipFeeAmount = getFeeAmount('scholarship_fee');
+      // ✅ Priorizar valor com desconto do window, caso contrário usar valor original
+      const baseAmount = getFeeAmount('scholarship_fee');
+      const finalAmount = (window as any).__checkout_final_amount || baseAmount;
+      
       console.log('Iniciando checkout Stripe para scholarship fee:');
       console.log('- Application ID:', pendingScholarshipFeeApplication.id);
       console.log('- Scholarship ID:', pendingScholarshipFeeApplication.scholarship_id);
-      console.log('- Fee Amount:', scholarshipFeeAmount);
+      console.log('- Valor original:', baseAmount);
+      console.log('- Valor com desconto:', finalAmount);
+      console.log('- Exchange Rate:', exchangeRate);
       
       // Chamar diretamente a Edge Function do Stripe para scholarship fee
       const { data: sessionData } = await supabase.auth.getSession();
@@ -1097,14 +1244,18 @@ const MyApplications: React.FC = () => {
         mode: 'payment',
         payment_type: 'scholarship_fee',
         fee_type: 'scholarship_fee',
-        amount: scholarshipFeeAmount, // Valor da scholarship fee do useFeeConfig
+        amount: finalAmount, // ✅ Usar valor com desconto se existir
         promotional_coupon: promotionalCoupon, // Cupom promocional (BLACK, etc)
         metadata: {
           application_id: pendingScholarshipFeeApplication.id,
           selected_scholarship_id: pendingScholarshipFeeApplication.scholarship_id,
           fee_type: 'scholarship_fee',
-          amount: scholarshipFeeAmount,
-          scholarship_fee_amount: scholarshipFeeAmount
+          amount: finalAmount, // ✅ Usar valor com desconto
+          scholarship_fee_amount: finalAmount, // ✅ Usar valor com desconto
+          original_amount: baseAmount, // Valor original para referência
+          final_amount: finalAmount, // Valor final com desconto
+          // Incluir taxa de câmbio se for PIX e estiver disponível
+          ...(exchangeRate ? { exchange_rate: exchangeRate.toString() } : {}),
         },
         scholarships_ids: [pendingScholarshipFeeApplication.scholarship_id],
       };
@@ -1152,13 +1303,14 @@ const MyApplications: React.FC = () => {
   };
 
   // Função para processar checkout PIX da Scholarship Fee
-  const handleScholarshipFeePixCheckout = async () => {
+  const handleScholarshipFeePixCheckout = async (exchangeRate?: number) => {
     if (!pendingScholarshipFeeApplication) return;
     
     try {
       setIsProcessingScholarshipFeeCheckout(true);
       
       console.log('Iniciando checkout PIX para scholarship fee com application ID:', pendingScholarshipFeeApplication.id);
+      console.log('[MyApplications] PIX Checkout - Exchange Rate:', exchangeRate);
       
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token;
@@ -1169,8 +1321,13 @@ const MyApplications: React.FC = () => {
 
       const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout-scholarship-fee`;
       
-      // Extrair código promocional do window se existir (passado pelo ScholarshipConfirmationModal)
+      // Extrair código promocional e valor final com desconto do window se existir (passado pelo ScholarshipConfirmationModal)
       const promotionalCoupon = (window as any).__checkout_promotional_coupon || null;
+      // ✅ Priorizar valor com desconto do window, caso contrário usar valor original
+      const finalAmount = (window as any).__checkout_final_amount || getFeeAmount('scholarship_fee');
+      const baseAmount = getFeeAmount('scholarship_fee'); // Valor original para referência
+      
+      console.log('[MyApplications] PIX Checkout - Valor original:', baseAmount, 'Valor com desconto:', finalAmount);
       
       const response = await fetch(apiUrl, {
         method: 'POST',
@@ -1187,12 +1344,17 @@ const MyApplications: React.FC = () => {
           fee_type: 'scholarship_fee',
           payment_method: 'pix', // Especificar PIX
           promotional_coupon: promotionalCoupon, // Cupom promocional (BLACK, etc)
+          amount: finalAmount, // ✅ Usar valor com desconto se existir
           metadata: {
             application_id: pendingScholarshipFeeApplication.id,
             selected_scholarship_id: pendingScholarshipFeeApplication.scholarship_id,
             fee_type: 'scholarship_fee',
-            amount: getFeeAmount('scholarship_fee'),
-            scholarship_fee_amount: getFeeAmount('scholarship_fee')
+            amount: finalAmount, // ✅ Usar valor com desconto
+            scholarship_fee_amount: finalAmount, // ✅ Usar valor com desconto
+            original_amount: baseAmount, // Valor original para referência
+            final_amount: finalAmount, // Valor final com desconto
+            // Incluir taxa de câmbio se estiver disponível
+            ...(exchangeRate ? { exchange_rate: exchangeRate.toString() } : {}),
           },
           scholarships_ids: [pendingScholarshipFeeApplication.scholarship_id],
         }),
@@ -1554,7 +1716,9 @@ const MyApplications: React.FC = () => {
                         <div className="flex items-center justify-between mb-3">
                           <span className="font-semibold text-gray-900 text-sm">{t('studentDashboard.myApplications.paymentStatus.applicationFee')}</span>
                           <span className="text-base font-bold text-gray-700">
-                            {formatAmount(getApplicationFeeWithDependents(Number(scholarship.application_fee_amount || 35000)))}
+                            {realPaidAmounts.application !== undefined
+                              ? formatAmount(realPaidAmounts.application)
+                              : formatAmount(getApplicationFeeWithDependents(Number(scholarship.application_fee_amount || 35000)))}
                           </span>
                         </div>
                         {applicationFeePaid ? (
@@ -1602,12 +1766,17 @@ const MyApplications: React.FC = () => {
                       <div className="bg-white border-2 border-slate-200 rounded-xl p-3 shadow-sm">
                         <div className="flex items-center justify-between mb-3">
                           <span className="font-semibold text-gray-900 text-sm">{t('studentDashboard.myApplications.paymentStatus.scholarshipFee')}</span>
-                          {scholarshipFeePromotionalCoupon ? (
+                          {realPaidAmounts.scholarship !== undefined ? (
+                            // Se há pagamento registrado, mostrar valor bruto (gross_amount_usd) ou amount
+                            <span className="text-base font-bold text-gray-700">{formatAmount(realPaidAmounts.scholarship)}</span>
+                          ) : scholarshipFeePromotionalCoupon ? (
+                            // Se há cupom promocional, mostrar valor com desconto
                             <div className="text-right">
                               <div className="text-base font-bold text-gray-400 line-through">{formatAmount(Number(getFeeAmount('scholarship_fee')))}</div>
                               <div className="text-base font-bold text-green-600">{formatAmount(scholarshipFeePromotionalCoupon.finalAmount)}</div>
                             </div>
                           ) : (
+                            // Sem cupom, mostrar valor normal da taxa
                             <span className="text-base font-bold text-gray-700">{formatAmount(Number(getFeeAmount('scholarship_fee')))}</span>
                           )}
                         </div>

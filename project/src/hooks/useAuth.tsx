@@ -574,6 +574,36 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           localStorage.setItem('cached_user_profile', JSON.stringify(profile));
         }
 
+        // ✅ NOVO: Refetch do perfil após um pequeno delay para garantir que o trigger do banco
+        // tenha atualizado o system_type e outros campos calculados
+        // Isso é especialmente importante após o registro de novos usuários
+        if (profile && profile.role === 'student') {
+          setTimeout(async () => {
+            try {
+              const { data: refreshedProfile, error: refreshError } = await supabase
+                .from('user_profiles')
+                .select('*')
+                .eq('user_id', session.user.id)
+                .single();
+              
+              if (!refreshError && refreshedProfile) {
+                console.log('✅ [USEAUTH] Perfil atualizado após delay:', refreshedProfile);
+                setUserProfile(refreshedProfile as UserProfile);
+                
+                // Atualizar cache também
+                const refreshedUser = await buildUser(session.user, refreshedProfile);
+                if (refreshedUser) {
+                  setUser(refreshedUser);
+                  localStorage.setItem('cached_user', JSON.stringify(refreshedUser));
+                  localStorage.setItem('cached_user_profile', JSON.stringify(refreshedProfile));
+                }
+              }
+            } catch (err) {
+              console.error('❌ [USEAUTH] Erro ao refetch do perfil:', err);
+            }
+          }, 1500); // 1.5 segundos de delay para permitir que o trigger do banco execute
+        }
+
         // Sincronizar telefone do user_metadata se o perfil não tiver
         if (profile && !profile.phone && session.user.user_metadata?.phone) {
           try {
@@ -876,6 +906,51 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       userData: signUpData
     });
 
+    // ✅ Verificar ANTES do signUp se há uma sessão ativa de staff (seller/admin/affiliate_admin)
+    // Isso é importante para não perder a sessão do seller quando ele registra um aluno
+    // Verificar tanto pela sessão atual quanto pela URL (página /student/register só sellers podem acessar)
+    const { data: { session: sessionBeforeSignUp } } = await supabase.auth.getSession();
+    const isOnSellerRegistrationPage = typeof window !== 'undefined' && window.location.pathname === '/student/register';
+    let isStaffRegistering = false;
+    let staffSessionToRestore: { access_token: string; refresh_token: string } | null = null;
+    
+    if (sessionBeforeSignUp?.user) {
+      // Verificar role do usuário atual ANTES do registro
+      let currentUserRole: string | null = sessionBeforeSignUp.user.user_metadata?.role;
+      
+      if (!currentUserRole) {
+        const { data: profileData } = await supabase
+          .from('user_profiles')
+          .select('role')
+          .eq('user_id', sessionBeforeSignUp.user.id)
+          .single();
+        currentUserRole = profileData?.role || null;
+      }
+      
+      isStaffRegistering = !!(currentUserRole && 
+        ['seller', 'admin', 'affiliate_admin'].includes(currentUserRole));
+      
+      if (isStaffRegistering) {
+        // Salvar a sessão completa do staff para restaurar depois
+        staffSessionToRestore = {
+          access_token: sessionBeforeSignUp.access_token,
+          refresh_token: sessionBeforeSignUp.refresh_token || ''
+        };
+        console.log('🔍 [USEAUTH] Registro sendo feito por staff (seller/admin/affiliate_admin), não fará login automático');
+        console.log('🔍 [USEAUTH] Sessão do staff salva para restauração');
+      }
+    }
+    
+    // Se estiver na página de registro de seller, também considerar como registro por staff
+    if (isOnSellerRegistrationPage && !isStaffRegistering && sessionBeforeSignUp) {
+      console.log('🔍 [USEAUTH] Detectado registro na página /student/register (acessível apenas por staff)');
+      isStaffRegistering = true;
+      staffSessionToRestore = {
+        access_token: sessionBeforeSignUp.access_token,
+        refresh_token: sessionBeforeSignUp.refresh_token || ''
+      };
+    }
+
     const { error, data } = await supabase.auth.signUp({
       email: normalizedEmail,
       password,
@@ -897,7 +972,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     console.log('✅ [USEAUTH] SignUp bem-sucedido');
     console.log('🔍 [USEAUTH] data.user:', data?.user);
     
-    // ✅ NOVO: Auto-confirmar email apenas para alunos que NÃO são vendedores em registro
+    // ✅ REATIVADO: Auto-confirmar email para todos os alunos (role student)
     if (data?.user && userData.role === 'student') {
       try {
         // Verificar se é um registro de vendedor (tem seller_referral_code E está em seller_registrations)
@@ -920,10 +995,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         
         // Auto-confirmar apenas se NÃO for registro de vendedor
         if (!isSellerRegistration) {
-          console.log('🔍 [USEAUTH] Auto-confirmando email para aluno...');
+          console.log('🔍 [USEAUTH] Auto-confirmando email para aluno...', {
+            userId: data.user.id,
+            email: normalizedEmail,
+            role: userData.role,
+            seller_referral_code: userData.seller_referral_code,
+            isStaffRegistering
+          });
           
           // Chamar Edge Function para confirmar email
-          const { error: confirmError } = await supabase.functions.invoke('auto-confirm-student-email', {
+          const { data: confirmData, error: confirmError } = await supabase.functions.invoke('auto-confirm-student-email', {
             body: {
               userId: data.user.id,
               role: userData.role
@@ -931,26 +1012,64 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           });
           
           if (confirmError) {
-            console.warn('⚠️ [USEAUTH] Erro ao auto-confirmar email:', confirmError);
+            console.error('❌ [USEAUTH] Erro ao auto-confirmar email:', confirmError);
+            console.error('❌ [USEAUTH] Detalhes do erro:', {
+              message: confirmError.message,
+              status: confirmError.status,
+              name: confirmError.name
+            });
             // Não falhar o registro se a confirmação falhar
           } else {
-            console.log('✅ [USEAUTH] Email auto-confirmado com sucesso');
+            console.log('✅ [USEAUTH] Email auto-confirmado com sucesso', confirmData);
             
-            // Fazer login automático após confirmação
+            // NÃO fazer login automático se foi um registro feito por staff
+            if (isStaffRegistering && staffSessionToRestore) {
+              console.log('🔍 [USEAUTH] Registro feito por staff, restaurando sessão do seller/admin');
+              
+              // Restaurar a sessão do staff imediatamente após a confirmação do email
+              // Isso substitui a sessão do aluno que foi criada automaticamente
+              const { error: restoreError } = await supabase.auth.setSession({
+                access_token: staffSessionToRestore.access_token,
+                refresh_token: staffSessionToRestore.refresh_token
+              });
+              
+              if (restoreError) {
+                console.error('❌ [USEAUTH] Erro ao restaurar sessão do staff:', restoreError);
+                // Se falhar, fazer logout para não manter sessão do aluno
+                await supabase.auth.signOut();
+              } else {
+                console.log('✅ [USEAUTH] Sessão do staff restaurada com sucesso');
+              }
+            } else if (isStaffRegistering) {
+              console.log('🔍 [USEAUTH] Registro feito por staff, mas não há sessão para restaurar - fazendo logout');
+              await supabase.auth.signOut();
+            } else {
+            // Aguardar um pouco para garantir que a confirmação foi processada
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+              // Fazer login automático após confirmação apenas se não for registro por staff
             console.log('🔍 [USEAUTH] Fazendo login automático...');
-            const { error: loginError } = await supabase.auth.signInWithPassword({
+            const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
               email: normalizedEmail,
               password,
             });
             
             if (loginError) {
-              console.warn('⚠️ [USEAUTH] Erro ao fazer login automático:', loginError);
+              console.error('❌ [USEAUTH] Erro ao fazer login automático:', loginError);
+              console.error('❌ [USEAUTH] Detalhes do erro de login:', {
+                message: loginError.message,
+                status: loginError.status,
+                name: loginError.name
+              });
               // Não falhar, o usuário pode fazer login manualmente depois
             } else {
-              console.log('✅ [USEAUTH] Login automático realizado com sucesso');
+              console.log('✅ [USEAUTH] Login automático realizado com sucesso', loginData);
               // O onAuthStateChange vai detectar a mudança e atualizar o estado
+              }
             }
           }
+        } else {
+          console.log('⚠️ [USEAUTH] Registro de vendedor detectado, NÃO auto-confirmando email');
         }
       } catch (err) {
         console.warn('⚠️ [USEAUTH] Erro ao tentar auto-confirmar email e fazer login:', err);

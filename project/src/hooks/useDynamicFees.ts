@@ -19,11 +19,24 @@ export interface DynamicFeeValues {
 export const useDynamicFees = (): DynamicFeeValues => {
   const { userProfile } = useAuth();
   const { getFeeAmount, hasOverride, loading: feeLoading } = useFeeConfig(userProfile?.user_id);
-  const { systemType } = useSystemType();
+  const { systemType, loading: systemTypeLoading } = useSystemType();
   const { fee350, fee550, fee900, loading: simplifiedFeesLoading } = useSimplifiedFees();
   // Pacotes dinâmicos descontinuados com nova estrutura de preços
 
   return useMemo(() => {
+    // ✅ CORREÇÃO: Aguardar systemType estar pronto antes de calcular
+    if (systemTypeLoading) {
+      console.log('⏳ [useDynamicFees] SystemType ainda carregando, aguardando...');
+      return {
+        selectionProcessFee: undefined as any,
+        scholarshipFee: undefined as any,
+        i20ControlFee: undefined as any,
+        selectionProcessFeeAmount: undefined as any,
+        scholarshipFeeAmount: undefined as any,
+        i20ControlFeeAmount: undefined as any,
+        hasSellerPackage: false
+      };
+    }
     
     // Para sistema simplificado, usar valores fixos (PRIORIDADE MÁXIMA)
     if (systemType === 'simplified') {
@@ -41,6 +54,9 @@ export const useDynamicFees = (): DynamicFeeValues => {
           hasSellerPackage: false
         };
       }
+      
+      // ✅ CORREÇÃO: Para sistema simplificado, Selection Process Fee é fixo em $350 (sem dependentes)
+      // Dependentes só afetam Application Fee ($100 por dependente)
       
       return {
         selectionProcessFee: `$${fee350.toFixed(2)}`,
@@ -97,5 +113,5 @@ export const useDynamicFees = (): DynamicFeeValues => {
       i20ControlFeeAmount: baseI20,
       hasSellerPackage: false
     };
-  }, [systemType, simplifiedFeesLoading, feeLoading, fee350, fee550, fee900, userProfile, getFeeAmount, hasOverride]);
+  }, [systemType, systemTypeLoading, simplifiedFeesLoading, feeLoading, fee350, fee550, fee900, userProfile, getFeeAmount, hasOverride]);
 };

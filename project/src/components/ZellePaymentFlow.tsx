@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth';
 import { useFeeConfig } from '../hooks/useFeeConfig';
 import { usePaymentBlocked } from '../hooks/usePaymentBlocked';
+import { useSystemType } from '../hooks/useSystemType';
 import { supabase } from '../lib/supabase';
 import { PreCheckoutModal } from './PreCheckoutModal';
 import { ZelleCheckout } from './ZelleCheckout';
@@ -33,6 +34,7 @@ export const ZellePaymentFlow: React.FC<ZellePaymentFlowProps> = ({
   const { isAuthenticated, user, userProfile } = useAuth();
   const { getFeeAmount, userFeeOverrides } = useFeeConfig(user?.id);
   const { isBlocked, pendingPayment, loading: paymentBlockedLoading } = usePaymentBlocked();
+  const { systemType } = useSystemType();
   const [loading] = useState(false);
   const [showPreCheckoutModal, setShowPreCheckoutModal] = useState(false);
   const [showZelleCheckout, setShowZelleCheckout] = useState(false);
@@ -51,65 +53,69 @@ export const ZellePaymentFlow: React.FC<ZellePaymentFlowProps> = ({
   };
 
 
-  const handlePreCheckoutProceed = async (discountCode?: string) => {
-    console.log('🔍 [ZellePaymentFlow] handlePreCheckoutProceed chamado com código:', discountCode);
+  const handlePreCheckoutProceed = async (finalAmount: number, discountCode?: string) => {
+    console.log('🔍 [ZellePaymentFlow] handlePreCheckoutProceed chamado com finalAmount:', finalAmount, 'código:', discountCode);
     
-    // Calcular valor base
+    // Calcular valor base para referência
     const baseAmount = getAmount();
-    let finalAmountValue = baseAmount;
+    let finalAmountValue = finalAmount; // ✅ Usar o valor já calculado pelo PreCheckoutModal
     let discountAppliedValue = false;
     
     console.log('🔍 [ZellePaymentFlow] Valores iniciais:', {
       baseAmount,
       finalAmountValue,
       discountAppliedValue,
-      feeType
+      feeType,
+      discountCode
     });
     
-    // Se há código de desconto, aplicar via edge function
+    // Se há código de desconto (referral code), aplicar via edge function
+    // Mas o valor final já foi calculado pelo PreCheckoutModal, então só precisamos registrar
     if (discountCode) {
-      try {
-        console.log('🔍 [ZellePaymentFlow] Aplicando código de desconto via edge function...');
-        const { data: sessionData } = await supabase.auth.getSession();
-        const token = sessionData.session?.access_token;
-        
-        if (!token) {
-          throw new Error('Usuário não autenticado');
-        }
+      // Verificar se é cupom promocional (BLACK, etc) ou código de referral
+      const isPromotionalCoupon = discountCode === 'BLACK' || (window as any).__checkout_promotional_coupon === discountCode;
+      
+      if (isPromotionalCoupon) {
+        console.log('🔍 [ZellePaymentFlow] ✅ Cupom promocional detectado, valor já calculado:', finalAmountValue);
+        discountAppliedValue = true;
+      } else {
+        // Código de referral - aplicar via edge function
+        try {
+          console.log('🔍 [ZellePaymentFlow] Aplicando código de referral via edge function...');
+          const { data: sessionData } = await supabase.auth.getSession();
+          const token = sessionData.session?.access_token;
+          
+          if (!token) {
+            throw new Error('Usuário não autenticado');
+          }
 
-        // Aplicar código de desconto
-        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/validate-referral-code`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-          body: JSON.stringify({ affiliate_code: discountCode }),
-        });
+          // Aplicar código de desconto
+          const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/validate-referral-code`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({ affiliate_code: discountCode }),
+          });
 
-        const result = await response.json();
-        console.log('🔍 [ZellePaymentFlow] Resultado da aplicação do código:', result);
-        
-        if (!result.success) {
-          console.error('🔍 [ZellePaymentFlow] ❌ Erro ao aplicar código:', result.error);
-          onError?.(result.error || 'Erro ao aplicar código de desconto');
+          const result = await response.json();
+          console.log('🔍 [ZellePaymentFlow] Resultado da aplicação do código:', result);
+          
+          if (!result.success) {
+            console.error('🔍 [ZellePaymentFlow] ❌ Erro ao aplicar código:', result.error);
+            onError?.(result.error || 'Erro ao aplicar código de desconto');
+            return;
+          }
+          
+          // O valor final já foi calculado pelo PreCheckoutModal, apenas marcar que desconto foi aplicado
+          discountAppliedValue = true;
+          console.log('🔍 [ZellePaymentFlow] ✅ Código de referral aplicado com sucesso');
+        } catch (error) {
+          console.error('🔍 [ZellePaymentFlow] ❌ Erro ao aplicar código:', error);
+          onError?.(error instanceof Error ? error.message : 'Erro ao aplicar código de desconto');
           return;
         }
-        
-        // Aplicar desconto de $50 se for selection_process
-        if (feeType === 'selection_process') {
-          finalAmountValue = Math.max(0, baseAmount - 50);
-          discountAppliedValue = true;
-          console.log('🔍 [ZellePaymentFlow] ✅ Desconto de $50 aplicado. Valor original: $' + baseAmount + ', Valor final: $' + finalAmountValue);
-        } else {
-          console.log('🔍 [ZellePaymentFlow] ⚠️ Desconto não aplicado - feeType não é selection_process:', feeType);
-        }
-        
-        console.log('🔍 [ZellePaymentFlow] ✅ Código aplicado com sucesso');
-      } catch (error) {
-        console.error('🔍 [ZellePaymentFlow] ❌ Erro ao aplicar código:', error);
-        onError?.(error instanceof Error ? error.message : 'Erro ao aplicar código de desconto');
-        return;
       }
     } else {
       console.log('🔍 [ZellePaymentFlow] Nenhum código de desconto fornecido');
@@ -120,6 +126,7 @@ export const ZellePaymentFlow: React.FC<ZellePaymentFlowProps> = ({
     setDiscountApplied(discountAppliedValue);
 
     console.log('🔍 [ZellePaymentFlow] Estados finais definidos:', {
+      baseAmount,
       finalAmountValue,
       discountAppliedValue,
       finalAmount: finalAmountValue,
@@ -158,18 +165,19 @@ export const ZellePaymentFlow: React.FC<ZellePaymentFlowProps> = ({
       } else {
         // Se não há override, aplicar lógica de dependentes aos valores padrão
         const dependents = Number(userProfile?.dependents) || 0;
-        const dependentsCost = dependents * 150; // $150 por dependente apenas no Selection Process
+        // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
+        // Dependentes só afetam Application Fee ($100 por dependente)
+        const dependentsCost = systemType === 'simplified' ? 0 : (dependents * 150); // $150 por dependente apenas no Selection Process (legacy)
         return getFeeAmount('selection_process') + dependentsCost;
       }
     }
     
     if (feeType === 'application_fee') {
       const baseAmount = getFeeAmount('application_fee');
-      const systemType = userProfile?.system_type || 'legacy';
       const dependents = Number(userProfile?.dependents) || 0;
       
-      // Adicionar $100 por dependente apenas para sistema legacy
-      if (systemType === 'legacy' && dependents > 0) {
+      // Adicionar $100 por dependente para ambos os sistemas (legacy e simplified)
+      if (dependents > 0) {
         const dependentsCost = dependents * 100; // $100 por dependente na Application Fee
         return baseAmount + dependentsCost;
       }

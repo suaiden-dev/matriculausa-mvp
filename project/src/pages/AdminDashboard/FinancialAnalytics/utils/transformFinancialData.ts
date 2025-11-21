@@ -25,15 +25,17 @@ function processApplications(
     if (!studentName || !universityName) return;
 
     const dependents = Number(student?.dependents) || 0;
-    const dependentCost = dependents * 150; // apenas selection process
     const userOverrides = overridesMap[student?.user_id] || {};
+    const systemType = userSystemTypesMap.get(student.user_id) || 'legacy';
+    // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
+    // Dependentes só afetam Application Fee ($100 por dependente)
+    const dependentCost = systemType === 'simplified' ? 0 : (dependents * 150); // apenas selection process (legacy)
 
     // Selection Process Fee
     let selectionProcessFee: number;
     if (userOverrides.selection_process_fee !== undefined) {
       selectionProcessFee = Math.round(userOverrides.selection_process_fee * 100);
     } else {
-      const systemType = userSystemTypesMap.get(student.user_id) || 'legacy';
       const baseAmount = systemType === 'simplified' ? 350 : 400;
       selectionProcessFee = Math.round((baseAmount + dependentCost) * 100);
     }
@@ -64,8 +66,8 @@ function processApplications(
     } else {
       applicationFee = Math.round(getFeeAmount('application_fee') * 100);
     }
-    const systemType = userSystemTypesMap.get(student.user_id) || 'legacy';
-    if (systemType === 'legacy' && dependents > 0) {
+    // Adicionar $100 por dependente para ambos os sistemas (legacy e simplified)
+    if (dependents > 0) {
       applicationFee += dependents * 10000; // $100 por dependente
     }
 
@@ -256,8 +258,11 @@ function processStripeUsers(
     if (hasZellePayment) return;
 
     const dependents = Number(stripeUser?.dependents) || 0;
-    const dependentCost = dependents * 150;
     const userOverrides = overridesMap[stripeUser?.user_id] || {};
+    const systemType = userSystemTypesMap.get(stripeUser.user_id) || 'legacy';
+    // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
+    // Dependentes só afetam Application Fee ($100 por dependente)
+    const dependentCost = systemType === 'simplified' ? 0 : (dependents * 150);
 
     let selectionProcessFee: number;
     const realAmount = realPaymentAmounts?.get(stripeUser?.user_id);
@@ -266,7 +271,6 @@ function processStripeUsers(
     } else if (userOverrides.selection_process_fee !== undefined) {
       selectionProcessFee = Math.round(userOverrides.selection_process_fee * 100);
     } else {
-      const systemType = userSystemTypesMap.get(stripeUser.user_id) || 'legacy';
       const baseAmount = systemType === 'simplified' ? 350 : 400;
       selectionProcessFee = Math.round((baseAmount + dependentCost) * 100);
     }
@@ -290,7 +294,7 @@ function processStripeUsers(
       scholarshipFee = Math.round(amount * 100);
     }
     let applicationFee = Math.round(getFeeAmount('application_fee') * 100);
-    const systemType = userSystemTypesMap.get(stripeUser.user_id) || 'legacy';
+    // systemType já foi declarado acima, reutilizar
     if (systemType === 'legacy' && dependents > 0) {
       applicationFee += dependents * 10000;
     }

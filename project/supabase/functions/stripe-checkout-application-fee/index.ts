@@ -223,7 +223,7 @@ Deno.serve(async (req) => {
       console.log('[stripe-checkout-application-fee] Nenhum scholarship_id encontrado na aplicação');
     }
 
-    // Adicionar custo por dependente apenas para sistema legacy
+    // Adicionar custo por dependente para ambos os sistemas (legacy e simplified)
     const systemType = userProfile.system_type || 'legacy';
     const dependents = Number(userProfile.dependents) || 0;
     
@@ -233,12 +233,12 @@ Deno.serve(async (req) => {
       baseApplicationFee: applicationFeeAmount
     });
     
-    if (systemType === 'legacy' && dependents > 0) {
-      const dependentsCost = dependents * 100; // $100 por dependente
+    if (dependents > 0) {
+      const dependentsCost = dependents * 100; // $100 por dependente (para ambos os sistemas)
       applicationFeeAmount += dependentsCost;
       console.log(`[stripe-checkout-application-fee] ✅ Adicionado $${dependentsCost} por ${dependents} dependente(s). Novo valor: $${applicationFeeAmount}`);
     } else {
-      console.log('[stripe-checkout-application-fee] Sem custo adicional de dependentes (sistema:', systemType, ', dependentes:', dependents, ')');
+      console.log('[stripe-checkout-application-fee] Sem custo adicional de dependentes (dependentes:', dependents, ')');
     }
 
     // Garantir valor mínimo de $0.50 USD
@@ -277,6 +277,16 @@ Deno.serve(async (req) => {
     if (finalPaymentMethod === 'pix') {
       console.log('[PIX] 🇧🇷 PIX selecionado para Application Fee - Configurando sessão PIX...');
       console.log('[PIX] 💰 Valor USD:', applicationFeeAmount);
+      
+      // Priorizar taxa de câmbio enviada pelo frontend (se disponível) para garantir consistência
+      const frontendExchangeRate = metadata?.exchange_rate ? parseFloat(metadata.exchange_rate) : null;
+      
+      if (frontendExchangeRate && frontendExchangeRate > 0) {
+        // Usar taxa do frontend para garantir que o valor calculado seja o mesmo
+        exchangeRate = frontendExchangeRate;
+        console.log('[stripe-checkout-application-fee] 💱 Usando taxa de câmbio do frontend (para consistência):', exchangeRate);
+      } else {
+        // Se frontend não enviou taxa, buscar nova
       try {
         console.log('[stripe-checkout-application-fee] 💱 Obtendo taxa de câmbio com margem comercial...');
         
@@ -293,60 +303,42 @@ Deno.serve(async (req) => {
         } else {
           throw new Error('API externa falhou');
         }
-        
-        // Logs específicos para PIX após cálculo da taxa
-        console.log('[PIX] 💱 Taxa de conversão:', exchangeRate);
-        console.log('[PIX] 💰 Valor BRL:', Math.round(applicationFeeAmount * exchangeRate * 100));
-        console.log('[PIX] 🔗 Success URL PIX:', `${success_url}`);
-        
       } catch (apiError) {
         console.error('[stripe-checkout-application-fee] ❌ Erro na API externa:', apiError);
         exchangeRate = 5.6; // Taxa de fallback
         console.log('[stripe-checkout-application-fee] 💱 Usando taxa de fallback:', exchangeRate);
       }
     }
-
-    // Verificar se deve aplicar markup (não aplicar em produção por padrão)
-    const enableMarkupEnv = Deno.env.get('ENABLE_STRIPE_FEE_MARKUP');
-    const shouldApplyMarkup = enableMarkupEnv === 'true' 
-      ? true 
-      : enableMarkupEnv === 'false' 
-        ? false 
-        : !config.environment.isProduction; // Se não definido, usar detecção automática
-    
-    // Calcular valor com ou sem markup de taxas do Stripe
-    let grossAmountInCents: number;
-    if (shouldApplyMarkup) {
-      if (finalPaymentMethod === 'pix') {
-        // Para PIX: calcular markup considerando taxa de câmbio
-        grossAmountInCents = calculatePIXAmountWithFees(baseAmount, exchangeRate);
-      } else {
-        // Para cartão: calcular markup
-        grossAmountInCents = calculateCardAmountWithFees(baseAmount);
-      }
-      console.log('[stripe-checkout-application-fee] ✅ Markup ATIVADO (ambiente:', config.environment.environment, ')');
-    } else {
-      // Sem markup: usar valor original
-      if (finalPaymentMethod === 'pix') {
-        grossAmountInCents = Math.round(baseAmount * exchangeRate * 100);
-      } else {
-        grossAmountInCents = Math.round(baseAmount * 100);
-      }
-      console.log('[stripe-checkout-application-fee] ⚠️ Markup DESATIVADO (ambiente:', config.environment.environment, ')');
+      
+      // Logs específicos para PIX após cálculo da taxa
+      console.log('[PIX] 💱 Taxa de conversão:', exchangeRate);
+      console.log('[PIX] 💰 Valor BRL:', Math.round(applicationFeeAmount * exchangeRate * 100));
+      console.log('[PIX] 🔗 Success URL PIX:', `${success_url}`);
     }
+
+    // Sempre aplicar markup de taxas do Stripe
+    let grossAmountInCents: number;
+    if (finalPaymentMethod === 'pix') {
+      // Para PIX: calcular markup considerando taxa de câmbio
+      grossAmountInCents = calculatePIXAmountWithFees(baseAmount, exchangeRate);
+    } else {
+      // Para cartão: calcular markup
+      grossAmountInCents = calculateCardAmountWithFees(baseAmount);
+    }
+    console.log('[stripe-checkout-application-fee] ✅ Markup ATIVADO (ambiente:', config.environment.environment, ')');
     
     // Atualizar metadata com valores gross e fee
     sessionMetadata.gross_amount = (grossAmountInCents / 100).toString();
-    sessionMetadata.fee_type = shouldApplyMarkup ? 'stripe_processing' : 'none';
-    sessionMetadata.fee_amount = shouldApplyMarkup ? ((grossAmountInCents / 100) - baseAmount).toString() : '0';
-    sessionMetadata.markup_enabled = shouldApplyMarkup.toString();
+    sessionMetadata.fee_type = 'stripe_processing';
+    sessionMetadata.fee_amount = ((grossAmountInCents / 100) - baseAmount).toString();
+    sessionMetadata.markup_enabled = 'true';
     
     console.log('[stripe-checkout-application-fee] 💰 Valores calculados:', {
       baseAmount,
       grossAmount: grossAmountInCents / 100,
-      feeAmount: shouldApplyMarkup ? (grossAmountInCents / 100) - baseAmount : 0,
+      feeAmount: (grossAmountInCents / 100) - baseAmount,
       grossAmountInCents,
-      markupEnabled: shouldApplyMarkup
+      markupEnabled: true
     });
 
     // Configuração da sessão Stripe

@@ -56,7 +56,7 @@ Deno.serve(async (req) => {
 
     console.log('[stripe-checkout-selection-process-fee] ✅ Variáveis de ambiente verificadas');
 
-    const { price_id, amount, success_url, cancel_url, mode, metadata, payment_method } = await req.json();
+    const { price_id, amount, success_url, cancel_url, mode, metadata, payment_method, promotional_coupon } = await req.json();
     
     console.log('[stripe-checkout-selection-process-fee] 📥 Payload recebido:', { price_id, amount, success_url, cancel_url, mode, metadata, payment_method });
     
@@ -78,8 +78,39 @@ Deno.serve(async (req) => {
 
     console.log('[stripe-checkout-selection-process-fee] ✅ Usuário autenticado:', user.id);
 
+    // Verificar se há cupom promocional (BLACK, etc) - ANTES de buscar desconto ativo
+    let promotionalCouponData: any = null;
+    if (promotional_coupon && promotional_coupon.trim()) {
+      try {
+        const normalizedCoupon = promotional_coupon.trim().toUpperCase();
+        console.log('[stripe-checkout-selection-process-fee] 🎟️ Validando cupom promocional:', normalizedCoupon);
+        
+        const { data: couponValidation, error: couponError } = await supabase
+          .rpc('validate_promotional_coupon', {
+            user_id_param: user.id,
+            coupon_code_param: normalizedCoupon,
+            fee_type_param: 'selection_process',
+            purchase_amount_param: amount || 0
+          });
+
+        if (couponError) {
+          console.error('[stripe-checkout-selection-process-fee] ❌ Erro ao validar cupom promocional:', couponError);
+        } else if (couponValidation && couponValidation.success) {
+          promotionalCouponData = couponValidation;
+          console.log('[stripe-checkout-selection-process-fee] ✅ Cupom promocional válido!');
+          console.log('[stripe-checkout-selection-process-fee] Coupon ID:', promotionalCouponData.coupon_id);
+          console.log('[stripe-checkout-selection-process-fee] Discount Amount:', promotionalCouponData.discount_amount);
+          console.log('[stripe-checkout-selection-process-fee] Final Amount:', promotionalCouponData.final_amount);
+        } else {
+          console.log('[stripe-checkout-selection-process-fee] ⚠️ Cupom promocional inválido:', couponValidation?.error);
+        }
+      } catch (error) {
+        console.error('[stripe-checkout-selection-process-fee] ❌ Erro ao verificar cupom promocional:', error);
+      }
+    }
+
     // Buscar taxas do pacote do usuário
-    let userPackageFees = null;
+    let userPackageFees: any = null;
     try {
       console.log('[stripe-checkout-selection-process-fee] 🔍 Tentando buscar taxas do pacote para user_id:', user.id);
       
@@ -106,6 +137,7 @@ Deno.serve(async (req) => {
     }
 
     // Monta o metadata mínimo
+    // NOTA: metadata pode conter exchange_rate do frontend, vamos preservá-lo
     const sessionMetadata = {
       student_id: user.id,
       fee_type: 'selection_process',
@@ -125,12 +157,12 @@ Deno.serve(async (req) => {
       sessionMetadata.user_has_package = 'false';
     }
 
-    console.log('[stripe-checkout-selection-process-fee] �� Metadata da sessão:', sessionMetadata);
+    console.log('[stripe-checkout-selection-process-fee]    Metadata da sessão:', sessionMetadata);
 
     // Verificar se usuário tem desconto ativo
     let activeDiscount = null;
     try {
-      console.log('[stripe-checkout-selection-process-fee] �� VERIFICANDO DESCONTO PARA USUÁRIO');
+      console.log('[stripe-checkout-selection-process-fee]    VERIFICANDO DESCONTO PARA USUÁRIO');
       console.log('[stripe-checkout-selection-process-fee] User ID:', user.id);
       console.log('[stripe-checkout-selection-process-fee] User Email:', user.email);
       
@@ -180,75 +212,72 @@ Deno.serve(async (req) => {
     if (payment_method === 'pix') {
       console.log('[PIX] 🇧🇷 PIX selecionado - Configurando sessão PIX...');
       console.log('[PIX] 💰 Valor USD:', amount);
-      try {
-        console.log('[stripe-checkout-selection-process-fee] 💱 Obtendo taxa de câmbio com margem comercial...');
-        
-        // Usar API externa com margem comercial (mais realista que Stripe)
-        const response = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
-        if (response.ok) {
-          const data = await response.json();
-          const baseRate = parseFloat(data.rates.BRL);
+      
+      // Priorizar taxa de câmbio enviada pelo frontend (se disponível) para garantir consistência
+      // Verificar tanto no sessionMetadata quanto no metadata original
+      const frontendExchangeRate = sessionMetadata.exchange_rate 
+        ? parseFloat(sessionMetadata.exchange_rate) 
+        : (metadata?.exchange_rate ? parseFloat(metadata.exchange_rate) : null);
+      
+      if (frontendExchangeRate && frontendExchangeRate > 0) {
+        // Usar taxa do frontend para garantir que o valor calculado seja o mesmo
+        exchangeRate = frontendExchangeRate;
+        console.log('[stripe-checkout-selection-process-fee] 💱 Usando taxa de câmbio do frontend (para consistência):', exchangeRate);
+      } else {
+        // Se frontend não enviou taxa, buscar nova
+        try {
+          console.log('[stripe-checkout-selection-process-fee] 💱 Obtendo taxa de câmbio com margem comercial...');
           
-          // Aplicar margem comercial (3-5% acima da taxa oficial)
-          exchangeRate = baseRate * 1.04; // 4% de margem
-          console.log('[stripe-checkout-selection-process-fee] 💱 Taxa base (ExchangeRates-API):', baseRate);
-          console.log('[stripe-checkout-selection-process-fee] 💱 Taxa com margem comercial (+4%):', exchangeRate);
-        } else {
-          throw new Error('API externa falhou');
+          // Usar API externa com margem comercial (mais realista que Stripe)
+          const response = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
+          if (response.ok) {
+            const data = await response.json();
+            const baseRate = parseFloat(data.rates.BRL);
+            
+            // Aplicar margem comercial (3-5% acima da taxa oficial)
+            exchangeRate = baseRate * 1.04; // 4% de margem
+            console.log('[stripe-checkout-selection-process-fee] 💱 Taxa base (ExchangeRates-API):', baseRate);
+            console.log('[stripe-checkout-selection-process-fee] 💱 Taxa com margem comercial (+4%):', exchangeRate);
+          } else {
+            throw new Error('API externa falhou');
+          }
+        } catch (apiError) {
+          console.error('[stripe-checkout-selection-process-fee] ❌ Erro na API externa:', apiError);
+          exchangeRate = 5.6; // Taxa de fallback
+          console.log('[stripe-checkout-selection-process-fee] 💱 Usando taxa de fallback:', exchangeRate);
         }
-        
-        // Logs específicos para PIX após cálculo da taxa
-        console.log('[PIX] 💱 Taxa de conversão:', exchangeRate);
-        console.log('[PIX] 💰 Valor BRL:', Math.round(amount * exchangeRate * 100));
-        console.log('[PIX] 🔗 Success URL PIX:', `http://localhost:5173/student/dashboard/pix-payment-success?session_id={CHECKOUT_SESSION_ID}`);
-        
-      } catch (apiError) {
-        console.error('[stripe-checkout-selection-process-fee] ❌ Erro na API externa:', apiError);
-        exchangeRate = 5.6; // Taxa de fallback
-        console.log('[stripe-checkout-selection-process-fee] 💱 Usando taxa de fallback:', exchangeRate);
       }
+      
+      // Logs específicos para PIX após cálculo da taxa
+      console.log('[PIX] 💱 Taxa de conversão:', exchangeRate);
+      console.log('[PIX] 💰 Valor BRL:', Math.round(amount * exchangeRate * 100));
+      console.log('[PIX] 🔗 Success URL PIX:', `http://localhost:5173/student/dashboard/pix-payment-success?session_id={CHECKOUT_SESSION_ID}`);
     }
 
     // Se o frontend enviou um amount específico (incluindo dependentes), usar esse valor
+    // NOTA: Se houver cupom promocional, o frontend já envia o valor com desconto aplicado
     if (amount && typeof amount === 'number' && amount > 0) {
       // Valor base (sem markup) - usado para comissões
+      // Usar o amount do frontend diretamente (já vem com desconto se houver cupom)
       const baseAmount = amount;
       
-      // Verificar se deve aplicar markup (não aplicar em produção por padrão)
-      const enableMarkupEnv = Deno.env.get('ENABLE_STRIPE_FEE_MARKUP');
-      const shouldApplyMarkup = enableMarkupEnv === 'true' 
-        ? true 
-        : enableMarkupEnv === 'false' 
-          ? false 
-          : !config.environment.isProduction; // Se não definido, usar detecção automática
-      
-      // Calcular valor com ou sem markup de taxas do Stripe
+      // Sempre aplicar markup de taxas do Stripe
       let grossAmountInCents: number;
-      if (shouldApplyMarkup) {
-        if (payment_method === 'pix') {
-          // Para PIX: calcular markup considerando taxa de câmbio
-          grossAmountInCents = calculatePIXAmountWithFees(baseAmount, exchangeRate);
-        } else {
-          // Para cartão: calcular markup
-          grossAmountInCents = calculateCardAmountWithFees(baseAmount);
-        }
-        console.log('[stripe-checkout-selection-process-fee] ✅ Markup ATIVADO (ambiente:', config.environment.environment, ')');
+      if (payment_method === 'pix') {
+        // Para PIX: calcular markup considerando taxa de câmbio
+        grossAmountInCents = calculatePIXAmountWithFees(baseAmount, exchangeRate);
       } else {
-        // Sem markup: usar valor original
-        if (payment_method === 'pix') {
-          grossAmountInCents = Math.round(baseAmount * exchangeRate * 100);
-        } else {
-          grossAmountInCents = Math.round(baseAmount * 100);
-        }
-        console.log('[stripe-checkout-selection-process-fee] ⚠️ Markup DESATIVADO (ambiente:', config.environment.environment, ')');
+        // Para cartão: calcular markup
+        grossAmountInCents = calculateCardAmountWithFees(baseAmount);
       }
+      console.log('[stripe-checkout-selection-process-fee] ✅ Markup ATIVADO (ambiente:', config.environment.environment, ')');
       
       // Adicionar valores base e gross ao metadata para uso em comissões
       sessionMetadata.base_amount = baseAmount.toString();
       sessionMetadata.gross_amount = (grossAmountInCents / 100).toString();
-      sessionMetadata.fee_type = shouldApplyMarkup ? 'stripe_processing' : 'none';
-      sessionMetadata.fee_amount = shouldApplyMarkup ? ((grossAmountInCents / 100) - baseAmount).toString() : '0';
-      sessionMetadata.markup_enabled = shouldApplyMarkup.toString();
+      sessionMetadata.fee_type = 'stripe_processing';
+      sessionMetadata.fee_amount = ((grossAmountInCents / 100) - baseAmount).toString();
+      sessionMetadata.markup_enabled = 'true';
       
       sessionConfig.line_items = [
         {
@@ -274,41 +303,23 @@ Deno.serve(async (req) => {
       // Valor base (sem markup) - usado para comissões
       const baseAmount = userPackageFees.selection_process_fee;
       
-      // Verificar se deve aplicar markup (não aplicar em produção por padrão)
-      const enableMarkupEnv = Deno.env.get('ENABLE_STRIPE_FEE_MARKUP');
-      const shouldApplyMarkup = enableMarkupEnv === 'true' 
-        ? true 
-        : enableMarkupEnv === 'false' 
-          ? false 
-          : !config.environment.isProduction; // Se não definido, usar detecção automática
-      
-      // Calcular valor com ou sem markup de taxas do Stripe
+      // Sempre aplicar markup de taxas do Stripe
       let grossAmountInCents: number;
-      if (shouldApplyMarkup) {
-        if (payment_method === 'pix') {
-          // Para PIX: calcular markup considerando taxa de câmbio
-          grossAmountInCents = calculatePIXAmountWithFees(baseAmount, exchangeRate);
-        } else {
-          // Para cartão: calcular markup
-          grossAmountInCents = calculateCardAmountWithFees(baseAmount);
-        }
-        console.log('[stripe-checkout-selection-process-fee] ✅ Markup ATIVADO (ambiente:', config.environment.environment, ')');
+      if (payment_method === 'pix') {
+        // Para PIX: calcular markup considerando taxa de câmbio
+        grossAmountInCents = calculatePIXAmountWithFees(baseAmount, exchangeRate);
       } else {
-        // Sem markup: usar valor original
-        if (payment_method === 'pix') {
-          grossAmountInCents = Math.round(baseAmount * exchangeRate * 100);
-        } else {
-          grossAmountInCents = Math.round(baseAmount * 100);
-        }
-        console.log('[stripe-checkout-selection-process-fee] ⚠️ Markup DESATIVADO (ambiente:', config.environment.environment, ')');
+        // Para cartão: calcular markup
+        grossAmountInCents = calculateCardAmountWithFees(baseAmount);
       }
+      console.log('[stripe-checkout-selection-process-fee] ✅ Markup ATIVADO (ambiente:', config.environment.environment, ')');
       
       // Adicionar valores base e gross ao metadata para uso em comissões
       sessionMetadata.base_amount = baseAmount.toString();
       sessionMetadata.gross_amount = (grossAmountInCents / 100).toString();
-      sessionMetadata.fee_type = shouldApplyMarkup ? 'stripe_processing' : 'none';
-      sessionMetadata.fee_amount = shouldApplyMarkup ? ((grossAmountInCents / 100) - baseAmount).toString() : '0';
-      sessionMetadata.markup_enabled = shouldApplyMarkup.toString();
+      sessionMetadata.fee_type = 'stripe_processing';
+      sessionMetadata.fee_amount = ((grossAmountInCents / 100) - baseAmount).toString();
+      sessionMetadata.markup_enabled = 'true';
       
       sessionConfig.line_items = [
         {
@@ -344,9 +355,27 @@ Deno.serve(async (req) => {
 
     console.log('[stripe-checkout-selection-process-fee] ⚙️ Configuração da sessão Stripe:', sessionConfig);
 
-    // Aplica desconto se houver
-    if (activeDiscount && activeDiscount.stripe_coupon_id) {
-      console.log('[stripe-checkout-selection-process-fee] �� APLICANDO DESCONTO');
+    // Aplica cupom promocional se houver (prioridade sobre código de referência)
+    // NOTA: O valor já foi recalculado no frontend e enviado como amount, então não precisamos aplicar desconto via Stripe
+    if (promotionalCouponData && promotionalCouponData.success) {
+      console.log('[stripe-checkout-selection-process-fee] 🎟️ CUPOM PROMOCIONAL APLICADO (valor já recalculado no frontend)');
+      console.log('[stripe-checkout-selection-process-fee] Coupon Code:', promotionalCouponData.coupon_code);
+      console.log('[stripe-checkout-selection-process-fee] Amount recebido do frontend (já com desconto):', amount);
+      console.log('[stripe-checkout-selection-process-fee] Discount Amount:', promotionalCouponData.discount_amount);
+      console.log('[stripe-checkout-selection-process-fee] Final Amount:', promotionalCouponData.final_amount);
+      
+      // Adicionar informações do cupom no metadata (sem aplicar desconto no Stripe)
+      sessionMetadata.promotional_coupon = promotionalCouponData.coupon_code;
+      sessionMetadata.promotional_discount = 'true';
+      sessionMetadata.promotional_discount_amount = promotionalCouponData.discount_amount.toString();
+      sessionMetadata.original_amount = (amount + promotionalCouponData.discount_amount).toString(); // Valor original antes do desconto
+      sessionMetadata.final_amount = promotionalCouponData.final_amount.toString();
+      
+      console.log('[stripe-checkout-selection-process-fee] ✅ Informações do cupom promocional adicionadas ao metadata!');
+    }
+    // Aplica desconto de código de referência se houver (e não houver cupom promocional)
+    else if (activeDiscount && activeDiscount.stripe_coupon_id) {
+      console.log('[stripe-checkout-selection-process-fee]    APLICANDO DESCONTO');
       console.log('[stripe-checkout-selection-process-fee] Coupon ID:', activeDiscount.stripe_coupon_id);
       console.log('[stripe-checkout-selection-process-fee] Discount Amount:', activeDiscount.discount_amount);
       
