@@ -595,41 +595,54 @@ const AdminStudentDetails: React.FC = () => {
   };
 
   // Função para buscar valores reais pagos de individual_fee_payments
-  // IMPORTANTE: Não usa valores de pagamentos PIX (que estão em BRL), apenas valores em USD
+  // ✅ CORREÇÃO: Usar gross_amount_usd quando disponível (valor bruto em USD)
+  // Isso garante que mostramos o valor que o aluno realmente pagou, igual ao Payment Management
   const fetchRealPaidAmounts = async (userId: string) => {
     try {
       const { data: payments, error } = await supabase
         .from('individual_fee_payments')
-        .select('fee_type, amount, payment_method')
-        .eq('user_id', userId);
+        .select('fee_type, amount, gross_amount_usd, payment_method, payment_date')
+        .eq('user_id', userId)
+        .order('payment_date', { ascending: false }); // Mais recente primeiro
       
       if (error) throw error;
       
       const amounts: typeof realPaidAmounts = {};
+      
+      // Processar cada pagamento, usando o mais recente para cada fee_type
       payments?.forEach(payment => {
-        const amount = Number(payment.amount);
+        // ✅ PRIORIDADE: Usar gross_amount_usd quando disponível (valor bruto em USD)
+        // Se não tiver, usar amount (mas pode estar em BRL para PIX, então verificar)
+        let amountUSD = payment.gross_amount_usd 
+          ? Number(payment.gross_amount_usd)
+          : Number(payment.amount);
         
-        // Se o valor for muito alto (> 1000), provavelmente é BRL de um pagamento PIX
-        // Não usar esse valor, deixar undefined para usar os valores das taxas configuradas
-        const isLikelyBRL = amount > 1000;
-        
-        // Se for pagamento via stripe e o valor for alto, provavelmente é PIX (BRL)
-        // Não usar valores de PIX, apenas valores em USD
-        if (isLikelyBRL && payment.payment_method === 'stripe') {
-          console.log(`[AdminDashboard] Ignorando valor de PIX (BRL) para ${payment.fee_type}: ${amount}`);
-          return; // Não definir o valor, deixar usar os valores das taxas configuradas
+        // Se não tem gross_amount_usd e o valor é muito alto, provavelmente é BRL
+        // Não usar esse valor para evitar mostrar valores incorretos
+        if (!payment.gross_amount_usd && amountUSD > 1000 && payment.payment_method === 'stripe') {
+          console.log(`[AdminDashboard] Ignorando valor provavelmente BRL para ${payment.fee_type}: ${amountUSD}`);
+          return;
         }
         
         const feeType = payment.fee_type as keyof typeof amounts;
-        if (feeType === 'selection_process') amounts.selection_process = amount;
-        else if (feeType === 'application') amounts.application = amount;
-        else if (feeType === 'scholarship') amounts.scholarship = amount;
-        else if (feeType === 'i20_control') amounts.i20_control = amount;
+        
+        // Só definir se ainda não foi definido (usar o mais recente, que vem primeiro devido ao order)
+        if (feeType === 'selection_process' && !amounts.selection_process) {
+          amounts.selection_process = amountUSD;
+        } else if (feeType === 'application' && !amounts.application) {
+          amounts.application = amountUSD;
+        } else if (feeType === 'scholarship' && !amounts.scholarship) {
+          amounts.scholarship = amountUSD;
+        } else if (feeType === 'i20_control' && !amounts.i20_control) {
+          amounts.i20_control = amountUSD;
+        }
       });
       
+      console.log('✅ [AdminStudentDetails] Real paid amounts loaded:', amounts);
       setRealPaidAmounts(amounts);
     } catch (error) {
-      console.error('Error fetching real paid amounts:', error);
+      console.error('❌ [AdminStudentDetails] Error fetching real paid amounts:', error);
+      setRealPaidAmounts({});
     }
   };
 

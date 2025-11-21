@@ -37,6 +37,7 @@ import { usePayments } from '../../hooks/usePayments';
 import ProfileCompletionGuard from '../../components/ProfileCompletionGuard';
 import { UniversityPaymentRequestService } from '../../services/UniversityPaymentRequestService';
 import { supabase } from '../../lib/supabase';
+import { getRealPaidAmounts } from '../../utils/paymentConverter';
 
 const PaymentManagement: React.FC = () => {
   const { university } = useUniversity();
@@ -367,12 +368,12 @@ const PaymentManagement: React.FC = () => {
       }
 
       // Calcular receita total APENAS de application fees (em dólares) incluindo dependentes
+      // ✅ CORREÇÃO: Adicionar $100 por dependente para ambos os sistemas (igual à tabela Student Payments)
       const totalApplicationFeeRevenue = paidApplications?.reduce((sum: number, app: any) => {
         const feeAmount = Number(app.scholarships?.application_fee_amount || 0);
         const s = studentsMap[app.student_id];
         const deps = Number(s?.dependents) || 0;
-        const systemType = (s?.system_type as any) || 'legacy';
-        const withDeps = systemType === 'legacy' && deps > 0 ? feeAmount + deps * 100 : feeAmount;
+        const withDeps = deps > 0 ? feeAmount + deps * 100 : feeAmount;
         return sum + withDeps;
       }, 0) || 0;
        
@@ -387,8 +388,8 @@ const PaymentManagement: React.FC = () => {
         const feeAmount = Number(app.scholarships?.application_fee_amount || 0);
         const s = studentsMap[app.student_id];
         const deps = Number(s?.dependents) || 0;
-        const systemType = (s?.system_type as any) || 'legacy';
-        const withDeps = systemType === 'legacy' && deps > 0 ? feeAmount + deps * 100 : feeAmount;
+        // ✅ CORREÇÃO: Adicionar $100 por dependente para ambos os sistemas (igual à tabela Student Payments)
+        const withDeps = deps > 0 ? feeAmount + deps * 100 : feeAmount;
         return sum + withDeps;
        }, 0) || 0;
       
@@ -453,15 +454,19 @@ const PaymentManagement: React.FC = () => {
         return;
       }
 
-      // Montar mapa de estudantes para dependentes/system_type
+      // Montar mapa de estudantes para dependentes/system_type e user_id
       const appStudentIds = Array.from(new Set((applications || []).map((a: any) => a.student_id).filter(Boolean)));
       let analyticsStudentsMap: Record<string, any> = {};
+      let studentIdToUserIdMap: Record<string, string> = {}; // Mapa de profile_id -> user_id
       if (appStudentIds.length > 0) {
         const { data: students } = await supabase
           .from('user_profiles')
-          .select('id, dependents, system_type')
+          .select('id, user_id, dependents, system_type')
           .in('id', appStudentIds);
-        (students || []).forEach((s: any) => { analyticsStudentsMap[s.id] = s; });
+        (students || []).forEach((s: any) => { 
+          analyticsStudentsMap[s.id] = s;
+          studentIdToUserIdMap[s.id] = s.user_id; // Mapear profile_id para user_id
+        });
       }
 
       // Calcular receita diária de application fees dos últimos 30 dias
@@ -479,8 +484,8 @@ const PaymentManagement: React.FC = () => {
           const base = Number(scholarship?.application_fee_amount || 0);
           const s = analyticsStudentsMap[app.student_id];
           const deps = Number(s?.dependents) || 0;
-          const systemType = (s?.system_type as any) || 'legacy';
-          const withDeps = systemType === 'legacy' && deps > 0 ? base + deps * 100 : base;
+          // ✅ CORREÇÃO: Adicionar $100 por dependente para ambos os sistemas (igual à tabela Student Payments)
+          const withDeps = deps > 0 ? base + deps * 100 : base;
           return sum + withDeps;
          }, 0) || 0;
          
@@ -504,8 +509,8 @@ const PaymentManagement: React.FC = () => {
           const base = Number(scholarship?.application_fee_amount || 0);
           const s = analyticsStudentsMap[app.student_id];
           const deps = Number(s?.dependents) || 0;
-          const systemType = (s?.system_type as any) || 'legacy';
-          const withDeps = systemType === 'legacy' && deps > 0 ? base + deps * 100 : base;
+          // ✅ CORREÇÃO: Adicionar $100 por dependente para ambos os sistemas (igual à tabela Student Payments)
+          const withDeps = deps > 0 ? base + deps * 100 : base;
           return sum + withDeps;
          }, 0) || 0;
          
@@ -544,18 +549,19 @@ const PaymentManagement: React.FC = () => {
        const recentActivity: Array<{date: string, type: string, amount: number, description: string}> = [];
        
        // Adicionar application fees pagas recentes
-      applications?.slice(0, 5).forEach(app => {
+       // ✅ CORREÇÃO: Usar a mesma lógica da tabela Student Payments (base + dependentes)
+       applications?.slice(0, 10).forEach(app => {
          if (app.is_application_fee_paid) {
            const scholarship = Array.isArray(app.scholarships) ? app.scholarships[0] : app.scholarships;
-          const base = Number(scholarship?.application_fee_amount || 0);
-          const s = analyticsStudentsMap[app.student_id];
-          const deps = Number(s?.dependents) || 0;
-          const systemType = (s?.system_type as any) || 'legacy';
-          const withDeps = systemType === 'legacy' && deps > 0 ? base + deps * 100 : base;
-          recentActivity.push({
+           const base = Number(scholarship?.application_fee_amount || 0);
+           const s = analyticsStudentsMap[app.student_id];
+           const deps = Number(s?.dependents) || 0;
+           // ✅ CORREÇÃO: Adicionar $100 por dependente para ambos os sistemas (igual à tabela Student Payments)
+           const withDeps = deps > 0 ? base + deps * 100 : base;
+           recentActivity.push({
              date: app.created_at,
              type: 'revenue',
-            amount: withDeps,
+             amount: withDeps,
              description: 'Application fee received'
            });
          }
@@ -595,14 +601,32 @@ const PaymentManagement: React.FC = () => {
 
   // Create revenue chart
   const createRevenueChart = () => {
-    if (!revenueChartRef.current || !window.Chart) return;
+    if (!revenueChartRef.current || !window.Chart) {
+      console.warn('Cannot create revenue chart: ref or Chart.js not available');
+      return;
+    }
+
+    // ✅ CORREÇÃO: Verificar se o canvas está realmente no DOM
+    if (!revenueChartRef.current.isConnected) {
+      console.warn('Revenue chart canvas not connected to DOM');
+      return;
+    }
 
     // Destroy existing chart
     if (revenueChart) {
-      revenueChart.destroy();
+      try {
+        revenueChart.destroy();
+        setRevenueChart(null);
+      } catch (error) {
+        console.warn('Error destroying existing revenue chart:', error);
+      }
     }
 
     const ctx = revenueChartRef.current.getContext('2d');
+    if (!ctx) {
+      console.warn('Cannot get 2d context from revenue chart canvas');
+      return;
+    }
     const data = revenueChartType === 'daily' 
       ? financialAnalytics.dailyRevenue.slice(-revenueChartPeriod)
       : financialAnalytics.monthlyRevenue.slice(-revenueChartPeriod);
@@ -751,14 +775,32 @@ const PaymentManagement: React.FC = () => {
 
   // Create trend analysis chart
   const createTrendChart = () => {
-    if (!trendChartRef.current || !window.Chart) return;
+    if (!trendChartRef.current || !window.Chart) {
+      console.warn('Cannot create trend chart: ref or Chart.js not available');
+      return;
+    }
+
+    // ✅ CORREÇÃO: Verificar se o canvas está realmente no DOM
+    if (!trendChartRef.current.isConnected) {
+      console.warn('Trend chart canvas not connected to DOM');
+      return;
+    }
 
     // Destroy existing chart
     if (trendChart) {
-      trendChart.destroy();
+      try {
+        trendChart.destroy();
+        setTrendChart(null);
+      } catch (error) {
+        console.warn('Error destroying existing trend chart:', error);
+      }
     }
 
     const ctx = trendChartRef.current.getContext('2d');
+    if (!ctx) {
+      console.warn('Cannot get 2d context from trend chart canvas');
+      return;
+    }
     const data = financialAnalytics.monthlyRevenue.slice(-6); // Last 6 months
 
     const chart = new window.Chart(ctx, {
@@ -862,11 +904,61 @@ const PaymentManagement: React.FC = () => {
 
   // Update charts when data changes
   useEffect(() => {
-    if (window.Chart && financialAnalytics.dailyRevenue.length > 0) {
-      createRevenueChart();
-      createPaymentStatusChart();
-      createTrendChart();
+    // ✅ CORREÇÃO: Adicionar cleanup e verificação mais robusta
+    if (!window.Chart) {
+      console.warn('Chart.js not loaded yet');
+      return;
     }
+
+    // Verificar se os refs estão prontos
+    if (!revenueChartRef.current || !paymentStatusChartRef.current || !trendChartRef.current) {
+      console.warn('Chart canvas refs not ready');
+      return;
+    }
+
+    // Verificar se há dados para exibir
+    if (financialAnalytics.dailyRevenue.length === 0 && financialAnalytics.monthlyRevenue.length === 0) {
+      console.warn('No financial data available for charts');
+      return;
+    }
+
+    // ✅ CORREÇÃO: Usar setTimeout para garantir que o DOM está totalmente renderizado
+    const timeoutId = setTimeout(() => {
+      try {
+        createRevenueChart();
+        createPaymentStatusChart();
+        createTrendChart();
+      } catch (error) {
+        console.error('Error creating charts:', error);
+      }
+    }, 100);
+
+    // ✅ CORREÇÃO: Cleanup function para destruir charts quando o componente desmonta ou dados mudam
+    return () => {
+      clearTimeout(timeoutId);
+      // Destruir charts existentes antes de recriar
+      if (revenueChart) {
+        try {
+          revenueChart.destroy();
+        } catch (error) {
+          console.warn('Error destroying revenue chart:', error);
+        }
+      }
+      if (paymentStatusChart) {
+        try {
+          paymentStatusChart.destroy();
+        } catch (error) {
+          console.warn('Error destroying payment status chart:', error);
+        }
+      }
+      if (trendChart) {
+        try {
+          trendChart.destroy();
+        } catch (error) {
+          console.warn('Error destroying trend chart:', error);
+        }
+      }
+    };
   }, [financialAnalytics, revenueChartType, revenueChartPeriod]);
 
   // Calculate metrics when financial data changes

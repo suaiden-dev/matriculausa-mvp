@@ -43,15 +43,37 @@ function FiltersBarBase(props: FiltersBarProps) {
 	} = props;
 
 	const searchTimeoutRef = React.useRef<number | null>(null);
+	// Estado local para feedback visual imediato no input
+	const [localSearchValue, setLocalSearchValue] = React.useState(filters.search || '');
+
+	// Sincronizar estado local quando filtro externo mudar (ex: reset)
+	React.useEffect(() => {
+		setLocalSearchValue(filters.search || '');
+	}, [filters.search]);
 
 	const handleSearchChange = (value: string) => {
+		// Atualizar input imediatamente para feedback visual
+		setLocalSearchValue(value);
+		
+		// Limpar timeout anterior
 		if (searchTimeoutRef.current) {
 			window.clearTimeout(searchTimeoutRef.current);
 		}
+		
+		// Aplicar filtro apenas após 600ms sem digitação (aumentado de 300ms para melhor performance)
 		searchTimeoutRef.current = window.setTimeout(() => {
 			setFilters({ ...filters, search: value });
-		}, 300);
+		}, 600);
 	};
+
+	// Cleanup do timeout ao desmontar
+	React.useEffect(() => {
+		return () => {
+			if (searchTimeoutRef.current) {
+				window.clearTimeout(searchTimeoutRef.current);
+			}
+		};
+	}, []);
 
 	return (
 		<div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
@@ -103,7 +125,7 @@ function FiltersBarBase(props: FiltersBarProps) {
 					type="text"
 					placeholder="Search by student name, email, university, or scholarship..."
 					className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-					value={filters.search}
+					value={localSearchValue}
 					onChange={(e) => handleSearchChange(e.target.value)}
 				/>
 			</div>
