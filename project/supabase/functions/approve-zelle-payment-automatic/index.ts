@@ -618,7 +618,7 @@ serve(async (req) => {
       console.log(`📤 [approve-zelle-payment-automatic] Buscando informações do seller e affiliate admin...`)
       
       // Buscar informações do seller relacionado ao pagamento
-      const { data: sellerData, error: sellerError } = await supabase
+      const { data: sellerData, error: sellerError } = await supabaseClient
         .from('sellers')
         .select(`
           id,
@@ -633,7 +633,7 @@ serve(async (req) => {
             user_profiles!affiliate_admins_user_id_fkey(full_name, email)
           )
         `)
-        .eq('user_id', userId)
+        .eq('user_id', user_id)
         .single()
 
       if (sellerData && !sellerError) {
@@ -654,10 +654,10 @@ serve(async (req) => {
             nome_seller: sellerData.name,
             email_affiliate_admin: sellerData.affiliate_admin?.user_profiles?.email || "",
             nome_affiliate_admin: sellerData.affiliate_admin?.user_profiles?.full_name || "Affiliate Admin",
-            o_que_enviar: `Pagamento de ${normalizedFeeTypeGlobal} no valor de ${amount} do aluno ${userProfile?.full_name || "Aluno"} foi aprovado automaticamente pelo sistema. Seller responsável: ${sellerData.name} (${sellerData.referral_code})`,
+            o_que_enviar: `Pagamento de ${normalizedFeeTypeGlobal} no valor de ${paymentAmount} do aluno ${userProfile?.full_name || "Aluno"} foi aprovado automaticamente pelo sistema. Seller responsável: ${sellerData.name} (${sellerData.referral_code})`,
             payment_id: paymentId,
             fee_type: normalizedFeeTypeGlobal,
-            amount: amount,
+            amount: paymentAmount,
             seller_id: sellerData.user_id,
             referral_code: sellerData.referral_code,
             commission_rate: sellerData.commission_rate,
@@ -701,10 +701,10 @@ serve(async (req) => {
               email_seller: sellerData.email,
               nome_seller: sellerData.name,
               phone_seller: sellerPhone || "",
-              o_que_enviar: `Pagamento de ${normalizedFeeTypeGlobal} no valor de ${amount} do aluno ${userProfile?.full_name || "Aluno"} foi aprovado automaticamente pelo sistema. Seller responsável: ${sellerData.name} (${sellerData.referral_code})`,
+              o_que_enviar: `Pagamento de ${normalizedFeeTypeGlobal} no valor de ${paymentAmount} do aluno ${userProfile?.full_name || "Aluno"} foi aprovado automaticamente pelo sistema. Seller responsável: ${sellerData.name} (${sellerData.referral_code})`,
               payment_id: paymentId,
               fee_type: normalizedFeeTypeGlobal,
-              amount: amount,
+              amount: paymentAmount,
               seller_id: sellerData.user_id,
               referral_code: sellerData.referral_code,
               commission_rate: sellerData.commission_rate,
@@ -741,14 +741,14 @@ serve(async (req) => {
             email_aluno: userProfile?.email || "",
             nome_aluno: userProfile?.full_name || "Aluno",
             phone_aluno: userProfile?.phone || "",
-            o_que_enviar: `Parabéns! O pagamento de ${normalizedFeeTypeGlobal} no valor de ${amount} do seu aluno ${userProfile?.full_name || "Aluno"} foi aprovado automaticamente pelo sistema. Você ganhará comissão sobre este pagamento!`,
+            o_que_enviar: `Parabéns! O pagamento de ${normalizedFeeTypeGlobal} no valor de ${paymentAmount} do seu aluno ${userProfile?.full_name || "Aluno"} foi aprovado automaticamente pelo sistema. Você ganhará comissão sobre este pagamento!`,
             payment_id: paymentId,
             fee_type: normalizedFeeTypeGlobal,
-            amount: amount,
+            amount: paymentAmount,
             seller_id: sellerData.user_id,
             referral_code: sellerData.referral_code,
             commission_rate: sellerData.commission_rate,
-            estimated_commission: amount * sellerData.commission_rate,
+            estimated_commission: paymentAmount * sellerData.commission_rate,
             approved_by: "Automatic System"
           }
 
@@ -772,7 +772,7 @@ serve(async (req) => {
         }
 
       } else {
-        console.log(`ℹ️ [approve-zelle-payment-automatic] Nenhum seller encontrado para o usuário ${userId}`)
+        console.log(`ℹ️ [approve-zelle-payment-automatic] Nenhum seller encontrado para o usuário ${user_id}`)
       }
     } catch (sellerLookupError) {
       console.error('❌ [approve-zelle-payment-automatic] Erro ao buscar informações do seller:', sellerLookupError)
