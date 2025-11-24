@@ -553,15 +553,15 @@ const PaymentManagement: React.FC = () => {
        applications?.slice(0, 10).forEach(app => {
          if (app.is_application_fee_paid) {
            const scholarship = Array.isArray(app.scholarships) ? app.scholarships[0] : app.scholarships;
-           const base = Number(scholarship?.application_fee_amount || 0);
-           const s = analyticsStudentsMap[app.student_id];
-           const deps = Number(s?.dependents) || 0;
+          const base = Number(scholarship?.application_fee_amount || 0);
+          const s = analyticsStudentsMap[app.student_id];
+          const deps = Number(s?.dependents) || 0;
            // ✅ CORREÇÃO: Adicionar $100 por dependente para ambos os sistemas (igual à tabela Student Payments)
            const withDeps = deps > 0 ? base + deps * 100 : base;
-           recentActivity.push({
+          recentActivity.push({
              date: app.created_at,
              type: 'revenue',
-             amount: withDeps,
+            amount: withDeps,
              description: 'Application fee received'
            });
          }
@@ -615,7 +615,7 @@ const PaymentManagement: React.FC = () => {
     // Destroy existing chart
     if (revenueChart) {
       try {
-        revenueChart.destroy();
+      revenueChart.destroy();
         setRevenueChart(null);
       } catch (error) {
         console.warn('Error destroying existing revenue chart:', error);
@@ -789,7 +789,7 @@ const PaymentManagement: React.FC = () => {
     // Destroy existing chart
     if (trendChart) {
       try {
-        trendChart.destroy();
+      trendChart.destroy();
         setTrendChart(null);
       } catch (error) {
         console.warn('Error destroying existing trend chart:', error);
@@ -925,9 +925,9 @@ const PaymentManagement: React.FC = () => {
     // ✅ CORREÇÃO: Usar setTimeout para garantir que o DOM está totalmente renderizado
     const timeoutId = setTimeout(() => {
       try {
-        createRevenueChart();
-        createPaymentStatusChart();
-        createTrendChart();
+      createRevenueChart();
+      createPaymentStatusChart();
+      createTrendChart();
       } catch (error) {
         console.error('Error creating charts:', error);
       }
