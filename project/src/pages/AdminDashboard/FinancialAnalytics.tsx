@@ -6,6 +6,7 @@ import { MetricsGrid } from './FinancialAnalytics/components/MetricsGrid';
 import { RevenueTrendChart } from './FinancialAnalytics/components/RevenueTrendChart';
 import { PaymentMethodsChart } from './FinancialAnalytics/components/PaymentMethodsChart';
 import { FeeTypesChart } from './FinancialAnalytics/components/FeeTypesChart';
+import { StripeAnalytics } from './FinancialAnalytics/components/StripeAnalytics';
 import FinancialAnalyticsSkeleton from '../../components/FinancialAnalyticsSkeleton';
 
 const FinancialAnalytics: React.FC = () => {
@@ -15,6 +16,7 @@ const FinancialAnalytics: React.FC = () => {
     loading,
     refreshing,
     metrics,
+    stripeMetrics,
     revenueData,
     paymentMethodData,
     feeTypeData,
@@ -63,6 +65,7 @@ const FinancialAnalytics: React.FC = () => {
         <PaymentMethodsChart paymentMethodData={paymentMethodData} />
         <FeeTypesChart feeTypeData={feeTypeData} />
       </div>
+      <StripeAnalytics metrics={stripeMetrics} loading={loading || refreshing} />
     </div>
   );
 };

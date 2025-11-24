@@ -11,7 +11,8 @@ import type {
   RevenueData, 
   PaymentMethodData, 
   FeeTypeData, 
-  TimeFilter 
+  TimeFilter,
+  StripeMetrics
 } from '../data/types';
 
 export function useFinancialAnalytics() {
@@ -50,6 +51,13 @@ export function useFinancialAnalytics() {
     completedUniversityPayouts: 0,
     universityPayouts: 0,
     affiliatePayouts: 0
+  });
+
+  const [stripeMetrics, setStripeMetrics] = useState<StripeMetrics>({
+    netIncome: 0,
+    stripeFees: 0,
+    grossValue: 0,
+    totalTransactions: 0
   });
 
   const [revenueData, setRevenueData] = useState<RevenueData[]>([]);
@@ -101,8 +109,35 @@ export function useFinancialAnalytics() {
         loadedData.allStudents
       );
 
+      // Calcular métricas do Stripe
+      const stripePayments = loadedData.stripePayments || [];
+      const stripeMetricsCalculated = stripePayments.reduce((acc, payment) => {
+        // FILTRO RÍGIDO: Apenas transações DEPOIS de 20/11/2025
+        // O usuário pediu especificamente para ver apenas dados recentes nesta seção
+        if (new Date(payment.payment_date) <= new Date('2025-11-20')) {
+          return acc;
+        }
+
+        const amount = Number(payment.amount) || 0;
+        const gross = payment.gross_amount_usd ? Number(payment.gross_amount_usd) : amount;
+        const fees = gross - amount;
+
+        return {
+          netIncome: acc.netIncome + amount,
+          stripeFees: acc.stripeFees + fees,
+          grossValue: acc.grossValue + gross,
+          totalTransactions: acc.totalTransactions + 1
+        };
+      }, {
+        netIncome: 0,
+        stripeFees: 0,
+        grossValue: 0,
+        totalTransactions: 0
+      });
+
       // Atualizar estados
       setMetrics(finalMetrics);
+      setStripeMetrics(stripeMetricsCalculated);
       setRevenueData(calculatedRevenueData);
       setPaymentMethodData(processedData.paymentMethodData);
       setFeeTypeData(processedData.feeTypeData);
@@ -182,6 +217,7 @@ export function useFinancialAnalytics() {
     loading,
     refreshing,
     metrics,
+    stripeMetrics,
     revenueData,
     paymentMethodData,
     feeTypeData,

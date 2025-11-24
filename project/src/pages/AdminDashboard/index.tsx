@@ -689,6 +689,7 @@ const AdminDashboard: React.FC = () => {
         <Route path="/matricula-rewards" element={<MatriculaRewardsAdmin />} />
         <Route path="/payout-requests" element={<AdminPayoutRequests />} />
         <Route path="/affiliate-payment-requests" element={<AffiliatePaymentRequests />} />
+        <Route path="affiliate-management" element={<AffiliateManagement />} />
 
         <Route path="/featured-universities" element={<FeaturedUniversitiesManagement />} />
         <Route path="/featured-scholarships" element={<FeaturedScholarshipsManagement />} />
