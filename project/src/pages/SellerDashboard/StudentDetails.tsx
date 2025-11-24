@@ -103,7 +103,9 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
   const [studentPackageFees, setStudentPackageFees] = useState<any>(null);
   const [dependents, setDependents] = useState<number>(0);
   // Estado para valores reais pagos
-  const [realPaidAmounts, setRealPaidAmounts] = useState<{ selection_process?: number; scholarship?: number; i20_control?: number } | null>(null);
+  const [realPaidAmounts, setRealPaidAmounts] = useState<{ selection_process?: number; scholarship?: number; i20_control?: number; application?: number } | null>(null);
+  // Estado para dados de cupons promocionais usados
+  const [couponUsageData, setCouponUsageData] = useState<Record<string, { final_amount: number; original_amount: number; discount_amount: number; coupon_code: string }>>({});
 
 
   // Função para obter valores corretos baseados no sistema do estudante
@@ -505,7 +507,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
       }
       
       try {
-        const amounts = await getRealPaidAmounts(studentId, ['selection_process', 'scholarship', 'i20_control']);
+        const amounts = await getRealPaidAmounts(studentId, ['selection_process', 'scholarship', 'i20_control', 'application']);
         setRealPaidAmounts(amounts);
       } catch (error) {
         console.error(`Erro ao buscar valores pagos para user_id ${studentId}:`, error);
@@ -513,6 +515,106 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
       }
     };
     loadRealPaidAmounts();
+  }, [studentId]);
+
+  // Carregar dados de uso de cupons promocionais
+  useEffect(() => {
+    const loadCouponUsage = async () => {
+      if (!studentId) {
+        setCouponUsageData({});
+        return;
+      }
+      
+      try {
+        // Buscar todos os usos de cupons promocionais para este estudante
+        // Incluir registros que foram realmente usados em pagamentos (com payment_id ou individual_fee_payment_id)
+        // Fazer duas queries separadas e combinar para evitar problemas com sintaxe do .or()
+        const { data: couponUsageWithPayment, error: error1 } = await supabase
+          .from('promotional_coupon_usage')
+          .select('fee_type, final_amount, original_amount, discount_amount, coupon_code, used_at, individual_fee_payment_id, payment_id')
+          .eq('user_id', studentId)
+          .not('payment_id', 'is', null)
+          .order('used_at', { ascending: false });
+        
+        const { data: couponUsageWithIndividualFee, error: error2 } = await supabase
+          .from('promotional_coupon_usage')
+          .select('fee_type, final_amount, original_amount, discount_amount, coupon_code, used_at, individual_fee_payment_id, payment_id')
+          .eq('user_id', studentId)
+          .not('individual_fee_payment_id', 'is', null)
+          .is('payment_id', null) // Apenas os que não têm payment_id mas têm individual_fee_payment_id
+          .order('used_at', { ascending: false });
+
+        const error = error1 || error2;
+        // Combinar resultados e remover duplicados baseado no id (se houver) ou nos campos únicos
+        const allCouponUsage = [
+          ...(couponUsageWithPayment || []),
+          ...(couponUsageWithIndividualFee || [])
+        ];
+        
+        // Remover duplicados baseado em fee_type + used_at (manter o mais recente)
+        const uniqueCouponUsage = allCouponUsage.reduce((acc: any[], current: any) => {
+          const existing = acc.find((item: any) => item.fee_type === current.fee_type);
+          if (!existing) {
+            acc.push(current);
+          } else {
+            // Se já existe, manter o mais recente
+            const existingDate = new Date(existing.used_at);
+            const currentDate = new Date(current.used_at);
+            if (currentDate > existingDate) {
+              const index = acc.indexOf(existing);
+              acc[index] = current;
+            }
+          }
+          return acc;
+        }, []);
+        
+        const couponUsage = uniqueCouponUsage.sort((a: any, b: any) => 
+          new Date(b.used_at).getTime() - new Date(a.used_at).getTime()
+        );
+
+        if (error) {
+          console.error('Erro ao buscar uso de cupons promocionais:', error);
+          setCouponUsageData({});
+          return;
+        }
+
+        // Criar um mapa de fee_type -> dados do cupom (usar o mais recente para cada fee_type)
+        const couponMap: Record<string, { final_amount: number; original_amount: number; discount_amount: number; coupon_code: string }> = {};
+        
+        if (couponUsage && couponUsage.length > 0) {
+          couponUsage.forEach((usage: any) => {
+            // Normalizar fee_type (i20_control_fee -> i20_control, application_fee -> application)
+            let normalizedFeeType = usage.fee_type;
+            if (normalizedFeeType === 'i20_control_fee') {
+              normalizedFeeType = 'i20_control';
+            } else if (normalizedFeeType === 'application_fee') {
+              normalizedFeeType = 'application';
+            } else if (normalizedFeeType === 'scholarship_fee') {
+              normalizedFeeType = 'scholarship';
+            } else if (normalizedFeeType === 'selection_process') {
+              normalizedFeeType = 'selection_process';
+            }
+
+            // Usar o registro mais recente para cada fee_type (já está ordenado por used_at DESC)
+            if (!couponMap[normalizedFeeType]) {
+              couponMap[normalizedFeeType] = {
+                final_amount: Number(usage.final_amount),
+                original_amount: Number(usage.original_amount),
+                discount_amount: Number(usage.discount_amount),
+                coupon_code: usage.coupon_code
+              };
+            }
+          });
+        }
+
+        setCouponUsageData(couponMap);
+      } catch (error) {
+        console.error('❌ [StudentDetails] Erro ao carregar uso de cupons promocionais:', error);
+        setCouponUsageData({});
+      }
+    };
+    
+    loadCouponUsage();
   }, [studentId]);
 
   // ✅ REMOVIDO: loadDocumentRequests - agora usa o hook useStudentDetails
@@ -1623,7 +1725,23 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                            </span>
                            <span className="text-xs text-slate-500">
                             {(() => {
-                              // ✅ CORREÇÃO: Priorizar valor real pago (líquido, sem taxas do Stripe)
+                              // ✅ PRIORIDADE 1: Se houver uso de cupom promocional, usar final_amount (valor com desconto)
+                              if (studentInfo?.has_paid_selection_process_fee && couponUsageData['selection_process']) {
+                                const couponData = couponUsageData['selection_process'];
+                                return (
+                                  <span>
+                                    <span className="line-through text-slate-400 mr-1">
+                                      {formatFeeAmount(couponData.original_amount)}
+                                    </span>
+                                    <span className="text-green-600 font-semibold">
+                                      {formatFeeAmount(couponData.final_amount)}
+                                    </span>
+                                    <span className="text-slate-400 ml-1">({couponData.coupon_code})</span>
+                                  </span>
+                                );
+                              }
+                              
+                              // ✅ PRIORIDADE 2: Valor real pago (líquido, sem taxas do Stripe)
                               if (studentInfo?.has_paid_selection_process_fee && realPaidAmounts?.selection_process !== undefined && realPaidAmounts.selection_process > 0) {
                                 return formatFeeAmount(realPaidAmounts.selection_process);
                               }
@@ -1665,7 +1783,28 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
             {studentInfo?.is_application_fee_paid ? (
               <span className="text-xs text-slate-500">
                 {(() => {
-                  // Base da scholarship se disponível; fallback para configuração padrão
+                  // ✅ PRIORIDADE 1: Se houver uso de cupom promocional, usar final_amount (valor com desconto)
+                  if (couponUsageData['application']) {
+                    const couponData = couponUsageData['application'];
+                    return (
+                      <span>
+                        <span className="line-through text-slate-400 mr-1">
+                          {formatFeeAmount(couponData.original_amount)}
+                        </span>
+                        <span className="text-green-600 font-semibold">
+                          {formatFeeAmount(couponData.final_amount)}
+                        </span>
+                        <span className="text-slate-400 ml-1">({couponData.coupon_code})</span>
+                      </span>
+                    );
+                  }
+                  
+                  // ✅ PRIORIDADE 2: Valor real pago (líquido, sem taxas do Stripe)
+                  if (realPaidAmounts?.application !== undefined && realPaidAmounts.application > 0) {
+                    return formatFeeAmount(realPaidAmounts.application);
+                  }
+                  
+                  // Fallback: Base da scholarship se disponível; fallback para configuração padrão
                   let baseAmount = 0;
                   if (studentInfo?.scholarship?.application_fee_amount) {
                     baseAmount = Number(studentInfo.scholarship.application_fee_amount);
@@ -1703,7 +1842,23 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                          </span>
                          <span className="text-xs text-slate-500">
                            {(() => {
-                             // ✅ CORREÇÃO: Priorizar valor real pago (líquido, sem taxas do Stripe)
+                             // ✅ PRIORIDADE 1: Se houver uso de cupom promocional, usar final_amount (valor com desconto)
+                             if (studentInfo?.is_scholarship_fee_paid && couponUsageData['scholarship']) {
+                               const couponData = couponUsageData['scholarship'];
+                               return (
+                                 <span>
+                                   <span className="line-through text-slate-400 mr-1">
+                                     {formatFeeAmount(couponData.original_amount)}
+                                   </span>
+                                   <span className="text-green-600 font-semibold">
+                                     {formatFeeAmount(couponData.final_amount)}
+                                   </span>
+                                   <span className="text-slate-400 ml-1">({couponData.coupon_code})</span>
+                                 </span>
+                               );
+                             }
+                             
+                             // ✅ PRIORIDADE 2: Valor real pago (líquido, sem taxas do Stripe)
                              if (studentInfo?.is_scholarship_fee_paid && realPaidAmounts?.scholarship !== undefined && realPaidAmounts.scholarship > 0) {
                                return formatFeeAmount(realPaidAmounts.scholarship);
                              }
@@ -1739,7 +1894,23 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                            </span>
                            <span className="text-xs text-slate-500">
                              {(() => {
-                               // ✅ CORREÇÃO: Priorizar valor real pago (líquido, sem taxas do Stripe)
+                               // ✅ PRIORIDADE 1: Se houver uso de cupom promocional, usar final_amount (valor com desconto)
+                               if (studentInfo?.has_paid_i20_control_fee && couponUsageData['i20_control']) {
+                                 const couponData = couponUsageData['i20_control'];
+                                 return (
+                                   <span>
+                                     <span className="line-through text-slate-400 mr-1">
+                                       {formatFeeAmount(couponData.original_amount)}
+                                     </span>
+                                     <span className="text-green-600 font-semibold">
+                                       {formatFeeAmount(couponData.final_amount)}
+                                     </span>
+                                     <span className="text-slate-400 ml-1">({couponData.coupon_code})</span>
+                                   </span>
+                                 );
+                               }
+                               
+                               // ✅ PRIORIDADE 2: Valor real pago (líquido, sem taxas do Stripe)
                                if (studentInfo?.has_paid_i20_control_fee && realPaidAmounts?.i20_control !== undefined && realPaidAmounts.i20_control > 0) {
                                  return formatFeeAmount(realPaidAmounts.i20_control);
                                }
