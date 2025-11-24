@@ -16,6 +16,13 @@ export interface FinancialMetrics {
   affiliatePayouts: number;
 }
 
+export interface StripeMetrics {
+  netIncome: number;
+  stripeFees: number;
+  grossValue: number;
+  totalTransactions: number;
+}
+
 export interface RevenueData {
   date: string;
   revenue: number;
@@ -80,6 +87,7 @@ export interface LoadedFinancialData {
   overridesMap: { [key: string]: any };
   userSystemTypesMap: Map<string, string>;
   realPaymentAmounts: Map<string, number>;
+  stripePayments: any[];
 }
 
 export type TimeFilter = '7d' | '30d' | '90d' | '1y' | 'all';

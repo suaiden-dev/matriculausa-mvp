@@ -136,7 +136,18 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
       return scholarship.scholarship_fee_amount || scholarshipFeeFromConfig;
     }
     
-    // Application Fee: o valor vem em centavos do banco
+    // Application Fee: PRIORIDADE 1 - Verificar override do usuário
+    const overrideAmount = getFeeAmountFromConfig('application_fee');
+    
+    if (overrideAmount) {
+      console.log('[ScholarshipConfirmationModal] Usando override de application_fee:', overrideAmount);
+      // Aplicar +$100 por dependente ao valor de override
+      const deps = Number(userProfile?.dependents) || 0;
+      const final = deps > 0 ? overrideAmount + deps * 100 : overrideAmount;
+      return final;
+    }
+    
+    // PRIORIDADE 2 - Valor da scholarship (application_fee_amount em centavos)
     let applicationFeeAmountInCents = scholarship.application_fee_amount;
     
     if (!applicationFeeAmountInCents) {
@@ -159,7 +170,8 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
   // Verificar se o usuário pode usar cupom promocional
   const hasSellerReferralCode = userProfile?.seller_referral_code && userProfile.seller_referral_code.trim() !== '';
   const isLegacySystem = userProfile?.system_type === 'legacy';
-  const canUsePromotionalCoupon = hasSellerReferralCode && isLegacySystem && feeType === 'scholarship_fee';
+  // ✅ SEMPRE permitir uso de cupom promocional (campo sempre visível)
+  const canUsePromotionalCoupon = true;
   
   // Calcular valor final considerando cupom promocional
   const feeAmount = promotionalCouponValidation?.isValid && promotionalCouponValidation.finalAmount
@@ -194,73 +206,80 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
   const validatePromotionalCoupon = async () => {
     if (!promotionalCoupon.trim() || !user?.id) return;
     
+    const normalizedCode = promotionalCoupon.trim().toUpperCase();
+    // ✅ CORREÇÃO: Normalizar feeType para corresponder ao banco (i20_control_fee -> i20_control)
+    const normalizedFeeType = feeType === 'i20_control_fee' ? 'i20_control' : feeType;
+    
+    console.log('🔍 [ScholarshipConfirmationModal] Validando cupom promocional:', normalizedCode, 'para feeType:', normalizedFeeType);
     setIsValidatingPromotionalCoupon(true);
-    try {
-      const normalizedCode = promotionalCoupon.trim().toUpperCase();
-      
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData.session?.access_token;
-      
-      if (!token) {
-        throw new Error('Usuário não autenticado');
-      }
+    setPromotionalCouponValidation(null);
 
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/validate-promotional-coupon`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          coupon_code: normalizedCode,
-          fee_type: 'scholarship_fee',
-          purchase_amount: baseFeeAmount
-        }),
+    try {
+      // ✅ Use new RPC that validates AND increments usage count for admin coupons
+      const { data: result, error } = await supabase.rpc('validate_and_apply_admin_promotional_coupon', {
+        p_code: normalizedCode,
+        p_fee_type: normalizedFeeType, // ✅ Usar feeType normalizado (application_fee, scholarship_fee ou i20_control)
+        p_user_id: user?.id
       });
 
-      if (!response.ok) {
+      if (error) {
+        console.error('🔍 [ScholarshipConfirmationModal] Erro RPC:', error);
+        throw error;
+      }
+
+      console.log('🔍 [ScholarshipConfirmationModal] Resultado da validação do cupom promocional:', result);
+
+      if (!result || !result.valid) {
         setPromotionalCouponValidation({
           isValid: false,
-          message: `Erro ao conectar com o servidor (${response.status}). Tente novamente.`
+          message: result?.message || 'Invalid coupon code'
         });
         return;
       }
 
-      const result = await response.json();
-
-      if (!result.success) {
-        setPromotionalCouponValidation({
-          isValid: false,
-          message: result.error || 'Cupom inválido'
-        });
-        return;
+      // Calculate discount locally based on RPC result
+      let discountAmount = 0;
+      if (result.discount_type === 'percentage') {
+        discountAmount = (baseFeeAmount * result.discount_value) / 100;
+      } else {
+        discountAmount = result.discount_value;
       }
+      
+      // Ensure discount doesn't exceed price
+      discountAmount = Math.min(discountAmount, baseFeeAmount);
+      const finalAmount = Math.max(0, baseFeeAmount - discountAmount);
 
       // Cupom válido
       const validationData = {
         isValid: true,
-        message: `Cupom ${normalizedCode} aplicado! Desconto de $${result.discount_amount.toFixed(2)} aplicado.`,
-        discountAmount: result.discount_amount,
-        finalAmount: result.final_amount
+        message: `Cupom ${normalizedCode} aplicado! Desconto de $${discountAmount.toFixed(2)} aplicado.`,
+        discountAmount: discountAmount,
+        finalAmount: finalAmount,
+        couponId: result.id // Store coupon ID for later use
       };
       
       setPromotionalCouponValidation(validationData);
       
       // ✅ Registrar uso do cupom no banco de dados
       try {
-        console.log('[ScholarshipConfirmationModal] Registrando uso do cupom promocional...');
-        const recordResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/record-promotional-coupon-validation`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData.session?.access_token;
+
+        if (token) {
+          console.log('[ScholarshipConfirmationModal] Registrando uso do cupom promocional...');
+          const recordResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/record-promotional-coupon-validation`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
           body: JSON.stringify({
             coupon_code: normalizedCode,
-            fee_type: 'scholarship_fee',
+            coupon_id: result.id,
+            fee_type: feeType, // ✅ Usar feeType dinâmico
             original_amount: baseFeeAmount,
-            discount_amount: result.discount_amount,
-            final_amount: result.final_amount
+            discount_amount: discountAmount,
+            final_amount: finalAmount
           }),
         });
 
@@ -270,18 +289,28 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
         } else {
           console.warn('[ScholarshipConfirmationModal] ⚠️ Aviso: Não foi possível registrar o uso do cupom:', recordResult.error);
         }
+      }
       } catch (recordError) {
         console.warn('[ScholarshipConfirmationModal] ⚠️ Aviso: Erro ao registrar uso do cupom:', recordError);
         // Não quebra o fluxo - continua normalmente mesmo se o registro falhar
       }
       
+      // Armazenar no window para o Overview acessar
+      (window as any).__promotional_coupon_validation = validationData;
+      
+      // Disparar evento customizado para atualizar o Overview
+      window.dispatchEvent(new CustomEvent('promotionalCouponValidated', {
+        detail: {
+          ...validationData,
+          fee_type: feeType // ✅ Adicionar fee_type para distinguir entre application_fee e scholarship_fee
+        }
+      }));
+      
       // Armazenar no window para uso no checkout
       (window as any).__checkout_promotional_coupon = normalizedCode;
       // ✅ Salvar valor final com desconto no window para uso no checkout PIX/Stripe
-      (window as any).__checkout_final_amount = result.final_amount;
-      console.log('[ScholarshipConfirmationModal] Valor final com desconto salvo no window:', result.final_amount);
-      
-      // ✅ REMOVIDO: Não salvar mais no localStorage - apenas no banco de dados
+      (window as any).__checkout_final_amount = finalAmount;
+      console.log('[ScholarshipConfirmationModal] Valor final com desconto salvo no window:', finalAmount);
       
     } catch (error: any) {
       console.error('Erro ao validar cupom promocional:', error);
@@ -296,15 +325,15 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
   
   // Verificar no banco de dados se o usuário já usou cupom promocional
   const checkPromotionalCouponFromDatabase = async () => {
-    if (!isOpen || !canUsePromotionalCoupon || feeType !== 'scholarship_fee' || !user?.id) return;
+    if (!isOpen || !feeType || !user?.id) return;
     
     try {
-      // Buscar registro mais recente de uso do cupom para scholarship_fee
+      // Buscar registro mais recente de uso do cupom para este feeType
       const { data: couponUsage, error } = await supabase
         .from('promotional_coupon_usage')
         .select('coupon_code, original_amount, discount_amount, final_amount, metadata, used_at')
         .eq('user_id', user.id)
-        .eq('fee_type', 'scholarship_fee')
+        .eq('fee_type', feeType) // ✅ Usar feeType dinâmico
         .order('used_at', { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -348,10 +377,10 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
 
   // Verificar cupom no banco quando modal abre
   useEffect(() => {
-    if (isOpen && canUsePromotionalCoupon && feeType === 'scholarship_fee') {
+    if (isOpen && feeType) {
       checkPromotionalCouponFromDatabase();
     }
-  }, [isOpen, canUsePromotionalCoupon, feeType, user?.id]);
+  }, [isOpen, feeType, user?.id]);
 
   // Função para remover cupom promocional aplicado
   const removePromotionalCoupon = async () => {
@@ -376,7 +405,7 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
         },
         body: JSON.stringify({
           coupon_code: promotionalCoupon.trim().toUpperCase(),
-          fee_type: 'scholarship_fee'
+          fee_type: feeType // ✅ Usar feeType dinâmico
         }),
       });
 
@@ -403,7 +432,9 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
     delete (window as any).__checkout_final_amount;
     
     // Limpar localStorage se existir
-    localStorage.removeItem('__promotional_coupon_scholarship_fee');
+    if (feeType) {
+      localStorage.removeItem(`__promotional_coupon_${feeType}`);
+    }
     
     console.log('[ScholarshipConfirmationModal] Cupom removido com sucesso');
   };
@@ -573,7 +604,8 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
       )}
 
       {/* Content */}
-      <div className={`${isInDrawer ? 'flex-1 overflow-y-auto p-4 min-h-0' : 'flex-1 overflow-y-auto p-4 sm:p-6 min-h-0'} space-y-4`}>
+      <div className={`${isInDrawer ? 'flex-1 p-4 min-h-0 overflow-y-auto' : 'flex-1 overflow-y-auto p-4 sm:p-6 min-h-0'}`}>
+        <div className="space-y-4">
         {/* Scholarship Info */}
         <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
           <h3 className="font-semibold text-gray-900 mb-2 text-sm sm:text-base">{t('scholarshipConfirmationModal.labels.selectedScholarship')}</h3>
@@ -605,7 +637,7 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
           </div>
         </div>
 
-        {/* Promotional Coupon Section - apenas para scholarship_fee */}
+        {/* Promotional Coupon Section - sempre visível */}
         {canUsePromotionalCoupon && (
           <div className="bg-gray-50 rounded-lg p-3 sm:p-4 space-y-3">
             <div className="text-center">
@@ -826,34 +858,7 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
             )}
           </div>
         </div>
-
-        {/* ZelleCheckout inline quando Zelle for selecionado e há callback */}
-        {showZelleInline && (
-          <div className="mt-4">
-            <ZelleCheckout
-              feeType={feeType}
-              amount={feeAmount}
-              scholarshipsIds={[scholarship.id]}
-              onSuccess={() => {
-                // Chamar callback de sucesso se fornecido
-                if (onZelleSuccess) {
-                  onZelleSuccess();
-                }
-                onClose();
-              }}
-              metadata={
-                zelleMetadata || (feeType === 'application_fee'
-                  ? {
-                      application_fee_amount: feeAmount,
-                      selected_scholarship_id: scholarship.id
-                    }
-                  : {
-                      selected_scholarship_id: scholarship.id
-                    })
-              }
-            />
-          </div>
-        )}
+        </div>
       </div>
 
       {/* Footer */}

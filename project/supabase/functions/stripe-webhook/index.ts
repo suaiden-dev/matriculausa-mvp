@@ -922,44 +922,11 @@ async function handleCheckoutSessionCompleted(session, stripe) {
         console.log('[stripe-webhook] User profile updated - application fee paid');
       }
 
-      // Registrar pagamento na tabela individual_fee_payments
-      try {
-        const paymentDate = new Date().toISOString();
-        const paymentAmountRaw = session.amount_total ? session.amount_total / 100 : 0;
-        const currency = session.currency?.toUpperCase() || 'USD';
-        const paymentIntentId = session.payment_intent as string || '';
-        
-        // Converter BRL para USD se necessário (sempre registrar em USD)
-        let paymentAmount = paymentAmountRaw;
-        if (currency === 'BRL' && session.metadata?.exchange_rate) {
-          const exchangeRate = parseFloat(session.metadata.exchange_rate);
-          if (exchangeRate > 0) {
-            paymentAmount = paymentAmountRaw / exchangeRate;
-            console.log(`[Individual Fee Payment] Convertendo BRL para USD: ${paymentAmountRaw} BRL / ${exchangeRate} = ${paymentAmount} USD`);
-          }
-        }
-        
-        console.log('[Individual Fee Payment] Recording application fee payment via PIX/Stripe...');
-        console.log(`[Individual Fee Payment] Valor original: ${paymentAmountRaw} ${currency}, Valor em USD: ${paymentAmount} USD`);
-        const { data: insertResult, error: insertError } = await supabase.rpc('insert_individual_fee_payment', {
-          p_user_id: finalUserId,
-          p_fee_type: 'application',
-          p_amount: paymentAmount, // Sempre em USD
-          p_payment_date: paymentDate,
-          p_payment_method: 'stripe',
-          p_payment_intent_id: paymentIntentId,
-          p_stripe_charge_id: null,
-          p_zelle_payment_id: null
-        });
-        
-        if (insertError) {
-          console.warn('[Individual Fee Payment] Warning: Could not record fee payment:', insertError);
-        } else {
-          console.log('[Individual Fee Payment] Application fee recorded successfully:', insertResult);
-        }
-      } catch (recordError) {
-        console.warn('[Individual Fee Payment] Warning: Failed to record individual fee payment:', recordError);
-      }
+      // --- REGISTRO DE INDIVIDUAL_FEE_PAYMENTS REMOVIDO ---
+      // O registro de individual_fee_payments para application_fee é feito via verify-stripe-session-application-fee
+      // (chamado quando o usuário é redirecionado para a página de sucesso)
+      // para evitar duplicação e garantir que valores brutos (gross_amount_usd) e taxas (fee_amount_usd) sejam registrados corretamente
+      console.log('[Individual Fee Payment] Registro de individual_fee_payments será feito via verify-stripe-session-application-fee');
       
       // Limpar carrinho
       const { error: cartError } = await supabase.from('user_cart').delete().eq('user_id', finalUserId);
