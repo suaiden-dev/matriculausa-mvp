@@ -49,6 +49,7 @@ import { ZelleWaitingPage } from './components/ZelleWaitingPage';
 import CheckoutSuccess from './pages/CheckoutSuccess';
 import ZellePaymentSuccess from './pages/ZellePaymentSuccess';
 import SmartAssistantLayout from './components/SmartAssistantLayout';
+import { Toaster } from 'react-hot-toast';
 
 import EB3JobsLanding from './pages/EB3JobsLanding';
 
@@ -166,6 +167,7 @@ const App: React.FC = () => {
           <UnreadMessagesProvider>
             <AuthRedirect>
               <AppContent />
+              <Toaster position="top-right" />
             </AuthRedirect>
           </UnreadMessagesProvider>
         </AuthProvider>

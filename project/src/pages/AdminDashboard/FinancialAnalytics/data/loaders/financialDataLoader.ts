@@ -395,6 +395,25 @@ async function loadAffiliateRequests(currentRange: DateRange): Promise<any[]> {
 }
 
 /**
+ * Busca pagamentos Stripe da tabela individual_fee_payments
+ */
+async function loadStripePayments(currentRange: DateRange): Promise<any[]> {
+  const { data, error } = await supabase
+    .from('individual_fee_payments')
+    .select('amount, gross_amount_usd, payment_date, payment_method')
+    .eq('payment_method', 'stripe')
+    .gte('payment_date', currentRange.start.toISOString())
+    .lte('payment_date', currentRange.end.toISOString());
+
+  if (error) {
+    console.error('❌ [FinancialAnalytics] Erro ao carregar pagamentos Stripe:', error);
+    return [];
+  }
+
+  return data || [];
+}
+
+/**
  * Carrega todos os dados financeiros necessários
  */
 export async function loadFinancialData(
@@ -406,10 +425,11 @@ export async function loadFinancialData(
   const prevRange = getPreviousPeriodRange(currentRange);
 
   // Carregar dados em paralelo quando possível
-  const [applicationsRaw, zellePaymentsRaw, allStudentsRaw] = await Promise.all([
+  const [applicationsRaw, zellePaymentsRaw, allStudentsRaw, stripePayments] = await Promise.all([
     loadApplications(),
     loadZellePayments(currentRange),
-    loadAllStudents()
+    loadAllStudents(),
+    loadStripePayments(currentRange)
   ]);
 
   // Filtrar dados em produção/staging: excluir usuários com email @uorak.com
@@ -492,7 +512,8 @@ export async function loadFinancialData(
     stripeUsers,
     overridesMap,
     userSystemTypesMap,
-    realPaymentAmounts
+    realPaymentAmounts,
+    stripePayments
   };
 }
 

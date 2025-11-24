@@ -102,9 +102,20 @@ Deno.serve(async (req)=>{
     console.log('Session metadata:', session.metadata);
     if (session.payment_status === 'paid' && session.status === 'complete') {
       const userId = session.client_reference_id;
-      const paymentMethod = session.metadata?.payment_method || 'stripe';
       const applicationId = session.metadata?.application_id;
-      console.log(`Processing successful payment. UserID: ${userId}, ApplicationID: ${applicationId}, PaymentMethod: ${paymentMethod}`);
+      
+      // Detectar se é PIX através dos payment_method_types ou metadata
+      const isPixPayment = session.payment_method_types?.includes('pix') || session.metadata?.payment_method === 'pix';
+      
+      // Para pagamentos via Stripe, sempre usar 'stripe' como payment_method na tabela individual_fee_payments
+      // Mas para scholarship_applications, usar 'pix' se for PIX, 'stripe' caso contrário
+      const paymentMethodForIndividualFee = 'stripe'; // Sempre 'stripe' para individual_fee_payments
+      const paymentMethodForApplication = isPixPayment ? 'pix' : (session.metadata?.payment_method || 'stripe'); // 'pix' ou 'stripe' para scholarship_applications
+      
+      // Variável para lógica de conversão (usada para detectar PIX)
+      const paymentMethod = isPixPayment ? 'pix' : (session.metadata?.payment_method || 'stripe');
+      
+      console.log(`Processing successful payment. UserID: ${userId}, ApplicationID: ${applicationId}, Payment Method: ${paymentMethodForApplication}`);
       if (!userId) return corsResponse({
         error: 'User ID (client_reference_id) missing in session.'
       }, 400);
@@ -129,14 +140,14 @@ Deno.serve(async (req)=>{
           p_action_description: `Application Fee payment processing started (${sessionId})`,
           p_performed_by: userId,
           p_performed_by_type: 'student',
-          p_metadata: {
-            fee_type: 'application',
-            payment_method: 'stripe',
-            amount: session.amount_total ? session.amount_total / 100 : 0,
-            session_id: sessionId,
-            application_id: applicationId,
-            processing_started: true
-          }
+            p_metadata: {
+              fee_type: 'application',
+              payment_method: paymentMethodForApplication,
+              amount: session.amount_total ? session.amount_total / 100 : 0,
+              session_id: sessionId,
+              application_id: applicationId,
+              processing_started: true
+            }
         });
         console.log('[DUPLICAÇÃO] Log de processamento criado para evitar duplicação');
       } catch (logError) {
@@ -171,7 +182,7 @@ Deno.serve(async (req)=>{
         payment_status: 'paid',
         paid_at: new Date().toISOString(),
         is_application_fee_paid: true,
-        application_fee_payment_method: paymentMethod || 'stripe'
+        application_fee_payment_method: paymentMethodForApplication // 'pix' ou 'stripe'
       };
       // Preservar o status atual se já estiver 'approved' (universidade já aprovou)
       console.log(`[verify-stripe-session-application-fee] Current application status: '${application.status}' for user ${userId}, application ${applicationId}.`);
@@ -278,7 +289,8 @@ Deno.serve(async (req)=>{
         let grossAmountUsd: number | null = null;
         let feeAmountUsd: number | null = null;
         
-        if ((currency === 'BRL' || paymentMethod === 'pix') && paymentIntentId && shouldFetchNetAmount) {
+        // Buscar valores do Stripe para PIX/BRL ou para qualquer pagamento com paymentIntentId (incluindo cartão USD)
+        if (paymentIntentId && shouldFetchNetAmount) {
           console.log(`✅ Buscando valor líquido, bruto e taxas do Stripe (ambiente: ${config.environment.environment})`);
           try {
             // Buscar PaymentIntent com latest_charge expandido para obter balance_transaction
@@ -317,8 +329,8 @@ Deno.serve(async (req)=>{
                   console.log(`[Individual Fee Payment] Valor líquido recebido do Stripe (após taxas e conversão): ${paymentAmount} USD`);
                   console.log(`[Individual Fee Payment] Valor bruto: ${grossAmountUsd || balanceTransaction.amount / 100} ${balanceTransaction.currency}, Taxas: ${feeAmountUsd || (balanceTransaction.fee || 0) / 100} ${balanceTransaction.currency}`);
                 } else {
-                  // Fallback: usar exchange_rate do metadata se disponível
-                  if (session.metadata?.exchange_rate) {
+                  // Fallback: usar exchange_rate do metadata se disponível (apenas para BRL)
+                  if (currency === 'BRL' && session.metadata?.exchange_rate) {
                     const exchangeRate = parseFloat(session.metadata.exchange_rate);
                     if (exchangeRate > 0) {
                       paymentAmount = paymentAmountRaw / exchangeRate;
@@ -327,8 +339,8 @@ Deno.serve(async (req)=>{
                   }
                 }
               } else {
-                // Fallback: usar exchange_rate do metadata
-                if (session.metadata?.exchange_rate) {
+                // Fallback: usar exchange_rate do metadata (apenas para BRL)
+                if (currency === 'BRL' && session.metadata?.exchange_rate) {
                   const exchangeRate = parseFloat(session.metadata.exchange_rate);
                   if (exchangeRate > 0) {
                     paymentAmount = paymentAmountRaw / exchangeRate;
@@ -337,8 +349,8 @@ Deno.serve(async (req)=>{
                 }
               }
             } else {
-              // Fallback: usar exchange_rate do metadata
-              if (session.metadata?.exchange_rate) {
+              // Fallback: usar exchange_rate do metadata (apenas para BRL)
+              if (currency === 'BRL' && session.metadata?.exchange_rate) {
                 const exchangeRate = parseFloat(session.metadata.exchange_rate);
                 if (exchangeRate > 0) {
                   paymentAmount = paymentAmountRaw / exchangeRate;
@@ -348,8 +360,8 @@ Deno.serve(async (req)=>{
             }
           } catch (stripeError) {
             console.error('[Individual Fee Payment] Erro ao buscar valor líquido do Stripe:', stripeError);
-            // Fallback: usar exchange_rate do metadata
-            if (session.metadata?.exchange_rate) {
+            // Fallback: usar exchange_rate do metadata (apenas para BRL)
+            if (currency === 'BRL' && session.metadata?.exchange_rate) {
               const exchangeRate = parseFloat(session.metadata.exchange_rate);
               if (exchangeRate > 0) {
                 paymentAmount = paymentAmountRaw / exchangeRate;
@@ -379,25 +391,82 @@ Deno.serve(async (req)=>{
           console.log(`[Individual Fee Payment] DEBUG - Não entrou em nenhum bloco de conversão. currency: ${currency}, paymentMethod: ${paymentMethod}, hasExchangeRate: ${!!session.metadata?.exchange_rate}`);
         }
         
-        console.log('[Individual Fee Payment] Recording application fee payment...');
-        console.log(`[Individual Fee Payment] Valor original: ${paymentAmountRaw} ${currency}, Valor em USD (líquido): ${paymentAmount} USD${grossAmountUsd ? `, Valor bruto: ${grossAmountUsd} USD` : ''}${feeAmountUsd ? `, Taxas: ${feeAmountUsd} USD` : ''}`);
-        const { data: insertResult, error: insertError } = await supabase.rpc('insert_individual_fee_payment', {
-          p_user_id: userId,
-          p_fee_type: 'application',
-          p_amount: paymentAmount, // Sempre em USD (líquido)
-          p_payment_date: paymentDate,
-          p_payment_method: 'stripe',
-          p_payment_intent_id: paymentIntentId,
-          p_stripe_charge_id: null,
-          p_zelle_payment_id: null,
-          p_gross_amount_usd: grossAmountUsd, // Valor bruto em USD (quando disponível)
-          p_fee_amount_usd: feeAmountUsd // Taxas em USD (quando disponível)
-        });
-        
-        if (insertError) {
-          console.warn('[Individual Fee Payment] Warning: Could not record fee payment:', insertError);
+        // ✅ Verificar se já existe registro com este payment_intent_id para evitar duplicação
+        // IMPORTANTE: Fazer verificação dupla para evitar race conditions
+        if (paymentIntentId) {
+          // Primeira verificação
+          const { data: existingPayment, error: checkError } = await supabase
+            .from('individual_fee_payments')
+            .select('id, payment_intent_id')
+            .eq('payment_intent_id', paymentIntentId)
+            .eq('fee_type', 'application')
+            .eq('user_id', userId)
+            .maybeSingle();
+          
+          if (checkError) {
+            console.warn('[Individual Fee Payment] Warning: Erro ao verificar duplicação:', checkError);
+          } else if (existingPayment) {
+            console.log(`[DUPLICAÇÃO] Payment já registrado em individual_fee_payments com payment_intent_id: ${paymentIntentId}, pulando inserção.`);
+            // Não inserir novamente, mas continuar o fluxo normalmente
+          } else {
+            // ✅ SEGUNDA VERIFICAÇÃO imediatamente antes de inserir (para evitar race condition)
+            const { data: doubleCheckPayment, error: doubleCheckError } = await supabase
+              .from('individual_fee_payments')
+              .select('id, payment_intent_id')
+              .eq('payment_intent_id', paymentIntentId)
+              .eq('fee_type', 'application')
+              .eq('user_id', userId)
+              .maybeSingle();
+            
+            if (doubleCheckError) {
+              console.warn('[Individual Fee Payment] Warning: Erro na segunda verificação de duplicação:', doubleCheckError);
+            } else if (doubleCheckPayment) {
+              console.log(`[DUPLICAÇÃO] Payment já registrado (segunda verificação) com payment_intent_id: ${paymentIntentId}, pulando inserção.`);
+              // Não inserir novamente
+            } else {
+              // Não existe, pode inserir
+              console.log('[Individual Fee Payment] Recording application fee payment...');
+              console.log(`[Individual Fee Payment] Valor original: ${paymentAmountRaw} ${currency}, Valor em USD (líquido): ${paymentAmount} USD${grossAmountUsd ? `, Valor bruto: ${grossAmountUsd} USD` : ''}${feeAmountUsd ? `, Taxas: ${feeAmountUsd} USD` : ''}`);
+              const { data: insertResult, error: insertError } = await supabase.rpc('insert_individual_fee_payment', {
+                p_user_id: userId,
+                p_fee_type: 'application',
+                p_amount: paymentAmount, // Sempre em USD (líquido)
+                p_payment_date: paymentDate,
+                p_payment_method: 'stripe',
+                p_payment_intent_id: paymentIntentId,
+                p_stripe_charge_id: null,
+                p_zelle_payment_id: null,
+                p_gross_amount_usd: grossAmountUsd, // Valor bruto em USD (quando disponível)
+                p_fee_amount_usd: feeAmountUsd // Taxas em USD (quando disponível)
+              });
+              
+              if (insertError) {
+                // Se o erro for de constraint única ou duplicação, verificar novamente
+                if (insertError.code === '23505' || insertError.message?.includes('duplicate') || insertError.message?.includes('unique')) {
+                  console.log(`[DUPLICAÇÃO] Erro de constraint única detectado, verificando se o registro foi criado por outra chamada...`);
+                  const { data: finalCheckPayment } = await supabase
+                    .from('individual_fee_payments')
+                    .select('id, payment_intent_id')
+                    .eq('payment_intent_id', paymentIntentId)
+                    .eq('fee_type', 'application')
+                    .eq('user_id', userId)
+                    .maybeSingle();
+                  
+                  if (finalCheckPayment) {
+                    console.log(`[DUPLICAÇÃO] Registro foi criado por outra chamada simultânea, continuando normalmente.`);
+                  } else {
+                    console.warn('[Individual Fee Payment] Warning: Erro ao inserir mas registro não encontrado:', insertError);
+                  }
+                } else {
+                  console.warn('[Individual Fee Payment] Warning: Could not record fee payment:', insertError);
+                }
+              } else {
+                console.log('[Individual Fee Payment] Application fee recorded successfully:', insertResult);
+              }
+            }
+          }
         } else {
-          console.log('[Individual Fee Payment] Application fee recorded successfully:', insertResult);
+          console.warn('[Individual Fee Payment] Warning: payment_intent_id não disponível, não é possível verificar duplicação. Pulando inserção.');
         }
       } catch (recordError) {
         console.warn('[Individual Fee Payment] Warning: Failed to record individual fee payment:', recordError);
