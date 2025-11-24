@@ -369,14 +369,17 @@ const StudentDashboard: React.FC = () => {
               ) : dashboardError ? (
                 <div className="p-8 text-center text-red-500">{dashboardError}</div>
               ) : (
-                <Overview 
-                  profile={profile}
-                  scholarships={scholarships}
-                  applications={applications}
-                  stats={stats}
-                  onApplyScholarship={handleApplyScholarship}
-                  recentApplications={recentApplications}
-                />
+                <>
+                  {console.log('🔍 [StudentDashboard] Renderizando Overview com stats:', stats)}
+                  <Overview 
+                    profile={profile}
+                    scholarships={scholarships}
+                    applications={applications}
+                    stats={stats}
+                    onApplyScholarship={handleApplyScholarship}
+                    recentApplications={recentApplications}
+                  />
+                </>
               )
             } 
           />

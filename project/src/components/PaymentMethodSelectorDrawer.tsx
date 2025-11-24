@@ -51,8 +51,8 @@ export const PaymentMethodSelectorDrawer: React.FC<PaymentMethodSelectorDrawerPr
   const isLegacySystem = userProfile?.system_type === 'legacy';
   const canUsePromotionalCoupon = hasSellerReferralCode && isLegacySystem;
   
-  // Verificar se o feeType permite cupom promocional (não application_fee e não selection_process)
-  const shouldShowPromotionalCoupon = canUsePromotionalCoupon && feeType && feeType !== 'application_fee' && feeType !== 'selection_process';
+  // ✅ SEMPRE mostrar campo de cupom promocional (campo sempre visível)
+  const shouldShowPromotionalCoupon = true;
   
   // Valor final considerando desconto promocional
   const finalAmount = promotionalCouponValidation?.isValid && promotionalCouponValidation.finalAmount
@@ -75,84 +75,85 @@ export const PaymentMethodSelectorDrawer: React.FC<PaymentMethodSelectorDrawerPr
     if (!promotionalCoupon.trim()) {
       setPromotionalCouponValidation({
         isValid: false,
-        message: 'Por favor, digite o código do cupom'
+        message: 'Please enter a coupon code'
       });
       return;
     }
 
     const normalizedCode = promotionalCoupon.trim().toUpperCase();
-    console.log('🔍 [PaymentMethodSelectorDrawer] Validando cupom promocional:', normalizedCode);
+    // ✅ CORREÇÃO: Normalizar feeType para corresponder ao banco (i20_control_fee -> i20_control)
+    const normalizedFeeType = feeType === 'i20_control_fee' ? 'i20_control' : feeType;
+    
+    console.log('🔍 [PaymentMethodSelectorDrawer] Validando cupom promocional:', normalizedCode, 'para feeType:', normalizedFeeType);
     setIsValidatingPromotionalCoupon(true);
     setPromotionalCouponValidation(null);
 
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData.session?.access_token;
-
-      if (!token) {
-        throw new Error('Usuário não autenticado');
-      }
-
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/validate-promotional-coupon`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          coupon_code: normalizedCode,
-          fee_type: feeType,
-          purchase_amount: amount
-        }),
+      // ✅ Use new RPC that validates AND increments usage count for admin coupons
+      const { data: result, error } = await supabase.rpc('validate_and_apply_admin_promotional_coupon', {
+        p_code: normalizedCode,
+        p_fee_type: normalizedFeeType,
+        p_user_id: user?.id
       });
 
-      if (!response.ok) {
-        console.error('🔍 [PaymentMethodSelectorDrawer] Erro HTTP:', response.status, response.statusText);
-        const errorText = await response.text();
-        console.error('🔍 [PaymentMethodSelectorDrawer] Resposta de erro:', errorText);
-        setPromotionalCouponValidation({
-          isValid: false,
-          message: `Erro ao conectar com o servidor (${response.status}). Tente novamente.`
-        });
-        return;
+      if (error) {
+        console.error('🔍 [PaymentMethodSelectorDrawer] Erro RPC:', error);
+        throw error;
       }
 
-      const result = await response.json();
       console.log('🔍 [PaymentMethodSelectorDrawer] Resultado da validação do cupom promocional:', result);
 
-      if (!result.success) {
+      if (!result || !result.valid) {
         setPromotionalCouponValidation({
           isValid: false,
-          message: result.error || 'Cupom inválido'
+          message: result?.message || 'Invalid coupon code'
         });
         return;
       }
+
+      // Calculate discount locally based on RPC result
+      let discountAmount = 0;
+      if (result.discount_type === 'percentage') {
+        discountAmount = (amount * result.discount_value) / 100;
+      } else {
+        discountAmount = result.discount_value;
+      }
+      
+      // Ensure discount doesn't exceed price
+      discountAmount = Math.min(discountAmount, amount);
+      const finalAmount = Math.max(0, amount - discountAmount);
 
       // Cupom válido
       const validationData = {
         isValid: true,
-        message: `Cupom ${normalizedCode} aplicado! Desconto de $${result.discount_amount.toFixed(2)} aplicado.`,
-        discountAmount: result.discount_amount,
-        finalAmount: result.final_amount
+        message: `Coupon ${normalizedCode} applied! You saved $${discountAmount.toFixed(2)}`,
+        discountAmount: discountAmount,
+        finalAmount: finalAmount,
+        couponId: result.id // Store coupon ID for later use
       };
       
       setPromotionalCouponValidation(validationData);
       
       // ✅ Registrar uso do cupom no banco de dados
       try {
-        console.log('[PaymentMethodSelectorDrawer] Registrando uso do cupom promocional...');
-        const recordResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/record-promotional-coupon-validation`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData.session?.access_token;
+
+        if (token) {
+          console.log('[PaymentMethodSelectorDrawer] Registrando uso do cupom promocional...');
+          const recordResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/record-promotional-coupon-validation`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
           body: JSON.stringify({
             coupon_code: normalizedCode,
+            coupon_id: result.id,
             fee_type: feeType,
             original_amount: amount,
-            discount_amount: result.discount_amount,
-            final_amount: result.final_amount
+            discount_amount: discountAmount,
+            final_amount: finalAmount
           }),
         });
 
@@ -162,16 +163,24 @@ export const PaymentMethodSelectorDrawer: React.FC<PaymentMethodSelectorDrawerPr
         } else {
           console.warn('[PaymentMethodSelectorDrawer] ⚠️ Aviso: Não foi possível registrar o uso do cupom:', recordResult.error);
         }
+      }
       } catch (recordError) {
         console.warn('[PaymentMethodSelectorDrawer] ⚠️ Aviso: Erro ao registrar uso do cupom:', recordError);
         // Não quebra o fluxo - continua normalmente mesmo se o registro falhar
       }
       
+      // Armazenar no window para o Overview acessar
+      (window as any).__promotional_coupon_validation = validationData;
+      
+      // Disparar evento customizado para atualizar o Overview
+      window.dispatchEvent(new CustomEvent('promotionalCouponValidated', {
+        detail: validationData
+      }));
+      
       // Salvar no window para uso no checkout
       (window as any).__checkout_promotional_coupon = normalizedCode;
-      (window as any).__checkout_final_amount = result.final_amount;
-      
-      // ✅ REMOVIDO: Não salvar mais no localStorage - apenas no banco de dados
+      (window as any).__checkout_final_amount = finalAmount;
+      console.log('[PaymentMethodSelectorDrawer] Valor final com desconto salvo no window:', finalAmount);
 
     } catch (error: any) {
       console.error('🔍 [PaymentMethodSelectorDrawer] Erro ao validar cupom promocional:', error);
@@ -244,7 +253,7 @@ export const PaymentMethodSelectorDrawer: React.FC<PaymentMethodSelectorDrawerPr
 
   // Verificar no banco de dados se o usuário já usou cupom promocional
   const checkPromotionalCouponFromDatabase = async () => {
-    if (!isOpen || !shouldShowPromotionalCoupon || !feeType || !user?.id) return;
+    if (!isOpen || !feeType || !user?.id) return;
     
     try {
       // Normalizar fee_type para corresponder ao banco
@@ -298,7 +307,7 @@ export const PaymentMethodSelectorDrawer: React.FC<PaymentMethodSelectorDrawerPr
 
   // Verificar cupom no banco quando modal abre
   useEffect(() => {
-    if (isOpen && shouldShowPromotionalCoupon && feeType) {
+    if (isOpen && feeType) {
       checkPromotionalCouponFromDatabase();
     } else if (!isOpen) {
       // Limpar estados quando modal fecha
@@ -306,7 +315,7 @@ export const PaymentMethodSelectorDrawer: React.FC<PaymentMethodSelectorDrawerPr
       setPromotionalCouponValidation(null);
       setIsValidatingPromotionalCoupon(false);
     }
-  }, [isOpen, shouldShowPromotionalCoupon, feeType, user?.id]);
+  }, [isOpen, feeType, user?.id]);
 
   // Reset confirmation state when modal closes
   useEffect(() => {
