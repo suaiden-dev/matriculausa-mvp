@@ -18,6 +18,7 @@ import { useStudentDetails } from '../../components/EnhancedStudentTracking/hook
 import { getRealPaidAmounts } from '../../utils/paymentConverter';
 import SelectedScholarshipCard from '../../components/AdminDashboard/StudentDetails/SelectedScholarshipCard';
 import StudentScholarshipsList from '../../components/EnhancedStudentTracking/StudentScholarshipsList';
+import ApplicationProgressCard from '../../components/AdminDashboard/StudentDetails/ApplicationProgressCard';
 
 interface StudentInfo {
   student_id: string;
@@ -89,6 +90,9 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
   // Estados para Transfer Form
   const [transferFormUploads, setTransferFormUploads] = useState<any[]>([]);
   const [loadingTransferFormUploads, setLoadingTransferFormUploads] = useState(false);
+  
+  // Estado para Application Progress Card
+  const [isProgressExpanded, setIsProgressExpanded] = useState(false);
   
   // Usar dados do hook
   const scholarshipApplication = hookScholarshipApplication;
@@ -953,6 +957,77 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
     });
   };
 
+  // Application Progress Functions
+  const allSteps = [
+    { key: 'selection_fee', label: 'Selection Fee' },
+    { key: 'apply', label: 'Application' },
+    { key: 'review', label: 'Review' },
+    { key: 'application_fee', label: 'App Fee' },
+    { key: 'scholarship_fee', label: 'Scholarship Fee' },
+    { key: 'i20_fee', label: 'I-20 Fee' },
+    { key: 'acceptance_letter', label: 'Acceptance' },
+    { key: 'transfer_form', label: 'Transfer Form' },
+    { key: 'enrollment', label: 'Enrollment' }
+  ];
+
+  const steps = allSteps.filter(step => {
+    if (step.key === 'transfer_form') {
+      return studentInfo?.student_process_type === 'transfer';
+    }
+    return true;
+  });
+
+  const getStepStatus = useCallback((step: { key: string; label: string }) => {
+    if (!studentInfo) return 'pending';
+    
+    switch (step.key) {
+      case 'selection_fee':
+        return studentInfo.has_paid_selection_process_fee ? 'completed' : 'pending';
+      case 'apply':
+        return (hookAllApplications && hookAllApplications.length > 0) ? 'completed' : 'pending';
+      case 'review':
+        if (studentInfo.application_status === 'enrolled' || studentInfo.application_status === 'approved') return 'completed';
+        if (studentInfo.application_status === 'rejected') return 'rejected';
+        if (studentInfo.application_status === 'under_review') return 'in_progress';
+        return 'pending';
+      case 'application_fee':
+        return studentInfo.is_application_fee_paid ? 'completed' : 'pending';
+      case 'scholarship_fee':
+        return studentInfo.is_scholarship_fee_paid ? 'completed' : 'pending';
+      case 'i20_fee':
+        return studentInfo.has_paid_i20_control_fee ? 'completed' : 'pending';
+      case 'acceptance_letter':
+        const currentApp = realScholarshipApplication || scholarshipApplication;
+        if (currentApp?.acceptance_letter_status === 'approved' || currentApp?.acceptance_letter_status === 'sent') return 'completed';
+        return 'pending';
+      case 'transfer_form':
+        if (studentInfo.student_process_type !== 'transfer') return 'skipped';
+        const transferApp = hookAllApplications?.find((app: any) => 
+          app.student_process_type === 'transfer' && 
+          (app.transfer_form_status === 'approved' || app.transfer_form_status === 'sent')
+        );
+        return transferApp ? 'completed' : 'pending';
+      case 'enrollment':
+        return studentInfo.application_status === 'enrolled' ? 'completed' : 'pending';
+      default:
+        return 'pending';
+    }
+  }, [studentInfo, hookAllApplications, realScholarshipApplication, scholarshipApplication]);
+
+  const getCurrentStep = useCallback(() => {
+    if (!studentInfo) return null;
+    
+    for (let i = 0; i < steps.length; i++) {
+      const status = getStepStatus(steps[i]);
+      if (status === 'in_progress' || status === 'pending') {
+        return { step: steps[i], index: i, status };
+      }
+    }
+    
+    // Se todos estão completos, retorna o último
+    return { step: steps[steps.length - 1], index: steps.length - 1, status: 'completed' };
+  }, [studentInfo, steps, getStepStatus]);
+
   // Função para buscar o documento mais recente por tipo
   const latestDocByType = (type: string) => {
     console.log('=== DEBUG latestDocByType ===');
@@ -1149,8 +1224,147 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+      <div className="min-h-screen bg-slate-50 animate-pulse">
+        {/* Header Skeleton */}
+        <div className="bg-white shadow-sm border-b border-slate-200 rounded-t-3xl">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center sm:space-x-4 min-w-0 w-full">
+                <div className="h-10 w-32 bg-slate-200 rounded-lg mb-4 sm:mb-0"></div>
+                <div className="min-w-0 w-full">
+                  <div className="h-8 w-48 bg-slate-200 rounded-lg mb-2"></div>
+                  <div className="h-4 w-64 bg-slate-200 rounded-lg"></div>
+                </div>
+              </div>
+              <div className="flex items-center space-x-3">
+                <div className="h-8 w-24 bg-slate-200 rounded-full"></div>
+                <div className="h-10 w-10 bg-slate-200 rounded-lg"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Navigation Tabs Skeleton */}
+        <div className="bg-white border-b border-slate-300 rounded-b-3xl">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex space-x-8 py-4">
+              {[1, 2].map((i) => (
+                <div key={i} className="h-5 w-24 bg-slate-200 rounded"></div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Main Content Skeleton */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
+            {/* Main Content Skeleton */}
+            <div className="xl:col-span-8 space-y-6">
+              {/* Student Information Card Skeleton */}
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
+                <div className="bg-gradient-to-r from-slate-300 to-slate-400 rounded-t-2xl px-6 py-4">
+                  <div className="h-6 w-48 bg-slate-200 rounded"></div>
+                </div>
+                <div className="p-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="space-y-4">
+                        <div className="h-6 w-32 bg-slate-200 rounded mb-4"></div>
+                        <div className="space-y-3">
+                          {[1, 2, 3, 4].map((j) => (
+                            <div key={j} className="space-y-2">
+                              <div className="h-4 w-24 bg-slate-200 rounded"></div>
+                              <div className="h-5 w-full bg-slate-200 rounded"></div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Scholarship Card Skeleton */}
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
+                <div className="bg-gradient-to-r from-slate-300 to-slate-400 rounded-t-2xl px-6 py-4">
+                  <div className="h-6 w-40 bg-slate-200 rounded"></div>
+                </div>
+                <div className="p-6 space-y-4">
+                  {[1, 2].map((i) => (
+                    <div key={i} className="border border-slate-200 rounded-xl p-4">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="h-5 w-48 bg-slate-200 rounded"></div>
+                        <div className="h-6 w-20 bg-slate-200 rounded-full"></div>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="h-4 w-full bg-slate-200 rounded"></div>
+                        <div className="h-4 w-3/4 bg-slate-200 rounded"></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Sidebar Skeleton */}
+            <div className="xl:col-span-4 space-y-4">
+              {/* Application Progress Card Skeleton */}
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
+                <div className="px-6 py-4 border-b border-slate-200">
+                  <div className="h-6 w-40 bg-slate-200 rounded"></div>
+                </div>
+                <div className="p-6 space-y-4">
+                  <div className="p-4 bg-slate-50 rounded-xl border-2 border-slate-200">
+                    <div className="flex items-center space-x-3 mb-2">
+                      <div className="w-8 h-8 bg-slate-200 rounded-full"></div>
+                      <div className="flex-1">
+                        <div className="h-5 w-32 bg-slate-200 rounded mb-1"></div>
+                        <div className="h-4 w-48 bg-slate-200 rounded"></div>
+                      </div>
+                    </div>
+                    <div className="h-6 w-20 bg-slate-200 rounded-full ml-11"></div>
+                  </div>
+                  <div className="flex justify-center">
+                    <div className="h-8 w-32 bg-slate-200 rounded-lg"></div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Quick Stats Card Skeleton */}
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
+                <div className="bg-gradient-to-r from-slate-300 to-slate-400 rounded-t-2xl px-6 py-4">
+                  <div className="h-5 w-40 bg-slate-200 rounded"></div>
+                </div>
+                <div className="p-6 space-y-3">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="flex items-center justify-between">
+                      <div className="h-4 w-24 bg-slate-200 rounded"></div>
+                      <div className="h-4 w-32 bg-slate-200 rounded"></div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Recent Activity Card Skeleton */}
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
+                <div className="bg-gradient-to-r from-slate-300 to-slate-400 rounded-t-2xl px-6 py-4">
+                  <div className="h-5 w-32 bg-slate-200 rounded"></div>
+                </div>
+                <div className="p-6 space-y-3">
+                  {[1, 2].map((i) => (
+                    <div key={i} className="flex items-start space-x-3">
+                      <div className="w-2 h-2 bg-slate-200 rounded-full mt-2"></div>
+                      <div className="flex-1">
+                        <div className="h-4 w-32 bg-slate-200 rounded mb-1"></div>
+                        <div className="h-3 w-24 bg-slate-200 rounded"></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -1542,6 +1756,17 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
 
             {/* Sidebar */}
             <div className="xl:col-span-4 space-y-4">
+              {/* Application Progress Card */}
+              {studentInfo && (
+                <ApplicationProgressCard
+                  currentStep={getCurrentStep()}
+                  allSteps={steps}
+                  isExpanded={isProgressExpanded}
+                  onToggleExpand={() => setIsProgressExpanded(!isProgressExpanded)}
+                  getStepStatus={getStepStatus}
+                />
+              )}
+
               {/* Quick Stats Card */}
               <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
                 <div className="bg-gradient-to-r rounded-t-2xl from-[#05294E] to-[#041f38] px-6 py-4">
