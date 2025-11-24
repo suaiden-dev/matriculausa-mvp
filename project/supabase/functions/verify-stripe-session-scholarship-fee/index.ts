@@ -227,7 +227,8 @@ Deno.serve(async (req)=>{
         let grossAmountUsd: number | null = null;
         let feeAmountUsd: number | null = null;
         
-        if ((currency === 'BRL' || paymentMethod === 'pix') && paymentIntentId && shouldFetchNetAmount) {
+        // Buscar valores do Stripe para PIX/BRL ou para qualquer pagamento com paymentIntentId (incluindo cartão USD)
+        if (paymentIntentId && shouldFetchNetAmount) {
           console.log(`✅ Buscando valor líquido, bruto e taxas do Stripe (ambiente: ${config.environment.environment})`);
           try {
             // Buscar PaymentIntent com latest_charge expandido para obter balance_transaction
@@ -266,8 +267,8 @@ Deno.serve(async (req)=>{
                   console.log(`[Individual Fee Payment] Valor líquido recebido do Stripe (após taxas e conversão): ${paymentAmount} USD`);
                   console.log(`[Individual Fee Payment] Valor bruto: ${grossAmountUsd || balanceTransaction.amount / 100} ${balanceTransaction.currency}, Taxas: ${feeAmountUsd || (balanceTransaction.fee || 0) / 100} ${balanceTransaction.currency}`);
                 } else {
-                  // Fallback: usar exchange_rate do metadata se disponível
-                  if (session.metadata?.exchange_rate) {
+                  // Fallback: usar exchange_rate do metadata se disponível (apenas para BRL)
+                  if (currency === 'BRL' && session.metadata?.exchange_rate) {
                     const exchangeRate = parseFloat(session.metadata.exchange_rate);
                     if (exchangeRate > 0) {
                       paymentAmount = paymentAmountRaw / exchangeRate;
@@ -276,8 +277,8 @@ Deno.serve(async (req)=>{
                   }
                 }
               } else {
-                // Fallback: usar exchange_rate do metadata
-                if (session.metadata?.exchange_rate) {
+                // Fallback: usar exchange_rate do metadata (apenas para BRL)
+                if (currency === 'BRL' && session.metadata?.exchange_rate) {
                   const exchangeRate = parseFloat(session.metadata.exchange_rate);
                   if (exchangeRate > 0) {
                     paymentAmount = paymentAmountRaw / exchangeRate;
@@ -286,8 +287,8 @@ Deno.serve(async (req)=>{
                 }
               }
             } else {
-              // Fallback: usar exchange_rate do metadata
-              if (session.metadata?.exchange_rate) {
+              // Fallback: usar exchange_rate do metadata (apenas para BRL)
+              if (currency === 'BRL' && session.metadata?.exchange_rate) {
                 const exchangeRate = parseFloat(session.metadata.exchange_rate);
                 if (exchangeRate > 0) {
                   paymentAmount = paymentAmountRaw / exchangeRate;
@@ -297,8 +298,8 @@ Deno.serve(async (req)=>{
             }
           } catch (stripeError) {
             console.error('[Individual Fee Payment] Erro ao buscar valor líquido do Stripe:', stripeError);
-            // Fallback: usar exchange_rate do metadata
-            if (session.metadata?.exchange_rate) {
+            // Fallback: usar exchange_rate do metadata (apenas para BRL)
+            if (currency === 'BRL' && session.metadata?.exchange_rate) {
               const exchangeRate = parseFloat(session.metadata.exchange_rate);
               if (exchangeRate > 0) {
                 paymentAmount = paymentAmountRaw / exchangeRate;
