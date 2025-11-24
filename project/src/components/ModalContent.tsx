@@ -72,8 +72,8 @@ export const ModalContent: React.FC<ModalContentProps> = ({
   feeType,
   canUsePromotionalCoupon = false
 }) => {
-  // Verificar se o feeType permite cupom promocional (não application_fee) E se o usuário pode usar
-  const shouldShowPromotionalCoupon = canUsePromotionalCoupon && feeType && feeType !== 'application_fee';
+  // ✅ SEMPRE mostrar campo de cupom promocional (campo sempre visível)
+  const shouldShowPromotionalCoupon = true;
   const promotionalCouponInputRef = useRef<HTMLInputElement>(null);
   
   return (

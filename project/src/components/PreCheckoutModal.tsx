@@ -234,15 +234,15 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
   // Verificar se o usuário tem system_type como legacy
   const isLegacySystem = userProfile?.system_type === 'legacy';
   
-  // Verificar se pode usar cupom promocional (seller_referral_code + legacy)
-  const canUsePromotionalCoupon = hasSellerReferralCode && isLegacySystem;
+  // ✅ SEMPRE permitir uso de cupom promocional (campo sempre visível)
+  const canUsePromotionalCoupon = true;
   
   // Verificar se o usuário já tem affiliate_code (friend code) do registro
   const hasAffiliateCode = userProfile?.affiliate_code && userProfile.affiliate_code.trim() !== '';
 
   // Verificar no banco de dados se o usuário já usou cupom promocional
   const checkPromotionalCouponFromDatabase = async () => {
-    if (!isOpen || !canUsePromotionalCoupon || !feeType || !user?.id) return;
+    if (!isOpen || !feeType || !user?.id) return;
     
     try {
       // Normalizar fee_type para corresponder ao banco
@@ -331,10 +331,10 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
 
   // Verificar cupom no banco quando modal abre
   useEffect(() => {
-    if (isOpen && canUsePromotionalCoupon && feeType) {
+    if (isOpen && feeType) {
       checkPromotionalCouponFromDatabase();
     }
-  }, [isOpen, canUsePromotionalCoupon, feeType, user?.id]);
+  }, [isOpen, feeType, user?.id]);
 
   useEffect(() => {
     

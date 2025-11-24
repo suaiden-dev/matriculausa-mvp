@@ -51,8 +51,8 @@ export const PaymentMethodSelectorDrawer: React.FC<PaymentMethodSelectorDrawerPr
   const isLegacySystem = userProfile?.system_type === 'legacy';
   const canUsePromotionalCoupon = hasSellerReferralCode && isLegacySystem;
   
-  // Verificar se o feeType permite cupom promocional (não application_fee e não selection_process)
-  const shouldShowPromotionalCoupon = canUsePromotionalCoupon && feeType && feeType !== 'application_fee' && feeType !== 'selection_process';
+  // ✅ SEMPRE mostrar campo de cupom promocional (campo sempre visível)
+  const shouldShowPromotionalCoupon = true;
   
   // Valor final considerando desconto promocional
   const finalAmount = promotionalCouponValidation?.isValid && promotionalCouponValidation.finalAmount
@@ -253,7 +253,7 @@ export const PaymentMethodSelectorDrawer: React.FC<PaymentMethodSelectorDrawerPr
 
   // Verificar no banco de dados se o usuário já usou cupom promocional
   const checkPromotionalCouponFromDatabase = async () => {
-    if (!isOpen || !shouldShowPromotionalCoupon || !feeType || !user?.id) return;
+    if (!isOpen || !feeType || !user?.id) return;
     
     try {
       // Normalizar fee_type para corresponder ao banco
@@ -307,7 +307,7 @@ export const PaymentMethodSelectorDrawer: React.FC<PaymentMethodSelectorDrawerPr
 
   // Verificar cupom no banco quando modal abre
   useEffect(() => {
-    if (isOpen && shouldShowPromotionalCoupon && feeType) {
+    if (isOpen && feeType) {
       checkPromotionalCouponFromDatabase();
     } else if (!isOpen) {
       // Limpar estados quando modal fecha
@@ -315,7 +315,7 @@ export const PaymentMethodSelectorDrawer: React.FC<PaymentMethodSelectorDrawerPr
       setPromotionalCouponValidation(null);
       setIsValidatingPromotionalCoupon(false);
     }
-  }, [isOpen, shouldShowPromotionalCoupon, feeType, user?.id]);
+  }, [isOpen, feeType, user?.id]);
 
   // Reset confirmation state when modal closes
   useEffect(() => {

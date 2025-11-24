@@ -161,8 +161,8 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
   // Verificar se o usuário pode usar cupom promocional
   const hasSellerReferralCode = userProfile?.seller_referral_code && userProfile.seller_referral_code.trim() !== '';
   const isLegacySystem = userProfile?.system_type === 'legacy';
-  // ✅ CORREÇÃO: Permitir cupom promocional para application_fee e scholarship_fee
-  const canUsePromotionalCoupon = hasSellerReferralCode && isLegacySystem && (feeType === 'scholarship_fee' || feeType === 'application_fee');
+  // ✅ SEMPRE permitir uso de cupom promocional (campo sempre visível)
+  const canUsePromotionalCoupon = true;
   
   // Calcular valor final considerando cupom promocional
   const feeAmount = promotionalCouponValidation?.isValid && promotionalCouponValidation.finalAmount
@@ -316,7 +316,7 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
   
   // Verificar no banco de dados se o usuário já usou cupom promocional
   const checkPromotionalCouponFromDatabase = async () => {
-    if (!isOpen || !canUsePromotionalCoupon || !feeType || !user?.id) return;
+    if (!isOpen || !feeType || !user?.id) return;
     
     try {
       // Buscar registro mais recente de uso do cupom para este feeType
@@ -368,10 +368,10 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
 
   // Verificar cupom no banco quando modal abre
   useEffect(() => {
-    if (isOpen && canUsePromotionalCoupon && feeType) {
+    if (isOpen && feeType) {
       checkPromotionalCouponFromDatabase();
     }
-  }, [isOpen, canUsePromotionalCoupon, feeType, user?.id]);
+  }, [isOpen, feeType, user?.id]);
 
   // Função para remover cupom promocional aplicado
   const removePromotionalCoupon = async () => {
@@ -619,7 +619,7 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
           </div>
         </div>
 
-        {/* Promotional Coupon Section - apenas para scholarship_fee */}
+        {/* Promotional Coupon Section - sempre visível */}
         {canUsePromotionalCoupon && (
           <div className="bg-gray-50 rounded-lg p-3 sm:p-4 space-y-3">
             <div className="text-center">
