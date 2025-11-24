@@ -462,6 +462,40 @@ Deno.serve(async (req) => {
         }
 
         console.log('[validate-zelle-payment-result] System updated successfully for validated payment');
+        
+        // Chamar approve-zelle-payment-automatic para enviar emails via webhook
+        try {
+          console.log('[validate-zelle-payment-result] Chamando approve-zelle-payment-automatic para enviar emails...');
+          
+          // Preparar dados para approve-zelle-payment-automatic
+          const feeTypeGlobal = payment.fee_type_global || payment.fee_type;
+          const scholarshipIds = payment.metadata?.scholarships_ids || null;
+          
+          const approveResponse = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/approve-zelle-payment-automatic`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
+            },
+            body: JSON.stringify({
+              user_id: payment.user_id,
+              fee_type_global: feeTypeGlobal,
+              temp_payment_id: payment.id,
+              scholarship_ids: scholarshipIds
+            })
+          });
+
+          if (approveResponse.ok) {
+            const approveResult = await approveResponse.json();
+            console.log('[validate-zelle-payment-result] ✅ approve-zelle-payment-automatic executado com sucesso:', approveResult);
+          } else {
+            const errorText = await approveResponse.text();
+            console.error('[validate-zelle-payment-result] ❌ Erro ao chamar approve-zelle-payment-automatic:', approveResponse.status, errorText);
+          }
+        } catch (approveError) {
+          console.error('[validate-zelle-payment-result] ❌ Erro ao chamar approve-zelle-payment-automatic:', approveError);
+          // Não falhar o processo se a chamada falhar
+        }
       } catch (error) {
         console.error('[validate-zelle-payment-result] Error updating system:', error);
         // Não falhar o processo se não conseguir atualizar o sistema
