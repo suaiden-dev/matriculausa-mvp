@@ -131,7 +131,8 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
     if (path.includes('/students')) return 'students';
     if (path.includes('/selection-process')) return 'selection-process';
     if (path.includes('/ai-solutions')) return 'ai-solutions';
-    if (path.includes('/stripe-connect')) return 'stripe-connect';
+    // COMENTADO: Stripe Connect - Funcionalidade removida temporariamente
+    // if (path.includes('/stripe-connect')) return 'stripe-connect';
 
     if (path.includes('/payment-dashboard')) return 'payment-dashboard';
 
@@ -204,7 +205,8 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
       badge: null,
       dropdown: [
         { id: 'analytics', label: 'Payment Management', icon: BarChart3, path: '/school/dashboard/analytics', badge: null },
-        { id: 'stripe-connect', label: 'Stripe Connect', icon: CreditCard, path: '/school/dashboard/stripe-connect', badge: null },
+        // COMENTADO: Stripe Connect - Funcionalidade removida temporariamente
+        // { id: 'stripe-connect', label: 'Stripe Connect', icon: CreditCard, path: '/school/dashboard/stripe-connect', badge: null },
       ]
     },
     { id: 'matricula-rewards', label: 'Matricula Rewards', icon: Gift, path: '/school/dashboard/matricula-rewards', badge: null },
