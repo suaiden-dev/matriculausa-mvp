@@ -147,22 +147,33 @@ Deno.serve(async (req)=>{
       }
       console.log(`User profile found: ${userProfile.id} for auth user: ${userId}`);
       
+      // Detectar se é PIX através dos payment_method_types ou metadata
+      const isPixPayment = session.payment_method_types?.includes('pix') || session.metadata?.payment_method === 'pix';
+      
+      // Para pagamentos via Stripe, sempre usar 'stripe' como payment_method na tabela individual_fee_payments
+      // Mas para scholarship_applications, usar 'pix' se for PIX, 'stripe' caso contrário
+      const paymentMethodForIndividualFee = 'stripe'; // Sempre 'stripe' para individual_fee_payments
+      const paymentMethodForApplication = isPixPayment ? 'pix' : 'stripe'; // 'pix' ou 'stripe' para scholarship_applications
+      
+      // Variável para lógica de conversão (usada para detectar PIX)
+      const paymentMethod = isPixPayment ? 'pix' : (session.payment_method_types?.[0] || 'stripe');
+      
       // Criar log ANTES de processar para evitar duplicação em chamadas simultâneas
       try {
         await supabase.rpc('log_student_action', {
-          p_student_id: userProfile.id,
-          p_action_type: 'fee_payment',
-          p_action_description: `Scholarship Fee payment processing started (${sessionId})`,
-          p_performed_by: userId,
-          p_performed_by_type: 'student',
-          p_metadata: {
-            fee_type: 'scholarship',
-            payment_method: 'stripe',
-            amount: session.amount_total ? session.amount_total / 100 : 0,
-            session_id: sessionId,
-            scholarships_ids: scholarshipsIds,
-            processing_started: true
-          }
+            p_student_id: userProfile.id,
+            p_action_type: 'fee_payment',
+            p_action_description: `Scholarship Fee payment processing started (${sessionId})`,
+            p_performed_by: userId,
+            p_performed_by_type: 'student',
+            p_metadata: {
+              fee_type: 'scholarship',
+              payment_method: paymentMethodForApplication,
+              amount: session.amount_total ? session.amount_total / 100 : 0,
+              session_id: sessionId,
+              scholarships_ids: scholarshipsIds,
+              processing_started: true
+            }
         });
         console.log('[DUPLICAÇÃO] Log de processamento criado para evitar duplicação');
       } catch (logError) {
@@ -183,6 +194,7 @@ Deno.serve(async (req)=>{
         }
         console.error('[DUPLICAÇÃO] Erro ao criar log, mas continuando processamento:', logError);
       }
+      
       // Atualiza perfil do usuário para marcar que pagou a scholarship fee (usando userId para user_profiles)
       const { error: profileUpdateError } = await supabase.from('user_profiles').update({
         is_scholarship_fee_paid: true
@@ -196,7 +208,6 @@ Deno.serve(async (req)=>{
         const paymentDate = new Date().toISOString();
         const paymentAmountRaw = session.amount_total ? session.amount_total / 100 : 0;
         const currency = session.currency?.toUpperCase() || 'USD';
-        const paymentMethod = session.payment_method_types?.[0] || 'stripe';
         // Obter payment_intent_id: pode ser string ou objeto PaymentIntent
         let paymentIntentId = '';
         if (typeof session.payment_intent === 'string') {
@@ -216,7 +227,8 @@ Deno.serve(async (req)=>{
         let grossAmountUsd: number | null = null;
         let feeAmountUsd: number | null = null;
         
-        if ((currency === 'BRL' || paymentMethod === 'pix') && paymentIntentId && shouldFetchNetAmount) {
+        // Buscar valores do Stripe para PIX/BRL ou para qualquer pagamento com paymentIntentId (incluindo cartão USD)
+        if (paymentIntentId && shouldFetchNetAmount) {
           console.log(`✅ Buscando valor líquido, bruto e taxas do Stripe (ambiente: ${config.environment.environment})`);
           try {
             // Buscar PaymentIntent com latest_charge expandido para obter balance_transaction
@@ -255,8 +267,8 @@ Deno.serve(async (req)=>{
                   console.log(`[Individual Fee Payment] Valor líquido recebido do Stripe (após taxas e conversão): ${paymentAmount} USD`);
                   console.log(`[Individual Fee Payment] Valor bruto: ${grossAmountUsd || balanceTransaction.amount / 100} ${balanceTransaction.currency}, Taxas: ${feeAmountUsd || (balanceTransaction.fee || 0) / 100} ${balanceTransaction.currency}`);
                 } else {
-                  // Fallback: usar exchange_rate do metadata se disponível
-                  if (session.metadata?.exchange_rate) {
+                  // Fallback: usar exchange_rate do metadata se disponível (apenas para BRL)
+                  if (currency === 'BRL' && session.metadata?.exchange_rate) {
                     const exchangeRate = parseFloat(session.metadata.exchange_rate);
                     if (exchangeRate > 0) {
                       paymentAmount = paymentAmountRaw / exchangeRate;
@@ -265,8 +277,8 @@ Deno.serve(async (req)=>{
                   }
                 }
               } else {
-                // Fallback: usar exchange_rate do metadata
-                if (session.metadata?.exchange_rate) {
+                // Fallback: usar exchange_rate do metadata (apenas para BRL)
+                if (currency === 'BRL' && session.metadata?.exchange_rate) {
                   const exchangeRate = parseFloat(session.metadata.exchange_rate);
                   if (exchangeRate > 0) {
                     paymentAmount = paymentAmountRaw / exchangeRate;
@@ -275,8 +287,8 @@ Deno.serve(async (req)=>{
                 }
               }
             } else {
-              // Fallback: usar exchange_rate do metadata
-              if (session.metadata?.exchange_rate) {
+              // Fallback: usar exchange_rate do metadata (apenas para BRL)
+              if (currency === 'BRL' && session.metadata?.exchange_rate) {
                 const exchangeRate = parseFloat(session.metadata.exchange_rate);
                 if (exchangeRate > 0) {
                   paymentAmount = paymentAmountRaw / exchangeRate;
@@ -286,8 +298,8 @@ Deno.serve(async (req)=>{
             }
           } catch (stripeError) {
             console.error('[Individual Fee Payment] Erro ao buscar valor líquido do Stripe:', stripeError);
-            // Fallback: usar exchange_rate do metadata
-            if (session.metadata?.exchange_rate) {
+            // Fallback: usar exchange_rate do metadata (apenas para BRL)
+            if (currency === 'BRL' && session.metadata?.exchange_rate) {
               const exchangeRate = parseFloat(session.metadata.exchange_rate);
               if (exchangeRate > 0) {
                 paymentAmount = paymentAmountRaw / exchangeRate;
@@ -377,7 +389,7 @@ Deno.serve(async (req)=>{
       const { data: updatedApps, error: appError } = await supabase.from('scholarship_applications').update({
         status: 'approved',
         is_scholarship_fee_paid: true,
-        scholarship_fee_payment_method: 'stripe'
+        scholarship_fee_payment_method: paymentMethodForApplication // 'pix' ou 'stripe'
       }).eq('student_id', userProfile.id).in('scholarship_id', scholarshipIdsArray).select('id');
       if (appError) throw new Error(`Failed to update scholarship_applications: ${appError.message}`);
       console.log('Scholarship applications updated to approved status');
@@ -404,7 +416,7 @@ Deno.serve(async (req)=>{
       }
       
       // Verificar se é PIX - se for, não enviar notificações (já foram enviadas pelo webhook)
-      const isPixPayment = session.payment_method_types?.includes('pix') || session.metadata?.payment_method === 'pix';
+      // isPixPayment já foi declarado acima
       if (isPixPayment) {
         console.log(`[NOTIFICAÇÃO] Pagamento via PIX detectado. Notificações já foram enviadas pelo webhook. Pulando envio de notificações para evitar duplicação.`);
         
@@ -892,12 +904,12 @@ Deno.serve(async (req)=>{
       let grossAmountUsdFromStripe: number | null = null;
       
       // Tentar buscar do balanceTransaction se for PIX
-      const paymentIntentId = session.payment_intent ? (typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent.id) : null;
-      const paymentMethod = session.metadata?.payment_method || (session.payment_method_types && session.payment_method_types[0]) || 'card';
+      const paymentIntentIdForGross = session.payment_intent ? (typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent.id) : null;
+      // paymentMethod já foi declarado acima, usar isPixPayment para detectar PIX
       
-      if ((currency === 'BRL' || paymentMethod === 'pix') && paymentIntentId) {
+      if ((currency === 'BRL' || isPixPayment) && paymentIntentIdForGross) {
         try {
-          const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId, {
+          const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentIdForGross, {
             expand: ['latest_charge.balance_transaction']
           });
           

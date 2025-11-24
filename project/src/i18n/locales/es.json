@@ -175,7 +175,7 @@
       "recipientEmail": "Correo del Destinatario",
       "paymentAmount": "Monto del Pago",
       "important": "Importante:",
-      "importantMessage": "Asegúrese de enviar el monto exacto de <strong>{{amount}} USD</strong> a <strong>info@thefutureofenglish.com</strong> vía Zelle. Cualquier discrepancia en el monto o destinatario retrasará el procesamiento de su pago.",
+      "importantMessage": "Asegúrese de enviar el monto exacto de <strong>{{amount}} USD</strong> a <strong>pay@matriculausa.com</strong> vía Zelle. Cualquier discrepancia en el monto o destinatario retrasará el procesamiento de su pago.",
       "importantMessageSimple": "Asegúrese de que el monto exacto del pago coincida con el monto mostrado arriba."
     }
   },

@@ -1084,7 +1084,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
                       {t('zelleCheckout.zellePaymentDetails.recipientEmail')}
                     </label>
                     <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-                      <code className="text-sm font-mono text-gray-900">info@thefutureofenglish.com</code>
+                      <code className="text-sm font-mono text-gray-900">pay@matriculausa.com</code>
                     </div>
                   </div>
                   
