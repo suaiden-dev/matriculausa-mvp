@@ -102,9 +102,20 @@ Deno.serve(async (req)=>{
     console.log('Session metadata:', session.metadata);
     if (session.payment_status === 'paid' && session.status === 'complete') {
       const userId = session.client_reference_id;
-      const paymentMethod = session.metadata?.payment_method || 'stripe';
       const applicationId = session.metadata?.application_id;
-      console.log(`Processing successful payment. UserID: ${userId}, ApplicationID: ${applicationId}, PaymentMethod: ${paymentMethod}`);
+      
+      // Detectar se é PIX através dos payment_method_types ou metadata
+      const isPixPayment = session.payment_method_types?.includes('pix') || session.metadata?.payment_method === 'pix';
+      
+      // Para pagamentos via Stripe, sempre usar 'stripe' como payment_method na tabela individual_fee_payments
+      // Mas para scholarship_applications, usar 'pix' se for PIX, 'stripe' caso contrário
+      const paymentMethodForIndividualFee = 'stripe'; // Sempre 'stripe' para individual_fee_payments
+      const paymentMethodForApplication = isPixPayment ? 'pix' : (session.metadata?.payment_method || 'stripe'); // 'pix' ou 'stripe' para scholarship_applications
+      
+      // Variável para lógica de conversão (usada para detectar PIX)
+      const paymentMethod = isPixPayment ? 'pix' : (session.metadata?.payment_method || 'stripe');
+      
+      console.log(`Processing successful payment. UserID: ${userId}, ApplicationID: ${applicationId}, Payment Method: ${paymentMethodForApplication}`);
       if (!userId) return corsResponse({
         error: 'User ID (client_reference_id) missing in session.'
       }, 400);
@@ -129,14 +140,14 @@ Deno.serve(async (req)=>{
           p_action_description: `Application Fee payment processing started (${sessionId})`,
           p_performed_by: userId,
           p_performed_by_type: 'student',
-          p_metadata: {
-            fee_type: 'application',
-            payment_method: 'stripe',
-            amount: session.amount_total ? session.amount_total / 100 : 0,
-            session_id: sessionId,
-            application_id: applicationId,
-            processing_started: true
-          }
+            p_metadata: {
+              fee_type: 'application',
+              payment_method: paymentMethodForApplication,
+              amount: session.amount_total ? session.amount_total / 100 : 0,
+              session_id: sessionId,
+              application_id: applicationId,
+              processing_started: true
+            }
         });
         console.log('[DUPLICAÇÃO] Log de processamento criado para evitar duplicação');
       } catch (logError) {
@@ -171,7 +182,7 @@ Deno.serve(async (req)=>{
         payment_status: 'paid',
         paid_at: new Date().toISOString(),
         is_application_fee_paid: true,
-        application_fee_payment_method: paymentMethod || 'stripe'
+        application_fee_payment_method: paymentMethodForApplication // 'pix' ou 'stripe'
       };
       // Preservar o status atual se já estiver 'approved' (universidade já aprovou)
       console.log(`[verify-stripe-session-application-fee] Current application status: '${application.status}' for user ${userId}, application ${applicationId}.`);

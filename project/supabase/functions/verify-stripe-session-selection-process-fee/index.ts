@@ -378,8 +378,19 @@ Deno.serve(async (req)=>{
     if (session.payment_status === 'paid' && session.status === 'complete') {
       const userId = session.client_reference_id;
       const applicationId = session.metadata?.application_id;
-      const paymentMethod = session.payment_method_types?.[0];
-      console.log(`Processing successful payment. UserID: ${userId}, ApplicationID: ${applicationId}, PaymentMethod: ${paymentMethod}`);
+      
+      // Detectar se é PIX através dos payment_method_types ou metadata
+      const isPixPayment = session.payment_method_types?.includes('pix') || session.metadata?.payment_method === 'pix';
+      
+      // Para pagamentos via Stripe, sempre usar 'stripe' como payment_method na tabela individual_fee_payments
+      // Mas para user_profiles, usar 'pix' se for PIX, 'stripe' caso contrário
+      const paymentMethodForIndividualFee = 'stripe'; // Sempre 'stripe' para individual_fee_payments
+      const paymentMethodForUserProfile = isPixPayment ? 'pix' : 'stripe'; // 'pix' ou 'stripe' para user_profiles
+      
+      // Variável para lógica de conversão (usada para detectar PIX)
+      const paymentMethod = session.payment_method_types?.[0] || (isPixPayment ? 'pix' : 'stripe');
+      
+      console.log(`Processing successful payment. UserID: ${userId}, ApplicationID: ${applicationId}, Payment Method: ${paymentMethodForUserProfile}`);
       if (!userId) return corsResponse({
         error: 'User ID (client_reference_id) missing in session.'
       }, 400);
@@ -404,7 +415,7 @@ Deno.serve(async (req)=>{
             p_performed_by_type: 'student',
             p_metadata: {
               fee_type: 'selection_process',
-              payment_method: 'stripe',
+              payment_method: paymentMethodForUserProfile,
               amount: session.amount_total ? session.amount_total / 100 : 0,
               session_id: sessionId,
               application_id: applicationId,
@@ -434,7 +445,7 @@ Deno.serve(async (req)=>{
       // Atualiza perfil do usuário
       const { error: profileError } = await supabase.from('user_profiles').update({
         has_paid_selection_process_fee: true,
-        selection_process_fee_payment_method: 'stripe'
+        selection_process_fee_payment_method: paymentMethodForUserProfile // 'pix' ou 'stripe'
       }).eq('user_id', userId);
       if (profileError) throw new Error(`Failed to update user_profiles: ${profileError.message}`);
 
