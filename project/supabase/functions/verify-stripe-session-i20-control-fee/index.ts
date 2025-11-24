@@ -317,9 +317,6 @@ Deno.serve(async (req)=>{
     });
     if (session.payment_status === 'paid' && session.status === 'complete') {
       const userId = session.client_reference_id;
-      // Para pagamentos via Stripe (incluindo PIX), sempre usar 'stripe' como payment_method
-      // O payment_method real (pix, card, etc) está em session.payment_method_types
-      const paymentMethod = 'stripe';
       
       if (!userId) {
         return corsResponse({
@@ -336,16 +333,24 @@ Deno.serve(async (req)=>{
         paymentIntentId = (session.payment_intent as any).id;
       }
       
+      // Detectar se é PIX através dos payment_method_types ou metadata
+      const isPixPayment = session.payment_method_types?.includes('pix') || session.metadata?.payment_method === 'pix';
+      
+      // Para pagamentos via Stripe, sempre usar 'stripe' como payment_method na tabela individual_fee_payments
+      // Mas para user_profiles, usar 'pix' se for PIX, 'stripe' caso contrário
+      const paymentMethodForIndividualFee = 'stripe'; // Sempre 'stripe' para individual_fee_payments
+      const paymentMethodForUserProfile = isPixPayment ? 'pix' : 'stripe'; // 'pix' ou 'stripe' para user_profiles
+      
       // Obter informações de moeda
       const currencyInfo = getCurrencyInfo(session);
       const amountValue = session.amount_total ? session.amount_total / 100 : 0;
       const formattedAmount = formatAmountWithCurrency(amountValue, session);
       
-      console.log(`[I20 Control Fee] Currency: ${currencyInfo.currency}, Amount: ${formattedAmount}`);
+      console.log(`[I20 Control Fee] Currency: ${currencyInfo.currency}, Amount: ${formattedAmount}, Payment Method: ${paymentMethodForUserProfile}`);
       // Atualiza user_profiles para marcar o pagamento do I-20 Control Fee
       const { error: profileError } = await supabase.from('user_profiles').update({
         has_paid_i20_control_fee: true,
-        i20_control_fee_payment_method: paymentMethod,
+        i20_control_fee_payment_method: paymentMethodForUserProfile, // 'pix' ou 'stripe'
         i20_control_fee_due_date: new Date().toISOString(),
         i20_control_fee_payment_intent_id: paymentIntentId
       }).eq('user_id', userId);
@@ -502,7 +507,7 @@ Deno.serve(async (req)=>{
               p_fee_type: 'i20_control',
               p_amount: paymentAmount, // ✅ Valor líquido (após taxas e conversão)
               p_payment_date: paymentDate,
-              p_payment_method: paymentMethod,
+              p_payment_method: paymentMethodForIndividualFee, // Sempre 'stripe' para individual_fee_payments
               p_payment_intent_id: paymentIntentId || null,
               p_stripe_charge_id: null,
               p_zelle_payment_id: null,
@@ -542,7 +547,7 @@ Deno.serve(async (req)=>{
           p_performed_by_type: 'student',
           p_metadata: {
             fee_type: 'i20_control',
-            payment_method: paymentMethod,
+            payment_method: paymentMethodForUserProfile,
             amount: amountValue,
             session_id: sessionId,
             payment_intent_id: paymentIntentId,
@@ -594,7 +599,7 @@ Deno.serve(async (req)=>{
             p_performed_by_type: 'student',
             p_metadata: {
               fee_type: 'i20_control',
-              payment_method: paymentMethod,
+              payment_method: paymentMethodForUserProfile,
               amount: amountValue,
               session_id: sessionId,
               notifications_sending: true
@@ -729,7 +734,7 @@ Deno.serve(async (req)=>{
           currency: currencyInfo.currency,
           currency_symbol: currencyInfo.symbol,
           formatted_amount: formattedAmount,
-          payment_method: paymentMethod
+          payment_method: paymentMethodForUserProfile
         };
         console.log('[NOTIFICAÇÃO ALUNO] Enviando notificação para aluno:', alunoNotificationPayload);
         const alunoNotificationResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
@@ -813,7 +818,7 @@ Deno.serve(async (req)=>{
               seller_id: sellerData.user_id,
               referral_code: sellerData.referral_code,
               commission_rate: sellerData.commission_rate,
-              payment_method: paymentMethod,
+              payment_method: paymentMethodForUserProfile,
               notification_type: "admin"
             };
             console.log('📧 [verify-stripe-session-i20-control-fee] ✅ ENVIANDO NOTIFICAÇÃO PARA ADMIN:', adminNotificationPayload);
@@ -851,7 +856,7 @@ Deno.serve(async (req)=>{
               seller_id: sellerData.user_id,
               referral_code: sellerData.referral_code,
               commission_rate: sellerData.commission_rate,
-              payment_method: paymentMethod,
+              payment_method: paymentMethodForUserProfile,
               notification_type: "seller"
             };
             console.log('📧 [verify-stripe-session-i20-control-fee] ✅ ENVIANDO NOTIFICAÇÃO PARA SELLER:', sellerNotificationPayload);
@@ -893,7 +898,7 @@ Deno.serve(async (req)=>{
                 seller_id: sellerData.user_id,
                 referral_code: sellerData.referral_code,
                 commission_rate: sellerData.commission_rate,
-                payment_method: paymentMethod,
+                payment_method: paymentMethodForUserProfile,
                 notification_type: "affiliate_admin"
               };
               console.log('📧 [verify-stripe-session-i20-control-fee] ✅ ENVIANDO NOTIFICAÇÃO PARA AFFILIATE ADMIN:', affiliateNotificationPayload);
@@ -935,7 +940,7 @@ Deno.serve(async (req)=>{
               currency: currencyInfo.currency,
               currency_symbol: currencyInfo.symbol,
               formatted_amount: formattedAmount,
-              payment_method: paymentMethod,
+              payment_method: paymentMethodForUserProfile,
               notification_type: 'admin'
             };
             console.log('📧 [verify-stripe-session-i20-control-fee] Enviando notificação para admin (seller não encontrado):', adminNotificationPayload);
@@ -974,7 +979,7 @@ Deno.serve(async (req)=>{
             currency: currencyInfo.currency,
             currency_symbol: currencyInfo.symbol,
             formatted_amount: formattedAmount,
-            payment_method: paymentMethod,
+            payment_method: paymentMethodForUserProfile,
             notification_type: 'admin'
           };
           console.log('📧 [verify-stripe-session-i20-control-fee] Enviando notificação para admin da plataforma (sem seller):', adminNotificationPayload);
@@ -1008,7 +1013,7 @@ Deno.serve(async (req)=>{
           p_performed_by_type: 'student',
           p_metadata: {
             fee_type: 'i20_control',
-            payment_method: paymentMethod,
+            payment_method: paymentMethodForUserProfile,
             amount: amountValue,
             session_id: sessionId,
             payment_intent_id: paymentIntentId,
