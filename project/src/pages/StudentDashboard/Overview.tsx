@@ -29,8 +29,7 @@ import { supabase } from '../../lib/supabase';
 import { ProgressBar } from '../../components/ProgressBar';
 import StepByStepButton from '../../components/OnboardingTour/StepByStepButton';
 import StepByStepGuide from '../../components/OnboardingTour/StepByStepGuide';
-import { useStepByStepGuide } from '../../hooks/useStepByStepGuide';
-import { supabase } from '../../lib/supabase';
+import ContinueApplicationButton from '../../components/ContinueApplicationButton';
 import { getGrossPaidAmounts } from '../../utils/paymentConverter';
 import './Overview.css'; // Adicionar um arquivo de estilos dedicado para padronização visual
 
@@ -100,11 +99,9 @@ const Overview: React.FC<OverviewProps> = ({
   const [visibleApplications, setVisibleApplications] = useState(5); // Mostrar 5 inicialmente
   const [feesLoading, setFeesLoading] = useState(true);
   const [documentsLoading, setDocumentsLoading] = useState(true);
+  const [studentDocuments, setStudentDocuments] = useState<any[]>([]);
   const [realPaidAmounts, setRealPaidAmounts] = useState<Record<string, number>>({});
   const [loadingPaidAmounts, setLoadingPaidAmounts] = useState(false);
-  
-  // Verificar se há pagamento Zelle pendente do tipo selection_process
-  const hasPendingSelectionProcessPayment = isBlocked && pendingPayment && pendingPayment.fee_type === 'selection_process';
   
   const hasMoreApplications = recentApplications.length > visibleApplications;
   const displayedApplications = recentApplications.slice(0, visibleApplications);

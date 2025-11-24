@@ -1530,7 +1530,9 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
                       <div className="space-y-1">
                         <div className="text-xs text-gray-500 line-through">${metadata.original_amount.toFixed(2)} USD</div>
                         <div className="text-base sm:text-lg font-bold text-gray-900">${amount.toFixed(2)} USD</div>
-                        <div className="text-xs text-green-600 font-medium">🎉 You saved $50.00!</div>
+                        <div className="text-xs text-green-600 font-medium">
+                          🎉 You saved ${(metadata.original_amount - amount).toFixed(2)}!
+                        </div>
                       </div>
                     ) : (
                       <span className="text-base sm:text-lg font-bold text-gray-900">${amount.toFixed(2)} USD</span>
