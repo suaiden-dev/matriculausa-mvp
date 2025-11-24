@@ -69,9 +69,36 @@ const Overview: React.FC<OverviewProps> = ({
   // Verificar se há pagamento Zelle pendente do tipo selection_process
   const hasPendingSelectionProcessPayment = isBlocked && pendingPayment && pendingPayment.fee_type === 'selection_process';
   
+  // Verificar se há step de onboarding salvo no localStorage
+  const savedOnboardingStep = React.useMemo(() => {
+    if (typeof window === 'undefined') return null;
+    const savedStep = window.localStorage.getItem('onboarding_current_step');
+    const validSteps = ['welcome', 'selection_fee', 'scholarship_selection', 'scholarship_review', 'process_type', 'documents_upload', 'waiting_approval', 'completed'];
+    return savedStep && validSteps.includes(savedStep) ? savedStep : null;
+  }, []);
+  
+  const hasSavedOnboardingStep = savedOnboardingStep !== null;
+  
+  // Mapear step para label amigável
+  const currentStepLabel = React.useMemo(() => {
+    if (!savedOnboardingStep) return null;
+    const stepLabels: Record<string, string> = {
+      'welcome': 'Welcome',
+      'selection_fee': 'Selection Fee',
+      'scholarship_selection': 'Scholarship Selection',
+      'scholarship_review': 'Scholarship Review',
+      'process_type': 'Process Type',
+      'documents_upload': 'Documents Upload',
+      'waiting_approval': 'Waiting Approval',
+      'completed': 'Completed'
+    };
+    return stepLabels[savedOnboardingStep] || savedOnboardingStep;
+  }, [savedOnboardingStep]);
+  
   const [visibleApplications, setVisibleApplications] = useState(5); // Mostrar 5 inicialmente
   const [feesLoading, setFeesLoading] = useState(true);
   const [documentsLoading, setDocumentsLoading] = useState(true);
+  const [studentDocuments, setStudentDocuments] = useState<any[]>([]);
   const [promotionalCouponDiscount, setPromotionalCouponDiscount] = useState<{ discountAmount: number; finalAmount: number } | null>(null);
   const [scholarshipFeePromotionalCoupon, setScholarshipFeePromotionalCoupon] = useState<{ discountAmount: number; finalAmount: number } | null>(null);
   const [i20PromotionalCoupon, setI20PromotionalCoupon] = useState<{ discountAmount: number; finalAmount: number } | null>(null);
@@ -81,9 +108,6 @@ const Overview: React.FC<OverviewProps> = ({
     scholarship?: number;
     i20_control?: number;
   }>({});
-  
-  // Verificar se há pagamento Zelle pendente do tipo selection_process
-  const hasPendingSelectionProcessPayment = isBlocked && pendingPayment && pendingPayment.fee_type === 'selection_process';
   
   const hasMoreApplications = recentApplications.length > visibleApplications;
   const displayedApplications = recentApplications.slice(0, visibleApplications);
