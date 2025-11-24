@@ -326,8 +326,18 @@ export const useStudentDetails = () => {
         const hasAnyScholarshipPaid = allApplications?.some((app: any) => app.is_scholarship_fee_paid) || false;
         const hasAnyApplicationPaid = allApplications?.some((app: any) => app.is_application_fee_paid) || false;
         
-        // Usar a aplicação mais recente para dados de exibição
-        const applicationData = allApplications?.[0] || null;
+        // ✅ CORREÇÃO: Priorizar aplicação com carta de aceite, senão usar a mais recente
+        let applicationData = allApplications?.[0] || null;
+        if (allApplications && allApplications.length > 0) {
+          // Buscar aplicação com carta de aceite primeiro
+          const appWithAcceptanceLetter = allApplications.find((app: any) => 
+            app.acceptance_letter_url && app.acceptance_letter_url.trim() !== ''
+          );
+          if (appWithAcceptanceLetter) {
+            applicationData = appWithAcceptanceLetter;
+            console.log('✅ [ACCEPTANCE_LETTER] Found application with acceptance letter:', applicationData.id);
+          }
+        }
 
         // ✅ NOVO: Armazenar todas as aplicações para exibição
         setAllApplications(allApplications || []);
