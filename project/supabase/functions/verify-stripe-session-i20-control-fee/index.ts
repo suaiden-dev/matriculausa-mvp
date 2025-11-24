@@ -334,7 +334,7 @@ Deno.serve(async (req)=>{
       }
       
       // Detectar se é PIX através dos payment_method_types ou metadata
-      const isPixPayment = session.payment_method_types?.includes('pix') || session.metadata?.payment_method === 'pix';
+      const isPixPayment = session.payment_method_types?.includes('pix') || session.metadata?.payment_method === 'pix'; 
       
       // Para pagamentos via Stripe, sempre usar 'stripe' como payment_method na tabela individual_fee_payments
       // Mas para user_profiles, usar 'pix' se for PIX, 'stripe' caso contrário
