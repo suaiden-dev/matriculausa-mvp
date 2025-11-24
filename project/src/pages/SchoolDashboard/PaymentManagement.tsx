@@ -137,9 +137,9 @@ const PaymentManagement: React.FC = () => {
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
   const [showRequestDetailsModal, setShowRequestDetailsModal] = useState(false);
   
-  // Stripe Connect status state
-  const [hasStripeConnect, setHasStripeConnect] = useState(false);
-  const [loadingStripeStatus, setLoadingStripeStatus] = useState(true);
+  // Stripe Connect status state - COMENTADO: Funcionalidade removida temporariamente
+  // const [hasStripeConnect, setHasStripeConnect] = useState(false);
+  // const [loadingStripeStatus, setLoadingStripeStatus] = useState(true);
   
   const handleExport = async () => {
     try {
@@ -179,45 +179,46 @@ const PaymentManagement: React.FC = () => {
     loadChartJS();
   }, []);
 
-  const checkStripeConnectStatus = async () => {
-    if (!university?.id) return;
-    
-    try {
-      setLoadingStripeStatus(true);
-      
-      // Verificar se a universidade tem configuração de taxa com Stripe Connect
-      const { data: feeConfig, error } = await supabase
-        .from('university_fee_configurations')
-        .select('stripe_connect_enabled, stripe_connect_account_id')
-        .eq('university_id', university.id)
-        .single();
-      
-      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
-        console.error('Error checking Stripe Connect status:', error);
-        return;
-      }
-      
-      // Se existe configuração e tem Stripe Connect habilitado
-      const hasConnect = feeConfig && 
-        feeConfig.stripe_connect_enabled === true && 
-        feeConfig.stripe_connect_account_id;
-      
-      setHasStripeConnect(!!hasConnect);
-      
-      console.log('🔗 [Stripe Connect] Status check:', {
-        universityId: university.id,
-        feeConfig,
-        hasConnect,
-        stripeEnabled: feeConfig?.stripe_connect_enabled,
-        accountId: feeConfig?.stripe_connect_account_id
-      });
-      
-    } catch (error: any) {
-      console.error('Error checking Stripe Connect status:', error);
-    } finally {
-      setLoadingStripeStatus(false);
-    }
-  };
+  // COMENTADO: Função de verificação de status do Stripe Connect - Funcionalidade removida temporariamente
+  // const checkStripeConnectStatus = async () => {
+  //   if (!university?.id) return;
+  //   
+  //   try {
+  //     setLoadingStripeStatus(true);
+  //     
+  //     // Verificar se a universidade tem configuração de taxa com Stripe Connect
+  //     const { data: feeConfig, error } = await supabase
+  //       .from('university_fee_configurations')
+  //       .select('stripe_connect_enabled, stripe_connect_account_id')
+  //       .eq('university_id', university.id)
+  //       .single();
+  //     
+  //     if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+  //       console.error('Error checking Stripe Connect status:', error);
+  //       return;
+  //     }
+  //     
+  //     // Se existe configuração e tem Stripe Connect habilitado
+  //     const hasConnect = feeConfig && 
+  //       feeConfig.stripe_connect_enabled === true && 
+  //       feeConfig.stripe_connect_account_id;
+  //     
+  //     setHasStripeConnect(!!hasConnect);
+  //     
+  //     console.log('🔗 [Stripe Connect] Status check:', {
+  //       universityId: university.id,
+  //       feeConfig,
+  //       hasConnect,
+  //       stripeEnabled: feeConfig?.stripe_connect_enabled,
+  //       accountId: feeConfig?.stripe_connect_account_id
+  //     });
+  //     
+  //   } catch (error: any) {
+  //     console.error('Error checking Stripe Connect status:', error);
+  //   } finally {
+  //     setLoadingStripeStatus(false);
+  //   }
+  // };
 
   const loadUniversityPaymentRequests = async () => {
     if (!university?.id || !user?.id) return;
@@ -972,7 +973,7 @@ const PaymentManagement: React.FC = () => {
   React.useEffect(() => {
     if (university?.id) {
       loadUniversityPaymentRequests();
-      checkStripeConnectStatus();
+      // COMENTADO: checkStripeConnectStatus(); - Funcionalidade removida temporariamente
       loadFinancialAnalytics();
     }
   }, [university?.id]);
@@ -1624,8 +1625,8 @@ const PaymentManagement: React.FC = () => {
       {/* University Payment Requests Tab Content */}
               {activeTab === 'university-requests' && (
         <>
-                    {/* Stripe Connect Banner - Only show if not connected */}
-                    {!loadingStripeStatus && !hasStripeConnect && (
+                    {/* COMENTADO: Stripe Connect Banner - Funcionalidade removida temporariamente */}
+                    {/* {!loadingStripeStatus && !hasStripeConnect && (
                       <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm mb-6">
                         <div className="flex items-start gap-4">
                           <div className="p-3 bg-[#05294E] rounded-xl">
@@ -1663,10 +1664,10 @@ const PaymentManagement: React.FC = () => {
                           </div>
                         </div>
                       </div>
-                    )}
+                    )} */}
 
-                    {/* Stripe Connect Success Message - Only show if connected */}
-                    {!loadingStripeStatus && hasStripeConnect && (
+                    {/* COMENTADO: Stripe Connect Success Message - Funcionalidade removida temporariamente */}
+                    {/* {!loadingStripeStatus && hasStripeConnect && (
                       <div className="bg-green-50 border border-green-200 rounded-2xl p-6 shadow-sm mb-6">
                         <div className="flex items-start gap-4">
                           <div className="p-3 bg-green-100 rounded-xl">
@@ -1683,7 +1684,7 @@ const PaymentManagement: React.FC = () => {
                           </div>
                         </div>
                       </div>
-                    )}
+                    )} */}
 
           {/* University Requests Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
