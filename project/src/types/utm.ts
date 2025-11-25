@@ -21,6 +21,9 @@ export interface UtmAttributionData {
   landing_page?: string;    // Primeira página visitada com UTM
   last_touch_page?: string; // Última página visitada
   referrer?: string;        // URL de referência (document.referrer)
+  gs?: string;               // Parâmetro para identificar compartilhamento orgânico (opcional)
+  client_name?: string;      // Nome do cliente que compartilhou o link (opcional)
+  client_email?: string;     // Email do cliente que compartilhou o link (opcional)
 }
 
 // Interface estendida com timestamp de captura

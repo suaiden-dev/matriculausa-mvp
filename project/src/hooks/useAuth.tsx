@@ -788,6 +788,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           landing_page: utm.landing_page ?? null,
           last_touch_page: utm.last_touch_page ?? null,
           referrer: utm.referrer ?? null,
+          // ✅ NOVO: Campos de cliente que compartilhou o link
+          client_name: utm.client_name ?? null,
+          client_email: utm.client_email ?? null,
           // Usa capturedAt do UTM ou timestamp atual
           captured_at: utm.capturedAt ?? new Date().toISOString(),
         });

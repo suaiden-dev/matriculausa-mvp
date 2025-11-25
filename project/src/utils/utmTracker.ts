@@ -80,6 +80,11 @@ const normalizePayload = (payload: StoredUtmAttribution): StoredUtmAttribution =
   landing_page: sanitizeValue(payload.landing_page),
   last_touch_page: sanitizeValue(payload.last_touch_page),
   referrer: sanitizeValue(payload.referrer),
+  // Sanitiza campo gs (compartilhamento orgânico)
+  gs: sanitizeValue(payload.gs),
+  // Sanitiza campos de cliente
+  client_name: sanitizeValue(payload.client_name),
+  client_email: sanitizeValue(payload.client_email),
   // capturedAt não precisa sanitizar (já é ISO string)
 });
 
@@ -235,6 +240,17 @@ export const captureUtmFromUrl = (): StoredUtmAttribution | null => {
   // CASO B: Há UTMs na URL atual E é da Brant Immigration
   console.log('[utmTracker] ✅ UTMs da Brant Immigration detectados:', utmRecord);
   
+  // ✅ NOVO: Captura parâmetro gs (compartilhamento orgânico)
+  const gsParam = params.get('gs');
+  
+  // ✅ NOVO: Captura parâmetro client (nome ou email do cliente que compartilhou)
+  const clientParam = params.get('client');
+  
+  // Detecta se client é email (contém @) ou nome
+  const isEmail = clientParam?.includes('@');
+  const clientName = isEmail ? undefined : sanitizeValue(clientParam);
+  const clientEmail = isEmail ? sanitizeValue(clientParam) : undefined;
+  
   // Decide se deve sobrescrever dados existentes
   const override = shouldOverrideExisting(existing);
   
@@ -257,11 +273,16 @@ export const captureUtmFromUrl = (): StoredUtmAttribution | null => {
     ? currentPath 
     : existing?.landing_page || currentPath;
 
+  // ✅ NOVO: Se gs estiver presente, força utm_medium=organic (tráfego orgânico)
+  const finalUtmMedium = gsParam 
+    ? 'organic' 
+    : (utmRecord.utm_medium ?? base.utm_medium);
+
   // 4. Constrói payload final (merge de novos UTMs com base)
   const payload: StoredUtmAttribution = {
     // Merge: novos UTMs têm prioridade, senão usa base
     utm_source: utmRecord.utm_source ?? base.utm_source,
-    utm_medium: utmRecord.utm_medium ?? base.utm_medium,
+    utm_medium: finalUtmMedium, // Usa organic se gs estiver presente
     utm_campaign: utmRecord.utm_campaign ?? base.utm_campaign,
     utm_term: utmRecord.utm_term ?? base.utm_term,
     utm_content: utmRecord.utm_content ?? base.utm_content,
@@ -269,6 +290,11 @@ export const captureUtmFromUrl = (): StoredUtmAttribution | null => {
     landing_page: landingPage,
     last_touch_page: currentPath, // Sempre atualiza para página atual
     referrer,
+    // ✅ NOVO: Inclui gs se estiver presente
+    gs: gsParam || base.gs,
+    // ✅ NOVO: Inclui client_name e client_email se estiverem presentes
+    client_name: clientName || base.client_name,
+    client_email: clientEmail || base.client_email,
     capturedAt,
   };
 
@@ -279,5 +305,66 @@ export const captureUtmFromUrl = (): StoredUtmAttribution | null => {
   
   // 6. Retorna dados capturados
   return payload;
+};
+
+/**
+ * Gera link de compartilhamento com parâmetros UTM orgânicos
+ * 
+ * Quando alguém compartilha o link do Brant, adiciona parâmetros para marcar
+ * como tráfego orgânico (não pago).
+ * 
+ * @param baseUtmParams - Parâmetros UTM base (opcional, do localStorage)
+ * @param clientName - Nome do cliente que está compartilhando (opcional)
+ * @param clientEmail - Email do cliente que está compartilhando (opcional)
+ * @returns URL completa pronta para compartilhar
+ * 
+ * @example
+ * // Link gerado com nome:
+ * // https://matriculausa.com/register?ref=BRANT&utm_source=brant&utm_medium=organic&gs=1&client=Maria%20Silva
+ * 
+ * @example
+ * // Link gerado com email:
+ * // https://matriculausa.com/register?ref=BRANT&utm_source=brant&utm_medium=organic&gs=1&client=maria@example.com
+ */
+export const generateShareableLink = (
+  baseUtmParams?: StoredUtmAttribution | null,
+  clientName?: string,
+  clientEmail?: string
+): string => {
+  // Base URL (usa origin do browser ou fallback)
+  const origin = isBrowser() ? window.location.origin : 'https://matriculausa.com';
+  const baseUrl = `${origin}/register`;
+  
+  // Parâmetros obrigatórios para compartilhamento
+  const params = new URLSearchParams();
+  params.set('ref', 'BRANT');
+  params.set('utm_source', 'brant');
+  params.set('utm_medium', 'organic'); // Sempre orgânico quando compartilhado
+  params.set('gs', '1'); // Identificador de compartilhamento
+
+  // ✅ NOVO: Adiciona nome ou email do cliente se fornecido
+  if (clientEmail) {
+    params.set('client', clientEmail);
+  } else if (clientName) {
+    params.set('client', clientName);
+  }
+
+  // Adiciona parâmetros UTM opcionais se existirem
+  if (baseUtmParams) {
+    if (baseUtmParams.utm_campaign) {
+      params.set('utm_campaign', baseUtmParams.utm_campaign);
+    }
+    if (baseUtmParams.utm_term) {
+      params.set('utm_term', baseUtmParams.utm_term);
+    }
+    if (baseUtmParams.utm_content) {
+      params.set('utm_content', baseUtmParams.utm_content);
+    }
+  }
+
+  const finalUrl = `${baseUrl}?${params.toString()}`;
+  console.log('[utmTracker] 🔗 Link de compartilhamento gerado:', finalUrl);
+  
+  return finalUrl;
 };
 
