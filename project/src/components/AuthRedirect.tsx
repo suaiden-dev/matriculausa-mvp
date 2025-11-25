@@ -129,13 +129,6 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
       // Whitelist: permitir acesso explícito à página interna de cadastro de estudante
       const isWhitelistedInternalRegister = location.pathname === '/student/register';
       
-      // NÃO redirecionar se há código de referência na URL (usuário veio de link de referência)
-      const hasReferralCode = window.location.search.includes('ref=');
-      if (hasReferralCode) {
-        console.log('[AuthRedirect] ⚠️ Código de referência detectado, não redirecionando');
-        return;
-      }
-      
       // REDIRECIONAMENTO APÓS LOGIN - verificar se usuário está na página de login/auth
       if (currentPath === '/login' || currentPath === '/auth' || currentPath === '/register') {
         // Redirecionamento baseado no role
