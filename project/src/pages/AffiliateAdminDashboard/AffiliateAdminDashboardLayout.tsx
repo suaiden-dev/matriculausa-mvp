@@ -15,7 +15,8 @@ import {
   User,
   ChevronDown,
   Activity,
-  CreditCard
+  CreditCard,
+  Link as LinkIcon
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import AffiliateAdminNotifications from '../../components/AffiliateAdminNotifications';
@@ -59,6 +60,7 @@ const AffiliateAdminDashboardLayout: React.FC<AffiliateAdminDashboardLayoutProps
     if (path.includes('/my-students')) return 'my-students';
     if (path.includes('/students')) return 'students';
     if (path.includes('/analytics')) return 'analytics';
+    if (path.includes('/utm-tracking')) return 'utm-tracking';
     if (path.includes('/profile')) return 'profile';
     return 'overview';
   };
@@ -74,6 +76,7 @@ const AffiliateAdminDashboardLayout: React.FC<AffiliateAdminDashboardLayoutProps
       { id: 'students', label: 'Seller Tracking', icon: GraduationCap, path: '/affiliate-admin/dashboard/students', badge: null },
       { id: 'my-students', label: 'My Students', icon: UserPlus, path: '/affiliate-admin/dashboard/my-students', badge: null },
       { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/affiliate-admin/dashboard/analytics', badge: null },
+      { id: 'utm-tracking', label: 'UTM Tracking', icon: LinkIcon, path: '/affiliate-admin/dashboard/utm-tracking', badge: null },
       { id: 'profile', label: 'Profile Settings', icon: Settings, path: '/affiliate-admin/dashboard/profile', badge: null }
     ];
 

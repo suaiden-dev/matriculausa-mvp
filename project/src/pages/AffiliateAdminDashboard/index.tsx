@@ -10,6 +10,7 @@ import EnhancedStudentTracking from './EnhancedStudentTrackingRefactored';
 import Analytics from './Analytics';
 import ProfileSettings from './ProfileSettings';
 import MyStudents from './MyStudents';
+import UtmTracking from './UtmTracking';
 
 interface AffiliateAdminStats {
   totalStudents: number;
@@ -261,6 +262,10 @@ const AffiliateAdminDashboard: React.FC = () => {
               userId={userId}
             />
           } 
+        />
+        <Route 
+          path="utm-tracking" 
+          element={<UtmTracking />} 
         />
         <Route 
           path="profile" 
