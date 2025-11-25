@@ -1239,7 +1239,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
         price_id: 'price_selection_process_fee',
         amount: computedBasePrice, // Usar valor com desconto
         payment_method: paymentMethod,
-        success_url: `${window.location.origin}/student/onboarding?step=scholarship_selection&payment=success`,
+        success_url: `${window.location.origin}/student/onboarding?step=scholarship_selection&payment=success&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${window.location.origin}/student/onboarding?step=selection_fee&payment=cancelled`,
         mode: 'payment',
         payment_type: 'selection_process',

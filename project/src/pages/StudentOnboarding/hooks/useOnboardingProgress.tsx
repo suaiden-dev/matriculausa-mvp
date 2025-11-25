@@ -114,11 +114,11 @@ export const useOnboardingProgress = () => {
       // 7. Verificar se onboarding foi completado
       const onboardingCompleted = userProfile.onboarding_completed || false;
 
-      // Verificar se é um novo usuário (sem nenhum progresso)
-      const isNewUser = !selectionFeePaid && !scholarshipsSelected && !processTypeSelected && !documentsUploaded;
-      
-      // Tentar recuperar step salvo (localStorage)
+      // Verificar se é um novo usuário (sem nenhum progresso E sem step salvo)
+      // Se há step salvo, significa que o usuário já interagiu com o onboarding
       const savedStep = getSavedStep();
+      const isNewUser = !selectionFeePaid && !scholarshipsSelected && !processTypeSelected && !documentsUploaded && !savedStep;
+      
       let currentStep: OnboardingStep;
 
       if (onboardingCompleted) {
@@ -126,12 +126,8 @@ export const useOnboardingProgress = () => {
         // Limpar step salvo quando completado
         window.localStorage.removeItem(ONBOARDING_STEP_KEY);
       } else if (isNewUser) {
-        // Novo usuário sempre começa na página de welcome, independente de step salvo
+        // Novo usuário (sem progresso E sem step salvo) sempre começa na página de welcome
         currentStep = 'welcome';
-        // Limpar step salvo se existir para garantir que comece do zero
-        if (savedStep && savedStep !== 'welcome') {
-          window.localStorage.removeItem(ONBOARDING_STEP_KEY);
-        }
       } else if (savedStep === 'welcome' && !selectionFeePaid && !scholarshipsSelected) {
         // Se o step salvo é 'welcome' e não há progresso, manter em 'welcome'
         // Isso permite que o usuário veja a página de welcome quando acessa via URL

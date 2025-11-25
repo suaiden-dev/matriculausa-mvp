@@ -60,7 +60,7 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onComplete }) 
         price_id: 'price_scholarship_fee',
         amount: scholarshipFeeAmount,
         payment_method: paymentMethod,
-        success_url: `${window.location.origin}/student/onboarding?step=completed&payment=success`,
+        success_url: `${window.location.origin}/student/onboarding?step=completed&payment=success&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${window.location.origin}/student/onboarding?step=scholarship_fee&payment=cancelled`,
         mode: 'payment',
         payment_type: 'scholarship_fee',

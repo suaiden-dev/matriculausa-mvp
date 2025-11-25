@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
@@ -13,6 +13,9 @@ import { DocumentsUploadStep } from './components/DocumentsUploadStep';
 import { WaitingApprovalStep } from './components/WaitingApprovalStep';
 import { OnboardingStep } from './types';
 import { supabase } from '../../lib/supabase';
+import PaymentSuccessOverlay from '../../components/PaymentSuccessOverlay';
+import CustomLoading from '../../components/CustomLoading';
+import { useTranslation } from 'react-i18next';
 
 const STEPS = [
   { key: 'welcome' as OnboardingStep, label: 'Welcome' },
@@ -29,6 +32,11 @@ const StudentOnboarding: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { state, loading, checkProgress, goToStep, markStepComplete } = useOnboardingProgress();
+  const { t } = useTranslation();
+  
+  // Estados para animação de sucesso do pagamento
+  const [showPaymentAnimation, setShowPaymentAnimation] = useState(false);
+  const [isVerifyingPayment, setIsVerifyingPayment] = useState(false);
 
   // Ler step da URL quando o componente carrega - deve ter prioridade sobre checkProgress
   useEffect(() => {
@@ -53,21 +61,104 @@ const StudentOnboarding: React.FC = () => {
     }
   }, [searchParams, goToStep]);
 
-  // Verificar se veio de pagamento bem-sucedido
+  // Verificar se veio de pagamento bem-sucedido e processar sessão do Stripe
   useEffect(() => {
     const paymentSuccess = searchParams.get('payment');
     const stepParam = searchParams.get('step');
+    const sessionId = searchParams.get('session_id');
 
-    if (paymentSuccess === 'success' && stepParam) {
-      // Recarregar progresso após pagamento
-      setTimeout(() => {
-        checkProgress();
-        if (stepParam !== 'completed') {
-          goToStep(stepParam as OnboardingStep);
+    if (paymentSuccess === 'success' && stepParam && sessionId) {
+      console.log('[Onboarding] Pagamento detectado - verificando sessão Stripe:', sessionId);
+      
+      // Chamar Edge Function para verificar e registrar o pagamento
+      const verifyStripeSession = async () => {
+        try {
+          // Determinar qual edge function chamar baseado no step
+          let edgeFunctionName = '';
+          if (stepParam === 'scholarship_selection') {
+            edgeFunctionName = 'verify-stripe-session-selection-process-fee';
+          } else if (stepParam === 'waiting_approval') {
+            // Pode ser application_fee ou scholarship_fee - tentar detectar ou usar fallback
+            edgeFunctionName = 'verify-stripe-session-application-fee';
+          } else if (stepParam === 'completed') {
+            edgeFunctionName = 'verify-stripe-session-scholarship-fee';
+          }
+
+          if (!edgeFunctionName) {
+            console.warn('[Onboarding] Não foi possível determinar edge function para verificação');
+            return;
+          }
+
+          const SUPABASE_PROJECT_URL = import.meta.env.VITE_SUPABASE_URL;
+          const EDGE_FUNCTION_ENDPOINT = `${SUPABASE_PROJECT_URL}/functions/v1/${edgeFunctionName}`;
+          
+          // Obter token
+          let token = null;
+          try {
+            const raw = localStorage.getItem(`sb-${SUPABASE_PROJECT_URL.split('//')[1].split('.')[0]}-auth-token`);
+            if (raw) {
+              const tokenObj = JSON.parse(raw);
+              token = tokenObj?.access_token || null;
+            }
+          } catch (e) {
+            console.error('[Onboarding] Erro ao obter token:', e);
+          }
+
+          console.log('[Onboarding] Chamando edge function:', edgeFunctionName);
+          const response = await fetch(EDGE_FUNCTION_ENDPOINT, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(token && { 'Authorization': `Bearer ${token}` }),
+            },
+            body: JSON.stringify({ sessionId }),
+          });
+
+          const data = await response.json();
+          console.log('[Onboarding] Resposta da verificação:', data);
+
+          if (data.status === 'complete' || data.success) {
+            console.log('[Onboarding] ✅ Pagamento verificado e registrado com sucesso!');
+            
+            // Mostrar animação de sucesso
+            setIsVerifyingPayment(false);
+            setShowPaymentAnimation(true);
+            
+            // Aguardar 6 segundos (animação completa) antes de recarregar
+            setTimeout(() => {
+              // Remover parâmetros de pagamento da URL
+              const url = new URL(window.location.href);
+              url.searchParams.delete('payment');
+              url.searchParams.delete('session_id');
+              url.searchParams.delete('pix_payment');
+              window.history.replaceState({}, '', url.toString());
+              
+              // Forçar reload do profile e progresso
+              window.location.reload();
+            }, 6000);
+          } else {
+            console.warn('[Onboarding] ⚠️ Pagamento não foi completado:', data);
+            setIsVerifyingPayment(false);
+          }
+        } catch (error) {
+          console.error('[Onboarding] Erro ao verificar sessão Stripe:', error);
+          setIsVerifyingPayment(false);
         }
-      }, 2000);
+      };
+
+      setIsVerifyingPayment(true);
+      verifyStripeSession();
+    } else if (paymentSuccess === 'success' && stepParam) {
+      // Sem session_id (pode ser Zelle) - mostrar animação e recarregar
+      setShowPaymentAnimation(true);
+      setTimeout(() => {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('payment');
+        window.history.replaceState({}, '', url.toString());
+        window.location.reload();
+      }, 6000);
     }
-  }, [searchParams, checkProgress, goToStep]);
+  }, [searchParams]);
 
   // Redirecionar se não for aluno
   useEffect(() => {
@@ -198,6 +289,30 @@ const StudentOnboarding: React.FC = () => {
         return <WelcomeStep onNext={handleNext} onBack={handleBack} />;
     }
   };
+
+  // Mostrar animação de sucesso do pagamento
+  if (showPaymentAnimation) {
+    return (
+      <PaymentSuccessOverlay
+        isSuccess={true}
+        title={t('successPages.selectionProcessFee.title')}
+        message={t('successPages.common.paymentProcessedAmount')}
+      />
+    );
+  }
+
+  // Mostrar loading enquanto verifica o pagamento
+  if (isVerifyingPayment) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <CustomLoading 
+          color="green" 
+          title={t('successPages.selectionProcessFee.verifying')} 
+          message={t('successPages.selectionProcessFee.pleaseWait')} 
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 w-full flex flex-col">

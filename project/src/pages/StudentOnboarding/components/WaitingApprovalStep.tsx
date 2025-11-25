@@ -525,7 +525,7 @@ export const WaitingApprovalStep: React.FC<StepProps & { onComplete?: () => void
         },
         body: JSON.stringify({
           price_id: 'price_application_fee',
-          success_url: `${window.location.origin}/student/onboarding?step=waiting_approval&payment=success`,
+          success_url: `${window.location.origin}/student/onboarding?step=waiting_approval&payment=success&session_id={CHECKOUT_SESSION_ID}`,
           cancel_url: `${window.location.origin}/student/onboarding?step=waiting_approval&payment=cancelled`,
           mode: 'payment',
           payment_type: 'application_fee',
@@ -582,7 +582,7 @@ export const WaitingApprovalStep: React.FC<StepProps & { onComplete?: () => void
         },
         body: JSON.stringify({
           price_id: 'price_application_fee',
-          success_url: `${window.location.origin}/student/onboarding?step=waiting_approval&payment=success`,
+          success_url: `${window.location.origin}/student/onboarding?step=waiting_approval&payment=success&session_id={CHECKOUT_SESSION_ID}`,
           cancel_url: `${window.location.origin}/student/onboarding?step=waiting_approval&payment=cancelled`,
           mode: 'payment',
           payment_type: 'application_fee',
@@ -642,7 +642,7 @@ export const WaitingApprovalStep: React.FC<StepProps & { onComplete?: () => void
         body: JSON.stringify({
           price_id: 'price_scholarship_fee',
           amount: scholarshipFeeAmount,
-          success_url: `${window.location.origin}/student/onboarding?step=waiting_approval&payment=success`,
+          success_url: `${window.location.origin}/student/onboarding?step=waiting_approval&payment=success&session_id={CHECKOUT_SESSION_ID}`,
           cancel_url: `${window.location.origin}/student/onboarding?step=waiting_approval&payment=cancelled`,
           mode: 'payment',
           payment_type: 'scholarship_fee',
@@ -695,7 +695,7 @@ export const WaitingApprovalStep: React.FC<StepProps & { onComplete?: () => void
           price_id: 'price_scholarship_fee',
           amount: scholarshipFeeAmount,
           payment_method: 'pix',
-          success_url: `${window.location.origin}/student/onboarding?step=waiting_approval&payment=success`,
+          success_url: `${window.location.origin}/student/onboarding?step=waiting_approval&payment=success&session_id={CHECKOUT_SESSION_ID}`,
           cancel_url: `${window.location.origin}/student/onboarding?step=waiting_approval&payment=cancelled`,
           mode: 'payment',
           payment_type: 'scholarship_fee',
