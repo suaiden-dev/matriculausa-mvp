@@ -1,4 +1,4 @@
-import React, { Suspense } from 'react';
+import React, { Suspense, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import { QueryClientProvider } from '@tanstack/react-query';
@@ -16,6 +16,7 @@ import UniversityDetail from './pages/UniversityDetail';
 import HowItWorks from './pages/HowItWorks';
 import TermsAndConditions from './pages/TermsAndConditions';
 import StudentTermsAcceptance from './pages/StudentTermsAcceptance';
+import { captureUtmFromUrl } from './utils/utmTracker';
 // ✅ OTIMIZAÇÃO: Lazy loading do SchoolProfileSetup para evitar carregar cities.json (208 MB) no início
 const SchoolProfileSetup = React.lazy(() => import('./pages/SchoolProfileSetup'));
 import { SchoolDashboard } from './pages/SchoolDashboard/index';
@@ -83,6 +84,11 @@ const AppContent = () => {
 
     return () => window.clearTimeout(id);
   }, [location.pathname, location.hash]);
+
+  // Captura parâmetros UTM da URL (especificamente para links da Brant Immigration)
+  useEffect(() => {
+    captureUtmFromUrl();
+  }, [location.pathname, location.search]);
 
   return (
     <Layout>

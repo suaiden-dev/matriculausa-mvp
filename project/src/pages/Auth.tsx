@@ -7,6 +7,7 @@ import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import PhoneInput from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
+import { getStoredUtmParams, clearUtmParams } from '../utils/utmTracker';
 
 interface AuthProps {
   mode: 'login' | 'register';
@@ -491,11 +492,25 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
         console.log('💾 [AUTH] Salvando telefone no localStorage:', formData.phone);
         localStorage.setItem('pending_phone', formData.phone || '');
         
-        await register(normalizedEmail, formData.password, userData);
+        // 📊 Ler parâmetros UTM do localStorage (se existirem)
+        const utmParams = getStoredUtmParams();
+        if (utmParams) {
+          console.log('📊 [AUTH] UTM parameters detectados:', utmParams);
+        }
+        
+        await register(normalizedEmail, formData.password, userData, {
+          utm: utmParams
+        });
 
         // Limpar códigos de referência do localStorage após registro bem-sucedido
         localStorage.removeItem('pending_affiliate_code');
         localStorage.removeItem('pending_seller_referral_code');
+        
+        // 📊 Limpar parâmetros UTM do localStorage após registro bem-sucedido
+        if (utmParams) {
+          clearUtmParams();
+          console.log('📊 [AUTH] UTM parameters limpos do localStorage');
+        }
 
         // Para estudantes, o email já é confirmado automaticamente e o login é feito automaticamente
         // O AuthRedirect vai redirecionar para o dashboard
