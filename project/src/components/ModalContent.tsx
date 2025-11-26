@@ -1,5 +1,5 @@
 import React from 'react';
-import { AlertCircle, CheckCircle, Lock } from 'lucide-react';
+import { AlertCircle, CheckCircle, Lock, Tag } from 'lucide-react';
 
 interface ModalContentProps {
   productName: string;
@@ -48,7 +48,14 @@ export const ModalContent: React.FC<ModalContentProps> = ({
   handleCheckboxChange,
   handleProceed,
   isLoading,
-  t
+  t,
+  promotionalCouponApplied
+}: ModalContentProps & {
+  promotionalCouponApplied?: {
+    discountAmount: number;
+    finalAmount: number;
+    code?: string;
+  } | null;
 }) => {
   
   return (
@@ -58,12 +65,34 @@ export const ModalContent: React.FC<ModalContentProps> = ({
       <div className="text-center">
         <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2 sm:mb-3">{productName}</h3>
         <div className="mb-3">
-          <div className="text-3xl font-bold text-blue-700">
-            ${computedBasePrice.toFixed(2)}
-          </div>
-          <p className="text-xs text-gray-600 mt-1">
-            {t('preCheckoutModal.totalAmount')}
-          </p>
+          {promotionalCouponApplied ? (
+            <>
+              <div className="text-3xl font-bold text-blue-700">
+                ${promotionalCouponApplied.finalAmount.toFixed(2)}
+              </div>
+              <p className="text-xs text-gray-600 mt-1">
+                Valor com desconto
+              </p>
+              <p className="text-xs text-gray-500 mt-1 line-through">
+                ${(promotionalCouponApplied.finalAmount + promotionalCouponApplied.discountAmount).toFixed(2)} Valor original
+              </p>
+              <div className="flex items-center justify-center mt-2">
+                <Tag className="h-3 w-3 text-green-600 mr-1" />
+                <span className="text-xs text-green-600 font-medium">
+                  Cupom {promotionalCouponApplied.code} aplicado! -${promotionalCouponApplied.discountAmount.toFixed(2)}
+                </span>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="text-3xl font-bold text-blue-700">
+                ${computedBasePrice.toFixed(2)}
+              </div>
+              <p className="text-xs text-gray-600 mt-1">
+                {t('preCheckoutModal.totalAmount')}
+              </p>
+            </>
+          )}
         </div>
         
         <div className="inline-flex items-center space-x-2 bg-blue-100 px-3 py-1 rounded-full mt-3">

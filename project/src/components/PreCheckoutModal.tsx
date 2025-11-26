@@ -177,6 +177,12 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
   const [codeApplied, setCodeApplied] = useState(false);
   const [hasReferralCode, setHasReferralCode] = useState(false);
   const [showCodeStep, setShowCodeStep] = useState(false);
+  // Estado para cupom promocional aplicado (apenas leitura/exibição)
+  const [promotionalCouponApplied, setPromotionalCouponApplied] = useState<{
+    discountAmount: number;
+    finalAmount: number;
+    code?: string;
+  } | null>(null);
   // Verificar se as taxas estão carregando (para uso futuro se necessário)
   // const isFeesLoading = (() => {
   //   if (userProfile?.system_type === 'simplified') {
@@ -225,6 +231,104 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
   // Verificar se o usuário já tem affiliate_code (friend code) do registro
   const hasAffiliateCode = userProfile?.affiliate_code && userProfile.affiliate_code.trim() !== '';
 
+  // Buscar cupom promocional do banco de dados
+  const checkPromotionalCouponFromDatabase = React.useCallback(async () => {
+    if (!isOpen || !feeType || !user?.id) return;
+    
+    try {
+      // Normalizar fee_type para corresponder ao banco
+      const normalizedFeeType = feeType === 'i20_control_fee' ? 'i20_control' : feeType;
+      
+      // Buscar registro mais recente de uso do cupom para este feeType
+      const { data: couponUsage, error } = await supabase
+        .from('promotional_coupon_usage')
+        .select('coupon_code, original_amount, discount_amount, final_amount, metadata, used_at')
+        .eq('user_id', user.id)
+        .eq('fee_type', normalizedFeeType)
+        .order('used_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      if (error) {
+        console.error('[PreCheckoutModal] Erro ao buscar cupom do banco:', error);
+        return;
+      }
+      
+      if (couponUsage && couponUsage.coupon_code) {
+        // Verificar se é uma validação recente (menos de 24 horas) ou se já foi usado em pagamento
+        const usedAt = new Date(couponUsage.used_at);
+        const now = new Date();
+        const hoursDiff = (now.getTime() - usedAt.getTime()) / (1000 * 60 * 60);
+        const isRecentValidation = hoursDiff < 24 || couponUsage.metadata?.is_validation === true;
+        
+        if (isRecentValidation) {
+          setPromotionalCouponApplied({
+            discountAmount: Number(couponUsage.discount_amount),
+            finalAmount: Number(couponUsage.final_amount),
+            code: couponUsage.coupon_code
+          });
+          console.log('[PreCheckoutModal] Cupom promocional carregado do banco:', couponUsage.coupon_code);
+        } else {
+          setPromotionalCouponApplied(null);
+        }
+      } else {
+        setPromotionalCouponApplied(null);
+      }
+    } catch (error) {
+      console.error('[PreCheckoutModal] Erro ao verificar cupom no banco:', error);
+      setPromotionalCouponApplied(null);
+    }
+  }, [isOpen, feeType, user?.id]);
+
+  // Verificar cupom no banco quando modal abre
+  useEffect(() => {
+    if (isOpen && feeType) {
+      checkPromotionalCouponFromDatabase();
+    }
+  }, [isOpen, feeType, checkPromotionalCouponFromDatabase]);
+
+  // Ouvir eventos de validação de cupom promocional
+  useEffect(() => {
+    // Verificar window ao montar
+    const windowCoupon = (window as any).__promotional_coupon_validation;
+    if (windowCoupon?.isValid && windowCoupon?.discountAmount) {
+      setPromotionalCouponApplied({
+        discountAmount: windowCoupon.discountAmount,
+        finalAmount: windowCoupon.finalAmount || Math.max(0, computedBasePrice - windowCoupon.discountAmount),
+        code: (window as any).__checkout_promotional_coupon
+      });
+    }
+    
+    // Ouvir eventos de validação de cupom
+    const handleCouponValidation = (event: CustomEvent) => {
+      if (event.detail?.isValid && event.detail?.discountAmount) {
+        // Verificar se é para o feeType atual
+        const eventFeeType = event.detail?.fee_type || feeType;
+        const normalizedEventFeeType = eventFeeType === 'i20_control_fee' ? 'i20_control' : eventFeeType;
+        const normalizedCurrentFeeType = feeType === 'i20_control_fee' ? 'i20_control' : feeType;
+        
+        if (normalizedEventFeeType === normalizedCurrentFeeType) {
+          setPromotionalCouponApplied({
+            discountAmount: event.detail.discountAmount,
+            finalAmount: event.detail.finalAmount || Math.max(0, computedBasePrice - event.detail.discountAmount),
+            code: (window as any).__checkout_promotional_coupon
+          });
+        }
+      } else {
+        // Se o cupom foi removido, verificar novamente no banco
+        checkPromotionalCouponFromDatabase();
+      }
+    };
+
+    window.addEventListener('promotionalCouponValidated', handleCouponValidation as EventListener);
+    window.addEventListener('promotionalCouponRemoved', checkPromotionalCouponFromDatabase);
+    
+    return () => {
+      window.removeEventListener('promotionalCouponValidated', handleCouponValidation as EventListener);
+      window.removeEventListener('promotionalCouponRemoved', checkPromotionalCouponFromDatabase);
+    };
+  }, [computedBasePrice, feeType, checkPromotionalCouponFromDatabase]);
+
 
   useEffect(() => {
     
@@ -241,6 +345,7 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
       setUserClickedCheckbox(false); // Reset user interaction flag
       setHasReferralCode(false); // Reset referral code checkbox
       setShowCodeStep(false); // Reset code step
+      setPromotionalCouponApplied(null); // Reset promotional coupon
       checkReferralCodeUsage();
       
       // iOS Safari zoom prevention
@@ -814,8 +919,22 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
     console.log('🔍 [PreCheckoutModal] userAffiliateCode:', userProfile?.affiliate_code);
     console.log('🔍 [PreCheckoutModal] hasSellerReferralCode:', hasSellerReferralCode);
     console.log('🔍 [PreCheckoutModal] activeDiscount:', activeDiscount);
+    console.log('🔍 [PreCheckoutModal] promotionalCouponApplied:', promotionalCouponApplied);
     
-    // ✅ CORREÇÃO: Para usuários com seller_referral_code, não precisa de código de desconto
+    // ✅ PRIORIDADE 1: Cupom promocional aplicado (BLACK, etc)
+    if (promotionalCouponApplied) {
+      console.log('🔍 [PreCheckoutModal] ✅ Cupom promocional aplicado - prosseguindo com desconto');
+      const finalAmount = promotionalCouponApplied.finalAmount;
+      const couponCode = promotionalCouponApplied.code || (window as any).__checkout_promotional_coupon;
+      // Salvar cupom promocional no window para uso no checkout
+      (window as any).__checkout_promotional_coupon = couponCode;
+      (window as any).__checkout_final_amount = finalAmount;
+      onProceedToCheckout(finalAmount, couponCode);
+      onClose();
+      return;
+    }
+    
+    // ✅ PRIORIDADE 2: Para usuários com seller_referral_code, não precisa de código de desconto
     if (hasSellerReferralCode) {
       console.log('🔍 [PreCheckoutModal] ✅ Usuário com seller_referral_code - prosseguindo sem validação de código');
       const finalAmount = computedBasePrice; // calculado localmente
@@ -824,7 +943,7 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
       return;
     }
     
-    // ✅ NOVO: Se usuário tem activeDiscount (código já aplicado no registro)
+    // ✅ PRIORIDADE 3: Se usuário tem activeDiscount (código já aplicado no registro)
     if (activeDiscount?.has_discount) {
       console.log('🔍 [PreCheckoutModal] ✅ Usuário com desconto ativo - prosseguindo (edge function aplicará desconto)');
       // ✅ SEGURANÇA: Não calcular desconto no frontend, deixar edge function controlar
@@ -894,7 +1013,7 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
               ) : (
                 <ModalContent
                   productName={productName}
-                  computedBasePrice={computedBasePrice}
+                  computedBasePrice={promotionalCouponApplied?.finalAmount || computedBasePrice}
                   hasUsedReferralCode={hasUsedReferralCode}
                   hasSellerReferralCode={Boolean(hasSellerReferralCode)}
                   activeDiscount={activeDiscount}
@@ -915,6 +1034,7 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
                   handleProceed={handleProceed}
                   isLoading={isLoading}
                   t={t}
+                  promotionalCouponApplied={promotionalCouponApplied}
                 />
               )}
             </div>
@@ -964,7 +1084,7 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
             <div className="flex-1 overflow-y-auto p-4 sm:p-6">
               <ModalContent
                 productName={productName}
-                computedBasePrice={computedBasePrice}
+                computedBasePrice={promotionalCouponApplied?.finalAmount || computedBasePrice}
                 hasUsedReferralCode={hasUsedReferralCode}
                 hasSellerReferralCode={!!hasSellerReferralCode}
                 activeDiscount={activeDiscount}
@@ -985,6 +1105,7 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
                 handleProceed={handleProceed}
                 isLoading={isLoading}
                 t={t}
+                promotionalCouponApplied={promotionalCouponApplied}
               />
             </div>
           </Dialog.Panel>
