@@ -31,7 +31,7 @@ export const PaymentMethodSelectorDrawer: React.FC<PaymentMethodSelectorDrawerPr
   amount
 }) => {
   const { t } = useTranslation();
-  const { user, userProfile } = useAuth();
+  const { user } = useAuth();
   const [isMobile, setIsMobile] = useState(false);
   const { openModal, closeModal } = useModal();
   
@@ -42,14 +42,10 @@ export const PaymentMethodSelectorDrawer: React.FC<PaymentMethodSelectorDrawerPr
     message: string;
     discountAmount?: number;
     finalAmount?: number;
+    originalAmount?: number;
   } | null>(null);
   const [isValidatingPromotionalCoupon, setIsValidatingPromotionalCoupon] = useState(false);
   const promotionalCouponInputRef = useRef<HTMLInputElement>(null);
-  
-  // Verificar se o usuário pode usar cupom promocional (seller_referral_code + legacy)
-  const hasSellerReferralCode = userProfile?.seller_referral_code && userProfile.seller_referral_code.trim() !== '';
-  const isLegacySystem = userProfile?.system_type === 'legacy';
-  const canUsePromotionalCoupon = hasSellerReferralCode && isLegacySystem;
   
   // ✅ SEMPRE mostrar campo de cupom promocional (campo sempre visível)
   const shouldShowPromotionalCoupon = true;
@@ -129,6 +125,7 @@ export const PaymentMethodSelectorDrawer: React.FC<PaymentMethodSelectorDrawerPr
         message: `Coupon ${normalizedCode} applied! You saved $${discountAmount.toFixed(2)}`,
         discountAmount: discountAmount,
         finalAmount: finalAmount,
+        originalAmount: amount, // ✅ Armazenar valor original
         couponId: result.id // Store coupon ID for later use
       };
       
@@ -284,11 +281,15 @@ export const PaymentMethodSelectorDrawer: React.FC<PaymentMethodSelectorDrawerPr
         if (isRecentValidation) {
           // Carregar cupom do banco
           setPromotionalCoupon(couponUsage.coupon_code);
+          const originalAmount = Number(couponUsage.original_amount);
+          const discountAmount = Number(couponUsage.discount_amount);
+          const finalAmount = Number(couponUsage.final_amount);
           const validationData = {
             isValid: true,
-            message: `Cupom ${couponUsage.coupon_code} aplicado! Desconto de $${Number(couponUsage.discount_amount).toFixed(2)} aplicado.`,
-            discountAmount: Number(couponUsage.discount_amount),
-            finalAmount: Number(couponUsage.final_amount)
+            message: `Cupom ${couponUsage.coupon_code} aplicado! Desconto de $${discountAmount.toFixed(2)} aplicado.`,
+            discountAmount: discountAmount,
+            finalAmount: finalAmount,
+            originalAmount: originalAmount // ✅ Usar valor original do banco
           };
           setPromotionalCouponValidation(validationData);
           
@@ -448,11 +449,22 @@ export const PaymentMethodSelectorDrawer: React.FC<PaymentMethodSelectorDrawerPr
                         </button>
                       </div>
                       <div className="text-sm text-green-700">
-                        <p className="line-through text-gray-500">${amount.toFixed(2)} (original)</p>
-                        <p className="font-bold text-lg">${promotionalCouponValidation.finalAmount?.toFixed(2)} (com desconto)</p>
-                        {promotionalCouponValidation.discountAmount && (
-                          <p className="text-xs mt-1">-${promotionalCouponValidation.discountAmount.toFixed(2)} de desconto</p>
-                        )}
+                        {(() => {
+                          // Calcular valor original: usar originalAmount se disponível, senão calcular como finalAmount + discountAmount
+                          const originalAmount = promotionalCouponValidation.originalAmount || 
+                            (promotionalCouponValidation.finalAmount && promotionalCouponValidation.discountAmount
+                              ? promotionalCouponValidation.finalAmount + promotionalCouponValidation.discountAmount
+                              : amount);
+                          return (
+                            <>
+                              <p className="line-through text-gray-500">${originalAmount.toFixed(2)} (original)</p>
+                              <p className="font-bold text-lg">${promotionalCouponValidation.finalAmount?.toFixed(2)} (com desconto)</p>
+                              {promotionalCouponValidation.discountAmount && (
+                                <p className="text-xs mt-1">-${promotionalCouponValidation.discountAmount.toFixed(2)} de desconto</p>
+                              )}
+                            </>
+                          );
+                        })()}
                       </div>
                     </div>
                   ) : promotionalCouponValidation && !promotionalCouponValidation.isValid ? (
@@ -606,11 +618,22 @@ export const PaymentMethodSelectorDrawer: React.FC<PaymentMethodSelectorDrawerPr
                         </button>
                       </div>
                       <div className="text-sm text-green-700">
-                        <p className="line-through text-gray-500">${amount.toFixed(2)} (original)</p>
-                        <p className="font-bold text-lg">${promotionalCouponValidation.finalAmount?.toFixed(2)} (com desconto)</p>
-                        {promotionalCouponValidation.discountAmount && (
-                          <p className="text-xs mt-1">-${promotionalCouponValidation.discountAmount.toFixed(2)} de desconto</p>
-                        )}
+                        {(() => {
+                          // Calcular valor original: usar originalAmount se disponível, senão calcular como finalAmount + discountAmount
+                          const originalAmount = promotionalCouponValidation.originalAmount || 
+                            (promotionalCouponValidation.finalAmount && promotionalCouponValidation.discountAmount
+                              ? promotionalCouponValidation.finalAmount + promotionalCouponValidation.discountAmount
+                              : amount);
+                          return (
+                            <>
+                              <p className="line-through text-gray-500">${originalAmount.toFixed(2)} (original)</p>
+                              <p className="font-bold text-lg">${promotionalCouponValidation.finalAmount?.toFixed(2)} (com desconto)</p>
+                              {promotionalCouponValidation.discountAmount && (
+                                <p className="text-xs mt-1">-${promotionalCouponValidation.discountAmount.toFixed(2)} de desconto</p>
+                              )}
+                            </>
+                          );
+                        })()}
                       </div>
                     </div>
                   ) : promotionalCouponValidation && !promotionalCouponValidation.isValid ? (
