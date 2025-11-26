@@ -87,7 +87,7 @@ export interface LoadedFinancialData {
   overridesMap: { [key: string]: any };
   userSystemTypesMap: Map<string, string>;
   realPaymentAmounts: Map<string, number>;
-  stripePayments: any[];
+  individualFeePayments: any[];
 }
 
 export type TimeFilter = '7d' | '30d' | '90d' | '1y' | 'all';

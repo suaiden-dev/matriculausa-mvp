@@ -171,7 +171,7 @@ async function loadZellePaymentsPrev(prevRange: DateRange): Promise<any[]> {
 async function loadAllStudents(): Promise<any[]> {
   const { data, error } = await supabase
     .from('user_profiles')
-    .select('id, email')
+    .select('id, user_id, email, full_name, dependents, system_type')
     .eq('role', 'student');
   
   if (error) throw error;
@@ -395,22 +395,100 @@ async function loadAffiliateRequests(currentRange: DateRange): Promise<any[]> {
 }
 
 /**
- * Busca pagamentos Stripe da tabela individual_fee_payments
+ * Busca pagamentos da tabela individual_fee_payments (Stripe e outros)
  */
-async function loadStripePayments(currentRange: DateRange): Promise<any[]> {
-  const { data, error } = await supabase
+async function loadIndividualFeePayments(currentRange: DateRange): Promise<any[]> {
+  // First, get the payments
+  const { data: payments, error: paymentsError } = await supabase
     .from('individual_fee_payments')
-    .select('amount, gross_amount_usd, payment_date, payment_method')
-    .eq('payment_method', 'stripe')
+    .select('id, user_id, fee_type, amount, gross_amount_usd, fee_amount_usd, payment_date, payment_method, payment_intent_id')
     .gte('payment_date', currentRange.start.toISOString())
     .lte('payment_date', currentRange.end.toISOString());
 
-  if (error) {
-    console.error('❌ [FinancialAnalytics] Erro ao carregar pagamentos Stripe:', error);
+  if (paymentsError) {
+    console.error('❌ [FinancialAnalytics] Erro ao carregar pagamentos individuais:', paymentsError);
     return [];
   }
 
-  return data || [];
+  if (!payments || payments.length === 0) {
+    return [];
+  }
+
+  // Get unique user IDs from payments
+  const userIds = [...new Set(payments.map(p => p.user_id))];
+
+  // Fetch overrides for these users
+  const { data: overrides } = await supabase
+    .from('user_fee_overrides')
+    .select('user_id, selection_process_fee, application_fee, scholarship_fee, i20_control_fee')
+    .in('user_id', userIds);
+
+  // Fetch coupon usage for these users and date range
+  const { data: couponUsages } = await supabase
+    .from('promotional_coupon_usage')
+    .select(`
+      user_id,
+      fee_type,
+      coupon_code,
+      discount_amount,
+      original_amount,
+      coupon_id,
+      applied_at
+    `)
+    .in('user_id', userIds)
+    .eq('status', 'applied');
+
+  // Fetch coupon details if we have any coupon usages
+  let coupons: any[] = [];
+  if (couponUsages && couponUsages.length > 0) {
+    const couponIds = [...new Set(couponUsages.map(cu => cu.coupon_id).filter(Boolean))];
+    if (couponIds.length > 0) {
+      const { data: couponsData } = await supabase
+        .from('promotional_coupons')
+        .select('id, code, name, discount_type, discount_value')
+        .in('id', couponIds);
+      coupons = couponsData || [];
+    }
+  }
+
+  // Create lookup maps
+  const overridesMap = new Map(
+    (overrides || []).map(o => [o.user_id, o])
+  );
+
+  const couponsMap = new Map(
+    coupons.map(c => [c.id, c])
+  );
+
+  // Transform and merge data
+  const transformedData = payments.map(payment => {
+    const override = overridesMap.get(payment.user_id);
+    
+    // Find matching coupon usage for this payment
+    const couponUsage = (couponUsages || []).find(cu => 
+      cu.user_id === payment.user_id && 
+      cu.fee_type === payment.fee_type &&
+      new Date(cu.applied_at).getTime() <= new Date(payment.payment_date).getTime()
+    );
+    
+    const coupon = couponUsage?.coupon_id ? couponsMap.get(couponUsage.coupon_id) : null;
+    
+    return {
+      ...payment,
+      override_selection_process: override?.selection_process_fee || null,
+      override_application: override?.application_fee || null,
+      override_scholarship: override?.scholarship_fee || null,
+      override_i20: override?.i20_control_fee || null,
+      coupon_code: couponUsage?.coupon_code || null,
+      coupon_name: coupon?.name || null,
+      discount_amount: couponUsage?.discount_amount || null,
+      original_amount: couponUsage?.original_amount || null,
+      discount_type: coupon?.discount_type || null,
+      discount_value: coupon?.discount_value || null
+    };
+  });
+
+  return transformedData;
 }
 
 /**
@@ -425,11 +503,11 @@ export async function loadFinancialData(
   const prevRange = getPreviousPeriodRange(currentRange);
 
   // Carregar dados em paralelo quando possível
-  const [applicationsRaw, zellePaymentsRaw, allStudentsRaw, stripePayments] = await Promise.all([
+  const [applicationsRaw, zellePaymentsRaw, allStudentsRaw, individualFeePayments] = await Promise.all([
     loadApplications(),
     loadZellePayments(currentRange),
     loadAllStudents(),
-    loadStripePayments(currentRange)
+    loadIndividualFeePayments(currentRange)
   ]);
 
   // Filtrar dados em produção/staging: excluir usuários com email @uorak.com
@@ -482,9 +560,9 @@ export async function loadFinancialData(
 
   // Coletar todos os user_ids únicos
   const allUserIds = [
-    ...(applications?.map(app => app.user_profiles?.user_id).filter(Boolean) || []),
-    ...(zellePayments?.map(payment => payment.user_id).filter(Boolean) || []),
-    ...(stripeUsers?.map(user => user.user_id).filter(Boolean) || [])
+    ...(applications?.map((app: any) => app.user_profiles?.user_id).filter(Boolean) || []),
+    ...(zellePayments?.map((payment: any) => payment.user_id).filter(Boolean) || []),
+    ...(stripeUsers?.map((user: any) => user.user_id).filter(Boolean) || [])
   ];
   const uniqueUserIds = [...new Set(allUserIds)];
 
@@ -513,7 +591,7 @@ export async function loadFinancialData(
     overridesMap,
     userSystemTypesMap,
     realPaymentAmounts,
-    stripePayments
+    individualFeePayments
   };
 }
 

@@ -63,6 +63,7 @@ export function useFinancialAnalytics() {
   const [revenueData, setRevenueData] = useState<RevenueData[]>([]);
   const [paymentMethodData, setPaymentMethodData] = useState<PaymentMethodData[]>([]);
   const [feeTypeData, setFeeTypeData] = useState<FeeTypeData[]>([]);
+  const [transactions, setTransactions] = useState<any[]>([]);
 
   // Filtros de período
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('30d');
@@ -109,9 +110,83 @@ export function useFinancialAnalytics() {
         loadedData.allStudents
       );
 
-      // Calcular métricas do Stripe
-      const stripePayments = loadedData.stripePayments || [];
-      const stripeMetricsCalculated = stripePayments.reduce((acc, payment) => {
+      // Processar pagamentos individuais e adicionar nomes e valores padrão
+      const individualFeePayments = loadedData.individualFeePayments || [];
+      const transactionsWithNames = individualFeePayments.map((payment: any) => {
+        const student = loadedData.allStudents.find((s: any) => s.id === payment.user_id || s.user_id === payment.user_id);
+        
+        // Calcular valor padrão da taxa (Standard Fee Value)
+        let standardAmount = 0;
+        const feeType = payment.fee_type;
+        const systemType = student?.system_type || 'legacy';
+        const dependents = Number(student?.dependents) || 0;
+
+        // Normalizar feeType para comparação (substituir espaços por underscores)
+        const normalizedFeeType = feeType?.toLowerCase().trim().replace(/ /g, '_');
+
+        if (normalizedFeeType === 'selection_process' || normalizedFeeType === 'selection_process_fee') {
+          if (systemType === 'simplified') {
+            standardAmount = 350;
+          } else {
+            // Legacy: 400 + (150 * dependents)
+            standardAmount = 400 + (dependents * 150);
+          }
+        } else if (normalizedFeeType === 'scholarship' || normalizedFeeType === 'scholarship_fee') {
+          if (systemType === 'simplified') {
+            standardAmount = 550;
+          } else {
+            standardAmount = 900;
+          }
+        } else if (normalizedFeeType === 'i20_control' || normalizedFeeType === 'i20_control_fee' || normalizedFeeType === 'i-20_control_fee') {
+          standardAmount = 900;
+        } else if (normalizedFeeType === 'application' || normalizedFeeType === 'application_fee') {
+          // Base 350 + (100 * dependents)
+          standardAmount = 350 + (dependents * 100);
+        }
+
+        // Fallback: Se não encontrou valor padrão, usar o valor pago (amount)
+        // Isso garante que nunca fique zerado
+        if (standardAmount === 0) {
+           standardAmount = Number(payment.amount) || 0;
+           
+           // Debug apenas se realmente falhar tudo
+           if (standardAmount === 0) {
+             console.log('⚠️ [FinancialAnalytics] Standard Amount AND Amount are 0 for:', {
+               id: payment.id,
+               feeType,
+               normalizedFeeType
+             });
+           }
+        }
+
+        return {
+          ...payment,
+          student_name: student?.full_name || 'Unknown Student',
+          standard_amount: standardAmount,
+          // Include override and coupon information
+          override_selection_process: payment.override_selection_process,
+          override_application: payment.override_application,
+          override_scholarship: payment.override_scholarship,
+          override_i20: payment.override_i20,
+          coupon_code: payment.coupon_code,
+          coupon_name: payment.coupon_name,
+          discount_amount: payment.discount_amount,
+          original_amount: payment.original_amount,
+          discount_type: payment.discount_type,
+          discount_value: payment.discount_value
+        };
+      });
+
+      // Debug dos primeiros itens
+      console.log('🔍 [FinancialAnalytics] Transactions processed:', transactionsWithNames.slice(0, 3).map((t: any) => ({
+        id: t.id,
+        fee_type: t.fee_type,
+        standard_amount: t.standard_amount
+      })));
+
+      // Calcular métricas do Stripe (apenas Stripe)
+      const stripePayments = individualFeePayments.filter((p: any) => p.payment_method === 'stripe');
+      const stripeMetricsCalculated = stripePayments.reduce((acc: any, payment: any) => {
         // FILTRO RÍGIDO: Apenas transações DEPOIS de 20/11/2025
         // O usuário pediu especificamente para ver apenas dados recentes nesta seção
         if (new Date(payment.payment_date) <= new Date('2025-11-20')) {
@@ -141,6 +216,7 @@ export function useFinancialAnalytics() {
       setRevenueData(calculatedRevenueData);
       setPaymentMethodData(processedData.paymentMethodData);
       setFeeTypeData(processedData.feeTypeData);
+      setTransactions(transactionsWithNames);
 
       console.log('✅ Financial data processed successfully');
     } catch (error) {
@@ -221,6 +297,7 @@ export function useFinancialAnalytics() {
     revenueData,
     paymentMethodData,
     feeTypeData,
+    transactions,
     timeFilter,
     showCustomDate,
     customDateFrom,
