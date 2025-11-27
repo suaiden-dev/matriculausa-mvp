@@ -1086,6 +1086,107 @@ const AdminStudentDetails: React.FC = () => {
           // Invalidar queries relacionadas
           queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
         }
+
+        // Log da ação
+        try {
+          await logAction(
+            'document_rejection',
+            `Document ${rejectDocData.docType} rejected by platform admin: ${reason}`,
+            user?.id || '',
+            'admin',
+            {
+              document_type: rejectDocData.docType,
+              application_id: rejectDocData.applicationId,
+              rejection_reason: reason,
+              rejected_by: user?.email || 'Platform Admin'
+            }
+          );
+        } catch (logError) {
+          console.error('Failed to log document rejection:', logError);
+        }
+
+        // ENVIAR NOTIFICAÇÕES PARA O ALUNO
+        console.log('📤 [handleConfirmReject] Enviando notificações de rejeição para o aluno...');
+        
+        try {
+          // 1. ENVIAR EMAIL VIA WEBHOOK (payload idêntico ao da universidade)
+          const rejectionPayload = {
+            tipo_notf: "Changes Requested",
+            email_aluno: student.student_email,
+            nome_aluno: student.student_name,
+            email_universidade: user?.email,
+            o_que_enviar: `Your document <strong>${rejectDocData.docType}</strong> for the request <strong>${rejectDocData.docType}</strong> has been rejected. Reason: <strong>${reason}</strong>. Please review and upload a corrected version.`
+          };
+
+          console.log('📤 [handleConfirmReject] Payload de rejeição:', rejectionPayload);
+
+          const webhookResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(rejectionPayload),
+          });
+
+          if (webhookResponse.ok) {
+            console.log('✅ [handleConfirmReject] Email de rejeição enviado com sucesso!');
+          } else {
+            console.warn('⚠️ [handleConfirmReject] Erro ao enviar email de rejeição:', webhookResponse.status);
+          }
+        } catch (webhookError) {
+          console.error('❌ [handleConfirmReject] Erro ao enviar webhook de rejeição:', webhookError);
+          // Não falhar o processo se o webhook falhar
+        }
+
+        // 2. ENVIAR NOTIFICAÇÃO IN-APP PARA O ALUNO (SINO)
+        console.log('📤 [handleConfirmReject] Enviando notificação in-app para o aluno...');
+        
+        try {
+          // Obter labels amigáveis para os documentos
+          const docLabels: Record<string, string> = {
+            passport: 'Passport',
+            diploma: 'High School Diploma',
+            funds_proof: 'Proof of Funds',
+          };
+          const docLabel = docLabels[rejectDocData.docType] || rejectDocData.docType;
+          
+          // Usar Edge Function que tem service role para criar notificação
+          const { data: { session } } = await supabase.auth.getSession();
+          const accessToken = session?.access_token;
+          
+          if (!accessToken) {
+            console.error('❌ [handleConfirmReject] Access token não encontrado');
+          } else {
+            // Preparar payload - usar user_id (UUID) que a Edge Function vai converter para student_id
+            // A Edge Function busca o student_id (user_profiles.id) a partir do user_id
+            const notificationPayload = {
+              user_id: student.user_id, // UUID que referencia auth.users.id
+              title: 'Document Rejected',
+              message: `Your ${docLabel} document has been rejected. Reason: ${reason}. Please review and upload a corrected version.`,
+              link: '/student/dashboard/applications',
+            };
+            
+            const response = await fetch(`${import.meta.env.VITE_SUPABASE_FUNCTIONS_URL}/create-student-notification`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${accessToken}`,
+              },
+              body: JSON.stringify(notificationPayload),
+            });
+            
+            if (!response.ok) {
+              const errorText = await response.text();
+              console.error('❌ [handleConfirmReject] Erro ao criar notificação:', response.status, errorText);
+            } else {
+              await response.json(); // Result não usado, apenas para consumir a resposta
+              console.log('✅ [handleConfirmReject] Notificação in-app enviada com sucesso!');
+            }
+          }
+        } catch (notificationError) {
+          console.error('❌ [handleConfirmReject] Erro ao enviar notificação in-app:', notificationError);
+          // Não falhar o processo se a notificação in-app falhar
+        }
         
         // Fechar o modal de rejeição
         setShowRejectDocModal(false);
@@ -1096,7 +1197,7 @@ const AdminStudentDetails: React.FC = () => {
     } catch (error) {
       console.error('Error rejecting document:', error);
     }
-  }, [rejectDocData, rejectDocument, student, setStudent]);
+  }, [rejectDocData, rejectDocument, student, setStudent, user, logAction, profileId, queryClient]);
 
   const handleViewDocument = useCallback((doc: { file_url: string; filename: string }) => {
     // ✅ Aceitar tanto file_url quanto url (fallback)
