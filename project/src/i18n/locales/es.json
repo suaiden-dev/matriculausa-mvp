@@ -1724,6 +1724,25 @@
             "Comienza tu programa académico"
           ]
         },
+        "scholarshipFeePaidI20Required": {
+          "title": "Tarifa de Beca Pagada - Documentos Pendientes",
+          "description": "¡Excelente! Tu tarifa de beca ha sido confirmada. Ahora necesitas enviar las solicitudes de documentos pendientes solicitadas por la universidad.",
+          "nextSteps": [
+            "Envía las solicitudes de documentos pendientes",
+            "Espera la aprobación de los documentos por la universidad",
+            "Paga la I-20 Control Fee para poder recibir la carta de aceptación",
+            "Recibe la carta de aceptación de la universidad"
+          ]
+        },
+        "allFeesPaidWaitingAcceptanceLetter": {
+          "title": "Todas las Tarifas Pagadas - Esperando Carta de Aceptación",
+          "description": "¡Excelente! Todas las tarifas han sido pagadas exitosamente. Ahora estás esperando que la universidad envíe tu carta de aceptación oficial.",
+          "nextSteps": [
+            "Espera que la universidad envíe tu carta de aceptación",
+            "Revisa regularmente la sección de documentos",
+            "Completa tu inscripción después de recibir la carta"
+          ]
+        },
         "fullyEnrolled": {
           "title": "¡Totalmente Inscrito!",
           "description": "¡Perfecto! Has completado exitosamente todos los requisitos y estás oficialmente inscrito.",
