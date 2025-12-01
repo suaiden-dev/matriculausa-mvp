@@ -267,6 +267,12 @@ function EnhancedStudentTracking(props) {
     loadBlackCouponUsers();
   }, [students]);
 
+  // Criar lista de estudantes que pagaram Selection Process Fee para os stats cards
+  // Independente do filtro showUnpaidSelectionProcess, os stats cards sempre consideram apenas quem pagou
+  const paidStudentsForStats = useMemo(() => {
+    return (students || []).filter(s => s.has_paid_selection_process_fee);
+  }, [students]);
+
   // Calcular receita ajustada por estudante usando valores reais pagos quando disponíveis
   // Usa valores reais pagos quando disponíveis, com fallback para cálculo fixo se não houver registro
   const adjustedStudents = useMemo(() => {
@@ -337,6 +343,63 @@ function EnhancedStudentTracking(props) {
     
     return result;
   }, [filteredStudents, overridesMap, feeConfig, dependentsMap, realPaidAmountsMap]);
+
+  // Calcular receita ajustada APENAS dos estudantes que pagaram Selection Process Fee
+  // Para usar nos stats cards (independente do filtro showUnpaidSelectionProcess)
+  const adjustedPaidStudentsForStats = useMemo(() => {
+    const result = (paidStudentsForStats || []).map((s) => {
+      
+      const o = overridesMap[s.user_id] || {};
+      const dependents = Number(dependentsMap[s.profile_id]) || 0;
+      const realPaid = realPaidAmountsMap[s.user_id] || {};
+
+      let total = 0;
+      
+      // Selection Process Fee - usar valor real pago se disponível, senão calcular
+      if (s.has_paid_selection_process_fee) {
+        if (realPaid.selection_process !== undefined && realPaid.selection_process > 0) {
+          total += realPaid.selection_process;
+        } else {
+          const systemType = s.system_type || 'legacy';
+          const baseSelectionFee = systemType === 'simplified' ? 350 : 400;
+          total += systemType === 'simplified' ? baseSelectionFee : baseSelectionFee + (dependents * 150);
+        }
+      }
+      
+      // Scholarship Fee - usar valor real pago se disponível, senão calcular
+      const hasAnyScholarshipPaid = s.is_scholarship_fee_paid || false;
+      if (hasAnyScholarshipPaid) {
+        if (realPaid.scholarship !== undefined && realPaid.scholarship > 0) {
+          total += realPaid.scholarship;
+        } else {
+          const systemType = s.system_type || 'legacy';
+          const scholarshipFee = systemType === 'simplified' ? 550 : 900;
+          total += scholarshipFee;
+        }
+      }
+      
+      // I-20 Control Fee - usar valor real pago se disponível, senão calcular
+      if (hasAnyScholarshipPaid && s.has_paid_i20_control_fee) {
+        if (realPaid.i20_control !== undefined && realPaid.i20_control > 0) {
+          total += realPaid.i20_control;
+        } else {
+          total += 900;
+        }
+      }
+
+      const adjusted = { 
+        ...s, 
+        total_paid_adjusted: total,
+        hasMultipleApplications: s.hasMultipleApplications,
+        applicationCount: s.applicationCount,
+        allApplications: s.allApplications
+      };
+      
+      return adjusted;
+    });
+    
+    return result;
+  }, [paidStudentsForStats, overridesMap, feeConfig, dependentsMap, realPaidAmountsMap]);
 
   // Toggle expandir vendedor
   const toggleSellerExpansion = (sellerId) => {
@@ -882,8 +945,8 @@ function EnhancedStudentTracking(props) {
       {/* Main Content */}
       <div className="px-4 sm:px-6 lg:px-8">
         <div className="space-y-6">
-          {/* Stats Cards */}
-          <StatsCards filteredStudents={adjustedStudents} />
+          {/* Stats Cards - usa estudantes filtrados normalmente, mas se o filtro showUnpaidSelectionProcess estiver desativado, usa apenas quem pagou */}
+          <StatsCards filteredStudents={filters.showUnpaidSelectionProcess ? adjustedStudents : adjustedPaidStudentsForStats} />
 
           {/* Filtros Avançados */}
           <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-6">

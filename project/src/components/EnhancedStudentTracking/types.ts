@@ -183,6 +183,7 @@ export interface FilterState {
   };
   statusFilter: string;
   paymentStatusFilter: string;
+  showUnpaidSelectionProcess: boolean; // Novo filtro para mostrar alunos sem pagamento
   sortBy: string;
   sortOrder: 'asc' | 'desc';
 }
