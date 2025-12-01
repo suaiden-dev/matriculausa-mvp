@@ -777,6 +777,7 @@ const PaymentManagement = (): React.JSX.Element => {
       {activeTab === 'payments' && (
         <PaymentsTab
           stats={stats}
+          isLoading={isFetchingPayments} // ✅ NOVO: Passar estado de loading para mostrar skeletons
           payments={payments}
           sortedPayments={sortedPayments}
           currentPayments={currentPayments}
