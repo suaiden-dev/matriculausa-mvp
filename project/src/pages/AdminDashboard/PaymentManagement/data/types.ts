@@ -44,6 +44,7 @@ export interface AdminPaymentsFilters {
   dateFrom?: string;
   dateTo?: string;
   affiliate?: string;
+  paymentMethod?: string;
 }
 
 export interface UniversityPaymentRequest {

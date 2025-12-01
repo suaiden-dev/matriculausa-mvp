@@ -110,7 +110,7 @@ export function PaymentsTab(props: PaymentsTabProps) {
         affiliates={affiliates}
         FEE_TYPES={FEE_TYPES}
         STATUS_OPTIONS={STATUS_OPTIONS}
-        resetFilters={() => setFilters({ search: '', university: 'all', feeType: 'all', status: 'all', dateFrom: '', dateTo: '', affiliate: 'all' })}
+        resetFilters={() => setFilters({ search: '', university: 'all', feeType: 'all', status: 'all', dateFrom: '', dateTo: '', affiliate: 'all', paymentMethod: 'all' })}
         sortedPayments={sortedPayments}
         payments={payments}
         currentPage={currentPage}

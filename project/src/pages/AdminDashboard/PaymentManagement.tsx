@@ -642,21 +642,30 @@ const PaymentManagement = (): React.JSX.Element => {
   // Resetar para primeira página quando filtros mudarem
   useEffect(() => {
     setCurrentPage(1);
-  }, [filters.search, filters.university, filters.feeType, filters.status, filters.dateFrom, filters.dateTo, filters.affiliate]);
+  }, [filters.search, filters.university, filters.feeType, filters.status, filters.dateFrom, filters.dateTo, filters.affiliate, filters.paymentMethod]);
 
   // Calcular paginação (usar utils de filtro/ordenação)
   const filteredPayments = filterPaymentsUtil(payments, filters as any, affiliates);
   const sortedPayments = sortPaymentsUtil(filteredPayments, sortBy, sortOrder);
   
+  // ✅ CORREÇÃO: Aplicar filtro client-side mesmo quando usa backend pagination
+  // (para filtros que não são suportados no backend, como paymentMethod)
+  const paymentsToDisplay = backendTotalCount !== null
+    ? filterPaymentsUtil(payments, filters as any, affiliates) // aplicar filtro client-side nos dados do backend
+    : sortedPayments;
+  
   let totalPages = Math.ceil(sortedPayments.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   const currentPayments = backendTotalCount !== null
-    ? payments // já paginado do backend
+    ? paymentsToDisplay.slice(startIndex, endIndex) // paginar após filtrar
     : sortedPayments.slice(startIndex, endIndex);
   if (backendTotalCount !== null) {
-    const total = backendTotalCount ?? payments.length;
-    totalPages = Math.max(1, Math.ceil(total / itemsPerPage));
+    // ✅ CORREÇÃO: Usar count dos dados filtrados quando há filtro de paymentMethod
+    const filteredCount = filters.paymentMethod && filters.paymentMethod !== 'all' 
+      ? paymentsToDisplay.length 
+      : backendTotalCount ?? payments.length;
+    totalPages = Math.max(1, Math.ceil(filteredCount / itemsPerPage));
   }
 
   // Funções de navegação
