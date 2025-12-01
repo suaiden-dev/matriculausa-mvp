@@ -132,6 +132,7 @@ const AffiliateManagement: React.FC = () => {
   const [overridesMap, setOverridesMap] = useState<Record<string, any>>({}); // por user_id
   const [dependentsMap, setDependentsMap] = useState<Record<string, number>>({}); // por profile_id
   const [realPaidAmountsMap, setRealPaidAmountsMap] = useState<Record<string, { selection_process?: number; scholarship?: number; i20_control?: number }>>({});
+  const [isLoadingRealPaidAmounts, setIsLoadingRealPaidAmounts] = useState(true); // ✅ NOVO: Estado para rastrear carregamento de valores
 
   // ===== Estados para informações de pagamento =====
   const [affiliatePaymentRequests, setAffiliatePaymentRequests] = useState<any[]>([]);
@@ -410,9 +411,15 @@ const AffiliateManagement: React.FC = () => {
     let mounted = true;
     const loadRealPaidAmounts = async () => {
       try {
+        // ✅ NOVO: Iniciar loading
+        if (mounted) setIsLoadingRealPaidAmounts(true);
+        
         const uniqueUserIds = Array.from(new Set((filteredStudents || []).map((s: any) => s.user_id).filter(Boolean)));
         if (uniqueUserIds.length === 0) {
-          if (mounted) setRealPaidAmountsMap({});
+          if (mounted) {
+            setRealPaidAmountsMap({});
+            setIsLoadingRealPaidAmounts(false);
+          }
           return;
         }
 
@@ -447,10 +454,14 @@ const AffiliateManagement: React.FC = () => {
         // Atualização final com todos os valores
         if (mounted) {
           setRealPaidAmountsMap(realPaidMap);
+          setIsLoadingRealPaidAmounts(false); // ✅ NOVO: Finalizar loading
         }
       } catch (error) {
         console.error('[AffiliateManagement] Erro ao carregar valores reais pagos:', error);
-        if (mounted) setRealPaidAmountsMap({});
+        if (mounted) {
+          setRealPaidAmountsMap({});
+          setIsLoadingRealPaidAmounts(false); // ✅ NOVO: Finalizar loading mesmo em caso de erro
+        }
       }
     };
     
@@ -566,16 +577,16 @@ const AffiliateManagement: React.FC = () => {
             const isInPeriod = (!dateFrom || paymentDateObj >= dateFrom) && (!dateTo || paymentDateObj <= dateTo);
             
             if (isInPeriod) {
-              let sel = 0;
-              if (realPaid.selection_process !== undefined && realPaid.selection_process > 0) {
-                sel = realPaid.selection_process;
-              } else if (o.selection_process_fee != null) {
-                sel = Number(o.selection_process_fee);
-              } else {
-                sel = systemType === 'simplified' ? baseSelectionFee : baseSelectionFee + (dependents * 150);
-              }
-              total += sel || 0;
-            }
+        let sel = 0;
+        if (realPaid.selection_process !== undefined && realPaid.selection_process > 0) {
+          sel = realPaid.selection_process;
+        } else if (o.selection_process_fee != null) {
+          sel = Number(o.selection_process_fee);
+        } else {
+          sel = systemType === 'simplified' ? baseSelectionFee : baseSelectionFee + (dependents * 150);
+        }
+        total += sel || 0;
+      }
           }
         } else {
           // Sem filtro de data, incluir normalmente
@@ -603,16 +614,16 @@ const AffiliateManagement: React.FC = () => {
             const isInPeriod = (!dateFrom || paymentDateObj >= dateFrom) && (!dateTo || paymentDateObj <= dateTo);
             
             if (isInPeriod) {
-              let schol = 0;
-              if (realPaid.scholarship !== undefined && realPaid.scholarship > 0) {
-                schol = realPaid.scholarship;
-              } else if (o.scholarship_fee != null) {
-                schol = Number(o.scholarship_fee);
-              } else {
-                schol = baseScholarshipFee;
-              }
-              total += schol || 0;
-            }
+        let schol = 0;
+        if (realPaid.scholarship !== undefined && realPaid.scholarship > 0) {
+          schol = realPaid.scholarship;
+        } else if (o.scholarship_fee != null) {
+          schol = Number(o.scholarship_fee);
+        } else {
+          schol = baseScholarshipFee;
+        }
+        total += schol || 0;
+      }
           }
         } else {
           // Sem filtro de data, incluir normalmente
@@ -641,15 +652,15 @@ const AffiliateManagement: React.FC = () => {
             const isInPeriod = (!dateFrom || paymentDateObj >= dateFrom) && (!dateTo || paymentDateObj <= dateTo);
             
             if (isInPeriod) {
-              let i20 = 0;
-              if (realPaid.i20_control !== undefined && realPaid.i20_control > 0) {
-                i20 = realPaid.i20_control;
-              } else if (o.i20_control_fee != null) {
-                i20 = Number(o.i20_control_fee);
-              } else {
-                i20 = baseI20Fee;
-              }
-              total += i20 || 0;
+        let i20 = 0;
+        if (realPaid.i20_control !== undefined && realPaid.i20_control > 0) {
+          i20 = realPaid.i20_control;
+        } else if (o.i20_control_fee != null) {
+          i20 = Number(o.i20_control_fee);
+        } else {
+          i20 = baseI20Fee;
+        }
+        total += i20 || 0;
             }
           }
         } else {
@@ -1089,7 +1100,11 @@ const AffiliateManagement: React.FC = () => {
             <div>
               <p className="text-sm font-medium text-slate-600">Total Revenue</p>
               <p className="text-2xl font-bold text-green-600">
-                ${totalStats.totalRevenue.toLocaleString()}
+                {isLoadingRealPaidAmounts ? (
+                  <div className="animate-pulse bg-slate-200 h-8 w-32 rounded"></div>
+                ) : (
+                  `$${totalStats.totalRevenue.toLocaleString()}`
+                )}
               </p>
             </div>
             <div className="p-3 bg-green-100 rounded-lg">
@@ -1289,7 +1304,11 @@ const AffiliateManagement: React.FC = () => {
                         </div>
                         <div>
                           <p className="text-lg font-bold text-green-600">
-                            ${affiliate.total_revenue.toLocaleString()}
+                            {isLoadingRealPaidAmounts ? (
+                              <div className="animate-pulse bg-slate-200 h-6 w-20 rounded"></div>
+                            ) : (
+                              `$${affiliate.total_revenue.toLocaleString()}`
+                            )}
                           </p>
                           <p className="text-xs text-slate-600">Total Revenue</p>
                         </div>
@@ -1366,7 +1385,11 @@ const AffiliateManagement: React.FC = () => {
                                   <div>
                                     <p className="text-sm font-medium text-slate-600">Total Revenue</p>
                                     <p className="text-2xl font-bold text-green-600">
-                                      ${affiliate.total_revenue.toLocaleString()}
+                                      {isLoadingRealPaidAmounts ? (
+                                        <div className="animate-pulse bg-slate-200 h-8 w-32 rounded"></div>
+                                      ) : (
+                                        `$${affiliate.total_revenue.toLocaleString()}`
+                                      )}
                                     </p>
                                   </div>
                                   <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
@@ -1494,7 +1517,11 @@ const AffiliateManagement: React.FC = () => {
                                                 {seller.students_count} students
                                               </p>
                                               <p className="text-sm text-green-600 font-medium">
-                                                {formatCurrency(seller.total_revenue)}
+                                                {isLoadingRealPaidAmounts ? (
+                                                  <div className="animate-pulse bg-slate-200 h-4 w-16 rounded"></div>
+                                                ) : (
+                                                  formatCurrency(seller.total_revenue)
+                                                )}
                                               </p>
                                             </div>
                                             
@@ -1602,8 +1629,8 @@ const AffiliateManagement: React.FC = () => {
                                             }
                                             
                                             return (
-                                              <div 
-                                                key={student.id}
+                                            <div 
+                                              key={student.id}
                                                 className="bg-slate-50 rounded-lg border border-slate-200 hover:border-slate-300 hover:shadow-sm transition-all duration-200"
                                               >
                                                 <div className="flex items-center justify-between p-3">
@@ -1620,69 +1647,73 @@ const AffiliateManagement: React.FC = () => {
                                                       }`} />
                                                     </button>
                                                     
-                                                    <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                                                      <span className="text-sm font-medium text-blue-600">
-                                                        {student.full_name?.charAt(0)?.toUpperCase() || 'S'}
+                                                <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                                                  <span className="text-sm font-medium text-blue-600">
+                                                    {student.full_name?.charAt(0)?.toUpperCase() || 'S'}
+                                                  </span>
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                  <p className="text-sm font-medium text-slate-900">
+                                                    {student.full_name || 'Name not provided'}
+                                                  </p>
+                                                  <div className="flex items-center space-x-4 text-xs text-slate-500">
+                                                    <span className="flex items-center">
+                                                      <Mail className="h-3 w-3 mr-1" />
+                                                      {student.email}
+                                                    </span>
+                                                    {student.country && (
+                                                      <span className="flex items-center">
+                                                        <MapPin className="h-3 w-3 mr-1" />
+                                                        {student.country}
                                                       </span>
-                                                    </div>
-                                                    <div className="flex-1 min-w-0">
-                                                      <p className="text-sm font-medium text-slate-900">
-                                                        {student.full_name || 'Name not provided'}
-                                                      </p>
-                                                      <div className="flex items-center space-x-4 text-xs text-slate-500">
-                                                        <span className="flex items-center">
-                                                          <Mail className="h-3 w-3 mr-1" />
-                                                          {student.email}
-                                                        </span>
-                                                        {student.country && (
-                                                          <span className="flex items-center">
-                                                            <MapPin className="h-3 w-3 mr-1" />
-                                                            {student.country}
-                                                          </span>
-                                                        )}
-                                                        {student.university_name && (
-                                                          <span className="flex items-center">
-                                                            <Building className="h-3 w-3 mr-1" />
-                                                            {student.university_name}
-                                                          </span>
-                                                        )}
-                                                      </div>
-                                                    </div>
+                                                    )}
+                                                    {student.university_name && (
+                                                      <span className="flex items-center">
+                                                        <Building className="h-3 w-3 mr-1" />
+                                                        {student.university_name}
+                                                      </span>
+                                                    )}
                                                   </div>
-                                                  
-                                                  <div className="flex items-center space-x-3">
-                                                    <div className="text-right">
-                                                      <div className="flex items-center space-x-2">
-                                                        <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${
-                                                          student.status === 'active' || student.status === 'registered' || student.status === 'enrolled' 
-                                                            ? 'bg-green-100 text-green-800' 
-                                                            : student.status === 'pending'
-                                                            ? 'bg-yellow-100 text-yellow-800'
-                                                            : 'bg-gray-100 text-gray-800'
-                                                        }`}>
-                                                          {student.status || 'Unknown'}
-                                                        </span>
-                                                      </div>
-                                                      <p className="text-sm font-medium text-green-600 mt-1">
-                                                        {formatCurrency(student.total_paid_adjusted)}
-                                                      </p>
-                                                      <p className="text-xs text-slate-500">
-                                                        {formatDate(student.created_at)}
-                                                      </p>
-                                                    </div>
-                                                    
-                                                    <button
+                                                </div>
+                                              </div>
+                                              
+                                              <div className="flex items-center space-x-3">
+                                                <div className="text-right">
+                                                  <div className="flex items-center space-x-2">
+                                                    <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${
+                                                      student.status === 'active' || student.status === 'registered' || student.status === 'enrolled' 
+                                                        ? 'bg-green-100 text-green-800' 
+                                                        : student.status === 'pending'
+                                                        ? 'bg-yellow-100 text-yellow-800'
+                                                        : 'bg-gray-100 text-gray-800'
+                                                    }`}>
+                                                      {student.status || 'Unknown'}
+                                                    </span>
+                                                  </div>
+                                                  <p className="text-sm font-medium text-green-600 mt-1">
+                                                    {isLoadingRealPaidAmounts ? (
+                                                      <div className="animate-pulse bg-slate-200 h-4 w-16 rounded"></div>
+                                                    ) : (
+                                                      formatCurrency(student.total_paid_adjusted)
+                                                    )}
+                                                  </p>
+                                                  <p className="text-xs text-slate-500">
+                                                    {formatDate(student.created_at)}
+                                                  </p>
+                                                </div>
+                                                
+                                                <button
                                                       onClick={(e) => {
                                                         e.stopPropagation();
                                                         handleViewStudent(student.profile_id || student.id);
                                                       }}
-                                                      className="flex items-center space-x-1 px-3 py-1 text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors"
-                                                    >
-                                                      <Eye className="h-3 w-3" />
-                                                      <span>View</span>
-                                                    </button>
-                                                  </div>
-                                                </div>
+                                                  className="flex items-center space-x-1 px-3 py-1 text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors"
+                                                >
+                                                  <Eye className="h-3 w-3" />
+                                                  <span>View</span>
+                                                </button>
+                                              </div>
+                                            </div>
                                                 
                                                 {/* ✅ NOVO: Detalhes das Taxas Expandidas */}
                                                 <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
@@ -1706,12 +1737,16 @@ const AffiliateManagement: React.FC = () => {
                                                                 Paid: {new Date(selectionDate).toLocaleDateString()}
                                                               </p>
                                                             )}
-                                                          </div>
+                                        </div>
                                                           <div className="text-right">
                                                             <p className={`text-sm font-semibold ${
                                                               selectionFee > 0 ? 'text-green-600' : 'text-slate-400'
                                                             }`}>
-                                                              {selectionFee > 0 ? formatCurrency(selectionFee) : 'N/A'}
+                                                              {isLoadingRealPaidAmounts ? (
+                                                                <div className="animate-pulse bg-slate-200 h-4 w-16 rounded"></div>
+                                                              ) : (
+                                                                selectionFee > 0 ? formatCurrency(selectionFee) : 'N/A'
+                                                              )}
                                                             </p>
                                                             {hasDateFilter && selectionDate && (() => {
                                                               const paymentDateObj = new Date(selectionDate);
@@ -1720,8 +1755,8 @@ const AffiliateManagement: React.FC = () => {
                                                                 <p className="text-xs text-amber-600 mt-0.5">Outside period</p>
                                                               ) : null;
                                                             })()}
-                                                          </div>
-                                                        </div>
+                                      </div>
+                                    </div>
                                                       )}
                                                       
                                                       {/* Scholarship Fee */}
@@ -1739,7 +1774,11 @@ const AffiliateManagement: React.FC = () => {
                                                             <p className={`text-sm font-semibold ${
                                                               scholarshipFee > 0 ? 'text-green-600' : 'text-slate-400'
                                                             }`}>
-                                                              {scholarshipFee > 0 ? formatCurrency(scholarshipFee) : 'N/A'}
+                                                              {isLoadingRealPaidAmounts ? (
+                                                                <div className="animate-pulse bg-slate-200 h-4 w-16 rounded"></div>
+                                                              ) : (
+                                                                scholarshipFee > 0 ? formatCurrency(scholarshipFee) : 'N/A'
+                                                              )}
                                                             </p>
                                                             {hasDateFilter && scholarshipDate && (() => {
                                                               const paymentDateObj = new Date(scholarshipDate);
@@ -1767,7 +1806,11 @@ const AffiliateManagement: React.FC = () => {
                                                             <p className={`text-sm font-semibold ${
                                                               i20Fee > 0 ? 'text-green-600' : 'text-slate-400'
                                                             }`}>
-                                                              {i20Fee > 0 ? formatCurrency(i20Fee) : 'N/A'}
+                                                              {isLoadingRealPaidAmounts ? (
+                                                                <div className="animate-pulse bg-slate-200 h-4 w-16 rounded"></div>
+                                                              ) : (
+                                                                i20Fee > 0 ? formatCurrency(i20Fee) : 'N/A'
+                                                              )}
                                                             </p>
                                                             {hasDateFilter && i20Date && (() => {
                                                               const paymentDateObj = new Date(i20Date);
@@ -1784,7 +1827,11 @@ const AffiliateManagement: React.FC = () => {
                                                       <div className="flex items-center justify-between p-2 bg-slate-100 rounded border border-slate-300 mt-2">
                                                         <p className="text-xs font-semibold text-slate-900">Total (Period)</p>
                                                         <p className="text-sm font-bold text-green-700">
-                                                          {formatCurrency(selectionFee + scholarshipFee + i20Fee)}
+                                                          {isLoadingRealPaidAmounts ? (
+                                                            <div className="animate-pulse bg-slate-200 h-4 w-20 rounded"></div>
+                                                          ) : (
+                                                            formatCurrency(selectionFee + scholarshipFee + i20Fee)
+                                                          )}
                                                         </p>
                                                       </div>
                                                     </div>
