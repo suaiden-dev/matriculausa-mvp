@@ -2,7 +2,7 @@ import React from 'react';
 import { supabase } from '../../lib/supabase';
 import { useState as useStateReact, useEffect } from 'react';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
-import { getRealPaidAmounts } from '../../utils/paymentConverter';
+import { getDisplayAmounts } from '../../utils/paymentConverter';
 import {
   GraduationCap,
   DollarSign,
@@ -185,7 +185,8 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
           
           const results = await Promise.allSettled(idsToLoadRealPaid.map(async (id: string) => {
             try {
-              const amounts = await getRealPaidAmounts(id, ['selection_process', 'scholarship', 'i20_control']);
+              // ✅ CORREÇÃO: Usar getDisplayAmounts para exibição (valores "Zelle" sem taxas)
+              const amounts = await getDisplayAmounts(id, ['selection_process', 'scholarship', 'i20_control']);
               return { id, amounts };
             } catch (error) {
               console.warn('⚠️ [OVERVIEW] Erro ao carregar valores pagos para', id, ':', error);
