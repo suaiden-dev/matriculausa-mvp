@@ -3,7 +3,7 @@ import React from 'react';
 import { useState as useStateReact, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useNavigate } from 'react-router-dom';
-import { getRealPaidAmounts } from '../../utils/paymentConverter';
+import { getDisplayAmounts } from '../../utils/paymentConverter';
 import { 
   Users, 
   UserPlus, 
@@ -192,7 +192,8 @@ const Overview = ({ stats, sellers = [], students = [], onRefresh }) => {
           if (!mounted) return;
           
           try {
-            const amounts = await getRealPaidAmounts(userId, ['selection_process', 'scholarship', 'i20_control']);
+            // ✅ CORREÇÃO: Usar getDisplayAmounts para exibição (valores "Zelle" sem taxas)
+            const amounts = await getDisplayAmounts(userId, ['selection_process', 'scholarship', 'i20_control']);
             if (mounted) {
               realPaidAmountsMap[userId] = {
                 selection_process: amounts.selection_process,

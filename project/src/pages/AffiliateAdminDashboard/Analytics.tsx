@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BarChart3, TrendingUp, Users, DollarSign, Calendar, Award } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-import { getRealPaidAmounts } from '../../utils/paymentConverter';
+import { getDisplayAmounts } from '../../utils/paymentConverter';
 
 interface AnalyticsProps {
   stats: {
@@ -118,7 +118,8 @@ const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], userId }) =>
         if (!p.user_id) return;
         
         try {
-          const amounts = await getRealPaidAmounts(p.user_id, ['selection_process', 'scholarship', 'i20_control']);
+          // ✅ CORREÇÃO: Usar getDisplayAmounts para exibição (valores "Zelle" sem taxas)
+          const amounts = await getDisplayAmounts(p.user_id, ['selection_process', 'scholarship', 'i20_control']);
           realPaidAmountsMap[p.user_id] = {
             selection_process: amounts.selection_process,
             scholarship: amounts.scholarship,

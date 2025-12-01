@@ -148,6 +148,140 @@ function calculateNetAmountFromGross(grossAmount: number, isPIX: boolean = false
 }
 
 /**
+ * ✅ NOVA FUNÇÃO: Busca valores para EXIBIÇÃO nos dashboards (admin de afiliados e seller)
+ * Retorna valores "Zelle" (valor base esperado sem taxas do Stripe)
+ * 
+ * IMPORTANTE: Usa valores esperados baseados no system_type do usuário, não calcula a partir do gross_amount_usd
+ * Isso é mais confiável e evita problemas com conversões e cálculos de taxas
+ */
+export async function getDisplayAmounts(
+  userId: string,
+  feeTypes: ('selection_process' | 'scholarship' | 'i20_control' | 'application')[]
+): Promise<Record<string, number>> {
+  try {
+    // 1. Buscar system_type, dependents e scholarship_package_id do usuário
+    const { data: userProfile, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('system_type, dependents, scholarship_package_id')
+      .eq('user_id', userId)
+      .single();
+
+    if (profileError || !userProfile) {
+      console.error('[paymentConverter] Erro ao buscar perfil do usuário:', profileError);
+      return {};
+    }
+
+    const systemType = userProfile.system_type || 'legacy';
+    const dependents = Number(userProfile.dependents) || 0;
+
+    // 2. Buscar overrides do usuário
+    // ⚠️ IMPORTANTE: Packages NÃO alteram os valores que o aluno vai pagar
+    // Apenas overrides explícitos devem ser usados
+    const { data: overrideData, error: overrideError } = await supabase
+      .rpc('get_user_fee_overrides', { target_user_id: userId });
+
+    const overrides = overrideError || !overrideData ? {} : (Array.isArray(overrideData) ? overrideData[0] : overrideData);
+
+    // 3. Buscar valores reais pagos (para casos onde o aluno pagou um valor diferente do padrão)
+    const { data: payments, error: paymentsError } = await supabase
+      .from('individual_fee_payments')
+      .select('fee_type, gross_amount_usd, payment_method')
+      .eq('user_id', userId)
+      .in('fee_type', feeTypes)
+      .order('payment_date', { ascending: false, nullsFirst: false })
+      .order('created_at', { ascending: false });
+
+    // Mapear valores reais pagos (usar o mais recente para cada fee_type)
+    const realPaidMap: Record<string, number> = {};
+    if (!paymentsError && payments) {
+      for (const payment of payments) {
+        const feeTypeKey = payment.fee_type === 'selection_process' ? 'selection_process' :
+                          payment.fee_type === 'scholarship' ? 'scholarship' :
+                          payment.fee_type === 'i20_control' ? 'i20_control' :
+                          payment.fee_type === 'application' ? 'application' : null;
+        
+        if (feeTypeKey && !realPaidMap[feeTypeKey] && payment.gross_amount_usd) {
+          // Para Zelle, usar diretamente (sem taxas)
+          // Para Stripe, usar gross_amount_usd como referência (mas vamos usar valores esperados)
+          if (payment.payment_method === 'zelle') {
+            realPaidMap[feeTypeKey] = Number(payment.gross_amount_usd);
+          }
+          // Para Stripe, não usar gross_amount_usd diretamente, vamos usar valores esperados
+        }
+      }
+    }
+
+    // 4. Calcular valores esperados "Zelle" baseados no system_type
+    const amounts: Record<string, number> = {};
+
+    // Valores base por system_type
+    const baseSelectionFee = systemType === 'simplified' ? 350 : 400;
+    const baseScholarshipFee = systemType === 'simplified' ? 550 : 900;
+    const baseI20Fee = 900; // Sempre 900 para ambos os sistemas
+
+    // Selection Process Fee - Prioridade: override > valor real pago (Zelle) > cálculo fixo
+    if (feeTypes.includes('selection_process')) {
+      if (overrides.selection_process_fee != null) {
+        amounts.selection_process = Number(overrides.selection_process_fee);
+      } else if (realPaidMap.selection_process) {
+        amounts.selection_process = realPaidMap.selection_process;
+      } else {
+        // Para simplified, Selection Process Fee é fixo ($350), sem dependentes
+        // Dependentes só afetam Application Fee ($100 por dependente)
+        amounts.selection_process = systemType === 'simplified' 
+          ? baseSelectionFee 
+          : baseSelectionFee + (dependents * 150);
+      }
+    }
+
+    // Scholarship Fee - Prioridade: override > valor real pago (Zelle) > cálculo fixo
+    if (feeTypes.includes('scholarship')) {
+      if (overrides.scholarship_fee != null) {
+        amounts.scholarship = Number(overrides.scholarship_fee);
+      } else if (realPaidMap.scholarship) {
+        amounts.scholarship = realPaidMap.scholarship;
+      } else {
+        amounts.scholarship = baseScholarshipFee;
+      }
+    }
+
+    // I-20 Control Fee - Prioridade: override > valor real pago (Zelle) > cálculo fixo ($900 padrão)
+    // ⚠️ IMPORTANTE: Packages NÃO alteram os valores que o aluno vai pagar
+    // Se o aluno tem I-20 de $999, deve haver um override explícito na tabela user_fee_overrides
+    if (feeTypes.includes('i20_control')) {
+      if (overrides.i20_control_fee != null) {
+        amounts.i20_control = Number(overrides.i20_control_fee);
+        console.log(`[paymentConverter] ✅ [DISPLAY] I-20 usando override: ${amounts.i20_control}`);
+      } else if (realPaidMap.i20_control) {
+        amounts.i20_control = realPaidMap.i20_control;
+        console.log(`[paymentConverter] ✅ [DISPLAY] I-20 usando valor Zelle: ${amounts.i20_control}`);
+      } else {
+        // Usar valor padrão: $900
+        amounts.i20_control = baseI20Fee;
+        console.log(`[paymentConverter] ✅ [DISPLAY] I-20 usando valor padrão: ${amounts.i20_control}`);
+      }
+    }
+
+    // Application Fee (se necessário)
+    if (feeTypes.includes('application')) {
+      if (overrides.application_fee != null) {
+        amounts.application = Number(overrides.application_fee);
+      } else {
+        // Application Fee padrão: $100 + ($100 por dependente)
+        amounts.application = 100 + (dependents * 100);
+      }
+    }
+
+    console.log(`[paymentConverter] ✅ [DISPLAY] Valores "Zelle" para user_id ${userId} (${systemType}):`, amounts);
+
+    return amounts;
+  } catch (error) {
+    console.error('[paymentConverter] Exceção ao buscar valores para exibição:', error);
+    return {};
+  }
+}
+
+/**
  * Busca valores líquidos pagos (sem taxas do Stripe) de individual_fee_payments
  * ✅ CORREÇÃO: Aplica remoção de taxas APENAS para pagamentos a partir de 19/11/2025
  * Para pagamentos anteriores ou sem registro, retorna valor bruto (sem remover taxas)
@@ -353,4 +487,3 @@ export async function getGrossPaidAmounts(
     return {};
   }
 }
-
