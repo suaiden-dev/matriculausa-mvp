@@ -182,7 +182,41 @@ export async function getDisplayAmounts(
 
     const overrides = overrideError || !overrideData ? {} : (Array.isArray(overrideData) ? overrideData[0] : overrideData);
 
-    // 3. Buscar valores reais pagos (para casos onde o aluno pagou um valor diferente do padrão)
+    // ✅ NOVO: 3. Buscar cupons promocionais usados (BLACK, etc)
+    // Mapear fee_types internos para os valores usados na tabela promotional_coupon_usage
+    const couponFeeTypeMap: Record<string, string> = {
+      'selection_process': 'selection_process',
+      'scholarship': 'scholarship_fee',
+      'i20_control': 'i20_control',
+      'application': 'application_fee'
+    };
+
+    const feeTypesForCoupon = feeTypes.map(ft => couponFeeTypeMap[ft] || ft);
+    const { data: couponUsage, error: couponError } = await supabase
+      .from('promotional_coupon_usage')
+      .select('fee_type, final_amount')
+      .eq('user_id', userId)
+      .in('fee_type', feeTypesForCoupon)
+      .order('used_at', { ascending: false });
+
+    // Mapear final_amount por fee_type (usar o mais recente para cada tipo)
+    const couponAmounts: Record<string, number> = {};
+    if (!couponError && couponUsage) {
+      for (const coupon of couponUsage) {
+        // Normalizar fee_type para a chave usada internamente
+        const feeTypeKey = coupon.fee_type === 'selection_process' ? 'selection_process' :
+                          coupon.fee_type === 'scholarship_fee' ? 'scholarship' :
+                          coupon.fee_type === 'i20_control' || coupon.fee_type === 'i20_control_fee' ? 'i20_control' :
+                          coupon.fee_type === 'application_fee' ? 'application' : null;
+        
+        if (feeTypeKey && !couponAmounts[feeTypeKey] && coupon.final_amount) {
+          couponAmounts[feeTypeKey] = Number(coupon.final_amount);
+          console.log(`[paymentConverter] ✅ [DISPLAY] Cupom promocional encontrado para ${feeTypeKey}: ${couponAmounts[feeTypeKey]} (final_amount)`);
+        }
+      }
+    }
+
+    // 4. Buscar valores reais pagos (para casos onde o aluno pagou um valor diferente do padrão)
     const { data: payments, error: paymentsError } = await supabase
       .from('individual_fee_payments')
       .select('fee_type, gross_amount_usd, payment_method')
@@ -219,10 +253,13 @@ export async function getDisplayAmounts(
     const baseScholarshipFee = systemType === 'simplified' ? 550 : 900;
     const baseI20Fee = 900; // Sempre 900 para ambos os sistemas
 
-    // Selection Process Fee - Prioridade: override > valor real pago (Zelle) > cálculo fixo
+    // Selection Process Fee - Prioridade: override > cupom promocional > valor real pago (Zelle) > cálculo fixo
     if (feeTypes.includes('selection_process')) {
       if (overrides.selection_process_fee != null) {
         amounts.selection_process = Number(overrides.selection_process_fee);
+      } else if (couponAmounts.selection_process) {
+        amounts.selection_process = couponAmounts.selection_process;
+        console.log(`[paymentConverter] ✅ [DISPLAY] Selection Process usando cupom promocional: ${amounts.selection_process}`);
       } else if (realPaidMap.selection_process) {
         amounts.selection_process = realPaidMap.selection_process;
       } else {
@@ -234,10 +271,13 @@ export async function getDisplayAmounts(
       }
     }
 
-    // Scholarship Fee - Prioridade: override > valor real pago (Zelle) > cálculo fixo
+    // Scholarship Fee - Prioridade: override > cupom promocional > valor real pago (Zelle) > cálculo fixo
     if (feeTypes.includes('scholarship')) {
       if (overrides.scholarship_fee != null) {
         amounts.scholarship = Number(overrides.scholarship_fee);
+      } else if (couponAmounts.scholarship) {
+        amounts.scholarship = couponAmounts.scholarship;
+        console.log(`[paymentConverter] ✅ [DISPLAY] Scholarship usando cupom promocional: ${amounts.scholarship}`);
       } else if (realPaidMap.scholarship) {
         amounts.scholarship = realPaidMap.scholarship;
       } else {
@@ -245,13 +285,16 @@ export async function getDisplayAmounts(
       }
     }
 
-    // I-20 Control Fee - Prioridade: override > valor real pago (Zelle) > cálculo fixo ($900 padrão)
+    // I-20 Control Fee - Prioridade: override > cupom promocional > valor real pago (Zelle) > cálculo fixo ($900 padrão)
     // ⚠️ IMPORTANTE: Packages NÃO alteram os valores que o aluno vai pagar
     // Se o aluno tem I-20 de $999, deve haver um override explícito na tabela user_fee_overrides
     if (feeTypes.includes('i20_control')) {
       if (overrides.i20_control_fee != null) {
         amounts.i20_control = Number(overrides.i20_control_fee);
         console.log(`[paymentConverter] ✅ [DISPLAY] I-20 usando override: ${amounts.i20_control}`);
+      } else if (couponAmounts.i20_control) {
+        amounts.i20_control = couponAmounts.i20_control;
+        console.log(`[paymentConverter] ✅ [DISPLAY] I-20 usando cupom promocional: ${amounts.i20_control}`);
       } else if (realPaidMap.i20_control) {
         amounts.i20_control = realPaidMap.i20_control;
         console.log(`[paymentConverter] ✅ [DISPLAY] I-20 usando valor Zelle: ${amounts.i20_control}`);
@@ -262,10 +305,13 @@ export async function getDisplayAmounts(
       }
     }
 
-    // Application Fee (se necessário)
+    // Application Fee - Prioridade: override > cupom promocional > cálculo fixo
     if (feeTypes.includes('application')) {
       if (overrides.application_fee != null) {
         amounts.application = Number(overrides.application_fee);
+      } else if (couponAmounts.application) {
+        amounts.application = couponAmounts.application;
+        console.log(`[paymentConverter] ✅ [DISPLAY] Application usando cupom promocional: ${amounts.application}`);
       } else {
         // Application Fee padrão: $100 + ($100 por dependente)
         amounts.application = 100 + (dependents * 100);
