@@ -116,8 +116,66 @@ export function useStudentDetailsQuery(profileId: string | undefined) {
 
       // Format the student record
       const applications = s.scholarship_applications || [];
+      
+      // ✅ CORREÇÃO: Priorizar aplicação enrolled, depois approved com application fee pago, depois approved
+      const enrolledApp = applications.find((app: any) => app.status === 'enrolled');
+      const approvedWithFeeApp = applications.find((app: any) => app.status === 'approved' && app.is_application_fee_paid);
       const approvedApp = applications.find((app: any) => app.status === 'approved');
-      const mainApp = approvedApp || applications[0] || {};
+      const mainApp = enrolledApp || approvedWithFeeApp || approvedApp || applications[0] || {};
+      
+      // 🔍 LOG: Verificar se é a Stephanie
+      const isStephanie = s.email === 'stephaniecriistine25@gmail.com';
+      if (isStephanie) {
+        console.log('🔍 [STEPHANIE DEBUG] ==========================================');
+        console.log('🔍 [STEPHANIE DEBUG] 🚀 useStudentDetailsQueries');
+        console.log('🔍 [STEPHANIE DEBUG] Email:', s.email);
+        console.log('🔍 [STEPHANIE DEBUG] Total applications:', applications.length);
+        console.log('🔍 [STEPHANIE DEBUG] Applications:', applications.map((app: any) => ({
+          id: app.id,
+          status: app.status,
+          is_application_fee_paid: app.is_application_fee_paid,
+          is_scholarship_fee_paid: app.is_scholarship_fee_paid,
+          payment_status: app.payment_status
+        })));
+        console.log('🔍 [STEPHANIE DEBUG] enrolledApp:', enrolledApp ? {
+          id: enrolledApp.id,
+          status: enrolledApp.status,
+          is_application_fee_paid: enrolledApp.is_application_fee_paid,
+          is_scholarship_fee_paid: enrolledApp.is_scholarship_fee_paid
+        } : null);
+        console.log('🔍 [STEPHANIE DEBUG] approvedWithFeeApp:', approvedWithFeeApp ? {
+          id: approvedWithFeeApp.id,
+          status: approvedWithFeeApp.status,
+          is_application_fee_paid: approvedWithFeeApp.is_application_fee_paid
+        } : null);
+        console.log('🔍 [STEPHANIE DEBUG] approvedApp:', approvedApp ? {
+          id: approvedApp.id,
+          status: approvedApp.status
+        } : null);
+        console.log('🔍 [STEPHANIE DEBUG] mainApp selecionado:', {
+          id: mainApp.id,
+          status: mainApp.status,
+          is_application_fee_paid: mainApp.is_application_fee_paid,
+          is_scholarship_fee_paid: mainApp.is_scholarship_fee_paid
+        });
+      }
+
+      // ✅ CORREÇÃO: Verificar se ALGUMA aplicação tem os fees pagos (priorizando enrolled)
+      const is_application_fee_paid = enrolledApp?.is_application_fee_paid || 
+                                      applications.some((app: any) => app.is_application_fee_paid) || 
+                                      false;
+      const is_scholarship_fee_paid = enrolledApp?.is_scholarship_fee_paid || 
+                                      mainApp?.is_scholarship_fee_paid || 
+                                      false;
+      
+      if (isStephanie) {
+        console.log('🔍 [STEPHANIE DEBUG] Flags finais:', {
+          is_application_fee_paid,
+          is_scholarship_fee_paid,
+          enrolledApp_has_application_fee: enrolledApp?.is_application_fee_paid,
+          enrolledApp_has_scholarship_fee: enrolledApp?.is_scholarship_fee_paid
+        });
+      }
 
       const formatted: StudentRecord = {
         student_id: s.id,
@@ -144,8 +202,8 @@ export function useStudentDetailsQuery(profileId: string | undefined) {
         scholarship_id: mainApp.scholarship_id || null,
         application_status: mainApp.status || null,
         applied_at: mainApp.applied_at || null,
-        is_application_fee_paid: mainApp.is_application_fee_paid || false,
-        is_scholarship_fee_paid: mainApp.is_scholarship_fee_paid || false,
+        is_application_fee_paid,
+        is_scholarship_fee_paid,
         application_fee_payment_method: mainApp.application_fee_payment_method || null,
         scholarship_fee_payment_method: mainApp.scholarship_fee_payment_method || null,
         acceptance_letter_status: mainApp.acceptance_letter_status || null,
