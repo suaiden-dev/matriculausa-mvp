@@ -12,7 +12,7 @@ import {
   Activity
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-import { getRealPaidAmounts } from '../../utils/paymentConverter';
+import { getDisplayAmounts } from '../../utils/paymentConverter';
 import { AffiliatePaymentRequestService } from '../../services/AffiliatePaymentRequestService';
 
 
@@ -274,7 +274,8 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
         if (!p.user_id) return;
         
         try {
-          const amounts = await getRealPaidAmounts(p.user_id, ['selection_process', 'scholarship', 'i20_control']);
+          // ✅ CORREÇÃO: Usar getDisplayAmounts para exibição (valores "Zelle" sem taxas)
+          const amounts = await getDisplayAmounts(p.user_id, ['selection_process', 'scholarship', 'i20_control']);
           realPaidAmountsMap[p.user_id] = {
             selection_process: amounts.selection_process,
             scholarship: amounts.scholarship,
@@ -749,7 +750,8 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
     await Promise.all((referralsData?.slice(0, 10) || []).map(async (row: any) => {
       if (!row?.user_id) return;
       try {
-        const amounts = await getRealPaidAmounts(row.user_id, ['selection_process', 'scholarship', 'i20_control']);
+        // ✅ CORREÇÃO: Usar getDisplayAmounts para exibição (valores "Zelle" sem taxas)
+        const amounts = await getDisplayAmounts(row.user_id, ['selection_process', 'scholarship', 'i20_control']);
         realPaidAmountsMap[row.user_id] = amounts;
       } catch (error) {
         console.error(`[FinancialOverview] Erro ao buscar valores pagos para user_id ${row.user_id}:`, error);
@@ -781,7 +783,7 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
           const baseSelDefault = row?.system_type === 'simplified' ? 350 : 400;
           // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
           // Dependentes só afetam Application Fee ($100 por dependente)
-          selectionFeeAmount = p?.system_type === 'simplified' 
+          selectionFeeAmount = row?.system_type === 'simplified' 
             ? baseSelDefault 
             : baseSelDefault + (deps * 150);
         }

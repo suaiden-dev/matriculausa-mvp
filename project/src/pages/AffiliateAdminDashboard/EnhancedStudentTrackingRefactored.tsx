@@ -17,7 +17,7 @@ import {
 import { supabase } from '../../lib/supabase';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
 import { useDynamicFeeCalculation, useDynamicFeeCalculationForUser } from '../../hooks/useDynamicFeeCalculation';
-import { getRealPaidAmounts } from '../../utils/paymentConverter';
+import { getDisplayAmounts } from '../../utils/paymentConverter';
 
 function EnhancedStudentTracking(props) {
   const { userId } = props || {};
@@ -214,7 +214,8 @@ function EnhancedStudentTracking(props) {
         
         await Promise.allSettled(uniqueUserIds.map(async (userId) => {
           try {
-            const amounts = await getRealPaidAmounts(userId, ['selection_process', 'scholarship', 'i20_control']);
+            // ✅ CORREÇÃO: Usar getDisplayAmounts para exibição (valores "Zelle" sem taxas)
+            const amounts = await getDisplayAmounts(userId, ['selection_process', 'scholarship', 'i20_control']);
             amountsMap[userId] = {
               selection_process: amounts.selection_process,
               scholarship: amounts.scholarship,

@@ -24,7 +24,7 @@ import { supabase } from '../../lib/supabase';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
 import { AffiliatePaymentRequestService } from '../../services/AffiliatePaymentRequestService';
 import { useEnvironment } from '../../hooks/useEnvironment';
-import { getRealPaidAmounts } from '../../utils/paymentConverter';
+import { getDisplayAmounts } from '../../utils/paymentConverter';
 // import removido: useDynamicFeeCalculation não é usado aqui
 // import removido: useUserSpecificFees não é usado aqui
 interface FilterState {
@@ -419,7 +419,8 @@ const AffiliateManagement: React.FC = () => {
             if (!mounted) return;
             
             try {
-              const amounts = await getRealPaidAmounts(userId, ['selection_process', 'scholarship', 'i20_control']);
+              // ✅ CORREÇÃO: Usar getDisplayAmounts para exibição nos dashboards (valores "Zelle" sem taxas)
+              const amounts = await getDisplayAmounts(userId, ['selection_process', 'scholarship', 'i20_control']);
               if (mounted) {
                 realPaidMap[userId] = {
                   selection_process: amounts.selection_process,
