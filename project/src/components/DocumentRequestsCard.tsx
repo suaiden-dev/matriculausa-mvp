@@ -1061,6 +1061,10 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
       
       if (error) throw error;
       
+      // Verificar se há upload rejeitado (para determinar se é reenvio)
+      const hasRejectedUpload = transferFormUploads.some(upload => upload.status === 'rejected');
+      const isResubmission = hasRejectedUpload;
+      
       // Deletar upload anterior se existir
       if (transferFormUploads.length > 0) {
         await supabase
@@ -1102,6 +1106,79 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
       
       if (newUploads) {
         setTransferFormUploads(newUploads);
+      }
+
+      // ✅ ENVIAR NOTIFICAÇÃO PARA ADMINS (reutilizando tipos existentes)
+      console.log('[TRANSFER FORM] 📤 Enviando notificação para admins sobre upload do transfer form...', {
+        isResubmission
+      });
+      
+      try {
+        // Buscar dados da aplicação (bolsa e universidade)
+        const { data: applicationData, error: appError } = await supabase
+          .from('scholarship_applications')
+          .select(`
+            id,
+            scholarships!inner(
+              title,
+              universities!inner(
+                name
+              )
+            )
+          `)
+          .eq('id', applicationId)
+          .maybeSingle();
+
+        if (appError) {
+          console.error('[TRANSFER FORM] Erro ao buscar dados da aplicação:', appError);
+        }
+
+        // Buscar dados do aluno
+        const { data: { user } } = await supabase.auth.getUser();
+        let studentName = 'Student';
+        let studentEmail = '';
+        
+        if (user) {
+          const { data: studentProfile } = await supabase
+            .from('user_profiles')
+            .select('full_name, email')
+            .eq('user_id', user.id)
+            .maybeSingle();
+          
+          if (studentProfile) {
+            studentName = studentProfile.full_name || 'Student';
+            studentEmail = studentProfile.email || '';
+          }
+        }
+
+        const scholarship = Array.isArray(applicationData?.scholarships) 
+          ? applicationData.scholarships[0] 
+          : applicationData?.scholarships;
+        const university = Array.isArray(scholarship?.universities)
+          ? scholarship.universities[0]
+          : scholarship?.universities;
+
+        const scholarshipTitle = scholarship?.title || 'Scholarship';
+        const universityName = university?.name || 'University';
+
+        // Chamar notifyAdmins para notificar sobre o upload do transfer form
+        // Reutiliza os tipos existentes: 'Novo documento enviado pelo aluno - Admin' ou 'Documento reenviado pelo aluno - Admin'
+        await notifyAdmins(
+          studentName,
+          studentEmail,
+          'Transfer Form',
+          scholarshipTitle,
+          universityName,
+          applicationId,
+          isResubmission // Detecta se é reenvio baseado em uploads rejeitados anteriores
+        );
+
+        console.log('[TRANSFER FORM] ✅ Notificação enviada para admins', {
+          tipo: isResubmission ? 'reenvio' : 'novo upload'
+        });
+      } catch (notifyError) {
+        console.error('[TRANSFER FORM] ❌ Erro ao enviar notificação para admins:', notifyError);
+        // Não falhar o processo se a notificação falhar
       }
       
     } catch (error: any) {

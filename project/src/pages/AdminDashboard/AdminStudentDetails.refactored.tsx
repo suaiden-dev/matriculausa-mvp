@@ -252,7 +252,7 @@ const AdminStudentDetails: React.FC = () => {
     handleUploadTransferForm,
     handleApproveTransferFormUpload,
     handleRejectTransferFormUpload
-  } = useTransferForm(student, isPlatformAdmin, user?.id);
+  } = useTransferForm(student, isPlatformAdmin, user?.id, user?.email);
   
   // Hooks para Document Requests
   const {
@@ -1153,6 +1153,14 @@ const AdminStudentDetails: React.FC = () => {
         // ENVIAR NOTIFICAÇÕES PARA O ALUNO
         console.log('📤 [handleConfirmReject] Enviando notificações de rejeição para o aluno...');
         
+        // Obter labels amigáveis para os documentos (definir antes do try para estar disponível em ambos os blocos)
+        const docLabels: Record<string, string> = {
+          passport: 'Passport',
+          diploma: 'High School Diploma',
+          funds_proof: 'Proof of Funds',
+        };
+        const docLabel = docLabels[rejectDocData.docType] || rejectDocData.docType;
+        
         try {
           // 1. ENVIAR EMAIL VIA WEBHOOK (payload idêntico ao da universidade)
           const rejectionPayload = {
@@ -1160,7 +1168,9 @@ const AdminStudentDetails: React.FC = () => {
             email_aluno: student.student_email,
             nome_aluno: student.student_name,
             email_universidade: user?.email,
-            o_que_enviar: `Your document <strong>${rejectDocData.docType}</strong> for the request <strong>${rejectDocData.docType}</strong> has been rejected. Reason: <strong>${reason}</strong>. Please review and upload a corrected version.`
+            document_type: rejectDocData.docType, // ✅ CORREÇÃO: Adicionar tipo de documento (passport, diploma, funds_proof)
+            document_title: docLabel, // ✅ CORREÇÃO: Adicionar título amigável do documento (Passport, High School Diploma, Proof of Funds)
+            o_que_enviar: `Your document <strong>${docLabel}</strong> has been rejected. Reason: <strong>${reason}</strong>. Please review and upload a corrected version.`
           };
 
           console.log('📤 [handleConfirmReject] Payload de rejeição:', rejectionPayload);
@@ -1187,13 +1197,7 @@ const AdminStudentDetails: React.FC = () => {
         console.log('📤 [handleConfirmReject] Enviando notificação in-app para o aluno...');
         
         try {
-          // Obter labels amigáveis para os documentos
-          const docLabels: Record<string, string> = {
-            passport: 'Passport',
-            diploma: 'High School Diploma',
-            funds_proof: 'Proof of Funds',
-          };
-          const docLabel = docLabels[rejectDocData.docType] || rejectDocData.docType;
+          // docLabel já foi calculado acima, reutilizar
           
           // Usar Edge Function que tem service role para criar notificação
           const { data: { session } } = await supabase.auth.getSession();
