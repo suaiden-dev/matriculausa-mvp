@@ -15,7 +15,8 @@ const StatsCards: React.FC<StatsCardsProps> = ({ filteredStudents, allStudents }
   };
 
   // Separar estudantes que pagaram vs apenas registrados
-  const paidStudents = filteredStudents.filter(s => s.has_paid_selection_process_fee);
+  // Usar allStudents para contar todos os registrados (não apenas os filtrados)
+  const paidStudents = allStudents.filter(s => s.has_paid_selection_process_fee);
   const registeredOnlyStudents = allStudents.filter(s => !s.has_paid_selection_process_fee);
 
   const totalRevenue = paidStudents.reduce((sum, student) => {
@@ -31,7 +32,7 @@ const StatsCards: React.FC<StatsCardsProps> = ({ filteredStudents, allStudents }
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-slate-600">Paid Students</p>
+            <p className="text-sm font-medium text-slate-600">Students</p>
             <p className="text-3xl font-bold text-green-600 mt-1">{paidStudents.length}</p>
             <p className="text-xs text-slate-500 mt-1">At least Selection Process paid</p>
           </div>
