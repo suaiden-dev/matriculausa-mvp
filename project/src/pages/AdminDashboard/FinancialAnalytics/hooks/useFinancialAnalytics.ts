@@ -117,29 +117,120 @@ export function useFinancialAnalytics() {
       // paymentRecords já está filtrado e deduplicado corretamente
       const paymentRecords = processedData.paymentRecords || [];
       
-      // Buscar dados de individual_fee_payments apenas para informações adicionais (coupons, overrides, etc.)
+      // Criar map de individual_fee_payments para buscar gross_amount_usd e fee_amount_usd
+      // Criar múltiplas chaves para facilitar busca, incluindo payment_intent_id quando disponível
       const individualFeePaymentsMap = new Map();
-      (loadedData.individualFeePayments || []).forEach((payment: any) => {
-        const key = `${payment.user_id}_${payment.fee_type}`;
-        if (!individualFeePaymentsMap.has(key)) {
-          individualFeePaymentsMap.set(key, payment);
+      const individualFeePaymentsByIntentId = new Map();
+      const individualFeePaymentsList = loadedData.individualFeePayments || [];
+      
+      individualFeePaymentsList.forEach((payment: any) => {
+        // Normalizar fee_type para diferentes formatos
+        const normalizedFeeType = payment.fee_type?.replace('_fee', '') || payment.fee_type;
+        const key1 = `${payment.user_id}_${normalizedFeeType}`;
+        const key2 = `${payment.user_id}_${payment.fee_type}`;
+        
+        // Armazenar com múltiplas chaves para facilitar busca
+        if (!individualFeePaymentsMap.has(key1)) {
+          individualFeePaymentsMap.set(key1, payment);
+        }
+        if (!individualFeePaymentsMap.has(key2)) {
+          individualFeePaymentsMap.set(key2, payment);
+        }
+        
+        // Também indexar por payment_intent_id se disponível (match mais preciso)
+        if (payment.payment_intent_id) {
+          individualFeePaymentsByIntentId.set(payment.payment_intent_id, payment);
         }
       });
       
+      // Filtrar paymentRecords para remover pagamentos 'manual'
+      const filteredPaymentRecords = paymentRecords.filter((record: any) => 
+        record.payment_method && record.payment_method !== 'manual'
+      );
+      
       // Transformar paymentRecords em transactions (formato esperado pela tabela)
-      const transactionsWithNames = paymentRecords.map((record: any) => {
+      const transactionsWithNames = filteredPaymentRecords.map((record: any) => {
         const student = loadedData.allStudents.find((s: any) => 
           s.user_id === record.student_id || s.id === record.student_id
         );
         
-        // Buscar dados adicionais de individual_fee_payments se disponível
+        // Buscar dados de individual_fee_payments para gross_amount_usd e fee_amount_usd
         const feeTypeKey = record.fee_type === 'selection_process' ? 'selection_process' :
                           record.fee_type === 'application' ? 'application' :
                           record.fee_type === 'scholarship' ? 'scholarship' :
                           record.fee_type === 'i20_control_fee' ? 'i20_control' : record.fee_type;
-        const individualPayment = student?.user_id 
-          ? individualFeePaymentsMap.get(`${student.user_id}_${feeTypeKey}`)
-          : null;
+        
+        // Buscar user_id do record (pode estar em student_id ou user_id)
+        const userId = student?.user_id || record.student_id || record.user_id;
+        let individualPayment = null;
+        
+        if (userId) {
+          // Normalizar fee_type para match
+          const normalizedRecordFeeType = record.fee_type === 'selection_process' ? 'selection_process' :
+                                         record.fee_type === 'application' ? 'application' :
+                                         record.fee_type === 'scholarship' ? 'scholarship' :
+                                         record.fee_type === 'i20_control_fee' ? 'i20_control' : record.fee_type;
+          
+          // Buscar todos os pagamentos deste usuário com fee_type correspondente
+          const allPayments = individualFeePaymentsList.filter((p: any) => {
+            // Match por user_id
+            if (p.user_id !== userId) return false;
+            
+            // Normalizar fee_type do payment
+            const normalizedPaymentFeeType = p.fee_type?.replace('_fee', '') || p.fee_type;
+            
+            // Match por fee_type normalizado (várias variações)
+            const feeTypeMatch = 
+              normalizedPaymentFeeType === normalizedRecordFeeType ||
+              p.fee_type === record.fee_type ||
+              p.fee_type === `${normalizedRecordFeeType}_fee` ||
+              (p.fee_type === 'selection_process_fee' && normalizedRecordFeeType === 'selection_process') ||
+              (p.fee_type === 'application_fee' && normalizedRecordFeeType === 'application') ||
+              (p.fee_type === 'scholarship_fee' && normalizedRecordFeeType === 'scholarship') ||
+              (p.fee_type === 'i20_control_fee' && normalizedRecordFeeType === 'i20_control');
+            
+            return feeTypeMatch;
+          });
+          
+          if (allPayments.length > 0) {
+            // Se houver múltiplos, escolher o mais próximo da data do record
+            const recordDateStr = record.payment_date || record.created_at;
+            const recordDate = recordDateStr ? new Date(recordDateStr).getTime() : 0;
+            
+            if (recordDate > 0) {
+              individualPayment = allPayments.reduce((closest, current) => {
+                const currentDate = new Date(current.payment_date).getTime();
+                const closestDate = new Date(closest.payment_date).getTime();
+                const currentDiff = Math.abs(currentDate - recordDate);
+                const closestDiff = Math.abs(closestDate - recordDate);
+                return currentDiff < closestDiff ? current : closest;
+              });
+            } else {
+              // Se não temos data no record, usar o primeiro match que tenha gross_amount_usd
+              individualPayment = allPayments.find((p: any) => p.gross_amount_usd != null) || allPayments[0];
+            }
+          }
+          
+          // Se ainda não encontrou, tentar match por payment_intent_id se disponível
+          if (!individualPayment && record.payment_intent_id) {
+            individualPayment = individualFeePaymentsByIntentId.get(record.payment_intent_id);
+          }
+          
+          // DEBUG TEMPORÁRIO - remover depois
+          if (record.payment_method === 'stripe' && !individualPayment) {
+            const userPayments = individualFeePaymentsList.filter((p: any) => p.user_id === userId);
+            const recordDateStr = record.payment_date || record.created_at;
+            console.log('[DEBUG] Stripe payment sem match:', {
+              userId,
+              recordFeeType: record.fee_type,
+              normalizedFeeType: normalizedRecordFeeType,
+              recordDate: recordDateStr,
+              userPaymentsCount: userPayments.length,
+              userPaymentsFeeTypes: userPayments.map((p: any) => p.fee_type),
+              allPaymentsCount: allPayments.length
+            });
+          }
+        }
         
         // Calcular standard_amount (valor padrão da taxa)
         let standardAmount = 0;
@@ -170,16 +261,46 @@ export function useFinancialAnalytics() {
           standardAmount = (record.amount || 0) / 100;
         }
 
+        // Calcular gross_amount_usd e fee_amount_usd
+        // Prioridade: individual_fee_payments > realPaymentAmounts (para Stripe) > valores padrão
+        const netAmount = (record.amount || 0) / 100; // Converter de centavos para dólares
+        let grossAmount = netAmount;
+        let feeAmount = 0;
+        
+        // Se temos valores em individual_fee_payments, usar esses (já estão em dólares)
+        if (individualPayment) {
+          if (individualPayment.gross_amount_usd !== null && individualPayment.gross_amount_usd !== undefined) {
+            grossAmount = Number(individualPayment.gross_amount_usd); // Já está em dólares
+          }
+          if (individualPayment.fee_amount_usd !== null && individualPayment.fee_amount_usd !== undefined) {
+            feeAmount = Number(individualPayment.fee_amount_usd); // Já está em dólares
+          } else if (individualPayment.gross_amount_usd !== null && individualPayment.gross_amount_usd !== undefined) {
+            // Se não temos fee_amount_usd mas temos gross_amount_usd, calcular a diferença
+            const gross = Number(individualPayment.gross_amount_usd);
+            feeAmount = Math.max(0, gross - netAmount);
+          }
+        } else if (record.payment_method === 'stripe' && loadedData.realPaymentAmounts) {
+          // Para Stripe, usar realPaymentAmounts (mesma lógica do PaymentManagement)
+          const realPaid = loadedData.realPaymentAmounts.get(userId);
+          if (realPaid) {
+            const realPaidAmount = realPaid[feeTypeKey as keyof typeof realPaid];
+            if (realPaidAmount && realPaidAmount > 0) {
+              grossAmount = realPaidAmount;
+              feeAmount = Math.max(0, realPaidAmount - netAmount);
+            }
+          }
+        }
+
         return {
           id: record.id,
           user_id: student?.user_id || record.student_id,
           fee_type: record.fee_type,
-          amount: (record.amount || 0) / 100, // Converter de centavos para dólares
-          gross_amount_usd: (record.amount || 0) / 100,
-          fee_amount_usd: 0, // Será calculado se necessário
+          amount: netAmount, // Já convertido de centavos para dólares (valor líquido)
+          gross_amount_usd: grossAmount,
+          fee_amount_usd: feeAmount,
           payment_date: record.payment_date || record.created_at,
           payment_method: record.payment_method || 'manual',
-          payment_intent_id: individualPayment?.payment_intent_id || null,
+          payment_intent_id: individualPayment?.payment_intent_id || record.payment_intent_id || null,
           student_name: record.student_name || student?.full_name || 'Unknown Student',
           student_email: record.student_email || student?.email || null,
           seller_referral_code: record.seller_referral_code || student?.seller_referral_code || null,

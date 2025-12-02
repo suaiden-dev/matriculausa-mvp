@@ -98,8 +98,8 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
 
   const uniquePaymentMethods = useMemo(() => {
     const methods = new Set(transactions.map(t => t.payment_method).filter(Boolean));
-    // Remove 'zelle' from the list
-    return Array.from(methods).filter(m => m !== 'zelle').sort();
+    // Remove 'zelle' and 'manual' from the list
+    return Array.from(methods).filter(m => m !== 'zelle' && m !== 'manual').sort();
   }, [transactions]);
 
   // Get unique affiliates from transactions (matching by referral code)

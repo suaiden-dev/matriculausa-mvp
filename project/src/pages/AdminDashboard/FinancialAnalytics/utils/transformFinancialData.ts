@@ -22,6 +22,7 @@ function processApplications(
     const studentName = student.full_name || 'Unknown Student';
     const studentEmail = student.email || '';
     const universityName = university.name || 'Unknown University';
+    const sellerReferralCode = student.seller_referral_code || null;
     if (!studentName || !universityName) return;
 
     const dependents = Number(student?.dependents) || 0;
@@ -151,12 +152,14 @@ function processApplications(
     if (student.has_paid_selection_process_fee && !globalFeesProcessed[student.user_id]?.selection_process) {
       paymentRecords.push({
         id: `${student.user_id}-selection`,
+        student_id: student.user_id,
         fee_type: 'selection_process',
         amount: selectionProcessFee,
         status: 'paid',
         payment_method: student.selection_process_fee_payment_method || 'manual',
         student_name: studentName,
         student_email: studentEmail,
+        seller_referral_code: sellerReferralCode,
         university_name: universityName,
         created_at: app.created_at
       });
@@ -168,12 +171,14 @@ function processApplications(
     if (app.is_application_fee_paid && !globalFeesProcessed[student.user_id]?.application_fee) {
       paymentRecords.push({
         id: `${student.user_id}-application`,
+        student_id: student.user_id,
         fee_type: 'application',
         amount: applicationFee,
         status: 'paid',
         payment_method: app.application_fee_payment_method || 'manual',
         student_name: studentName,
         student_email: studentEmail,
+        seller_referral_code: sellerReferralCode,
         university_name: universityName,
         created_at: app.created_at
       });
@@ -185,12 +190,14 @@ function processApplications(
     if (app.is_scholarship_fee_paid && scholarship.id !== '31c9b8e6-af11-4462-8494-c79854f3f66e') {
       paymentRecords.push({
         id: `${app.id}-scholarship`,
+        student_id: student.user_id,
         fee_type: 'scholarship',
         amount: scholarshipFee,
         status: 'paid',
         payment_method: app.scholarship_fee_payment_method || 'manual',
         student_name: studentName,
         student_email: studentEmail,
+        seller_referral_code: sellerReferralCode,
         university_name: universityName,
         created_at: app.created_at
       });
@@ -200,12 +207,14 @@ function processApplications(
     if (student.has_paid_i20_control_fee && !globalFeesProcessed[student.user_id]?.i20_control) {
       paymentRecords.push({
         id: `${student.user_id}-i20`,
+        student_id: student.user_id,
         fee_type: 'i20_control_fee',
         amount: i20ControlFee,
         status: 'paid',
         payment_method: student.i20_control_fee_payment_method || 'manual',
         student_name: studentName,
         student_email: studentEmail,
+        seller_referral_code: sellerReferralCode,
         university_name: universityName,
         created_at: app.created_at
       });
@@ -231,6 +240,7 @@ function processZellePayments(
     if (!student) return;
     const studentName = student.full_name || 'Unknown Student';
     const studentEmail = student.email || '';
+    const sellerReferralCode = student.seller_referral_code || null;
     if (!studentName) return;
 
     const hasApplication = applications?.some(app => (app as any).user_profiles?.user_id === (student as any).user_id);
@@ -248,12 +258,14 @@ function processZellePayments(
       const selectionPayment = userZellePayments.find((p: any) => p.fee_type_global === 'selection_process' || p.fee_type === 'selection_process_fee');
       paymentRecords.push({
         id: `zelle-${selectionPayment.id}-selection`,
+        student_id: userId,
         fee_type: 'selection_process',
         amount: Math.round(parseFloat(selectionPayment.amount) * 100),
         status: 'paid',
         payment_method: 'zelle',
         student_name: studentName,
         student_email: studentEmail,
+        seller_referral_code: sellerReferralCode,
         university_name: 'No University Selected',
         created_at: selectionPayment.created_at
       });
@@ -264,12 +276,14 @@ function processZellePayments(
       const applicationAmount = Math.round(parseFloat(applicationPayment.amount) * 100);
       paymentRecords.push({
         id: `zelle-${applicationPayment.id}-application`,
+        student_id: userId,
         fee_type: 'application',
         amount: applicationAmount,
         status: 'paid',
         payment_method: 'zelle',
         student_name: studentName,
         student_email: studentEmail,
+        seller_referral_code: sellerReferralCode,
         university_name: 'No University Selected',
         created_at: applicationPayment.created_at
       });
@@ -279,12 +293,14 @@ function processZellePayments(
       const scholarshipPayment = userZellePayments.find((p: any) => p.fee_type_global === 'scholarship' || p.fee_type === 'scholarship_fee');
       paymentRecords.push({
         id: `zelle-${scholarshipPayment.id}-scholarship`,
+        student_id: userId,
         fee_type: 'scholarship',
         amount: Math.round(parseFloat(scholarshipPayment.amount) * 100),
         status: 'paid',
         payment_method: 'zelle',
         student_name: studentName,
         student_email: studentEmail,
+        seller_referral_code: sellerReferralCode,
         university_name: 'No University Selected',
         created_at: scholarshipPayment.created_at
       });
@@ -294,12 +310,14 @@ function processZellePayments(
       const i20Payment = userZellePayments.find((p: any) => p.fee_type_global === 'i20_control_fee' || p.fee_type === 'i20_control_fee');
       paymentRecords.push({
         id: `zelle-${i20Payment.id}-i20`,
+        student_id: userId,
         fee_type: 'i20_control_fee',
         amount: Math.round(parseFloat(i20Payment.amount) * 100),
         status: 'paid',
         payment_method: 'zelle',
         student_name: studentName,
         student_email: studentEmail,
+        seller_referral_code: sellerReferralCode,
         university_name: 'No University Selected',
         created_at: i20Payment.created_at
       });
@@ -326,6 +344,7 @@ function processStripeUsers(
     if (!stripeUser) return;
     const studentName = stripeUser.full_name || 'Unknown Student';
     const studentEmail = stripeUser.email || '';
+    const sellerReferralCode = stripeUser.seller_referral_code || null;
     if (!studentName) return;
 
     const hasApplication = applications?.some(app => (app as any).user_profiles?.user_id === (stripeUser as any).user_id);
@@ -409,12 +428,14 @@ function processStripeUsers(
     if (stripeUser.has_paid_selection_process_fee) {
       paymentRecords.push({
         id: `stripe-${stripeUser.user_id}-selection`,
+        student_id: stripeUser.user_id,
         fee_type: 'selection_process',
         amount: selectionProcessFee,
         status: 'paid',
         payment_method: stripeUser.selection_process_fee_payment_method || 'manual',
         student_name: studentName,
         student_email: studentEmail,
+        seller_referral_code: sellerReferralCode,
         university_name: 'No University Selected',
         created_at: stripeUser.created_at
       });
@@ -423,12 +444,14 @@ function processStripeUsers(
     if (stripeUser.is_application_fee_paid) {
       paymentRecords.push({
         id: `stripe-${stripeUser.user_id}-application`,
+        student_id: stripeUser.user_id,
         fee_type: 'application',
         amount: applicationFee,
         status: 'paid',
         payment_method: 'manual',
         student_name: studentName,
         student_email: studentEmail,
+        seller_referral_code: sellerReferralCode,
         university_name: 'No University Selected',
         created_at: stripeUser.created_at
       });
@@ -437,12 +460,14 @@ function processStripeUsers(
     if (stripeUser.is_scholarship_fee_paid) {
       paymentRecords.push({
         id: `stripe-${stripeUser.user_id}-scholarship`,
+        student_id: stripeUser.user_id,
         fee_type: 'scholarship',
         amount: scholarshipFee,
         status: 'paid',
         payment_method: 'manual',
         student_name: studentName,
         student_email: studentEmail,
+        seller_referral_code: sellerReferralCode,
         university_name: 'No University Selected',
         created_at: stripeUser.created_at
       });
@@ -452,12 +477,14 @@ function processStripeUsers(
     if (stripeUser.has_paid_i20_control_fee) {
       paymentRecords.push({
         id: `stripe-${stripeUser.user_id}-i20`,
+        student_id: stripeUser.user_id,
         fee_type: 'i20_control_fee',
         amount: i20ControlFee,
         status: 'paid',
         payment_method: stripeUser.i20_control_fee_payment_method || 'manual',
         student_name: studentName,
         student_email: studentEmail,
+        seller_referral_code: sellerReferralCode,
         university_name: 'No University Selected',
         created_at: stripeUser.created_at
       });

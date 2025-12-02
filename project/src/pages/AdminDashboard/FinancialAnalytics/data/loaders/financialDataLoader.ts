@@ -67,7 +67,8 @@ async function loadApplications(): Promise<any[]> {
         dependents,
         created_at,
         selection_process_fee_payment_method,
-        i20_control_fee_payment_method
+        i20_control_fee_payment_method,
+        seller_referral_code
       ),
       scholarships (
         id,
@@ -198,7 +199,8 @@ async function loadStripeUsers(applications: any[]): Promise<any[]> {
       dependents,
       created_at,
       selection_process_fee_payment_method,
-      i20_control_fee_payment_method
+      i20_control_fee_payment_method,
+      seller_referral_code
     `)
     .eq('role', 'student')
     .or('has_paid_selection_process_fee.eq.true,is_application_fee_paid.eq.true,is_scholarship_fee_paid.eq.true,has_paid_i20_control_fee.eq.true');
