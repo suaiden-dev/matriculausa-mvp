@@ -18,7 +18,6 @@ interface FilterState {
   };
   statusFilter: string;
   paymentStatusFilter: string;
-  showUnpaidSelectionProcess: boolean;
   sortBy: string;
   sortOrder: 'asc' | 'desc';
 }
@@ -166,21 +165,6 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
                 <option value="dropped">Dropped</option>
                 <option value="cancelled">Cancelled</option>
               </select>
-            </div>
-
-            {/* Filtro para mostrar alunos sem pagamento */}
-            <div className="flex items-end">
-              <label className="flex items-center space-x-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={filters.showUnpaidSelectionProcess}
-                  onChange={(e) => handleFilterChange('showUnpaidSelectionProcess', e.target.checked)}
-                  className="w-5 h-5 text-[#05294E] border-slate-300 rounded focus:ring-[#05294E] focus:ring-2"
-                />
-                <span className="text-sm font-medium text-slate-700">
-                  Show students without Selection Process Fee payment
-                </span>
-              </label>
             </div>
           </div>
 
