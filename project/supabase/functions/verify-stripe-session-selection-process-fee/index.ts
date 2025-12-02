@@ -1,14 +1,187 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import Stripe from 'npm:stripe@17.7.0';
-import { createClient } from 'npm:@supabase/supabase-js@2.49.1';
+import { createClient, SupabaseClient } from 'npm:@supabase/supabase-js@2.49.1';
 import { getStripeConfig } from './stripe-config.ts';
 // Import jsPDF for Deno environment
 // @ts-ignore
 import jsPDF from "https://esm.sh/jspdf@2.5.1?target=deno";
 
 const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
+
+/**
+ * Busca todos os usuários admin do sistema
+ * Retorna array com email, nome e telefone de cada admin
+ * Em ambiente de desenvolvimento (localhost), filtra emails específicos
+ */
+async function getAllAdmins(supabase: SupabaseClient, isDevelopment: boolean = false): Promise<Array<{
+  email: string;
+  full_name: string;
+  phone: string;
+}>> {
+  // Emails a serem filtrados em ambiente de desenvolvimento
+  const devBlockedEmails = [
+    'luizedmiola@gmail.com',
+    'chimentineto@gmail.com',
+    'fsuaiden@gmail.com',
+    'rayssathefuture@gmail.com'
+  ];
+  
+  try {
+    // Buscar todos os admins da tabela user_profiles onde role = 'admin'
+    // Usar RPC ou query direta - tentar primeiro com user_profiles
+    const { data: adminProfiles, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('user_id, email, full_name, phone')
+      .eq('role', 'admin');
+
+    if (profileError) {
+      console.error('[getAllAdmins] Erro ao buscar admins de user_profiles:', profileError);
+      
+      // Fallback: tentar buscar de auth.users usando raw_user_meta_data
+      try {
+        const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
+        if (!authError && authUsers) {
+          const adminUsers = authUsers.users
+            .filter(user => user.user_metadata?.role === 'admin' || user.email === 'admin@matriculausa.com')
+            .map(user => ({
+              email: user.email || '',
+              full_name: user.user_metadata?.full_name || user.user_metadata?.name || 'Admin MatriculaUSA',
+              phone: user.user_metadata?.phone || ''
+            }))
+            .filter(admin => admin.email); // Apenas admins com email
+          
+          if (adminUsers.length > 0) {
+            // Filtrar emails bloqueados em desenvolvimento
+            const filteredAdmins = isDevelopment 
+              ? adminUsers.filter(admin => !devBlockedEmails.includes(admin.email))
+              : adminUsers;
+            console.log(`[getAllAdmins] Encontrados ${filteredAdmins.length} admin(s) via auth.users${isDevelopment ? ' (filtrados para dev)' : ''}:`, filteredAdmins.map(a => a.email));
+            return filteredAdmins.length > 0 ? filteredAdmins : [{
+              email: 'admin@matriculausa.com',
+              full_name: 'Admin MatriculaUSA',
+              phone: ''
+            }];
+          }
+        }
+      } catch (authFallbackError) {
+        console.error('[getAllAdmins] Erro no fallback para auth.users:', authFallbackError);
+      }
+      
+      // Fallback final: retornar admin padrão se houver erro
+      return [{
+        email: 'admin@matriculausa.com',
+        full_name: 'Admin MatriculaUSA',
+        phone: ''
+      }];
+    }
+
+    if (!adminProfiles || adminProfiles.length === 0) {
+      console.warn('[getAllAdmins] Nenhum admin encontrado em user_profiles, tentando auth.users...');
+      
+      // Fallback: tentar buscar de auth.users
+      try {
+        const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
+        if (!authError && authUsers) {
+          const adminUsers = authUsers.users
+            .filter(user => user.user_metadata?.role === 'admin' || user.email === 'admin@matriculausa.com')
+            .map(user => ({
+              email: user.email || '',
+              full_name: user.user_metadata?.full_name || user.user_metadata?.name || 'Admin MatriculaUSA',
+              phone: user.user_metadata?.phone || ''
+            }))
+            .filter(admin => admin.email);
+          
+          if (adminUsers.length > 0) {
+            // Filtrar emails bloqueados em desenvolvimento
+            const filteredAdmins = isDevelopment 
+              ? adminUsers.filter(admin => !devBlockedEmails.includes(admin.email))
+              : adminUsers;
+            console.log(`[getAllAdmins] Encontrados ${filteredAdmins.length} admin(s) via auth.users${isDevelopment ? ' (filtrados para dev)' : ''}:`, filteredAdmins.map(a => a.email));
+            return filteredAdmins.length > 0 ? filteredAdmins : [{
+              email: 'admin@matriculausa.com',
+              full_name: 'Admin MatriculaUSA',
+              phone: ''
+            }];
+          }
+        }
+      } catch (authFallbackError) {
+        console.error('[getAllAdmins] Erro no fallback para auth.users:', authFallbackError);
+      }
+      
+      // Fallback final: retornar admin padrão se não houver admins
+      console.warn('[getAllAdmins] Nenhum admin encontrado, usando admin padrão');
+      return [{
+        email: 'admin@matriculausa.com',
+        full_name: 'Admin MatriculaUSA',
+        phone: ''
+      }];
+    }
+
+    // Se algum admin não tem email em user_profiles, buscar de auth.users
+    const adminsWithEmail = await Promise.all(
+      adminProfiles.map(async (profile) => {
+        if (profile.email) {
+          return {
+            email: profile.email,
+            full_name: profile.full_name || 'Admin MatriculaUSA',
+            phone: profile.phone || ''
+          };
+        } else {
+          // Buscar email de auth.users se não estiver em user_profiles
+          try {
+            const { data: authUser } = await supabase.auth.admin.getUserById(profile.user_id);
+            return {
+              email: authUser?.user?.email || '',
+              full_name: profile.full_name || authUser?.user?.user_metadata?.full_name || 'Admin MatriculaUSA',
+              phone: profile.phone || authUser?.user?.user_metadata?.phone || ''
+            };
+          } catch (e) {
+            console.warn(`[getAllAdmins] Erro ao buscar email para user_id ${profile.user_id}:`, e);
+            return null;
+          }
+        }
+      })
+    );
+
+    // Filtrar nulos e admins sem email
+    let admins = adminsWithEmail
+      .filter((admin): admin is { email: string; full_name: string; phone: string } => 
+        admin !== null && !!admin.email
+      );
+
+    // Filtrar emails bloqueados em desenvolvimento
+    if (isDevelopment) {
+      const beforeFilter = admins.length;
+      admins = admins.filter(admin => !devBlockedEmails.includes(admin.email));
+      if (beforeFilter !== admins.length) {
+        console.log(`[getAllAdmins] Filtrados ${beforeFilter - admins.length} admin(s) em ambiente de desenvolvimento`);
+      }
+    }
+
+    if (admins.length === 0) {
+      console.warn('[getAllAdmins] Nenhum admin válido encontrado após processamento, usando admin padrão');
+      return [{
+        email: 'admin@matriculausa.com',
+        full_name: 'Admin MatriculaUSA',
+        phone: ''
+      }];
+    }
+
+    console.log(`[getAllAdmins] Encontrados ${admins.length} admin(s)${isDevelopment ? ' (filtrados para dev)' : ''}:`, admins.map(a => a.email));
+
+    return admins;
+  } catch (error) {
+    console.error('[getAllAdmins] Erro inesperado ao buscar admins:', error);
+    // Fallback: retornar admin padrão em caso de erro
+    return [{
+      email: 'admin@matriculausa.com',
+      full_name: 'Admin MatriculaUSA',
+      phone: ''
+    }];
+  }
+}
 // Function to send term acceptance notification with PDF after successful payment
-async function sendTermAcceptanceNotificationAfterPayment(userId, feeType) {
+async function sendTermAcceptanceNotificationAfterPayment(userId, feeType, isDevelopment: boolean = false) {
   try {
     console.log('[NOTIFICAÇÃO] Buscando dados do usuário para notificação...');
     // Get user profile data
@@ -157,11 +330,16 @@ async function sendTermAcceptanceNotificationAfterPayment(userId, feeType) {
       console.warn('[NOTIFICAÇÃO] Continuando sem PDF devido ao erro na geração');
       // Don't throw error to avoid breaking the payment process
     }
-    // Prepare notification payload
+    // Buscar todos os admins do sistema
+    // Em ambiente de desenvolvimento (test), filtrar emails específicos
+    // Nota: isDevelopment já foi passado como parâmetro para esta função
+    const admins = await getAllAdmins(supabase, isDevelopment);
+    
+    // Prepare notification payload (usar primeiro admin como padrão, mas enviar para todos)
     const webhookPayload = {
       tipo_notf: "Student Term Acceptance",
-      email_admin: "admin@matriculausa.com",
-      nome_admin: "Admin MatriculaUSA",
+      email_admin: admins[0]?.email || "admin@matriculausa.com",
+      nome_admin: admins[0]?.full_name || "Admin MatriculaUSA",
       email_aluno: userProfile.email,
       nome_aluno: userProfile.full_name,
       email_seller: sellerData?.email || "",
@@ -178,42 +356,54 @@ async function sendTermAcceptanceNotificationAfterPayment(userId, feeType) {
       referral_code: sellerData?.referral_code || "",
       affiliate_admin_id: sellerData?.affiliate_admin_id || ""
     };
-    console.log('[NOTIFICAÇÃO] Enviando webhook com payload:', webhookPayload);
+      console.log('[NOTIFICAÇÃO] Enviando webhook para todos os admins:', admins.length);
     
-    let webhookResponse;
-    if (pdfBlob) {
-      // Send webhook notification with PDF
-      const formData = new FormData();
-      // Add each field individually for n8n to process correctly
-      Object.entries(webhookPayload).forEach(([key, value])=>{
-        formData.append(key, value !== null && value !== undefined ? value.toString() : '');
-      });
-      // Add PDF with descriptive filename
-      const fileName = `term_acceptance_${userProfile.full_name.replace(/\s+/g, '_').toLowerCase()}_${new Date().toISOString().split('T')[0]}.pdf`;
-      formData.append('pdf', pdfBlob, fileName);
-      console.log('[NOTIFICAÇÃO] PDF anexado à notificação:', fileName);
-      webhookResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
-        method: 'POST',
-        body: formData
-      });
-    } else {
-      // Send webhook notification without PDF
-      console.log('[NOTIFICAÇÃO] Enviando notificação sem PDF devido ao erro na geração');
-      webhookResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'User-Agent': 'PostmanRuntime/7.36.3'
-        },
-        body: JSON.stringify(webhookPayload)
-      });
-    }
-    if (webhookResponse.ok) {
-      console.log('[NOTIFICAÇÃO] Notificação enviada com sucesso!');
-    } else {
-      const errorText = await webhookResponse.text();
-      console.warn('[NOTIFICAÇÃO] Erro ao enviar notificação:', webhookResponse.status, errorText);
-    }
+    // Enviar notificação para todos os admins
+    const notificationPromises = admins.map(async (admin) => {
+      const adminPayload = {
+        ...webhookPayload,
+        email_admin: admin.email,
+        nome_admin: admin.full_name
+      };
+      
+      let webhookResponse;
+      if (pdfBlob) {
+        // Send webhook notification with PDF
+        const formData = new FormData();
+        // Add each field individually for n8n to process correctly
+        Object.entries(adminPayload).forEach(([key, value])=>{
+          formData.append(key, value !== null && value !== undefined ? value.toString() : '');
+        });
+        // Add PDF with descriptive filename
+        const fileName = `term_acceptance_${userProfile.full_name.replace(/\s+/g, '_').toLowerCase()}_${new Date().toISOString().split('T')[0]}.pdf`;
+        formData.append('pdf', pdfBlob, fileName);
+        webhookResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+          method: 'POST',
+          body: formData
+        });
+      } else {
+        // Send webhook notification without PDF
+        webhookResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'User-Agent': 'PostmanRuntime/7.36.3'
+          },
+          body: JSON.stringify(adminPayload)
+        });
+      }
+      
+      if (webhookResponse.ok) {
+        console.log(`[NOTIFICAÇÃO] Notificação enviada com sucesso para ${admin.email}!`);
+      } else {
+        const errorText = await webhookResponse.text();
+        console.warn(`[NOTIFICAÇÃO] Erro ao enviar notificação para ${admin.email}:`, webhookResponse.status, errorText);
+      }
+    });
+    
+    // Aguardar todas as notificações serem enviadas
+    await Promise.allSettled(notificationPromises);
+    console.log('[NOTIFICAÇÃO] Todas as notificações processadas!');
   } catch (error) {
     console.error('[NOTIFICAÇÃO] Erro ao enviar notificação de aceitação de termos:', error);
   // Don't throw error to avoid breaking the payment process
@@ -812,11 +1002,14 @@ Deno.serve(async (req)=>{
       // --- NOTIFICAÇÕES VIA WEBHOOK N8N (para PIX e cartão) ---
       try {
         console.log(`📤 [verify-stripe-session-selection-process-fee] Iniciando notificações...`);
+        // Detectar ambiente de desenvolvimento
+        const isDevelopment = config.environment.isTest || config.environment.environment === 'test';
+        
         // Buscar dados do aluno (incluindo seller_referral_code)
         const { data: alunoData, error: alunoError } = await supabase.from('user_profiles').select('full_name, email, seller_referral_code').eq('user_id', userId).single();
-        // Buscar telefone do admin
-        const { data: adminProfile, error: adminProfileError } = await supabase.from('user_profiles').select('phone').eq('email', 'admin@matriculausa.com').single();
-        const adminPhone = adminProfile?.phone || "";
+        // Buscar todos os admins do sistema
+        // Em ambiente de desenvolvimento (test), filtrar emails específicos
+        const admins = await getAllAdmins(supabase, isDevelopment);
         if (alunoError || !alunoData) {
           console.error('[NOTIFICAÇÃO] Erro ao buscar dados do aluno:', alunoError);
           return corsResponse({
@@ -827,7 +1020,7 @@ Deno.serve(async (req)=>{
         // Send term acceptance notification with PDF after successful payment
         try {
           console.log('[NOTIFICAÇÃO] Enviando notificação de aceitação de termos...');
-          await sendTermAcceptanceNotificationAfterPayment(userId, 'selection_process');
+          await sendTermAcceptanceNotificationAfterPayment(userId, 'selection_process', isDevelopment);
           console.log('[NOTIFICAÇÃO] Notificação de aceitação de termos enviada com sucesso!');
         } catch (notificationError) {
           console.error('[NOTIFICAÇÃO] Erro ao enviar notificação de aceitação de termos:', notificationError);
@@ -837,6 +1030,10 @@ Deno.serve(async (req)=>{
         const currencyInfo = getCurrencyInfo(session);
         const amountValue = session.amount_total / 100;
         const formattedAmount = formatAmountWithCurrency(amountValue, session);
+        
+        // Detectar método de pagamento para campo interno (pix ou stripe)
+        const isPixPayment = session.payment_method_types?.includes('pix') || session.metadata?.payment_method === 'pix';
+        const paymentMethodForNotification = isPixPayment ? 'pix' : 'stripe';
         
         const alunoNotificationPayload = {
           tipo_notf: 'Pagamento de selection process confirmado',
@@ -849,7 +1046,7 @@ Deno.serve(async (req)=>{
           currency: currencyInfo.currency,
           currency_symbol: currencyInfo.symbol,
           formatted_amount: formattedAmount,
-          payment_method: "stripe"
+          payment_method: paymentMethodForNotification
         };
         console.log('[NOTIFICAÇÃO ALUNO] Enviando notificação para aluno:', alunoNotificationPayload);
         const alunoNotificationResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
@@ -907,46 +1104,50 @@ Deno.serve(async (req)=>{
               }
             }
             // NOTIFICAÇÕES SEPARADAS PARA ADMIN, SELLER E AFFILIATE ADMIN
-            // 1. NOTIFICAÇÃO PARA ADMIN
-            // Buscar telefone do admin (usando email admin@matriculausa.com)
-            const { data: adminProfile, error: adminProfileError } = await supabase.from('user_profiles').select('phone').eq('email', 'admin@matriculausa.com').single();
-            const adminPhone = adminProfile?.phone || "";
-            const adminNotificationPayload = {
-              tipo_notf: "Pagamento Stripe de selection process confirmado - Admin",
-              email_admin: "admin@matriculausa.com",
-              nome_admin: "Admin MatriculaUSA",
-              phone_admin: adminPhone,
-              email_aluno: alunoData.email,
-              nome_aluno: alunoData.full_name,
-              o_que_enviar: `Pagamento Stripe de selection process no valor de ${formattedAmount} do aluno ${alunoData.full_name} foi processado com sucesso. Seller responsável: ${sellerData.name} (${sellerData.referral_code}). Affiliate: ${affiliateAdminData.name}`,
-              payment_id: sessionId,
-              fee_type: 'selection_process',
-              amount: amountValue,
-              currency: currencyInfo.currency,
-              currency_symbol: currencyInfo.symbol,
-              formatted_amount: formattedAmount,
-              seller_id: sellerData.user_id,
-              referral_code: sellerData.referral_code,
-              commission_rate: sellerData.commission_rate,
-              payment_method: "stripe",
-              notification_type: "admin"
-            };
-            console.log('📧 [verify-stripe-session-selection-process-fee] ✅ ENVIANDO NOTIFICAÇÃO PARA ADMIN:', adminNotificationPayload);
-            const adminNotificationResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'User-Agent': 'PostmanRuntime/7.36.3'
-              },
-              body: JSON.stringify(adminNotificationPayload)
+            // 1. NOTIFICAÇÃO PARA TODOS OS ADMINS
+            // Detectar método de pagamento para campo interno (pix ou stripe)
+            const isPixPayment = session.payment_method_types?.includes('pix') || session.metadata?.payment_method === 'pix';
+            const paymentMethodForNotification = isPixPayment ? 'pix' : 'stripe';
+            
+            const adminNotificationPromises = admins.map(async (admin) => {
+              const adminNotificationPayload = {
+                tipo_notf: "Pagamento Stripe de selection process confirmado - Admin",
+                email_admin: admin.email,
+                nome_admin: admin.full_name,
+                phone_admin: admin.phone,
+                email_aluno: alunoData.email,
+                nome_aluno: alunoData.full_name,
+                o_que_enviar: `Pagamento Stripe de selection process no valor de ${formattedAmount} do aluno ${alunoData.full_name} foi processado com sucesso. Seller responsável: ${sellerData.name} (${sellerData.referral_code}). Affiliate: ${affiliateAdminData.name}`,
+                payment_id: sessionId,
+                fee_type: 'selection_process',
+                amount: amountValue,
+                currency: currencyInfo.currency,
+                currency_symbol: currencyInfo.symbol,
+                formatted_amount: formattedAmount,
+                seller_id: sellerData.user_id,
+                referral_code: sellerData.referral_code,
+                commission_rate: sellerData.commission_rate,
+                payment_method: paymentMethodForNotification,
+                notification_type: "admin"
+              };
+              console.log(`📧 [verify-stripe-session-selection-process-fee] ✅ ENVIANDO NOTIFICAÇÃO PARA ADMIN ${admin.email}:`, adminNotificationPayload);
+              const adminNotificationResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'User-Agent': 'PostmanRuntime/7.36.3'
+                },
+                body: JSON.stringify(adminNotificationPayload)
+              });
+              if (adminNotificationResponse.ok) {
+                const adminResult = await adminNotificationResponse.text();
+                console.log(`📧 [verify-stripe-session-selection-process-fee] Notificação para ADMIN ${admin.email} enviada com sucesso:`, adminResult);
+              } else {
+                const adminError = await adminNotificationResponse.text();
+                console.error(`📧 [verify-stripe-session-selection-process-fee] Erro ao enviar notificação para ADMIN ${admin.email}:`, adminError);
+              }
             });
-            if (adminNotificationResponse.ok) {
-              const adminResult = await adminNotificationResponse.text();
-              console.log('📧 [verify-stripe-session-selection-process-fee] Notificação para ADMIN enviada com sucesso:', adminResult);
-            } else {
-              const adminError = await adminNotificationResponse.text();
-              console.error('📧 [verify-stripe-session-selection-process-fee] Erro ao enviar notificação para ADMIN:', adminError);
-            }
+            await Promise.allSettled(adminNotificationPromises);
             // 2. NOTIFICAÇÃO PARA SELLER
             // Buscar telefone do seller
             const { data: sellerProfile, error: sellerProfileError } = await supabase.from('user_profiles').select('phone').eq('user_id', sellerData.user_id).single();
@@ -968,7 +1169,7 @@ Deno.serve(async (req)=>{
               seller_id: sellerData.user_id,
               referral_code: sellerData.referral_code,
               commission_rate: sellerData.commission_rate,
-              payment_method: "stripe",
+              payment_method: paymentMethodForNotification,
               notification_type: "seller"
             };
             console.log('📧 [verify-stripe-session-selection-process-fee] ✅ ENVIANDO NOTIFICAÇÃO PARA SELLER:', sellerNotificationPayload);
@@ -1008,7 +1209,7 @@ Deno.serve(async (req)=>{
                 seller_id: sellerData.user_id,
                 referral_code: sellerData.referral_code,
                 commission_rate: sellerData.commission_rate,
-                payment_method: "stripe",
+                payment_method: paymentMethodForNotification,
                 notification_type: "affiliate_admin"
               };
               console.log('📧 [verify-stripe-session-selection-process-fee] ✅ ENVIANDO NOTIFICAÇÃO PARA AFFILIATE ADMIN:', affiliateNotificationPayload);
@@ -1034,16 +1235,70 @@ Deno.serve(async (req)=>{
             console.log(`📤 [verify-stripe-session-selection-process-fee] ❌ SELLER NÃO ENCONTRADO para seller_referral_code: ${alunoData.seller_referral_code}`);
             console.log(`📤 [verify-stripe-session-selection-process-fee] ❌ ERRO na busca do seller:`, sellerError);
             
-            // Notificação para admin quando NÃO há seller
+            // Notificação para todos os admins quando NÃO há seller
             const currencyInfo = getCurrencyInfo(session);
             const amountValue = session.amount_total / 100;
             const formattedAmount = formatAmountWithCurrency(amountValue, session);
             
+            // Detectar método de pagamento para campo interno (pix ou stripe)
+            const isPixPayment = session.payment_method_types?.includes('pix') || session.metadata?.payment_method === 'pix';
+            const paymentMethodForNotification = isPixPayment ? 'pix' : 'stripe';
+            
+            const adminNotificationPromises = admins.map(async (admin) => {
+              const adminNotificationPayload = {
+                tipo_notf: "Pagamento Stripe de selection process confirmado - Admin",
+                email_admin: admin.email,
+                nome_admin: admin.full_name,
+                phone_admin: admin.phone,
+                email_aluno: alunoData.email,
+                nome_aluno: alunoData.full_name,
+                o_que_enviar: `Pagamento Stripe de selection process no valor de ${formattedAmount} do aluno ${alunoData.full_name} foi processado com sucesso.`,
+                payment_id: sessionId,
+                fee_type: 'selection_process',
+                amount: amountValue,
+                currency: currencyInfo.currency,
+                currency_symbol: currencyInfo.symbol,
+                formatted_amount: formattedAmount,
+                payment_method: paymentMethodForNotification,
+                notification_type: 'admin'
+              };
+              console.log(`📧 [verify-stripe-session-selection-process-fee] Enviando notificação para admin ${admin.email} (sem seller):`, adminNotificationPayload);
+              const adminNotificationResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'User-Agent': 'PostmanRuntime/7.36.3'
+                },
+                body: JSON.stringify(adminNotificationPayload)
+              });
+              if (adminNotificationResponse.ok) {
+                const adminResult = await adminNotificationResponse.text();
+                console.log(`📧 [verify-stripe-session-selection-process-fee] Notificação para admin ${admin.email} enviada com sucesso:`, adminResult);
+              } else {
+                const adminError = await adminNotificationResponse.text();
+                console.error(`📧 [verify-stripe-session-selection-process-fee] Erro ao enviar notificação para admin ${admin.email}:`, adminError);
+              }
+            });
+            await Promise.allSettled(adminNotificationPromises);
+          }
+        } else {
+          console.log(`📤 [verify-stripe-session-selection-process-fee] ❌ NENHUM SELLER_REFERRAL_CODE encontrado, não há seller para notificar`);
+          
+          // Notificação para todos os admins quando NÃO há seller_referral_code
+          const currencyInfo = getCurrencyInfo(session);
+          const amountValue = session.amount_total / 100;
+          const formattedAmount = formatAmountWithCurrency(amountValue, session);
+          
+          // Detectar método de pagamento para campo interno (pix ou stripe)
+          const isPixPayment = session.payment_method_types?.includes('pix') || session.metadata?.payment_method === 'pix';
+          const paymentMethodForNotification = isPixPayment ? 'pix' : 'stripe';
+          
+          const adminNotificationPromises = admins.map(async (admin) => {
             const adminNotificationPayload = {
               tipo_notf: "Pagamento Stripe de selection process confirmado - Admin",
-              email_admin: "admin@matriculausa.com",
-              nome_admin: "Admin MatriculaUSA",
-              phone_admin: adminPhone,
+              email_admin: admin.email,
+              nome_admin: admin.full_name,
+              phone_admin: admin.phone,
               email_aluno: alunoData.email,
               nome_aluno: alunoData.full_name,
               o_que_enviar: `Pagamento Stripe de selection process no valor de ${formattedAmount} do aluno ${alunoData.full_name} foi processado com sucesso.`,
@@ -1053,10 +1308,10 @@ Deno.serve(async (req)=>{
               currency: currencyInfo.currency,
               currency_symbol: currencyInfo.symbol,
               formatted_amount: formattedAmount,
-              payment_method: 'stripe',
+              payment_method: paymentMethodForNotification,
               notification_type: 'admin'
             };
-            console.log('📧 [verify-stripe-session-selection-process-fee] Enviando notificação para admin da plataforma (sem seller):', adminNotificationPayload);
+            console.log(`📧 [verify-stripe-session-selection-process-fee] Enviando notificação para admin ${admin.email} (sem seller):`, adminNotificationPayload);
             const adminNotificationResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
               method: 'POST',
               headers: {
@@ -1067,53 +1322,13 @@ Deno.serve(async (req)=>{
             });
             if (adminNotificationResponse.ok) {
               const adminResult = await adminNotificationResponse.text();
-              console.log('📧 [verify-stripe-session-selection-process-fee] Notificação para admin enviada com sucesso:', adminResult);
+              console.log(`📧 [verify-stripe-session-selection-process-fee] Notificação para admin ${admin.email} enviada com sucesso:`, adminResult);
             } else {
               const adminError = await adminNotificationResponse.text();
-              console.error('📧 [verify-stripe-session-selection-process-fee] Erro ao enviar notificação para admin:', adminError);
+              console.error(`📧 [verify-stripe-session-selection-process-fee] Erro ao enviar notificação para admin ${admin.email}:`, adminError);
             }
-          }
-        } else {
-          console.log(`📤 [verify-stripe-session-selection-process-fee] ❌ NENHUM SELLER_REFERRAL_CODE encontrado, não há seller para notificar`);
-          
-          // Notificação para admin quando NÃO há seller_referral_code
-          const currencyInfo = getCurrencyInfo(session);
-          const amountValue = session.amount_total / 100;
-          const formattedAmount = formatAmountWithCurrency(amountValue, session);
-          
-          const adminNotificationPayload = {
-            tipo_notf: "Pagamento Stripe de selection process confirmado - Admin",
-            email_admin: "admin@matriculausa.com",
-            nome_admin: "Admin MatriculaUSA",
-            phone_admin: adminPhone,
-            email_aluno: alunoData.email,
-            nome_aluno: alunoData.full_name,
-            o_que_enviar: `Pagamento Stripe de selection process no valor de ${formattedAmount} do aluno ${alunoData.full_name} foi processado com sucesso.`,
-            payment_id: sessionId,
-            fee_type: 'selection_process',
-            amount: amountValue,
-            currency: currencyInfo.currency,
-            currency_symbol: currencyInfo.symbol,
-            formatted_amount: formattedAmount,
-            payment_method: 'stripe',
-            notification_type: 'admin'
-          };
-          console.log('📧 [verify-stripe-session-selection-process-fee] Enviando notificação para admin da plataforma (sem seller):', adminNotificationPayload);
-          const adminNotificationResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'User-Agent': 'PostmanRuntime/7.36.3'
-            },
-            body: JSON.stringify(adminNotificationPayload)
           });
-          if (adminNotificationResponse.ok) {
-            const adminResult = await adminNotificationResponse.text();
-            console.log('📧 [verify-stripe-session-selection-process-fee] Notificação para admin enviada com sucesso:', adminResult);
-          } else {
-            const adminError = await adminNotificationResponse.text();
-            console.error('📧 [verify-stripe-session-selection-process-fee] Erro ao enviar notificação para admin:', adminError);
-          }
+          await Promise.allSettled(adminNotificationPromises);
         }
       } catch (notifErr) {
         console.error('[NOTIFICAÇÃO] Erro ao notificar selection process via n8n:', notifErr);

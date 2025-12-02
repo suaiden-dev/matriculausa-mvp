@@ -12,6 +12,7 @@ export const useFilters = () => {
     },
     statusFilter: 'all',
     paymentStatusFilter: 'all',
+    showUnpaidSelectionProcess: false, // Por padrão, oculta alunos sem pagamento
     sortBy: 'revenue',
     sortOrder: 'desc'
   });
@@ -30,6 +31,7 @@ export const useFilters = () => {
       dateRange: { start: '', end: '' },
       statusFilter: 'all',
       paymentStatusFilter: 'all',
+      showUnpaidSelectionProcess: false, // Reseta para ocultar alunos sem pagamento
       sortBy: 'revenue',
       sortOrder: 'desc'
     });

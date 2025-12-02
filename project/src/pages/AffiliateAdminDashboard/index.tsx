@@ -10,6 +10,7 @@ import EnhancedStudentTracking from './EnhancedStudentTrackingRefactored';
 import Analytics from './Analytics';
 import ProfileSettings from './ProfileSettings';
 import MyStudents from './MyStudents';
+import UtmTracking from './UtmTracking';
 
 interface AffiliateAdminStats {
   totalStudents: number;
@@ -36,6 +37,11 @@ interface Student {
   created_at: string;
   status: string;
   application_status?: string;
+  has_paid_selection_process_fee?: boolean;
+  has_paid_i20_control_fee?: boolean;
+  is_scholarship_fee_paid?: boolean;
+  is_application_fee_paid?: boolean;
+  system_type?: string;
 }
 
 interface Seller {
@@ -164,7 +170,11 @@ const AffiliateAdminDashboard: React.FC = () => {
         created_at: student.created_at,
         status: student.status || 'active',
         application_status: student.application_status || 'Not specified',
-        system_type: student.system_type || 'legacy'
+        system_type: student.system_type || 'legacy',
+        has_paid_selection_process_fee: student.has_paid_selection_process_fee || false,
+        has_paid_i20_control_fee: student.has_paid_i20_control_fee || false,
+        is_scholarship_fee_paid: student.is_scholarship_fee_paid || false,
+        is_application_fee_paid: student.is_application_fee_paid || false
       }));
 
       // Atualizar estatísticas
@@ -261,6 +271,10 @@ const AffiliateAdminDashboard: React.FC = () => {
               userId={userId}
             />
           } 
+        />
+        <Route 
+          path="utm-tracking" 
+          element={<UtmTracking />} 
         />
         <Route 
           path="profile" 

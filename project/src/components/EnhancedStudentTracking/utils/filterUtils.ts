@@ -21,8 +21,16 @@ export const getFilteredAndSortedData = (
       referred_by_seller_id: student.referred_by_seller_id,
       status: student.status,
       created_at: student.created_at,
-      university_id: student.university_id
+      university_id: student.university_id,
+      has_paid_selection_process_fee: student.has_paid_selection_process_fee
     });
+    
+    // Filtro por pagamento da Selection Process Fee
+    // Por padrão, oculta alunos que não pagaram (a menos que o filtro esteja ativado)
+    if (!filters.showUnpaidSelectionProcess && !student.has_paid_selection_process_fee) {
+      console.log(`🔍 Student ${student.full_name} filtered out: hasn't paid selection process fee`);
+      return false;
+    }
     
     // Filtro por vendedor
     if (filters.sellerFilter !== 'all' && student.referred_by_seller_id !== filters.sellerFilter) {

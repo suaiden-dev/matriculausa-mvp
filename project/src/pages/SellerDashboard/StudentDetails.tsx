@@ -15,7 +15,7 @@ import { getDocumentStatusDisplay } from '../../utils/documentStatusMapper';
 import DocumentViewerModal from '../../components/DocumentViewerModal';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
 import { useStudentDetails } from '../../components/EnhancedStudentTracking/hooks/useStudentDetails';
-import { getRealPaidAmounts } from '../../utils/paymentConverter';
+import { getDisplayAmounts } from '../../utils/paymentConverter';
 import SelectedScholarshipCard from '../../components/AdminDashboard/StudentDetails/SelectedScholarshipCard';
 import StudentScholarshipsList from '../../components/EnhancedStudentTracking/StudentScholarshipsList';
 import ApplicationProgressCard from '../../components/AdminDashboard/StudentDetails/ApplicationProgressCard';
@@ -511,7 +511,8 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
       }
       
       try {
-        const amounts = await getRealPaidAmounts(studentId, ['selection_process', 'scholarship', 'i20_control', 'application']);
+        // ✅ CORREÇÃO: Usar getDisplayAmounts para exibição (valores "Zelle" sem taxas)
+        const amounts = await getDisplayAmounts(studentId, ['selection_process', 'scholarship', 'i20_control', 'application']);
         setRealPaidAmounts(amounts);
       } catch (error) {
         console.error(`Erro ao buscar valores pagos para user_id ${studentId}:`, error);

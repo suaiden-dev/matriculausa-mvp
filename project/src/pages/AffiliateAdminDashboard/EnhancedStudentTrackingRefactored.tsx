@@ -17,7 +17,7 @@ import {
 import { supabase } from '../../lib/supabase';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
 import { useDynamicFeeCalculation, useDynamicFeeCalculationForUser } from '../../hooks/useDynamicFeeCalculation';
-import { getRealPaidAmounts } from '../../utils/paymentConverter';
+import { getDisplayAmounts } from '../../utils/paymentConverter';
 
 function EnhancedStudentTracking(props) {
   const { userId } = props || {};
@@ -214,7 +214,8 @@ function EnhancedStudentTracking(props) {
         
         await Promise.allSettled(uniqueUserIds.map(async (userId) => {
           try {
-            const amounts = await getRealPaidAmounts(userId, ['selection_process', 'scholarship', 'i20_control']);
+            // ✅ CORREÇÃO: Usar getDisplayAmounts para exibição (valores "Zelle" sem taxas)
+            const amounts = await getDisplayAmounts(userId, ['selection_process', 'scholarship', 'i20_control']);
             amountsMap[userId] = {
               selection_process: amounts.selection_process,
               scholarship: amounts.scholarship,
@@ -266,6 +267,56 @@ function EnhancedStudentTracking(props) {
 
     loadBlackCouponUsers();
   }, [students]);
+
+  // Calcular receita ajustada para TODOS os estudantes (para StatsCards)
+  const allAdjustedStudents = useMemo(() => {
+    const result = (students || []).map((s) => {
+      const o = overridesMap[s.user_id] || {};
+      const dependents = Number(dependentsMap[s.profile_id]) || 0;
+      const realPaid = realPaidAmountsMap[s.user_id] || {};
+
+      let total = 0;
+      
+      if (s.has_paid_selection_process_fee) {
+        if (realPaid.selection_process !== undefined && realPaid.selection_process > 0) {
+          total += realPaid.selection_process;
+        } else {
+          const systemType = s.system_type || 'legacy';
+          const baseSelectionFee = systemType === 'simplified' ? 350 : 400;
+          total += systemType === 'simplified' ? baseSelectionFee : baseSelectionFee + (dependents * 150);
+        }
+      }
+      
+      const hasAnyScholarshipPaid = s.is_scholarship_fee_paid || false;
+      if (hasAnyScholarshipPaid) {
+        if (realPaid.scholarship !== undefined && realPaid.scholarship > 0) {
+          total += realPaid.scholarship;
+        } else {
+          const systemType = s.system_type || 'legacy';
+          const scholarshipFee = systemType === 'simplified' ? 550 : 900;
+          total += scholarshipFee;
+        }
+      }
+      
+      if (hasAnyScholarshipPaid && s.has_paid_i20_control_fee) {
+        if (realPaid.i20_control !== undefined && realPaid.i20_control > 0) {
+          total += realPaid.i20_control;
+        } else {
+          total += 900;
+        }
+      }
+
+      return { 
+        ...s, 
+        total_paid_adjusted: total,
+        hasMultipleApplications: s.hasMultipleApplications,
+        applicationCount: s.applicationCount,
+        allApplications: s.allApplications
+      };
+    });
+    
+    return result;
+  }, [students, overridesMap, feeConfig, dependentsMap, realPaidAmountsMap]);
 
   // Calcular receita ajustada por estudante usando valores reais pagos quando disponíveis
   // Usa valores reais pagos quando disponíveis, com fallback para cálculo fixo se não houver registro
@@ -882,8 +933,11 @@ function EnhancedStudentTracking(props) {
       {/* Main Content */}
       <div className="px-4 sm:px-6 lg:px-8">
         <div className="space-y-6">
-          {/* Stats Cards */}
-          <StatsCards filteredStudents={adjustedStudents} />
+          {/* Stats Cards - sempre mostra diferenciação entre pagos e registrados */}
+          <StatsCards 
+            filteredStudents={adjustedStudents}
+            allStudents={allAdjustedStudents}
+          />
 
           {/* Filtros Avançados */}
           <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-6">

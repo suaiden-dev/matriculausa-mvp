@@ -175,7 +175,7 @@
       "recipientEmail": "Email do Destinatário",
       "paymentAmount": "Valor do Pagamento",
       "important": "Importante:",
-      "importantMessage": "Certifique-se de enviar o valor exato de <strong>{{amount}} USD</strong> para <strong>info@thefutureofenglish.com</strong> via Zelle. Qualquer discrepância no valor ou destinatário atrasará o processamento do seu pagamento.",
+      "importantMessage": "Certifique-se de enviar o valor exato de <strong>{{amount}} USD</strong> para <strong>pay@matriculausa.com</strong> via Zelle. Qualquer discrepância no valor ou destinatário atrasará o processamento do seu pagamento.",
       "importantMessageSimple": "Certifique-se de que o valor exato do pagamento corresponde ao valor mostrado acima."
     }
   },
@@ -1968,6 +1968,25 @@
             "Pague a taxa da bolsa para completar a matrícula",
             "Receba a confirmação final",
             "Comece seu programa acadêmico"
+          ]
+        },
+        "scholarshipFeePaidI20Required": {
+          "title": "Taxa da Bolsa Paga - Documentos Pendentes",
+          "description": "Ótimo! Sua taxa da bolsa foi confirmada. Agora você precisa enviar as requisições de documentos pendentes solicitadas pela universidade.",
+          "nextSteps": [
+            "Envie as requisições de documentos pendentes",
+            "Aguarde a aprovação dos documentos pela universidade",
+            "Pague a I-20 Control Fee para poder receber a carta de aceite",
+            "Receba a carta de aceite da universidade"
+          ]
+        },
+        "allFeesPaidWaitingAcceptanceLetter": {
+          "title": "Todas as Taxas Pagas - Aguardando Carta de Aceite",
+          "description": "Excelente! Todas as taxas foram pagas com sucesso. Agora você está aguardando a universidade enviar sua carta de aceite oficial.",
+          "nextSteps": [
+            "Aguarde a universidade enviar sua carta de aceite",
+            "Verifique regularmente a seção de documentos",
+            "Complete sua matrícula após receber a carta"
           ]
         },
         "fullyEnrolled": {

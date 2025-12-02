@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
@@ -16,10 +16,17 @@ const ScholarshipFeeSuccess: React.FC = () => {
   const [promotionalCoupon, setPromotionalCoupon] = useState<string | null>(null);
   const navigate = useNavigate();
   const { userProfile } = useAuth();
+  const verificationRef = useRef<boolean>(false); // ✅ Proteção contra chamadas duplicadas
 
   const { t } = useTranslation();
 
   useEffect(() => {
+    // ✅ Proteção contra chamadas duplicadas (React StrictMode ou re-renders)
+    if (verificationRef.current) {
+      console.log('[ScholarshipFeeSuccess] Verificação já foi executada, pulando chamada duplicada.');
+      return;
+    }
+    
     const params = new URLSearchParams(window.location.search);
     const sessionId = params.get('session_id');
     console.log('[ScholarshipFeeSuccess] sessionId from URL:', sessionId);
@@ -28,6 +35,10 @@ const ScholarshipFeeSuccess: React.FC = () => {
       setLoading(false);
       return;
     }
+    
+    // ✅ Marcar como executado ANTES de fazer a chamada
+    verificationRef.current = true;
+    
     const verifySession = async () => {
       try {
         const SUPABASE_PROJECT_URL = import.meta.env.VITE_SUPABASE_URL;

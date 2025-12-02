@@ -20,6 +20,23 @@ export function filterPayments(
     const matchesUniversity = filters.university === 'all' || payment.university_id === filters.university;
     const matchesFeeType = filters.feeType === 'all' || payment.fee_type === filters.feeType;
     const matchesStatus = filters.status === 'all' || payment.status === filters.status;
+    
+    // ✅ NOVO: Filtro por método de pagamento
+    const matchesPaymentMethod = (() => {
+      if (!filters.paymentMethod || filters.paymentMethod === 'all') return true;
+      // Mapear valores do filtro para valores do banco
+      // 'pix' no filtro corresponde a 'stripe' no banco (pagamentos PIX via Stripe)
+      // 'zelle' corresponde a 'zelle'
+      // 'outside' corresponde a 'manual'
+      if (filters.paymentMethod === 'pix') {
+        return payment.payment_method === 'stripe';
+      } else if (filters.paymentMethod === 'zelle') {
+        return payment.payment_method === 'zelle';
+      } else if (filters.paymentMethod === 'outside') {
+        return payment.payment_method === 'manual';
+      }
+      return payment.payment_method === filters.paymentMethod;
+    })();
 
     const matchesAffiliate = (function () {
       if (!filters.affiliate || filters.affiliate === 'all') return true;
@@ -38,7 +55,7 @@ export function filterPayments(
       if (filters.dateTo) matchesDate = matchesDate && paymentDate <= new Date(filters.dateTo);
     }
 
-    return matchesSearch && matchesUniversity && matchesFeeType && matchesStatus && matchesAffiliate && matchesDate;
+    return matchesSearch && matchesUniversity && matchesFeeType && matchesStatus && matchesPaymentMethod && matchesAffiliate && matchesDate;
   });
 }
 

@@ -175,7 +175,7 @@
       "recipientEmail": "Recipient Email",
       "paymentAmount": "Payment Amount",
       "important": "Important:",
-      "importantMessage": "Make sure to send the exact amount of <strong>{{amount}} USD</strong> to <strong>info@thefutureofenglish.com</strong> via Zelle. Any discrepancy in amount or recipient will delay your payment processing.",
+      "importantMessage": "Make sure to send the exact amount of <strong>{{amount}} USD</strong> to <strong>pay@matriculausa.com</strong> via Zelle. Any discrepancy in amount or recipient will delay your payment processing.",
       "importantMessageSimple": "Make sure the exact payment amount matches the amount shown above."
     }
   },
@@ -1888,6 +1888,25 @@
             "Pay the scholarship fee to complete enrollment",
             "Receive final confirmation",
             "Begin your academic program"
+          ]
+        },
+        "scholarshipFeePaidI20Required": {
+          "title": "Scholarship Fee Paid - Pending Documents",
+          "description": "Great! Your scholarship fee has been confirmed. Now you need to submit the pending document requests requested by the university.",
+          "nextSteps": [
+            "Submit pending document requests",
+            "Wait for university approval of documents",
+            "Pay the I-20 Control Fee to receive your acceptance letter",
+            "Receive the acceptance letter from the university"
+          ]
+        },
+        "allFeesPaidWaitingAcceptanceLetter": {
+          "title": "All Fees Paid - Waiting for Acceptance Letter",
+          "description": "Excellent! All fees have been paid successfully. You are now waiting for the university to send your official acceptance letter.",
+          "nextSteps": [
+            "Wait for the university to send your acceptance letter",
+            "Check the documents section regularly",
+            "Complete your enrollment after receiving the letter"
           ]
         },
         "fullyEnrolled": {

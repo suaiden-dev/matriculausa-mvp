@@ -3,7 +3,7 @@ import React from 'react';
 import { useState as useStateReact, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useNavigate } from 'react-router-dom';
-import { getRealPaidAmounts } from '../../utils/paymentConverter';
+import { getDisplayAmounts } from '../../utils/paymentConverter';
 import { 
   Users, 
   UserPlus, 
@@ -15,7 +15,6 @@ import DirectSalesLink from './DirectSalesLink';
 
 const Overview = ({ stats, sellers = [], students = [], onRefresh }) => {
   const navigate = useNavigate();
-  const recentSellers = (sellers || []).slice(0, 5);
 
   // Default values for stats
   const safeStats = {
@@ -107,8 +106,11 @@ const Overview = ({ stats, sellers = [], students = [], onRefresh }) => {
           return;
         }
 
+        // ✅ FILTRO: Apenas estudantes que pagaram Selection Process Fee (mesma lógica do EnhancedStudentTrackingRefactored)
+        const paidProfiles = (profiles || []).filter(p => p.has_paid_selection_process_fee);
+
         // Preparar overrides por user_id (opcional, mas mantém compatibilidade)
-        const uniqueUserIds = Array.from(new Set((profiles || []).map((p) => p.user_id).filter(Boolean)));
+        const uniqueUserIds = Array.from(new Set((paidProfiles || []).map((p) => p.user_id).filter(Boolean)));
         const overrideEntries = await Promise.allSettled(uniqueUserIds.map(async (uid) => {
           const { data, error } = await supabase.rpc('get_user_fee_overrides', { target_user_id: uid });
           return [uid, error ? null : data];
@@ -128,9 +130,10 @@ const Overview = ({ stats, sellers = [], students = [], onRefresh }) => {
         }, {});
 
         // ✅ OTIMIZAÇÃO: Calcular primeiro com valores de fallback (rápido) e mostrar imediatamente
+        // ✅ FILTRO: Usar apenas paidProfiles (estudantes que pagaram Selection Process Fee)
         const calculateRevenue = (realPaidAmountsMap: Record<string, { selection_process?: number; scholarship?: number; i20_control?: number }> = {}) => {
           const revenueByReferral: Record<string, number> = {};
-          const total = (profiles || []).reduce((sum, p) => {
+          const total = (paidProfiles || []).reduce((sum, p) => {
             const deps = Number(p?.dependents || 0);
             const ov = overridesMap[p?.user_id] || {};
             const realPaid = realPaidAmountsMap[p?.user_id] || {};
@@ -192,7 +195,8 @@ const Overview = ({ stats, sellers = [], students = [], onRefresh }) => {
           if (!mounted) return;
           
           try {
-            const amounts = await getRealPaidAmounts(userId, ['selection_process', 'scholarship', 'i20_control']);
+            // ✅ CORREÇÃO: Usar getDisplayAmounts para exibição (valores "Zelle" sem taxas)
+            const amounts = await getDisplayAmounts(userId, ['selection_process', 'scholarship', 'i20_control']);
             if (mounted) {
               realPaidAmountsMap[userId] = {
                 selection_process: amounts.selection_process,
@@ -215,6 +219,7 @@ const Overview = ({ stats, sellers = [], students = [], onRefresh }) => {
             total: finalRevenue.total,
             revenueByReferral: finalRevenue.revenueByReferral,
             profilesCount: profiles?.length || 0,
+            paidProfilesCount: paidProfiles?.length || 0,
             realPaidAmountsCount: Object.keys(realPaidAmountsMap).length
           });
         }
@@ -233,33 +238,106 @@ const Overview = ({ stats, sellers = [], students = [], onRefresh }) => {
     return new Date(dateString).toLocaleDateString('en-US');
   };
 
+  // ✅ FILTRO: Apenas estudantes que pagaram Selection Process Fee (mesma lógica do EnhancedStudentTrackingRefactored)
+  // ✅ DEDUPLICAÇÃO: Como a função SQL retorna múltiplas linhas por estudante (uma por aplicação),
+  // precisamos deduplicar por id antes de contar para evitar contar o mesmo estudante múltiplas vezes
+  const paidStudents = React.useMemo(() => {
+    // Primeiro, deduplicar estudantes por id (manter apenas a primeira ocorrência)
+    const uniqueStudentsMap = new Map();
+    (students || []).forEach((s) => {
+      if (!uniqueStudentsMap.has(s.id)) {
+        uniqueStudentsMap.set(s.id, s);
+      }
+    });
+    const uniqueStudents = Array.from(uniqueStudentsMap.values());
+    
+    // Depois, filtrar apenas os que pagaram
+    return uniqueStudents.filter(s => s.has_paid_selection_process_fee);
+  }, [students]);
+
+  // Contar apenas estudantes que pagaram para o card "Referred Students"
+  const paidStudentsCount = paidStudents.length;
+
+  // ✅ FILTRO: Agrupar estudantes pagos por referral_code para contar e filtrar sellers
+  // Usar seller_referral_code do estudante para fazer match com referral_code do seller
+  const paidStudentsByReferral = React.useMemo(() => {
+    const map = {};
+    (paidStudents || []).forEach((s) => {
+      // ✅ CORREÇÃO: Usar seller_referral_code para fazer match com referral_code do seller
+      const referralCode = s.seller_referral_code;
+      if (referralCode) {
+        if (!map[referralCode]) {
+          map[referralCode] = [];
+        }
+        map[referralCode].push(s);
+      }
+    });
+    return map;
+  }, [paidStudents]);
+
+  // ✅ FILTRO: Recent sellers apenas com estudantes que pagaram (mesma lógica do displaySellers)
+  // Só mostrar sellers que têm receita ajustada > 0 (já que receita só é calculada com quem pagou)
+  const recentSellers = React.useMemo(() => {
+    if (loadingAdjusted) return [];
+    
+    return (sellers || [])
+      .filter((s) => {
+        const referralCode = s.referral_code;
+        // ✅ FILTRO: Só mostrar se tem receita ajustada > 0 (garante que tem estudantes que pagaram)
+        const hasAdjustedRevenue = adjustedRevenueByReferral[referralCode] && adjustedRevenueByReferral[referralCode] > 0;
+        return hasAdjustedRevenue;
+      })
+      .map((s) => {
+        const paidCount = paidStudentsByReferral[s?.referral_code]?.length || 0;
+        return {
+          ...s,
+          students_count: paidCount
+        };
+      })
+      .slice(0, 5);
+  }, [sellers, paidStudentsByReferral, adjustedRevenueByReferral, loadingAdjusted]);
+
   // Sellers com receita ajustada (se disponível)
+  // ✅ FILTRO: Mostrar apenas sellers que têm receita ajustada > 0 (garante que tem estudantes que pagaram)
   // Priorizar adjustedRevenueByReferral que usa valores reais pagos
   // ⚠️ Só calcular quando os valores reais pagos estiverem carregados para evitar mudança visual
   const displaySellers = loadingAdjusted 
     ? [] // Retornar array vazio enquanto carrega para evitar mostrar valores incorretos
-    : (sellers || []).map((s) => {
-      const adjustedRevenue = adjustedRevenueByReferral[s?.referral_code];
-      const finalRevenue = adjustedRevenue != null && adjustedRevenue !== undefined
-        ? adjustedRevenue
-        : (s.total_revenue || 0);
-      
-      // Log para debug
-      if (s?.referral_code === 'SUAIDEN') {
-        console.log('🔍 [OVERVIEW] SUAIDEN revenue:', {
-          referral_code: s.referral_code,
-          adjustedRevenue,
-          s_total_revenue: s.total_revenue,
-          finalRevenue,
-          adjustedRevenueByReferral: adjustedRevenueByReferral
+    : (sellers || [])
+        .filter((s) => {
+          // ✅ FILTRO: Só mostrar sellers que têm receita ajustada > 0
+          // A receita ajustada só é calculada com estudantes que pagaram Selection Process Fee
+          const referralCode = s.referral_code;
+          const hasAdjustedRevenue = adjustedRevenueByReferral[referralCode] && adjustedRevenueByReferral[referralCode] > 0;
+          return hasAdjustedRevenue;
+        })
+        .map((s) => {
+          const adjustedRevenue = adjustedRevenueByReferral[s?.referral_code];
+          const finalRevenue = adjustedRevenue != null && adjustedRevenue !== undefined
+            ? adjustedRevenue
+            : 0; // Se não tem receita ajustada, não deve aparecer (já foi filtrado)
+          
+          // Contar apenas estudantes que pagaram para este seller
+          const paidCount = paidStudentsByReferral[s?.referral_code]?.length || 0;
+          
+          // Log para debug
+          if (s?.referral_code === 'SUAIDEN') {
+            console.log('🔍 [OVERVIEW] SUAIDEN revenue:', {
+              referral_code: s.referral_code,
+              adjustedRevenue,
+              s_total_revenue: s.total_revenue,
+              finalRevenue,
+              paidCount,
+              adjustedRevenueByReferral: adjustedRevenueByReferral
+            });
+          }
+          
+          return {
+            ...s,
+            total_revenue: finalRevenue,
+            students_count: paidCount // ✅ Usar contagem de estudantes que pagaram
+          };
         });
-      }
-      
-      return {
-        ...s,
-        total_revenue: finalRevenue
-      };
-    });
 
   // Total para o card: alinhar com Top Sellers (soma do mapa ajustado)
   // ⚠️ Só calcular quando os valores reais pagos estiverem carregados
@@ -350,10 +428,10 @@ const Overview = ({ stats, sellers = [], students = [], onRefresh }) => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-500 mb-1">Referred Students</p>
-                <p className="text-3xl font-bold text-slate-900">{safeStats.totalStudents}</p>
+                <p className="text-3xl font-bold text-slate-900">{paidStudentsCount}</p>
                 <div className="flex items-center mt-2">
                   <TrendingUp className="h-4 w-4 text-[#05294E] mr-1" />
-                  <span className="text-sm font-medium text-[#05294E]">Performance</span>
+                  <span className="text-sm font-medium text-[#05294E]">Who paid Selection Process</span>
                 </div>
               </div>
               <div className="w-14 h-14 bg-gradient-to-br from-[#05294E] to-blue-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">

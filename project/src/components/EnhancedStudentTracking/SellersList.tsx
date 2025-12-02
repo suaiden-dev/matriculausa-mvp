@@ -118,7 +118,7 @@ const SellersList: React.FC<SellersListProps> = ({
                 <div className="flex items-center justify-between lg:justify-end space-x-6">
                   <div className="text-center">
                     <p className="text-sm text-slate-500">Students</p>
-                    <p className="text-2xl font-bold text-blue-600">{seller.students_count}</p>
+                    <p className="text-2xl font-bold text-blue-600">{sellerStudents.length}</p>
                   </div>
                   <div className="text-center">
                     <p className="text-sm text-slate-500">Revenue</p>
