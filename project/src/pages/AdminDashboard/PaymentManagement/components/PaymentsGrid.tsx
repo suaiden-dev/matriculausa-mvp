@@ -6,9 +6,10 @@ export interface PaymentsGridProps {
 	currentPayments: any[];
 	FEE_TYPES: { value: string; label: string; color?: string }[];
 	handleViewDetails: (payment: any) => void;
+	isLoading?: boolean; // ✅ NOVO: Estado de loading para mostrar skeletons
 }
 
-function PaymentsGridBase({ currentPayments, FEE_TYPES, handleViewDetails }: PaymentsGridProps) {
+function PaymentsGridBase({ currentPayments, FEE_TYPES, handleViewDetails, isLoading }: PaymentsGridProps) {
 	return (
 		<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 			{currentPayments.map((payment: any) => (
@@ -28,7 +29,11 @@ function PaymentsGridBase({ currentPayments, FEE_TYPES, handleViewDetails }: Pay
 						</div>
 						<div className="flex items-center gap-2 mb-1">
 							<DollarSign className="h-4 w-4 text-green-500" />
-							<span className="font-bold text-green-700">${formatCentsToDollars(payment.amount)}</span>
+							{isLoading ? (
+								<div className="animate-pulse bg-slate-200 h-4 w-16 rounded"></div>
+							) : (
+								<span className="font-bold text-green-700">${formatCentsToDollars(payment.amount)}</span>
+							)}
 						</div>
 						<div className="flex items-center gap-2 mb-1">
 							<Calendar className="h-4 w-4 text-gray-400" />
