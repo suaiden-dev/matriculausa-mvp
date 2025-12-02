@@ -32,7 +32,8 @@ const FinancialAnalytics: React.FC = () => {
     handleTimeFilterChange,
     handleCustomDateToggle,
     setCustomDateFrom,
-    setCustomDateTo
+    setCustomDateTo,
+    affiliates
   } = useFinancialAnalytics();
   
   console.log('🚀 [FinancialAnalytics] Estado do hook:', { loading, refreshing });
@@ -72,7 +73,7 @@ const FinancialAnalytics: React.FC = () => {
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}
             `}
           >
-            Visão Geral
+            Overview
           </button>
           <button
             onClick={() => setActiveTab('transactions')}
@@ -83,7 +84,7 @@ const FinancialAnalytics: React.FC = () => {
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}
             `}
           >
-            Transações Detalhadas
+            Transaction Details
           </button>
         </nav>
       </div>
@@ -98,13 +99,13 @@ const FinancialAnalytics: React.FC = () => {
             <PaymentMethodsChart paymentMethodData={paymentMethodData} />
             <FeeTypesChart feeTypeData={feeTypeData} />
           </div>
-          <StripeAnalytics metrics={stripeMetrics} loading={loading || refreshing} />
         </div>
       ) : (
         <div className="animate-in fade-in duration-300">
           <FinancialTransactionsTable 
             transactions={transactions} 
-            loading={loading || refreshing} 
+            loading={loading || refreshing}
+            affiliates={affiliates}
           />
         </div>
       )}

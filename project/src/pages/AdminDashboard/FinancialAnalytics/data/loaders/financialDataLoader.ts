@@ -1,6 +1,7 @@
 import { supabase } from '../../../../../lib/supabase';
 import type { DateRange, LoadedFinancialData } from '../types';
 import { getPreviousPeriodRange } from '../../utils/dateRange';
+import { getGrossPaidAmounts } from '../../../../../utils/paymentConverter';
 
 /**
  * Verifica se está em produção ou staging
@@ -171,7 +172,7 @@ async function loadZellePaymentsPrev(prevRange: DateRange): Promise<any[]> {
 async function loadAllStudents(): Promise<any[]> {
   const { data, error } = await supabase
     .from('user_profiles')
-    .select('id, user_id, email, full_name, dependents, system_type')
+    .select('id, user_id, email, full_name, dependents, system_type, seller_referral_code')
     .eq('role', 'student');
   
   if (error) throw error;
@@ -417,6 +418,81 @@ async function loadIndividualFeePayments(currentRange: DateRange): Promise<any[]
   // Get unique user IDs from payments
   const userIds = [...new Set(payments.map(p => p.user_id))];
 
+  // Fetch user profiles for payment methods (selection_process and i20_control)
+  const { data: userProfiles } = await supabase
+    .from('user_profiles')
+    .select('user_id, selection_process_fee_payment_method, i20_control_fee_payment_method')
+    .in('user_id', userIds);
+
+  // Fetch scholarship applications for payment methods (application_fee and scholarship_fee)
+  // First, get student profile IDs from user IDs
+  const { data: studentProfiles } = await supabase
+    .from('user_profiles')
+    .select('id, user_id')
+    .in('user_id', userIds);
+  
+  const studentProfileIds = studentProfiles?.map(sp => sp.id) || [];
+  
+  // Fetch scholarship applications with payment methods
+  // For application_fee: get the one where is_application_fee_paid = true
+  // For scholarship_fee: get the one where is_scholarship_fee_paid = true
+  const { data: scholarshipApplications } = studentProfileIds.length > 0
+    ? await supabase
+        .from('scholarship_applications')
+        .select('student_id, application_fee_payment_method, scholarship_fee_payment_method, is_application_fee_paid, is_scholarship_fee_paid, created_at')
+        .in('student_id', studentProfileIds)
+        .order('created_at', { ascending: false })
+    : { data: null };
+
+  // Create lookup maps
+  const userProfilesMap = new Map(
+    (userProfiles || []).map(up => [up.user_id, up])
+  );
+  
+  // Create separate maps for application_fee and scholarship_fee
+  // For application_fee: use the application where is_application_fee_paid = true
+  // For scholarship_fee: use the application where is_scholarship_fee_paid = true
+  const applicationFeeMap = new Map<string, any>();
+  const scholarshipFeeMap = new Map<string, any>();
+  
+  (scholarshipApplications || []).forEach(sa => {
+    // For application_fee: prioritize the one where payment was made
+    if (sa.is_application_fee_paid) {
+      if (!applicationFeeMap.has(sa.student_id)) {
+        applicationFeeMap.set(sa.student_id, sa);
+      } else {
+        // If multiple paid, prefer the one with payment_method filled or most recent
+        const existing = applicationFeeMap.get(sa.student_id);
+        if (sa.application_fee_payment_method && !existing?.application_fee_payment_method) {
+          applicationFeeMap.set(sa.student_id, sa);
+        } else if (!existing?.application_fee_payment_method && !sa.application_fee_payment_method) {
+          // Both don't have payment_method, keep the most recent (already ordered)
+          if (new Date(sa.created_at) > new Date(existing.created_at)) {
+            applicationFeeMap.set(sa.student_id, sa);
+          }
+        }
+      }
+    }
+    
+    // For scholarship_fee: prioritize the one where payment was made
+    if (sa.is_scholarship_fee_paid) {
+      if (!scholarshipFeeMap.has(sa.student_id)) {
+        scholarshipFeeMap.set(sa.student_id, sa);
+      } else {
+        // If multiple paid, prefer the one with payment_method filled or most recent
+        const existing = scholarshipFeeMap.get(sa.student_id);
+        if (sa.scholarship_fee_payment_method && !existing?.scholarship_fee_payment_method) {
+          scholarshipFeeMap.set(sa.student_id, sa);
+        } else if (!existing?.scholarship_fee_payment_method && !sa.scholarship_fee_payment_method) {
+          // Both don't have payment_method, keep the most recent (already ordered)
+          if (new Date(sa.created_at) > new Date(existing.created_at)) {
+            scholarshipFeeMap.set(sa.student_id, sa);
+          }
+        }
+      }
+    }
+  });
+
   // Fetch overrides for these users
   const { data: overrides } = await supabase
     .from('user_fee_overrides')
@@ -473,8 +549,39 @@ async function loadIndividualFeePayments(currentRange: DateRange): Promise<any[]
     
     const coupon = couponUsage?.coupon_id ? couponsMap.get(couponUsage.coupon_id) : null;
     
+    // Get payment method from correct source based on fee type
+    // Always fetch from the correct table, regardless of what's in individual_fee_payments
+    let paymentMethod = 'manual';
+    const userProfile = userProfilesMap.get(payment.user_id);
+    
+    if (payment.fee_type === 'selection_process' || payment.fee_type === 'selection_process_fee') {
+      paymentMethod = userProfile?.selection_process_fee_payment_method || 'manual';
+    } else if (payment.fee_type === 'i20_control' || payment.fee_type === 'i20_control_fee') {
+      paymentMethod = userProfile?.i20_control_fee_payment_method || 'manual';
+    } else if (payment.fee_type === 'application' || payment.fee_type === 'application_fee') {
+      // Find student profile ID (id) for this user_id
+      const studentProfile = studentProfiles?.find(sp => sp.user_id === payment.user_id);
+      if (studentProfile) {
+        // Use the application where is_application_fee_paid = true
+        const scholarshipApp = applicationFeeMap.get(studentProfile.id);
+        paymentMethod = scholarshipApp?.application_fee_payment_method || 'manual';
+      }
+    } else if (payment.fee_type === 'scholarship' || payment.fee_type === 'scholarship_fee') {
+      // Find student profile ID (id) for this user_id
+      const studentProfile = studentProfiles?.find(sp => sp.user_id === payment.user_id);
+      if (studentProfile) {
+        // Use the application where is_scholarship_fee_paid = true
+        const scholarshipApp = scholarshipFeeMap.get(studentProfile.id);
+        paymentMethod = scholarshipApp?.scholarship_fee_payment_method || 'manual';
+      }
+    } else {
+      // Fallback to payment_method from individual_fee_payments if fee_type doesn't match
+      paymentMethod = payment.payment_method || 'manual';
+    }
+    
     return {
       ...payment,
+      payment_method: paymentMethod,
       override_selection_process: override?.selection_process_fee || null,
       override_application: override?.application_fee || null,
       override_scholarship: override?.scholarship_fee || null,
@@ -567,11 +674,50 @@ export async function loadFinancialData(
   const uniqueUserIds = [...new Set(allUserIds)];
 
   // Carregar dados relacionados aos usuários em paralelo
-  const [overridesMap, userSystemTypesMap, realPaymentAmounts] = await Promise.all([
+  const [overridesMap, userSystemTypesMap] = await Promise.all([
     loadFeeOverrides(uniqueUserIds),
-    loadUserSystemTypes(uniqueUserIds),
-    loadRealPaymentAmounts(uniqueUserIds)
+    loadUserSystemTypes(uniqueUserIds)
   ]);
+  
+  // ✅ CORREÇÃO: Carregar valores reais pagos (COM taxas do Stripe) usando getGrossPaidAmounts
+  // Mesma lógica do PaymentManagement para garantir valores consistentes
+  const realPaymentAmounts = new Map<string, { selection_process?: number; scholarship?: number; i20_control?: number; application?: number }>();
+  
+  // Processar em batches para evitar sobrecarga
+  const batchSize = 10;
+  const batches: string[][] = [];
+  for (let i = 0; i < uniqueUserIds.length; i += batchSize) {
+    batches.push(uniqueUserIds.slice(i, i + batchSize));
+  }
+  
+  // Processar batches em paralelo
+  const batchPromises = batches.map(async (batch) => {
+    const batchResults = await Promise.allSettled(
+      batch.map(async (userId) => {
+        try {
+          const amounts = await getGrossPaidAmounts(userId, ['selection_process', 'scholarship', 'i20_control', 'application']);
+          return { userId, amounts };
+        } catch (error) {
+          console.error(`Erro ao buscar valores brutos pagos para user_id ${userId}:`, error);
+          return { userId, amounts: {} };
+        }
+      })
+    );
+    
+    batchResults.forEach((result) => {
+      if (result.status === 'fulfilled' && result.value) {
+        const { userId, amounts } = result.value;
+        realPaymentAmounts.set(userId, {
+          selection_process: amounts.selection_process,
+          scholarship: amounts.scholarship,
+          i20_control: amounts.i20_control,
+          application: amounts.application,
+        });
+      }
+    });
+  });
+  
+  await Promise.allSettled(batchPromises);
 
   // Carregar requisições de pagamento
   const [universityRequests, affiliateRequests] = await Promise.all([
@@ -590,7 +736,7 @@ export async function loadFinancialData(
     stripeUsers,
     overridesMap,
     userSystemTypesMap,
-    realPaymentAmounts,
+    realPaymentAmounts, // Agora contém valores reais pagos via getGrossPaidAmounts
     individualFeePayments
   };
 }

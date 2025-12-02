@@ -6,6 +6,8 @@ import { transformFinancialData } from '../utils/transformFinancialData';
 import { calculateRevenueData, calculateFinalMetrics } from '../utils/calculateMetrics';
 import { getDateRange } from '../utils/dateRange';
 import { exportFinancialDataToCSV } from '../data/services/exportService';
+import { loadAffiliatesLoader } from '../../PaymentManagement/data/loaders/referencesLoader';
+import { supabase } from '../../../../lib/supabase';
 import type { 
   FinancialMetrics, 
   RevenueData, 
@@ -64,6 +66,7 @@ export function useFinancialAnalytics() {
   const [paymentMethodData, setPaymentMethodData] = useState<PaymentMethodData[]>([]);
   const [feeTypeData, setFeeTypeData] = useState<FeeTypeData[]>([]);
   const [transactions, setTransactions] = useState<any[]>([]);
+  const [affiliates, setAffiliates] = useState<any[]>([]);
 
   // Filtros de período
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('30d');
@@ -79,14 +82,13 @@ export function useFinancialAnalytics() {
       const currentRange = getDateRange(timeFilter, customDateFrom, customDateTo, showCustomDate);
       console.log('🚀 [useFinancialAnalytics] DateRange:', currentRange);
       
-      // Carregar dados
-      console.log('🚀 [useFinancialAnalytics] Chamando loadFinancialData...');
-      const loadedData = await loadFinancialData(currentRange);
-      console.log('🚀 [useFinancialAnalytics] loadFinancialData retornou:', {
-        applications: loadedData.applications?.length,
-        zellePayments: loadedData.zellePayments?.length,
-        allStudents: loadedData.allStudents?.length
-      });
+      // Load affiliates in parallel
+      const [loadedData, affiliatesData] = await Promise.all([
+        loadFinancialData(currentRange),
+        loadAffiliatesLoader(supabase)
+      ]);
+      
+      setAffiliates(affiliatesData || []);
 
       // Transformar dados
       const processedData = await transformFinancialData({
@@ -110,82 +112,94 @@ export function useFinancialAnalytics() {
         loadedData.allStudents
       );
 
-      // Processar pagamentos individuais e adicionar nomes e valores padrão
-      const individualFeePayments = loadedData.individualFeePayments || [];
-      const transactionsWithNames = individualFeePayments.map((payment: any) => {
-        const student = loadedData.allStudents.find((s: any) => s.id === payment.user_id || s.user_id === payment.user_id);
+      // ✅ CORREÇÃO: Usar paymentRecords de transformFinancialData (mesma lógica do PaymentManagement)
+      // Isso garante que temos exatamente os mesmos registros que o PaymentManagement mostra
+      // paymentRecords já está filtrado e deduplicado corretamente
+      const paymentRecords = processedData.paymentRecords || [];
+      
+      // Buscar dados de individual_fee_payments apenas para informações adicionais (coupons, overrides, etc.)
+      const individualFeePaymentsMap = new Map();
+      (loadedData.individualFeePayments || []).forEach((payment: any) => {
+        const key = `${payment.user_id}_${payment.fee_type}`;
+        if (!individualFeePaymentsMap.has(key)) {
+          individualFeePaymentsMap.set(key, payment);
+        }
+      });
+      
+      // Transformar paymentRecords em transactions (formato esperado pela tabela)
+      const transactionsWithNames = paymentRecords.map((record: any) => {
+        const student = loadedData.allStudents.find((s: any) => 
+          s.user_id === record.student_id || s.id === record.student_id
+        );
         
-        // Calcular valor padrão da taxa (Standard Fee Value)
+        // Buscar dados adicionais de individual_fee_payments se disponível
+        const feeTypeKey = record.fee_type === 'selection_process' ? 'selection_process' :
+                          record.fee_type === 'application' ? 'application' :
+                          record.fee_type === 'scholarship' ? 'scholarship' :
+                          record.fee_type === 'i20_control_fee' ? 'i20_control' : record.fee_type;
+        const individualPayment = student?.user_id 
+          ? individualFeePaymentsMap.get(`${student.user_id}_${feeTypeKey}`)
+          : null;
+        
+        // Calcular standard_amount (valor padrão da taxa)
         let standardAmount = 0;
-        const feeType = payment.fee_type;
+        const feeType = record.fee_type;
         const systemType = student?.system_type || 'legacy';
         const dependents = Number(student?.dependents) || 0;
 
-        // Normalizar feeType para comparação (substituir espaços por underscores)
-        const normalizedFeeType = feeType?.toLowerCase().trim().replace(/ /g, '_');
-
-        if (normalizedFeeType === 'selection_process' || normalizedFeeType === 'selection_process_fee') {
+        if (feeType === 'selection_process') {
           if (systemType === 'simplified') {
             standardAmount = 350;
           } else {
-            // Legacy: 400 + (150 * dependents)
             standardAmount = 400 + (dependents * 150);
           }
-        } else if (normalizedFeeType === 'scholarship' || normalizedFeeType === 'scholarship_fee') {
+        } else if (feeType === 'scholarship') {
           if (systemType === 'simplified') {
             standardAmount = 550;
           } else {
             standardAmount = 900;
           }
-        } else if (normalizedFeeType === 'i20_control' || normalizedFeeType === 'i20_control_fee' || normalizedFeeType === 'i-20_control_fee') {
+        } else if (feeType === 'i20_control_fee') {
           standardAmount = 900;
-        } else if (normalizedFeeType === 'application' || normalizedFeeType === 'application_fee') {
-          // Base 350 + (100 * dependents)
+        } else if (feeType === 'application') {
           standardAmount = 350 + (dependents * 100);
         }
 
-        // Fallback: Se não encontrou valor padrão, usar o valor pago (amount)
-        // Isso garante que nunca fique zerado
+        // Se não encontrou valor padrão, usar o amount do record (já em centavos, converter para dólares)
         if (standardAmount === 0) {
-           standardAmount = Number(payment.amount) || 0;
-           
-           // Debug apenas se realmente falhar tudo
-           if (standardAmount === 0) {
-             console.log('⚠️ [FinancialAnalytics] Standard Amount AND Amount are 0 for:', {
-               id: payment.id,
-               feeType,
-               normalizedFeeType
-             });
-           }
+          standardAmount = (record.amount || 0) / 100;
         }
 
         return {
-          ...payment,
-          student_name: student?.full_name || 'Unknown Student',
+          id: record.id,
+          user_id: student?.user_id || record.student_id,
+          fee_type: record.fee_type,
+          amount: (record.amount || 0) / 100, // Converter de centavos para dólares
+          gross_amount_usd: (record.amount || 0) / 100,
+          fee_amount_usd: 0, // Será calculado se necessário
+          payment_date: record.payment_date || record.created_at,
+          payment_method: record.payment_method || 'manual',
+          payment_intent_id: individualPayment?.payment_intent_id || null,
+          student_name: record.student_name || student?.full_name || 'Unknown Student',
+          student_email: record.student_email || student?.email || null,
+          seller_referral_code: record.seller_referral_code || student?.seller_referral_code || null,
           standard_amount: standardAmount,
-          // Include override and coupon information
-          override_selection_process: payment.override_selection_process,
-          override_application: payment.override_application,
-          override_scholarship: payment.override_scholarship,
-          override_i20: payment.override_i20,
-          coupon_code: payment.coupon_code,
-          coupon_name: payment.coupon_name,
-          discount_amount: payment.discount_amount,
-          original_amount: payment.original_amount,
-          discount_type: payment.discount_type,
-          discount_value: payment.discount_value
+          // Include override and coupon information from individual payment if available
+          override_selection_process: individualPayment?.override_selection_process || null,
+          override_application: individualPayment?.override_application || null,
+          override_scholarship: individualPayment?.override_scholarship || null,
+          override_i20: individualPayment?.override_i20 || null,
+          coupon_code: individualPayment?.coupon_code || null,
+          coupon_name: individualPayment?.coupon_name || null,
+          discount_amount: individualPayment?.discount_amount || null,
+          original_amount: individualPayment?.original_amount || null,
+          discount_type: individualPayment?.discount_type || null,
+          discount_value: individualPayment?.discount_value || null
         };
       });
 
-      // Debug dos primeiros itens
-      console.log('🔍 [FinancialAnalytics] Transactions processed:', transactionsWithNames.slice(0, 3).map((t: any) => ({
-        id: t.id,
-        fee_type: t.fee_type,
-        standard_amount: t.standard_amount
-      })));
-
       // Calcular métricas do Stripe (apenas Stripe)
-      const stripePayments = individualFeePayments.filter((p: any) => p.payment_method === 'stripe');
+      const stripePayments = transactionsWithNames.filter((p: any) => p.payment_method === 'stripe');
       const stripeMetricsCalculated = stripePayments.reduce((acc: any, payment: any) => {
         // FILTRO RÍGIDO: Apenas transações DEPOIS de 20/11/2025
         // O usuário pediu especificamente para ver apenas dados recentes nesta seção
@@ -307,7 +321,8 @@ export function useFinancialAnalytics() {
     handleTimeFilterChange,
     handleCustomDateToggle,
     setCustomDateFrom,
-    setCustomDateTo
+    setCustomDateTo,
+    affiliates
   };
 }
 
