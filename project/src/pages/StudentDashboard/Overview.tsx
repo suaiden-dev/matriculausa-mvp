@@ -71,6 +71,11 @@ const Overview: React.FC<OverviewProps> = ({
   const [documentsLoading, setDocumentsLoading] = useState(true);
   const [realPaidAmounts, setRealPaidAmounts] = useState<Record<string, number>>({});
   const [loadingPaidAmounts, setLoadingPaidAmounts] = useState(false);
+  const [selectionProcessPromotionalCoupon, setSelectionProcessPromotionalCoupon] = useState<{
+    discountAmount: number;
+    finalAmount: number;
+    code?: string;
+  } | null>(null);
   
   // Verificar se há pagamento Zelle pendente do tipo selection_process
   const hasPendingSelectionProcessPayment = isBlocked && pendingPayment && pendingPayment.fee_type === 'selection_process';
@@ -160,6 +165,103 @@ const Overview: React.FC<OverviewProps> = ({
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
   }, [user?.id, documentsLoading, refetchUserProfile, fetchStudentDocuments]);
+
+  // Buscar cupom promocional do banco de dados para Selection Process Fee
+  const checkSelectionProcessPromotionalCouponFromDatabase = React.useCallback(async () => {
+    if (!user?.id) return;
+    
+    try {
+      // Buscar registro mais recente de uso do cupom para selection_process
+      const { data: couponUsage, error } = await supabase
+        .from('promotional_coupon_usage')
+        .select('coupon_code, original_amount, discount_amount, final_amount, metadata, used_at')
+        .eq('user_id', user.id)
+        .eq('fee_type', 'selection_process')
+        .order('used_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      if (error) {
+        console.error('[Overview] Erro ao buscar cupom do banco:', error);
+        return;
+      }
+      
+      if (couponUsage && couponUsage.coupon_code) {
+        // Verificar se é uma validação recente (menos de 24 horas) ou se já foi usado em pagamento
+        const usedAt = new Date(couponUsage.used_at);
+        const now = new Date();
+        const hoursDiff = (now.getTime() - usedAt.getTime()) / (1000 * 60 * 60);
+        const isRecentValidation = hoursDiff < 24 || couponUsage.metadata?.is_validation === true;
+        
+        if (isRecentValidation) {
+          const discountAmount = Number(couponUsage.discount_amount);
+          const finalAmount = Number(couponUsage.final_amount);
+          
+          setSelectionProcessPromotionalCoupon({
+            discountAmount,
+            finalAmount,
+            code: couponUsage.coupon_code
+          });
+          
+          console.log('[Overview] Cupom promocional carregado do banco:', couponUsage.coupon_code);
+        } else {
+          setSelectionProcessPromotionalCoupon(null);
+        }
+      } else {
+        setSelectionProcessPromotionalCoupon(null);
+      }
+    } catch (error) {
+      console.error('[Overview] Erro ao verificar cupom no banco:', error);
+      setSelectionProcessPromotionalCoupon(null);
+    }
+  }, [user?.id]);
+
+  // Verificar cupom promocional do banco quando componente monta
+  useEffect(() => {
+    checkSelectionProcessPromotionalCouponFromDatabase();
+  }, [checkSelectionProcessPromotionalCouponFromDatabase]);
+
+  // Ouvir eventos de validação de cupom promocional
+  useEffect(() => {
+    // Verificar window ao montar
+    const windowCoupon = (window as any).__promotional_coupon_validation;
+    if (windowCoupon?.isValid && windowCoupon?.discountAmount) {
+      const baseAmount = selectionProcessFeeAmount || 0;
+      setSelectionProcessPromotionalCoupon({
+        discountAmount: windowCoupon.discountAmount,
+        finalAmount: windowCoupon.finalAmount || Math.max(0, baseAmount - windowCoupon.discountAmount),
+        code: (window as any).__checkout_promotional_coupon
+      });
+    }
+    
+    // Ouvir eventos de validação de cupom
+    const handleCouponValidation = (event: CustomEvent) => {
+      if (event.detail?.isValid && event.detail?.discountAmount) {
+        // Verificar se é para selection_process (pode vir no detail ou inferir pelo contexto)
+        const feeType = event.detail?.fee_type || 'selection_process';
+        
+        if (feeType === 'selection_process') {
+          const baseAmount = selectionProcessFeeAmount || 0;
+          setSelectionProcessPromotionalCoupon({
+            discountAmount: event.detail.discountAmount,
+            finalAmount: event.detail.finalAmount || Math.max(0, baseAmount - event.detail.discountAmount),
+            code: (window as any).__checkout_promotional_coupon
+          });
+        }
+      } else {
+        // Se o cupom foi removido, verificar novamente no banco
+        checkSelectionProcessPromotionalCouponFromDatabase();
+      }
+    };
+
+    window.addEventListener('promotionalCouponValidated', handleCouponValidation as EventListener);
+    window.addEventListener('promotionalCouponRemoved', checkSelectionProcessPromotionalCouponFromDatabase);
+    
+    return () => {
+      window.removeEventListener('promotionalCouponValidated', handleCouponValidation as EventListener);
+      window.removeEventListener('promotionalCouponRemoved', checkSelectionProcessPromotionalCouponFromDatabase);
+    };
+  }, [selectionProcessFeeAmount, checkSelectionProcessPromotionalCouponFromDatabase]);
 
   // Exibir skeleton até os dados de perfil e taxas estarem prontos para evitar flicker
   useEffect(() => {
@@ -313,10 +415,17 @@ const Overview: React.FC<OverviewProps> = ({
   const i20WithDependents = i20Base + i20Extra;
 
   // Valores das taxas para o ProgressBar (Application fee é variável)
-  // ✅ CORREÇÃO: Aplicar desconto na barra de progresso se houver activeDiscount
-  const selectionFeeWithDiscount = activeDiscount?.has_discount 
-    ? Math.max(selectionWithDependents - (activeDiscount.discount_amount || 0), 0)
-    : selectionWithDependents;
+  // ✅ CORREÇÃO: Aplicar desconto na barra de progresso se houver activeDiscount ou cupom promocional
+  const selectionFeeWithDiscount = (() => {
+    // Prioridade: cupom promocional > activeDiscount
+    if (selectionProcessPromotionalCoupon) {
+      return selectionProcessPromotionalCoupon.finalAmount;
+    }
+    if (activeDiscount?.has_discount) {
+      return Math.max(selectionWithDependents - (activeDiscount.discount_amount || 0), 0);
+    }
+    return selectionWithDependents;
+  })();
 
   // ✅ CORREÇÃO: Prioridade: Override > Valor real pago > Valor esperado
   const getSelectionProcessFeeDisplay = () => {
@@ -567,6 +676,19 @@ const Overview: React.FC<OverviewProps> = ({
                 <div className="text-left sm:text-right">
                   {feesLoading ? (
                     <div className="inline-block w-24 h-6 bg-white/30 rounded animate-pulse" />
+                  ) : selectionProcessPromotionalCoupon ? (
+                    <div className="flex flex-col sm:text-center">
+                      <div className="text-lg sm:text-xl md:text-2xl font-bold text-white line-through">${selectionWithDependents}</div>
+                      <div className="text-base sm:text-lg md:text-xl font-bold text-green-300">
+                        ${selectionProcessPromotionalCoupon.finalAmount.toFixed(2)}
+                      </div>
+                      <div className="flex items-center sm:justify-center mt-1">
+                        <Tag className="h-3 w-3 text-green-300 mr-1" />
+                        <span className="text-xs text-green-300 font-medium">
+                          {t('studentDashboard.recentApplications.couponApplied')} -${selectionProcessPromotionalCoupon.discountAmount.toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
                   ) : activeDiscount?.has_discount ? (
                     <div className="flex flex-col sm:text-center">
                       <div className="text-lg sm:text-xl md:text-2xl font-bold text-white line-through">${selectionWithDependents}</div>
@@ -587,7 +709,7 @@ const Overview: React.FC<OverviewProps> = ({
               </div>
               <p className="text-blue-100 text-xs sm:text-sm mb-3 sm:mb-4 leading-relaxed">
                 {t('studentDashboard.selectionProcess.description')}
-                {activeDiscount?.has_discount && (
+                {(selectionProcessPromotionalCoupon || activeDiscount?.has_discount) && (
                   <span className="block mt-1 text-green-300 font-medium">
                     {t('studentDashboard.selectionProcess.discountApplied')}
                   </span>

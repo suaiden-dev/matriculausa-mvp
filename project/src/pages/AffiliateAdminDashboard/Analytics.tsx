@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BarChart3, TrendingUp, Users, DollarSign, Calendar, Award } from 'lucide-react';
+import { BarChart3, TrendingUp, Users, DollarSign, Calendar, Award, UserCheck, UserX } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { getDisplayAmounts } from '../../utils/paymentConverter';
 
@@ -30,6 +30,10 @@ const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], userId }) =>
   const [clientAdjustedRevenue, setClientAdjustedRevenue] = useState<number | null>(null);
   const [adjustedRevenueByReferral, setAdjustedRevenueByReferral] = useState<Record<string, number>>({});
   const [loadingAdjusted, setLoadingAdjusted] = useState(false);
+  
+  // Estados para diferenciar estudantes pagos vs registrados
+  const [paidStudentsCount, setPaidStudentsCount] = useState<number>(0);
+  const [registeredOnlyCount, setRegisteredOnlyCount] = useState<number>(0);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -189,10 +193,18 @@ const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], userId }) =>
         return sum + subtotal;
       }, 0);
 
+      // Calcular contagens de estudantes pagos vs não pagos
+      const paidCount = (profiles || []).filter(p => p?.has_paid_selection_process_fee).length;
+      const notPaidCount = (profiles || []).filter(p => !p?.has_paid_selection_process_fee).length;
+
       setClientAdjustedRevenue(total);
       setAdjustedRevenueByReferral(revenueByReferral);
+      setPaidStudentsCount(paidCount);
+      setRegisteredOnlyCount(notPaidCount);
     } catch {
       setClientAdjustedRevenue(null);
+      setPaidStudentsCount(0);
+      setRegisteredOnlyCount(0);
     } finally {
       setLoadingAdjusted(false);
     }
@@ -388,11 +400,14 @@ const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], userId }) =>
   // Top vendedores por performance
   const topSellers = displaySellers
     .sort((a, b) => {
-      // Sort by number of students first, then by revenue
-      if (b.students_count !== a.students_count) {
-        return b.students_count - a.students_count;
+      // Sort by revenue first, then by number of students
+      const revenueA = a.total_revenue || 0;
+      const revenueB = b.total_revenue || 0;
+      
+      if (revenueB !== revenueA) {
+        return revenueB - revenueA;
       }
-      return (b.total_revenue || 0) - (a.total_revenue || 0);
+      return (b.students_count || 0) - (a.students_count || 0);
     })
     .slice(0, 5);
 
@@ -454,7 +469,47 @@ const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], userId }) =>
       <div className="px-4 sm:px-6 lg:px-8">
         <div className="space-y-8">
           {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        {/* Estudantes que pagaram */}
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-slate-600">Paid Students</p>
+              {loadingAdjusted ? (
+                <div className="h-9 bg-slate-200 rounded animate-pulse mt-1"></div>
+              ) : (
+                <>
+                  <p className="text-3xl font-bold text-green-600 mt-1">{paidStudentsCount}</p>
+                  <p className="text-xs text-slate-500 mt-1">At least Selection Process paid</p>
+                </>
+              )}
+            </div>
+            <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+              <UserCheck className="h-6 w-6 text-green-600" />
+            </div>
+          </div>
+        </div>
+
+        {/* Estudantes apenas registrados */}
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-slate-600">Registered Only</p>
+              {loadingAdjusted ? (
+                <div className="h-9 bg-slate-200 rounded animate-pulse mt-1"></div>
+              ) : (
+                <>
+                  <p className="text-3xl font-bold text-orange-600 mt-1">{registeredOnlyCount}</p>
+                  <p className="text-xs text-slate-500 mt-1">Not paid yet</p>
+                </>
+              )}
+            </div>
+            <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
+              <UserX className="h-6 w-6 text-orange-600" />
+            </div>
+          </div>
+        </div>
+
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -516,16 +571,19 @@ const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], userId }) =>
               {loadingAdjusted ? (
                 <div className="h-9 bg-slate-200 rounded animate-pulse mt-1"></div>
               ) : (
-                <p className="text-3xl font-bold text-red-600 mt-1">
-                  {safeStats.totalStudents > 0 
-                    ? formatCurrency((clientAdjustedRevenue || safeStats.totalRevenue) / safeStats.totalStudents) 
-                    : '$0.00'
-                  }
-                </p>
+                <>
+                  <p className="text-3xl font-bold text-blue-600 mt-1">
+                    {paidStudentsCount > 0 
+                      ? formatCurrency((clientAdjustedRevenue || safeStats.totalRevenue) / paidStudentsCount) 
+                      : '$0.00'
+                    }
+                  </p>
+                  <p className="text-xs text-slate-500 mt-1">Per paid student</p>
+                </>
               )}
             </div>
-            <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
-              <DollarSign className="h-6 w-6 text-red-600" />
+            <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+              <DollarSign className="h-6 w-6 text-blue-600" />
             </div>
           </div>
           <div className="mt-4 flex items-center text-sm">

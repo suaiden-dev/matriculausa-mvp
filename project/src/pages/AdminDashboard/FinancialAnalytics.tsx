@@ -65,7 +65,6 @@ const FinancialAnalytics: React.FC = () => {
         <PaymentMethodsChart paymentMethodData={paymentMethodData} />
         <FeeTypesChart feeTypeData={feeTypeData} />
       </div>
-      <StripeAnalytics metrics={stripeMetrics} loading={loading || refreshing} />
     </div>
   );
 };
