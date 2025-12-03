@@ -63,7 +63,7 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
   const [filterValueMax, setFilterValueMax] = useState<string>('');
   const [selectedTransactions, setSelectedTransactions] = useState<Set<string>>(new Set());
   const [selectAll, setSelectAll] = useState(false);
-  const itemsPerPage = 10;
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   // Filter function to exclude test users (@uorak.com) in production/staging
   const shouldFilter = useMemo(() => {
@@ -315,9 +315,9 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
 
       // Search filter
       const matchesSearch = 
-        t.student_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        t.fee_type.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        t.payment_method.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      t.student_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      t.fee_type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      t.payment_method.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (t.payment_intent_id && t.payment_intent_id.toLowerCase().includes(searchTerm.toLowerCase()));
 
       if (!matchesSearch) return false;
@@ -950,23 +950,46 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
                   </tr>
                 );
               })
-                    ) : (
-                      <tr>
+            ) : (
+              <tr>
                         <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
                           No transactions found.
-                        </td>
-                      </tr>
-                    )}
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
 
       {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
+      {filteredTransactions.length > 0 && (
+        <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between flex-wrap gap-4">
+          <div className="flex items-center gap-4">
           <p className="text-sm text-gray-500">
-            Showing <span className="font-medium">{startIndex + 1}</span> to <span className="font-medium">{Math.min(startIndex + itemsPerPage, filteredTransactions.length)}</span> of <span className="font-medium">{filteredTransactions.length}</span> results
-          </p>
+              Showing <span className="font-medium">{startIndex + 1}</span> to <span className="font-medium">{Math.min(startIndex + itemsPerPage, filteredTransactions.length)}</span> of <span className="font-medium">{filteredTransactions.length}</span> results
+            </p>
+            <div className="flex items-center gap-2">
+              <label htmlFor="itemsPerPage" className="text-sm text-gray-600">
+                Items per page:
+              </label>
+              <select
+                id="itemsPerPage"
+                value={itemsPerPage}
+                onChange={(e) => {
+                  setItemsPerPage(Number(e.target.value));
+                  setCurrentPage(1); // Reset to first page when changing items per page
+                }}
+                className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value={5}>5</option>
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+            </div>
+          </div>
+          {totalPages > 1 && (
           <div className="flex gap-2">
             <button
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
@@ -983,6 +1006,7 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
+          )}
         </div>
       )}
     </div>

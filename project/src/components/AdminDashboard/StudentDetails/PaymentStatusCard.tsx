@@ -1,6 +1,7 @@
 import React from 'react';
 import { CreditCard, CheckCircle, XCircle, Edit3, Save, X } from 'lucide-react';
 import { StudentRecord } from './types';
+import { supabase } from '../../../lib/supabase';
 
 interface PaymentStatusCardProps {
   student: StudentRecord;
@@ -40,6 +41,7 @@ interface PaymentStatusCardProps {
   onPaymentMethodChange: (method: string) => void;
   formatFeeAmount: (amount: number) => string;
   getFeeAmount: (feeType: string) => number;
+  overridesRefreshKey?: number; // ✅ Key para forçar recarregamento de overrides
 }
 
 /**
@@ -75,7 +77,106 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
     onPaymentMethodChange,
     formatFeeAmount,
     getFeeAmount,
+    overridesRefreshKey = 0,
   } = props;
+
+  // ✅ Buscar affiliate admin email do aluno para verificar se é do Brant
+  const [studentAffiliateAdminEmail, setStudentAffiliateAdminEmail] = React.useState<string | null>(null);
+  const [loadingAffiliateCheck, setLoadingAffiliateCheck] = React.useState<boolean>(true);
+  
+  // ✅ Buscar overrides diretamente do banco para garantir valores atualizados (evita cache do hook)
+  const [currentOverrides, setCurrentOverrides] = React.useState<{
+    selection_process_fee?: number;
+    scholarship_fee?: number;
+    i20_control_fee?: number;
+  } | null>(null);
+  const [loadingOverrides, setLoadingOverrides] = React.useState<boolean>(true);
+
+  React.useEffect(() => {
+    const fetchStudentAffiliateAdmin = async () => {
+      if (!student?.seller_referral_code) {
+        setStudentAffiliateAdminEmail(null);
+        setLoadingAffiliateCheck(false);
+        return;
+      }
+
+      try {
+        const { data: result, error } = await supabase.rpc('get_affiliate_admin_email_by_seller_code', {
+          seller_code: student.seller_referral_code
+        });
+        
+        if (!error && result && result.length > 0 && result[0]?.email) {
+          setStudentAffiliateAdminEmail(result[0].email);
+        } else {
+          setStudentAffiliateAdminEmail(null);
+        }
+      } catch (error) {
+        console.error('Error fetching student affiliate admin email:', error);
+        setStudentAffiliateAdminEmail(null);
+      } finally {
+        setLoadingAffiliateCheck(false);
+      }
+    };
+
+    fetchStudentAffiliateAdmin();
+  }, [student?.seller_referral_code]);
+
+  // ✅ Buscar overrides diretamente do banco
+  React.useEffect(() => {
+    const fetchOverrides = async () => {
+      if (!student?.user_id) {
+        setCurrentOverrides(null);
+        setLoadingOverrides(false);
+        return;
+      }
+
+      try {
+        const { data: overrideData, error: overrideError } = await supabase
+          .from('user_fee_overrides')
+          .select('selection_process_fee, scholarship_fee, i20_control_fee, updated_at')
+          .eq('user_id', student.user_id)
+          .maybeSingle();
+        
+        if (overrideError && overrideError.code !== 'PGRST116') {
+          console.error('❌ [PaymentStatusCard] Erro ao buscar overrides:', overrideError);
+        }
+        
+        if (!overrideError && overrideData) {
+          setCurrentOverrides({
+            selection_process_fee: overrideData.selection_process_fee != null ? Number(overrideData.selection_process_fee) : undefined,
+            scholarship_fee: overrideData.scholarship_fee != null ? Number(overrideData.scholarship_fee) : undefined,
+            i20_control_fee: overrideData.i20_control_fee != null ? Number(overrideData.i20_control_fee) : undefined,
+          });
+        } else {
+          setCurrentOverrides(null);
+        }
+      } catch (error) {
+        console.error('❌ [PaymentStatusCard] Erro ao buscar overrides:', error);
+        setCurrentOverrides(null);
+      } finally {
+        setLoadingOverrides(false);
+      }
+    };
+
+    fetchOverrides();
+  }, [student?.user_id, overridesRefreshKey]); // ✅ Adicionar overridesRefreshKey como dependência
+
+  // ✅ Verificar se é do affiliate admin "contato@brantimmigration.com"
+  const isBrantImmigrationAffiliate = studentAffiliateAdminEmail?.toLowerCase() === 'contato@brantimmigration.com';
+
+  // ✅ Debug: Log quando editingFees mudar
+  React.useEffect(() => {
+    console.log('🔍 [PaymentStatusCard] editingFees mudou:', editingFees);
+    if (editingFees) {
+      console.log('✅ [PaymentStatusCard] Valores de editingFees:', {
+        selection_process: editingFees.selection_process,
+        scholarship: editingFees.scholarship,
+        i20_control: editingFees.i20_control
+      });
+    } else {
+      console.log('ℹ️ [PaymentStatusCard] editingFees é null/undefined');
+    }
+  }, [editingFees]);
 
   // This is a simplified version - full implementation would include all fee types
   return (
@@ -139,7 +240,7 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                 <div className="mt-2">
                   <input
                     type="number"
-                    value={editingFees.selection_process}
+                    value={editingFees.selection_process ?? ''}
                     onChange={(e) =>
                       onEditFeesChange({ ...editingFees, selection_process: Number(e.target.value) })
                     }
@@ -151,8 +252,8 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
               ) : (
                 <dd className="text-sm font-semibold text-slate-700 mt-1 flex items-center">
                   {(() => {
-                    // ✅ CORREÇÃO: Se está carregando o valor correto, mostrar skeleton
-                    if (loadingPaidAmounts?.selection_process) {
+                    // ✅ CORREÇÃO: Se está carregando o valor correto, verificando affiliate admin ou overrides, mostrar skeleton
+                    if (loadingPaidAmounts?.selection_process || loadingAffiliateCheck || loadingOverrides) {
                       return (
                         <div className="animate-pulse flex items-center gap-2">
                           <div className="h-4 w-20 bg-slate-200 rounded"></div>
@@ -177,45 +278,35 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                     }
                     
                     // Caso contrário, calcular valor esperado (para exibição antes do pagamento)
-                    const hasCustomOverride = hasOverride('selection_process');
+                    // ✅ PRIORIDADE 1: Verificar override primeiro (busca direta do banco, sem cache)
+                    if (currentOverrides?.selection_process_fee !== undefined && currentOverrides?.selection_process_fee !== null) {
+                      // Se tem override, usar o valor do override diretamente
+                      return formatFeeAmount(currentOverrides.selection_process_fee);
+                    }
                     
-                    // IMPORTANTE: Não usar getFeeAmount diretamente aqui porque ele pode retornar
-                    // realPaymentAmounts se existir, mesmo que o aluno não tenha pago ainda
-                    // Vamos calcular manualmente baseado no system_type, Matricula Rewards e overrides
+                    // ✅ PRIORIDADE 2: Se for do affiliate admin "contato@brantimmigration.com", usar valores fixos
+                    if (isBrantImmigrationAffiliate) {
+                      // Selection Process: $400 base + $150 por dependente
+                      const selectionProcessAmount = 400 + (dependents * 150);
+                      return formatFeeAmount(selectionProcessAmount);
+                    }
+                    
+                    // Caso contrário, calcular normalmente
+                    const hasMatrFromSellerCode = student?.seller_referral_code && /^MATR/i.test(student.seller_referral_code);
+                    const hasMatrDiscount = hasMatriculaRewardsDiscount || hasMatrFromSellerCode;
+                    
                     let base: number;
-                    // Declarar systemType no escopo correto para estar disponível em todo o bloco
                     const systemType = userSystemType || 'legacy';
                     
-                    if (hasCustomOverride && userFeeOverrides?.selection_process_fee !== undefined) {
-                      // Se tem override, usar o valor do override diretamente (sem adicionar dependents)
-                      base = userFeeOverrides.selection_process_fee;
+                    if (hasMatrDiscount) {
+                      base = 350; // $400 - $50 desconto
                     } else {
-                      // Verificar se o usuário aplicou desconto do Matricula Rewards
-                      // Pode vir de seller_referral_code OU de used_referral_codes/affiliate_referrals
-                      const hasMatrFromSellerCode = student?.seller_referral_code && /^MATR/i.test(student.seller_referral_code);
-                      const hasMatrDiscount = hasMatriculaRewardsDiscount || hasMatrFromSellerCode;
-                      
-                      if (hasMatrDiscount) {
-                        // Se tem desconto do Matricula Rewards, sempre usar $350 (que é $400 - $50)
-                        base = 350;
-                      } else {
-                        // Se não tem override, calcular baseado no system_type
-                        if (systemType === 'simplified') {
-                          base = 350;
-                        } else {
-                          base = 400; // legacy
-                        }
-                      }
-                      // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
-                      // Dependentes só afetam Application Fee ($100 por dependente)
-                      if (systemType !== 'simplified') {
-                        base = base + dependents * 150;
-                      }
+                      base = systemType === 'simplified' ? 350 : 400;
                     }
                     
                     return formatFeeAmount(base);
                   })()}
-                  {hasOverride('selection_process') && <span className="ml-2 text-xs text-blue-500">(custom)</span>}
+                  {currentOverrides?.selection_process_fee !== undefined && <span className="ml-2 text-xs text-blue-500">(custom)</span>}
                 </dd>
               )}
             </div>
@@ -421,7 +512,7 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                 <div className="mt-2">
                   <input
                     type="number"
-                    value={editingFees.scholarship}
+                    value={editingFees.scholarship ?? ''}
                     onChange={(e) =>
                       onEditFeesChange({ ...editingFees, scholarship: Number(e.target.value) })
                     }
@@ -433,8 +524,8 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
               ) : (
                 <dd className="text-sm font-semibold text-slate-700 mt-1 flex items-center">
                   {(() => {
-                    // ✅ CORREÇÃO: Se está carregando o valor correto, mostrar skeleton
-                    if (loadingPaidAmounts?.scholarship) {
+                    // ✅ CORREÇÃO: Se está carregando o valor correto, verificando affiliate admin ou overrides, mostrar skeleton
+                    if (loadingPaidAmounts?.scholarship || loadingAffiliateCheck || loadingOverrides) {
                       return (
                         <div className="animate-pulse flex items-center gap-2">
                           <div className="h-4 w-20 bg-slate-200 rounded"></div>
@@ -457,10 +548,20 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                       }
                     }
                     
+                    // ✅ PRIORIDADE 1: Verificar override primeiro (busca direta do banco, sem cache)
+                    if (currentOverrides?.scholarship_fee !== undefined && currentOverrides?.scholarship_fee !== null) {
+                      return formatFeeAmount(currentOverrides.scholarship_fee);
+                    }
+                    
+                    // ✅ PRIORIDADE 2: Se for do affiliate admin "contato@brantimmigration.com", usar valor fixo $900
+                    if (isBrantImmigrationAffiliate) {
+                      return formatFeeAmount(900);
+                    }
+                    
                     // Caso contrário, mostrar valor esperado
                     return formatFeeAmount(getFeeAmount('scholarship_fee'));
                   })()}
-                  {hasOverride('scholarship_fee') && (
+                  {currentOverrides?.scholarship_fee !== undefined && (
                     <span className="ml-2 text-xs text-blue-500">(custom)</span>
                   )}
                 </dd>
@@ -555,7 +656,7 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                 <div className="mt-2">
                   <input
                     type="number"
-                    value={editingFees.i20_control}
+                    value={editingFees.i20_control ?? ''}
                     onChange={(e) =>
                       onEditFeesChange({ ...editingFees, i20_control: Number(e.target.value) })
                     }
@@ -567,8 +668,8 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
               ) : (
                 <dd className="text-sm font-semibold text-slate-700 mt-1 flex items-center">
                   {(() => {
-                    // ✅ CORREÇÃO: Se está carregando o valor correto, mostrar skeleton
-                    if (loadingPaidAmounts?.i20_control) {
+                    // ✅ CORREÇÃO: Se está carregando o valor correto, verificando affiliate admin ou overrides, mostrar skeleton
+                    if (loadingPaidAmounts?.i20_control || loadingAffiliateCheck || loadingOverrides) {
                       return (
                         <div className="animate-pulse flex items-center gap-2">
                           <div className="h-4 w-20 bg-slate-200 rounded"></div>
@@ -591,10 +692,20 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                       }
                     }
                     
+                    // ✅ PRIORIDADE 1: Verificar override primeiro (busca direta do banco, sem cache)
+                    if (currentOverrides?.i20_control_fee !== undefined && currentOverrides?.i20_control_fee !== null) {
+                      return formatFeeAmount(currentOverrides.i20_control_fee);
+                    }
+                    
+                    // ✅ PRIORIDADE 2: Se for do affiliate admin "contato@brantimmigration.com", usar valor fixo $900
+                    if (isBrantImmigrationAffiliate) {
+                      return formatFeeAmount(900);
+                    }
+                    
                     // Caso contrário, mostrar valor esperado
                     return formatFeeAmount(getFeeAmount('i20_control_fee'));
                   })()}
-                  {hasOverride('i20_control_fee') && (
+                  {currentOverrides?.i20_control_fee !== undefined && (
                     <span className="ml-2 text-xs text-blue-500">(custom)</span>
                   )}
                 </dd>

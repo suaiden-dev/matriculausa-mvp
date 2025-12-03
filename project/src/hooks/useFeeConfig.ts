@@ -154,15 +154,30 @@ export const useFeeConfig = (userId?: string) => {
 
       if (data && data.length > 0) {
         // Mapear os dados para um objeto { fee_type: amount }
+        // ✅ CORREÇÃO: Normalizar fee_type para garantir consistência
         const amounts: {[key: string]: number} = {};
         data.forEach((fee: any) => {
-          amounts[fee.fee_type] = Number(fee.display_amount);
+          // Normalizar fee_type: remover sufixo _fee se existir e garantir formato consistente
+          let normalizedFeeType = fee.fee_type;
+          if (normalizedFeeType) {
+            // Remover sufixo _fee se existir
+            normalizedFeeType = normalizedFeeType.replace(/_fee$/, '');
+            // Garantir que está em formato snake_case
+            normalizedFeeType = normalizedFeeType.replace(/-/g, '_');
+          }
+          
+          if (normalizedFeeType) {
+            amounts[normalizedFeeType] = Number(fee.display_amount);
+            // ✅ Também adicionar com _fee para garantir compatibilidade
+            amounts[`${normalizedFeeType}_fee`] = Number(fee.display_amount);
+          }
         });
         
         setRealPaymentAmounts(amounts);
         
         // Debug - Sempre logar para facilitar troubleshooting
         console.log('🔍 [useFeeConfig] Real payment amounts loaded for user:', userId, amounts);
+        console.log('🔍 [useFeeConfig] Raw data from RPC:', data);
       } else {
         setRealPaymentAmounts({});
         
@@ -313,7 +328,36 @@ export const useFeeConfig = (userId?: string) => {
       return customAmount;
     }
 
-    // PRIORIDADE 1: Verificar se há override personalizado para este usuário (MÁXIMA PRIORIDADE)
+    // ✅ PRIORIDADE 1 (MÁXIMA): Verificar se há valor real pago na tabela individual_fee_payments
+    // Se já foi pago, usar o valor realmente pago (gross_amount_usd ou amount)
+    // Isso tem prioridade sobre overrides, pois representa o valor efetivamente pago
+    if (realPaymentAmounts && Object.keys(realPaymentAmounts).length > 0) {
+      // Normalizar nome da taxa para match (remover sufixo _fee se existir)
+      const normalizedFeeType = feeType.replace(/_fee$/, '');
+      
+      // ✅ CORREÇÃO: Tentar múltiplas variações do fee_type para garantir match
+      // A RPC pode retornar "selection_process", "selection_process_fee", etc.
+      const possibleKeys = [
+        normalizedFeeType, // "selection_process"
+        feeType, // "selection_process" ou "selection_process_fee"
+        feeType.replace('_', '-'), // "selection-process" ou "i-20_control_fee"
+        normalizedFeeType.replace('_', '-'), // "selection-process"
+      ];
+      
+      for (const key of possibleKeys) {
+        if (realPaymentAmounts[key] !== undefined && realPaymentAmounts[key] !== null) {
+          console.log(`🔍 [useFeeConfig] Using REAL payment amount for ${feeType} (matched key: ${key}):`, realPaymentAmounts[key]);
+          return realPaymentAmounts[key];
+        }
+      }
+      
+      // Debug: Log todas as chaves disponíveis se não encontrou match
+      console.log(`🔍 [useFeeConfig] Real payment amounts available keys:`, Object.keys(realPaymentAmounts));
+      console.log(`🔍 [useFeeConfig] Looking for feeType: ${feeType}, normalized: ${normalizedFeeType}`);
+    }
+
+    // PRIORIDADE 2: Verificar se há override personalizado para este usuário
+    // Overrides só são usados se a fee ainda não foi paga
     if (userFeeOverrides) {
       switch (feeType) {
         case 'selection_process':
@@ -341,18 +385,6 @@ export const useFeeConfig = (userId?: string) => {
             return userFeeOverrides.i20_control_fee;
           }
           break;
-      }
-    }
-
-    // PRIORIDADE 2: Verificar se há valor real pago na tabela individual_fee_payments
-    if (realPaymentAmounts && Object.keys(realPaymentAmounts).length > 0) {
-      // Normalizar nome da taxa para match (remover sufixo _fee se existir)
-      const normalizedFeeType = feeType.replace(/_fee$/, '');
-      
-      if (realPaymentAmounts[normalizedFeeType] !== undefined) {
-        // Debug
-        console.log(`🔍 [useFeeConfig] Using REAL payment amount for ${normalizedFeeType}:`, realPaymentAmounts[normalizedFeeType]);
-        return realPaymentAmounts[normalizedFeeType];
       }
     }
 

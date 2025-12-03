@@ -72,7 +72,7 @@ const TabLoadingSkeleton: React.FC = () => (
 const AdminStudentDetails: React.FC = () => {
   const { profileId } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
   const queryClient = useQueryClient();
   
   // React Query Hooks
@@ -114,6 +114,8 @@ const AdminStudentDetails: React.FC = () => {
         secondaryDataQuery.refetch(),
         pendingZelleQuery.refetch(),
       ]);
+      // ✅ Recarregar realPaidAmounts após refresh
+      await reloadRealPaidAmounts();
     } finally {
       setTimeout(() => {
         setIsRefreshing(false);
@@ -122,7 +124,7 @@ const AdminStudentDetails: React.FC = () => {
   };
   
   const { saving, saveProfile, markFeeAsPaid, approveDocument, rejectDocument } = useAdminStudentActions();
-  const { getFeeAmount, formatFeeAmount, hasOverride, userSystemType, userFeeOverrides } = useFeeConfig(student?.user_id);
+  const { getFeeAmount, formatFeeAmount, hasOverride, userSystemType, userFeeOverrides, loadUserFeeOverrides } = useFeeConfig(student?.user_id);
   const { logAction } = useStudentLogs(student?.student_id || '');
 
   /**
@@ -339,6 +341,8 @@ const AdminStudentDetails: React.FC = () => {
   const [savingFees, setSavingFees] = useState(false);
   const [editingPaymentMethod, setEditingPaymentMethod] = useState<string | null>(null);
   const [savingPaymentMethod, setSavingPaymentMethod] = useState(false);
+  // ✅ Estado para forçar recarregamento de overrides no PaymentStatusCard
+  const [overridesRefreshKey, setOverridesRefreshKey] = useState(0);
 
   // Permissões (isPlatformAdmin já definido acima)
   const canEditProfile = isPlatformAdmin;
@@ -545,6 +549,52 @@ const AdminStudentDetails: React.FC = () => {
     // Remover validateAndNormalizePaidAmounts das dependências pois é estável (useCallback com [] vazio)
     // Remover getFeeAmount também, pois pode mudar a cada render mas não afeta a lógica de quando carregar
   }, [student?.user_id, userSystemType, userFeeOverrides, student?.dependents, hasMatriculaRewardsDiscount, student?.seller_referral_code]);
+
+  // Função para recarregar realPaidAmounts (força recarregamento mesmo se dependências não mudaram)
+  const reloadRealPaidAmounts = React.useCallback(async () => {
+    if (!student?.user_id) return;
+    
+    // Resetar refs para forçar recarregamento
+    lastLoadedUserIdRef.current = null;
+    lastLoadedDepsRef.current = '';
+    isLoadingRef.current = false;
+    
+    setLoadingPaidAmounts({
+      selection_process: true,
+      scholarship: true,
+      i20_control: true,
+      application: true,
+    });
+    
+    try {
+      const amounts = await getGrossPaidAmounts(student.user_id, ['selection_process', 'scholarship', 'i20_control', 'application']);
+      
+      // ✅ APLICAR VALIDAÇÃO: Usar a mesma lógica do Payment Management
+      const hasMatrFromSellerCode = !!(student?.seller_referral_code && /^MATR/i.test(student.seller_referral_code));
+      const normalizedAmounts = validateAndNormalizePaidAmounts(
+        amounts,
+        userSystemType,
+        userFeeOverrides,
+        getFeeAmount,
+        student?.dependents || 0,
+        hasMatriculaRewardsDiscount,
+        hasMatrFromSellerCode
+      );
+      
+      setRealPaidAmounts(normalizedAmounts);
+      console.log('[AdminStudentDetails] ✅ realPaidAmounts recarregado após refresh/save:', normalizedAmounts);
+    } catch (error) {
+      console.error('[AdminStudentDetails] Erro ao recarregar valores brutos pagos:', error);
+      setRealPaidAmounts({});
+    } finally {
+      setLoadingPaidAmounts({
+        selection_process: false,
+        scholarship: false,
+        i20_control: false,
+        application: false,
+      });
+    }
+  }, [student?.user_id, student?.dependents, student?.seller_referral_code, userSystemType, userFeeOverrides, hasMatriculaRewardsDiscount, getFeeAmount, validateAndNormalizePaidAmounts]);
 
   // Carregar referral info quando necessário (ainda é local pois depende de seller_referral_code)
   React.useEffect(() => {
@@ -756,11 +806,42 @@ const AdminStudentDetails: React.FC = () => {
   };
 
   // Handlers
-  const handleOpenChat = useCallback(() => {
-    if (student) {
-      navigate(`/admin/chat/${student.user_id}`);
+  const handleOpenChat = useCallback(async () => {
+    if (student?.user_id) {
+      // First, try to find existing conversation with this student
+      try {
+        let query = supabase
+          .from('admin_student_conversations')
+          .select('id, admin_id')
+          .eq('student_id', student.user_id);
+
+        // For affiliate admins, only look for their own conversations
+        // For regular admins, look for any existing conversation with this student
+        if (userProfile && userProfile.role === 'affiliate_admin') {
+          query = query.eq('admin_id', user?.id);
+        }
+
+        const { data: existingConversations, error } = await query;
+
+        if (error) {
+          console.error('Error finding existing conversation:', error);
+        }
+
+        if (existingConversations && existingConversations.length > 0) {
+          // Use the first existing conversation (most recent)
+          const existingConversation = existingConversations[0];
+          navigate(`/admin/dashboard/users?tab=messages&conversation=${existingConversation.id}&recipient_id=${student.user_id}`);
+        } else {
+          // Navigate to create new conversation
+          navigate(`/admin/dashboard/users?tab=messages&recipient_id=${student.user_id}`);
+        }
+      } catch (e) {
+        console.error('Error in handleOpenChat:', e);
+        // Fallback to creating new conversation
+        navigate(`/admin/dashboard/users?tab=messages&recipient_id=${student.user_id}`);
+      }
     }
-  }, [student, navigate]);
+  }, [student, user, userProfile, navigate]);
 
   const handleBack = useCallback(() => {
     navigate(-1);
@@ -1743,6 +1824,12 @@ const AdminStudentDetails: React.FC = () => {
 
       if (error) throw error;
 
+      console.log('✅ [handleSaveEditFees] Overrides salvos no banco:', {
+        selection_process: editingFees.selection_process,
+        scholarship: editingFees.scholarship,
+        i20_control: editingFees.i20_control
+      });
+
       // Log da ação
       try {
         await logAction(
@@ -1765,13 +1852,26 @@ const AdminStudentDetails: React.FC = () => {
       // Invalidar queries relacionadas
       queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.students.secondaryData(student?.user_id) });
+      
+      // ✅ Aguardar um pouco para garantir que o banco foi atualizado
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      // ✅ Recarregar realPaidAmounts E userFeeOverrides após salvar fees
+      // Isso garante que os valores estejam atualizados quando iniciar nova edição
+      await Promise.all([
+        reloadRealPaidAmounts(),
+        loadUserFeeOverrides()
+      ]);
+      
+      // ✅ Forçar recarregamento de overrides no PaymentStatusCard
+      setOverridesRefreshKey(prev => prev + 1);
     } catch (error: any) {
       console.error('Error saving fee overrides:', error);
       alert('Erro ao salvar as taxas personalizadas: ' + error.message);
     } finally {
       setSavingFees(false);
     }
-  }, [editingFees, student, user, logAction, profileId, queryClient]);
+  }, [editingFees, student, user, logAction, profileId, queryClient, reloadRealPaidAmounts]);
 
   // Handler para resetar fees para padrão
   const handleResetFees = useCallback(async () => {
@@ -1807,47 +1907,179 @@ const AdminStudentDetails: React.FC = () => {
       // Invalidar queries relacionadas
       queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.students.secondaryData(student?.user_id) });
+      
+      // ✅ Recarregar realPaidAmounts E userFeeOverrides após resetar fees
+      // Isso garante que os valores estejam atualizados quando iniciar nova edição
+      await Promise.all([
+        reloadRealPaidAmounts(),
+        loadUserFeeOverrides()
+      ]);
+      
+      // ✅ Forçar recarregamento de overrides no PaymentStatusCard
+      setOverridesRefreshKey(prev => prev + 1);
     } catch (error: any) {
       console.error('Error resetting fees:', error);
       alert('Erro ao resetar as taxas: ' + error.message);
     } finally {
       setSavingFees(false);
     }
-  }, [student, user, logAction, profileId, queryClient]);
+  }, [student, user, logAction, profileId, queryClient, reloadRealPaidAmounts]);
 
   // Handler para iniciar edição de fees
-  const handleStartEditFees = useCallback(() => {
+  const handleStartEditFees = useCallback(async () => {
     if (!student) return;
     
-    // Calcular o valor exato que seria exibido para Selection Process Fee
-    let selectionProcessValue: number;
-    const hasCustomOverride = hasOverride('selection_process');
+    // ✅ IMPORTANTE: Recarregar realPaidAmounts antes de iniciar edição
+    await reloadRealPaidAmounts();
     
-    if (hasCustomOverride && userFeeOverrides?.selection_process_fee !== undefined) {
-      // Se tem override, usar o valor do override diretamente
-      selectionProcessValue = userFeeOverrides.selection_process_fee;
-    } else {
-      // Calcular baseado no system_type, Matricula Rewards e dependents
-      const hasMatrFromSellerCode = student?.seller_referral_code && /^MATR/i.test(student.seller_referral_code);
-      const hasMatrDiscount = hasMatriculaRewardsDiscount || hasMatrFromSellerCode;
+    // ✅ Buscar overrides diretamente do banco para garantir valores atualizados
+    // Isso evita problemas de closure com o estado do hook
+    let currentOverrides: {
+      selection_process_fee?: number;
+      scholarship_fee?: number;
+      i20_control_fee?: number;
+    } | null = null;
+    
+    try {
+      // ✅ Forçar nova query sem cache adicionando timestamp
+      const { data: overrideData, error: overrideError } = await supabase
+        .from('user_fee_overrides')
+        .select('selection_process_fee, scholarship_fee, i20_control_fee, updated_at')
+        .eq('user_id', student.user_id)
+        .maybeSingle();
       
-      let base: number;
-      if (hasMatrDiscount) {
-        base = 350; // $400 - $50 desconto
-      } else {
-        const systemType = userSystemType || 'legacy';
-        base = systemType === 'simplified' ? 350 : 400;
+      if (overrideError && overrideError.code !== 'PGRST116') {
+        console.error('❌ [handleStartEditFees] Erro ao buscar overrides:', overrideError);
       }
-      selectionProcessValue = base + dependents * 150;
+      
+      if (!overrideError && overrideData) {
+        currentOverrides = {
+          selection_process_fee: overrideData.selection_process_fee != null ? Number(overrideData.selection_process_fee) : undefined,
+          scholarship_fee: overrideData.scholarship_fee != null ? Number(overrideData.scholarship_fee) : undefined,
+          i20_control_fee: overrideData.i20_control_fee != null ? Number(overrideData.i20_control_fee) : undefined,
+        };
+        console.log('✅ [handleStartEditFees] Overrides encontrados no banco:', currentOverrides);
+      } else {
+        console.log('ℹ️ [handleStartEditFees] Nenhum override encontrado para este usuário');
+      }
+    } catch (error) {
+      console.error('❌ [handleStartEditFees] Erro ao buscar overrides:', error);
     }
     
-    // Para scholarship e i20_control, usar getFeeAmount que já considera overrides
-    setEditingFees({
+    // ✅ Buscar affiliate admin email do aluno para verificar se deve aplicar custo de dependentes
+    let studentAffiliateAdminEmail: string | null = null;
+    if (student.seller_referral_code) {
+      try {
+        const { data: result, error } = await supabase.rpc('get_affiliate_admin_email_by_seller_code', {
+          seller_code: student.seller_referral_code
+        });
+        
+        if (!error && result && result.length > 0 && result[0]?.email) {
+          studentAffiliateAdminEmail = result[0].email;
+        }
+      } catch (error) {
+        console.error('Error fetching student affiliate admin email:', error);
+      }
+    }
+    
+    // ✅ Verificar se é do affiliate admin "contato@brantimmigration.com" para aplicar valores fixos
+    const isBrantImmigrationAffiliate = studentAffiliateAdminEmail?.toLowerCase() === 'contato@brantimmigration.com';
+    
+    // ✅ Se a fee já foi paga, usar o valor realmente pago (realPaidAmounts) como padrão
+    // Caso contrário, usar o valor calculado/esperado
+    // Nota: realPaidAmounts foi recarregado acima, então agora está atualizado
+    
+    // Selection Process Fee
+    let selectionProcessValue: number;
+    if (student.has_paid_selection_process_fee && realPaidAmounts?.selection_process !== undefined && realPaidAmounts?.selection_process !== null) {
+      // Se já foi pago, usar o valor realmente pago
+      selectionProcessValue = realPaidAmounts.selection_process;
+    } else {
+      // Se não foi pago, calcular o valor esperado
+      
+      // ✅ PRIORIDADE 1: Verificar override primeiro (antes de Brant)
+      if (currentOverrides?.selection_process_fee !== undefined && currentOverrides?.selection_process_fee !== null) {
+        // Se tem override, usar o valor do override diretamente
+        selectionProcessValue = currentOverrides.selection_process_fee;
+        console.log('✅ [handleStartEditFees] Selection Process usando override:', selectionProcessValue);
+      } else if (isBrantImmigrationAffiliate) {
+        // ✅ PRIORIDADE 2: Se for do affiliate admin "contato@brantimmigration.com", usar valores fixos
+        // Selection Process: $400 base + $150 por dependente
+        selectionProcessValue = 400 + (dependents * 150);
+      } else {
+        // Caso contrário, calcular normalmente
+        const hasMatrFromSellerCode = student?.seller_referral_code && /^MATR/i.test(student.seller_referral_code);
+        const hasMatrDiscount = hasMatriculaRewardsDiscount || hasMatrFromSellerCode;
+        
+        let base: number;
+        if (hasMatrDiscount) {
+          base = 350; // $400 - $50 desconto
+        } else {
+          const systemType = userSystemType || 'legacy';
+          base = systemType === 'simplified' ? 350 : 400;
+        }
+        
+        // Para legacy, dependentes só se for do Brant (já tratado acima)
+        selectionProcessValue = base;
+      }
+    }
+    
+    // Scholarship Fee
+    let scholarshipValue: number;
+    if (student.is_scholarship_fee_paid && realPaidAmounts?.scholarship !== undefined && realPaidAmounts?.scholarship !== null) {
+      // Se já foi pago, usar o valor realmente pago
+      scholarshipValue = realPaidAmounts.scholarship;
+    } else {
+      // ✅ PRIORIDADE 1: Verificar override primeiro (antes de Brant)
+      if (currentOverrides?.scholarship_fee !== undefined && currentOverrides?.scholarship_fee !== null) {
+        // Se tem override, usar o valor do override diretamente
+        scholarshipValue = currentOverrides.scholarship_fee;
+        console.log('✅ [handleStartEditFees] Scholarship usando override:', scholarshipValue);
+      } else if (isBrantImmigrationAffiliate) {
+        // ✅ PRIORIDADE 2: Valor fixo para Brant: $900
+        scholarshipValue = 900;
+      } else {
+        // Caso contrário, usar getFeeAmount que já considera overrides
+        scholarshipValue = getFeeAmount('scholarship_fee');
+      }
+    }
+    
+    // I-20 Control Fee
+    let i20ControlValue: number;
+    if (student.has_paid_i20_control_fee && realPaidAmounts?.i20_control !== undefined && realPaidAmounts?.i20_control !== null) {
+      // Se já foi pago, usar o valor realmente pago
+      i20ControlValue = realPaidAmounts.i20_control;
+    } else {
+      // ✅ PRIORIDADE 1: Verificar override primeiro (antes de Brant)
+      if (currentOverrides?.i20_control_fee !== undefined && currentOverrides?.i20_control_fee !== null) {
+        // Se tem override, usar o valor do override diretamente
+        i20ControlValue = currentOverrides.i20_control_fee;
+        console.log('✅ [handleStartEditFees] I-20 Control usando override:', i20ControlValue);
+      } else if (isBrantImmigrationAffiliate) {
+        // ✅ PRIORIDADE 2: Valor fixo para Brant: $900
+        i20ControlValue = 900;
+      } else {
+        // Caso contrário, usar getFeeAmount que já considera overrides
+        i20ControlValue = getFeeAmount('i20_control_fee');
+      }
+    }
+    
+    const finalFees = {
       selection_process: selectionProcessValue,
-      scholarship: getFeeAmount('scholarship_fee'),
-      i20_control: getFeeAmount('i20_control_fee')
-    });
-  }, [student, getFeeAmount, hasOverride, userFeeOverrides, userSystemType, hasMatriculaRewardsDiscount, dependents]);
+      scholarship: scholarshipValue,
+      i20_control: i20ControlValue
+    };
+    
+    console.log('✅ [handleStartEditFees] Valores finais para edição:', finalFees);
+    console.log('✅ [handleStartEditFees] Overrides usados:', currentOverrides);
+    
+    setEditingFees(finalFees);
+    
+    // ✅ Verificar se o estado foi atualizado (usar setTimeout para verificar após o próximo render)
+    setTimeout(() => {
+      console.log('🔍 [handleStartEditFees] Estado editingFees após setEditingFees (verificação):', finalFees);
+    }, 100);
+  }, [student, getFeeAmount, userSystemType, hasMatriculaRewardsDiscount, dependents, realPaidAmounts, reloadRealPaidAmounts]);
 
   // Handler para cancelar edição de fees
   const handleCancelEditFees = useCallback(() => {
@@ -2150,6 +2382,7 @@ const AdminStudentDetails: React.FC = () => {
                 onPaymentMethodChange={setPaymentMethod}
                 formatFeeAmount={formatFeeAmount}
                 getFeeAmount={getFeeAmount}
+                overridesRefreshKey={overridesRefreshKey}
               />
             </Suspense>
 
