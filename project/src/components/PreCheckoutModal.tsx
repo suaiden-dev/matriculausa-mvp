@@ -343,8 +343,15 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
       setShowTermsModal(false); // Reset terms modal state
       setActiveTerm(null); // Reset active term
       setUserClickedCheckbox(false); // Reset user interaction flag
-      setHasReferralCode(false); // Reset referral code checkbox
-      setShowCodeStep(false); // Reset code step
+      // ✅ CORREÇÃO: Se não tem seller_referral_code, mostrar campo diretamente (sem checkbox)
+      // Não resetar hasReferralCode e showCodeStep se não tem seller_referral_code
+      if (!hasSellerReferralCode) {
+        setHasReferralCode(true); // Sempre mostrar campo se não tem seller_referral_code
+        setShowCodeStep(true); // Sempre mostrar campo se não tem seller_referral_code
+      } else {
+        setHasReferralCode(false); // Reset apenas se tem seller_referral_code
+        setShowCodeStep(false); // Reset apenas se tem seller_referral_code
+      }
       setPromotionalCouponApplied(null); // Reset promotional coupon
       checkReferralCodeUsage();
       
@@ -952,20 +959,28 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
       return;
     }
     
-    // ✅ Se usuário marcou que tem código (e não tem activeDiscount), precisa validar
-    if (hasReferralCode) {
-      if (validationResult?.isValid && discountCode.trim() && codeApplied) {
+    // ✅ CORREÇÃO: Se não tem seller_referral_code, o campo está sempre visível
+    // Se o usuário preencheu um código, precisa validar antes de prosseguir
+    // Se não preencheu ou código é inválido, pode prosseguir sem desconto
+    if (!hasSellerReferralCode && discountCode.trim()) {
+      // Se preencheu código, precisa estar válido para prosseguir
+      if (validationResult?.isValid && codeApplied) {
         console.log('🔍 [PreCheckoutModal] ✅ Aplicando código novo e continuando');
         const discount = validationResult?.discountAmount || 0;
         const finalAmount = Math.max(productPrice - discount, 0);
         onProceedToCheckout(finalAmount, discountCode.trim().toUpperCase());
         onClose();
+      } else if (validationResult && !validationResult.isValid) {
+        // Se código foi validado mas é inválido, não pode prosseguir
+        console.log('🔍 [PreCheckoutModal] ❌ Código inválido - não pode prosseguir');
+        alert(t('preCheckoutModal.mustEnterValidCode'));
       } else {
-        console.log('🔍 [PreCheckoutModal] ❌ Código não válido ou não aplicado - não pode prosseguir');
+        // Se preencheu mas não validou ainda, não pode prosseguir
+        console.log('🔍 [PreCheckoutModal] ❌ Código preenchido mas não validado - não pode prosseguir');
         alert(t('preCheckoutModal.mustEnterValidCode'));
       }
     } else {
-      // ✅ Usuário não tem código - prosseguir sem desconto
+      // ✅ Usuário não preencheu código ou tem seller_referral_code - prosseguir sem desconto
       console.log('🔍 [PreCheckoutModal] ✅ Prosseguindo sem código');
       const finalAmount = computedBasePrice;
       onProceedToCheckout(finalAmount);
