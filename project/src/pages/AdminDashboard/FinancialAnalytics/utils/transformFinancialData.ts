@@ -52,9 +52,9 @@ function processApplications(
         selectionProcessFee = Math.round(realPaid.selection_process * 100);
       } else {
         // Valor muito discrepante, usar cálculo fixo
-        if (userOverrides.selection_process_fee !== undefined) {
-          selectionProcessFee = Math.round(userOverrides.selection_process_fee * 100);
-        } else {
+    if (userOverrides.selection_process_fee !== undefined) {
+      selectionProcessFee = Math.round(userOverrides.selection_process_fee * 100);
+    } else {
           selectionProcessFee = Math.round((expectedSelectionProcess + dependentCost) * 100);
         }
       }
@@ -74,9 +74,9 @@ function processApplications(
         i20ControlFee = Math.round(realPaid.i20_control * 100);
       } else {
         // Valor muito discrepante, usar cálculo fixo
-        if (userOverrides.i20_control_fee !== undefined) {
-          i20ControlFee = Math.round(userOverrides.i20_control_fee * 100);
-        } else {
+    if (userOverrides.i20_control_fee !== undefined) {
+      i20ControlFee = Math.round(userOverrides.i20_control_fee * 100);
+    } else {
           i20ControlFee = Math.round(expectedI20Control * 100);
         }
       }
@@ -96,9 +96,9 @@ function processApplications(
         scholarshipFee = Math.round(realPaid.scholarship * 100);
       } else {
         // Valor muito discrepante, usar cálculo fixo
-        if (userOverrides.scholarship_fee !== undefined) {
-          scholarshipFee = Math.round(userOverrides.scholarship_fee * 100);
-        } else {
+    if (userOverrides.scholarship_fee !== undefined) {
+      scholarshipFee = Math.round(userOverrides.scholarship_fee * 100);
+    } else {
           scholarshipFee = Math.round(expectedScholarship * 100);
         }
       }
@@ -125,12 +125,12 @@ function processApplications(
         applicationFee = Math.round(realPaid.application * 100);
       } else {
         // Valor muito discrepante, usar cálculo fixo
-        if (scholarship?.application_fee_amount) {
-          const rawValue = parseFloat(scholarship.application_fee_amount);
-          applicationFee = rawValue > 1000 ? Math.round(rawValue) : Math.round(rawValue * 100);
-        } else {
-          applicationFee = Math.round(getFeeAmount('application_fee') * 100);
-        }
+    if (scholarship?.application_fee_amount) {
+      const rawValue = parseFloat(scholarship.application_fee_amount);
+      applicationFee = rawValue > 1000 ? Math.round(rawValue) : Math.round(rawValue * 100);
+    } else {
+      applicationFee = Math.round(getFeeAmount('application_fee') * 100);
+    }
         if (dependents > 0) {
           applicationFee += dependents * 10000; // $100 por dependente (para ambos os sistemas)
         }
@@ -143,7 +143,7 @@ function processApplications(
       }
     } else {
       applicationFee = Math.round(getFeeAmount('application_fee') * 100);
-      if (dependents > 0) {
+    if (dependents > 0) {
         applicationFee += dependents * 10000; // $100 por dependente (para ambos os sistemas)
       }
     }

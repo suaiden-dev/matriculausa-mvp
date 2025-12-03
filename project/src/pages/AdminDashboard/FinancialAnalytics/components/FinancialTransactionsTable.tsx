@@ -315,9 +315,9 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
 
       // Search filter
       const matchesSearch = 
-        t.student_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        t.fee_type.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        t.payment_method.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      t.student_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      t.fee_type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      t.payment_method.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (t.payment_intent_id && t.payment_intent_id.toLowerCase().includes(searchTerm.toLowerCase()));
 
       if (!matchesSearch) return false;
@@ -950,13 +950,13 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
                   </tr>
                 );
               })
-                    ) : (
-                      <tr>
+            ) : (
+              <tr>
                         <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
                           No transactions found.
-                        </td>
-                      </tr>
-                    )}
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
@@ -965,7 +965,7 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
       {filteredTransactions.length > 0 && (
         <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-4">
-            <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-500">
               Showing <span className="font-medium">{startIndex + 1}</span> to <span className="font-medium">{Math.min(startIndex + itemsPerPage, filteredTransactions.length)}</span> of <span className="font-medium">{filteredTransactions.length}</span> results
             </p>
             <div className="flex items-center gap-2">
@@ -990,22 +990,22 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
             </div>
           </div>
           {totalPages > 1 && (
-            <div className="flex gap-2">
-              <button
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-                className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
           )}
         </div>
       )}
