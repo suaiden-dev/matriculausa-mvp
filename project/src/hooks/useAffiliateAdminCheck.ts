@@ -44,8 +44,6 @@ export const useAffiliateAdminCheck = (): {
 
         if (result && result.length > 0 && result[0]?.email) {
           setAffiliateEmail(result[0].email);
-        } else {
-          console.log('⚠️ [useAffiliateAdminCheck] Email do affiliate admin não encontrado');
         }
       } catch (error) {
         console.error('❌ [useAffiliateAdminCheck] Erro ao verificar affiliate admin:', error);

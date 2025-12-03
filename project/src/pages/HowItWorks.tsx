@@ -22,7 +22,7 @@ import { useSimplifiedFees } from '../hooks/useSimplifiedFees';
 import SmartChat from '../components/SmartChat';
 
 const HowItWorks: React.FC = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { selectionProcessFee, scholarshipFee, i20ControlFee, hasSellerPackage, packageName } = useDynamicFees();
   const { affiliateAdminEmail, loading: affiliateCheckLoading, isTheFutureOfEnglishAffiliate } = useAffiliateAdminCheck();
   const { userProfile } = useAuth();
@@ -45,6 +45,11 @@ const HowItWorks: React.FC = () => {
       return '$350.00';
     }
     
+    // ✅ Se for do affiliate admin contato@brantimmigration.com, valor base é 400 (sem dependentes no título)
+    if (isBrantImmigrationAffiliate) {
+      return '$400.00';
+    }
+    
     // Para sistema simplificado, valor base é 350
     if (systemType === 'simplified') {
       return `$${fee350.toFixed(2)}`;
@@ -61,16 +66,8 @@ const HowItWorks: React.FC = () => {
       // Valor base para legacy é 400 (sem dependentes)
       return '$400.00';
     }
-  }, [affiliateCheckLoading, systemTypeLoading, simplifiedFeesLoading, feeLoading, isTheFutureOfEnglishAffiliate, systemType, fee350, hasOverride, getFeeAmount]);
+  }, [affiliateCheckLoading, systemTypeLoading, simplifiedFeesLoading, feeLoading, isTheFutureOfEnglishAffiliate, isBrantImmigrationAffiliate, systemType, fee350, hasOverride, getFeeAmount]);
   
-  // Debug: verificar se a verificação está funcionando
-  React.useEffect(() => {
-    if (!affiliateCheckLoading) {
-      console.log('🔍 [HowItWorks] Affiliate Admin Email:', affiliateAdminEmail);
-      console.log('🔍 [HowItWorks] Is Brant Immigration Affiliate:', isBrantImmigrationAffiliate);
-      console.log('🔍 [HowItWorks] Base Selection Fee (sem dependentes):', baseSelectionFee);
-    }
-  }, [affiliateAdminEmail, isBrantImmigrationAffiliate, affiliateCheckLoading, baseSelectionFee]);
   
   return (
     <div className="bg-white min-h-screen">
@@ -128,7 +125,31 @@ const HowItWorks: React.FC = () => {
                   </div>
             <div>
               <h3 className="text-2xl font-bold mb-2 text-green-700">
-                2. {t('howItWorks.steps.selectionFee.title', { selectionProcessFee: baseSelectionFee || selectionProcessFee })}
+                2. {(() => {
+                  // Se ainda está carregando a verificação do affiliate ou o valor base, mostrar skeleton
+                  const isLoading = baseSelectionFee === undefined || affiliateCheckLoading || systemTypeLoading || 
+                      (systemType === 'simplified' && simplifiedFeesLoading) || 
+                      (systemType === 'legacy' && feeLoading);
+                  
+                  if (isLoading) {
+                    // Obter o texto base da tradução e remover o placeholder/valor
+                    const titleText = t('howItWorks.steps.selectionFee.title', { selectionProcessFee: '{{selectionProcessFee}}' });
+                    // Remover placeholder {{selectionProcessFee}} e qualquer valor já inserido ($XXX.XX)
+                    const textWithoutFee = titleText
+                      .replace(/\{\{selectionProcessFee\}\}/g, '')
+                      .replace(/\(\$[\d.]+\)/g, '')
+                      .replace(/\$[\d.]+/g, '')
+                      .trim();
+                    return (
+                      <>
+                        {textWithoutFee}
+                        <span className="inline-block ml-2 h-6 w-20 bg-slate-200 rounded animate-pulse"></span>
+                      </>
+                    );
+                  }
+                  // Quando o valor estiver pronto, mostrar o valor correto
+                  return t('howItWorks.steps.selectionFee.title', { selectionProcessFee: baseSelectionFee || selectionProcessFee });
+                })()}
                 {hasSellerPackage && (
                   <span className="ml-2 text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
                     {packageName}
@@ -138,12 +159,6 @@ const HowItWorks: React.FC = () => {
               <p className="text-slate-700 mb-2 text-lg">
                 {(() => {
                   let baseDescription = t('howItWorks.steps.selectionFee.description');
-                  
-                  // Debug
-                  console.log('🔍 [HowItWorks] Base description:', baseDescription);
-                  console.log('🔍 [HowItWorks] Is Brant Immigration:', isBrantImmigrationAffiliate);
-                  console.log('🔍 [HowItWorks] Affiliate Admin Email:', affiliateAdminEmail);
-                  console.log('🔍 [HowItWorks] Loading:', affiliateCheckLoading);
                   
                   // Se ainda está carregando, retornar descrição sem dependentes temporariamente
                   if (affiliateCheckLoading) {
@@ -155,17 +170,18 @@ const HowItWorks: React.FC = () => {
                   
                   // Se for do affiliate admin correto, adicionar o texto de dependentes
                   if (isBrantImmigrationAffiliate) {
-                    // Verificar o idioma atual para usar o texto correto
-                    const isPortuguese = t('common.perDependent', { defaultValue: '' }) === '' || 
-                                         baseDescription.includes('por dependente');
+                    // ✅ CORREÇÃO: Verificar diretamente o idioma atual do i18n
+                    // Em vez de depender de chave de tradução ausente, verificar o idioma configurado
+                    const currentLanguage = i18n.language || 'en';
+                    const isPortuguese = currentLanguage.startsWith('pt') || 
+                                         baseDescription.toLowerCase().includes('por dependente') ||
+                                         baseDescription.toLowerCase().includes('processo seletivo');
                     const dependentsText = isPortuguese ? 'por dependente' : 'per dependent';
                     const dependentsNote = ` (+$150 ${dependentsText})`;
-                    console.log('🔍 [HowItWorks] Adding dependents text:', dependentsNote);
                     return baseDescription + dependentsNote;
                   }
                   
                   // Se não for do affiliate admin correto, retornar sem o texto de dependentes
-                  console.log('🔍 [HowItWorks] Returning without dependents text');
                   return baseDescription;
                 })()}
               </p>
