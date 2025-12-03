@@ -1847,8 +1847,27 @@ const AdminStudentDetails: React.FC = () => {
   }, [student, user, logAction, profileId, queryClient]);
 
   // Handler para iniciar edição de fees
-  const handleStartEditFees = useCallback(() => {
+  const handleStartEditFees = useCallback(async () => {
     if (!student) return;
+    
+    // ✅ Buscar affiliate admin email do aluno para verificar se deve aplicar custo de dependentes
+    let studentAffiliateAdminEmail: string | null = null;
+    if (student.seller_referral_code) {
+      try {
+        const { data: result, error } = await supabase.rpc('get_affiliate_admin_email_by_seller_code', {
+          seller_code: student.seller_referral_code
+        });
+        
+        if (!error && result && result.length > 0 && result[0]?.email) {
+          studentAffiliateAdminEmail = result[0].email;
+        }
+      } catch (error) {
+        console.error('Error fetching student affiliate admin email:', error);
+      }
+    }
+    
+    // ✅ Verificar se é do affiliate admin "contato@brantimmigration.com" para aplicar custo de dependentes
+    const isBrantImmigrationAffiliate = studentAffiliateAdminEmail?.toLowerCase() === 'contato@brantimmigration.com';
     
     // ✅ Se a fee já foi paga, usar o valor realmente pago (realPaidAmounts) como padrão
     // Caso contrário, usar o valor calculado/esperado
@@ -1877,7 +1896,10 @@ const AdminStudentDetails: React.FC = () => {
           const systemType = userSystemType || 'legacy';
           base = systemType === 'simplified' ? 350 : 400;
         }
-        selectionProcessValue = base + dependents * 150;
+        
+        // ✅ CORREÇÃO: Custo de $150 por dependente só se for do affiliate admin "contato@brantimmigration.com"
+        const dependentsCost = isBrantImmigrationAffiliate ? dependents * 150 : 0;
+        selectionProcessValue = base + dependentsCost;
       }
     }
     
