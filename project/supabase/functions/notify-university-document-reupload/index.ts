@@ -1,5 +1,5 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js';
+import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js';
 
 function corsHeaders(origin: string | null) {
   if (!origin || origin.includes('localhost') || origin.includes('127.0.0.1')) {
@@ -20,6 +20,170 @@ const supabase = createClient(
   Deno.env.get('SUPABASE_URL')!,
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 );
+
+/**
+ * Busca todos os usuários admin do sistema
+ * Retorna array com email, nome e telefone de cada admin
+ * Em ambiente de desenvolvimento (localhost), filtra emails específicos
+ */
+async function getAllAdmins(supabase: SupabaseClient, isDevelopment: boolean = false): Promise<Array<{
+  email: string;
+  full_name: string;
+  phone: string;
+}>> {
+  // Emails a serem filtrados em ambiente de desenvolvimento
+  const devBlockedEmails = [
+    'luizedmiola@gmail.com',
+    'chimentineto@gmail.com',
+    'fsuaiden@gmail.com',
+    'rayssathefuture@gmail.com'
+  ];
+  
+  try {
+    // Buscar todos os admins da tabela user_profiles onde role = 'admin'
+    const { data: adminProfiles, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('user_id, email, full_name, phone')
+      .eq('role', 'admin');
+
+    if (profileError) {
+      console.error('[getAllAdmins] Erro ao buscar admins de user_profiles:', profileError);
+      
+      // Fallback: tentar buscar de auth.users
+      try {
+        const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
+        if (!authError && authUsers) {
+          const adminUsers = authUsers.users
+            .filter(user => user.user_metadata?.role === 'admin' || user.email === 'admin@matriculausa.com')
+            .map(user => ({
+              email: user.email || '',
+              full_name: user.user_metadata?.full_name || user.user_metadata?.name || 'Admin MatriculaUSA',
+              phone: user.user_metadata?.phone || ''
+            }))
+            .filter(admin => admin.email);
+          
+          if (adminUsers.length > 0) {
+            const filteredAdmins = isDevelopment 
+              ? adminUsers.filter(admin => !devBlockedEmails.includes(admin.email))
+              : adminUsers;
+            console.log(`[getAllAdmins] Encontrados ${filteredAdmins.length} admin(s) via auth.users${isDevelopment ? ' (filtrados para dev)' : ''}:`, filteredAdmins.map(a => a.email));
+            return filteredAdmins.length > 0 ? filteredAdmins : [{
+              email: 'admin@matriculausa.com',
+              full_name: 'Admin MatriculaUSA',
+              phone: ''
+            }];
+          }
+        }
+      } catch (authFallbackError) {
+        console.error('[getAllAdmins] Erro no fallback para auth.users:', authFallbackError);
+      }
+      
+      return [{
+        email: 'admin@matriculausa.com',
+        full_name: 'Admin MatriculaUSA',
+        phone: ''
+      }];
+    }
+
+    if (!adminProfiles || adminProfiles.length === 0) {
+      console.warn('[getAllAdmins] Nenhum admin encontrado em user_profiles, tentando auth.users...');
+      
+      try {
+        const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
+        if (!authError && authUsers) {
+          const adminUsers = authUsers.users
+            .filter(user => user.user_metadata?.role === 'admin' || user.email === 'admin@matriculausa.com')
+            .map(user => ({
+              email: user.email || '',
+              full_name: user.user_metadata?.full_name || user.user_metadata?.name || 'Admin MatriculaUSA',
+              phone: user.user_metadata?.phone || ''
+            }))
+            .filter(admin => admin.email);
+          
+          if (adminUsers.length > 0) {
+            const filteredAdmins = isDevelopment 
+              ? adminUsers.filter(admin => !devBlockedEmails.includes(admin.email))
+              : adminUsers;
+            console.log(`[getAllAdmins] Encontrados ${filteredAdmins.length} admin(s) via auth.users${isDevelopment ? ' (filtrados para dev)' : ''}:`, filteredAdmins.map(a => a.email));
+            return filteredAdmins.length > 0 ? filteredAdmins : [{
+              email: 'admin@matriculausa.com',
+              full_name: 'Admin MatriculaUSA',
+              phone: ''
+            }];
+          }
+        }
+      } catch (authFallbackError) {
+        console.error('[getAllAdmins] Erro no fallback para auth.users:', authFallbackError);
+      }
+      
+      return [{
+        email: 'admin@matriculausa.com',
+        full_name: 'Admin MatriculaUSA',
+        phone: ''
+      }];
+    }
+
+    // Se algum admin não tem email em user_profiles, buscar de auth.users
+    const adminsWithEmail = await Promise.all(
+      adminProfiles.map(async (profile) => {
+        if (profile.email) {
+          return {
+            email: profile.email,
+            full_name: profile.full_name || 'Admin MatriculaUSA',
+            phone: profile.phone || ''
+          };
+        } else {
+          try {
+            const { data: authUser } = await supabase.auth.admin.getUserById(profile.user_id);
+            return {
+              email: authUser?.user?.email || '',
+              full_name: profile.full_name || authUser?.user?.user_metadata?.full_name || 'Admin MatriculaUSA',
+              phone: profile.phone || authUser?.user?.user_metadata?.phone || ''
+            };
+          } catch (e) {
+            console.warn(`[getAllAdmins] Erro ao buscar email para user_id ${profile.user_id}:`, e);
+            return null;
+          }
+        }
+      })
+    );
+
+    // Filtrar nulos e admins sem email
+    let admins = adminsWithEmail
+      .filter((admin): admin is { email: string; full_name: string; phone: string } => 
+        admin !== null && !!admin.email
+      );
+
+    // Filtrar emails bloqueados em desenvolvimento
+    if (isDevelopment) {
+      const beforeFilter = admins.length;
+      admins = admins.filter(admin => !devBlockedEmails.includes(admin.email));
+      if (beforeFilter !== admins.length) {
+        console.log(`[getAllAdmins] Filtrados ${beforeFilter - admins.length} admin(s) em ambiente de desenvolvimento`);
+      }
+    }
+
+    if (admins.length === 0) {
+      console.warn('[getAllAdmins] Nenhum admin válido encontrado após processamento, usando admin padrão');
+      return [{
+        email: 'admin@matriculausa.com',
+        full_name: 'Admin MatriculaUSA',
+        phone: ''
+      }];
+    }
+
+    console.log(`[getAllAdmins] Encontrados ${admins.length} admin(s)${isDevelopment ? ' (filtrados para dev)' : ''}:`, admins.map(a => a.email));
+
+    return admins;
+  } catch (error) {
+    console.error('[getAllAdmins] Erro inesperado ao buscar admins:', error);
+    return [{
+      email: 'admin@matriculausa.com',
+      full_name: 'Admin MatriculaUSA',
+      phone: ''
+    }];
+  }
+}
 
 Deno.serve(async (req) => {
   const origin = req.headers.get('origin');
@@ -102,7 +266,17 @@ Deno.serve(async (req) => {
 
     console.log('[Edge] Mensagem de notificação:', notifMessage);
 
-    // 4. Inserir notificação in-app
+    // 4. Detectar ambiente de desenvolvimento
+    const originHeader = req.headers.get('origin') || '';
+    const isDevelopment = originHeader.includes('localhost') || 
+                          originHeader.includes('127.0.0.1') || 
+                          originHeader.includes('0.0.0.0');
+
+    // 5. Buscar todos os administradores
+    const admins = await getAllAdmins(supabase, isDevelopment);
+    console.log(`[Edge] Encontrados ${admins.length} admin(s) para notificação${isDevelopment ? ' (filtrados para dev)' : ''}`);
+
+    // 6. Inserir notificação in-app para universidade
     try {
       const { error: notifError } = await supabase.from('university_notifications').insert({
         university_id: universidade.id,
@@ -131,8 +305,8 @@ Deno.serve(async (req) => {
       console.log('[Edge] Erro ao inserir notificação in-app:', notifErr);
     }
 
-    // 5. Montar payload para n8n
-    const payload = {
+    // 7. Montar payload para n8n (universidade)
+    const universityPayload = {
       tipo_notf: 'Documento reenviado pelo aluno',
       email_aluno: emailAluno,
       nome_aluno: nomeAluno,
@@ -145,38 +319,99 @@ Deno.serve(async (req) => {
       application_id: application_id,
       is_reupload: true
     };
-    console.log('[Edge] Payload para n8n:', payload);
+    console.log('[Edge] Payload para n8n (universidade):', universityPayload);
 
-    // 6. Enviar para o n8n
-    try {
-      const n8nRes = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+    // 8. Enviar notificações em paralelo: universidade e todos os admins
+    const notificationPromises: Promise<any>[] = [];
+
+    // Notificação para universidade
+    notificationPromises.push(
+      fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'User-Agent': 'PostmanRuntime/7.36.3',
         },
-        body: JSON.stringify(payload),
-      });
-      const n8nText = await n8nRes.text();
-      console.log('[Edge] Resposta do n8n:', n8nRes.status, n8nText);
-      
-      return new Response(JSON.stringify({
-        status: n8nRes.status,
-        n8nResponse: n8nText,
-        payload,
-        success: true
-      }), { status: 200, headers: corsHeaders(origin) });
-    } catch (n8nErr) {
-      console.log('[Edge] Erro ao enviar para o n8n:', n8nErr);
-      return new Response(JSON.stringify({ 
-        error: true, 
-        message: 'Erro ao enviar para o n8n', 
-        details: n8nErr?.message 
-      }), {
-        status: 500,
-        headers: corsHeaders(origin),
-      });
-    }
+        body: JSON.stringify(universityPayload),
+      }).then(async (res) => {
+        const text = await res.text();
+        console.log('[Edge] Resposta do n8n (universidade):', res.status, text);
+        return { type: 'university', status: res.status, response: text };
+      }).catch((err) => {
+        console.error('[Edge] Erro ao enviar notificação para universidade:', err);
+        return { type: 'university', error: err.message };
+      })
+    );
+
+    // Notificações para todos os administradores
+    const adminNotificationPromises = admins.map(async (admin) => {
+      const adminPayload = {
+        tipo_notf: 'Documento reenviado pelo aluno - Admin',
+        email_admin: admin.email,
+        nome_admin: admin.full_name,
+        phone_admin: admin.phone || '',
+        email_aluno: emailAluno,
+        nome_aluno: nomeAluno,
+        phone_aluno: '', // Pode ser adicionado se necessário
+        o_que_enviar: `O aluno ${nomeAluno} reenviou o documento ${docLabel} para a bolsa ${bolsaTitulo} (${nomeUniversidade}). Por favor, revise o documento atualizado no painel administrativo.`,
+        document_type: document_type,
+        document_label: docLabel,
+        application_id: application_id,
+        scholarship_title: bolsaTitulo,
+        university_name: nomeUniversidade,
+        is_reupload: true,
+        notification_type: 'admin'
+      };
+
+      try {
+        const response = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'User-Agent': 'PostmanRuntime/7.36.3',
+          },
+          body: JSON.stringify(adminPayload),
+        });
+
+        const responseText = await response.text();
+        if (response.ok) {
+          console.log(`[Edge] ✅ Notificação enviada para admin ${admin.email}`);
+          return { success: true, email: admin.email, status: response.status };
+        } else {
+          console.error(`[Edge] ❌ Erro ao enviar notificação para admin ${admin.email}:`, response.status, responseText);
+          return { success: false, email: admin.email, status: response.status, error: responseText };
+        }
+      } catch (error) {
+        console.error(`[Edge] ❌ Erro ao enviar notificação para admin ${admin.email}:`, error);
+        return { success: false, email: admin.email, error: String(error) };
+      }
+    });
+
+    notificationPromises.push(...adminNotificationPromises);
+
+    // Aguardar todas as notificações
+    const results = await Promise.allSettled(notificationPromises);
+    
+    const universityResult = results[0];
+    const adminResults = results.slice(1);
+
+    console.log('[Edge] Resultados das notificações:', {
+      university: universityResult.status === 'fulfilled' ? universityResult.value : universityResult.reason,
+      admins: adminResults.map(r => r.status === 'fulfilled' ? r.value : r.reason)
+    });
+
+    // Retornar resposta com status das notificações
+    const universityStatus = universityResult.status === 'fulfilled' 
+      ? (universityResult.value as any).status || 200
+      : 500;
+
+    return new Response(JSON.stringify({
+      status: universityStatus,
+      universityNotification: universityResult.status === 'fulfilled' ? universityResult.value : null,
+      adminNotifications: adminResults.map(r => r.status === 'fulfilled' ? r.value : { error: String(r.reason) }),
+      payload: universityPayload,
+      success: true
+    }), { status: 200, headers: corsHeaders(origin) });
   } catch (err: any) {
     console.log('[Edge] Erro inesperado:', err);
     return new Response(JSON.stringify({ 

@@ -725,6 +725,13 @@ const MyApplications: React.FC = () => {
     return status.replace('_', ' ').toUpperCase();
   };
 
+  // Helper function para garantir que nextSteps seja sempre um array
+  const ensureArray = (value: any): string[] => {
+    if (Array.isArray(value)) return value;
+    if (typeof value === 'string') return [value];
+    return [];
+  };
+
   // Função para gerar mensagens detalhadas sobre o status
   const getStatusDescription = (application: ApplicationWithScholarship) => {
     const status = application.status;
@@ -734,6 +741,11 @@ const MyApplications: React.FC = () => {
     );
     const applicationFeePaid = !!(application as any).is_application_fee_paid;
     const scholarshipFeePaid = !!(application as any).is_scholarship_fee_paid;
+    const i20ControlFeePaid = !!(application as any).is_i20_control_fee_paid;
+    // Verificar se a carta de aceite foi recebida (tem URL ou status 'sent'/'approved')
+    const hasAcceptanceLetter = !!(application as any).acceptance_letter_url || 
+                                 (application as any).acceptance_letter_status === 'sent' || 
+                                 (application as any).acceptance_letter_status === 'approved';
 
     switch (status) {
       case 'approved':
@@ -741,7 +753,7 @@ const MyApplications: React.FC = () => {
           return {
             title: t('studentDashboard.myApplications.statusDescriptions.documentsApprovedByUniversity.title'),
             description: t('studentDashboard.myApplications.statusDescriptions.documentsApprovedByUniversity.description'),
-            nextSteps: t('studentDashboard.myApplications.statusDescriptions.documentsApprovedByUniversity.nextSteps', { returnObjects: true }) as string[],
+            nextSteps: ensureArray(t('studentDashboard.myApplications.statusDescriptions.documentsApprovedByUniversity.nextSteps', { returnObjects: true })),
             icon: '📋',
             color: 'text-blue-700',
             bgColor: 'bg-blue-50',
@@ -751,7 +763,7 @@ const MyApplications: React.FC = () => {
           return {
             title: t('studentDashboard.myApplications.statusDescriptions.applicationApprovedPaymentRequired.title'),
             description: t('studentDashboard.myApplications.statusDescriptions.applicationApprovedPaymentRequired.description'),
-            nextSteps: t('studentDashboard.myApplications.statusDescriptions.applicationApprovedPaymentRequired.nextSteps', { returnObjects: true }) as string[],
+            nextSteps: ensureArray(t('studentDashboard.myApplications.statusDescriptions.applicationApprovedPaymentRequired.nextSteps', { returnObjects: true })),
             icon: '💳',
             color: 'text-green-700',
             bgColor: 'bg-green-50',
@@ -761,17 +773,40 @@ const MyApplications: React.FC = () => {
           return {
             title: t('studentDashboard.myApplications.statusDescriptions.applicationFeePaidScholarshipFeeRequired.title'),
             description: t('studentDashboard.myApplications.statusDescriptions.applicationFeePaidScholarshipFeeRequired.description'),
-            nextSteps: t('studentDashboard.myApplications.statusDescriptions.applicationFeePaidScholarshipFeeRequired.nextSteps', { returnObjects: true }) as string[],
+            nextSteps: ensureArray(t('studentDashboard.myApplications.statusDescriptions.applicationFeePaidScholarshipFeeRequired.nextSteps', { returnObjects: true })),
             icon: '🎓',
             color: 'text-blue-700',
             bgColor: 'bg-blue-50',
             borderColor: 'border-blue-200'
           };
+        } else if (!i20ControlFeePaid) {
+          // Scholarship Fee paga, mas I-20 ainda não foi pago
+          return {
+            title: t('studentDashboard.myApplications.statusDescriptions.scholarshipFeePaidI20Required.title'),
+            description: t('studentDashboard.myApplications.statusDescriptions.scholarshipFeePaidI20Required.description'),
+            nextSteps: ensureArray(t('studentDashboard.myApplications.statusDescriptions.scholarshipFeePaidI20Required.nextSteps', { returnObjects: true })),
+            icon: '📄',
+            color: 'text-blue-700',
+            bgColor: 'bg-blue-50',
+            borderColor: 'border-blue-200'
+          };
+        } else if (!hasAcceptanceLetter) {
+          // Todas as taxas pagas, mas ainda não recebeu a carta de aceite
+          return {
+            title: t('studentDashboard.myApplications.statusDescriptions.allFeesPaidWaitingAcceptanceLetter.title'),
+            description: t('studentDashboard.myApplications.statusDescriptions.allFeesPaidWaitingAcceptanceLetter.description'),
+            nextSteps: ensureArray(t('studentDashboard.myApplications.statusDescriptions.allFeesPaidWaitingAcceptanceLetter.nextSteps', { returnObjects: true })),
+            icon: '📧',
+            color: 'text-blue-700',
+            bgColor: 'bg-blue-50',
+            borderColor: 'border-blue-200'
+          };
         } else {
+          // Todas as taxas pagas E carta de aceite recebida = Fully Enrolled
           return {
             title: t('studentDashboard.myApplications.statusDescriptions.fullyEnrolled.title'),
             description: t('studentDashboard.myApplications.statusDescriptions.fullyEnrolled.description'),
-            nextSteps: t('studentDashboard.myApplications.statusDescriptions.fullyEnrolled.nextSteps', { returnObjects: true }) as string[],
+            nextSteps: ensureArray(t('studentDashboard.myApplications.statusDescriptions.fullyEnrolled.nextSteps', { returnObjects: true })),
             icon: '🎉',
             color: 'text-emerald-700',
             bgColor: 'bg-emerald-50',
@@ -783,7 +818,7 @@ const MyApplications: React.FC = () => {
         return {
           title: t('studentDashboard.myApplications.statusDescriptions.applicationNotSelected.title'),
           description: t('studentDashboard.myApplications.statusDescriptions.applicationNotSelected.description'),
-          nextSteps: t('studentDashboard.myApplications.statusDescriptions.applicationNotSelected.nextSteps', { returnObjects: true }) as string[],
+          nextSteps: ensureArray(t('studentDashboard.myApplications.statusDescriptions.applicationNotSelected.nextSteps', { returnObjects: true })),
           icon: '📝',
           color: 'text-red-700',
           bgColor: 'bg-red-50',
@@ -794,7 +829,7 @@ const MyApplications: React.FC = () => {
         return {
           title: t('studentDashboard.myApplications.statusDescriptions.applicationUnderReview.title'),
           description: t('studentDashboard.myApplications.statusDescriptions.applicationUnderReview.description'),
-          nextSteps: t('studentDashboard.myApplications.statusDescriptions.applicationUnderReview.nextSteps', { returnObjects: true }) as string[],
+          nextSteps: ensureArray(t('studentDashboard.myApplications.statusDescriptions.applicationUnderReview.nextSteps', { returnObjects: true })),
           icon: '🔍',
           color: 'text-amber-700',
           bgColor: 'bg-amber-50',
@@ -805,7 +840,7 @@ const MyApplications: React.FC = () => {
         return {
           title: t('studentDashboard.myApplications.statusDescriptions.applicationFeeConfirmed.title'),
           description: t('studentDashboard.myApplications.statusDescriptions.applicationFeeConfirmed.description'),
-          nextSteps: t('studentDashboard.myApplications.statusDescriptions.applicationFeeConfirmed.nextSteps', { returnObjects: true }) as string[],
+          nextSteps: ensureArray(t('studentDashboard.myApplications.statusDescriptions.applicationFeeConfirmed.nextSteps', { returnObjects: true })),
           icon: '✅',
           color: 'text-blue-700',
           bgColor: 'bg-blue-50',
@@ -818,7 +853,7 @@ const MyApplications: React.FC = () => {
           return {
             title: t('studentDashboard.myApplications.statusDescriptions.documentsUnderUniversityReview.title'),
             description: t('studentDashboard.myApplications.statusDescriptions.documentsUnderUniversityReview.description'),
-            nextSteps: t('studentDashboard.myApplications.statusDescriptions.documentsUnderUniversityReview.nextSteps', { returnObjects: true }) as string[],
+            nextSteps: ensureArray(t('studentDashboard.myApplications.statusDescriptions.documentsUnderUniversityReview.nextSteps', { returnObjects: true })),
             icon: '📋',
             color: 'text-blue-700',
             bgColor: 'bg-blue-50',
@@ -828,7 +863,7 @@ const MyApplications: React.FC = () => {
           return {
             title: t('studentDashboard.myApplications.statusDescriptions.applicationSubmitted.title'),
             description: t('studentDashboard.myApplications.statusDescriptions.applicationSubmitted.description'),
-            nextSteps: t('studentDashboard.myApplications.statusDescriptions.applicationSubmitted.nextSteps', { returnObjects: true }) as string[],
+            nextSteps: ensureArray(t('studentDashboard.myApplications.statusDescriptions.applicationSubmitted.nextSteps', { returnObjects: true })),
             icon: '📤',
             color: 'text-slate-700',
             bgColor: 'bg-slate-50',

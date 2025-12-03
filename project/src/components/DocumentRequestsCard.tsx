@@ -353,9 +353,196 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
     setSelectedFiles((prev: typeof selectedFiles) => ({ ...prev, [requestId]: file }));
   };
 
+  // ✅ Função auxiliar para notificar admins (movida para fora do handleSendUpload para melhor escopo)
+  const notifyAdmins = async (
+    studentName: string,
+    studentEmail: string,
+    documentTitle: string,
+    scholarshipTitle: string,
+    universityName: string,
+    applicationId: string | null,
+    isResubmission: boolean
+  ) => {
+    console.log('[NOTIFICAÇÃO ADMIN] 🚀 Iniciando notificação para admins', {
+      studentName,
+      studentEmail,
+      documentTitle,
+      scholarshipTitle,
+      universityName,
+      applicationId,
+      isResubmission
+    });
+
+    try {
+      // Detectar ambiente de desenvolvimento
+      const isDevelopment = window.location.hostname === 'localhost' || 
+                           window.location.hostname === '127.0.0.1' || 
+                           window.location.hostname === '0.0.0.0';
+
+      // Emails a serem filtrados em ambiente de desenvolvimento
+      const devBlockedEmails = [
+        'luizedmiola@gmail.com',
+        'chimentineto@gmail.com',
+        'fsuaiden@gmail.com',
+        'rayssathefuture@gmail.com'
+      ];
+
+      // Buscar todos os admins com telefone
+      let admins: Array<{ email: string; full_name: string; phone: string }> = [];
+      try {
+        console.log('[NOTIFICAÇÃO ADMIN] 🔍 Buscando admins no banco de dados...');
+        const { data: adminProfiles, error: adminProfileError } = await supabase
+          .from('user_profiles')
+          .select('email, full_name, phone')
+          .eq('role', 'admin');
+        
+        console.log('[NOTIFICAÇÃO ADMIN] 📊 Resultado da busca de admins:', {
+          adminProfiles,
+          adminProfileError,
+          count: adminProfiles?.length || 0
+        });
+        
+        if (adminProfiles && !adminProfileError && adminProfiles.length > 0) {
+          admins = adminProfiles
+            .filter(admin => admin.email)
+            .map(admin => ({
+              email: admin.email || '',
+              full_name: admin.full_name || 'Admin MatriculaUSA',
+              phone: admin.phone || ''
+            }));
+          
+          // Filtrar emails bloqueados em desenvolvimento
+          if (isDevelopment) {
+            const beforeFilter = admins.length;
+            admins = admins.filter(admin => !devBlockedEmails.includes(admin.email));
+            console.log(`[NOTIFICAÇÃO ADMIN] 🔒 Ambiente de desenvolvimento: ${beforeFilter} → ${admins.length} admins após filtro`);
+          }
+        } else {
+          // Fallback: usar admin padrão
+          console.log('[NOTIFICAÇÃO ADMIN] ⚠️ Nenhum admin encontrado, usando fallback');
+          admins = [{
+            email: 'admin@matriculausa.com',
+            full_name: 'Admin MatriculaUSA',
+            phone: ''
+          }];
+        }
+      } catch (error) {
+        console.error('[NOTIFICAÇÃO ADMIN] ❌ Erro ao buscar admins:', error);
+        admins = [{
+          email: 'admin@matriculausa.com',
+          full_name: 'Admin MatriculaUSA',
+          phone: ''
+        }];
+      }
+
+      if (admins.length === 0) {
+        console.log('[NOTIFICAÇÃO ADMIN] ⚠️ Nenhum admin encontrado após processamento');
+        return;
+      }
+
+      console.log(`[NOTIFICAÇÃO ADMIN] 👥 ${admins.length} admin(s) encontrado(s):`, admins.map(a => a.email));
+
+      // Buscar telefone do aluno
+      let studentPhone = '';
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: studentProfile } = await supabase
+            .from('user_profiles')
+            .select('phone')
+            .eq('user_id', user.id)
+            .maybeSingle();
+          
+          if (studentProfile) {
+            studentPhone = studentProfile.phone || '';
+          }
+        }
+      } catch (error) {
+        console.error('[NOTIFICAÇÃO ADMIN] Erro ao buscar telefone do aluno:', error);
+      }
+
+          // Enviar notificação para cada admin
+          const adminNotificationPromises = admins.map(async (admin) => {
+            const adminPayload = {
+              tipo_notf: isResubmission 
+                ? 'Documento reenviado pelo aluno - Admin' 
+                : 'Novo documento enviado pelo aluno - Admin',
+          email_admin: admin.email,
+          nome_admin: admin.full_name,
+          phone_admin: admin.phone || '',
+          email_aluno: studentEmail,
+          nome_aluno: studentName,
+          phone_aluno: studentPhone,
+          nome_bolsa: scholarshipTitle,
+          nome_universidade: universityName,
+          o_que_enviar: isResubmission
+            ? `O aluno ${studentName} reenviou o documento "${documentTitle}" que foi previamente rejeitado para a bolsa "${scholarshipTitle}" (${universityName}). Por favor, revise o documento atualizado no painel administrativo.`
+            : `O aluno ${studentName} enviou o documento "${documentTitle}" para a bolsa "${scholarshipTitle}" (${universityName}). Por favor, revise o documento no painel administrativo.`,
+          document_title: documentTitle,
+          application_id: applicationId,
+          notification_type: 'admin'
+        };
+
+        console.log(`[NOTIFICAÇÃO ADMIN] 📤 Enviando notificação para admin ${admin.email}:`, adminPayload);
+
+        try {
+          const response = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'User-Agent': 'PostmanRuntime/7.36.3',
+            },
+            body: JSON.stringify(adminPayload),
+          });
+
+          const responseText = await response.text();
+          console.log(`[NOTIFICAÇÃO ADMIN] 📥 Resposta do webhook para ${admin.email}:`, {
+            status: response.status,
+            statusText: response.statusText,
+            responseText
+          });
+
+          if (response.ok) {
+            console.log(`[NOTIFICAÇÃO ADMIN] ✅ Notificação enviada com sucesso para admin ${admin.email}`);
+            return { success: true, email: admin.email };
+          } else {
+            console.error(`[NOTIFICAÇÃO ADMIN] ❌ Erro ao enviar notificação para admin ${admin.email}:`, response.status, responseText);
+            return { success: false, email: admin.email, error: responseText };
+          }
+        } catch (error) {
+          console.error(`[NOTIFICAÇÃO ADMIN] ❌ Erro ao enviar notificação para admin ${admin.email}:`, error);
+          return { success: false, email: admin.email, error: String(error) };
+        }
+      });
+
+      // Aguardar todas as notificações (não bloquear se alguma falhar)
+      console.log('[NOTIFICAÇÃO ADMIN] ⏳ Aguardando envio de notificações...');
+      const allResults = await Promise.allSettled(adminNotificationPromises);
+      const successful = allResults.filter(r => r.status === 'fulfilled' && r.value.success).length;
+      const total = admins.length;
+      console.log(`[NOTIFICAÇÃO ADMIN] 📧 Notificações enviadas: ${successful}/${total} (${admins.length} admin(s))`);
+      
+      // Log detalhado dos resultados
+      allResults.forEach((result, index) => {
+        if (result.status === 'fulfilled') {
+          console.log(`[NOTIFICAÇÃO ADMIN] 📊 Resultado ${index + 1}/${total}:`, result.value);
+        } else {
+          console.error(`[NOTIFICAÇÃO ADMIN] ❌ Erro no resultado ${index + 1}/${total}:`, result.reason);
+        }
+      });
+    } catch (adminError) {
+      console.error('[NOTIFICAÇÃO ADMIN] ❌ Erro geral ao notificar admins:', adminError);
+      // Não falhar o processo se a notificação para admins falhar
+    }
+  };
+
   const handleSendUpload = async (requestId: string) => {
+    console.log('[UPLOAD] 🚀 Iniciando upload de documento', { requestId });
     const file = selectedFiles[requestId];
-    if (!file) return;
+    if (!file) {
+      console.log('[UPLOAD] ⚠️ Nenhum arquivo selecionado');
+      return;
+    }
     setUploading(prev => ({ ...prev, [requestId]: true }));
     try {
       const { data, error } = await supabase.storage.from('document-attachments').upload(`uploads/${Date.now()}_${file.name}`, file);
@@ -470,6 +657,18 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                 });
                 // console.log('[REENVIO] Resposta do n8n (global):', n8nRes.status, n8nText);
               }
+
+              // ✅ Notificar admins para documento global reenviado
+              console.log('[REENVIO] 📧 Chamando notifyAdmins para documento global reenviado');
+              await notifyAdmins(
+                studentData.full_name,
+                studentData.email,
+                requestData.title,
+                'Documento Global',
+                university.name,
+                null,
+                true
+              );
             }
           } else {
             // Buscar dados da aplicação separadamente
@@ -499,14 +698,21 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
               const scholarship = applicationData.scholarships;
               const emailUniversidade = university.contact?.admissionsEmail || university.contact?.email || '';
               
-              // Buscar dados do aluno
-              const { data: studentData } = await supabase
-                .from('user_profiles')
-                .select('full_name, email')
-                .eq('id', currentUserId)
-                .single();
+              // Buscar dados do aluno através do contexto de autenticação (mesma abordagem do documento global)
+              const { data: { user } } = await supabase.auth.getUser();
+              
+              if (!user) {
+                console.error('[REENVIO] Usuário não autenticado');
+                return;
+              }
 
-              if (studentData && emailUniversidade) {
+              // Usar dados do usuário autenticado
+              const studentData = {
+                full_name: user.user_metadata?.full_name || user.user_metadata?.name || 'Usuário',
+                email: user.email || 'email@exemplo.com'
+              };
+
+              if (emailUniversidade) {
                 const payload = {
                   tipo_notf: 'Documento reenviado após rejeição',
                   email_aluno: studentData.email,
@@ -529,6 +735,18 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                 });
                 // console.log('[REENVIO] Resposta do n8n:', n8nRes.status, n8nText);
               }
+
+              // ✅ Notificar admins para documento reenviado
+              console.log('[REENVIO] 📧 Chamando notifyAdmins para documento reenviado');
+              await notifyAdmins(
+                studentData.full_name,
+                studentData.email,
+                requestData.title,
+                scholarship.title,
+                university.name,
+                requestData.scholarship_application_id,
+                true
+              );
             }
           }
         } else {
@@ -601,6 +819,18 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                 });
                 // console.log('[NOVO UPLOAD] Resposta do n8n (global):', n8nRes.status, n8nText);
               }
+
+              // ✅ Notificar admins para documento global novo
+              console.log('[NOVO UPLOAD] 📧 Chamando notifyAdmins para documento global novo');
+              await notifyAdmins(
+                studentData.full_name,
+                studentData.email,
+                requestData.title,
+                'Documento Global',
+                university.name,
+                null,
+                false
+              );
             }
           } else {
             // Buscar dados da aplicação separadamente
@@ -653,6 +883,18 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                 });
                 // console.log('[NOVO UPLOAD] Resposta do n8n:', n8nRes.status, n8nText);
               }
+
+              // ✅ Notificar admins para novo documento
+              console.log('[NOVO UPLOAD] 📧 Chamando notifyAdmins para novo documento');
+              await notifyAdmins(
+                studentData.full_name,
+                studentData.email,
+                requestData.title,
+                scholarship.title,
+                university.name,
+                requestData.scholarship_application_id,
+                false
+              );
             }
           }
         }
@@ -819,6 +1061,10 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
       
       if (error) throw error;
       
+      // Verificar se há upload rejeitado (para determinar se é reenvio)
+      const hasRejectedUpload = transferFormUploads.some(upload => upload.status === 'rejected');
+      const isResubmission = hasRejectedUpload;
+      
       // Deletar upload anterior se existir
       if (transferFormUploads.length > 0) {
         await supabase
@@ -860,6 +1106,79 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
       
       if (newUploads) {
         setTransferFormUploads(newUploads);
+      }
+
+      // ✅ ENVIAR NOTIFICAÇÃO PARA ADMINS (reutilizando tipos existentes)
+      console.log('[TRANSFER FORM] 📤 Enviando notificação para admins sobre upload do transfer form...', {
+        isResubmission
+      });
+      
+      try {
+        // Buscar dados da aplicação (bolsa e universidade)
+        const { data: applicationData, error: appError } = await supabase
+          .from('scholarship_applications')
+          .select(`
+            id,
+            scholarships!inner(
+              title,
+              universities!inner(
+                name
+              )
+            )
+          `)
+          .eq('id', applicationId)
+          .maybeSingle();
+
+        if (appError) {
+          console.error('[TRANSFER FORM] Erro ao buscar dados da aplicação:', appError);
+        }
+
+        // Buscar dados do aluno
+        const { data: { user } } = await supabase.auth.getUser();
+        let studentName = 'Student';
+        let studentEmail = '';
+        
+        if (user) {
+          const { data: studentProfile } = await supabase
+            .from('user_profiles')
+            .select('full_name, email')
+            .eq('user_id', user.id)
+            .maybeSingle();
+          
+          if (studentProfile) {
+            studentName = studentProfile.full_name || 'Student';
+            studentEmail = studentProfile.email || '';
+          }
+        }
+
+        const scholarship = Array.isArray(applicationData?.scholarships) 
+          ? applicationData.scholarships[0] 
+          : applicationData?.scholarships;
+        const university = Array.isArray(scholarship?.universities)
+          ? scholarship.universities[0]
+          : scholarship?.universities;
+
+        const scholarshipTitle = scholarship?.title || 'Scholarship';
+        const universityName = university?.name || 'University';
+
+        // Chamar notifyAdmins para notificar sobre o upload do transfer form
+        // Reutiliza os tipos existentes: 'Novo documento enviado pelo aluno - Admin' ou 'Documento reenviado pelo aluno - Admin'
+        await notifyAdmins(
+          studentName,
+          studentEmail,
+          'Transfer Form',
+          scholarshipTitle,
+          universityName,
+          applicationId,
+          isResubmission // Detecta se é reenvio baseado em uploads rejeitados anteriores
+        );
+
+        console.log('[TRANSFER FORM] ✅ Notificação enviada para admins', {
+          tipo: isResubmission ? 'reenvio' : 'novo upload'
+        });
+      } catch (notifyError) {
+        console.error('[TRANSFER FORM] ❌ Erro ao enviar notificação para admins:', notifyError);
+        // Não falhar o processo se a notificação falhar
       }
       
     } catch (error: any) {

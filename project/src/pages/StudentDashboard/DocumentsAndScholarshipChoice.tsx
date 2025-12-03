@@ -478,6 +478,13 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
             console.error('Failed to log document rejection:', logError);
           }
 
+          // Enviar notificações para administração e universidade
+          await sendManualReviewNotifications({
+            passport: passportErr,
+            diploma: degreeErr,
+            funds_proof: fundsErr
+          });
+
           // Processar aplicações sem notificar universidade
           await processApplicationsAndClearCart(docUrls, false);
           
@@ -503,6 +510,13 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
           })
           .eq('user_id', user.id);
 
+        // Enviar notificações para administração e universidade (resposta inesperada do n8n)
+        await sendManualReviewNotifications({
+          passport: 'Erro na análise automática',
+          diploma: 'Erro na análise automática',
+          funds_proof: 'Erro na análise automática'
+        });
+
         // Processar aplicações sem notificar universidade
         await processApplicationsAndClearCart(docUrls, false);
         
@@ -523,6 +537,228 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
   };
 
 
+
+  // Função para enviar notificações quando documentos são rejeitados e enviados para revisão manual
+  const sendManualReviewNotifications = async (errors: { passport?: string; diploma?: string; funds_proof?: string }) => {
+    if (!user || !userProfile) return;
+
+    try {
+      // Detectar ambiente de desenvolvimento
+      const isDevelopment = window.location.hostname === 'localhost' || 
+                           window.location.hostname === '127.0.0.1' || 
+                           window.location.hostname === '0.0.0.0';
+
+      // Emails a serem filtrados em ambiente de desenvolvimento
+      const devBlockedEmails = [
+        'luizedmiola@gmail.com',
+        'chimentineto@gmail.com',
+        'fsuaiden@gmail.com',
+        'rayssathefuture@gmail.com'
+      ];
+
+      // 1. Buscar todos os admins
+      let admins: Array<{ email: string; full_name: string; phone: string }> = [];
+      try {
+        const { data: adminProfiles, error: adminProfileError } = await supabase
+          .from('user_profiles')
+          .select('email, full_name, phone')
+          .eq('role', 'admin');
+        
+        if (adminProfiles && !adminProfileError && adminProfiles.length > 0) {
+          admins = adminProfiles
+            .filter(admin => admin.email)
+            .map(admin => ({
+              email: admin.email || '',
+              full_name: admin.full_name || 'Admin MatriculaUSA',
+              phone: admin.phone || ''
+            }));
+          
+          // Filtrar emails bloqueados em desenvolvimento
+          if (isDevelopment) {
+            admins = admins.filter(admin => !devBlockedEmails.includes(admin.email));
+          }
+        } else {
+          // Fallback: usar admin padrão
+          admins = [{
+            email: 'admin@matriculausa.com',
+            full_name: 'Admin MatriculaUSA',
+            phone: ''
+          }];
+        }
+      } catch (error) {
+        console.error('Erro ao buscar admins:', error);
+        admins = [{
+          email: 'admin@matriculausa.com',
+          full_name: 'Admin MatriculaUSA',
+          phone: ''
+        }];
+      }
+
+      // 2. Buscar bolsas e universidades relacionadas
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('id, selected_scholarship_id')
+        .eq('user_id', user.id)
+        .single();
+
+      const scholarshipIds: string[] = [];
+      
+      // Buscar bolsas do carrinho
+      const { data: cartRows } = await supabase
+        .from('user_cart')
+        .select('scholarship_id')
+        .eq('user_id', user.id);
+      
+      if (Array.isArray(cartRows)) {
+        for (const row of cartRows) {
+          if (row?.scholarship_id && !scholarshipIds.includes(row.scholarship_id)) {
+            scholarshipIds.push(row.scholarship_id);
+          }
+        }
+      }
+      
+      if (scholarshipIds.length === 0 && profile?.selected_scholarship_id) {
+        scholarshipIds.push(profile.selected_scholarship_id);
+      }
+
+      // Buscar universidades relacionadas às bolsas
+      const universities: Array<{ id: string; name: string; email: string }> = [];
+      if (scholarshipIds.length > 0) {
+        // Buscar bolsas com university_id
+        const { data: scholarships } = await supabase
+          .from('scholarships')
+          .select('id, university_id')
+          .in('id', scholarshipIds);
+        
+        if (scholarships) {
+          // Extrair IDs únicos de universidades
+          const uniqueUniversityIds = Array.from(
+            new Set(
+              scholarships
+                .map(s => (s as any).university_id)
+                .filter(Boolean)
+            )
+          ) as string[];
+          
+          if (uniqueUniversityIds.length > 0) {
+            // Buscar dados das universidades
+            const { data: universitiesData } = await supabase
+              .from('universities')
+              .select('id, name, contact')
+              .in('id', uniqueUniversityIds);
+            
+            if (universitiesData) {
+              for (const university of universitiesData) {
+                const contact = (university as any).contact || {};
+                const email = contact.admissionsEmail || contact.email || '';
+                if (email) {
+                  universities.push({
+                    id: university.id,
+                    name: university.name,
+                    email: email
+                  });
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // 3. Preparar mensagem de erro
+      const errorMessages: string[] = [];
+      if (errors.passport) errorMessages.push(`Passaporte: ${errors.passport}`);
+      if (errors.diploma) errorMessages.push(`Diploma: ${errors.diploma}`);
+      if (errors.funds_proof) errorMessages.push(`Comprovação de fundos: ${errors.funds_proof}`);
+      const errorSummary = errorMessages.length > 0 ? errorMessages.join('; ') : 'Documentos rejeitados pela análise automática';
+
+      // 4. Enviar notificações para admins
+      const adminNotificationPromises = admins.map(async (admin) => {
+        const adminPayload = {
+          tipo_notf: 'Documentos enviados para revisão manual - Admin',
+          email_admin: admin.email,
+          nome_admin: admin.full_name,
+          phone_admin: admin.phone || '',
+          email_aluno: userProfile.email || user.email || '',
+          nome_aluno: userProfile.full_name || '',
+          phone_aluno: userProfile.phone || '',
+          o_que_enviar: `O aluno ${userProfile.full_name || user.email} enviou documentos que foram rejeitados pela análise automática e requerem revisão manual. Erros detectados: ${errorSummary}. Acesse o painel para revisar os documentos.`,
+          notification_type: 'admin'
+        };
+
+        try {
+          const response = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'User-Agent': 'PostmanRuntime/7.36.3'
+            },
+            body: JSON.stringify(adminPayload)
+          });
+          
+          if (response.ok) {
+            console.log(`✅ Notificação enviada para ADMIN ${admin.email}`);
+            return { success: true, email: admin.email };
+          } else {
+            const errorText = await response.text();
+            console.error(`❌ Erro ao enviar notificação para ADMIN ${admin.email}:`, errorText);
+            return { success: false, email: admin.email, error: errorText };
+          }
+        } catch (error) {
+          console.error(`❌ Erro ao enviar notificação para ADMIN ${admin.email}:`, error);
+          return { success: false, email: admin.email, error: String(error) };
+        }
+      });
+
+      // 5. Enviar notificações para universidades
+      const universityNotificationPromises = universities.map(async (university) => {
+        const universityPayload = {
+          tipo_notf: 'Documentos enviados para revisão manual - Universidade',
+          email_aluno: userProfile.email || user.email || '',
+          nome_aluno: userProfile.full_name || '',
+          email_universidade: university.email,
+          nome_universidade: university.name,
+          o_que_enviar: `O aluno ${userProfile.full_name || user.email} enviou documentos que foram rejeitados pela análise automática e requerem revisão manual. Erros detectados: ${errorSummary}. Acesse o painel da universidade para revisar os documentos.`,
+          notification_target: 'university'
+        };
+
+        try {
+          const response = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'User-Agent': 'PostmanRuntime/7.36.3'
+            },
+            body: JSON.stringify(universityPayload)
+          });
+          
+          if (response.ok) {
+            console.log(`✅ Notificação enviada para UNIVERSIDADE ${university.name} (${university.email})`);
+            return { success: true, email: university.email };
+          } else {
+            const errorText = await response.text();
+            console.error(`❌ Erro ao enviar notificação para UNIVERSIDADE ${university.email}:`, errorText);
+            return { success: false, email: university.email, error: errorText };
+          }
+        } catch (error) {
+          console.error(`❌ Erro ao enviar notificação para UNIVERSIDADE ${university.email}:`, error);
+          return { success: false, email: university.email, error: String(error) };
+        }
+      });
+
+      // 6. Aguardar todas as notificações
+      const allResults = await Promise.allSettled([
+        ...adminNotificationPromises,
+        ...universityNotificationPromises
+      ]);
+
+      const successful = allResults.filter(r => r.status === 'fulfilled' && r.value.success).length;
+      const total = admins.length + universities.length;
+      console.log(`📧 Notificações enviadas: ${successful}/${total} (${admins.length} admin(s), ${universities.length} universidade(s))`);
+
+    } catch (error) {
+      console.error('Erro ao enviar notificações de revisão manual:', error);
+    }
+  };
 
   // Função auxiliar para processar aplicações e limpar carrinho (com opção de notificar universidade)
   const processApplicationsAndClearCart = async (docUrls: Record<string, string>, notifyUniversity: boolean = false) => {

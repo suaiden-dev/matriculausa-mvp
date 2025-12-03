@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BarChart3, TrendingUp, Users, DollarSign, Calendar, Award } from 'lucide-react';
+import { BarChart3, TrendingUp, Users, DollarSign, Calendar, Award, UserCheck, UserX } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { getDisplayAmounts } from '../../utils/paymentConverter';
 
@@ -30,6 +30,10 @@ const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], userId }) =>
   const [clientAdjustedRevenue, setClientAdjustedRevenue] = useState<number | null>(null);
   const [adjustedRevenueByReferral, setAdjustedRevenueByReferral] = useState<Record<string, number>>({});
   const [loadingAdjusted, setLoadingAdjusted] = useState(false);
+  
+  // Estados para diferenciar estudantes pagos vs registrados
+  const [paidStudentsCount, setPaidStudentsCount] = useState<number>(0);
+  const [registeredOnlyCount, setRegisteredOnlyCount] = useState<number>(0);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -189,10 +193,18 @@ const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], userId }) =>
         return sum + subtotal;
       }, 0);
 
+      // Calcular contagens de estudantes pagos vs não pagos
+      const paidCount = (profiles || []).filter(p => p?.has_paid_selection_process_fee).length;
+      const notPaidCount = (profiles || []).filter(p => !p?.has_paid_selection_process_fee).length;
+
       setClientAdjustedRevenue(total);
       setAdjustedRevenueByReferral(revenueByReferral);
+      setPaidStudentsCount(paidCount);
+      setRegisteredOnlyCount(notPaidCount);
     } catch {
       setClientAdjustedRevenue(null);
+      setPaidStudentsCount(0);
+      setRegisteredOnlyCount(0);
     } finally {
       setLoadingAdjusted(false);
     }
@@ -255,6 +267,7 @@ const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], userId }) =>
           has_paid_i20_control_fee, 
           dependents,
           seller_referral_code,
+          system_type,
           created_at,
           scholarship_applications(is_scholarship_fee_paid, created_at)
         `)
@@ -286,6 +299,26 @@ const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], userId }) =>
         return acc;
       }, {});
 
+      // ✅ CORREÇÃO: Buscar valores reais pagos para usar nos cálculos (mesma lógica do loadAdjustedRevenue)
+      const realPaidAmountsMap: Record<string, { selection_process?: number; scholarship?: number; i20_control?: number }> = {};
+      
+      // Buscar valores pagos para cada estudante
+      await Promise.all((profiles || []).map(async (p: any) => {
+        if (!p.user_id) return;
+        
+        try {
+          // ✅ CORREÇÃO: Usar getDisplayAmounts para exibição (valores "Zelle" sem taxas)
+          const amounts = await getDisplayAmounts(p.user_id, ['selection_process', 'scholarship', 'i20_control']);
+          realPaidAmountsMap[p.user_id] = {
+            selection_process: amounts.selection_process,
+            scholarship: amounts.scholarship,
+            i20_control: amounts.i20_control
+          };
+        } catch (error) {
+          console.error(`[Analytics] Erro ao buscar valores pagos para user_id ${p.user_id}:`, error);
+        }
+      }));
+
       // Calcular dados mensais dos últimos 12 meses
       const monthlyMap: Record<string, { students_count: number; total_revenue: number; active_sellers: Set<string> }> = {};
       
@@ -301,7 +334,7 @@ const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], userId }) =>
         };
       }
 
-      // Processar cada perfil de estudante
+      // Processar cada perfil de estudante usando valores reais pagos quando disponível
       (profiles || []).forEach((p) => {
         const createdDate = new Date(p.created_at);
         const monthYear = `${createdDate.getFullYear()}-${String(createdDate.getMonth() + 1).padStart(2, '0')}`;
@@ -310,31 +343,55 @@ const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], userId }) =>
 
         const deps = Number(p?.dependents || 0);
         const ov = overridesMap[p?.user_id] || {};
+        const realPaid = realPaidAmountsMap[p?.user_id] || {};
 
-        // Selection Process
+        // Selection Process - usar valor real pago se disponível, senão calcular
         let selPaid = 0;
         if (p?.has_paid_selection_process_fee) {
-          // Usar valor baseado no system_type do aluno (350 para simplified, 400 para legacy)
-          const baseSelDefault = p?.system_type === 'simplified' ? 350 : 400;
-          const baseSel = ov.selection_process_fee != null ? Number(ov.selection_process_fee) : baseSelDefault;
-          // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
-          // Dependentes só afetam Application Fee ($100 por dependente)
-          selPaid = ov.selection_process_fee != null 
-            ? baseSel 
-            : (p?.system_type === 'simplified' ? baseSel : baseSel + (deps * 150));
+          if (realPaid.selection_process !== undefined) {
+            // Usar valor real pago (já com desconto e convertido se PIX)
+            selPaid = realPaid.selection_process;
+          } else {
+            // Fallback: cálculo fixo para dados antigos sem registro
+            const baseSelDefault = p?.system_type === 'simplified' ? 350 : 400;
+            const baseSel = ov.selection_process_fee != null ? Number(ov.selection_process_fee) : baseSelDefault;
+            // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
+            // Dependentes só afetam Application Fee ($100 por dependente)
+            selPaid = ov.selection_process_fee != null 
+              ? baseSel 
+              : (p?.system_type === 'simplified' ? baseSel : baseSel + (deps * 150));
+          }
         }
 
-        // Scholarship Fee (sem dependentes)
-        // ✅ CORREÇÃO: Usar diretamente a flag já calculada pela RPC
-        const hasAnyScholarshipPaid = p?.is_scholarship_fee_paid || false;
-        // Usar valor baseado no system_type do aluno (550 para simplified, 900 para legacy)
-        const schBaseDefault = p?.system_type === 'simplified' ? 550 : 900;
-        const schBase = ov.scholarship_fee != null ? Number(ov.scholarship_fee) : schBaseDefault;
-        const schPaid = hasAnyScholarshipPaid ? schBase : 0;
+        // Scholarship Fee - usar valor real pago se disponível, senão calcular
+        const hasAnyScholarshipPaid = Array.isArray(p?.scholarship_applications) 
+          ? p.scholarship_applications.some((app: any) => app.is_scholarship_fee_paid)
+          : false;
+        let schPaid = 0;
+        if (hasAnyScholarshipPaid) {
+          if (realPaid.scholarship !== undefined) {
+            // Usar valor real pago (já com desconto e convertido se PIX)
+            schPaid = realPaid.scholarship;
+          } else {
+            // Fallback: cálculo fixo para dados antigos sem registro
+            const schBaseDefault = p?.system_type === 'simplified' ? 550 : 900;
+            const schBase = ov.scholarship_fee != null ? Number(ov.scholarship_fee) : schBaseDefault;
+            schPaid = schBase;
+          }
+        }
 
-        // I-20 Control (sem dependentes)
-        const i20Base = ov.i20_control_fee != null ? Number(ov.i20_control_fee) : 900;
-        const i20Paid = (hasAnyScholarshipPaid && p?.has_paid_i20_control_fee) ? i20Base : 0;
+        // I-20 Control Fee - usar valor real pago se disponível, senão calcular
+        let i20Paid = 0;
+        if (hasAnyScholarshipPaid && p?.has_paid_i20_control_fee) {
+          if (realPaid.i20_control !== undefined) {
+            // Usar valor real pago (já com desconto e convertido se PIX)
+            i20Paid = realPaid.i20_control;
+          } else {
+            // Fallback: cálculo fixo para dados antigos sem registro
+            const i20Base = ov.i20_control_fee != null ? Number(ov.i20_control_fee) : 900;
+            i20Paid = i20Base;
+          }
+        }
 
         const totalRevenue = selPaid + schPaid + i20Paid;
 
@@ -388,11 +445,14 @@ const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], userId }) =>
   // Top vendedores por performance
   const topSellers = displaySellers
     .sort((a, b) => {
-      // Sort by number of students first, then by revenue
-      if (b.students_count !== a.students_count) {
-        return b.students_count - a.students_count;
+      // Sort by revenue first, then by number of students
+      const revenueA = a.total_revenue || 0;
+      const revenueB = b.total_revenue || 0;
+      
+      if (revenueB !== revenueA) {
+        return revenueB - revenueA;
       }
-      return (b.total_revenue || 0) - (a.total_revenue || 0);
+      return (b.students_count || 0) - (a.students_count || 0);
     })
     .slice(0, 5);
 
@@ -454,7 +514,47 @@ const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], userId }) =>
       <div className="px-4 sm:px-6 lg:px-8">
         <div className="space-y-8">
           {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        {/* Estudantes que pagaram */}
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-slate-600">Paid Students</p>
+              {loadingAdjusted ? (
+                <div className="h-9 bg-slate-200 rounded animate-pulse mt-1"></div>
+              ) : (
+                <>
+                  <p className="text-3xl font-bold text-green-600 mt-1">{paidStudentsCount}</p>
+                  <p className="text-xs text-slate-500 mt-1">At least Selection Process paid</p>
+                </>
+              )}
+            </div>
+            <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+              <UserCheck className="h-6 w-6 text-green-600" />
+            </div>
+          </div>
+        </div>
+
+        {/* Estudantes apenas registrados */}
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-slate-600">Registered Only</p>
+              {loadingAdjusted ? (
+                <div className="h-9 bg-slate-200 rounded animate-pulse mt-1"></div>
+              ) : (
+                <>
+                  <p className="text-3xl font-bold text-orange-600 mt-1">{registeredOnlyCount}</p>
+                  <p className="text-xs text-slate-500 mt-1">Not paid yet</p>
+                </>
+              )}
+            </div>
+            <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
+              <UserX className="h-6 w-6 text-orange-600" />
+            </div>
+          </div>
+        </div>
+
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -516,16 +616,19 @@ const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], userId }) =>
               {loadingAdjusted ? (
                 <div className="h-9 bg-slate-200 rounded animate-pulse mt-1"></div>
               ) : (
-                <p className="text-3xl font-bold text-red-600 mt-1">
-                  {safeStats.totalStudents > 0 
-                    ? formatCurrency((clientAdjustedRevenue || safeStats.totalRevenue) / safeStats.totalStudents) 
-                    : '$0.00'
-                  }
-                </p>
+                <>
+                  <p className="text-3xl font-bold text-blue-600 mt-1">
+                    {paidStudentsCount > 0 
+                      ? formatCurrency((clientAdjustedRevenue || safeStats.totalRevenue) / paidStudentsCount) 
+                      : '$0.00'
+                    }
+                  </p>
+                  <p className="text-xs text-slate-500 mt-1">Per paid student</p>
+                </>
               )}
             </div>
-            <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
-              <DollarSign className="h-6 w-6 text-red-600" />
+            <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+              <DollarSign className="h-6 w-6 text-blue-600" />
             </div>
           </div>
           <div className="mt-4 flex items-center text-sm">

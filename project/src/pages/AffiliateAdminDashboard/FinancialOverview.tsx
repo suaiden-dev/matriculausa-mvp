@@ -35,7 +35,6 @@ interface FinancialStats {
   activeReferrals: number;
   completedReferrals: number;
   last7DaysRevenue: number;
-  pendingCredits: number;
   averageCommissionPerReferral: number;
   manualRevenue: number;
 }
@@ -76,7 +75,6 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
     activeReferrals: 0,
     completedReferrals: 0,
     last7DaysRevenue: 0,
-    pendingCredits: 0,
     averageCommissionPerReferral: 0,
     manualRevenue: 0
   });
@@ -101,7 +99,7 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
 
   // Revenue chart filter state
   const [revenueChartType, setRevenueChartType] = useState<'daily' | 'monthly'>('daily');
-  const [revenueChartPeriod, setRevenueChartPeriod] = useState<number>(7);
+  const [revenueChartPeriod, setRevenueChartPeriod] = useState<number>(30);
   
   // Chart refs for Chart.js
   const revenueChartRef = useRef<HTMLCanvasElement>(null);
@@ -498,6 +496,7 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
       const activeReferrals = derivedPending;
 
       // Receita últimos 7 dias baseada na data do registro com lógica ajustada
+      // ✅ CORREÇÃO: Usar valores reais pagos (mesma lógica do totalRevenue)
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
       const last7DaysRevenue = rows
@@ -508,32 +507,53 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
         .reduce((sum: number, p: any) => {
           const deps = Number(p?.dependents || 0);
           const ov = overridesMap[p?.user_id] || {};
+          const realPaid = realPaidAmountsMap[p?.user_id] || {};
 
-          // Selection Process
+          // Selection Process - usar valor real pago se disponível, senão calcular
           let selPaid = 0;
           if (p?.has_paid_selection_process_fee) {
-            // Usar valor baseado no system_type do aluno (350 para simplified, 400 para legacy)
-            const baseSelDefault = p?.system_type === 'simplified' ? 350 : 400;
-            const baseSel = ov.selection_process_fee != null ? Number(ov.selection_process_fee) : baseSelDefault;
-            // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
-            // Dependentes só afetam Application Fee ($100 por dependente)
-            selPaid = ov.selection_process_fee != null 
-              ? baseSel 
-              : (p?.system_type === 'simplified' ? baseSel : baseSel + (deps * 150));
+            if (realPaid.selection_process !== undefined) {
+              // Usar valor real pago (já com desconto e convertido se PIX)
+              selPaid = realPaid.selection_process;
+            } else {
+              // Fallback: cálculo fixo para dados antigos sem registro
+              const baseSelDefault = p?.system_type === 'simplified' ? 350 : 400;
+              const baseSel = ov.selection_process_fee != null ? Number(ov.selection_process_fee) : baseSelDefault;
+              // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
+              // Dependentes só afetam Application Fee ($100 por dependente)
+              selPaid = ov.selection_process_fee != null 
+                ? baseSel 
+                : (p?.system_type === 'simplified' ? baseSel : baseSel + (deps * 150));
+            }
           }
 
-          // Scholarship Fee (sem dependentes)
-          // ✅ CORREÇÃO: Usar diretamente a flag já calculada pela RPC
+          // Scholarship Fee - usar valor real pago se disponível, senão calcular
           const hasAnyScholarshipPaid = p?.is_scholarship_fee_paid || false;
-          // Usar valor baseado no system_type do aluno (550 para simplified, 900 para legacy)
-          const schBaseDefault = p?.system_type === 'simplified' ? 550 : 900;
-          const schBase = ov.scholarship_fee != null ? Number(ov.scholarship_fee) : schBaseDefault;
-          const schPaid = hasAnyScholarshipPaid ? schBase : 0;
+          let schPaid = 0;
+          if (hasAnyScholarshipPaid) {
+            if (realPaid.scholarship !== undefined) {
+              // Usar valor real pago (já com desconto e convertido se PIX)
+              schPaid = realPaid.scholarship;
+            } else {
+              // Fallback: cálculo fixo para dados antigos sem registro
+              const schBaseDefault = p?.system_type === 'simplified' ? 550 : 900;
+              const schBase = ov.scholarship_fee != null ? Number(ov.scholarship_fee) : schBaseDefault;
+              schPaid = schBase;
+            }
+          }
 
-          // I-20 Control (sem dependentes)
-          // I-20 Control Fee - sempre 900 para ambos os sistemas
-          const i20Base = ov.i20_control_fee != null ? Number(ov.i20_control_fee) : 900;
-          const i20Paid = (hasAnyScholarshipPaid && p?.has_paid_i20_control_fee) ? i20Base : 0;
+          // I-20 Control Fee - usar valor real pago se disponível, senão calcular
+          let i20Paid = 0;
+          if (hasAnyScholarshipPaid && p?.has_paid_i20_control_fee) {
+            if (realPaid.i20_control !== undefined) {
+              // Usar valor real pago (já com desconto e convertido se PIX)
+              i20Paid = realPaid.i20_control;
+            } else {
+              // Fallback: cálculo fixo para dados antigos sem registro
+              const i20Base = ov.i20_control_fee != null ? Number(ov.i20_control_fee) : 900;
+              i20Paid = i20Base;
+            }
+          }
 
           return sum + selPaid + schPaid + i20Paid;
         }, 0);
@@ -596,7 +616,6 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
         activeReferrals,
         completedReferrals,
         last7DaysRevenue,
-        pendingCredits: activeReferrals * 50,
         averageCommissionPerReferral,
         manualRevenue
       });
@@ -641,35 +660,77 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
       return acc;
     }, {});
 
-    // Função para calcular revenue de um perfil usando a lógica de overrides
+    // ✅ CORREÇÃO: Buscar valores reais pagos para usar nos cálculos (mesma lógica do totalRevenue)
+    const realPaidAmountsMap: Record<string, { selection_process?: number; scholarship?: number; i20_control?: number }> = {};
+    
+    // Buscar valores pagos para cada estudante
+    await Promise.all((referralsData || []).map(async (p: any) => {
+      if (!p.user_id) return;
+      
+      try {
+        // ✅ CORREÇÃO: Usar getDisplayAmounts para exibição (valores "Zelle" sem taxas)
+        const amounts = await getDisplayAmounts(p.user_id, ['selection_process', 'scholarship', 'i20_control']);
+        realPaidAmountsMap[p.user_id] = {
+          selection_process: amounts.selection_process,
+          scholarship: amounts.scholarship,
+          i20_control: amounts.i20_control
+        };
+      } catch (error) {
+        console.error(`[FinancialOverview] Erro ao buscar valores pagos para user_id ${p.user_id}:`, error);
+      }
+    }));
+
+    // Função para calcular revenue de um perfil usando valores reais pagos quando disponível
     const calculateProfileRevenue = (p: any) => {
       const deps = Number(p?.dependents || 0);
       const ov = overridesMap[p?.user_id] || {};
+      const realPaid = realPaidAmountsMap[p?.user_id] || {};
 
-      // Selection Process
+      // Selection Process - usar valor real pago se disponível, senão calcular
       let selPaid = 0;
       if (p?.has_paid_selection_process_fee) {
-        // Usar valor baseado no system_type do aluno (350 para simplified, 400 para legacy)
-        const baseSelDefault = p?.system_type === 'simplified' ? 350 : 400;
-        const baseSel = ov.selection_process_fee != null ? Number(ov.selection_process_fee) : baseSelDefault;
-        // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
-        // Dependentes só afetam Application Fee ($100 por dependente)
-        selPaid = ov.selection_process_fee != null 
-          ? baseSel 
-          : (p?.system_type === 'simplified' ? baseSel : baseSel + (deps * 150));
+        if (realPaid.selection_process !== undefined) {
+          // Usar valor real pago (já com desconto e convertido se PIX)
+          selPaid = realPaid.selection_process;
+        } else {
+          // Fallback: cálculo fixo para dados antigos sem registro
+          const baseSelDefault = p?.system_type === 'simplified' ? 350 : 400;
+          const baseSel = ov.selection_process_fee != null ? Number(ov.selection_process_fee) : baseSelDefault;
+          // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
+          // Dependentes só afetam Application Fee ($100 por dependente)
+          selPaid = ov.selection_process_fee != null 
+            ? baseSel 
+            : (p?.system_type === 'simplified' ? baseSel : baseSel + (deps * 150));
+        }
       }
 
-      // Scholarship Fee (sem dependentes)
-      // ✅ CORREÇÃO: Usar diretamente a flag já calculada pela RPC
+      // Scholarship Fee - usar valor real pago se disponível, senão calcular
       const hasAnyScholarshipPaid = p?.is_scholarship_fee_paid || false;
-      // Usar valor baseado no system_type do aluno (550 para simplified, 900 para legacy)
-      const schBaseDefault = p?.system_type === 'simplified' ? 550 : 900;
-      const schBase = ov.scholarship_fee != null ? Number(ov.scholarship_fee) : schBaseDefault;
-      const schPaid = hasAnyScholarshipPaid ? schBase : 0;
+      let schPaid = 0;
+      if (hasAnyScholarshipPaid) {
+        if (realPaid.scholarship !== undefined) {
+          // Usar valor real pago (já com desconto e convertido se PIX)
+          schPaid = realPaid.scholarship;
+        } else {
+          // Fallback: cálculo fixo para dados antigos sem registro
+          const schBaseDefault = p?.system_type === 'simplified' ? 550 : 900;
+          const schBase = ov.scholarship_fee != null ? Number(ov.scholarship_fee) : schBaseDefault;
+          schPaid = schBase;
+        }
+      }
 
-      // I-20 Control (sem dependentes)
-      const i20Base = ov.i20_control_fee != null ? Number(ov.i20_control_fee) : 900;
-      const i20Paid = (hasAnyScholarshipPaid && p?.has_paid_i20_control_fee) ? i20Base : 0;
+      // I-20 Control Fee - usar valor real pago se disponível, senão calcular
+      let i20Paid = 0;
+      if (hasAnyScholarshipPaid && p?.has_paid_i20_control_fee) {
+        if (realPaid.i20_control !== undefined) {
+          // Usar valor real pago (já com desconto e convertido se PIX)
+          i20Paid = realPaid.i20_control;
+        } else {
+          // Fallback: cálculo fixo para dados antigos sem registro
+          const i20Base = ov.i20_control_fee != null ? Number(ov.i20_control_fee) : 900;
+          i20Paid = i20Base;
+        }
+      }
 
       return selPaid + schPaid + i20Paid;
     };
@@ -743,20 +804,8 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
     };
 
     // Criar atividade recente (últimos 10 eventos) usando valores reais pagos
+    // ✅ CORREÇÃO: Usar o realPaidAmountsMap já calculado no início da função
     const recentActivity: Array<{date: string, type: string, amount: number, description: string}> = [];
-
-    // Buscar valores reais pagos para todos os estudantes de uma vez
-    const realPaidAmountsMap: Record<string, { selection_process?: number; scholarship?: number; i20_control?: number }> = {};
-    await Promise.all((referralsData?.slice(0, 10) || []).map(async (row: any) => {
-      if (!row?.user_id) return;
-      try {
-        // ✅ CORREÇÃO: Usar getDisplayAmounts para exibição (valores "Zelle" sem taxas)
-        const amounts = await getDisplayAmounts(row.user_id, ['selection_process', 'scholarship', 'i20_control']);
-        realPaidAmountsMap[row.user_id] = amounts;
-      } catch (error) {
-        console.error(`[FinancialOverview] Erro ao buscar valores pagos para user_id ${row.user_id}:`, error);
-      }
-    }));
 
     // Montar eventos por taxa paga usando valores reais pagos
     referralsData?.slice(0, 10).forEach((row: any) => {
@@ -1493,12 +1542,6 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
               <span className="text-sm text-slate-600">Last 7 Days</span>
               <span className="text-sm font-medium text-slate-900">
                 {formatCurrency(financialStats.last7DaysRevenue)}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-slate-600">Pending Credits</span>
-              <span className="text-sm font-medium text-slate-900">
-                {formatCurrency(financialStats.pendingCredits)}
               </span>
             </div>
             <div className="flex items-center justify-between">

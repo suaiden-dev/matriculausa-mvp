@@ -238,6 +238,7 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({ error: 'Incomplete payload, notification not sent.' }), { status: 400, headers: corsHeaders });
       }
 
+      // ✅ ENVIAR EMAIL VIA WEBHOOK N8N
       const payload = {
         tipo_notf: 'Novo documento solicitado',
         email_aluno: emailAluno,
@@ -258,7 +259,71 @@ Deno.serve(async (req) => {
       if (!n8nResponse.ok) {
         console.log('[Edge] n8n retornou erro:', n8nResponse.status, await n8nResponse.text());
       } else {
-        console.log('[Edge] Notificação enviada com sucesso para n8n');
+        console.log('[Edge] ✅ Email enviado com sucesso para n8n');
+      }
+
+      // ✅ ENVIAR NOTIFICAÇÃO IN-APP (SINO) PARA O ALUNO
+      // Apenas para requests individuais (não globais)
+      if (!is_global && application && emailAluno && emailAluno !== 'aluno@exemplo.com') {
+        try {
+          // Buscar user_id do aluno para criar notificação
+          let studentUserId: string | null = null;
+          
+          // Tentar buscar por user_id primeiro (student_id da application é user_id)
+          const { data: studentProfile, error: studentProfileError } = await supabase
+            .from('user_profiles')
+            .select('user_id')
+            .eq('user_id', application.student_id)
+            .single();
+          
+          if (!studentProfileError && studentProfile) {
+            studentUserId = studentProfile.user_id;
+          } else {
+            // Tentar buscar por id (student_id da application pode ser id do profile)
+            const { data: studentProfile2, error: studentProfileError2 } = await supabase
+              .from('user_profiles')
+              .select('user_id')
+              .eq('id', application.student_id)
+              .single();
+            
+            if (!studentProfileError2 && studentProfile2) {
+              studentUserId = studentProfile2.user_id;
+            }
+          }
+
+          if (studentUserId) {
+            // Criar notificação in-app usando a Edge Function create-student-notification
+            const notificationPayload = {
+              user_id: studentUserId,
+              title: 'New document request',
+              message: `A new document request was created: ${title}. Please review and upload the requested document.`,
+              type: 'document_request_created',
+              link: `/student/dashboard/application/${application.id}/chat?tab=documents`
+            };
+
+            const functionsUrl = Deno.env.get('SUPABASE_URL')?.replace(/\/$/, '') + '/functions/v1';
+            const notificationResponse = await fetch(`${functionsUrl}/create-student-notification`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
+              },
+              body: JSON.stringify(notificationPayload)
+            });
+
+            if (!notificationResponse.ok) {
+              const errorText = await notificationResponse.text();
+              console.log('[Edge] ⚠️ Erro ao criar notificação in-app:', notificationResponse.status, errorText);
+            } else {
+              console.log('[Edge] ✅ Notificação in-app criada com sucesso');
+            }
+          } else {
+            console.log('[Edge] ⚠️ Não foi possível encontrar user_id do aluno para criar notificação in-app');
+          }
+        } catch (notificationError) {
+          console.log('[Edge] ⚠️ Erro ao enviar notificação in-app:', notificationError);
+          // Não falha a criação do document_request por causa da notificação
+        }
       }
     } catch (n8nError) {
       console.log('[Edge] Erro ao notificar n8n:', n8nError);

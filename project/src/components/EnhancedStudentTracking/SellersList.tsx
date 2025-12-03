@@ -118,15 +118,20 @@ const SellersList: React.FC<SellersListProps> = ({
                 <div className="flex items-center justify-between lg:justify-end space-x-6">
                   <div className="text-center">
                     <p className="text-sm text-slate-500">Students</p>
-                    <p className="text-2xl font-bold text-blue-600">{seller.students_count}</p>
+                    <p className="text-2xl font-bold text-green-600">
+                      {sellerStudents.filter((s: any) => s.has_paid_selection_process_fee).length}
+                    </p>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      {sellerStudents.filter((s: any) => !s.has_paid_selection_process_fee).length} registered
+                    </p>
                   </div>
                   <div className="text-center">
                     <p className="text-sm text-slate-500">Revenue</p>
                     <p className="text-2xl font-bold text-green-600">
                       {(() => {
-                        // Somar receita ajustada dos alunos do seller se disponível
+                        // Somar receita ajustada apenas dos estudantes que pagaram (não registrados)
                         const studentsForSeller = filteredStudents.filter((student: any) => 
-                          student.referred_by_seller_id === seller.id
+                          student.referred_by_seller_id === seller.id && student.has_paid_selection_process_fee
                         );
                         const adjusted = studentsForSeller.reduce((sum: number, st: any) => {
                           const val = Number(st.total_paid_adjusted ?? st.total_paid ?? 0);
@@ -150,8 +155,16 @@ const SellersList: React.FC<SellersListProps> = ({
             </div>
 
             {/* Lista de estudantes (expandível) */}
-            {expandedSellers.has(seller.id) && (
-              <div className="border-t border-slate-200">
+            <div 
+              className={`border-t border-slate-200 overflow-hidden transition-all duration-500 ease-in-out ${
+                expandedSellers.has(seller.id) 
+                  ? 'max-h-[5000px] opacity-100' 
+                  : 'max-h-0 opacity-0 border-t-0'
+              }`}
+            >
+              <div className={`transform transition-all duration-300 ease-out ${
+                expandedSellers.has(seller.id) ? 'translate-y-0' : '-translate-y-2'
+              }`}>
                 {sellerStudents.length > 0 ? (
                   <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-slate-200">
@@ -184,7 +197,11 @@ const SellersList: React.FC<SellersListProps> = ({
                         {sellerStudents.map((student) => (
                           <React.Fragment key={student.id}>
                             <tr 
-                              className="hover:bg-blue-50 hover:shadow-sm cursor-pointer transition-all duration-200 group"
+                              className={`hover:shadow-sm cursor-pointer transition-all duration-200 group ${
+                                student.has_paid_selection_process_fee 
+                                  ? 'hover:bg-green-50' 
+                                  : 'hover:bg-orange-50 opacity-75'
+                              }`}
                               onClick={() => {
                                 
                                 if (student.hasMultipleApplications) {
@@ -198,14 +215,33 @@ const SellersList: React.FC<SellersListProps> = ({
                             >
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="flex items-center">
-                                <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                                  <span className="text-sm font-medium text-green-600">
+                                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                                  student.has_paid_selection_process_fee 
+                                    ? 'bg-green-100' 
+                                    : 'bg-orange-100'
+                                }`}>
+                                  <span className={`text-sm font-medium ${
+                                    student.has_paid_selection_process_fee 
+                                      ? 'text-green-600' 
+                                      : 'text-orange-600'
+                                  }`}>
                                     {student.full_name?.charAt(0)?.toUpperCase() || 'S'}
                                   </span>
                                 </div>
                                 <div className="ml-4 flex-1">
                                   <div className="flex items-center gap-2 flex-wrap">
                                     <div className="text-sm font-medium text-slate-900">{student.full_name}</div>
+                                    {!student.has_paid_selection_process_fee && (
+                                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-700 border border-orange-200">
+                                        Registered Only
+                                      </span>
+                                    )}
+                                    {student.has_paid_selection_process_fee && (
+                                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 border border-green-200">
+                                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                                        Student
+                                      </span>
+                                    )}
                                     {(() => {
                                       const studentUserId = student.user_id || student.id || student.student_id;
                                       const hasBlackCoupon = studentUserId && blackCouponUsers.has(studentUserId);
@@ -254,10 +290,16 @@ const SellersList: React.FC<SellersListProps> = ({
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="flex items-center">
-                                <DollarSign className="h-4 w-4 text-green-600 mr-1" />
-                                <span className="text-sm font-medium text-slate-900">
-                                  {formatCurrency(Number(student.total_paid_adjusted ?? student.total_paid ?? 0))}
-                                </span>
+                                {student.has_paid_selection_process_fee ? (
+                                  <>
+                                    <DollarSign className="h-4 w-4 text-green-600 mr-1" />
+                                    <span className="text-sm font-medium text-slate-900">
+                                      {formatCurrency(Number(student.total_paid_adjusted ?? student.total_paid ?? 0))}
+                                    </span>
+                                  </>
+                                ) : (
+                                  <span className="text-sm text-slate-400 italic">Not paid yet</span>
+                                )}
                               </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
@@ -403,7 +445,7 @@ const SellersList: React.FC<SellersListProps> = ({
                   </div>
                 )}
               </div>
-            )}
+            </div>
           </div>
         );
       })}

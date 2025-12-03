@@ -38,12 +38,7 @@ export function TimePeriodFilter({
         {(['7d', '30d', '90d', '1y', 'all'] as const).map((period) => (
           <button
             key={period}
-            onClick={() => {
-              onTimeFilterChange(period);
-              if (showCustomDate) {
-                onCustomDateToggle();
-              }
-            }}
+            onClick={() => onTimeFilterChange(period)}
             className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
               timeFilter === period && !showCustomDate
                 ? 'bg-blue-600 text-white'

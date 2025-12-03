@@ -1,5 +1,5 @@
-import React, { useRef } from 'react';
-import { AlertCircle, CheckCircle, Lock, XCircle } from 'lucide-react';
+import React from 'react';
+import { AlertCircle, CheckCircle, Lock, Tag } from 'lucide-react';
 
 interface ModalContentProps {
   productName: string;
@@ -24,20 +24,6 @@ interface ModalContentProps {
   handleProceed: () => void;
   isLoading: boolean;
   t: any;
-  // Props para cupom promocional
-  promotionalCoupon?: string;
-  setPromotionalCoupon?: (value: string) => void;
-  promotionalCouponValidation?: {
-    isValid: boolean;
-    message: string;
-    discountAmount?: number;
-    finalAmount?: number;
-  } | null;
-  isValidatingPromotionalCoupon?: boolean;
-  validatePromotionalCoupon?: () => void;
-  removePromotionalCoupon?: () => void;
-  feeType?: 'selection_process' | 'application_fee' | 'enrollment_fee' | 'scholarship_fee';
-  canUsePromotionalCoupon?: boolean; // Passado do PreCheckoutModal (seller_referral_code + legacy)
 }
 
 export const ModalContent: React.FC<ModalContentProps> = ({
@@ -63,18 +49,14 @@ export const ModalContent: React.FC<ModalContentProps> = ({
   handleProceed,
   isLoading,
   t,
-  promotionalCoupon = '',
-  setPromotionalCoupon,
-  promotionalCouponValidation = null,
-  isValidatingPromotionalCoupon = false,
-  validatePromotionalCoupon,
-  removePromotionalCoupon,
-  feeType,
-  canUsePromotionalCoupon = false
+  promotionalCouponApplied
+}: ModalContentProps & {
+  promotionalCouponApplied?: {
+    discountAmount: number;
+    finalAmount: number;
+    code?: string;
+  } | null;
 }) => {
-  // ✅ SEMPRE mostrar campo de cupom promocional (campo sempre visível)
-  const shouldShowPromotionalCoupon = true;
-  const promotionalCouponInputRef = useRef<HTMLInputElement>(null);
   
   return (
   <div className="space-y-4 sm:space-y-6 bg-white min-h-full">
@@ -83,25 +65,29 @@ export const ModalContent: React.FC<ModalContentProps> = ({
       <div className="text-center">
         <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2 sm:mb-3">{productName}</h3>
         <div className="mb-3">
-          {promotionalCouponValidation?.isValid && promotionalCouponValidation.finalAmount && promotionalCouponValidation.discountAmount ? (
-            // Mostrar valor com desconto quando cupom está aplicado
+          {promotionalCouponApplied ? (
             <>
               <div className="text-3xl font-bold text-blue-700">
-                ${promotionalCouponValidation.finalAmount.toFixed(2)}
+                ${promotionalCouponApplied.finalAmount.toFixed(2)}
               </div>
               <p className="text-xs text-gray-600 mt-1">
                 Valor com desconto
               </p>
               <p className="text-xs text-gray-500 mt-1 line-through">
-                ${(promotionalCouponValidation.finalAmount + promotionalCouponValidation.discountAmount).toFixed(2)} Valor original
+                ${(promotionalCouponApplied.finalAmount + promotionalCouponApplied.discountAmount).toFixed(2)} Valor original
               </p>
+              <div className="flex items-center justify-center mt-2">
+                <Tag className="h-3 w-3 text-green-600 mr-1" />
+                <span className="text-xs text-green-600 font-medium">
+                  Cupom {promotionalCouponApplied.code} aplicado! -${promotionalCouponApplied.discountAmount.toFixed(2)}
+                </span>
+              </div>
             </>
           ) : (
-            // Mostrar valor normal quando não há cupom
             <>
-          <div className="text-3xl font-bold text-blue-700">
-            ${computedBasePrice.toFixed(2)}
-          </div>
+              <div className="text-3xl font-bold text-blue-700">
+                ${computedBasePrice.toFixed(2)}
+              </div>
               <p className="text-xs text-gray-600 mt-1">
                 {t('preCheckoutModal.totalAmount')}
               </p>
@@ -115,103 +101,6 @@ export const ModalContent: React.FC<ModalContentProps> = ({
         </div>
       </div>
     </div>
-
-    {/* Promotional Coupon Section - apenas para usuários com seller_referral_code + legacy system_type e feeTypes permitidos */}
-    {shouldShowPromotionalCoupon && (
-      <div className="space-y-4">
-        <div className="text-center">
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            Cupom Promocional
-          </h3>
-        </div>
-
-        <div className="space-y-3">
-          {promotionalCouponValidation?.isValid ? (
-            // Cupom válido - mostrar apenas confirmação visual, sem duplicar valores
-            <div className="bg-green-50 border-2 border-green-300 rounded-xl p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <CheckCircle className="w-5 h-5 text-green-600" />
-                  <span className="font-semibold text-green-800">{promotionalCoupon}</span>
-                  {promotionalCouponValidation.discountAmount && (
-                    <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded-full">
-                      -${promotionalCouponValidation.discountAmount.toFixed(2)} Aplicado
-                    </span>
-                  )}
-                </div>
-                <button
-                  onClick={removePromotionalCoupon}
-                  className="p-2 hover:bg-green-100 rounded-lg transition-colors"
-                  title="Remover cupom"
-                >
-                  <XCircle className="w-5 h-5 text-green-600 hover:text-red-600" />
-                </button>
-              </div>
-            </div>
-          ) : (
-            // Input para validar cupom
-            <div className="flex gap-2">
-              <input
-                ref={promotionalCouponInputRef}
-                type="text"
-                id="promotional-coupon-input"
-                name="promotional-coupon"
-                value={promotionalCoupon}
-                onChange={(e) => {
-                  const newValue = e.target.value.toUpperCase();
-                  // Manter o cursor na posição correta
-                  const cursorPosition = e.target.selectionStart;
-                  setPromotionalCoupon?.(newValue);
-                  // Restaurar posição do cursor após atualização usando requestAnimationFrame
-                  requestAnimationFrame(() => {
-                    if (promotionalCouponInputRef.current) {
-                      promotionalCouponInputRef.current.setSelectionRange(cursorPosition, cursorPosition);
-                      promotionalCouponInputRef.current.focus();
-                    }
-                  });
-                }}
-                onBlur={(e) => {
-                  // Manter o valor em uppercase quando perder foco
-                  const upperValue = e.target.value.toUpperCase();
-                  if (upperValue !== promotionalCoupon) {
-                    setPromotionalCoupon?.(upperValue);
-                  }
-                }}
-                placeholder="Digite o cupom promocional"
-                className="flex-1 px-4 sm:px-5 py-3 sm:py-4 border-2 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-center font-mono text-base sm:text-lg tracking-wider border-gray-300"
-                style={{ fontSize: '16px' }}
-                maxLength={20}
-                autoComplete="off"
-              />
-              <button
-                onClick={validatePromotionalCoupon}
-                disabled={isValidatingPromotionalCoupon || !promotionalCoupon.trim()}
-                className="px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-semibold transition-all shadow-lg hover:shadow-xl transform whitespace-nowrap bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
-              >
-                {isValidatingPromotionalCoupon ? (
-                  <div className="flex items-center justify-center space-x-2">
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    <span className="hidden sm:inline">Validando...</span>
-                  </div>
-                ) : (
-                  "Validar"
-                )}
-              </button>
-            </div>
-          )}
-          
-          {/* Validation Result - apenas para erros */}
-          {promotionalCouponValidation && !promotionalCouponValidation.isValid && (
-            <div className="p-3 rounded-xl border-2 bg-red-50 border-red-300 text-red-800">
-              <div className="flex items-center space-x-2">
-                <AlertCircle className="w-5 h-5 text-red-600" />
-                <span className="font-medium text-sm">{promotionalCouponValidation.message}</span>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    )}
 
     {/* Discount Code Section */}
     {(!hasUsedReferralCode && !hasSellerReferralCode) || activeDiscount?.has_discount ? (

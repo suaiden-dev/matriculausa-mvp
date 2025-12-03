@@ -252,7 +252,7 @@ const AdminStudentDetails: React.FC = () => {
     handleUploadTransferForm,
     handleApproveTransferFormUpload,
     handleRejectTransferFormUpload
-  } = useTransferForm(student, isPlatformAdmin, user?.id);
+  } = useTransferForm(student, isPlatformAdmin, user?.id, user?.email);
   
   // Hooks para Document Requests
   const {
@@ -514,7 +514,7 @@ const AdminStudentDetails: React.FC = () => {
         
         // ✅ APLICAR VALIDAÇÃO: Usar a mesma lógica do Payment Management
         // Se valores estiverem muito discrepantes (provavelmente BRL não convertido), usar valores fixos em dólar
-        const hasMatrFromSellerCode = student?.seller_referral_code && /^MATR/i.test(student.seller_referral_code);
+        const hasMatrFromSellerCode = !!(student?.seller_referral_code && /^MATR/i.test(student.seller_referral_code));
         const normalizedAmounts = validateAndNormalizePaidAmounts(
           amounts,
           userSystemType,
@@ -522,7 +522,7 @@ const AdminStudentDetails: React.FC = () => {
           getFeeAmount,
           student?.dependents || 0,
           hasMatriculaRewardsDiscount,
-          !!student?.seller_referral_code && hasMatrFromSellerCode
+          hasMatrFromSellerCode
         );
         
         setRealPaidAmounts(normalizedAmounts);
@@ -786,11 +786,39 @@ const AdminStudentDetails: React.FC = () => {
       setIsEditing(false);
       // Invalidar queries relacionadas
       queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
+      
+      // Log da ação
+      try {
+        await logAction(
+          'profile_update',
+          `Student profile updated by platform admin`,
+          user?.id || '',
+          'admin',
+          {
+            updated_fields: {
+              full_name: student.student_name,
+              email: student.student_email,
+              phone: student.phone,
+              country: student.country,
+              field_of_interest: student.field_of_interest,
+              academic_level: student.academic_level,
+              gpa: student.gpa,
+              english_proficiency: student.english_proficiency,
+              dependents: dependents,
+              desired_scholarship_range: student.desired_scholarship_range,
+            },
+            updated_by: user?.email || 'Platform Admin'
+          }
+        );
+      } catch (logError) {
+        console.error('Failed to log profile update:', logError);
+      }
+      
       alert('Profile saved successfully!');
     } else {
       alert('Error saving profile: ' + result.error);
     }
-  }, [student, dependents, saveProfile, profileId, queryClient]);
+  }, [student, dependents, saveProfile, profileId, queryClient, user, logAction]);
 
   const handleMarkAsPaid = useCallback((feeType: string) => {
     setPendingPayment({ fee_type: feeType });
@@ -984,7 +1012,7 @@ const AdminStudentDetails: React.FC = () => {
         const updatedAmounts = await getGrossPaidAmounts(student.user_id, ['selection_process', 'scholarship', 'i20_control', 'application']);
         
         // ✅ APLICAR VALIDAÇÃO: Usar a mesma lógica do Payment Management
-        const hasMatrFromSellerCode = student?.seller_referral_code && /^MATR/i.test(student.seller_referral_code);
+        const hasMatrFromSellerCode = !!(student?.seller_referral_code && /^MATR/i.test(student.seller_referral_code));
         const normalizedAmounts = validateAndNormalizePaidAmounts(
           updatedAmounts,
           userSystemType,
@@ -992,7 +1020,7 @@ const AdminStudentDetails: React.FC = () => {
           getFeeAmount,
           student?.dependents || 0,
           hasMatriculaRewardsDiscount,
-          !!student?.seller_referral_code && hasMatrFromSellerCode
+          hasMatrFromSellerCode
         );
         
         setRealPaidAmounts(normalizedAmounts);
@@ -1041,6 +1069,23 @@ const AdminStudentDetails: React.FC = () => {
           // Invalidar queries relacionadas
           queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
         }
+
+        // Log da ação
+        try {
+          await logAction(
+            'document_approval',
+            `Document ${docType} approved by platform admin`,
+            user?.id || '',
+            'admin',
+            {
+              document_type: docType,
+              application_id: appId,
+              approved_by: user?.email || 'Platform Admin'
+            }
+          );
+        } catch (logError) {
+          console.error('Failed to log document approval:', logError);
+        }
       } else {
         console.error('Error approving document:', result.error);
       }
@@ -1049,7 +1094,7 @@ const AdminStudentDetails: React.FC = () => {
     } finally {
       setApprovingDocs(prev => ({ ...prev, [`${appId}:${docType}`]: false }));
     }
-  }, [approveDocument, student, setStudent]);
+  }, [approveDocument, student, setStudent, user, logAction, profileId, queryClient]);
 
   const handleRejectDocument = useCallback((appId: string, docType: string) => {
     setRejectDocData({ applicationId: appId, docType });
@@ -1086,6 +1131,111 @@ const AdminStudentDetails: React.FC = () => {
           // Invalidar queries relacionadas
           queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
         }
+
+        // Log da ação
+        try {
+          await logAction(
+            'document_rejection',
+            `Document ${rejectDocData.docType} rejected by platform admin: ${reason}`,
+            user?.id || '',
+            'admin',
+            {
+              document_type: rejectDocData.docType,
+              application_id: rejectDocData.applicationId,
+              rejection_reason: reason,
+              rejected_by: user?.email || 'Platform Admin'
+            }
+          );
+        } catch (logError) {
+          console.error('Failed to log document rejection:', logError);
+        }
+
+        // ENVIAR NOTIFICAÇÕES PARA O ALUNO
+        console.log('📤 [handleConfirmReject] Enviando notificações de rejeição para o aluno...');
+        
+        // Obter labels amigáveis para os documentos (definir antes do try para estar disponível em ambos os blocos)
+        const docLabels: Record<string, string> = {
+          passport: 'Passport',
+          diploma: 'High School Diploma',
+          funds_proof: 'Proof of Funds',
+        };
+        const docLabel = docLabels[rejectDocData.docType] || rejectDocData.docType;
+        
+        try {
+          // 1. ENVIAR EMAIL VIA WEBHOOK (payload idêntico ao da universidade)
+          const rejectionPayload = {
+            tipo_notf: "Changes Requested",
+            email_aluno: student.student_email,
+            nome_aluno: student.student_name,
+            email_universidade: user?.email,
+            document_type: rejectDocData.docType, // ✅ CORREÇÃO: Adicionar tipo de documento (passport, diploma, funds_proof)
+            document_title: docLabel, // ✅ CORREÇÃO: Adicionar título amigável do documento (Passport, High School Diploma, Proof of Funds)
+            o_que_enviar: `Your document <strong>${docLabel}</strong> has been rejected. Reason: <strong>${reason}</strong>. Please review and upload a corrected version.`
+          };
+
+          console.log('📤 [handleConfirmReject] Payload de rejeição:', rejectionPayload);
+
+          const webhookResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(rejectionPayload),
+          });
+
+          if (webhookResponse.ok) {
+            console.log('✅ [handleConfirmReject] Email de rejeição enviado com sucesso!');
+          } else {
+            console.warn('⚠️ [handleConfirmReject] Erro ao enviar email de rejeição:', webhookResponse.status);
+          }
+        } catch (webhookError) {
+          console.error('❌ [handleConfirmReject] Erro ao enviar webhook de rejeição:', webhookError);
+          // Não falhar o processo se o webhook falhar
+        }
+
+        // 2. ENVIAR NOTIFICAÇÃO IN-APP PARA O ALUNO (SINO)
+        console.log('📤 [handleConfirmReject] Enviando notificação in-app para o aluno...');
+        
+        try {
+          // docLabel já foi calculado acima, reutilizar
+          
+          // Usar Edge Function que tem service role para criar notificação
+          const { data: { session } } = await supabase.auth.getSession();
+          const accessToken = session?.access_token;
+          
+          if (!accessToken) {
+            console.error('❌ [handleConfirmReject] Access token não encontrado');
+          } else {
+            // Preparar payload - usar user_id (UUID) que a Edge Function vai converter para student_id
+            // A Edge Function busca o student_id (user_profiles.id) a partir do user_id
+            const notificationPayload = {
+              user_id: student.user_id, // UUID que referencia auth.users.id
+              title: 'Document Rejected',
+              message: `Your ${docLabel} document has been rejected. Reason: ${reason}. Please review and upload a corrected version.`,
+              link: '/student/dashboard/applications',
+            };
+            
+            const response = await fetch(`${import.meta.env.VITE_SUPABASE_FUNCTIONS_URL}/create-student-notification`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${accessToken}`,
+              },
+              body: JSON.stringify(notificationPayload),
+            });
+            
+            if (!response.ok) {
+              const errorText = await response.text();
+              console.error('❌ [handleConfirmReject] Erro ao criar notificação:', response.status, errorText);
+            } else {
+              await response.json(); // Result não usado, apenas para consumir a resposta
+              console.log('✅ [handleConfirmReject] Notificação in-app enviada com sucesso!');
+            }
+          }
+        } catch (notificationError) {
+          console.error('❌ [handleConfirmReject] Erro ao enviar notificação in-app:', notificationError);
+          // Não falhar o processo se a notificação in-app falhar
+        }
         
         // Fechar o modal de rejeição
         setShowRejectDocModal(false);
@@ -1096,7 +1246,7 @@ const AdminStudentDetails: React.FC = () => {
     } catch (error) {
       console.error('Error rejecting document:', error);
     }
-  }, [rejectDocData, rejectDocument, student, setStudent]);
+  }, [rejectDocData, rejectDocument, student, setStudent, user, logAction, profileId, queryClient]);
 
   const handleViewDocument = useCallback((doc: { file_url: string; filename: string }) => {
     // ✅ Aceitar tanto file_url quanto url (fallback)
@@ -1321,6 +1471,22 @@ const AdminStudentDetails: React.FC = () => {
         console.error('Error sending webhook:', error);
       }
 
+      // Log da ação
+      try {
+        await logAction(
+          'application_approval',
+          `Application ${applicationId} approved by platform admin`,
+          user?.id || '',
+          'admin',
+          {
+            application_id: applicationId,
+            approved_by: user?.email || 'Platform Admin'
+          }
+        );
+      } catch (logError) {
+        console.error('Failed to log application approval:', logError);
+      }
+
       // Atualizar o estado local com os dados atualizados do banco
       if (updatedApp) {
         console.log('🔄 [APPROVE] Atualizando estado local...');
@@ -1369,7 +1535,7 @@ const AdminStudentDetails: React.FC = () => {
     } finally {
       setApprovingStudent(false);
     }
-  }, [student, isPlatformAdmin, user, setStudent, profileId, queryClient]);
+  }, [student, isPlatformAdmin, user, setStudent, profileId, queryClient, logAction, rejectStudentReason]);
 
   const rejectApplication = useCallback(async (applicationId: string) => {
     if (!student || !isPlatformAdmin) return;
@@ -1392,6 +1558,23 @@ const AdminStudentDetails: React.FC = () => {
       setShowRejectStudentModal(false);
       setRejectStudentReason('');
       setPendingRejectAppId(null);
+      
+      // Log da ação
+      try {
+        await logAction(
+          'application_rejection',
+          `Application ${applicationId} rejected by platform admin: ${rejectStudentReason || 'No reason provided'}`,
+          user?.id || '',
+          'admin',
+          {
+            application_id: applicationId,
+            rejection_reason: rejectStudentReason || null,
+            rejected_by: user?.email || 'Platform Admin'
+          }
+        );
+      } catch (logError) {
+        console.error('Failed to log application rejection:', logError);
+      }
       
       // Atualizar o estado local com os dados atualizados do banco
       if (updatedApp) {
@@ -1560,6 +1743,24 @@ const AdminStudentDetails: React.FC = () => {
 
       if (error) throw error;
 
+      // Log da ação
+      try {
+        await logAction(
+          'fee_override_update',
+          `Fee overrides updated by platform admin`,
+          user?.id || '',
+          'admin',
+          {
+            selection_process_fee: editingFees.selection_process,
+            scholarship_fee: editingFees.scholarship,
+            i20_control_fee: editingFees.i20_control,
+            updated_by: user?.email || 'Platform Admin'
+          }
+        );
+      } catch (logError) {
+        console.error('Failed to log fee override update:', logError);
+      }
+
       setEditingFees(null);
       // Invalidar queries relacionadas
       queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
@@ -1570,7 +1771,7 @@ const AdminStudentDetails: React.FC = () => {
     } finally {
       setSavingFees(false);
     }
-  }, [editingFees, student]);
+  }, [editingFees, student, user, logAction, profileId, queryClient]);
 
   // Handler para resetar fees para padrão
   const handleResetFees = useCallback(async () => {
@@ -1587,6 +1788,21 @@ const AdminStudentDetails: React.FC = () => {
 
       if (error) throw error;
 
+      // Log da ação
+      try {
+        await logAction(
+          'fee_override_reset',
+          `Fee overrides reset to default by platform admin`,
+          user?.id || '',
+          'admin',
+          {
+            reset_by: user?.email || 'Platform Admin'
+          }
+        );
+      } catch (logError) {
+        console.error('Failed to log fee override reset:', logError);
+      }
+
       setEditingFees(null);
       // Invalidar queries relacionadas
       queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
@@ -1597,7 +1813,7 @@ const AdminStudentDetails: React.FC = () => {
     } finally {
       setSavingFees(false);
     }
-  }, [student]);
+  }, [student, user, logAction, profileId, queryClient]);
 
   // Handler para iniciar edição de fees
   const handleStartEditFees = useCallback(() => {
@@ -1691,6 +1907,23 @@ const AdminStudentDetails: React.FC = () => {
         if (error) throw error;
       }
       
+      // Log da ação
+      try {
+        await logAction(
+          'payment_method_update',
+          `Payment method for ${feeType} updated to ${method} by platform admin`,
+          user?.id || '',
+          'admin',
+          {
+            fee_type: feeType,
+            payment_method: method,
+            updated_by: user?.email || 'Platform Admin'
+          }
+        );
+      } catch (logError) {
+        console.error('Failed to log payment method update:', logError);
+      }
+
       setEditingPaymentMethod(null);
       // Invalidar queries relacionadas
       queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
@@ -1701,7 +1934,7 @@ const AdminStudentDetails: React.FC = () => {
     } finally {
       setSavingPaymentMethod(false);
     }
-  }, [student, isPlatformAdmin, paymentMethod]);
+  }, [student, isPlatformAdmin, paymentMethod, user, logAction, profileId, queryClient]);
 
   // Loading state
   if (loading || !student) {
