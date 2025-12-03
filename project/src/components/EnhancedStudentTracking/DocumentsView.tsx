@@ -702,92 +702,103 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                         request.document_request_uploads.map((upload: any) => {
                           const { filename, fullUrl } = getDocumentInfo(upload);
                           return (
-                            <div key={upload.id} className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-4 last:mb-0">
-                              <div className="flex items-start sm:items-center space-x-4 min-w-0">
-                                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                                  <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                  </svg>
+                            <div key={upload.id} className="mb-4 last:mb-0 pb-4 border-b border-slate-100 last:border-b-0 last:pb-0">
+                              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                                <div className="flex items-start sm:items-center space-x-4 min-w-0 flex-1">
+                                  <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                    <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="font-medium text-slate-900 break-words">{filename}</p>
+                                    <p className="text-sm text-slate-500">
+                                      Submitted on {formatDate(upload.uploaded_at)}
+                                    </p>
+                                    <p className="text-xs text-slate-400 mt-1 break-words">
+                                      Response to: {request.title || 'Document Request'}
+                                    </p>
+                                  </div>
                                 </div>
-                                <div className="flex-1 min-w-0">
-                                  <p className="font-medium text-slate-900 break-words">{filename}</p>
-                                  <p className="text-sm text-slate-500">
-                                    Submitted on {formatDate(upload.uploaded_at)}
-                                  </p>
-                                  <p className="text-xs text-slate-400 mt-1 break-words">
-                                    Response to: {request.title || 'Document Request'}
-                                  </p>
+                                
+                                <div className="flex flex-wrap gap-2 sm:flex-nowrap sm:space-x-3 items-center sm:self-auto self-start">
+                                  <span className={`px-3 py-1 rounded text-sm font-medium whitespace-nowrap ${
+                                    upload.status === 'approved' ? 'text-green-600' :
+                                    upload.status === 'rejected' ? 'text-red-600' :
+                                    upload.status === 'under_review' ? 'bg-yellow-100 text-yellow-800' :
+                                    'bg-slate-100 text-slate-800'
+                                  }`}>
+                                    {upload.status === 'approved' ? 'Approved' :
+                                     upload.status === 'rejected' ? 'Rejected' :
+                                     upload.status === 'under_review' ? 'Under Review' :
+                                     'Pending'}
+                                  </span>
+                                  
+                                  <button
+                                    onClick={() => onViewDocument({
+                                      ...upload,
+                                      file_url: fullUrl,
+                                      filename
+                                    })}
+                                    className="bg-[#05294E] hover:bg-[#041f38] text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors whitespace-nowrap text-center"
+                                  >
+                                    View
+                                  </button>
+                                  
+                                  <button
+                                    onClick={() => onDownloadDocument({
+                                      ...upload,
+                                      file_url: fullUrl,
+                                      filename
+                                    })}
+                                    className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-xl text-sm font-medium transition-colors whitespace-nowrap text-center"
+                                  >
+                                    Download
+                                  </button>
+                                  
+                                  {/* Admin Action Buttons - Only show for admin and if document is under review or pending */}
+                                  {isAdmin && (upload.status === 'under_review' || upload.status === 'pending') && upload.status !== 'rejected' && (
+                                    <div className="flex gap-2">
+                                      {onApproveDocument && (
+                                        <button
+                                          onClick={() => onApproveDocument(upload.id)}
+                                          disabled={approvingStates[`approve-${upload.id}`]}
+                                          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors whitespace-nowrap text-center disabled:cursor-not-allowed"
+                                        >
+                                          {approvingStates[`approve-${upload.id}`] ? 'Approving...' : 'Approve'}
+                                        </button>
+                                      )}
+                                      
+                                      {onRejectDocument && (
+                                        <button
+                                          onClick={() => handleRejectClick(upload.id)}
+                                          disabled={rejectingStates[`reject-${upload.id}`]}
+                                          className="bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors whitespace-nowrap text-center disabled:cursor-not-allowed"
+                                        >
+                                          {rejectingStates[`reject-${upload.id}`] ? 'Rejecting...' : 'Reject'}
+                                        </button>
+                                      )}
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                               
-                              <div className="flex flex-wrap gap-2 sm:flex-nowrap sm:space-x-3 sm:self-auto self-start mt-3 sm:mt-0 items-center">
-                                <span className={`px-3 py-1 rounded text-sm font-medium whitespace-nowrap ${
-                                  upload.status === 'approved' ? 'text-green-600' :
-                                  upload.status === 'rejected' ? 'text-red-600' :
-                                  upload.status === 'under_review' ? 'bg-yellow-100 text-yellow-800' :
-                                  'bg-slate-100 text-slate-800'
-                                }`}>
-                                  {upload.status === 'approved' ? 'Approved' :
-                                   upload.status === 'rejected' ? 'Rejected' :
-                                   upload.status === 'under_review' ? 'Under Review' :
-                                   'Pending'}
-                                </span>
-                                
-                                <button
-                                  onClick={() => onViewDocument({
-                                    ...upload,
-                                    file_url: fullUrl,
-                                    filename
-                                  })}
-                                  className="bg-[#05294E] hover:bg-[#041f38] text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors whitespace-nowrap text-center"
-                                >
-                                  View
-                                </button>
-                                
-                                <button
-                                  onClick={() => onDownloadDocument({
-                                    ...upload,
-                                    file_url: fullUrl,
-                                    filename
-                                  })}
-                                  className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-xl text-sm font-medium transition-colors whitespace-nowrap text-center"
-                                >
-                                  Download
-                                </button>
-                                
-                                {/* Admin Action Buttons - Only show for admin and if document is under review or pending */}
-                                {isAdmin && (upload.status === 'under_review' || upload.status === 'pending') && upload.status !== 'rejected' && (
-                                  <div className="flex gap-2">
-                                    {onApproveDocument && (
-                                      <button
-                                        onClick={() => onApproveDocument(upload.id)}
-                                        disabled={approvingStates[`approve-${upload.id}`]}
-                                        className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors whitespace-nowrap text-center disabled:cursor-not-allowed"
-                                      >
-                                        {approvingStates[`approve-${upload.id}`] ? 'Approving...' : 'Approve'}
-                                      </button>
-                                    )}
-                                    
-                                    {onRejectDocument && (
-                                      <button
-                                        onClick={() => handleRejectClick(upload.id)}
-                                        disabled={rejectingStates[`reject-${upload.id}`]}
-                                        className="bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors whitespace-nowrap text-center disabled:cursor-not-allowed"
-                                      >
-                                        {rejectingStates[`reject-${upload.id}`] ? 'Rejecting...' : 'Reject'}
-                                      </button>
-                                    )}
+                              {/* Show rejection reason if document is rejected - Full width below actions */}
+                              {upload.status === 'rejected' && upload.rejection_reason && (
+                                <div className="w-full mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                                  <div className="flex items-start gap-2 mb-2">
+                                    <svg className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    <p className="text-xs font-semibold text-red-800 uppercase tracking-wide">Rejection Reason</p>
                                   </div>
-                                )}
-                                
-                                {/* Show rejection reason if document is rejected */}
-                                {upload.status === 'rejected' && upload.rejection_reason && (
-                                  <div className="w-full mt-3 p-3 bg-slate-50 border border-slate-200 rounded-lg">
-                                    <p className="text-xs font-medium text-slate-600 mb-1">Rejection reason:</p>
-                                    <p className="text-sm text-slate-700 leading-relaxed">{upload.rejection_reason}</p>
+                                  <div className="max-h-48 overflow-y-auto">
+                                    <p className="text-sm text-red-900 leading-relaxed whitespace-pre-wrap break-words">
+                                      {upload.rejection_reason}
+                                    </p>
                                   </div>
-                                )}
-                              </div>
+                                </div>
+                              )}
                             </div>
                           );
                         })

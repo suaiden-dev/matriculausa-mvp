@@ -427,18 +427,22 @@ const Overview: React.FC<OverviewProps> = ({
     return selectionWithDependents;
   })();
 
-  // ✅ CORREÇÃO: Prioridade: Override > Valor real pago > Valor esperado
+  // ✅ CORREÇÃO: Prioridade: Valor real pago > Override > Valor esperado
   const getSelectionProcessFeeDisplay = () => {
     if (loadingPaidAmounts) return <FeeSkeleton />;
     
-    // PRIORIDADE 1: Override (MÁXIMA PRIORIDADE)
-    if (userFeeOverrides?.selection_process_fee !== undefined) {
-      return `$${userFeeOverrides.selection_process_fee.toFixed(2)}`;
+    // PRIORIDADE 1 (MÁXIMA): Valor real pago quando já foi pago
+    // Se já foi pago, usar o valor realmente pago (gross_amount_usd ou amount)
+    // Isso tem prioridade sobre overrides, pois representa o valor efetivamente pago
+    if (userProfile?.has_paid_selection_process_fee && realPaidAmounts?.selection_process !== undefined && realPaidAmounts.selection_process > 0) {
+      console.log('🔍 [Overview] Selection Process Fee - Usando valor real pago:', realPaidAmounts.selection_process);
+      return `$${realPaidAmounts.selection_process.toFixed(2)}`;
     }
     
-    // PRIORIDADE 2: Valor real pago quando já foi pago
-    if (userProfile?.has_paid_selection_process_fee && realPaidAmounts?.selection_process !== undefined && realPaidAmounts.selection_process > 0) {
-      return `$${realPaidAmounts.selection_process.toFixed(2)}`;
+    // PRIORIDADE 2: Override (só usado se ainda não foi pago)
+    if (userFeeOverrides?.selection_process_fee !== undefined) {
+      console.log('🔍 [Overview] Selection Process Fee - Usando override:', userFeeOverrides.selection_process_fee);
+      return `$${userFeeOverrides.selection_process_fee.toFixed(2)}`;
     }
     
     // PRIORIDADE 3: Valor esperado (com desconto se aplicável)

@@ -14,11 +14,60 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useDynamicFees } from '../hooks/useDynamicFees';
+import { useAffiliateAdminCheck } from '../hooks/useAffiliateAdminCheck';
+import { useAuth } from '../hooks/useAuth';
+import { useSystemType } from '../hooks/useSystemType';
+import { useFeeConfig } from '../hooks/useFeeConfig';
+import { useSimplifiedFees } from '../hooks/useSimplifiedFees';
 import SmartChat from '../components/SmartChat';
 
 const HowItWorks: React.FC = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { selectionProcessFee, scholarshipFee, i20ControlFee, hasSellerPackage, packageName } = useDynamicFees();
+  const { affiliateAdminEmail, loading: affiliateCheckLoading, isTheFutureOfEnglishAffiliate } = useAffiliateAdminCheck();
+  const { userProfile } = useAuth();
+  const { systemType, loading: systemTypeLoading } = useSystemType();
+  const { getFeeAmount, hasOverride, loading: feeLoading } = useFeeConfig(userProfile?.user_id);
+  const { fee350, loading: simplifiedFeesLoading } = useSimplifiedFees();
+  
+  // Verificar se deve mostrar o texto de dependentes (+$150 per dependent)
+  const isBrantImmigrationAffiliate = affiliateAdminEmail?.toLowerCase() === 'contato@brantimmigration.com';
+  
+  // ✅ Calcular apenas o valor base (sem dependentes) para exibição no título
+  const baseSelectionFee = React.useMemo(() => {
+    // Se ainda estiver carregando, retornar undefined
+    if (affiliateCheckLoading || systemTypeLoading || (systemType === 'simplified' && simplifiedFeesLoading) || (systemType === 'legacy' && feeLoading)) {
+      return undefined;
+    }
+    
+    // Se for do affiliate admin info@thefutureofenglish.com, valor fixo é 350
+    if (isTheFutureOfEnglishAffiliate) {
+      return '$350.00';
+    }
+    
+    // ✅ Se for do affiliate admin contato@brantimmigration.com, valor base é 400 (sem dependentes no título)
+    if (isBrantImmigrationAffiliate) {
+      return '$400.00';
+    }
+    
+    // Para sistema simplificado, valor base é 350
+    if (systemType === 'simplified') {
+      return `$${fee350.toFixed(2)}`;
+    }
+    
+    // Para sistema legacy
+    const hasSelectionOverride = hasOverride('selection_process');
+    
+    if (hasSelectionOverride) {
+      // Se há override, usar o valor do override (já é o valor base, sem dependentes)
+      const overrideValue = Number(getFeeAmount('selection_process'));
+      return `$${overrideValue.toFixed(2)}`;
+    } else {
+      // Valor base para legacy é 400 (sem dependentes)
+      return '$400.00';
+    }
+  }, [affiliateCheckLoading, systemTypeLoading, simplifiedFeesLoading, feeLoading, isTheFutureOfEnglishAffiliate, isBrantImmigrationAffiliate, systemType, fee350, hasOverride, getFeeAmount]);
+  
   
   return (
     <div className="bg-white min-h-screen">
@@ -76,7 +125,31 @@ const HowItWorks: React.FC = () => {
                   </div>
             <div>
               <h3 className="text-2xl font-bold mb-2 text-green-700">
-                2. {t('howItWorks.steps.selectionFee.title', { selectionProcessFee })}
+                2. {(() => {
+                  // Se ainda está carregando a verificação do affiliate ou o valor base, mostrar skeleton
+                  const isLoading = baseSelectionFee === undefined || affiliateCheckLoading || systemTypeLoading || 
+                      (systemType === 'simplified' && simplifiedFeesLoading) || 
+                      (systemType === 'legacy' && feeLoading);
+                  
+                  if (isLoading) {
+                    // Obter o texto base da tradução e remover o placeholder/valor
+                    const titleText = t('howItWorks.steps.selectionFee.title', { selectionProcessFee: '{{selectionProcessFee}}' });
+                    // Remover placeholder {{selectionProcessFee}} e qualquer valor já inserido ($XXX.XX)
+                    const textWithoutFee = titleText
+                      .replace(/\{\{selectionProcessFee\}\}/g, '')
+                      .replace(/\(\$[\d.]+\)/g, '')
+                      .replace(/\$[\d.]+/g, '')
+                      .trim();
+                    return (
+                      <>
+                        {textWithoutFee}
+                        <span className="inline-block ml-2 h-6 w-20 bg-slate-200 rounded animate-pulse"></span>
+                      </>
+                    );
+                  }
+                  // Quando o valor estiver pronto, mostrar o valor correto
+                  return t('howItWorks.steps.selectionFee.title', { selectionProcessFee: baseSelectionFee || selectionProcessFee });
+                })()}
                 {hasSellerPackage && (
                   <span className="ml-2 text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
                     {packageName}
@@ -84,7 +157,33 @@ const HowItWorks: React.FC = () => {
                 )}
               </h3>
               <p className="text-slate-700 mb-2 text-lg">
-                {t('howItWorks.steps.selectionFee.description')}
+                {(() => {
+                  let baseDescription = t('howItWorks.steps.selectionFee.description');
+                  
+                  // Se ainda está carregando, retornar descrição sem dependentes temporariamente
+                  if (affiliateCheckLoading) {
+                    return baseDescription.replace(/\s*\(\+\$150\s*(per|por)\s*dependent[^)]*\)/i, '').trim();
+                  }
+                  
+                  // Remover o texto de dependentes do texto base (caso já esteja presente)
+                  baseDescription = baseDescription.replace(/\s*\(\+\$150\s*(per|por)\s*dependent[^)]*\)/i, '').trim();
+                  
+                  // Se for do affiliate admin correto, adicionar o texto de dependentes
+                  if (isBrantImmigrationAffiliate) {
+                    // ✅ CORREÇÃO: Verificar diretamente o idioma atual do i18n
+                    // Em vez de depender de chave de tradução ausente, verificar o idioma configurado
+                    const currentLanguage = i18n.language || 'en';
+                    const isPortuguese = currentLanguage.startsWith('pt') || 
+                                         baseDescription.toLowerCase().includes('por dependente') ||
+                                         baseDescription.toLowerCase().includes('processo seletivo');
+                    const dependentsText = isPortuguese ? 'por dependente' : 'per dependent';
+                    const dependentsNote = ` (+$150 ${dependentsText})`;
+                    return baseDescription + dependentsNote;
+                  }
+                  
+                  // Se não for do affiliate admin correto, retornar sem o texto de dependentes
+                  return baseDescription;
+                })()}
               </p>
               <ul className="list-disc list-inside text-slate-500 text-sm space-y-1">
                 {(t('howItWorks.steps.selectionFee.items', { returnObjects: true }) as string[]).map((item, index) => (
