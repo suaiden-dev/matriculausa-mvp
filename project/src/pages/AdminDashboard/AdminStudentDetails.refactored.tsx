@@ -72,7 +72,7 @@ const TabLoadingSkeleton: React.FC = () => (
 const AdminStudentDetails: React.FC = () => {
   const { profileId } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
   const queryClient = useQueryClient();
   
   // React Query Hooks
@@ -756,11 +756,42 @@ const AdminStudentDetails: React.FC = () => {
   };
 
   // Handlers
-  const handleOpenChat = useCallback(() => {
-    if (student) {
-      navigate(`/admin/chat/${student.user_id}`);
+  const handleOpenChat = useCallback(async () => {
+    if (student?.user_id) {
+      // First, try to find existing conversation with this student
+      try {
+        let query = supabase
+          .from('admin_student_conversations')
+          .select('id, admin_id')
+          .eq('student_id', student.user_id);
+
+        // For affiliate admins, only look for their own conversations
+        // For regular admins, look for any existing conversation with this student
+        if (userProfile && userProfile.role === 'affiliate_admin') {
+          query = query.eq('admin_id', user?.id);
+        }
+
+        const { data: existingConversations, error } = await query;
+
+        if (error) {
+          console.error('Error finding existing conversation:', error);
+        }
+
+        if (existingConversations && existingConversations.length > 0) {
+          // Use the first existing conversation (most recent)
+          const existingConversation = existingConversations[0];
+          navigate(`/admin/dashboard/users?tab=messages&conversation=${existingConversation.id}&recipient_id=${student.user_id}`);
+        } else {
+          // Navigate to create new conversation
+          navigate(`/admin/dashboard/users?tab=messages&recipient_id=${student.user_id}`);
+        }
+      } catch (e) {
+        console.error('Error in handleOpenChat:', e);
+        // Fallback to creating new conversation
+        navigate(`/admin/dashboard/users?tab=messages&recipient_id=${student.user_id}`);
+      }
     }
-  }, [student, navigate]);
+  }, [student, user, userProfile, navigate]);
 
   const handleBack = useCallback(() => {
     navigate(-1);
