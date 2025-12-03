@@ -1819,35 +1819,63 @@ const AdminStudentDetails: React.FC = () => {
   const handleStartEditFees = useCallback(() => {
     if (!student) return;
     
-    // Calcular o valor exato que seria exibido para Selection Process Fee
-    let selectionProcessValue: number;
-    const hasCustomOverride = hasOverride('selection_process');
+    // ✅ Se a fee já foi paga, usar o valor realmente pago (realPaidAmounts) como padrão
+    // Caso contrário, usar o valor calculado/esperado
     
-    if (hasCustomOverride && userFeeOverrides?.selection_process_fee !== undefined) {
-      // Se tem override, usar o valor do override diretamente
-      selectionProcessValue = userFeeOverrides.selection_process_fee;
+    // Selection Process Fee
+    let selectionProcessValue: number;
+    if (student.has_paid_selection_process_fee && realPaidAmounts?.selection_process !== undefined && realPaidAmounts?.selection_process !== null) {
+      // Se já foi pago, usar o valor realmente pago
+      selectionProcessValue = realPaidAmounts.selection_process;
     } else {
-      // Calcular baseado no system_type, Matricula Rewards e dependents
-      const hasMatrFromSellerCode = student?.seller_referral_code && /^MATR/i.test(student.seller_referral_code);
-      const hasMatrDiscount = hasMatriculaRewardsDiscount || hasMatrFromSellerCode;
+      // Se não foi pago, calcular o valor esperado
+      const hasCustomOverride = hasOverride('selection_process');
       
-      let base: number;
-      if (hasMatrDiscount) {
-        base = 350; // $400 - $50 desconto
+      if (hasCustomOverride && userFeeOverrides?.selection_process_fee !== undefined) {
+        // Se tem override, usar o valor do override diretamente
+        selectionProcessValue = userFeeOverrides.selection_process_fee;
       } else {
-        const systemType = userSystemType || 'legacy';
-        base = systemType === 'simplified' ? 350 : 400;
+        // Calcular baseado no system_type, Matricula Rewards e dependents
+        const hasMatrFromSellerCode = student?.seller_referral_code && /^MATR/i.test(student.seller_referral_code);
+        const hasMatrDiscount = hasMatriculaRewardsDiscount || hasMatrFromSellerCode;
+        
+        let base: number;
+        if (hasMatrDiscount) {
+          base = 350; // $400 - $50 desconto
+        } else {
+          const systemType = userSystemType || 'legacy';
+          base = systemType === 'simplified' ? 350 : 400;
+        }
+        selectionProcessValue = base + dependents * 150;
       }
-      selectionProcessValue = base + dependents * 150;
     }
     
-    // Para scholarship e i20_control, usar getFeeAmount que já considera overrides
+    // Scholarship Fee
+    let scholarshipValue: number;
+    if (student.is_scholarship_fee_paid && realPaidAmounts?.scholarship !== undefined && realPaidAmounts?.scholarship !== null) {
+      // Se já foi pago, usar o valor realmente pago
+      scholarshipValue = realPaidAmounts.scholarship;
+    } else {
+      // Se não foi pago, usar getFeeAmount que já considera overrides
+      scholarshipValue = getFeeAmount('scholarship_fee');
+    }
+    
+    // I-20 Control Fee
+    let i20ControlValue: number;
+    if (student.has_paid_i20_control_fee && realPaidAmounts?.i20_control !== undefined && realPaidAmounts?.i20_control !== null) {
+      // Se já foi pago, usar o valor realmente pago
+      i20ControlValue = realPaidAmounts.i20_control;
+    } else {
+      // Se não foi pago, usar getFeeAmount que já considera overrides
+      i20ControlValue = getFeeAmount('i20_control_fee');
+    }
+    
     setEditingFees({
       selection_process: selectionProcessValue,
-      scholarship: getFeeAmount('scholarship_fee'),
-      i20_control: getFeeAmount('i20_control_fee')
+      scholarship: scholarshipValue,
+      i20_control: i20ControlValue
     });
-  }, [student, getFeeAmount, hasOverride, userFeeOverrides, userSystemType, hasMatriculaRewardsDiscount, dependents]);
+  }, [student, getFeeAmount, hasOverride, userFeeOverrides, userSystemType, hasMatriculaRewardsDiscount, dependents, realPaidAmounts]);
 
   // Handler para cancelar edição de fees
   const handleCancelEditFees = useCallback(() => {
