@@ -47,32 +47,6 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [showNotif, setShowNotif] = useState(false);
   const [showNotificationsModal, setShowNotificationsModal] = useState(false);
-  const [selectionFeePaid, setSelectionFeePaid] = useState<boolean | null>(null);
-  
-  // Buscar flag de pagamento diretamente do banco se não vier no profile
-  useEffect(() => {
-    const fetchSelectionFee = async () => {
-      try {
-        if (!user?.id) return;
-        const { data, error } = await supabase
-          .from('user_profiles')
-          .select('has_paid_selection_process_fee')
-          .eq('user_id', user.id)
-          .single();
-        if (!error) {
-          setSelectionFeePaid(!!data?.has_paid_selection_process_fee);
-        }
-      } catch {}
-    };
-    if (profile?.has_paid_selection_process_fee === undefined || profile?.has_paid_selection_process_fee === null) {
-      fetchSelectionFee();
-    } else {
-      setSelectionFeePaid(!!profile?.has_paid_selection_process_fee);
-    }
-  }, [user?.id, profile?.has_paid_selection_process_fee]);
-
-  // Bloqueio do chat até pagamento da Selection Process Fee
-  const canAccessChat = !!selectionFeePaid;
   
   // Usar Polling Inteligente em vez de Supabase Real-time
   const {
@@ -102,12 +76,6 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
     requestNotificationPermission();
   }, []);
 
-  // Redirecionar acessos diretos ao chat quando não liberado (fixar ordem dos hooks no topo)
-  useEffect(() => {
-    if (!loading && location.pathname.includes('/student/dashboard/chat') && selectionFeePaid === false) {
-      navigate('/student/dashboard/applications', { replace: true });
-    }
-  }, [loading, location.pathname, selectionFeePaid, navigate]);
   
   // Solicitar permissão para notificações nativas na primeira renderização
   useEffect(() => {
@@ -210,7 +178,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
     { id: 'scholarships', label: t('studentDashboard.sidebar.browseScholarships'), icon: Award, path: '/student/dashboard/scholarships' },
     { id: 'cart', label: t('studentDashboard.sidebar.selectedScholarships'), icon: GraduationCap, path: '/student/dashboard/cart' },
     { id: 'applications', label: t('studentDashboard.sidebar.myApplications'), icon: FileText, path: '/student/dashboard/applications' },
-    ...(canAccessChat ? [{ id: 'chat', label: t('studentDashboard.sidebar.supportChat'), icon: MessageSquare, path: '/student/dashboard/chat' }] : []),
+    { id: 'chat', label: t('studentDashboard.sidebar.supportChat'), icon: MessageSquare, path: '/student/dashboard/chat' },
     { id: 'rewards', label: t('studentDashboard.sidebar.matriculaRewards'), icon: Gift, path: '/student/dashboard/rewards' },
     { id: 'profile', label: t('studentDashboard.sidebar.profile'), icon: User, path: '/student/dashboard/profile' }
   ];
