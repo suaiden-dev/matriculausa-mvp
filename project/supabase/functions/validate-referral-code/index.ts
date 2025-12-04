@@ -35,10 +35,12 @@ Deno.serve(async (req) => {
     console.log('[validate-referral-code] Validating code:', normalized, 'for user:', user.id);
     if (!normalized) return corsResponse({ success: false, error: 'Código de referência é obrigatório' }, 200);
 
+    // ✅ CORREÇÃO: Passar email_param para evitar ambiguidade entre as duas versões da função
     const { data: validationResult, error: validationError } = await supabase
       .rpc('validate_and_apply_referral_code', {
         user_id_param: user.id,
-        affiliate_code_param: normalized
+        affiliate_code_param: normalized,
+        email_param: user.email || null
       });
 
     if (validationError) {

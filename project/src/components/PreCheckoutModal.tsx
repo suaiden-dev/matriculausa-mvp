@@ -952,9 +952,19 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
     
     // ✅ PRIORIDADE 3: Se usuário tem activeDiscount (código já aplicado no registro)
     if (activeDiscount?.has_discount) {
-      console.log('🔍 [PreCheckoutModal] ✅ Usuário com desconto ativo - prosseguindo (edge function aplicará desconto)');
-      // ✅ SEGURANÇA: Não calcular desconto no frontend, deixar edge function controlar
-      onProceedToCheckout(computedBasePrice);
+      console.log('🔍 [PreCheckoutModal] ✅ Usuário com desconto ativo - calculando valor com desconto');
+      // Calcular valor com desconto para exibição no PaymentMethodSelector
+      const discountAmount = activeDiscount.discount_amount || 0;
+      const finalAmountWithDiscount = Math.max(computedBasePrice - discountAmount, 0);
+      // Salvar valor com desconto no window para uso no PaymentMethodSelector
+      (window as any).__checkout_final_amount = finalAmountWithDiscount;
+      // ✅ Flag para indicar que o desconto já foi aplicado (para evitar duplicação na edge function)
+      (window as any).__checkout_discount_applied = true;
+      console.log('🔍 [PreCheckoutModal] Valor com desconto salvo:', finalAmountWithDiscount, 'Desconto:', discountAmount);
+      console.log('🔍 [PreCheckoutModal] Flag discount_already_applied definido como true');
+      // ✅ Passar valor com desconto para handlePreCheckoutSuccess usar no PaymentMethodSelector
+      // ✅ IMPORTANTE: Edge function NÃO deve aplicar desconto novamente, pois já está aplicado no valor
+      onProceedToCheckout(finalAmountWithDiscount);
       onClose();
       return;
     }
