@@ -1174,6 +1174,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         console.warn('⚠️ [USEAUTH] Erro na conversão do pacote:', err);
       }
     }
+
+    // ✅ NOVO: Enviar mensagem automática de boas-vindas no chat para novos alunos (registro por staff)
+    // A mensagem de boas-vindas agora é enviada automaticamente pelo trigger do banco de dados
+    // Não é mais necessário enviar manualmente aqui
   };
 
   // Função para trocar role do usuário (apenas para desenvolvimento/admin)

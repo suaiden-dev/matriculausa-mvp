@@ -1496,6 +1496,13 @@
       "profile": "Profile",
       "supportChat": "Support Chat"
     },
+    "chat": {
+      "welcomeMessage": {
+        "title": "Welcome to Support Chat!",
+        "body": "Hello! This is your support chat. Our team is available to help you from 9 AM to 5 PM (Arizona Time Zone). You can ask questions about scholarships, documents, and your application progress. Feel free to send messages and attachments at any time!",
+        "hours": "Support hours: 9 AM - 5 PM (Arizona Time Zone)"
+      }
+    },
     "profileStatus": {
       "title": "Profile Status",
       "basicInformation": "Basic information",

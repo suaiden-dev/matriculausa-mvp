@@ -1496,6 +1496,13 @@
       "profile": "Perfil",
       "supportChat": "Chat de Suporte"
     },
+    "chat": {
+      "welcomeMessage": {
+        "title": "Bem-vindo ao Chat de Suporte!",
+        "body": "Olá! Este é o seu chat de suporte. Nossa equipe está disponível para ajudá-lo das 9h às 17h (Fuso Horário do Arizona). Você pode fazer perguntas sobre bolsas, documentos e o progresso da sua aplicação. Sinta-se à vontade para enviar mensagens e anexos a qualquer momento!",
+        "hours": "Horário de atendimento: 9 AM - 5 PM (Fuso Horário do Arizona)"
+      }
+    },
     "profileStatus": {
       "title": "Status do Perfil",
       "basicInformation": "Informações básicas",
