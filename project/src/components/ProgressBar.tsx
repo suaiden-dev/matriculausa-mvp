@@ -4,6 +4,7 @@ import { CheckCircle, DollarSign, Award, FileText, ArrowRight, Lock, Clock } fro
 import { useFeeConfig } from '../hooks/useFeeConfig';
 import { useAuth } from '../hooks/useAuth';
 import { useDynamicFees } from '../hooks/useDynamicFees';
+import { supabase } from '../lib/supabase';
 
 interface Step {
   label: string;
@@ -43,7 +44,7 @@ const FeeSkeleton = () => (
 
 export const ProgressBar: React.FC<ProgressBarProps> = ({ steps, feeValues: customFeeValues }) => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
   const { getFeeAmount } = useFeeConfig(user?.id);
   const { selectionProcessFee, scholarshipFee, i20ControlFee } = useDynamicFees();
   const currentIdx = steps.findIndex(step => step.current);
@@ -54,15 +55,58 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({ steps, feeValues: cust
     if (idx === 1) return '/student/dashboard/scholarships';
     // Scholarship Fee (índice 2) -> my application
     if (idx === 2) return '/student/dashboard/applications';
-    // I-20 Control Fee (índice 3) -> student details/profile
-    if (idx === 3) return '/student/dashboard/profile';
+    // I-20 Control Fee (índice 3) -> será determinado dinamicamente
+    if (idx === 3) return null; // Retornar null para processar assincronamente
     return null;
   };
 
   // Função para lidar com o clique no step
-  const handleStepClick = (idx: number, step: Step) => {
-    // Só permite clique se não estiver completo e tiver uma rota
+  const handleStepClick = async (idx: number, step: Step) => {
+    // Só permite clique se não estiver completo
     if (!step.completed) {
+      // I-20 Control Fee (índice 3) - lógica especial
+      if (idx === 3) {
+        // Verificar se já pagou a scholarship fee
+        if (!userProfile?.id) {
+          // Se não tem userProfile, redirecionar para applications
+          navigate('/student/dashboard/applications');
+          return;
+        }
+
+        try {
+          // Buscar aplicação com scholarship fee paga
+          const { data: applications, error } = await supabase
+            .from('scholarship_applications')
+            .select('id')
+            .eq('student_id', userProfile.id)
+            .eq('is_scholarship_fee_paid', true)
+            .order('updated_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (error) {
+            console.error('Erro ao buscar aplicação:', error);
+            // Em caso de erro, redirecionar para applications
+            navigate('/student/dashboard/applications');
+            return;
+          }
+
+          if (applications && applications.id) {
+            // Se encontrou aplicação com scholarship fee paga, redirecionar para detalhes
+            navigate(`/student/dashboard/application/${applications.id}/chat`);
+          } else {
+            // Se não encontrou, redirecionar para applications
+            navigate('/student/dashboard/applications');
+          }
+        } catch (error) {
+          console.error('Erro ao processar clique no I-20 Control Fee:', error);
+          // Em caso de erro, redirecionar para applications
+          navigate('/student/dashboard/applications');
+        }
+        return;
+      }
+
+      // Para outros steps, usar rota direta
       const route = getStepRoute(idx);
       if (route) {
         navigate(route);
@@ -128,7 +172,8 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({ steps, feeValues: cust
             </div>
             {steps.map((step, idx) => {
               const route = getStepRoute(idx);
-              const isClickable = !step.completed && route !== null;
+              // I-20 Control Fee (índice 3) sempre é clicável se não estiver completo
+              const isClickable = !step.completed && (route !== null || idx === 3);
               return (
                 <React.Fragment key={idx}>
                   {/* Seta animada antes da etapa atual */}
@@ -158,7 +203,8 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({ steps, feeValues: cust
         <div className="flex flex-col gap-3 md:hidden w-full">
           {steps.map((step, idx) => {
             const route = getStepRoute(idx);
-            const isClickable = !step.completed && route !== null;
+            // I-20 Control Fee (índice 3) sempre é clicável se não estiver completo
+            const isClickable = !step.completed && (route !== null || idx === 3);
             return (
               <div 
                 key={idx} 
@@ -184,7 +230,8 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({ steps, feeValues: cust
       <div className="hidden md:flex w-full max-w-2xl mx-auto justify-between px-2 gap-4 md:gap-6 lg:gap-8 mt-4">
         {steps.map((step, idx) => {
           const route = getStepRoute(idx);
-          const isClickable = !step.completed && route !== null;
+          // I-20 Control Fee (índice 3) sempre é clicável se não estiver completo
+          const isClickable = !step.completed && (route !== null || idx === 3);
           return (
             <div 
               key={idx} 
