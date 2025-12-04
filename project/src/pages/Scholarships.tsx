@@ -609,7 +609,7 @@ const Scholarships: React.FC = () => {
           </div>
 
           {/* Dropdown Filters */}
-          <div className="flex items-center gap-2 min-w-[120px]">
+          <div className="flex items-center gap-2 flex-wrap">
             <select
               value={selectedLevel}
               onChange={(e) => setSelectedLevel(e.target.value)}
@@ -634,74 +634,82 @@ const Scholarships: React.FC = () => {
               <option value="engineering">{t('scholarshipsPage.filters.engineering')}</option>
               <option value="any">{t('scholarshipsPage.filters.anyField')}</option>
             </select>
-                                                     <select
-                 value={selectedStudyMode}
-                 onChange={(e) => setSelectedStudyMode(e.target.value)}
-                 className="px-3 py-2 border border-slate-200 rounded-lg focus:ring-1 focus:ring-[#05294E] focus:border-[#05294E] text-xs bg-slate-50 min-w-[110px]"
-                 aria-label={t('scholarshipsPage.scholarshipCard.studyMode')}
-                 disabled={scholarshipsLoading}
-               >
-               <option value="all">{t('scholarshipsPage.filters.allModes')}</option>
-               <option value="online">{t('scholarshipsPage.filters.online')}</option>
-               <option value="in_person">{t('scholarshipsPage.filters.inPerson')}</option>
-               <option value="hybrid">{t('scholarshipsPage.filters.hybrid')}</option>
-             </select>
-                                                     <select
-                 value={selectedWorkAuth}
-                 onChange={(e) => setSelectedWorkAuth(e.target.value)}
-                 className="px-3 py-2 border border-slate-200 rounded-lg focus:ring-1 focus:ring-[#05294E] focus:border-[#05294E] text-xs bg-slate-50 min-w-[110px]"
-                 aria-label={t('scholarshipsPage.scholarshipCard.workAuthorization')}
-                 disabled={scholarshipsLoading}
-               >
-                 <option value="all">{t('scholarshipsPage.filters.allPermissions')}</option>
-                 <option value="OPT">{t('scholarshipsPage.filters.opt')}</option>
-                 <option value="CPT">{t('scholarshipsPage.filters.cpt')}</option>
-                 <option value="F1">{t('scholarshipsPage.filters.f1')}</option>
-             </select>
-             {/* University Filter - Always visible, disabled until payment */}
-             <div className="relative group">
-               <select
-                 value={selectedUniversity}
-                 onChange={(e) => setSelectedUniversity(e.target.value)}
-                 className={`px-3 py-2 border rounded-lg focus:ring-1 focus:ring-[#05294E] focus:border-[#05294E] text-xs min-w-[150px] transition-all ${
-                   canUseUniversityFilter
-                     ? 'bg-slate-50 border-slate-200 text-slate-900 pr-8'
-                     : 'bg-slate-100 border-slate-300 text-slate-500 cursor-not-allowed opacity-75 pr-8'
-                 }`}
-                 style={{ paddingRight: !canUseUniversityFilter ? '2rem' : undefined }}
-                 aria-label={t('scholarshipsPage.filters.university') || 'University'}
-                 disabled={scholarshipsLoading || loadingUniversities || !canUseUniversityFilter}
-               >
-                 <option value="all">{t('scholarshipsPage.filters.allUniversities') || 'All Universities'}</option>
-                 {universities.map((university) => (
-                   <option key={university.id} value={university.id}>
-                     {university.name}
-                   </option>
-                 ))}
-               </select>
-               {/* Ícone de lock quando desabilitado */}
-               {!canUseUniversityFilter && (
-                 <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none z-20">
-                   <Lock className="h-3 w-3 text-slate-400" />
-                 </div>
-               )}
-               {/* Tooltip ao passar o mouse quando desabilitado */}
-               {!canUseUniversityFilter && (
-                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-slate-900 text-white text-xs rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none z-[100] max-w-xs">
-                   <div className="flex items-start gap-2">
-                     <Lock className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
-                     <span className="leading-relaxed">{t('scholarshipsPage.filters.universityTooltip') || 'Crie uma conta e pague a Selection Process Fee para filtrar por universidade'}</span>
-                   </div>
-                   {/* Tooltip arrow */}
-                   <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900"></div>
-                 </div>
-               )}
-             </div>
+            <select
+              value={selectedStudyMode}
+              onChange={(e) => setSelectedStudyMode(e.target.value)}
+              className="px-3 py-2 border border-slate-200 rounded-lg focus:ring-1 focus:ring-[#05294E] focus:border-[#05294E] text-xs bg-slate-50 min-w-[110px]"
+              aria-label={t('scholarshipsPage.scholarshipCard.studyMode')}
+              disabled={scholarshipsLoading}
+            >
+              <option value="all">{t('scholarshipsPage.filters.allModes')}</option>
+              <option value="online">{t('scholarshipsPage.filters.online')}</option>
+              <option value="in_person">{t('scholarshipsPage.filters.inPerson')}</option>
+              <option value="hybrid">{t('scholarshipsPage.filters.hybrid')}</option>
+            </select>
+            <select
+              value={selectedWorkAuth}
+              onChange={(e) => setSelectedWorkAuth(e.target.value)}
+              className="px-3 py-2 border border-slate-200 rounded-lg focus:ring-1 focus:ring-[#05294E] focus:border-[#05294E] text-xs bg-slate-50 min-w-[110px]"
+              aria-label={t('scholarshipsPage.scholarshipCard.workAuthorization')}
+              disabled={scholarshipsLoading}
+            >
+              <option value="all">{t('scholarshipsPage.filters.allPermissions')}</option>
+              <option value="OPT">{t('scholarshipsPage.filters.opt')}</option>
+              <option value="CPT">{t('scholarshipsPage.filters.cpt')}</option>
+              <option value="F1">{t('scholarshipsPage.filters.f1')}</option>
+            </select>
+            {/* University Filter - Always visible, disabled until payment */}
+            <div className="relative group" style={{ minWidth: '150px', maxWidth: '150px' }}>
+              <select
+                value={selectedUniversity}
+                onChange={(e) => setSelectedUniversity(e.target.value)}
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-1 focus:ring-[#05294E] focus:border-[#05294E] text-xs transition-all appearance-none overflow-hidden text-ellipsis ${
+                  canUseUniversityFilter
+                    ? 'bg-slate-50 border-slate-200 text-slate-900 pr-8'
+                    : 'bg-slate-100 border-slate-300 text-slate-500 cursor-not-allowed opacity-75 pr-8'
+                }`}
+                style={{ 
+                  paddingRight: '2rem',
+                  backgroundImage: canUseUniversityFilter 
+                    ? 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%23334155\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'/%3E%3C/svg%3E")'
+                    : 'none',
+                  backgroundPosition: 'right 0.5rem center',
+                  backgroundRepeat: 'no-repeat',
+                  backgroundSize: '1rem 1rem'
+                }}
+                aria-label={t('scholarshipsPage.filters.university') || 'University'}
+                disabled={scholarshipsLoading || loadingUniversities || !canUseUniversityFilter}
+              >
+                <option value="all">{t('scholarshipsPage.filters.allUniversities') || 'All Universities'}</option>
+                {universities.map((university) => (
+                  <option key={university.id} value={university.id}>
+                    {university.name}
+                  </option>
+                ))}
+              </select>
+              {/* Ícone de lock quando desabilitado */}
+              {!canUseUniversityFilter && (
+                <div className="absolute right-8 top-1/2 -translate-y-1/2 pointer-events-none z-20">
+                  <Lock className="h-3 w-3 text-slate-400" />
+                </div>
+              )}
+              {/* Tooltip ao passar o mouse quando desabilitado */}
+              {!canUseUniversityFilter && (
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-slate-900 text-white text-xs rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none z-[100] max-w-xs whitespace-normal">
+                  <div className="flex items-start gap-2">
+                    <Lock className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
+                    <span className="leading-relaxed">{t('scholarshipsPage.filters.universityTooltip') || 'Crie uma conta e pague a Selection Process Fee para filtrar por universidade'}</span>
+                  </div>
+                  {/* Tooltip arrow */}
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900"></div>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Results Count */}
-          <div className="flex items-center justify-end flex-1 min-w-[120px]">
-            <span className="text-xs text-slate-600 bg-slate-100 rounded px-3 py-1 font-medium">
+          <div className="flex items-center justify-end flex-shrink-0 ml-auto">
+            <span className="text-xs text-slate-600 bg-slate-100 rounded px-3 py-1 font-medium whitespace-nowrap">
               {scholarshipsLoading ? t('scholarshipsPage.filters.loading') : `${filteredScholarships.length} ${t('scholarshipsPage.filters.scholarshipsFound')}`}
             </span>
           </div>
