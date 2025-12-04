@@ -83,6 +83,24 @@ export const ModalContent: React.FC<ModalContentProps> = ({
                 </span>
               </div>
             </>
+          ) : activeDiscount?.has_discount ? (
+            <>
+              <div className="text-3xl font-bold text-blue-700 line-through">
+                ${computedBasePrice.toFixed(2)}
+              </div>
+              <div className="text-2xl sm:text-3xl font-bold text-green-600 mt-1">
+                ${Math.max(computedBasePrice - (activeDiscount.discount_amount || 0), 0).toFixed(2)}
+              </div>
+              <p className="text-xs text-gray-600 mt-1">
+                {t('preCheckoutModal.totalAmount')}
+              </p>
+              <div className="flex items-center justify-center mt-2">
+                <Tag className="h-3 w-3 text-green-600 mr-1" />
+                <span className="text-xs text-green-600 font-medium">
+                  {t('studentDashboard.recentApplications.couponApplied')} -${activeDiscount.discount_amount || 0}
+                </span>
+              </div>
+            </>
           ) : (
             <>
               <div className="text-3xl font-bold text-blue-700">
