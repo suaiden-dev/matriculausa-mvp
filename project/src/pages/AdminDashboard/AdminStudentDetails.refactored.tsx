@@ -1999,25 +1999,25 @@ const AdminStudentDetails: React.FC = () => {
       
       // ✅ PRIORIDADE 1: Verificar override primeiro (antes de Brant)
       if (currentOverrides?.selection_process_fee !== undefined && currentOverrides?.selection_process_fee !== null) {
-        // Se tem override, usar o valor do override diretamente
+      // Se tem override, usar o valor do override diretamente
         selectionProcessValue = currentOverrides.selection_process_fee;
         console.log('✅ [handleStartEditFees] Selection Process usando override:', selectionProcessValue);
       } else if (isBrantImmigrationAffiliate) {
         // ✅ PRIORIDADE 2: Se for do affiliate admin "contato@brantimmigration.com", usar valores fixos
         // Selection Process: $400 base + $150 por dependente
         selectionProcessValue = 400 + (dependents * 150);
-      } else {
+    } else {
         // Caso contrário, calcular normalmente
-        const hasMatrFromSellerCode = student?.seller_referral_code && /^MATR/i.test(student.seller_referral_code);
-        const hasMatrDiscount = hasMatriculaRewardsDiscount || hasMatrFromSellerCode;
-        
-        let base: number;
-        if (hasMatrDiscount) {
-          base = 350; // $400 - $50 desconto
-        } else {
-          const systemType = userSystemType || 'legacy';
-          base = systemType === 'simplified' ? 350 : 400;
-        }
+      const hasMatrFromSellerCode = student?.seller_referral_code && /^MATR/i.test(student.seller_referral_code);
+      const hasMatrDiscount = hasMatriculaRewardsDiscount || hasMatrFromSellerCode;
+      
+      let base: number;
+      if (hasMatrDiscount) {
+        base = 350; // $400 - $50 desconto
+      } else {
+        const systemType = userSystemType || 'legacy';
+        base = systemType === 'simplified' ? 350 : 400;
+      }
         
         // Para legacy, dependentes só se for do Brant (já tratado acima)
         selectionProcessValue = base;

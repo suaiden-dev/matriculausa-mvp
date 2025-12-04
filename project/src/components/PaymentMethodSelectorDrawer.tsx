@@ -5,6 +5,7 @@ import { Dialog } from '@headlessui/react';
 import { PaymentMethodSelector } from './PaymentMethodSelector';
 import { useModal } from '../contexts/ModalContext';
 import { useAuth } from '../hooks/useAuth';
+import { useReferralCode } from '../hooks/useReferralCode';
 import { supabase } from '../lib/supabase';
 import {
   Drawer,
@@ -32,6 +33,7 @@ export const PaymentMethodSelectorDrawer: React.FC<PaymentMethodSelectorDrawerPr
 }) => {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const { activeDiscount } = useReferralCode();
   const [isMobile, setIsMobile] = useState(false);
   const { openModal, closeModal } = useModal();
   
@@ -47,8 +49,8 @@ export const PaymentMethodSelectorDrawer: React.FC<PaymentMethodSelectorDrawerPr
   const [isValidatingPromotionalCoupon, setIsValidatingPromotionalCoupon] = useState(false);
   const promotionalCouponInputRef = useRef<HTMLInputElement>(null);
   
-  // ✅ SEMPRE mostrar campo de cupom promocional (campo sempre visível)
-  const shouldShowPromotionalCoupon = true;
+  // ✅ Mostrar cupom promocional apenas se o usuário NÃO tiver usado o referral code do Matricula Rewards
+  const shouldShowPromotionalCoupon = !activeDiscount?.has_discount;
   
   // Valor final considerando desconto promocional
   const finalAmount = promotionalCouponValidation?.isValid && promotionalCouponValidation.finalAmount
@@ -66,18 +68,20 @@ export const PaymentMethodSelectorDrawer: React.FC<PaymentMethodSelectorDrawerPr
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+
+  // Reset confirmation state when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      // Component cleanup if needed
+    }
+  }, [isOpen]);
+
   // Função para validar cupom promocional
   const validatePromotionalCoupon = async () => {
-    if (!promotionalCoupon.trim()) {
-      setPromotionalCouponValidation({
-        isValid: false,
-        message: 'Please enter a coupon code'
-      });
-      return;
-    }
-
+    if (!promotionalCoupon.trim() || !user?.id) return;
+    
     const normalizedCode = promotionalCoupon.trim().toUpperCase();
-    // ✅ CORREÇÃO: Normalizar feeType para corresponder ao banco (i20_control_fee -> i20_control)
+    // Normalizar feeType para corresponder ao banco (i20_control_fee -> i20_control)
     const normalizedFeeType = feeType === 'i20_control_fee' ? 'i20_control' : feeType;
     
     console.log('🔍 [PaymentMethodSelectorDrawer] Validando cupom promocional:', normalizedCode, 'para feeType:', normalizedFeeType);
@@ -85,11 +89,11 @@ export const PaymentMethodSelectorDrawer: React.FC<PaymentMethodSelectorDrawerPr
     setPromotionalCouponValidation(null);
 
     try {
-      // ✅ Use new RPC that validates AND increments usage count for admin coupons
+      // Use new RPC that validates AND increments usage count for admin coupons
       const { data: result, error } = await supabase.rpc('validate_and_apply_admin_promotional_coupon', {
         p_code: normalizedCode,
         p_fee_type: normalizedFeeType,
-        p_user_id: user?.id
+        p_user_id: user.id
       });
 
       if (error) {
@@ -122,16 +126,15 @@ export const PaymentMethodSelectorDrawer: React.FC<PaymentMethodSelectorDrawerPr
       // Cupom válido
       const validationData = {
         isValid: true,
-        message: `Coupon ${normalizedCode} applied! You saved $${discountAmount.toFixed(2)}`,
+        message: `Cupom ${normalizedCode} aplicado! Desconto de $${discountAmount.toFixed(2)} aplicado.`,
         discountAmount: discountAmount,
         finalAmount: finalAmount,
-        originalAmount: amount, // ✅ Armazenar valor original
-        couponId: result.id // Store coupon ID for later use
+        originalAmount: amount
       };
       
       setPromotionalCouponValidation(validationData);
       
-      // ✅ Registrar uso do cupom no banco de dados
+      // Registrar uso do cupom no banco de dados
       try {
         const { data: sessionData } = await supabase.auth.getSession();
         const token = sessionData.session?.access_token;
@@ -144,34 +147,34 @@ export const PaymentMethodSelectorDrawer: React.FC<PaymentMethodSelectorDrawerPr
               'Content-Type': 'application/json',
               'Authorization': `Bearer ${token}`,
             },
-          body: JSON.stringify({
-            coupon_code: normalizedCode,
-            coupon_id: result.id,
-            fee_type: feeType,
-            original_amount: amount,
-            discount_amount: discountAmount,
-            final_amount: finalAmount
-          }),
-        });
+            body: JSON.stringify({
+              coupon_code: normalizedCode,
+              coupon_id: result.id,
+              fee_type: feeType,
+              original_amount: amount,
+              discount_amount: discountAmount,
+              final_amount: finalAmount
+            }),
+          });
 
-        const recordResult = await recordResponse.json();
-        if (recordResult.success) {
-          console.log('[PaymentMethodSelectorDrawer] ✅ Uso do cupom registrado com sucesso!');
-        } else {
-          console.warn('[PaymentMethodSelectorDrawer] ⚠️ Aviso: Não foi possível registrar o uso do cupom:', recordResult.error);
+          const recordResult = await recordResponse.json();
+          if (recordResult.success) {
+            console.log('[PaymentMethodSelectorDrawer] ✅ Uso do cupom registrado com sucesso!');
+          } else {
+            console.warn('[PaymentMethodSelectorDrawer] ⚠️ Aviso: Não foi possível registrar o uso do cupom:', recordResult.error);
+          }
         }
-      }
       } catch (recordError) {
         console.warn('[PaymentMethodSelectorDrawer] ⚠️ Aviso: Erro ao registrar uso do cupom:', recordError);
-        // Não quebra o fluxo - continua normalmente mesmo se o registro falhar
       }
       
-      // Armazenar no window para o Overview acessar
+      // Armazenar no window
       (window as any).__promotional_coupon_validation = validationData;
-      
-      // Disparar evento customizado para atualizar o Overview
       window.dispatchEvent(new CustomEvent('promotionalCouponValidated', {
-        detail: validationData
+        detail: {
+          ...validationData,
+          fee_type: feeType
+        }
       }));
       
       // Salvar no window para uso no checkout
@@ -221,13 +224,11 @@ export const PaymentMethodSelectorDrawer: React.FC<PaymentMethodSelectorDrawerPr
       
       if (!result.success) {
         console.warn('[PaymentMethodSelectorDrawer] ⚠️ Aviso: Não foi possível remover o cupom do banco:', result.error);
-        // Continuar mesmo se falhar no banco - remover localmente
-          } else {
+      } else {
         console.log('[PaymentMethodSelectorDrawer] ✅ Cupom removido do banco com sucesso!');
       }
     } catch (error) {
       console.warn('[PaymentMethodSelectorDrawer] ⚠️ Aviso: Erro ao remover cupom do banco:', error);
-      // Continuar mesmo se falhar - remover localmente
     }
     
     // Limpar estados locais
@@ -242,8 +243,8 @@ export const PaymentMethodSelectorDrawer: React.FC<PaymentMethodSelectorDrawerPr
     
     // Limpar localStorage se existir
     if (feeType) {
-            localStorage.removeItem(`__promotional_coupon_${feeType}`);
-          }
+      localStorage.removeItem(`__promotional_coupon_${feeType}`);
+    }
     
     console.log('[PaymentMethodSelectorDrawer] Cupom removido com sucesso');
   };
@@ -289,7 +290,7 @@ export const PaymentMethodSelectorDrawer: React.FC<PaymentMethodSelectorDrawerPr
             message: `Cupom ${couponUsage.coupon_code} aplicado! Desconto de $${discountAmount.toFixed(2)} aplicado.`,
             discountAmount: discountAmount,
             finalAmount: finalAmount,
-            originalAmount: originalAmount // ✅ Usar valor original do banco
+            originalAmount: originalAmount
           };
           setPromotionalCouponValidation(validationData);
           
@@ -303,12 +304,12 @@ export const PaymentMethodSelectorDrawer: React.FC<PaymentMethodSelectorDrawerPr
       }
     } catch (error) {
       console.error('[PaymentMethodSelectorDrawer] Erro ao verificar cupom no banco:', error);
-      }
+    }
   };
 
   // Verificar cupom no banco quando modal abre
   useEffect(() => {
-    if (isOpen && feeType) {
+    if (isOpen && feeType && shouldShowPromotionalCoupon) {
       checkPromotionalCouponFromDatabase();
     } else if (!isOpen) {
       // Limpar estados quando modal fecha
@@ -316,14 +317,7 @@ export const PaymentMethodSelectorDrawer: React.FC<PaymentMethodSelectorDrawerPr
       setPromotionalCouponValidation(null);
       setIsValidatingPromotionalCoupon(false);
     }
-  }, [isOpen, feeType, user?.id]);
-
-  // Reset confirmation state when modal closes
-  useEffect(() => {
-    if (!isOpen) {
-      // Component cleanup if needed
-    }
-  }, [isOpen]);
+  }, [isOpen, feeType, user?.id, shouldShowPromotionalCoupon]);
 
   // Manage modal state in global context
   useEffect(() => {
@@ -363,7 +357,7 @@ export const PaymentMethodSelectorDrawer: React.FC<PaymentMethodSelectorDrawerPr
           </DrawerHeader>
           
           <div className="flex-1 overflow-y-auto p-4 bg-white space-y-4">
-            {/* Cupom Promocional Section - apenas para usuários com seller_referral_code + legacy system_type e feeTypes permitidos */}
+            {/* Cupom Promocional Section - apenas se usuário NÃO tiver usado referral code do Matricula Rewards */}
             {shouldShowPromotionalCoupon && (
               <div className="space-y-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-200">
                 <div className="text-center">
@@ -436,7 +430,7 @@ export const PaymentMethodSelectorDrawer: React.FC<PaymentMethodSelectorDrawerPr
                     // Cupom válido - mostrar informações e botão para remover
                     <div className="bg-green-50 border-2 border-green-300 rounded-xl p-3 sm:p-4 space-y-3">
                       <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
+                        <div className="flex items-center space-x-2">
                           <CheckCircle className="w-5 h-5 text-green-600" />
                           <span className="font-semibold text-green-800">{promotionalCoupon}</span>
                         </div>
@@ -450,7 +444,6 @@ export const PaymentMethodSelectorDrawer: React.FC<PaymentMethodSelectorDrawerPr
                       </div>
                       <div className="text-sm text-green-700">
                         {(() => {
-                          // Calcular valor original: usar originalAmount se disponível, senão calcular como finalAmount + discountAmount
                           const originalAmount = promotionalCouponValidation.originalAmount || 
                             (promotionalCouponValidation.finalAmount && promotionalCouponValidation.discountAmount
                               ? promotionalCouponValidation.finalAmount + promotionalCouponValidation.discountAmount
@@ -471,7 +464,7 @@ export const PaymentMethodSelectorDrawer: React.FC<PaymentMethodSelectorDrawerPr
                     // Erro de validação
                     <div className="p-3 rounded-xl border-2 bg-red-50 border-red-300 text-red-800">
                       <div className="flex items-center space-x-2">
-                          <AlertCircle className="w-5 h-5 text-red-600" />
+                        <AlertCircle className="w-5 h-5 text-red-600" />
                         <span className="font-medium text-sm">{promotionalCouponValidation.message}</span>
                       </div>
                     </div>
@@ -532,7 +525,7 @@ export const PaymentMethodSelectorDrawer: React.FC<PaymentMethodSelectorDrawerPr
 
           {/* Content */}
           <div className="p-6 space-y-6">
-            {/* Cupom Promocional Section - apenas para usuários com seller_referral_code + legacy system_type e feeTypes permitidos */}
+            {/* Cupom Promocional Section - apenas se usuário NÃO tiver usado referral code do Matricula Rewards */}
             {shouldShowPromotionalCoupon && (
               <div className="space-y-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-200">
                 <div className="text-center">
@@ -605,7 +598,7 @@ export const PaymentMethodSelectorDrawer: React.FC<PaymentMethodSelectorDrawerPr
                     // Cupom válido - mostrar informações e botão para remover
                     <div className="bg-green-50 border-2 border-green-300 rounded-xl p-3 sm:p-4 space-y-3">
                       <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
+                        <div className="flex items-center space-x-2">
                           <CheckCircle className="w-5 h-5 text-green-600" />
                           <span className="font-semibold text-green-800">{promotionalCoupon}</span>
                         </div>
@@ -619,7 +612,6 @@ export const PaymentMethodSelectorDrawer: React.FC<PaymentMethodSelectorDrawerPr
                       </div>
                       <div className="text-sm text-green-700">
                         {(() => {
-                          // Calcular valor original: usar originalAmount se disponível, senão calcular como finalAmount + discountAmount
                           const originalAmount = promotionalCouponValidation.originalAmount || 
                             (promotionalCouponValidation.finalAmount && promotionalCouponValidation.discountAmount
                               ? promotionalCouponValidation.finalAmount + promotionalCouponValidation.discountAmount
@@ -640,7 +632,7 @@ export const PaymentMethodSelectorDrawer: React.FC<PaymentMethodSelectorDrawerPr
                     // Erro de validação
                     <div className="p-3 rounded-xl border-2 bg-red-50 border-red-300 text-red-800">
                       <div className="flex items-center space-x-2">
-                          <AlertCircle className="w-5 h-5 text-red-600" />
+                        <AlertCircle className="w-5 h-5 text-red-600" />
                         <span className="font-medium text-sm">{promotionalCouponValidation.message}</span>
                       </div>
                     </div>

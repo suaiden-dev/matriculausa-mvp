@@ -2,11 +2,6 @@ export const useEnvironment = () => {
   const hostname = window.location.hostname;
   const href = window.location.href;
   
-  console.log('🌍 [useEnvironment] Detectando ambiente:', {
-    hostname,
-    href,
-    fullLocation: window.location
-  });
   
   // Verificações mais robustas
   const isProduction = hostname === 'matriculausa.com' ||
@@ -24,7 +19,6 @@ export const useEnvironment = () => {
                        hostname.includes('localhost') ||
                        hostname.includes('dev');
   
-  console.log('🌍 [useEnvironment] Resultado:', { isProduction, isStaging, isDevelopment });
   
   return { isProduction, isStaging, isDevelopment };
 };

@@ -441,19 +441,13 @@ const StudentApplicationsView: React.FC = () => {
           return;
         }
 
-        console.log('[BLACK Coupon] Total registros encontrados:', data?.length || 0);
-        console.log('[BLACK Coupon] Dados encontrados:', data);
 
         const userIds = new Set<string>();
         (data || []).forEach((row: any) => {
           if (row.user_id) {
             userIds.add(row.user_id);
-            console.log('[BLACK Coupon] Adicionando user_id:', row.user_id, 'com cupom:', row.coupon_code);
           }
         });
-        
-        console.log('[BLACK Coupon] Total de user_ids únicos:', userIds.size);
-        console.log('[BLACK Coupon] Lista de user_ids:', Array.from(userIds));
         
         setBlackCouponUsers(userIds);
       } catch (e) {
