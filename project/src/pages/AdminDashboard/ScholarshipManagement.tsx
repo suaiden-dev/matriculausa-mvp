@@ -3,13 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { Dialog } from '@headlessui/react';
 import { 
   Award, 
-  DollarSign, 
-  Calendar, 
   Building, 
   Search, 
-  Filter, 
   Eye, 
-  TrendingUp,
   Users,
   CheckCircle,
   Clock,
@@ -17,16 +13,7 @@ import {
   List,
   Grid3X3,
   X,
-  Target,
-  Star,
-  GraduationCap,
-  Monitor,
-  MapPin,
-  Briefcase,
-  Globe,
-  FileText,
   AlertCircle,
-  BookOpen,
   AlertTriangle,
   Edit,
   Power
@@ -45,7 +32,6 @@ interface ScholarshipManagementProps {
 
 const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
   scholarships,
-  stats,
   onRefresh
 }) => {
   const navigate = useNavigate();
@@ -55,10 +41,11 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
   const [universityFilter, setUniversityFilter] = useState('all');
   const [courseFilter, setCourseFilter] = useState('all');
   const [deliveryModeFilter, setDeliveryModeFilter] = useState('all');
+  const [deadlineFilter, setDeadlineFilter] = useState<'all' | 'expired' | 'urgent' | '14days' | 'soon' | 'normal'>('all');
   const [minAmount, setMinAmount] = useState('');
   const [maxAmount, setMaxAmount] = useState('');
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [sortBy, setSortBy] = useState<'recent' | 'applicants' | 'views'>('recent');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
+  const [sortBy, setSortBy] = useState<'recent' | 'applicants' | 'views' | 'deadline'>('recent');
   // Estados do modal de detalhes
   const [selectedScholarship, setSelectedScholarship] = useState<any | null>(null);
   const [showModal, setShowModal] = useState(false);
@@ -156,75 +143,7 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
     localStorage.setItem('scholarship-view-mode', mode);
   };
 
-  const filteredScholarships = scholarships.filter(scholarship => {
-    const matchesSearch = scholarship.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         scholarship.universities?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (scholarship.field_of_study && scholarship.field_of_study.toLowerCase().includes(searchTerm.toLowerCase()));
-    
-    const matchesStatus = statusFilter === 'all' || 
-      (statusFilter === 'active' && scholarship.is_active) ||
-      (statusFilter === 'inactive' && !scholarship.is_active);
-    
-    const matchesLevel = levelFilter === 'all' || scholarship.level === levelFilter;
-    
-    const matchesUniversity = universityFilter === 'all' || 
-      scholarship.universities?.name === universityFilter;
-    
-    const matchesCourse = courseFilter === 'all' || 
-      scholarship.field_of_study === courseFilter;
-    
-    const matchesDeliveryMode = deliveryModeFilter === 'all' || 
-      scholarship.delivery_mode === deliveryModeFilter;
-    
-    // Filtrar por valor mínimo e máximo - usar annual_value_with_scholarship
-    const scholarshipValue = scholarship.annual_value_with_scholarship || scholarship.amount || scholarship.scholarshipvalue || 0;
-    
-    // Converter valores de string para número, validando se são números válidos
-    const minAmountValue = minAmount && minAmount.trim() !== '' ? parseFloat(minAmount) : null;
-    const maxAmountValue = maxAmount && maxAmount.trim() !== '' ? parseFloat(maxAmount) : null;
-    
-    // Validar se os valores são números válidos (não NaN)
-    const validMinAmount = minAmountValue !== null && !isNaN(minAmountValue) ? minAmountValue : null;
-    const validMaxAmount = maxAmountValue !== null && !isNaN(maxAmountValue) ? maxAmountValue : null;
-    
-    const matchesMinAmount = validMinAmount === null || scholarshipValue >= validMinAmount;
-    const matchesMaxAmount = validMaxAmount === null || scholarshipValue <= validMaxAmount;
-    
-    return matchesSearch && matchesStatus && matchesLevel && matchesUniversity && matchesCourse && 
-           matchesDeliveryMode && matchesMinAmount && matchesMaxAmount;
-  }).sort((a, b) => {
-    // Ordenação baseada no filtro selecionado
-    switch (sortBy) {
-      case 'applicants':
-        return (b.application_count || 0) - (a.application_count || 0);
-      case 'views':
-        return (b.cart_count || 0) - (a.cart_count || 0);
-      case 'recent':
-      default:
-        // Ordenar por data de criação (mais recente primeiro)
-        return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
-    }
-  });
-
-  // Lógica de paginação
-  const totalPages = Math.ceil(filteredScholarships.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const currentScholarships = filteredScholarships.slice(startIndex, endIndex);
-
-  // Reset para primeira página quando filtros mudarem
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, statusFilter, levelFilter, universityFilter, courseFilter, deliveryModeFilter, minAmount, maxAmount, sortBy]);
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0
-    }).format(value);
-  };
-
+  // Funções de deadline - devem ser definidas antes de serem usadas
   const getDaysUntilDeadline = (deadline: string) => {
     // Criar data atual sem hora (apenas dia)
     const today = new Date();
@@ -247,6 +166,118 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
     if (days <= 7) return { status: 'urgent', color: 'text-orange-600', bg: 'bg-orange-50' };
     if (days <= 30) return { status: 'soon', color: 'text-yellow-600', bg: 'bg-yellow-50' };
     return { status: 'normal', color: 'text-green-600', bg: 'bg-green-50' };
+  };
+
+  const filteredScholarships = scholarships.filter(scholarship => {
+    const matchesSearch = scholarship.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         scholarship.universities?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (scholarship.field_of_study && scholarship.field_of_study.toLowerCase().includes(searchTerm.toLowerCase()));
+    
+    const matchesStatus = statusFilter === 'all' || 
+      (statusFilter === 'active' && scholarship.is_active) ||
+      (statusFilter === 'inactive' && !scholarship.is_active);
+    
+    const matchesLevel = levelFilter === 'all' || scholarship.level === levelFilter;
+    
+    const matchesUniversity = universityFilter === 'all' || 
+      scholarship.universities?.name === universityFilter;
+    
+    const matchesCourse = courseFilter === 'all' || 
+      scholarship.field_of_study === courseFilter;
+    
+    const matchesDeliveryMode = deliveryModeFilter === 'all' || 
+      scholarship.delivery_mode === deliveryModeFilter;
+    
+    // Filtrar por deadline
+    const deadlineStatus = getDeadlineStatus(scholarship.deadline);
+    const daysLeft = getDaysUntilDeadline(scholarship.deadline);
+    let matchesDeadline = true;
+    
+    if (deadlineFilter !== 'all') {
+      if (deadlineFilter === '14days') {
+        // Filtro específico para 14 dias: mais de 7 dias e até 14 dias
+        matchesDeadline = daysLeft > 7 && daysLeft <= 14;
+      } else {
+        matchesDeadline = deadlineStatus.status === deadlineFilter;
+      }
+    }
+    
+    // Filtrar por valor mínimo e máximo - usar annual_value_with_scholarship
+    const scholarshipValue = scholarship.annual_value_with_scholarship || scholarship.amount || scholarship.scholarshipvalue || 0;
+    
+    // Converter valores de string para número, validando se são números válidos
+    const minAmountValue = minAmount && minAmount.trim() !== '' ? parseFloat(minAmount) : null;
+    const maxAmountValue = maxAmount && maxAmount.trim() !== '' ? parseFloat(maxAmount) : null;
+    
+    // Validar se os valores são números válidos (não NaN)
+    const validMinAmount = minAmountValue !== null && !isNaN(minAmountValue) ? minAmountValue : null;
+    const validMaxAmount = maxAmountValue !== null && !isNaN(maxAmountValue) ? maxAmountValue : null;
+    
+    const matchesMinAmount = validMinAmount === null || scholarshipValue >= validMinAmount;
+    const matchesMaxAmount = validMaxAmount === null || scholarshipValue <= validMaxAmount;
+    
+    return matchesSearch && matchesStatus && matchesLevel && matchesUniversity && matchesCourse && 
+           matchesDeliveryMode && matchesDeadline && matchesMinAmount && matchesMaxAmount;
+  }).sort((a, b) => {
+    // Ordenação baseada no filtro selecionado
+    switch (sortBy) {
+      case 'applicants':
+        return (b.application_count || 0) - (a.application_count || 0);
+      case 'views':
+        return (b.cart_count || 0) - (a.cart_count || 0);
+      case 'deadline':
+        // Ordenar por deadline (mais próximo primeiro)
+        const daysA = getDaysUntilDeadline(a.deadline);
+        const daysB = getDaysUntilDeadline(b.deadline);
+        // Expiradas primeiro, depois por dias restantes (menor primeiro)
+        if (daysA < 0 && daysB >= 0) return -1;
+        if (daysA >= 0 && daysB < 0) return 1;
+        return daysA - daysB;
+      case 'recent':
+      default:
+        // Ordenar por data de criação (mais recente primeiro)
+        return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+    }
+  });
+
+  // Lógica de paginação
+  const totalPages = Math.ceil(filteredScholarships.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentScholarships = filteredScholarships.slice(startIndex, endIndex);
+
+  // Reset para primeira página quando filtros mudarem
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, levelFilter, universityFilter, courseFilter, deliveryModeFilter, deadlineFilter, minAmount, maxAmount, sortBy]);
+
+  // Calcular estatísticas de deadline
+  const deadlineStats = React.useMemo(() => {
+    const stats = {
+      expired: 0,
+      urgent: 0,
+      soon: 0,
+      normal: 0,
+      total: scholarships.length
+    };
+    
+    scholarships.forEach(scholarship => {
+      const status = getDeadlineStatus(scholarship.deadline);
+      if (status.status === 'expired') stats.expired++;
+      else if (status.status === 'urgent') stats.urgent++;
+      else if (status.status === 'soon') stats.soon++;
+      else stats.normal++;
+    });
+    
+    return stats;
+  }, [scholarships]);
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0
+    }).format(value);
   };
 
   const getFieldBadgeColor = (field: string | undefined) => {
@@ -275,7 +306,7 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Filters */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
         <div className="space-y-6">
@@ -359,16 +390,34 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
               </div>
 
               <div className="min-w-[160px]">
+                <label className="block text-xs font-medium text-slate-600 mb-1">Deadline</label>
+                <select
+                  value={deadlineFilter}
+                  onChange={(e) => setDeadlineFilter(e.target.value as 'all' | 'expired' | 'urgent' | '14days' | 'soon' | 'normal')}
+                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200 text-sm"
+                  title="Filter by deadline status"
+                >
+                  <option value="all">All Deadlines</option>
+                  <option value="expired">Expired</option>
+                  <option value="urgent">Urgent (≤7 days)</option>
+                  <option value="14days">14 Days</option>
+                  <option value="soon">Soon (≤30 days)</option>
+                  <option value="normal">Normal</option>
+                </select>
+              </div>
+
+              <div className="min-w-[160px]">
                 <label className="block text-xs font-medium text-slate-600 mb-1">Sort By</label>
                 <select
                   value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as 'recent' | 'applicants' | 'views')}
+                  onChange={(e) => setSortBy(e.target.value as 'recent' | 'applicants' | 'views' | 'deadline')}
                   className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200 text-sm"
                   title="Sort scholarships"
                 >
                   <option value="recent">Most Recent</option>
                   <option value="applicants">Most Applicants</option>
                   <option value="views">Most Views</option>
+                  <option value="deadline">Deadline (Soonest First)</option>
                 </select>
               </div>
             </div>
@@ -473,6 +522,65 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
         </div>
       </div>
 
+      {/* Alert for scholarships near expiration - between filters and table */}
+      {(deadlineStats.urgent > 0 || deadlineStats.expired > 0) && (
+        <div className={`rounded-lg shadow-sm border ${
+          deadlineStats.urgent > 0 
+            ? 'bg-orange-50 border-orange-200' 
+            : 'bg-red-50 border-red-200'
+        }`}>
+          <div className="flex items-center gap-3 p-3">
+            <AlertTriangle className={`h-4 w-4 flex-shrink-0 ${
+              deadlineStats.urgent > 0 
+                ? 'text-orange-600' 
+                : 'text-red-600'
+            }`} />
+            <div className="flex-1 flex items-center justify-between">
+              <div>
+                <span className={`text-sm font-medium ${
+                  deadlineStats.urgent > 0 
+                    ? 'text-orange-900' 
+                    : 'text-red-900'
+                }`}>
+                  {deadlineStats.urgent > 0 
+                    ? `${deadlineStats.urgent} Urgent Scholarship${deadlineStats.urgent !== 1 ? 's' : ''} (≤7 days)`
+                    : `${deadlineStats.expired} Expired Scholarship${deadlineStats.expired !== 1 ? 's' : ''}`
+                  }
+                </span>
+                <span className={`text-xs ml-2 ${
+                  deadlineStats.urgent > 0 
+                    ? 'text-orange-700' 
+                    : 'text-red-700'
+                }`}>
+                  {deadlineStats.urgent > 0 
+                    ? 'Consider extending deadlines or updating information.'
+                    : 'Consider updating deadlines or deactivating them.'
+                  }
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                {deadlineStats.urgent > 0 && (
+                  <button
+                    onClick={() => setDeadlineFilter('urgent')}
+                    className="px-3 py-1.5 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition-colors text-xs font-medium"
+                  >
+                    View Urgent
+                  </button>
+                )}
+                {deadlineStats.expired > 0 && (
+                  <button
+                    onClick={() => setDeadlineFilter('expired')}
+                    className="px-3 py-1.5 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-xs font-medium"
+                  >
+                    View Expired
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Scholarships Grid/List */}
       {viewMode === 'grid' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -549,10 +657,23 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
                   </div>
 
                   {/* Deadline */}
-                  <div className={`p-3 rounded-xl border ${deadlineInfo.bg} border-slate-200`}>
+                  <div className={`p-3 rounded-xl border-2 ${deadlineInfo.bg} ${
+                    deadlineInfo.status === 'expired' ? 'border-red-300' :
+                    deadlineInfo.status === 'urgent' ? 'border-orange-300' :
+                    deadlineInfo.status === 'soon' ? 'border-yellow-300' :
+                    'border-green-300'
+                  }`}>
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-medium text-slate-700">Application Deadline</p>
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="text-sm font-medium text-slate-700">Application Deadline</p>
+                          {deadlineInfo.status === 'urgent' && (
+                            <AlertTriangle className="h-4 w-4 text-orange-600 animate-pulse" />
+                          )}
+                          {deadlineInfo.status === 'expired' && (
+                            <AlertCircle className="h-4 w-4 text-red-600" />
+                          )}
+                        </div>
                         <p className="font-bold text-slate-900">
                           {new Date(scholarship.deadline).toLocaleDateString()}
                         </p>
@@ -568,7 +689,12 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
                             </p>
                           </>
                         ) : (
-                          <span className="text-sm font-bold text-red-600">Expired</span>
+                          <>
+                            <p className="text-2xl font-bold text-red-600">Expired</p>
+                            <p className="text-xs font-medium text-red-600">
+                              {Math.abs(daysLeft)} day{Math.abs(daysLeft) !== 1 ? 's' : ''} ago
+                            </p>
+                          </>
                         )}
                       </div>
                     </div>
@@ -650,7 +776,25 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
                   <td className="px-4 py-2">
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${scholarship.is_active ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'}`}>{scholarship.is_active ? 'Active' : 'Inactive'}</span>
                   </td>
-                  <td className="px-4 py-2 text-slate-600">{new Date(scholarship.deadline).toLocaleDateString()}</td>
+                  <td className="px-4 py-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-slate-600">{new Date(scholarship.deadline).toLocaleDateString()}</span>
+                      {(() => {
+                        const deadlineInfo = getDeadlineStatus(scholarship.deadline);
+                        const daysLeft = getDaysUntilDeadline(scholarship.deadline);
+                        return (
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            deadlineInfo.status === 'expired' ? 'bg-red-100 text-red-700' :
+                            deadlineInfo.status === 'urgent' ? 'bg-orange-100 text-orange-700' :
+                            deadlineInfo.status === 'soon' ? 'bg-yellow-100 text-yellow-700' :
+                            'bg-green-100 text-green-700'
+                          }`}>
+                            {daysLeft > 0 ? `${daysLeft}d left` : 'Expired'}
+                          </span>
+                        );
+                      })()}
+                    </div>
+                  </td>
                   <td className="px-4 py-2">
                     <div className="flex items-center gap-2">
                       <button 
@@ -810,7 +954,7 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
                   </div>
                   <div>
                     <h3 className="text-sm font-medium text-gray-500 mb-2">Annual Value</h3>
-                    <p className="text-gray-900 font-semibold text-green-600">
+                    <p className="font-semibold text-green-600">
                       {formatCurrency(Number(selectedScholarship.annual_value_with_scholarship ?? 0))}
                     </p>
                   </div>
