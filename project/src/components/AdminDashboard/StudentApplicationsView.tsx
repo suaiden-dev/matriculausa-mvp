@@ -156,6 +156,7 @@ const StudentApplicationsView: React.FC = () => {
     }
   };
 
+
   const handleApproveDocument = async (applicationId: string, docType: string) => {
     if (!isPlatformAdmin) return;
     if (!approveableTypes.has(docType)) return;
@@ -1407,7 +1408,9 @@ const StudentApplicationsView: React.FC = () => {
                     <div className="p-6">
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         <div className="space-y-4">
-                          <h3 className="text-lg font-semibold text-slate-900 border-b border-slate-200 pb-2">Contact Details</h3>
+                          <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                            <h3 className="text-lg font-semibold text-slate-900">Contact Details</h3>
+                          </div>
                           <div className="space-y-3">
                             <div>
                               <dt className="text-sm font-medium text-slate-600">Full Name</dt>
