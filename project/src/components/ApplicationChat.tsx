@@ -147,7 +147,7 @@ const ApplicationChat: React.FC<ApplicationChatProps & {
   inputPlaceholder = 'Type your message...',
   adminSenders
 }) => {
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
   const [text, setText] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -329,6 +329,12 @@ const ApplicationChat: React.FC<ApplicationChatProps & {
             const isFromAdmin = isAdminContext && !!(adminSenders && adminSenders[msg.senderId]);
             const isFromCurrentUser = msg.senderId === user?.id;
             const alignRight = isAdminContext ? isFromCurrentUser : msg.isOwn;
+            
+            // ✅ Determinar cor da mensagem baseado no remetente
+            // Se é mensagem de admin (mas não do usuário atual), usar cor diferenciada
+            const isAdminMessage = isAdminContext && isFromAdmin && !isFromCurrentUser;
+            
+            
             return (
             <div
               key={msg.id}
@@ -344,7 +350,9 @@ const ApplicationChat: React.FC<ApplicationChatProps & {
               <div className={`p-3 rounded-2xl shadow-lg border relative ${
                 alignRight 
                   ? 'bg-[#05294E] text-white shadow-[#05294E]/20' 
-                  : 'bg-white text-gray-800 border-gray-200 shadow-gray-100'
+                  : isAdminMessage
+                    ? 'bg-blue-50 text-gray-800 border-blue-300 shadow-blue-100' // ✅ Cor diferenciada para mensagens de admins
+                    : 'bg-white text-gray-800 border-gray-200 shadow-gray-100'
               } transition-all duration-300 hover:shadow-xl`}>
                 {!hideBubbleHeader && (
                   <div className="flex items-center gap-2 mb-2">
@@ -475,11 +483,73 @@ const ApplicationChat: React.FC<ApplicationChatProps & {
 
                 {/* Status indicators */}
                 {alignRight && (
-                  <div className="flex items-center justify-end gap-1 mt-2">
-                    {msg.status === 'pending' && <ClockIcon />}
-                    {msg.status === 'error' && <ErrorIcon />}
-                    {msg.status === 'sent' && !msg.readAt && <SentIcon />}
-                    {msg.status === 'sent' && msg.readAt && <ReadIcon />}
+                  <div className="flex flex-col items-end gap-1 mt-2">
+                    <div className="flex items-center justify-end gap-1">
+                      {msg.status === 'pending' && <ClockIcon />}
+                      {msg.status === 'error' && <ErrorIcon />}
+                      {msg.status === 'sent' && !msg.readAt && <SentIcon />}
+                      {/* ✅ ReadIcon (checkmark azul) apenas para admins - alunos não veem */}
+                      {msg.status === 'sent' && msg.readAt && (userProfile?.role === 'admin' || userProfile?.role === 'affiliate_admin') && <ReadIcon />}
+                      {/* Para alunos, mostrar apenas SentIcon mesmo se foi lida */}
+                      {msg.status === 'sent' && msg.readAt && (userProfile?.role !== 'admin' && userProfile?.role !== 'affiliate_admin') && <SentIcon />}
+                    </div>
+                    
+                    {/* ✅ Confirmação de visualização para admins - mostra quando aluno leu a mensagem */}
+                    {(() => {
+                      // Mostrar confirmação apenas se:
+                      // 1. É mensagem do admin atual (alignRight = true)
+                      // 2. Está no contexto de admin (adminSenders existe)
+                      // 3. A mensagem foi enviada pelo usuário atual (admin)
+                      // 4. A mensagem foi lida pelo aluno (readAt não é null)
+                      // 5. O usuário atual é um admin (não um aluno)
+                      const isCurrentUserAdmin = userProfile?.role === 'admin' || userProfile?.role === 'affiliate_admin';
+                      const shouldShowReadReceipt = alignRight && 
+                                                   !!adminSenders && 
+                                                   isFromCurrentUser && 
+                                                   !!msg.readAt &&
+                                                   isCurrentUserAdmin; // ✅ Apenas admins veem a confirmação
+                      
+                      if (shouldShowReadReceipt) {
+                        const readDate = new Date(msg.readAt);
+                        const now = new Date();
+                        const diffMs = now.getTime() - readDate.getTime();
+                        const diffMins = Math.floor(diffMs / (1000 * 60));
+                        const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+                        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+                        
+                        let timeText = 'just now';
+                        if (diffMins >= 1 && diffMins < 60) {
+                          timeText = `${diffMins}m ago`;
+                        } else if (diffHours >= 1 && diffHours < 24) {
+                          timeText = `${diffHours}h ago`;
+                        } else if (diffDays >= 1 && diffDays < 7) {
+                          timeText = `${diffDays}d ago`;
+                        } else {
+                          timeText = readDate.toLocaleDateString('en-US', { 
+                            month: 'short', 
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          });
+                        }
+                        
+                        return (
+                          <div 
+                            key={`read-receipt-${msg.id}`}
+                            className="flex items-center justify-end gap-1.5 mt-0.5"
+                            title={`Read by student on ${new Date(msg.readAt).toLocaleString()}`}
+                          >
+                            <svg className="w-3 h-3 flex-shrink-0 text-white/80" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                            <span className="text-xs font-medium text-white/80 whitespace-nowrap">
+                              Read {timeText}
+                            </span>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
                   </div>
                 )}
               </div>

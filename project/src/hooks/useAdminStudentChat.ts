@@ -215,7 +215,7 @@ export const useAdminStudentChat = (conversationId?: string, recipientId?: strin
           uploaded_at: att.created_at,
         })) || [];
 
-        return formatMessage({
+        const formatted = formatMessage({
           id: msg.id,
           sender_id: msg.sender_id,
           recipient_id: msg.recipient_id,
@@ -226,6 +226,8 @@ export const useAdminStudentChat = (conversationId?: string, recipientId?: strin
           is_deleted: msg.is_deleted,
           attachments,
         });
+        
+        return formatted;
       });
 
       setMessages(formattedMessages);
@@ -337,7 +339,7 @@ export const useAdminStudentChat = (conversationId?: string, recipientId?: strin
           filter: `conversation_id=eq.${currentConversationId}` 
         },
         async (payload: any) => {
-          // Handle message updates (edit/delete)
+          // Handle message updates (edit/delete/read status)
           const { data: updatedMessage } = await supabase
             .from('admin_student_messages')
             .select(`
@@ -542,12 +544,13 @@ export const useAdminStudentChat = (conversationId?: string, recipientId?: strin
     if (!user || !currentConversationId) return;
 
     try {
-      const { error } = await supabase
+      const { error, data } = await supabase
         .from('admin_student_messages')
         .update({ read_at: new Date().toISOString() })
         .eq('conversation_id', currentConversationId)
         .eq('recipient_id', user.id)
-        .is('read_at', null);
+        .is('read_at', null)
+        .select('id, sender_id, recipient_id, read_at');
 
       if (error) {
         console.error('Failed to mark all messages as read:', error);

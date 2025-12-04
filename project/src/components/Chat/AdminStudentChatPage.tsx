@@ -48,6 +48,13 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
     }
   }, [defaultConversationId, selectedConversationId]);
 
+  // ✅ CORREÇÃO: Para alunos, atualizar selectedConversationId quando o hook criar uma conversação automaticamente
+  useEffect(() => {
+    if (userProfile?.role === 'student' && chat.conversationId && !selectedConversationId) {
+      setSelectedConversationId(chat.conversationId);
+    }
+  }, [userProfile?.role, chat.conversationId, selectedConversationId]);
+
   const handleConversationSelect = (conversationId: string, recipientId: string, recipientName: string) => {
     // If conversationId is empty, it means admin is starting a new conversation with a student
     if (conversationId === '') {
@@ -160,12 +167,16 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
     }
   };
 
-  // Auto-mark messages as read when admin enters a conversation
+  // ✅ CORREÇÃO: Auto-mark messages as read when STUDENT enters a conversation
+  // Admins não devem marcar mensagens como lidas - apenas alunos devem fazer isso
   useEffect(() => {
+    // Para alunos, usar o conversationId do hook (que pode ser criado automaticamente)
+    const conversationId = selectedConversationId || chat.conversationId;
+    
     if (
-      selectedConversationId && 
+      conversationId && 
       chat.messages.length > 0 && 
-      (userProfile?.role === 'admin' || userProfile?.role === 'affiliate_admin')
+      userProfile?.role === 'student' // ✅ Apenas para alunos
     ) {
       // Wait a bit for messages to load, then mark as read
       const timer = setTimeout(async () => {
@@ -174,7 +185,7 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
 
       return () => clearTimeout(timer);
     }
-  }, [selectedConversationId, chat.messages.length, userProfile?.role, chat.markAllAsRead]);
+  }, [selectedConversationId, chat.conversationId, chat.messages.length, userProfile?.role, chat.markAllAsRead]);
 
   if (!user || !userProfile) {
     return (
