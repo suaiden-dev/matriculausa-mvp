@@ -1586,6 +1586,13 @@
       "profile": "Perfil",
       "supportChat": "Chat de Soporte"
     },
+    "chat": {
+      "welcomeMessage": {
+        "title": "¡Bienvenido al Chat de Soporte!",
+        "body": "¡Hola! Este es tu chat de soporte. Nuestro equipo está disponible para ayudarte de 9 AM a 5 PM (Zona Horaria de Arizona). Puedes hacer preguntas sobre becas, documentos y el progreso de tu solicitud. ¡Siéntete libre de enviar mensajes y archivos adjuntos en cualquier momento!",
+        "hours": "Horario de atención: 9 AM - 5 PM (Zona Horaria de Arizona)"
+      }
+    },
     "cartPage": {
       "removeFromCart": "Eliminar del carrito",
       "removeToProceed": "Elimina esta beca para proceder",

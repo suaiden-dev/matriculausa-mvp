@@ -529,12 +529,19 @@ export const useAdminStudentChat = (conversationId?: string, recipientId?: strin
   const markAsRead = async (messageId: string) => {
     if (!user) return;
 
+    // ✅ SEGURANÇA: Apenas alunos podem marcar mensagens como lidas
+    // Admins não devem marcar mensagens como lidas quando visualizam conversas
+    if (userProfile?.role !== 'student') {
+      console.log('⚠️ [markAsRead] Apenas alunos podem marcar mensagens como lidas. Role atual:', userProfile?.role);
+      return;
+    }
+
     try {
       await supabase
         .from('admin_student_messages')
         .update({ read_at: new Date().toISOString() })
         .eq('id', messageId)
-        .eq('recipient_id', user.id);
+        .eq('recipient_id', user.id); // ✅ Garante que só marca mensagens onde o aluno é o destinatário
     } catch (e) {
       console.error('Failed to mark message as read:', e);
     }
@@ -543,12 +550,19 @@ export const useAdminStudentChat = (conversationId?: string, recipientId?: strin
   const markAllAsRead = async () => {
     if (!user || !currentConversationId) return;
 
+    // ✅ SEGURANÇA: Apenas alunos podem marcar mensagens como lidas
+    // Admins não devem marcar mensagens como lidas quando visualizam conversas
+    if (userProfile?.role !== 'student') {
+      console.log('⚠️ [markAllAsRead] Apenas alunos podem marcar mensagens como lidas. Role atual:', userProfile?.role);
+      return;
+    }
+
     try {
       const { error, data } = await supabase
         .from('admin_student_messages')
         .update({ read_at: new Date().toISOString() })
         .eq('conversation_id', currentConversationId)
-        .eq('recipient_id', user.id)
+        .eq('recipient_id', user.id) // ✅ Garante que só marca mensagens onde o aluno é o destinatário
         .is('read_at', null)
         .select('id, sender_id, recipient_id, read_at');
 
