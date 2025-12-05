@@ -2846,6 +2846,52 @@
       "subscribe": "Inscrever-se",
       "subscribed": "Obrigado por se inscrever!"
     },
+    "unsubscribe": {
+      "invalidLink": {
+        "title": "Link Inválido",
+        "message": "O link de cancelamento de inscrição não é válido ou está expirado.",
+        "button": "Voltar para Home"
+      },
+      "alreadyUnsubscribed": {
+        "title": "Já Removido",
+        "message": "Você já está removido da lista de newsletter do MatriculaUSA.",
+        "button": "Voltar para Home"
+      },
+      "success": {
+        "title": "Inscrição Cancelada com Sucesso",
+        "message": "Você foi removido da lista de newsletter com sucesso. Não receberá mais emails de campanha do MatriculaUSA.",
+        "important": "<strong>Importante:</strong> Você ainda receberá emails importantes sobre sua conta, aplicações e confirmações de pagamento.",
+        "reactivate": "Se mudar de ideia, você pode reativar sua inscrição entrando em contato conosco.",
+        "button": "Voltar para Home"
+      },
+      "error": {
+        "title": "Erro",
+        "message": "Ocorreu um erro ao processar sua solicitação. Por favor, tente novamente mais tarde.",
+        "tryAgain": "Tentar Novamente",
+        "backToHome": "Voltar para Home"
+      },
+      "form": {
+        "title": "Cancelar Inscrição",
+        "question": "Tem certeza que deseja parar de receber emails de campanha do MatriculaUSA?",
+        "reasonLabel": "Motivo (opcional)",
+        "reasonPlaceholder": "Nos conte por que você está cancelando a inscrição (opcional)",
+        "reasonHelp": "Seu feedback nos ajuda a melhorar nossos serviços",
+        "note": "<strong>Nota:</strong> Você ainda receberá emails importantes sobre sua conta, aplicações e confirmações de pagamento.",
+        "disclaimer": "Ao cancelar, você não receberá mais emails de campanha, mas continuará recebendo emails importantes sobre sua conta e aplicações.",
+        "cancel": "Cancelar",
+        "confirm": "Confirmar Cancelamento",
+        "processing": "Processando..."
+      },
+      "errors": {
+        "tokenMissing": "Token ou ID de usuário não fornecido",
+        "configError": "Erro de configuração: URL do Supabase não encontrada",
+        "httpError": "Erro HTTP {{status}}",
+        "checkStatusError": "Erro ao verificar status ({{status}})",
+        "checkStatusGeneric": "Erro ao verificar status de inscrição. Por favor, tente novamente.",
+        "processError": "Erro ao processar cancelamento de inscrição",
+        "processErrorRetry": "Erro ao processar cancelamento de inscrição. Por favor, tente novamente."
+      }
+    },
     "copyright": "© 2024 Matrícula USA. Todos os direitos reservados."
   },
   "matriculaRewardsLanding": {

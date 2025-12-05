@@ -2735,6 +2735,52 @@
       "subscribe": "Subscribe",
       "subscribed": "Thank you for subscribing!"
     },
+    "unsubscribe": {
+      "invalidLink": {
+        "title": "Invalid Link",
+        "message": "The unsubscribe link is invalid or has expired.",
+        "button": "Back to Home"
+      },
+      "alreadyUnsubscribed": {
+        "title": "Already Unsubscribed",
+        "message": "You are already unsubscribed from MatriculaUSA newsletter emails.",
+        "button": "Back to Home"
+      },
+      "success": {
+        "title": "Successfully Unsubscribed",
+        "message": "You have been successfully removed from our newsletter list. You will no longer receive campaign emails from MatriculaUSA.",
+        "important": "<strong>Important:</strong> You will still receive important emails about your account, applications, and payment confirmations.",
+        "reactivate": "If you change your mind, you can reactivate your subscription by contacting us.",
+        "button": "Back to Home"
+      },
+      "error": {
+        "title": "Error",
+        "message": "An error occurred while processing your request. Please try again later.",
+        "tryAgain": "Try Again",
+        "backToHome": "Back to Home"
+      },
+      "form": {
+        "title": "Unsubscribe from Newsletter",
+        "question": "Are you sure you want to stop receiving campaign emails from MatriculaUSA?",
+        "reasonLabel": "Reason (optional)",
+        "reasonPlaceholder": "Tell us why you're unsubscribing (optional)",
+        "reasonHelp": "Your feedback helps us improve our services",
+        "note": "<strong>Note:</strong> You will still receive important emails about your account, applications, and payment confirmations.",
+        "disclaimer": "By unsubscribing, you will no longer receive campaign emails, but you will continue to receive important emails about your account and applications.",
+        "cancel": "Cancel",
+        "confirm": "Confirm Unsubscribe",
+        "processing": "Processing..."
+      },
+      "errors": {
+        "tokenMissing": "Token or user ID not provided",
+        "configError": "Configuration error: Supabase URL not found",
+        "httpError": "HTTP Error {{status}}",
+        "checkStatusError": "Error checking status ({{status}})",
+        "checkStatusGeneric": "Error checking subscription status. Please try again.",
+        "processError": "Error processing unsubscribe request",
+        "processErrorRetry": "Error processing unsubscribe request. Please try again."
+      }
+    },
     "copyright": "© 2024 Matrícula USA. All rights reserved."
   },
   "matriculaRewardsLanding": {
