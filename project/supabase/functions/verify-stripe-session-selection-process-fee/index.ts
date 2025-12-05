@@ -330,16 +330,9 @@ async function sendTermAcceptanceNotificationAfterPayment(userId, feeType, isDev
       console.warn('[NOTIFICAÇÃO] Continuando sem PDF devido ao erro na geração');
       // Don't throw error to avoid breaking the payment process
     }
-    // Buscar todos os admins do sistema
-    // Em ambiente de desenvolvimento (test), filtrar emails específicos
-    // Nota: isDevelopment já foi passado como parâmetro para esta função
-    const admins = await getAllAdmins(supabase, isDevelopment);
-    
-    // Prepare notification payload (usar primeiro admin como padrão, mas enviar para todos)
+    // Prepare notification payload - enviar apenas para o ALUNO
     const webhookPayload = {
       tipo_notf: "Student Term Acceptance",
-      email_admin: admins[0]?.email || "admin@matriculausa.com",
-      nome_admin: admins[0]?.full_name || "Admin MatriculaUSA",
       email_aluno: userProfile.email,
       nome_aluno: userProfile.full_name,
       email_seller: sellerData?.email || "",
@@ -356,54 +349,43 @@ async function sendTermAcceptanceNotificationAfterPayment(userId, feeType, isDev
       referral_code: sellerData?.referral_code || "",
       affiliate_admin_id: sellerData?.affiliate_admin_id || ""
     };
-      console.log('[NOTIFICAÇÃO] Enviando webhook para todos os admins:', admins.length);
     
-    // Enviar notificação para todos os admins
-    const notificationPromises = admins.map(async (admin) => {
-      const adminPayload = {
-        ...webhookPayload,
-        email_admin: admin.email,
-        nome_admin: admin.full_name
-      };
-      
-      let webhookResponse;
-      if (pdfBlob) {
-        // Send webhook notification with PDF
-        const formData = new FormData();
-        // Add each field individually for n8n to process correctly
-        Object.entries(adminPayload).forEach(([key, value])=>{
-          formData.append(key, value !== null && value !== undefined ? value.toString() : '');
-        });
-        // Add PDF with descriptive filename
-        const fileName = `term_acceptance_${userProfile.full_name.replace(/\s+/g, '_').toLowerCase()}_${new Date().toISOString().split('T')[0]}.pdf`;
-        formData.append('pdf', pdfBlob, fileName);
-        webhookResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
-          method: 'POST',
-          body: formData
-        });
-      } else {
-        // Send webhook notification without PDF
-        webhookResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'User-Agent': 'PostmanRuntime/7.36.3'
-          },
-          body: JSON.stringify(adminPayload)
-        });
-      }
-      
-      if (webhookResponse.ok) {
-        console.log(`[NOTIFICAÇÃO] Notificação enviada com sucesso para ${admin.email}!`);
-      } else {
-        const errorText = await webhookResponse.text();
-        console.warn(`[NOTIFICAÇÃO] Erro ao enviar notificação para ${admin.email}:`, webhookResponse.status, errorText);
-      }
-    });
+    console.log('[NOTIFICAÇÃO] Enviando notificação de aceitação de termos para o aluno:', userProfile.email);
     
-    // Aguardar todas as notificações serem enviadas
-    await Promise.allSettled(notificationPromises);
-    console.log('[NOTIFICAÇÃO] Todas as notificações processadas!');
+    // Enviar apenas UMA notificação para o ALUNO
+    let webhookResponse;
+    if (pdfBlob) {
+      // Send webhook notification with PDF
+      const formData = new FormData();
+      // Add each field individually for n8n to process correctly
+      Object.entries(webhookPayload).forEach(([key, value])=>{
+        formData.append(key, value !== null && value !== undefined ? value.toString() : '');
+      });
+      // Add PDF with descriptive filename
+      const fileName = `term_acceptance_${userProfile.full_name.replace(/\s+/g, '_').toLowerCase()}_${new Date().toISOString().split('T')[0]}.pdf`;
+      formData.append('pdf', pdfBlob, fileName);
+      webhookResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+        method: 'POST',
+        body: formData
+      });
+    } else {
+      // Send webhook notification without PDF
+      webhookResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'User-Agent': 'PostmanRuntime/7.36.3'
+        },
+        body: JSON.stringify(webhookPayload)
+      });
+    }
+    
+    if (webhookResponse.ok) {
+      console.log(`[NOTIFICAÇÃO] Notificação de aceitação de termos enviada com sucesso para o aluno ${userProfile.email}!`);
+    } else {
+      const errorText = await webhookResponse.text();
+      console.warn(`[NOTIFICAÇÃO] Erro ao enviar notificação de aceitação de termos para o aluno ${userProfile.email}:`, webhookResponse.status, errorText);
+    }
   } catch (error) {
     console.error('[NOTIFICAÇÃO] Erro ao enviar notificação de aceitação de termos:', error);
   // Don't throw error to avoid breaking the payment process
