@@ -352,7 +352,7 @@ export async function sendTermAcceptanceNotificationAfterPayment(userId: string,
 
             // Calcular dimensões da imagem mantendo proporção correta
             const maxWidth = 260; // mm
-            const maxHeight = 300; // mm
+            const maxHeight = 300; // mma
             const availableWidth = pageWidth - (2 * margin);
 
             // Converter mm para unidades do PDF
