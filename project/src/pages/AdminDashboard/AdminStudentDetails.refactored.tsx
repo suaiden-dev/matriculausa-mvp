@@ -1774,6 +1774,24 @@ const AdminStudentDetails: React.FC = () => {
   // Handler para download de PDF de termos
   const handleDownloadTermPDF = useCallback(async (acceptance: any) => {
     try {
+      // Buscar identity_photo_path e identity_photo_name se não estiverem no acceptance
+      let identityPhotoPath = acceptance.identity_photo_path;
+      let identityPhotoName = acceptance.identity_photo_name;
+      
+      // Se não estiverem no acceptance, buscar do banco
+      if (!identityPhotoPath && acceptance.id) {
+        const { data: termAcceptanceData, error: termError } = await supabase
+          .from('comprehensive_term_acceptance')
+          .select('identity_photo_path, identity_photo_name')
+          .eq('id', acceptance.id)
+          .maybeSingle();
+        
+        if (!termError && termAcceptanceData) {
+          identityPhotoPath = termAcceptanceData.identity_photo_path;
+          identityPhotoName = termAcceptanceData.identity_photo_name;
+        }
+      }
+      
       // Preparar dados para o PDF
       const pdfData: StudentTermAcceptanceData = {
         student_name: acceptance.user_full_name || student?.student_name || 'N/A',
@@ -1784,11 +1802,13 @@ const AdminStudentDetails: React.FC = () => {
         user_agent: acceptance.user_agent || 'N/A',
         country: student?.country || 'N/A',
         affiliate_code: student?.seller_referral_code || undefined,
-        term_content: acceptance.term_content || ''
+        term_content: acceptance.term_content || '',
+        identity_photo_path: identityPhotoPath || undefined,
+        identity_photo_name: identityPhotoName || undefined
       };
       
-      // Gerar e baixar o PDF
-      generateTermAcceptancePDF(pdfData);
+      // Gerar e baixar o PDF (agora é assíncrono)
+      await generateTermAcceptancePDF(pdfData);
     } catch (error) {
       console.error('Error generating PDF:', error);
       alert('Error generating PDF. Please try again.');
