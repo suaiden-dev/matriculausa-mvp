@@ -49,6 +49,16 @@ export async function approveZelleFlow(params: {
     });
     const individualFeePaymentId = individualFeePaymentResult?.paymentId || null;
 
+    // Send term acceptance notification with PDF (including identity photo, without term content)
+    try {
+      const { sendTermAcceptanceNotificationAfterPayment } = await import('./notificationsService');
+      await sendTermAcceptanceNotificationAfterPayment(payment.user_id, 'selection_process');
+      console.log('[zelleOrchestrator] ✅ Notificação de aceitação de termos enviada com sucesso');
+    } catch (notificationError) {
+      console.error('[zelleOrchestrator] ❌ Erro ao enviar notificação de aceitação de termos:', notificationError);
+      // Não falhar o processo se a notificação falhar
+    }
+
     // ✅ REMOVIDO: Registro de uso do cupom promocional - agora é feito apenas na validação (record-promotional-coupon-validation)
 
     // Resolve dynamic amount from package overrides
