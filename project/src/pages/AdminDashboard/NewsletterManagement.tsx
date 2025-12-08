@@ -24,6 +24,7 @@ import {
 import { Dialog } from '@headlessui/react';
 import { supabase } from '../../lib/supabase';
 import { toast } from 'react-hot-toast';
+import RefreshButton from '../../components/RefreshButton';
 
 interface Campaign {
   id: string;
@@ -123,6 +124,9 @@ const NewsletterManagement: React.FC = () => {
   const [loadingPreferences, setLoadingPreferences] = useState(false);
   const [preferenceSearch, setPreferenceSearch] = useState('');
 
+  // Estado para controlar animação do botão refresh
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
 
   useEffect(() => {
     loadData();
@@ -133,8 +137,15 @@ const NewsletterManagement: React.FC = () => {
       fetchSentEmails();
     } else if (activeTab === 'preferences') {
       fetchPreferences();
+    } else if (activeTab === 'overview') {
+      // Carregar emails recentes para o overview
+      fetchRecentEmails();
     }
   }, [activeTab, emailFilters, emailPage]);
+
+  // Estado para emails recentes no overview
+  const [recentEmails, setRecentEmails] = useState<SentEmail[]>([]);
+  const [loadingRecentEmails, setLoadingRecentEmails] = useState(false);
 
   const loadData = async () => {
     setLoading(true);
@@ -148,6 +159,29 @@ const NewsletterManagement: React.FC = () => {
       toast.error('Error loading data');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Função para forçar recarregamento quando necessário
+  const forceRefreshAll = async () => {
+    setIsRefreshing(true);
+    try {
+      // Recarregar todos os dados
+      await Promise.all([
+        fetchStats(),
+        fetchCampaigns(),
+        activeTab === 'emails' ? fetchSentEmails() : Promise.resolve(),
+        activeTab === 'preferences' ? fetchPreferences() : Promise.resolve(),
+        activeTab === 'overview' ? fetchRecentEmails() : Promise.resolve()
+      ]);
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+      toast.error('Error refreshing data');
+    } finally {
+      // Pequeno delay para garantir que a animação seja visível
+      setTimeout(() => {
+        setIsRefreshing(false);
+      }, 300);
     }
   };
 
@@ -230,6 +264,56 @@ const NewsletterManagement: React.FC = () => {
       toast.error('Error loading campaigns');
     } finally {
       setLoadingCampaigns(false);
+    }
+  };
+
+  const fetchRecentEmails = async (limit: number = 5) => {
+    try {
+      setLoadingRecentEmails(true);
+      const { data, error } = await supabase
+        .from('newsletter_sent_emails')
+        .select('*')
+        .order('sent_at', { ascending: false })
+        .limit(limit);
+
+      if (error) throw error;
+
+      // Buscar nomes dos usuários e dados das campanhas
+      if (data) {
+        const userIds = [...new Set(data.map(e => e.user_id))];
+        const campaignIds = [...new Set(data.map(e => e.campaign_id))];
+
+        // Buscar perfis de usuários
+        const { data: userProfiles } = await supabase
+          .from('user_profiles')
+          .select('user_id, full_name, email')
+          .in('user_id', userIds);
+
+        // Buscar campanhas
+        const { data: campaignData } = await supabase
+          .from('newsletter_campaigns')
+          .select('id, name, campaign_key')
+          .in('id', campaignIds);
+
+        const emailsWithNames = data.map(email => {
+          const profile = userProfiles?.find(p => p.user_id === email.user_id);
+          const campaign = campaignData?.find(c => c.id === email.campaign_id);
+          return {
+            ...email,
+            user_name: profile?.full_name || email.metadata?.full_name || 'N/A',
+            user_email: profile?.email || email.email_address,
+            campaign: campaign || null
+          };
+        });
+
+        setRecentEmails(emailsWithNames);
+      } else {
+        setRecentEmails([]);
+      }
+    } catch (error) {
+      console.error('Error fetching recent emails:', error);
+    } finally {
+      setLoadingRecentEmails(false);
     }
   };
 
@@ -498,13 +582,11 @@ const NewsletterManagement: React.FC = () => {
             Manage campaigns, view statistics and control user preferences
           </p>
         </div>
-        <button
-          onClick={loadData}
-          className="flex items-center gap-2 px-4 py-2 bg-[#05294E] text-white rounded-lg hover:bg-[#041d35] transition-colors"
-        >
-          <RefreshCw className="w-4 h-4" />
-          Refresh
-        </button>
+        <RefreshButton
+          onClick={forceRefreshAll}
+          isRefreshing={isRefreshing}
+          title="Refresh all data"
+        />
       </div>
 
       {/* Tabs */}
@@ -606,6 +688,75 @@ const NewsletterManagement: React.FC = () => {
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Recent Sent Emails */}
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div className="p-6 border-b border-slate-200">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                  <Mail className="w-5 h-5 text-[#05294E]" />
+                  Recent Sent Emails
+                </h2>
+                <button
+                  onClick={() => setActiveTab('emails')}
+                  className="text-sm text-[#05294E] hover:text-[#041d35] font-medium"
+                >
+                  View All →
+                </button>
+              </div>
+            </div>
+            {loadingRecentEmails ? (
+              <div className="flex items-center justify-center py-12">
+                <RefreshCw className="w-8 h-8 animate-spin text-[#05294E]" />
+              </div>
+            ) : recentEmails.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-slate-50 border-b border-slate-200">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase">Date</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase">Recipient</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase">Subject</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase">Campaign</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {recentEmails.map(email => (
+                      <tr key={email.id} className="hover:bg-slate-50">
+                        <td className="px-6 py-4 text-sm text-slate-600">
+                          {email.sent_at ? new Date(email.sent_at).toLocaleString('en-US') : '-'}
+                        </td>
+                        <td className="px-6 py-4">
+                          <div>
+                            <p className="font-medium text-slate-800">{email.user_name || 'N/A'}</p>
+                            <p className="text-sm text-slate-500">{email.email_address}</p>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-slate-600 max-w-md truncate">
+                          {email.subject}
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="text-sm text-slate-600">
+                            {(email.campaign as any)?.name || 'N/A'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(email.status)}`}>
+                            {getStatusLabel(email.status)}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="text-center py-12 text-slate-500">
+                No emails sent yet
+              </div>
+            )}
           </div>
 
         </div>
