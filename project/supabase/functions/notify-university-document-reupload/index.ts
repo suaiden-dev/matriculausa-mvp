@@ -36,7 +36,9 @@ async function getAllAdmins(supabase: SupabaseClient, isDevelopment: boolean = f
     'luizedmiola@gmail.com',
     'chimentineto@gmail.com',
     'fsuaiden@gmail.com',
-    'rayssathefuture@gmail.com'
+    'rayssathefuture@gmail.com',
+    'gui.reis@live.com',
+    'admin@matriculausa.com'
   ];
   
   try {

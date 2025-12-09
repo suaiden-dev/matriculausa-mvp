@@ -27,6 +27,8 @@ BEGIN
           'ip_address', cta.ip_address,
           'user_agent', cta.user_agent,
           'created_at', cta.created_at,
+          'identity_photo_path', cta.identity_photo_path,
+          'identity_photo_name', cta.identity_photo_name,
           'user_email', COALESCE(up.email, 'N/A'),
           'user_full_name', COALESCE(up.full_name, 'N/A'),
           'term_title', COALESCE(at.title, 'N/A'),

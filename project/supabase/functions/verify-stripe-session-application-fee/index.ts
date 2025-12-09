@@ -48,7 +48,9 @@ async function getAllAdmins(supabase, isDevelopment: boolean = false): Promise<A
     'luizedmiola@gmail.com',
     'chimentineto@gmail.com',
     'fsuaiden@gmail.com',
-    'rayssathefuture@gmail.com'
+    'rayssathefuture@gmail.com',
+    'gui.reis@live.com',
+    'admin@matriculausa.com'
   ];
   
   try {

@@ -71,6 +71,8 @@ export interface TermAcceptance {
   ip_address?: string;
   user_agent?: string;
   created_at: string;
+  identity_photo_path?: string; // ✅ Caminho da foto de identidade no bucket
+  identity_photo_name?: string; // ✅ Nome do arquivo da foto
   user_email?: string;
   user_full_name?: string;
   term_title?: string;

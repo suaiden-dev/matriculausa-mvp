@@ -1,4 +1,5 @@
 import jsPDF from 'jspdf';
+import { supabase } from '../lib/supabase';
 
 export interface StudentTermAcceptanceData {
   student_name: string;
@@ -10,9 +11,11 @@ export interface StudentTermAcceptanceData {
   country?: string;
   affiliate_code?: string;
   term_content?: string;
+  identity_photo_path?: string; // ✅ Caminho da foto de identidade no bucket
+  identity_photo_name?: string; // ✅ Nome do arquivo da foto
 }
 
-export const generateTermAcceptancePDF = (data: StudentTermAcceptanceData): void => {
+export const generateTermAcceptancePDF = async (data: StudentTermAcceptanceData): Promise<void> => {
   try {
     // Criar novo documento PDF
     const pdf = new jsPDF();
@@ -59,7 +62,7 @@ export const generateTermAcceptancePDF = (data: StudentTermAcceptanceData): void
     pdf.setFontSize(12);
     pdf.setFont('helvetica', 'normal');
     pdf.text('MatriculaUSA - Academic Management System', pageWidth / 2, currentY, { align: 'center' });
-    currentY += 15;
+    currentY += 12;
 
     currentY = addSeparator(currentY);
 
@@ -103,7 +106,7 @@ export const generateTermAcceptancePDF = (data: StudentTermAcceptanceData): void
       pdf.setFontSize(16);
       pdf.setFont('helvetica', 'bold');
       pdf.text('TERM CONTENT', margin, currentY);
-      currentY += 15;
+      currentY += 12;
 
       // Parse and format the term content with proper styling (igual ao MyStudents.tsx)
       const formatTermContent = (content: string): number => {
@@ -179,15 +182,15 @@ export const generateTermAcceptancePDF = (data: StudentTermAcceptanceData): void
           
           switch (element.type) {
             case 'h1':
-              currentY += 5;
+              currentY += 2;
               pdf.setFontSize(13);
               pdf.setFont('helvetica', 'bold');
               currentY = addWrappedText(element.text, margin, currentY, pageWidth - margin - 20, 13);
-              currentY += 5;
+              currentY += 2;
               break;
               
             case 'h2':
-              currentY += 6;
+              currentY += 2;
               pdf.setFontSize(11);
               pdf.setFont('helvetica', 'bold');
               currentY = addWrappedText(element.text, margin, currentY, pageWidth - margin - 20, 11);
@@ -218,7 +221,7 @@ export const generateTermAcceptancePDF = (data: StudentTermAcceptanceData): void
 
       try {
         currentY = formatTermContent(data.term_content);
-        currentY += 10; // Espaço extra após o conteúdo
+        currentY += 5; // Espaço extra após o conteúdo
       } catch (error) {
         console.error('Error formatting term content:', error);
         // Fallback to simple text if formatting fails
@@ -241,7 +244,7 @@ export const generateTermAcceptancePDF = (data: StudentTermAcceptanceData): void
           : plainTextContent;
         
         currentY = addWrappedText(termContent, margin, currentY, pageWidth - margin - 20, 10);
-        currentY += 10;
+        currentY += 8;
       }
 
       currentY = addSeparator(currentY);
@@ -291,7 +294,117 @@ export const generateTermAcceptancePDF = (data: StudentTermAcceptanceData): void
     pdf.text('Browser/Device:', margin, currentY);
     pdf.setFont('helvetica', 'normal');
     currentY = addWrappedText(data.user_agent || 'Not available', margin, currentY + 8, pageWidth - margin - 20, 9);
-    currentY += 5;
+    currentY += 8;
+
+    // ✅ Identity Photo Section (se houver foto)
+    if (data.identity_photo_path && data.identity_photo_path.trim() !== '') {
+      try {
+        console.log('[PDF Generator] Foto de identidade encontrada, incluindo no PDF:', data.identity_photo_path);
+        
+        // Verificar se precisa de nova página
+        const pageHeight = pdf.internal.pageSize.getHeight();
+        if (currentY > pageHeight - margin - 80) {
+          pdf.addPage();
+          currentY = margin;
+        }
+
+        // Obter signed URL para a foto
+        const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+          .from('identity-photos')
+          .createSignedUrl(data.identity_photo_path, 3600); // 1 hora de validade
+
+        if (!signedUrlError && signedUrlData) {
+          try {
+            // Fazer download da imagem
+            const imageResponse = await fetch(signedUrlData.signedUrl);
+            const imageBlob = await imageResponse.blob();
+            const imageUrl = URL.createObjectURL(imageBlob);
+
+            // Adicionar seção de foto de identidade
+            currentY += 8;
+            pdf.setFontSize(14);
+            pdf.setFont('helvetica', 'bold');
+            pdf.text('IDENTITY PHOTO WITH DOCUMENT', margin, currentY);
+            currentY += 12;
+
+            // Calcular dimensões da imagem mantendo proporção correta
+            const maxWidth = 260; // mm
+            const maxHeight = 300; // mm
+            const availableWidth = pageWidth - (2 * margin);
+
+            // Converter mm para unidades do PDF
+            const maxWidthUnits = maxWidth * 0.264583;
+            const maxHeightUnits = maxHeight * 0.264583;
+            const imageWidth = Math.min(maxWidthUnits, availableWidth * 0.9);
+
+            // Tentar obter dimensões reais da imagem
+            let finalWidth = imageWidth;
+            let finalHeight = 0;
+
+            try {
+              const img = new Image();
+              await new Promise((resolve, reject) => {
+                img.onload = resolve;
+                img.onerror = reject;
+                img.src = imageUrl;
+              });
+
+              const aspectRatio = img.height / img.width;
+              finalHeight = imageWidth * aspectRatio;
+
+              // Se a altura exceder o máximo, ajustar pela altura
+              if (finalHeight > maxHeightUnits) {
+                finalHeight = maxHeightUnits;
+                finalWidth = finalHeight / aspectRatio;
+              }
+
+              // Adicionar imagem com dimensões calculadas mantendo proporção
+              pdf.addImage(
+                imageUrl,
+                data.identity_photo_path.endsWith('.png') ? 'PNG' : 'JPEG',
+                margin,
+                currentY,
+                finalWidth,
+                finalHeight,
+                undefined,
+                'FAST'
+              );
+
+              currentY += finalHeight + 10;
+              URL.revokeObjectURL(imageUrl);
+              console.log('[PDF Generator] ✅ Foto de identidade incluída no PDF com sucesso!');
+            } catch (propError) {
+              // Fallback: usar proporção estimada (assumir 3:4 para selfies verticais)
+              console.warn('[PDF Generator] Não foi possível obter dimensões da imagem, usando proporção estimada:', propError);
+              finalHeight = imageWidth * 1.33; // Proporção 3:4
+
+              pdf.addImage(
+                imageUrl,
+                data.identity_photo_path.endsWith('.png') ? 'PNG' : 'JPEG',
+                margin,
+                currentY,
+                finalWidth,
+                finalHeight,
+                undefined,
+                'FAST'
+              );
+
+              currentY += finalHeight + 10;
+              URL.revokeObjectURL(imageUrl);
+            }
+          } catch (conversionError) {
+            console.error('[PDF Generator] Erro ao processar foto:', conversionError);
+            // Continuar sem foto - não quebrar o PDF
+          }
+        } else {
+          console.warn('[PDF Generator] Erro ao obter signed URL da foto:', signedUrlError);
+          // Continuar sem foto - não quebrar o PDF
+        }
+      } catch (photoError) {
+        console.error('[PDF Generator] Erro ao processar foto de identidade:', photoError);
+        // Continuar sem foto - não quebrar o PDF
+      }
+    }
 
     // Rodapé com informações legais
     const footerY = pdf.internal.pageSize.getHeight() - 30;

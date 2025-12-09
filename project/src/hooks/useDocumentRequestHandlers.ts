@@ -359,13 +359,50 @@ export const useDocumentRequestHandlers = (
   }, [userId]);
 
   // Handler para fazer download de documento
-  const handleDownloadDocument = useCallback((doc: { file_url: string; filename?: string }) => {
-    const link = document.createElement('a');
-    link.href = doc.file_url;
-    // Extrair filename da URL se não fornecido
-    const filename = doc.filename || doc.file_url.split('/').pop() || 'document.pdf';
-    link.download = filename;
-    link.click();
+  const handleDownloadDocument = useCallback(async (doc: { file_url: string; filename?: string }) => {
+    try {
+      let downloadUrl = doc.file_url;
+      
+      // ✅ CORREÇÃO: Se file_url é um caminho relativo (não começa com http), converter para URL pública
+      if (doc.file_url && !doc.file_url.startsWith('http')) {
+        // ✅ Determinar o bucket correto baseado no caminho do arquivo
+        // Transfer Form uploads estão no bucket 'document-attachments' com caminho 'transfer-forms-filled/...'
+        // Outros documentos estão no bucket 'student-documents'
+        let bucket = 'student-documents'; // padrão
+        
+        if (doc.file_url.includes('transfer-forms-filled/') || doc.file_url.includes('transfer-forms/')) {
+          bucket = 'document-attachments';
+        }
+        
+        // Converter caminho relativo para URL pública
+        const { data: { publicUrl } } = supabase.storage
+          .from(bucket)
+          .getPublicUrl(doc.file_url);
+        
+        downloadUrl = publicUrl;
+      }
+      
+      // Fazer download usando fetch para garantir que funciona
+      const response = await fetch(downloadUrl);
+      if (!response.ok) {
+        throw new Error('Failed to download document: ' + response.statusText);
+      }
+      
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      // Extrair filename da URL se não fornecido
+      const filename = doc.filename || doc.file_url.split('/').pop() || 'document.pdf';
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error: any) {
+      console.error('Erro no download:', error);
+      alert(`Failed to download document: ${error.message}`);
+    }
   }, []);
 
   // Handler para editar template

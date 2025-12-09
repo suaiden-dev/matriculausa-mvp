@@ -7,6 +7,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useSearchParams } from 'react-router-dom';
 import { useFeeConfig } from '../hooks/useFeeConfig';
 import { useDynamicFees } from '../hooks/useDynamicFees';
+import { sendTermAcceptanceNotificationAfterPayment } from '../pages/AdminDashboard/PaymentManagement/data/services/notificationsService';
 
 interface ZelleCheckoutPageProps {
   feeType?: string;
@@ -503,6 +504,19 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
         .upload(filePath, selectedFile);
 
       if (uploadError) throw uploadError;
+
+      // ✅ Enviar documento de aceitação de termos imediatamente após upload do comprovante (apenas para selection_process)
+      // Isso garante que o documento seja enviado independentemente de aprovação automática ou manual
+      if (normalizedFeeType === 'selection_process' && user?.id) {
+        try {
+          console.log('📧 [ZelleCheckout] Enviando documento de aceitação de termos após upload do comprovante...');
+          await sendTermAcceptanceNotificationAfterPayment(user.id, 'selection_process');
+          console.log('✅ [ZelleCheckout] Documento de aceitação de termos enviado com sucesso');
+        } catch (notificationError) {
+          console.error('❌ [ZelleCheckout] Erro ao enviar documento de aceitação de termos:', notificationError);
+          // Não falhar o processo se a notificação falhar
+        }
+      }
 
       // Verificar se já existe um pagamento similar recente (últimos 30 segundos) para evitar duplicação
       console.log('🔍 [ZelleCheckout] Verificando pagamentos duplicados...');

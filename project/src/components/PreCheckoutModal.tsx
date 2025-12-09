@@ -12,6 +12,7 @@ import { useAffiliateTermsAcceptance } from '../hooks/useAffiliateTermsAcceptanc
 import { useReferralCode } from '../hooks/useReferralCode';
 import { ModalContent } from './ModalContent';
 import { useModal } from '../contexts/ModalContext';
+import { IdentityPhotoUpload } from './IdentityPhotoUpload';
 import {
   Drawer,
   DrawerContent,
@@ -225,6 +226,11 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
   const [userClickedCheckbox, setUserClickedCheckbox] = useState(false); // Track user interaction
   const termsContentRef = useRef<HTMLDivElement>(null);
   
+  // Identity photo upload states
+  const [showPhotoUploadStep, setShowPhotoUploadStep] = useState(false);
+  const [identityPhotoPath, setIdentityPhotoPath] = useState<string | null>(null);
+  const [identityPhotoName, setIdentityPhotoName] = useState<string | null>(null);
+  
   // Verificar se o usuário tem seller_referral_code
   const hasSellerReferralCode = userProfile?.seller_referral_code && userProfile.seller_referral_code.trim() !== '';
   
@@ -343,6 +349,9 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
       setShowTermsModal(false); // Reset terms modal state
       setActiveTerm(null); // Reset active term
       setUserClickedCheckbox(false); // Reset user interaction flag
+      setShowPhotoUploadStep(false); // Reset photo upload step
+      setIdentityPhotoPath(null); // Reset photo path
+      setIdentityPhotoName(null); // Reset photo name
       // ✅ CORREÇÃO: Se não tem seller_referral_code, mostrar campo diretamente (sem checkbox)
       // Não resetar hasReferralCode e showCodeStep se não tem seller_referral_code
       if (!hasSellerReferralCode) {
@@ -374,6 +383,9 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
       setShowTermsModal(false);
       setActiveTerm(null);
       setUserClickedCheckbox(false);
+      setShowPhotoUploadStep(false);
+      setIdentityPhotoPath(null);
+      setIdentityPhotoName(null);
       
       // Restore original viewport settings
       const viewport = document.querySelector('meta[name="viewport"]');
@@ -430,6 +442,9 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
       setShowTermsModal(false);
       setActiveTerm(null);
       setUserClickedCheckbox(false);
+      setShowPhotoUploadStep(false);
+      setIdentityPhotoPath(null);
+      setIdentityPhotoName(null);
       
       // Restore original viewport settings on unmount
       const viewport = document.querySelector('meta[name="viewport"]');
@@ -524,13 +539,6 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
     if (termsContentRef.current) {
       const { scrollTop, scrollHeight, clientHeight } = termsContentRef.current;
       const isAtBottom = scrollTop + clientHeight >= scrollHeight - 10; // 10px tolerance
-      console.log('🔍 [PreCheckoutModal] Scroll debug:', {
-        scrollTop,
-        scrollHeight,
-        clientHeight,
-        isAtBottom,
-        threshold: scrollHeight - 10
-      });
       setHasScrolledToBottom(isAtBottom);
     }
   };
@@ -599,12 +607,17 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
             await recordAffiliateTermAcceptance(activeTerm.id, 'checkout_terms', affiliateAdminId);
           } else {
             console.log('🔍 [PreCheckoutModal] Usuário sem affiliate, usando registro normal');
+            // ✅ NOTA: A foto será salva depois quando o usuário fizer upload e clicar em "Prosseguir"
+            // Por isso não passamos identityPhotoPath aqui ainda
             await recordTermAcceptance(activeTerm.id, 'checkout_terms');
           }
         }
         
         console.log('🔍 [PreCheckoutModal] Termos aceitos e registrados');
         setTermsAccepted(true);
+        
+        // Avançar para etapa de upload de foto
+        setShowPhotoUploadStep(true);
         
         // Para mobile: fechar a visualização de termos no drawer
         if (isMobile) {
@@ -617,6 +630,9 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
         console.error('🔍 [PreCheckoutModal] Erro ao registrar aceitação dos termos:', error);
         // Still allow user to proceed even if recording fails
         setTermsAccepted(true);
+        
+        // Avançar para etapa de upload de foto mesmo se houver erro
+        setShowPhotoUploadStep(true);
         
         // Para mobile: fechar a visualização de termos no drawer
         if (isMobile) {
@@ -911,11 +927,87 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
     }
   };
 
-  const handleProceed = () => {
+  const handleProceed = async () => {
     // Check if terms are accepted
     if (!termsAccepted) {
       alert(t('preCheckoutModal.mustAcceptTerms'));
       return;
+    }
+
+    // Check if photo was uploaded
+    if (!identityPhotoPath) {
+      alert('Por favor, faça upload da sua foto com documento antes de prosseguir.');
+      return;
+    }
+
+    // Salvar foto de identidade no registro de aceitação de termos
+    if (activeTerm && identityPhotoPath) {
+      try {
+        console.log('🔍 [PreCheckoutModal] Salvando foto de identidade no registro de aceitação...', {
+          userId: user?.id,
+          termId: activeTerm.id,
+          photoPath: identityPhotoPath,
+          photoName: identityPhotoName
+        });
+        
+        // Buscar o registro de aceitação mais recente
+        const { data: termAcceptance, error: termError } = await supabase
+          .from('comprehensive_term_acceptance')
+          .select('id, accepted_at')
+          .eq('user_id', user?.id)
+          .eq('term_id', activeTerm.id)
+          .eq('term_type', 'checkout_terms')
+          .order('accepted_at', { ascending: false })
+          .limit(1)
+          .maybeSingle(); // ✅ Usar maybeSingle para não falhar se não houver registro
+
+        if (termError) {
+          console.error('🔍 [PreCheckoutModal] Erro ao buscar registro de aceitação:', termError);
+        } else if (termAcceptance) {
+          console.log('🔍 [PreCheckoutModal] Registro encontrado:', termAcceptance.id);
+          // Atualizar com a foto
+          const { data: updateData, error: updateError } = await supabase
+            .from('comprehensive_term_acceptance')
+            .update({
+              identity_photo_path: identityPhotoPath,
+              identity_photo_name: identityPhotoName
+            })
+            .eq('id', termAcceptance.id)
+            .select();
+
+          if (updateError) {
+            console.error('🔍 [PreCheckoutModal] ❌ Erro ao salvar foto:', updateError);
+            console.error('🔍 [PreCheckoutModal] Detalhes do erro:', {
+              code: updateError.code,
+              message: updateError.message,
+              details: updateError.details,
+              hint: updateError.hint
+            });
+            // ✅ Tentar novamente com RPC se update direto falhar (após migration ser aplicada)
+            try {
+              const { data: rpcData, error: rpcError } = await supabase.rpc('update_term_acceptance_photo', {
+                p_acceptance_id: termAcceptance.id,
+                p_photo_path: identityPhotoPath,
+                p_photo_name: identityPhotoName
+              });
+              if (rpcError) {
+                console.error('🔍 [PreCheckoutModal] ❌ Erro ao salvar foto via RPC:', rpcError);
+              } else if (rpcData) {
+                console.log('🔍 [PreCheckoutModal] ✅ Foto salva com sucesso via RPC');
+              }
+            } catch (rpcErr) {
+              console.error('🔍 [PreCheckoutModal] ❌ Erro ao tentar salvar via RPC:', rpcErr);
+            }
+          } else {
+            console.log('🔍 [PreCheckoutModal] ✅ Foto salva com sucesso no registro de aceitação:', updateData);
+          }
+        } else {
+          console.warn('🔍 [PreCheckoutModal] Nenhum registro de aceitação encontrado para atualizar');
+        }
+      } catch (error) {
+        console.error('🔍 [PreCheckoutModal] Erro ao salvar foto de identidade:', error);
+        // Não bloquear o fluxo se houver erro ao salvar foto
+      }
     }
 
     console.log('🔍 [PreCheckoutModal] handleProceed chamado');
@@ -1035,6 +1127,53 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
                   setShowTermsInDrawer={setShowTermsInDrawer}
                   t={t}
                 />
+              ) : showPhotoUploadStep ? (
+                <div className="space-y-4 sm:space-y-6">
+                  <div className="text-center">
+                    <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">
+                      Foto de Identidade
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                      Faça upload de uma foto sua segurando seu documento de identidade
+                    </p>
+                  </div>
+                  
+                  <IdentityPhotoUpload
+                    onUploadSuccess={(filePath, fileName) => {
+                      setIdentityPhotoPath(filePath);
+                      setIdentityPhotoName(fileName);
+                    }}
+                    onUploadError={(error) => {
+                      console.error('Erro ao fazer upload:', error);
+                    }}
+                    onRemove={() => {
+                      setIdentityPhotoPath(null);
+                      setIdentityPhotoName(null);
+                    }}
+                    initialPhotoPath={identityPhotoPath || undefined}
+                  />
+                  
+                  <div className="border-t border-gray-200 bg-gray-50 p-4 sm:p-6 -mx-4 sm:-mx-6 -mb-4 sm:-mb-6 rounded-b-2xl">
+                    <button
+                      onClick={handleProceed}
+                      disabled={isLoading || !identityPhotoPath}
+                      className={`w-full px-4 sm:px-6 py-3 sm:py-4 rounded-xl font-semibold transition-all shadow-lg hover:shadow-xl transform hover:scale-105 text-sm sm:text-base ${
+                        identityPhotoPath
+                          ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700'
+                          : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      }`}
+                    >
+                      {isLoading ? (
+                        <div className="flex items-center justify-center space-x-2">
+                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          <span>{t('preCheckoutModal.processingPayment')}</span>
+                        </div>
+                      ) : (
+                        t('preCheckoutModal.goToPayment')
+                      )}
+                    </button>
+                  </div>
+                </div>
               ) : (
                 <ModalContent
                   productName={productName}
@@ -1107,31 +1246,80 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
 
             {/* Content */}
             <div className="flex-1 overflow-y-auto p-4 sm:p-6">
-              <ModalContent
-                productName={productName}
-                computedBasePrice={promotionalCouponApplied?.finalAmount || computedBasePrice}
-                hasUsedReferralCode={hasUsedReferralCode}
-                hasSellerReferralCode={!!hasSellerReferralCode}
-                activeDiscount={activeDiscount}
-                hasReferralCode={hasReferralCode}
-                showCodeStep={showCodeStep}
-                setHasReferralCode={setHasReferralCode}
-                setDiscountCode={setDiscountCode}
-                setValidationResult={setValidationResult}
-                setCodeApplied={setCodeApplied}
-                setShowCodeStep={setShowCodeStep}
-                discountCode={discountCode}
-                hasAffiliateCode={!!hasAffiliateCode}
-                validateDiscountCode={validateDiscountCode}
-                isValidating={isValidating}
-                validationResult={validationResult}
-                termsAccepted={termsAccepted}
-                handleCheckboxChange={handleCheckboxChange}
-                handleProceed={handleProceed}
-                isLoading={isLoading}
-                t={t}
-                promotionalCouponApplied={promotionalCouponApplied}
-              />
+              {showPhotoUploadStep ? (
+                <div className="space-y-4 sm:space-y-6">
+                  <div className="text-center">
+                    <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">
+                      Foto de Identidade
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                      Faça upload de uma foto sua segurando seu documento de identidade
+                    </p>
+                  </div>
+                  
+                  <IdentityPhotoUpload
+                    onUploadSuccess={(filePath, fileName) => {
+                      setIdentityPhotoPath(filePath);
+                      setIdentityPhotoName(fileName);
+                    }}
+                    onUploadError={(error) => {
+                      console.error('Erro ao fazer upload:', error);
+                    }}
+                    onRemove={() => {
+                      setIdentityPhotoPath(null);
+                      setIdentityPhotoName(null);
+                    }}
+                    initialPhotoPath={identityPhotoPath || undefined}
+                  />
+                  
+                  <div className="border-t border-gray-200 bg-gray-50 p-4 sm:p-6 -mx-4 sm:-mx-6 -mb-4 sm:-mb-6 rounded-b-2xl">
+                    <button
+                      onClick={handleProceed}
+                      disabled={isLoading || !identityPhotoPath}
+                      className={`w-full px-4 sm:px-6 py-3 sm:py-4 rounded-xl font-semibold transition-all shadow-lg hover:shadow-xl transform hover:scale-105 text-sm sm:text-base ${
+                        identityPhotoPath
+                          ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700'
+                          : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      }`}
+                    >
+                      {isLoading ? (
+                        <div className="flex items-center justify-center space-x-2">
+                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          <span>{t('preCheckoutModal.processingPayment')}</span>
+                        </div>
+                      ) : (
+                        t('preCheckoutModal.goToPayment')
+                      )}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <ModalContent
+                  productName={productName}
+                  computedBasePrice={promotionalCouponApplied?.finalAmount || computedBasePrice}
+                  hasUsedReferralCode={hasUsedReferralCode}
+                  hasSellerReferralCode={!!hasSellerReferralCode}
+                  activeDiscount={activeDiscount}
+                  hasReferralCode={hasReferralCode}
+                  showCodeStep={showCodeStep}
+                  setHasReferralCode={setHasReferralCode}
+                  setDiscountCode={setDiscountCode}
+                  setValidationResult={setValidationResult}
+                  setCodeApplied={setCodeApplied}
+                  setShowCodeStep={setShowCodeStep}
+                  discountCode={discountCode}
+                  hasAffiliateCode={!!hasAffiliateCode}
+                  validateDiscountCode={validateDiscountCode}
+                  isValidating={isValidating}
+                  validationResult={validationResult}
+                  termsAccepted={termsAccepted}
+                  handleCheckboxChange={handleCheckboxChange}
+                  handleProceed={handleProceed}
+                  isLoading={isLoading}
+                  t={t}
+                  promotionalCouponApplied={promotionalCouponApplied}
+                />
+              )}
             </div>
           </Dialog.Panel>
         </div>

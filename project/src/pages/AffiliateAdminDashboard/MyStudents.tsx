@@ -25,6 +25,9 @@ interface StudentTermAcceptance {
   ip_address?: string;
   user_agent?: string;
   created_at: string;
+  // Identity photo information
+  identity_photo_path?: string;
+  identity_photo_name?: string;
   // User profile information
   user_email: string;
   user_full_name: string;
@@ -120,7 +123,7 @@ const MyStudents: React.FC = () => {
       // Extrair IDs dos usuários referenciados
       const referredUserIds = referredUsers.map((u: any) => u.user_id);
 
-      // Buscar aceitações de termos desses usuários
+      // Buscar aceitações de termos desses usuários (incluindo foto de identidade)
       const { data: termAcceptances, error: termError } = await supabase
         .from('comprehensive_term_acceptance')
         .select(`
@@ -131,7 +134,9 @@ const MyStudents: React.FC = () => {
           accepted_at,
           ip_address,
           user_agent,
-          created_at
+          created_at,
+          identity_photo_path,
+          identity_photo_name
         `)
         .in('user_id', referredUserIds)
         .order('accepted_at', { ascending: false });
@@ -175,6 +180,8 @@ const MyStudents: React.FC = () => {
           ip_address: acceptance.ip_address,
           user_agent: acceptance.user_agent,
           created_at: acceptance.created_at,
+          identity_photo_path: acceptance.identity_photo_path || undefined,
+          identity_photo_name: acceptance.identity_photo_name || undefined,
           user_email: userInfo?.email || 'N/A',
           user_full_name: userInfo?.full_name || 'N/A',
           user_country: userInfo?.country,
@@ -244,6 +251,7 @@ const MyStudents: React.FC = () => {
   // Gerar PDF para um estudante específico
   const generateStudentPDF = async (student: StudentTermAcceptance) => {
     try {
+      // ✅ identity_photo_path e identity_photo_name já vêm do student (carregados na query)
       const pdfData: StudentTermAcceptanceData = {
         student_name: student.user_full_name,
         student_email: student.user_email,
@@ -253,11 +261,13 @@ const MyStudents: React.FC = () => {
         user_agent: student.user_agent || 'N/A',
         country: student.user_country || 'N/A',
         affiliate_code: student.affiliate_code,
-        term_content: student.term_content
+        term_content: student.term_content,
+        identity_photo_path: student.identity_photo_path,
+        identity_photo_name: student.identity_photo_name
       };
 
-      // Gerar e baixar PDF
-      generateTermAcceptancePDF(pdfData);
+      // Gerar e baixar PDF (agora é assíncrono)
+      await generateTermAcceptancePDF(pdfData);
 
     } catch (error) {
       console.error('Erro ao gerar PDF:', error);

@@ -61,6 +61,8 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
   const [filterAffiliate, setFilterAffiliate] = useState<string[]>([]);
   const [filterValueMin, setFilterValueMin] = useState<string>('');
   const [filterValueMax, setFilterValueMax] = useState<string>('');
+  const [filterDateFrom, setFilterDateFrom] = useState<string>('');
+  const [filterDateTo, setFilterDateTo] = useState<string>('');
   const [selectedTransactions, setSelectedTransactions] = useState<Set<string>>(new Set());
   const [selectAll, setSelectAll] = useState(false);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -98,8 +100,8 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
 
   const uniquePaymentMethods = useMemo(() => {
     const methods = new Set(transactions.map(t => t.payment_method).filter(Boolean));
-    // Remove 'zelle' and 'manual' from the list
-    return Array.from(methods).filter(m => m !== 'zelle' && m !== 'manual').sort();
+    // Keep all methods to allow explicit filtering, including zelle
+    return Array.from(methods).sort();
   }, [transactions]);
 
   // Get unique affiliates from transactions (matching by referral code)
@@ -157,6 +159,8 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
     setFilterAffiliate([]);
     setFilterValueMin('');
     setFilterValueMax('');
+    setFilterDateFrom('');
+    setFilterDateTo('');
     setCurrentPage(1);
     setSelectedTransactions(new Set());
     setSelectAll(false);
@@ -206,7 +210,7 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
 
 
   // Check if any filter is active
-  const hasActiveFilters = filterFeeType.length > 0 || filterPaymentMethod.length > 0 || filterAffiliate.length > 0 || filterValueMin || filterValueMax;
+  const hasActiveFilters = filterFeeType.length > 0 || filterPaymentMethod.length > 0 || filterAffiliate.length > 0 || filterValueMin || filterValueMax || filterDateFrom || filterDateTo;
 
   // Toggle fee type in filter
   const toggleFeeType = (feeType: string) => {
@@ -310,9 +314,6 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
       // Exclude test users (@uorak.com) in production/staging
       if (shouldExcludeStudent(t.student_email)) return false;
 
-      // Exclude zelle payments
-      if (t.payment_method === 'zelle') return false;
-
       // Search filter
       const matchesSearch = 
       t.student_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -332,6 +333,19 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
       if (filterAffiliate.length > 0) {
         const affiliateId = getAffiliateIdFromTransaction(t);
         if (!affiliateId || !filterAffiliate.includes(affiliateId)) return false;
+      }
+
+      // Date range filter
+      const paymentDate = new Date(t.payment_date);
+      if (filterDateFrom) {
+        const fromDate = new Date(filterDateFrom);
+        if (paymentDate < fromDate) return false;
+      }
+      if (filterDateTo) {
+        const toDate = new Date(filterDateTo);
+        // include the entire end day by setting time to end-of-day
+        toDate.setHours(23, 59, 59, 999);
+        if (paymentDate > toDate) return false;
       }
 
       // Value filters (using standard_amount)
@@ -424,7 +438,7 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
     setCurrentPage(1);
     setSelectedTransactions(new Set());
     setSelectAll(false);
-  }, [filterFeeType, filterPaymentMethod, filterAffiliate, filterValueMin, filterValueMax, searchTerm]);
+  }, [filterFeeType, filterPaymentMethod, filterAffiliate, filterValueMin, filterValueMax, filterDateFrom, filterDateTo, searchTerm]);
 
   // Update selectAll when currentTransactions change
   useEffect(() => {
@@ -714,6 +728,32 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
                 placeholder="999999.99"
                 step="0.01"
                 min="0"
+                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            {/* Date From Filter */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                Date From
+              </label>
+              <input
+                type="date"
+                value={filterDateFrom}
+                onChange={(e) => setFilterDateFrom(e.target.value)}
+                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            {/* Date To Filter */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                Date To
+              </label>
+              <input
+                type="date"
+                value={filterDateTo}
+                onChange={(e) => setFilterDateTo(e.target.value)}
                 className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
