@@ -292,6 +292,9 @@ export function useStudentSecondaryDataQuery(userId: string | undefined) {
         user_full_name: acc.user_profiles?.full_name || null,
         term_title: acc.application_terms?.title || 'Term',
         term_content: acc.application_terms?.content || '',
+        // ✅ identity_photo_path e identity_photo_name já vêm do select * (ou da RPC)
+        identity_photo_path: acc.identity_photo_path || null,
+        identity_photo_name: acc.identity_photo_name || null,
       }));
 
       const individualFeePayments = paymentsResult.data || [];

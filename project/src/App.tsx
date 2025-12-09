@@ -53,6 +53,7 @@ import SmartAssistantLayout from './components/SmartAssistantLayout';
 import { Toaster } from 'react-hot-toast';
 
 import EB3JobsLanding from './pages/EB3JobsLanding';
+import UnsubscribeNewsletter from './pages/UnsubscribeNewsletter';
 
 // Componente interno que usa o hook dentro do contexto do Router
 const AppContent = () => {
@@ -148,6 +149,7 @@ const AppContent = () => {
           <Route path="/auth-callback" element={<AuthCallback />} />
           <Route path="/microsoft-email" element={<MicrosoftCallback />} />
           <Route path="/eb3-jobs" element={<EB3JobsLanding />} />
+          <Route path="/unsubscribe" element={<UnsubscribeNewsletter />} />
           
           <Route path="/checkout/zelle/waiting" element={<ZelleWaitingPage />} />
           <Route path="/checkout/zelle" element={<ZelleCheckoutPage />} />

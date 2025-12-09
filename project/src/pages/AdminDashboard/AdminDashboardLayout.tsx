@@ -20,7 +20,8 @@ import {
   CheckCircle,
   CreditCard,
   DollarSign,
-  Tag
+  Tag,
+  Mail
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import AdminStudentChatNotifications from '../../components/AdminStudentChatNotifications';
@@ -67,6 +68,7 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
     if (path.includes('/affiliate-payment-requests')) return 'affiliate-payment-requests';
     if (path.includes('/affiliate-management')) return 'affiliate-management';
     if (path.includes('/coupons')) return 'coupons';
+    if (path.includes('/newsletter')) return 'newsletter';
     if (path.includes('/matricula-rewards')) return 'matricula-rewards';
     if (path.includes('/financial-analytics')) return 'financial-analytics';
     if (path.includes('/settings')) return 'settings';
@@ -112,6 +114,7 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
     { id: 'payments', label: 'Payment Management', icon: CreditCard, path: '/admin/dashboard/payments', badge: null },
     { id: 'financial-analytics', label: 'Financial Analytics', icon: BarChart3, path: '/admin/dashboard/financial-analytics', badge: null },
     { id: 'coupons', label: 'Coupons', icon: Tag, path: '/admin/dashboard/coupons', badge: null },
+    { id: 'newsletter', label: 'Newsletter', icon: Mail, path: '/admin/dashboard/newsletter', badge: null },
     { id: 'affiliate-management', label: 'Affiliate Management', icon: Users, path: '/admin/dashboard/affiliate-management', badge: null },
     { id: 'matricula-rewards', label: 'Matricula Rewards', icon: Award, path: '/admin/dashboard/matricula-rewards', badge: null },
     { id: 'settings', label: 'Content Management', icon: Settings, path: '/admin/dashboard/settings', badge: null }
@@ -248,6 +251,8 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
                   {activeTab === 'scholarships' && 'Scholarships'}
                   {activeTab === 'payments' && 'Payment Management'}
                   {activeTab === 'financial-analytics' && 'Financial Analytics'}
+                  {activeTab === 'coupons' && 'Coupon Management'}
+                  {activeTab === 'newsletter' && 'Newsletter Management'}
                   {activeTab === 'affiliate-management' && 'Affiliate Management'}
                   {activeTab === 'matricula-rewards' && 'Matricula Rewards'}
                   {activeTab === 'settings' && 'Content Management'}
@@ -260,6 +265,8 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
                   {activeTab === 'scholarships' && 'Manage scholarship programs'}
                   {activeTab === 'payments' && 'Payment processing and management'}
                   {activeTab === 'financial-analytics' && 'Financial reports and analytics'}
+                  {activeTab === 'coupons' && 'Manage promotional coupons'}
+                  {activeTab === 'newsletter' && 'Manage newsletter campaigns and user preferences'}
                   {activeTab === 'affiliate-management' && 'Affiliate partner management'}
                   {activeTab === 'matricula-rewards' && 'Reward system management'}
                   {activeTab === 'settings' && 'Content and system settings'}

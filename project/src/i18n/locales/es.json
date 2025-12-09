@@ -2507,6 +2507,52 @@
       "subscribe": "Subscribe",
       "subscribed": "Thank you for subscribing!"
     },
+    "unsubscribe": {
+      "invalidLink": {
+        "title": "Enlace Inválido",
+        "message": "El enlace de cancelación de suscripción no es válido o ha expirado.",
+        "button": "Volver al Inicio"
+      },
+      "alreadyUnsubscribed": {
+        "title": "Ya Desuscrito",
+        "message": "Ya estás desuscrito de los emails del boletín de MatriculaUSA.",
+        "button": "Volver al Inicio"
+      },
+      "success": {
+        "title": "Desuscripción Exitosa",
+        "message": "Has sido removido exitosamente de nuestra lista de boletín. Ya no recibirás emails de campaña de MatriculaUSA.",
+        "important": "<strong>Importante:</strong> Aún recibirás emails importantes sobre tu cuenta, aplicaciones y confirmaciones de pago.",
+        "reactivate": "Si cambias de opinión, puedes reactivar tu suscripción contactándonos.",
+        "button": "Volver al Inicio"
+      },
+      "error": {
+        "title": "Error",
+        "message": "Ocurrió un error al procesar tu solicitud. Por favor, intenta nuevamente más tarde.",
+        "tryAgain": "Intentar Nuevamente",
+        "backToHome": "Volver al Inicio"
+      },
+      "form": {
+        "title": "Desuscribirse del Boletín",
+        "question": "¿Estás seguro de que deseas dejar de recibir emails de campaña de MatriculaUSA?",
+        "reasonLabel": "Motivo (opcional)",
+        "reasonPlaceholder": "Cuéntanos por qué te estás desuscribiendo (opcional)",
+        "reasonHelp": "Tu retroalimentación nos ayuda a mejorar nuestros servicios",
+        "note": "<strong>Nota:</strong> Aún recibirás emails importantes sobre tu cuenta, aplicaciones y confirmaciones de pago.",
+        "disclaimer": "Al desuscribirte, ya no recibirás emails de campaña, pero continuarás recibiendo emails importantes sobre tu cuenta y aplicaciones.",
+        "cancel": "Cancelar",
+        "confirm": "Confirmar Desuscripción",
+        "processing": "Procesando..."
+      },
+      "errors": {
+        "tokenMissing": "Token o ID de usuario no proporcionado",
+        "configError": "Error de configuración: URL de Supabase no encontrada",
+        "httpError": "Error HTTP {{status}}",
+        "checkStatusError": "Error al verificar estado ({{status}})",
+        "checkStatusGeneric": "Error al verificar el estado de suscripción. Por favor, intenta nuevamente.",
+        "processError": "Error al procesar la solicitud de desuscripción",
+        "processErrorRetry": "Error al procesar la solicitud de desuscripción. Por favor, intenta nuevamente."
+      }
+    },
     "copyright": "© 2024 Matrícula USA. All rights reserved."
   },
   "matriculaRewardsLanding": {

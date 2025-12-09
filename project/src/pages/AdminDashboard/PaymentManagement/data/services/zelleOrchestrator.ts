@@ -49,6 +49,9 @@ export async function approveZelleFlow(params: {
     });
     const individualFeePaymentId = individualFeePaymentResult?.paymentId || null;
 
+    // ✅ REMOVIDO: Envio de documento de aceitação de termos - agora é enviado no momento do upload do comprovante no ZelleCheckoutPage.tsx
+    // Isso garante que o documento seja enviado independentemente de aprovação automática ou manual
+
     // ✅ REMOVIDO: Registro de uso do cupom promocional - agora é feito apenas na validação (record-promotional-coupon-validation)
 
     // Resolve dynamic amount from package overrides
