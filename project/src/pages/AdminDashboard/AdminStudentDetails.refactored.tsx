@@ -1343,9 +1343,18 @@ const AdminStudentDetails: React.FC = () => {
         // Se já é uma URL completa, usar diretamente
         window.open(fileUrl, '_blank');
       } else {
+        // ✅ CORREÇÃO: Determinar o bucket correto baseado no caminho do arquivo
+        // Transfer Form uploads estão no bucket 'document-attachments' com caminho 'transfer-forms-filled/...'
+        // Outros documentos estão no bucket 'student-documents'
+        let bucket = 'student-documents'; // padrão
+        
+        if (fileUrl.includes('transfer-forms-filled/') || fileUrl.includes('transfer-forms/')) {
+          bucket = 'document-attachments';
+        }
+        
         // Se file_url é um path do storage, converter para URL pública
         const publicUrl = supabase.storage
-          .from('student-documents')
+          .from(bucket)
           .getPublicUrl(fileUrl)
           .data.publicUrl;
         
