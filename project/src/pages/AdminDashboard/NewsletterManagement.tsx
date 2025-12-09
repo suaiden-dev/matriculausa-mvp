@@ -5,39 +5,23 @@ import {
   Send,
   XCircle,
   CheckCircle,
-  Clock,
   TrendingUp,
   BarChart3,
   Search,
-  Filter,
-  Eye,
-  ToggleLeft,
-  ToggleRight,
   RefreshCw,
-  Calendar,
-  User,
-  AlertCircle,
   Activity,
   Edit,
-  X
+  X,
+  Plus
 } from 'lucide-react';
 import { Dialog } from '@headlessui/react';
 import { supabase } from '../../lib/supabase';
 import { toast } from 'react-hot-toast';
 import RefreshButton from '../../components/RefreshButton';
+import { CreateCampaignModal } from './NewsletterManagement/components/CreateCampaignModal';
+import { CampaignsList, Campaign } from './NewsletterManagement/components/CampaignsList';
 
-interface Campaign {
-  id: string;
-  campaign_key: string;
-  name: string;
-  description: string | null;
-  email_subject_template: string;
-  email_body_template: string;
-  cooldown_days: number;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-}
+// Campaign interface moved to CampaignsList component
 
 interface SentEmail {
   id: string;
@@ -126,6 +110,12 @@ const NewsletterManagement: React.FC = () => {
 
   // Estado para controlar animação do botão refresh
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Estado para modal de criação de campanha
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  
+  // Estado para processamento manual
+  const [processingManually, setProcessingManually] = useState(false);
 
 
   useEffect(() => {
@@ -258,7 +248,7 @@ const NewsletterManagement: React.FC = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setCampaigns(data || []);
+      setCampaigns((data || []) as Campaign[]);
     } catch (error) {
       console.error('Error fetching campaigns:', error);
       toast.error('Error loading campaigns');
@@ -462,7 +452,7 @@ const NewsletterManagement: React.FC = () => {
     }
   };
 
-  const openEditModal = (campaign: Campaign) => {
+  const openEditModal = (campaign: Campaign | any) => {
     setEditingCampaign(campaign);
     setEditFormData({
       name: campaign.name,
@@ -512,6 +502,52 @@ const NewsletterManagement: React.FC = () => {
       toast.error('Error updating campaign');
     } finally {
       setSavingCampaign(false);
+    }
+  };
+
+  const processCampaignsManually = async () => {
+    try {
+      setProcessingManually(true);
+      toast.loading('Processing campaigns...', { id: 'processing' });
+      
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('Not authenticated');
+      }
+
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/process-newsletter-campaigns`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({})
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || 'Failed to process campaigns');
+      }
+
+      const result = await response.json();
+      const totalSent = result.total?.sent || result.sent || 0;
+      const totalFailed = result.total?.failed || result.failed || 0;
+      
+      toast.success(`Campaigns processed! Sent: ${totalSent}, Failed: ${totalFailed}`, { id: 'processing' });
+      
+      // Recarregar dados após um pequeno delay para garantir que os dados foram salvos
+      setTimeout(async () => {
+        await Promise.all([
+          fetchStats(),
+          fetchCampaigns(),
+          fetchRecentEmails()
+        ]);
+      }, 1000);
+    } catch (error: any) {
+      console.error('Error processing campaigns:', error);
+      toast.error(error.message || 'Error processing campaigns', { id: 'processing' });
+    } finally {
+      setProcessingManually(false);
     }
   };
 
@@ -762,7 +798,7 @@ const NewsletterManagement: React.FC = () => {
         </div>
       ) : activeTab === 'campaigns' ? (
         <div className="space-y-6">
-          {/* Search */}
+          {/* Search and Create Button */}
           <div className="flex items-center gap-4">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
@@ -774,98 +810,40 @@ const NewsletterManagement: React.FC = () => {
                 className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
               />
             </div>
+            <button
+              onClick={processCampaignsManually}
+              disabled={processingManually}
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Process campaigns manually (for testing)"
+            >
+              {processingManually ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <Activity className="w-4 h-4" />
+                  Process Now
+                </>
+              )}
+            </button>
+            <button
+              onClick={() => setIsCreateModalOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-[#05294E] text-white rounded-lg hover:bg-[#041d35] transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              Create Campaign
+            </button>
           </div>
 
           {/* Campaigns List */}
-          {loadingCampaigns ? (
-            <div className="flex items-center justify-center py-12">
-              <RefreshCw className="w-8 h-8 animate-spin text-[#05294E]" />
-            </div>
-          ) : (
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-slate-50 border-b border-slate-200">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase">Name</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase">Key</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase">Cooldown</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase">Status</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200">
-                    {filteredCampaigns.map(campaign => (
-                      <tr key={campaign.id} className="hover:bg-slate-50">
-                        <td className="px-6 py-4">
-                          <div>
-                            <p className="font-medium text-slate-800">{campaign.name}</p>
-                            {campaign.description && (
-                              <p className="text-sm text-slate-500 mt-1">{campaign.description}</p>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <code className="text-xs bg-slate-100 px-2 py-1 rounded text-slate-700">
-                            {campaign.campaign_key}
-                          </code>
-                        </td>
-                        <td className="px-6 py-4 text-slate-600">
-                          {campaign.cooldown_days} days
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
-                            campaign.is_active
-                              ? 'bg-green-50 text-green-700'
-                              : 'bg-red-50 text-red-700'
-                          }`}>
-                            {campaign.is_active ? (
-                              <>
-                                <CheckCircle className="w-3 h-3" />
-                                Active
-                              </>
-                            ) : (
-                              <>
-                                <XCircle className="w-3 h-3" />
-                                Inactive
-                              </>
-                            )}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-3">
-                            <button
-                              onClick={() => openEditModal(campaign)}
-                              className="flex items-center gap-1 text-sm text-[#05294E] hover:text-[#041d35]"
-                            >
-                              <Edit className="w-4 h-4" />
-                              Edit
-                            </button>
-                            <button
-                              onClick={() => toggleCampaign(campaign.id, campaign.is_active)}
-                              className="flex items-center gap-2 text-sm text-[#05294E] hover:text-[#041d35]"
-                            >
-                              {campaign.is_active ? (
-                                <>
-                                  <ToggleRight className="w-5 h-5" />
-                                  Deactivate
-                                </>
-                              ) : (
-                                <>
-                                  <ToggleLeft className="w-5 h-5" />
-                                  Activate
-                                </>
-                              )}
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
+          <CampaignsList
+            campaigns={filteredCampaigns}
+            loading={loadingCampaigns}
+            onEdit={openEditModal}
+            onToggle={toggleCampaign}
+          />
         </div>
       ) : activeTab === 'emails' ? (
         <div className="space-y-6">
@@ -886,7 +864,10 @@ const NewsletterManagement: React.FC = () => {
                 <label className="block text-sm font-medium text-slate-700 mb-1">Campaign</label>
                 <select
                   value={emailFilters.campaign}
-                  onChange={(e) => setEmailFilters({ ...emailFilters, campaign: e.target.value, emailPage: 1 })}
+                  onChange={(e) => {
+                    setEmailFilters({ ...emailFilters, campaign: e.target.value });
+                    setEmailPage(1);
+                  }}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
                 >
                   <option value="">All</option>
@@ -899,7 +880,10 @@ const NewsletterManagement: React.FC = () => {
                 <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
                 <select
                   value={emailFilters.status}
-                  onChange={(e) => setEmailFilters({ ...emailFilters, status: e.target.value, emailPage: 1 })}
+                  onChange={(e) => {
+                    setEmailFilters({ ...emailFilters, status: e.target.value });
+                    setEmailPage(1);
+                  }}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
                 >
                   <option value="">All</option>
@@ -914,7 +898,10 @@ const NewsletterManagement: React.FC = () => {
                 <input
                   type="date"
                   value={emailFilters.dateFrom}
-                  onChange={(e) => setEmailFilters({ ...emailFilters, dateFrom: e.target.value, emailPage: 1 })}
+                  onChange={(e) => {
+                    setEmailFilters({ ...emailFilters, dateFrom: e.target.value });
+                    setEmailPage(1);
+                  }}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
                 />
               </div>
@@ -923,7 +910,10 @@ const NewsletterManagement: React.FC = () => {
                 <input
                   type="date"
                   value={emailFilters.dateTo}
-                  onChange={(e) => setEmailFilters({ ...emailFilters, dateTo: e.target.value, emailPage: 1 })}
+                  onChange={(e) => {
+                    setEmailFilters({ ...emailFilters, dateTo: e.target.value });
+                    setEmailPage(1);
+                  }}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
                 />
               </div>
@@ -1104,6 +1094,16 @@ const NewsletterManagement: React.FC = () => {
           )}
         </div>
       ) : null}
+
+      {/* Create Campaign Modal */}
+      <CreateCampaignModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSuccess={() => {
+          fetchCampaigns();
+          fetchStats();
+        }}
+      />
 
       {/* Edit Campaign Modal */}
       {isEditModalOpen && editingCampaign && (

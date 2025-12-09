@@ -33,3 +33,6 @@ $$;
 -- Comentário na função
 COMMENT ON FUNCTION update_term_acceptance_photo IS 'Atualiza a foto de identidade em um registro de aceitação de termos. Usa SECURITY DEFINER para permitir atualização mesmo com RLS ativo.';
 
+
+
+
