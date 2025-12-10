@@ -47,6 +47,8 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
   const [isSimplifiedSeller, setIsSimplifiedSeller] = useState(false);
   // Terms acceptance state
   const [termsAccepted, setTermsAccepted] = useState(false);
+  // Newsletter consent state
+  const [newsletterConsent, setNewsletterConsent] = useState(false);
   // Ref para evitar múltiplas execuções
   const referralCodeProcessedRef = useRef(false);
 
@@ -457,6 +459,8 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
         const userData = {
           full_name: activeTab === 'student' ? formData.full_name : formData.full_name,
           role: (activeTab === 'student' ? 'student' : 'school') as 'student' | 'school',
+          // Newsletter consent - save for all users
+          newsletter_consent: newsletterConsent,
           // Add additional registration data only for universities
           ...(activeTab === 'university' && {
             universityName: formData.universityName || '',
@@ -1136,6 +1140,20 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                   {t('authPage.register.privacyPolicy')}
                 </a>
                 .
+              </label>
+            </div>
+
+            {/* Newsletter Consent Checkbox */}
+            <div className="flex items-center space-x-3 mb-4">
+              <input
+                type="checkbox"
+                id="newsletter-consent"
+                checked={newsletterConsent}
+                onChange={(e) => setNewsletterConsent(e.target.checked)}
+                className="h-4 w-4 text-[#05294E] border-gray-300 rounded focus:ring-[#05294E] flex-shrink-0"
+              />
+              <label htmlFor="newsletter-consent" className="text-sm text-slate-600 cursor-pointer leading-relaxed">
+                I want to receive newsletter emails with updates and important information
               </label>
             </div>
 

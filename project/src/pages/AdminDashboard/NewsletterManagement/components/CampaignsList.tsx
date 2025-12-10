@@ -7,7 +7,8 @@ import {
   ToggleRight,
   RefreshCw,
   Target,
-  Mail
+  Mail,
+  Trash2
 } from 'lucide-react';
 import { getStageMetadata } from '../../../../utils/applicationFlowStages';
 
@@ -20,6 +21,7 @@ export interface Campaign {
   email_body_template: string;
   cooldown_days: number;
   is_active: boolean;
+  send_once?: boolean; // Se true, envia apenas uma vez por usuário
   created_at: string;
   updated_at: string;
   trigger_conditions?: {
@@ -34,13 +36,15 @@ interface CampaignsListProps {
   loading: boolean;
   onEdit: (campaign: Campaign) => void;
   onToggle: (campaignId: string, currentStatus: boolean) => void;
+  onDelete: (campaignId: string, campaignName: string) => void;
 }
 
 export const CampaignsList: React.FC<CampaignsListProps> = ({
   campaigns,
   loading,
   onEdit,
-  onToggle
+  onToggle,
+  onDelete
 }) => {
   const getCampaignType = (campaign: Campaign): { type: string; label: string; icon: any } => {
     const triggerConditions = campaign.trigger_conditions || {};
@@ -164,6 +168,13 @@ export const CampaignsList: React.FC<CampaignsListProps> = ({
                           </>
                         )}
                       </button>
+                      <button
+                        onClick={() => onDelete(campaign.id, campaign.name)}
+                        className="flex items-center gap-1 text-sm text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        Delete
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -175,6 +186,7 @@ export const CampaignsList: React.FC<CampaignsListProps> = ({
     </div>
   );
 };
+
 
 
 

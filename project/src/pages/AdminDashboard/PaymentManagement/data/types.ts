@@ -8,6 +8,7 @@ export interface PaymentRecord {
   university_name: string;
   scholarship_id?: string | null;
   scholarship_title?: string;
+  field_of_study?: string | null;
   fee_type: 'selection_process' | 'application' | 'scholarship' | 'i20_control_fee' | 'application_fee' | 'scholarship_fee';
   fee_type_global?: string;
   amount: number;
@@ -16,7 +17,7 @@ export interface PaymentRecord {
   payment_date?: string;
   stripe_session_id?: string;
   created_at: string;
-  payment_method?: 'stripe' | 'zelle' | 'manual';
+  payment_method?: 'stripe' | 'zelle' | 'manual' | 'pix';
   payment_proof_url?: string;
   admin_notes?: string;
   zelle_status?: 'pending_verification' | 'approved' | 'rejected' | string;
@@ -38,13 +39,13 @@ export interface PaymentStats {
 
 export interface AdminPaymentsFilters {
   search: string;
-  university: string;
-  feeType: string;
-  status: string;
+  university: string | string[]; // Suporta string única (compatibilidade) ou array (seleção múltipla)
+  feeType: string | string[]; // Suporta string única (compatibilidade) ou array (seleção múltipla)
+  status: string | string[]; // Suporta string única (compatibilidade) ou array (seleção múltipla)
   dateFrom?: string;
   dateTo?: string;
-  affiliate?: string;
-  paymentMethod?: string;
+  affiliate?: string | string[]; // Suporta string única (compatibilidade) ou array (seleção múltipla)
+  paymentMethod?: string | string[]; // Suporta string única (compatibilidade) ou array (seleção múltipla)
 }
 
 export interface UniversityPaymentRequest {
