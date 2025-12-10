@@ -1,98 +1,56 @@
--- Migration: Fix RLS policies to allow trigger to insert welcome messages
--- The trigger runs with SECURITY DEFINER, which should bypass RLS, but we'll create
--- helper functions to ensure it works correctly without breaking user registration
+-- Migration: Update newsletter system for GDPR/LGPD compliance with explicit opt-in
+-- This migration updates the newsletter system to require explicit consent before sending emails
 
--- Create helper function to insert conversation (bypasses RLS via SECURITY DEFINER)
-CREATE OR REPLACE FUNCTION public.create_welcome_conversation(
-  p_admin_id uuid,
-  p_student_id uuid
-)
-RETURNS uuid
-LANGUAGE plpgsql
-SECURITY DEFINER
-AS $$
-DECLARE
-  v_conversation_id uuid;
-BEGIN
-  -- Insert conversation (SECURITY DEFINER bypasses RLS)
-  INSERT INTO public.admin_student_conversations (admin_id, student_id)
-  VALUES (p_admin_id, p_student_id)
-  ON CONFLICT (admin_id, student_id) DO NOTHING
-  RETURNING id INTO v_conversation_id;
-
-  -- If conversation already existed, get its ID
-  IF v_conversation_id IS NULL THEN
-    SELECT id INTO v_conversation_id
-    FROM public.admin_student_conversations
-    WHERE admin_id = p_admin_id AND student_id = p_student_id
-    LIMIT 1;
-  END IF;
-
-  RETURN v_conversation_id;
-END;
-$$;
-
--- Create helper function to insert welcome message (bypasses RLS via SECURITY DEFINER)
-CREATE OR REPLACE FUNCTION public.insert_welcome_message(
-  p_conversation_id uuid,
-  p_admin_id uuid,
-  p_student_id uuid,
-  p_message_text text
-)
+-- 1. Update check_user_can_receive_email function to require explicit opt-in
+CREATE OR REPLACE FUNCTION check_user_can_receive_email(p_user_id uuid)
 RETURNS boolean
 LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
+DECLARE
+  v_opt_out boolean;
+  v_opt_in boolean;
+  v_last_email_sent timestamptz;
+  v_hours_since_last_email numeric;
 BEGIN
-  -- Check if welcome message already exists (prevent duplication)
-  IF EXISTS (
-    SELECT 1
-    FROM public.admin_student_messages
-    WHERE conversation_id = p_conversation_id
-    AND (
-      message LIKE '%Welcome to Support Chat%'
-      OR message LIKE '%Bem-vindo ao Chat de Suporte%'
-      OR message LIKE '%Bienvenido al Chat de Soporte%'
-    )
-    LIMIT 1
-  ) THEN
-    RETURN false; -- Message already exists
+  -- Verificar preferências de newsletter
+  SELECT email_opt_out, email_opt_in, last_email_sent_at
+  INTO v_opt_out, v_opt_in, v_last_email_sent
+  FROM newsletter_user_preferences
+  WHERE user_id = p_user_id;
+  
+  -- Se não tem registro de preferências, não pode receber (opt-in explícito requerido)
+  IF v_opt_out IS NULL AND v_opt_in IS NULL THEN
+    RETURN false;
   END IF;
-
-  -- Insert welcome message (SECURITY DEFINER bypasses RLS)
-  INSERT INTO public.admin_student_messages (
-    conversation_id,
-    sender_id,
-    recipient_id,
-    message,
-    read_at
-  )
-  VALUES (
-    p_conversation_id,
-    p_admin_id,
-    p_student_id,
-    p_message_text,
-    NULL  -- Leave as null so it appears as unread
-  );
-
-  -- Update conversation's last_message_at
-  UPDATE public.admin_student_conversations
-  SET 
-    last_message_at = NOW(),
-    updated_at = NOW()
-  WHERE id = p_conversation_id;
-
-  RETURN true; -- Message inserted successfully
+  
+  -- Se optou por sair, não pode receber
+  IF v_opt_out = true THEN
+    RETURN false;
+  END IF;
+  
+  -- ✅ NOVO: Se não consentiu explicitamente (opt_in é NULL ou false), não pode receber
+  IF v_opt_in IS NULL OR v_opt_in = false THEN
+    RETURN false;
+  END IF;
+  
+  -- Verificar rate limit: máximo 1 email por dia (24 horas)
+  -- Só verifica se o usuário consentiu (opt_in = true)
+  IF v_last_email_sent IS NOT NULL THEN
+    v_hours_since_last_email := EXTRACT(EPOCH FROM (NOW() - v_last_email_sent)) / 3600;
+    IF v_hours_since_last_email < 24 THEN
+      RETURN false;
+    END IF;
+  END IF;
+  
+  -- Se chegou aqui, usuário consentiu e passou no rate limit
+  RETURN true;
 END;
 $$;
 
--- Grant execute permissions on helper functions
-GRANT EXECUTE ON FUNCTION public.create_welcome_conversation(uuid, uuid) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.create_welcome_conversation(uuid, uuid) TO anon;
-GRANT EXECUTE ON FUNCTION public.insert_welcome_message(uuid, uuid, uuid, text) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.insert_welcome_message(uuid, uuid, uuid, text) TO anon;
+COMMENT ON FUNCTION check_user_can_receive_email IS 'Verifica se usuário pode receber email. Exige opt-in explícito (email_opt_in = true), verifica opt-out e rate limit (máximo 1 email por 24h). GDPR/LGPD compliant.';
 
--- Create or replace the trigger function to use helper functions
+-- 2. Update handle_new_user trigger to create newsletter preferences based on consent
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -190,7 +148,7 @@ BEGIN
     );
   END IF;
 
-  -- ✅ NOVO: Send welcome message for students (using helper functions that bypass RLS)
+  -- ✅ Send welcome message for students (using helper functions that bypass RLS)
   -- IMPORTANTE: Esta seção está completamente isolada em um bloco BEGIN/EXCEPTION
   -- para garantir que QUALQUER erro aqui NÃO quebre o registro do usuário
   IF user_role = 'student' THEN
@@ -297,4 +255,5 @@ GRANT EXECUTE ON FUNCTION public.handle_new_user() TO authenticated;
 GRANT EXECUTE ON FUNCTION public.handle_new_user() TO anon;
 
 -- Add comment for documentation
-COMMENT ON FUNCTION public.handle_new_user() IS 'Creates user profile, university entry (if role=school), and sends welcome chat message directly in database (if role=student) automatically when user signs up. Uses helper functions with SECURITY DEFINER to bypass RLS policies.';
+COMMENT ON FUNCTION public.handle_new_user() IS 'Creates user profile, university entry (if role=school), sends welcome chat message (if role=student), and creates newsletter preferences based on consent. Uses helper functions with SECURITY DEFINER to bypass RLS policies.';
+

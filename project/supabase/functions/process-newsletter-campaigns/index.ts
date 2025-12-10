@@ -26,6 +26,126 @@ interface EligibleUser {
   user_profile_id: string;
 }
 
+/**
+ * Verifica se o usuário tem opt-in explícito para receber emails
+ * CRÍTICO: Esta verificação é obrigatória para compliance GDPR/LGPD
+ * Retorna true APENAS se email_opt_in = true explicitamente
+ */
+async function hasExplicitOptIn(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<boolean> {
+  const { data: preferences } = await supabase
+    .from('newsletter_user_preferences')
+    .select('email_opt_in, email_opt_out')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  // Se não tem registro OU não consentiu explicitamente (opt_in não é true), NÃO pode receber
+  if (!preferences || preferences.email_opt_in !== true) {
+    return false;
+  }
+
+  // Se optou por sair, não pode receber
+  if (preferences.email_opt_out === true) {
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * Verifica se a campanha pode ser enviada para o usuário
+ * Retorna { canSend: boolean, reason?: string }
+ * - Se send_once = true e já foi enviado → não pode enviar
+ * - Se send_once = false e está em cooldown → não pode enviar
+ * - Caso contrário → pode enviar
+ */
+async function canSendCampaignToUser(
+  supabase: SupabaseClient,
+  userId: string,
+  campaignId: string,
+  cooldownDays: number,
+  testMode: boolean = false
+): Promise<{ canSend: boolean; reason?: string }> {
+  // IMPORTANTE: send_once deve ser SEMPRE respeitado, mesmo em modo de teste
+  // Apenas o cooldown pode ser ignorado em modo de teste
+  
+  // Buscar configuração da campanha PRIMEIRO para verificar send_once
+  const { data: campaign, error: campaignError } = await supabase
+    .from('newsletter_campaigns')
+    .select('send_once')
+    .eq('id', campaignId)
+    .single();
+
+  if (campaignError) {
+    console.error(`[Newsletter] Erro ao buscar campanha ${campaignId}:`, campaignError);
+    // Em caso de erro, não permitir envio por segurança
+    return { canSend: false, reason: `Error fetching campaign: ${campaignError.message}` };
+  }
+
+  // Verificar se já foi enviado (qualquer status: sent, pending, failed)
+  const { data: lastEmail, error: emailError } = await supabase
+    .from('newsletter_sent_emails')
+    .select('sent_at, status')
+    .eq('user_id', userId)
+    .eq('campaign_id', campaignId)
+    .order('sent_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (emailError) {
+    console.error(`[Newsletter] Erro ao verificar emails enviados para user ${userId}:`, emailError);
+    // Em caso de erro, não permitir envio por segurança
+    return { canSend: false, reason: `Error checking sent emails: ${emailError.message}` };
+  }
+
+  // Se nunca foi enviado, pode enviar
+  if (!lastEmail?.sent_at) {
+    console.log(`[Newsletter] ✅ Usuário ${userId} nunca recebeu esta campanha, pode enviar`);
+    return { canSend: true };
+  }
+
+  console.log(`[Newsletter] 📧 Usuário ${userId} já recebeu esta campanha anteriormente (enviado em ${lastEmail.sent_at}, status: ${lastEmail.status})`);
+
+  // Se send_once = true, não reenviar nunca (independente de quando foi enviado)
+  if (campaign?.send_once === true) {
+    console.log(`[Newsletter] ⛔ BLOQUEADO: Usuário ${userId} já recebeu esta campanha (send_once=true, enviado em ${lastEmail.sent_at}, status: ${lastEmail.status})`);
+    return { 
+      canSend: false, 
+      reason: `Campaign configured to send only once (send_once=true). Last sent: ${lastEmail.sent_at}` 
+    };
+  }
+
+  // Se send_once = false, verificar cooldown
+  // IMPORTANTE: Se cooldownDays = 0, permite reenvio imediato (sem verificar cooldown)
+  if (cooldownDays === 0) {
+    console.log(`[Newsletter] ✅ Cooldown = 0, permitindo reenvio imediato para user ${userId} (último envio: ${lastEmail.sent_at})`);
+    return { canSend: true };
+  }
+
+  // Se cooldownDays > 0, verificar se passou o período de cooldown
+  if (!testMode) {
+    const lastSentDate = new Date(lastEmail.sent_at);
+    const daysSinceLastEmail = (Date.now() - lastSentDate.getTime()) / (1000 * 60 * 60 * 24);
+    
+    console.log(`[Newsletter] 📊 Cooldown check: ${daysSinceLastEmail.toFixed(3)} dias desde último envio, necessário: ${cooldownDays} dias`);
+    
+    if (daysSinceLastEmail < cooldownDays) {
+      console.log(`[Newsletter] ⏳ Usuário ${userId} está em cooldown (${daysSinceLastEmail.toFixed(3)} dias, necessário: ${cooldownDays} dias)`);
+      return { 
+        canSend: false, 
+        reason: `User is in cooldown (${daysSinceLastEmail.toFixed(3)} days, required: ${cooldownDays} days). Last sent: ${lastEmail.sent_at}` 
+      };
+    }
+  } else {
+    console.log(`[Newsletter] 🧪 TESTE: Ignorando cooldown para user ${userId} (mas send_once ainda é respeitado)`);
+  }
+
+  console.log(`[Newsletter] ✅ Usuário ${userId} pode receber esta campanha`);
+  return { canSend: true };
+}
+
 interface Campaign {
   id: string;
   campaign_key: string;
@@ -33,8 +153,9 @@ interface Campaign {
   email_subject_template: string;
   email_body_template: string;
   cooldown_days: number;
+  send_once?: boolean; // Se true, envia apenas uma vez por usuário
   trigger_conditions?: {
-    type?: 'registered_no_payment' | 'paid_no_application' | 'application_flow_stage';
+    type?: 'registered_no_payment' | 'paid_no_application' | 'application_flow_stage' | 'all_users';
     days?: number;
     stage?: string;
     stage_status?: string;
@@ -50,19 +171,13 @@ async function getEligibleUsersForRegisteredNoPayment(
   campaignId: string,
   cooldownDays: number,
   daysSinceRegistration: number = 2,
-  limit: number = 50
+  limit: number = 50,
+  ignoreRateLimit: boolean = false
 ): Promise<EligibleUser[]> {
-  const { data, error } = await supabase.rpc('get_eligible_users_for_campaign', {
-    p_campaign_key: 'registered_no_payment',
-    p_limit: limit
-  });
-
-  if (error) {
-    console.error('[Newsletter] Erro ao buscar usuários elegíveis (registered_no_payment):', error);
-    return [];
-  }
-
+  // Buscar usuários diretamente (não usar RPC que pode ter validações próprias)
+  // Isso nos dá mais controle sobre as validações
   // Filtrar usuários que atendem às condições específicas desta campanha
+  // Aumentar o limite para garantir que encontramos todos os usuários elegíveis
   const { data: eligibleUsers, error: queryError } = await supabase
     .from('user_profiles')
     .select(`
@@ -76,28 +191,41 @@ async function getEligibleUsersForRegisteredNoPayment(
     .eq('role', 'student')
     .eq('has_paid_selection_process_fee', false)
     .not('email', 'is', null)
-    .limit(limit);
+    .limit(limit * 3); // Aumentar para garantir que encontramos todos
 
   if (queryError || !eligibleUsers) {
     console.error('[Newsletter] Erro ao buscar user_profiles:', queryError);
     return [];
   }
 
+  console.log(`[Newsletter] 📊 Busca inicial encontrou ${eligibleUsers.length} usuários com has_paid_selection_process_fee=false`);
+
   // Buscar data de criação dos usuários
   const userIds = eligibleUsers.map(u => u.user_id);
   const { data: authUsers } = await supabase.auth.admin.listUsers();
   
+  console.log(`[Newsletter] 📊 Total de usuários auth encontrados: ${authUsers?.users.length || 0}`);
+  
   const usersWithCreationDate = eligibleUsers
     .map(profile => {
       const authUser = authUsers?.users.find(u => u.id === profile.user_id);
-      if (!authUser) return null;
+      if (!authUser) {
+        console.log(`[Newsletter] ⚠️ Usuário ${profile.email} não encontrado em auth.users`);
+        return null;
+      }
 
       // Verificar se passaram os dias mínimos desde o registro (exceto em modo de teste)
-      if (!TEST_MODE) {
-        const createdAt = new Date(authUser.created_at);
-        const daysSinceCreation = (Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24);
-        
-        if (daysSinceCreation < daysSinceRegistration) return null;
+      // Se daysSinceRegistration for 0, enviar imediatamente (não verificar dias)
+      const createdAt = new Date(authUser.created_at);
+      const daysSinceCreation = (Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24);
+      
+      if (!TEST_MODE && daysSinceRegistration > 0) {
+        if (daysSinceCreation < daysSinceRegistration) {
+          console.log(`[Newsletter] ⏳ Usuário ${profile.email} não passou no filtro de dias (${daysSinceCreation.toFixed(3)} dias < ${daysSinceRegistration} dias)`);
+          return null;
+        }
+      } else {
+        console.log(`[Newsletter] ✅ Usuário ${profile.email} passou no filtro de dias (daysSinceRegistration=${daysSinceRegistration}, daysSinceCreation=${daysSinceCreation.toFixed(3)}, TEST_MODE=${TEST_MODE})`);
       }
 
       return {
@@ -109,46 +237,73 @@ async function getEligibleUsersForRegisteredNoPayment(
     })
     .filter((u): u is EligibleUser => u !== null);
 
+  console.log(`[Newsletter] 📊 Após filtrar por dias, restam ${usersWithCreationDate.length} usuários`);
+
   // Verificar rate limit e cooldown para cada usuário (ignorar em modo de teste)
   const finalEligibleUsers: EligibleUser[] = [];
   
+  console.log(`[Newsletter] 🔍 Iniciando validações para ${usersWithCreationDate.length} usuários`);
+  
   for (const user of usersWithCreationDate) {
-    // Verificar se pode receber email (rate limit e opt-out) - IGNORAR EM MODO DE TESTE
-    if (!TEST_MODE) {
+    console.log(`[Newsletter] 🔍 Processando usuário: ${user.email} (${user.user_id})`);
+    
+    // ✅ CRÍTICO: Verificar opt-in explícito ANTES de qualquer outra verificação
+    // Isso garante compliance GDPR/LGPD - apenas usuários que consentiram podem receber
+    const { data: preferences, error: prefError } = await supabase
+      .from('newsletter_user_preferences')
+      .select('email_opt_in, email_opt_out')
+      .eq('user_id', user.user_id)
+      .maybeSingle();
+
+    if (prefError) {
+      console.error(`[Newsletter] ❌ Erro ao buscar preferências para ${user.email}:`, prefError);
+      continue;
+    }
+
+    // Se não tem registro OU não consentiu explicitamente (opt_in não é true), NÃO pode receber
+    if (!preferences || preferences.email_opt_in !== true) {
+      console.log(`[Newsletter] ⛔ Usuário ${user.email} não pode receber email: opt-in não confirmado (opt_in=${preferences?.email_opt_in}, preferences existe: ${!!preferences})`);
+      continue;
+    }
+
+    // Se optou por sair, não pode receber
+    if (preferences.email_opt_out === true) {
+      console.log(`[Newsletter] ⛔ Usuário ${user.email} optou por sair (opt-out)`);
+      continue;
+    }
+
+    console.log(`[Newsletter] ✅ Usuário ${user.email} passou na verificação de opt-in`);
+
+    // ✅ IMPORTANTE: Verificar cooldown da campanha ANTES do rate limit global
+    const { canSend, reason } = await canSendCampaignToUser(
+      supabase,
+      user.user_id,
+      campaignId,
+      cooldownDays,
+      TEST_MODE
+    );
+
+    if (!canSend) {
+      console.log(`[Newsletter] ⛔ Usuário ${user.email} não pode receber esta campanha: ${reason}`);
+      continue;
+    }
+
+    // Verificar rate limit global (máximo 1 email por 24h) - IGNORAR EM MODO DE TESTE OU SE ignoreRateLimit = true
+    if (!TEST_MODE && !ignoreRateLimit) {
       const { data: canReceive } = await supabase.rpc('check_user_can_receive_email', {
         p_user_id: user.user_id
       });
 
       if (!canReceive) {
-        console.log(`[Newsletter] Usuário ${user.email} não pode receber email (rate limit ou opt-out)`);
+        console.log(`[Newsletter] ⏳ Usuário ${user.email} não pode receber email (rate limit global: máximo 1 email por 24h)`);
         continue;
       }
     } else {
-      console.log(`[Newsletter] 🧪 TESTE: Ignorando rate limit para ${user.email}`);
-    }
-
-    // Verificar cooldown desta campanha - IGNORAR EM MODO DE TESTE
-    if (!TEST_MODE) {
-      const { data: lastEmail } = await supabase
-        .from('newsletter_sent_emails')
-        .select('sent_at')
-        .eq('user_id', user.user_id)
-        .eq('campaign_id', campaignId)
-        .order('sent_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (lastEmail?.sent_at) {
-        const lastSentDate = new Date(lastEmail.sent_at);
-        const daysSinceLastEmail = (Date.now() - lastSentDate.getTime()) / (1000 * 60 * 60 * 24);
-        
-        if (daysSinceLastEmail < cooldownDays) {
-          console.log(`[Newsletter] Usuário ${user.email} está em cooldown (${daysSinceLastEmail.toFixed(1)} dias)`);
-          continue;
-        }
+      if (ignoreRateLimit) {
+        console.log(`[Newsletter] ⚡ IGNORANDO rate limit para ${user.email} (processamento manual)`);
+      } else {
+        console.log(`[Newsletter] 🧪 TESTE: Ignorando rate limit para ${user.email}`);
       }
-    } else {
-      console.log(`[Newsletter] 🧪 TESTE: Ignorando cooldown para ${user.email}`);
     }
 
     finalEligibleUsers.push(user);
@@ -166,7 +321,8 @@ async function getEligibleUsersForPaidNoApplication(
   campaignId: string,
   cooldownDays: number,
   daysSincePayment: number = 3,
-  limit: number = 50
+  limit: number = 50,
+  ignoreRateLimit: boolean = false
 ): Promise<EligibleUser[]> {
   // Buscar usuários que pagaram selection process fee mas não têm aplicação
   const { data: eligibleUsers, error: queryError } = await supabase
@@ -205,7 +361,8 @@ async function getEligibleUsersForPaidNoApplication(
     }
 
     // Verificar se pagou há mais de X dias (exceto em modo de teste)
-    if (!TEST_MODE) {
+    // Se daysSincePayment for 0, enviar imediatamente (não verificar dias)
+    if (!TEST_MODE && daysSincePayment > 0) {
       const { data: payment } = await supabase
         .from('individual_fee_payments')
         .select('payment_date')
@@ -225,36 +382,43 @@ async function getEligibleUsersForPaidNoApplication(
       }
     }
 
-    // Verificar rate limit e cooldown - IGNORAR EM MODO DE TESTE
-    if (!TEST_MODE) {
+    // ✅ CRÍTICO: Verificar opt-in explícito ANTES de qualquer outra verificação
+    const hasOptIn = await hasExplicitOptIn(supabase, profile.user_id);
+    if (!hasOptIn) {
+      console.log(`[Newsletter] ⛔ Usuário ${profile.email} não pode receber email: opt-in não confirmado`);
+      continue;
+    }
+
+    // ✅ IMPORTANTE: Verificar cooldown da campanha ANTES do rate limit global
+    const { canSend, reason } = await canSendCampaignToUser(
+      supabase,
+      profile.user_id,
+      campaignId,
+      cooldownDays,
+      TEST_MODE
+    );
+
+    if (!canSend) {
+      console.log(`[Newsletter] ⛔ Usuário ${profile.email} não pode receber esta campanha: ${reason}`);
+      continue;
+    }
+
+    // Verificar rate limit global (máximo 1 email por 24h) - IGNORAR EM MODO DE TESTE OU SE ignoreRateLimit = true
+    if (!TEST_MODE && !ignoreRateLimit) {
       const { data: canReceive } = await supabase.rpc('check_user_can_receive_email', {
         p_user_id: profile.user_id
       });
 
       if (!canReceive) {
+        console.log(`[Newsletter] ⏳ Usuário ${profile.email} não pode receber email (rate limit global: máximo 1 email por 24h)`);
         continue;
       }
-
-      // Verificar cooldown
-      const { data: lastEmail } = await supabase
-        .from('newsletter_sent_emails')
-        .select('sent_at')
-        .eq('user_id', profile.user_id)
-        .eq('campaign_id', campaignId)
-        .order('sent_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (lastEmail?.sent_at) {
-        const lastSentDate = new Date(lastEmail.sent_at);
-        const daysSinceLastEmail = (Date.now() - lastSentDate.getTime()) / (1000 * 60 * 60 * 24);
-        
-        if (daysSinceLastEmail < cooldownDays) {
-          continue;
-        }
-      }
     } else {
-      console.log(`[Newsletter] 🧪 TESTE: Ignorando rate limit e cooldown para ${profile.email}`);
+      if (ignoreRateLimit) {
+        console.log(`[Newsletter] ⚡ IGNORANDO rate limit para ${profile.email} (processamento manual)`);
+      } else {
+        console.log(`[Newsletter] 🧪 TESTE: Ignorando rate limit e cooldown para ${profile.email}`);
+      }
     }
 
     usersWithoutApplication.push({
@@ -508,7 +672,8 @@ async function getEligibleUsersForApplicationFlowStage(
   cooldownDays: number,
   stage: string,
   stageStatus?: string,
-  limit: number = 50
+  limit: number = 50,
+  ignoreRateLimit: boolean = false
 ): Promise<EligibleUser[]> {
   console.log(`[Newsletter] Buscando usuários no estágio: ${stage}${stageStatus ? ` com status: ${stageStatus}` : ''}`);
 
@@ -731,38 +896,39 @@ async function getEligibleUsersForApplicationFlowStage(
   const finalEligibleUsers: EligibleUser[] = [];
   
   for (const student of eligibleStudents.slice(0, limit)) {
-    // Verificar se pode receber email (rate limit e opt-out)
-    if (!TEST_MODE) {
+    // ✅ CRÍTICO: Verificar opt-in explícito ANTES de qualquer outra verificação
+    const hasOptIn = await hasExplicitOptIn(supabase, student.user_id);
+    if (!hasOptIn) {
+      console.log(`[Newsletter] ⛔ Usuário ${student.email} não pode receber email: opt-in não confirmado`);
+      continue;
+    }
+
+    // ✅ IMPORTANTE: Verificar cooldown da campanha ANTES do rate limit global
+    const { canSend, reason } = await canSendCampaignToUser(
+      supabase,
+      student.user_id,
+      campaignId,
+      cooldownDays,
+      TEST_MODE
+    );
+
+    if (!canSend) {
+      console.log(`[Newsletter] ⛔ Usuário ${student.email} não pode receber esta campanha: ${reason}`);
+      continue;
+    }
+
+    // Verificar rate limit global (máximo 1 email por 24h) - IGNORAR SE ignoreRateLimit = true
+    if (!TEST_MODE && !ignoreRateLimit) {
       const { data: canReceive } = await supabase.rpc('check_user_can_receive_email', {
         p_user_id: student.user_id
       });
 
       if (!canReceive) {
-        console.log(`[Newsletter] Usuário ${student.email} não pode receber email (rate limit ou opt-out)`);
+        console.log(`[Newsletter] ⏳ Usuário ${student.email} não pode receber email (rate limit global: máximo 1 email por 24h)`);
         continue;
       }
-    }
-
-    // Verificar cooldown desta campanha
-    if (!TEST_MODE) {
-      const { data: lastEmail } = await supabase
-        .from('newsletter_sent_emails')
-        .select('sent_at')
-        .eq('user_id', student.user_id)
-        .eq('campaign_id', campaignId)
-        .order('sent_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (lastEmail?.sent_at) {
-        const lastSentDate = new Date(lastEmail.sent_at);
-        const daysSinceLastEmail = (Date.now() - lastSentDate.getTime()) / (1000 * 60 * 60 * 24);
-        
-        if (daysSinceLastEmail < cooldownDays) {
-          console.log(`[Newsletter] Usuário ${student.email} está em cooldown (${daysSinceLastEmail.toFixed(1)} dias)`);
-          continue;
-        }
-      }
+    } else if (ignoreRateLimit) {
+      console.log(`[Newsletter] ⚡ IGNORANDO rate limit para ${student.email} (processamento manual)`);
     }
 
     finalEligibleUsers.push({
@@ -777,9 +943,102 @@ async function getEligibleUsersForApplicationFlowStage(
 }
 
 /**
+ * Busca todos os usuários elegíveis para campanhas do tipo "all_users"
+ * Respeita rate limit e cooldown, mas não filtra por estágio ou condições específicas
+ */
+async function getEligibleUsersForAllUsers(
+  supabase: SupabaseClient,
+  campaignId: string,
+  cooldownDays: number,
+  limit: number = 50,
+  ignoreRateLimit: boolean = false
+): Promise<EligibleUser[]> {
+  console.log(`[Newsletter] Buscando todos os usuários elegíveis para campanha broadcast`);
+
+  // Buscar todos os estudantes com email
+  const { data: allUsers, error: queryError } = await supabase
+    .from('user_profiles')
+    .select(`
+      user_id,
+      email,
+      full_name,
+      id,
+      role
+    `)
+    .eq('role', 'student')
+    .not('email', 'is', null)
+    .limit(limit * 3); // Buscar mais para filtrar depois
+
+  if (queryError || !allUsers) {
+    console.error('[Newsletter] Erro ao buscar user_profiles:', queryError);
+    return [];
+  }
+
+  console.log(`[Newsletter] Encontrados ${allUsers.length} usuários para filtrar`);
+
+  // Verificar rate limit e cooldown para cada usuário
+  const finalEligibleUsers: EligibleUser[] = [];
+  
+  for (const user of allUsers) {
+    // ✅ CRÍTICO: Verificar opt-in explícito ANTES de qualquer outra verificação
+    const hasOptIn = await hasExplicitOptIn(supabase, user.user_id);
+    if (!hasOptIn) {
+      console.log(`[Newsletter] ⛔ Usuário ${user.email} não pode receber email: opt-in não confirmado`);
+      continue;
+    }
+
+    // ✅ IMPORTANTE: Verificar cooldown da campanha ANTES do rate limit global
+    const { canSend, reason } = await canSendCampaignToUser(
+      supabase,
+      user.user_id,
+      campaignId,
+      cooldownDays,
+      TEST_MODE
+    );
+
+    if (!canSend) {
+      console.log(`[Newsletter] ⛔ Usuário ${user.email} não pode receber esta campanha: ${reason}`);
+      continue;
+    }
+
+    // Verificar rate limit global (máximo 1 email por 24h) - IGNORAR EM MODO DE TESTE OU SE ignoreRateLimit = true
+    if (!TEST_MODE && !ignoreRateLimit) {
+      const { data: canReceive } = await supabase.rpc('check_user_can_receive_email', {
+        p_user_id: user.user_id
+      });
+
+      if (!canReceive) {
+        console.log(`[Newsletter] ⏳ Usuário ${user.email} não pode receber email (rate limit global: máximo 1 email por 24h)`);
+        continue;
+      }
+    } else {
+      if (ignoreRateLimit) {
+        console.log(`[Newsletter] ⚡ IGNORANDO rate limit para ${user.email} (processamento manual)`);
+      } else {
+        console.log(`[Newsletter] 🧪 TESTE: Ignorando rate limit para ${user.email}`);
+      }
+    }
+
+    finalEligibleUsers.push({
+      user_id: user.user_id,
+      email: user.email || '',
+      full_name: user.full_name || 'Estudante',
+      user_profile_id: user.id
+    });
+
+    if (finalEligibleUsers.length >= limit) {
+      break;
+    }
+  }
+
+  console.log(`[Newsletter] ${finalEligibleUsers.length} usuários elegíveis para campanha broadcast`);
+  return finalEligibleUsers;
+}
+
+/**
  * Processa uma campanha específica
  */
-async function processCampaign(campaign: Campaign): Promise<{ sent: number; failed: number }> {
+async function processCampaign(campaign: Campaign, ignoreRateLimit: boolean = false): Promise<{ sent: number; failed: number }> {
   console.log(`[Newsletter] Processando campanha: ${campaign.name} (${campaign.campaign_key})`);
 
   let eligibleUsers: EligibleUser[] = [];
@@ -790,9 +1049,10 @@ async function processCampaign(campaign: Campaign): Promise<{ sent: number; fail
      campaign.campaign_key.startsWith('paid_no_application') ? 'paid_no_application' : null);
   
   // Extrair dias do campaign_key (ex: registered_no_payment_14d -> 14) ou usar trigger_conditions
-  let daysSinceTrigger = campaign.trigger_conditions?.days;
+  // IMPORTANTE: days pode ser 0, então não usar !daysSinceTrigger (0 é falsy)
+  let daysSinceTrigger: number | undefined = campaign.trigger_conditions?.days;
   
-  if (!daysSinceTrigger) {
+  if (daysSinceTrigger === undefined || daysSinceTrigger === null) {
     // Tentar extrair do campaign_key
     const daysMatch = campaign.campaign_key.match(/(\d+)d$/);
     if (daysMatch) {
@@ -802,6 +1062,8 @@ async function processCampaign(campaign: Campaign): Promise<{ sent: number; fail
       daysSinceTrigger = triggerType === 'registered_no_payment' ? 2 : 3;
     }
   }
+  
+  console.log(`[Newsletter] 📅 daysSinceTrigger extraído: ${daysSinceTrigger} (trigger_conditions.days: ${campaign.trigger_conditions?.days})`);
 
   // Buscar usuários elegíveis baseado na campanha
   if (triggerType === 'registered_no_payment') {
@@ -810,7 +1072,8 @@ async function processCampaign(campaign: Campaign): Promise<{ sent: number; fail
       campaign.id,
       campaign.cooldown_days,
       daysSinceTrigger,
-      50
+      50,
+      ignoreRateLimit
     );
   } else if (triggerType === 'paid_no_application') {
     eligibleUsers = await getEligibleUsersForPaidNoApplication(
@@ -818,7 +1081,8 @@ async function processCampaign(campaign: Campaign): Promise<{ sent: number; fail
       campaign.id,
       campaign.cooldown_days,
       daysSinceTrigger,
-      50
+      50,
+      ignoreRateLimit
     );
   } else if (triggerType === 'application_flow_stage') {
     const stage = campaign.trigger_conditions?.stage;
@@ -835,7 +1099,16 @@ async function processCampaign(campaign: Campaign): Promise<{ sent: number; fail
       campaign.cooldown_days,
       stage,
       stageStatus,
-      50
+      50,
+      ignoreRateLimit
+    );
+  } else if (triggerType === 'all_users') {
+    eligibleUsers = await getEligibleUsersForAllUsers(
+      supabase,
+      campaign.id,
+      campaign.cooldown_days,
+      50,
+      ignoreRateLimit
     );
   } else {
     console.warn(`[Newsletter] Campanha desconhecida: ${campaign.campaign_key} (tipo: ${triggerType})`);
@@ -843,12 +1116,9 @@ async function processCampaign(campaign: Campaign): Promise<{ sent: number; fail
   }
 
   console.log(`[Newsletter] Encontrados ${eligibleUsers.length} usuários elegíveis para ${campaign.campaign_key}`);
-
-  // Filtrar apenas email de teste se estiver em modo de teste
-  if (TEST_MODE) {
-    console.log(`[Newsletter] 🧪 MODO DE TESTE ATIVO - Filtrando apenas para: ${TEST_EMAIL}`);
-    eligibleUsers = eligibleUsers.filter(user => user.email.toLowerCase() === TEST_EMAIL.toLowerCase());
-    console.log(`[Newsletter] Após filtro de teste: ${eligibleUsers.length} usuário(s) elegível(is)`);
+  console.log(`[Newsletter] 📋 Configuração da campanha: send_once=${campaign.send_once}, cooldown_days=${campaign.cooldown_days}`);
+  if (ignoreRateLimit) {
+    console.log(`[Newsletter] ⚡ MODO MANUAL: Rate limit global será IGNORADO para esta campanha`);
   }
 
   let sent = 0;
@@ -857,6 +1127,34 @@ async function processCampaign(campaign: Campaign): Promise<{ sent: number; fail
   // Processar cada usuário
   for (const user of eligibleUsers) {
     try {
+      // ✅ VERIFICAÇÃO FINAL DE SEGURANÇA: Garantir opt-in explícito antes de enviar
+      // Esta é uma verificação dupla de segurança para garantir compliance GDPR/LGPD
+      const hasOptIn = await hasExplicitOptIn(supabase, user.user_id);
+      if (!hasOptIn) {
+        console.error(`[Newsletter] 🚨 BLOQUEADO: Tentativa de enviar email para ${user.email} sem opt-in explícito! Opt-in não confirmado.`);
+        failed++;
+        continue;
+      }
+
+      // ✅ VERIFICAÇÃO CRÍTICA: Verificar send_once e cooldown ANTES de enviar
+      // Esta verificação é feita novamente aqui para evitar race conditions
+      // IMPORTANTE: Quando ignoreRateLimit = true, ainda verificamos cooldown e send_once, mas não o rate limit global
+      console.log(`[Newsletter] 🔍 Verificando se pode enviar para ${user.email} (campaign: ${campaign.id}, send_once: ${campaign.send_once}, cooldown: ${campaign.cooldown_days}, ignoreRateLimit: ${ignoreRateLimit}, TEST_MODE: ${TEST_MODE})`);
+      const { canSend, reason } = await canSendCampaignToUser(
+        supabase,
+        user.user_id,
+        campaign.id,
+        campaign.cooldown_days,
+        TEST_MODE
+      );
+
+      if (!canSend) {
+        console.log(`[Newsletter] ⛔ BLOQUEADO ANTES DE ENVIAR: ${user.email} - ${reason}`);
+        failed++;
+        continue;
+      }
+      console.log(`[Newsletter] ✅ APROVADO PARA ENVIAR: ${user.email} (passou em todas as verificações)`);
+
       // Personalizar template
       const subject = personalizeEmailTemplate(campaign.email_subject_template, user, campaign.campaign_key);
       const htmlBody = personalizeEmailTemplate(campaign.email_body_template, user, campaign.campaign_key);
@@ -936,14 +1234,20 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json().catch(() => ({}));
-    const { campaign_key, limit } = body;
+    const { campaign_key, limit, ignore_rate_limit } = body;
+
+    const ignoreRateLimit = ignore_rate_limit === true;
+
+    if (ignoreRateLimit) {
+      console.log('[Newsletter] ⚡ Processamento manual: Rate limit será IGNORADO');
+    }
 
     console.log('[Newsletter] Iniciando processamento de campanhas');
 
     // Buscar campanhas ativas (incluindo trigger_conditions)
     let query = supabase
       .from('newsletter_campaigns')
-      .select('id, campaign_key, name, email_subject_template, email_body_template, cooldown_days, trigger_conditions')
+      .select('id, campaign_key, name, email_subject_template, email_body_template, cooldown_days, send_once, trigger_conditions')
       .eq('is_active', true);
 
     // Se especificou uma campanha, processar apenas ela
@@ -967,7 +1271,7 @@ Deno.serve(async (req) => {
 
     // Processar cada campanha
     for (const campaign of campaigns) {
-      const result = await processCampaign(campaign);
+      const result = await processCampaign(campaign, ignoreRateLimit);
       results[campaign.campaign_key] = result;
     }
 

@@ -196,6 +196,7 @@ CREATE POLICY "Service role can manage preferences"
 -- ============================================================================
 
 -- Função para verificar se usuário pode receber email
+-- ✅ ATUALIZADA: Agora exige opt-in explícito (GDPR/LGPD compliance)
 CREATE OR REPLACE FUNCTION check_user_can_receive_email(p_user_id uuid)
 RETURNS boolean
 LANGUAGE plpgsql
@@ -203,26 +204,33 @@ SECURITY DEFINER
 AS $$
 DECLARE
   v_opt_out boolean;
+  v_opt_in boolean;
   v_last_email_sent timestamptz;
   v_hours_since_last_email numeric;
 BEGIN
-  -- Verificar opt-out
-  SELECT email_opt_out, last_email_sent_at
-  INTO v_opt_out, v_last_email_sent
+  -- Verificar preferências de newsletter
+  SELECT email_opt_out, email_opt_in, last_email_sent_at
+  INTO v_opt_out, v_opt_in, v_last_email_sent
   FROM newsletter_user_preferences
   WHERE user_id = p_user_id;
+  
+  -- Se não tem registro de preferências, não pode receber (opt-in explícito requerido)
+  IF v_opt_out IS NULL AND v_opt_in IS NULL THEN
+    RETURN false;
+  END IF;
   
   -- Se optou por sair, não pode receber
   IF v_opt_out = true THEN
     RETURN false;
   END IF;
   
-  -- Se não tem registro de preferências, pode receber (primeira vez)
-  IF v_opt_out IS NULL THEN
-    RETURN true;
+  -- ✅ NOVO: Se não consentiu explicitamente (opt_in é NULL ou false), não pode receber
+  IF v_opt_in IS NULL OR v_opt_in = false THEN
+    RETURN false;
   END IF;
   
   -- Verificar rate limit: máximo 1 email por dia (24 horas)
+  -- Só verifica se o usuário consentiu (opt_in = true)
   IF v_last_email_sent IS NOT NULL THEN
     v_hours_since_last_email := EXTRACT(EPOCH FROM (NOW() - v_last_email_sent)) / 3600;
     IF v_hours_since_last_email < 24 THEN
@@ -230,11 +238,12 @@ BEGIN
     END IF;
   END IF;
   
+  -- Se chegou aqui, usuário consentiu e passou no rate limit
   RETURN true;
 END;
 $$;
 
-COMMENT ON FUNCTION check_user_can_receive_email IS 'Verifica se usuário pode receber email (rate limit e opt-out)';
+COMMENT ON FUNCTION check_user_can_receive_email IS 'Verifica se usuário pode receber email. Exige opt-in explícito (email_opt_in = true), verifica opt-out e rate limit (máximo 1 email por 24h). GDPR/LGPD compliant.';
 
 -- Função para buscar usuários elegíveis para uma campanha
 CREATE OR REPLACE FUNCTION get_eligible_users_for_campaign(p_campaign_key text, p_limit integer DEFAULT 50)

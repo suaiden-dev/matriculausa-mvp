@@ -43,3 +43,4 @@ WHERE jobname = 'newsletter-campaigns';
 -- SELECT cron.alter_job(14, schedule => '0 20 * * *');
 
 
+

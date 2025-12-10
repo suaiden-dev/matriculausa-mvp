@@ -36,3 +36,4 @@ COMMENT ON FUNCTION update_term_acceptance_photo IS 'Atualiza a foto de identida
 
 
 
+
