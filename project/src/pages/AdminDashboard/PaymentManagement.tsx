@@ -119,13 +119,14 @@ const PaymentManagement = (): React.JSX.Element => {
     if (!filters || Object.keys(filters).length === 0) {
       setFilters((prev: any) => ({
         ...prev,
-    search: '',
-    university: 'all',
-    feeType: 'all',
-        status: 'paid',
+        search: '',
+        university: 'all', // Pode ser 'all' ou array
+        feeType: 'all', // Pode ser 'all' ou array
+        status: 'paid', // Pode ser 'all' ou array
         dateFrom: undefined,
         dateTo: undefined,
-        affiliate: undefined,
+        affiliate: undefined, // Pode ser 'all' ou array
+        paymentMethod: undefined, // Pode ser 'all' ou array
       }));
     }
   }, []);
@@ -694,11 +695,17 @@ const PaymentManagement = (): React.JSX.Element => {
 
   const handleExport = async () => {
     try {
-      await exportPaymentsToCsvViaEdge(filters as any);
-    } catch (_) {
+      // Usar os dados já filtrados (sortedPayments) para exportação
+      // Isso garante que a exportação respeite todos os filtros aplicados, incluindo seleção múltipla
+      downloadCsvFromPayments(sortedPayments as any);
+    } catch (error) {
+      console.error('Error exporting payments:', error);
+      // Fallback: tentar Edge Function apenas se a exportação client-side falhar
       try {
-        downloadCsvFromPayments(sortedPayments as any);
-      } catch (_) {}
+        await exportPaymentsToCsvViaEdge(filters as any);
+      } catch (edgeError) {
+        console.error('Error exporting via Edge Function:', edgeError);
+      }
     }
   };
 
