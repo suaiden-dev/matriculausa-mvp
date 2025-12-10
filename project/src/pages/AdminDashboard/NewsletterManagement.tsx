@@ -75,6 +75,9 @@ const NewsletterManagement: React.FC = () => {
   const [campaignSearch, setCampaignSearch] = useState('');
   const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isProcessConfirmModalOpen, setIsProcessConfirmModalOpen] = useState(false);
+  const [isDeleteConfirmModalOpen, setIsDeleteConfirmModalOpen] = useState(false);
+  const [campaignToDelete, setCampaignToDelete] = useState<{ id: string; name: string; emailCount: number } | null>(null);
   const [savingCampaign, setSavingCampaign] = useState(false);
   const [editFormData, setEditFormData] = useState<{
     name: string;
@@ -82,12 +85,20 @@ const NewsletterManagement: React.FC = () => {
     email_subject_template: string;
     email_body_template: string;
     cooldown_days: number;
+    days?: number; // Campo para registered_no_payment e paid_no_application
+    stageStatus?: string; // Campo para application_flow_stage
+    isActive: boolean; // Campo is_active
+    sendOnce: boolean; // Campo send_once
   }>({
     name: '',
     description: '',
     email_subject_template: '',
     email_body_template: '',
-    cooldown_days: 7
+    cooldown_days: 7,
+    days: undefined,
+    stageStatus: undefined,
+    isActive: true,
+    sendOnce: false
   });
   
   // Emails state
@@ -452,6 +463,66 @@ const NewsletterManagement: React.FC = () => {
     }
   };
 
+  const openDeleteModal = async (campaignId: string, campaignName: string) => {
+    try {
+      // Verificar quantos emails foram enviados antes de mostrar o modal
+      const { data: sentEmails, error: checkError } = await supabase
+        .from('newsletter_sent_emails')
+        .select('id')
+        .eq('campaign_id', campaignId);
+
+      if (checkError) {
+        console.error('Error checking sent emails:', checkError);
+      }
+
+      const emailCount = sentEmails?.length || 0;
+      
+      setCampaignToDelete({
+        id: campaignId,
+        name: campaignName,
+        emailCount: emailCount
+      });
+      setIsDeleteConfirmModalOpen(true);
+    } catch (error: any) {
+      console.error('Error checking sent emails:', error);
+      toast.error('Error loading campaign information');
+    }
+  };
+
+  const deleteCampaign = async () => {
+    if (!campaignToDelete) return;
+
+    try {
+      setIsDeleteConfirmModalOpen(false);
+      
+      // Deletar a campanha
+      // Nota: Com ON DELETE CASCADE, os emails enviados também serão deletados
+      const { error } = await supabase
+        .from('newsletter_campaigns')
+        .delete()
+        .eq('id', campaignToDelete.id);
+
+      if (error) throw error;
+
+      toast.success(
+        `Campaign "${campaignToDelete.name}" deleted successfully.${campaignToDelete.emailCount > 0 ? ` (${campaignToDelete.emailCount} sent email record(s) also deleted)` : ''}`
+      );
+      
+      setCampaignToDelete(null);
+      await fetchCampaigns();
+      await fetchStats();
+    } catch (error: any) {
+      console.error('Error deleting campaign:', error);
+      
+      // Verificar se o erro é por causa de foreign key constraint
+      if (error.message?.includes('foreign key') || error.message?.includes('constraint')) {
+        toast.error('Cannot delete campaign: There are sent emails associated with this campaign. Please contact support.');
+      } else {
+        toast.error(error.message || 'Error deleting campaign');
+      }
+    }
+  };
+
   const openEditModal = (campaign: Campaign | any) => {
     setEditingCampaign(campaign);
     setEditFormData({
@@ -459,7 +530,11 @@ const NewsletterManagement: React.FC = () => {
       description: campaign.description || '',
       email_subject_template: campaign.email_subject_template,
       email_body_template: campaign.email_body_template,
-      cooldown_days: campaign.cooldown_days
+      cooldown_days: campaign.cooldown_days,
+      days: campaign.trigger_conditions?.days,
+      stageStatus: campaign.trigger_conditions?.stage_status,
+      isActive: campaign.is_active ?? true,
+      sendOnce: campaign.send_once ?? false
     });
     setIsEditModalOpen(true);
   };
@@ -472,7 +547,11 @@ const NewsletterManagement: React.FC = () => {
       description: '',
       email_subject_template: '',
       email_body_template: '',
-      cooldown_days: 7
+      cooldown_days: 7,
+      days: undefined,
+      stageStatus: undefined,
+      isActive: true,
+      sendOnce: false
     });
   };
 
@@ -481,6 +560,28 @@ const NewsletterManagement: React.FC = () => {
 
     try {
       setSavingCampaign(true);
+      
+      // Atualizar trigger_conditions baseado no tipo de campanha
+      const triggerType = editingCampaign.trigger_conditions?.type;
+      let updatedTriggerConditions = editingCampaign.trigger_conditions;
+      
+      if (triggerType === 'registered_no_payment' || triggerType === 'paid_no_application') {
+        updatedTriggerConditions = {
+          ...editingCampaign.trigger_conditions,
+          days: editFormData.days
+        };
+      } else if (triggerType === 'application_flow_stage') {
+        updatedTriggerConditions = {
+          ...editingCampaign.trigger_conditions,
+          ...(editFormData.stageStatus ? { stage_status: editFormData.stageStatus } : { stage_status: null })
+        };
+        // Remover stage_status se estiver vazio
+        if (!editFormData.stageStatus) {
+          const { stage_status, ...rest } = updatedTriggerConditions as any;
+          updatedTriggerConditions = rest;
+        }
+      }
+
       const { error } = await supabase
         .from('newsletter_campaigns')
         .update({
@@ -488,7 +589,10 @@ const NewsletterManagement: React.FC = () => {
           description: editFormData.description || null,
           email_subject_template: editFormData.email_subject_template,
           email_body_template: editFormData.email_body_template,
-          cooldown_days: editFormData.cooldown_days
+          cooldown_days: editFormData.cooldown_days,
+          trigger_conditions: updatedTriggerConditions,
+          is_active: editFormData.isActive,
+          send_once: editFormData.sendOnce
         })
         .eq('id', editingCampaign.id);
 
@@ -508,6 +612,7 @@ const NewsletterManagement: React.FC = () => {
   const processCampaignsManually = async () => {
     try {
       setProcessingManually(true);
+      setIsProcessConfirmModalOpen(false);
       toast.loading('Processing campaigns...', { id: 'processing' });
       
       const { data: { session } } = await supabase.auth.getSession();
@@ -521,7 +626,9 @@ const NewsletterManagement: React.FC = () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({})
+        body: JSON.stringify({
+          ignore_rate_limit: true // Ignore rate limit when processing manually
+        })
       });
 
       if (!response.ok) {
@@ -811,7 +918,7 @@ const NewsletterManagement: React.FC = () => {
               />
             </div>
             <button
-              onClick={processCampaignsManually}
+              onClick={() => setIsProcessConfirmModalOpen(true)}
               disabled={processingManually}
               className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               title="Process campaigns manually (for testing)"
@@ -843,6 +950,7 @@ const NewsletterManagement: React.FC = () => {
             loading={loadingCampaigns}
             onEdit={openEditModal}
             onToggle={toggleCampaign}
+            onDelete={openDeleteModal}
           />
         </div>
       ) : activeTab === 'emails' ? (
@@ -1105,6 +1213,133 @@ const NewsletterManagement: React.FC = () => {
         }}
       />
 
+      {/* Delete Campaign Confirmation Modal */}
+      <Dialog open={isDeleteConfirmModalOpen} onClose={() => setIsDeleteConfirmModalOpen(false)} className="fixed z-50 inset-0 overflow-y-auto">
+        <div className="flex items-center justify-center min-h-screen px-4">
+          <div className="fixed inset-0 bg-black opacity-30" onClick={() => setIsDeleteConfirmModalOpen(false)} />
+          <Dialog.Panel className="relative bg-white rounded-xl shadow-xl max-w-md w-full mx-auto p-6 z-50">
+            <div className="flex items-center justify-between mb-6">
+              <Dialog.Title className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+                <XCircle className="w-6 h-6 text-red-600" />
+                Delete Campaign
+              </Dialog.Title>
+              <button
+                onClick={() => setIsDeleteConfirmModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {campaignToDelete && (
+                <>
+                  {campaignToDelete.emailCount > 0 ? (
+                    <>
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                        <p className="text-red-800 font-medium mb-2">
+                          ⚠️ WARNING: This campaign has {campaignToDelete.emailCount} sent email(s) in the history.
+                        </p>
+                        <p className="text-sm text-red-700">
+                          By deleting this campaign, ALL sent email records will also be permanently deleted.
+                        </p>
+                      </div>
+                      <p className="text-slate-700">
+                        Are you sure you want to delete the campaign <strong>"{campaignToDelete.name}"</strong>?
+                      </p>
+                      <p className="text-sm text-red-600 font-medium">
+                        This action CANNOT be undone.
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-slate-700">
+                        Are you sure you want to delete the campaign <strong>"{campaignToDelete.name}"</strong>?
+                      </p>
+                      <p className="text-sm text-slate-500">
+                        This action cannot be undone.
+                      </p>
+                    </>
+                  )}
+                </>
+              )}
+            </div>
+
+            <div className="flex items-center justify-end gap-3 mt-6 pt-6 border-t border-slate-200">
+              <button
+                onClick={() => setIsDeleteConfirmModalOpen(false)}
+                className="px-4 py-2 text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={deleteCampaign}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
+              >
+                <XCircle className="w-4 h-4" />
+                Delete Campaign
+              </button>
+            </div>
+          </Dialog.Panel>
+        </div>
+      </Dialog>
+
+      {/* Process Now Confirmation Modal */}
+      <Dialog open={isProcessConfirmModalOpen} onClose={() => setIsProcessConfirmModalOpen(false)} className="fixed z-50 inset-0 overflow-y-auto">
+        <div className="flex items-center justify-center min-h-screen px-4">
+          <div className="fixed inset-0 bg-black opacity-30" onClick={() => setIsProcessConfirmModalOpen(false)} />
+          <Dialog.Panel className="relative bg-white rounded-xl shadow-xl max-w-md w-full mx-auto p-6 z-50">
+            <div className="flex items-center justify-between mb-6">
+              <Dialog.Title className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+                <Activity className="w-6 h-6 text-green-600" />
+                Process Campaigns
+              </Dialog.Title>
+              <button
+                onClick={() => setIsProcessConfirmModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <p className="text-slate-700">
+                Are you sure you want to process all active campaigns now?
+              </p>
+              <p className="text-sm text-slate-500">
+                This will send emails to all eligible users based on each campaign's criteria. The process may take a few moments.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 mt-6 pt-6 border-t border-slate-200">
+              <button
+                onClick={() => setIsProcessConfirmModalOpen(false)}
+                className="px-4 py-2 text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={processCampaignsManually}
+                disabled={processingManually}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {processingManually ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <Activity className="w-4 h-4" />
+                    Process Now
+                  </>
+                )}
+              </button>
+            </div>
+          </Dialog.Panel>
+        </div>
+      </Dialog>
+
       {/* Edit Campaign Modal */}
       {isEditModalOpen && editingCampaign && (
         <Dialog open={isEditModalOpen} onClose={closeEditModal} className="fixed z-50 inset-0 overflow-y-auto">
@@ -1200,6 +1435,51 @@ const NewsletterManagement: React.FC = () => {
                   </p>
                 </div>
 
+                {/* Days Since Trigger - Only show for registered_no_payment and paid_no_application */}
+                {(editingCampaign.trigger_conditions?.type === 'registered_no_payment' || 
+                  editingCampaign.trigger_conditions?.type === 'paid_no_application') && (
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Days Since {editingCampaign.trigger_conditions?.type === 'registered_no_payment' ? 'Registration' : 'Payment'} *
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={editFormData.days ?? ''}
+                      onChange={(e) => setEditFormData({ ...editFormData, days: parseInt(e.target.value) || 0 })}
+                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
+                      placeholder="2"
+                    />
+                    <p className="text-xs text-slate-500 mt-1">
+                      Minimum number of days since {editingCampaign.trigger_conditions?.type === 'registered_no_payment' ? 'registration' : 'payment'} before sending this campaign. Use 0 to send immediately.
+                    </p>
+                  </div>
+                )}
+
+                {/* Stage Status - Only show for application_flow_stage */}
+                {editingCampaign.trigger_conditions?.type === 'application_flow_stage' && (
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Stage Status (Optional)
+                    </label>
+                    <select
+                      value={editFormData.stageStatus ?? ''}
+                      onChange={(e) => setEditFormData({ ...editFormData, stageStatus: e.target.value || undefined })}
+                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
+                    >
+                      <option value="">Any Status (Default)</option>
+                      <option value="pending">Pending</option>
+                      <option value="in_progress">In Progress</option>
+                      <option value="completed">Completed</option>
+                      <option value="rejected">Rejected</option>
+                      <option value="skipped">Skipped</option>
+                    </select>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Filter by specific stage status. Leave empty to target any status in this stage.
+                    </p>
+                  </div>
+                )}
+
                 {/* Cooldown Days */}
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">
@@ -1207,15 +1487,54 @@ const NewsletterManagement: React.FC = () => {
                   </label>
                   <input
                     type="number"
-                    min="1"
+                    min="0"
                     value={editFormData.cooldown_days}
-                    onChange={(e) => setEditFormData({ ...editFormData, cooldown_days: parseInt(e.target.value) || 7 })}
+                    onChange={(e) => {
+                      const value = parseInt(e.target.value);
+                      setEditFormData({ ...editFormData, cooldown_days: isNaN(value) ? 0 : value });
+                    }}
                     className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
                     placeholder="7"
                   />
                   <p className="text-xs text-slate-500 mt-1">
-                    Number of days before a user can receive this campaign email again
+                    Number of days before a user can receive this campaign email again. Use 0 to allow immediate re-sending (only rate limit will apply).
                   </p>
+                </div>
+
+                {/* Is Active Toggle */}
+                <div>
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={editFormData.isActive}
+                      onChange={(e) => setEditFormData({ ...editFormData, isActive: e.target.checked })}
+                      className="h-4 w-4 text-[#05294E] border-gray-300 rounded focus:ring-[#05294E]"
+                    />
+                    <div>
+                      <span className="text-sm font-medium text-slate-700">Active Campaign</span>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Only active campaigns will be processed and sent to users
+                      </p>
+                    </div>
+                  </label>
+                </div>
+
+                {/* Send Once Toggle */}
+                <div>
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={editFormData.sendOnce}
+                      onChange={(e) => setEditFormData({ ...editFormData, sendOnce: e.target.checked })}
+                      className="h-4 w-4 text-[#05294E] border-gray-300 rounded focus:ring-[#05294E]"
+                    />
+                    <div>
+                      <span className="text-sm font-medium text-slate-700">Send Only Once</span>
+                      <p className="text-xs text-slate-500 mt-1">
+                        If checked, this campaign will be sent only once per user. If unchecked, it can be resent after the cooldown period.
+                      </p>
+                    </div>
+                  </label>
                 </div>
               </div>
 

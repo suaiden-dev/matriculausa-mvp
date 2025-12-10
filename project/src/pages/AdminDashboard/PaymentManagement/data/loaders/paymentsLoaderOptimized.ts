@@ -120,6 +120,7 @@ export async function loadPaymentsBaseDataOptimized(supabase: SupabaseClient): P
           title,
           amount,
           application_fee_amount,
+          field_of_study,
           universities (
             id,
             name
