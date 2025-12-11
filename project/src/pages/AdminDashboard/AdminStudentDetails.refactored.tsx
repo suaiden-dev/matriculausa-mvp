@@ -362,7 +362,7 @@ const AdminStudentDetails: React.FC = () => {
     handleUploadTransferForm,
     handleApproveTransferFormUpload,
     handleRejectTransferFormUpload
-  } = useTransferForm(student, isPlatformAdmin, user?.id, user?.email);
+  } = useTransferForm(student, isPlatformAdmin, user?.id, user?.email, logAction);
   
   // Hooks para Document Requests
   const {
@@ -391,7 +391,7 @@ const AdminStudentDetails: React.FC = () => {
     handleEditNote,
     handleSaveEditNote,
     handleDeleteNote
-  } = useAdminNotes(student, user?.id, setStudent);
+  } = useAdminNotes(student, user?.id, setStudent, logAction, student?.student_id);
   
   // Hooks para Document Request Handlers
   const {
@@ -405,7 +405,7 @@ const AdminStudentDetails: React.FC = () => {
     handleDownloadDocument,
     handleEditTemplate,
     handleDeleteDocumentRequest
-  } = useDocumentRequestHandlers(student, user?.id, setDocumentRequests);
+  } = useDocumentRequestHandlers(student, user?.id, setDocumentRequests, logAction, student?.student_id);
 
   // Outros estados locais
   const [activeTab, setActiveTab] = useState<TabId>('overview');
@@ -2096,16 +2096,20 @@ const AdminStudentDetails: React.FC = () => {
       try {
         await logAction(
           'application_approval',
-          `Application ${applicationId} approved by platform admin`,
+          `Application approved by platform admin`,
           user?.id || '',
           'admin',
           {
             application_id: applicationId,
-            approved_by: user?.email || 'Platform Admin'
+            student_id: student.student_id,
+            student_name: student.student_name || 'N/A',
+            approved_by: user?.email || 'Platform Admin',
+            approved_at: new Date().toISOString()
           }
         );
+        console.log('✅ [approveApplication] Ação logada com sucesso');
       } catch (logError) {
-        console.error('Failed to log application approval:', logError);
+        console.error('⚠️ [approveApplication] Erro ao logar ação (não crítico):', logError);
       }
 
       // Atualizar o estado local com os dados atualizados do banco
@@ -2184,17 +2188,21 @@ const AdminStudentDetails: React.FC = () => {
       try {
         await logAction(
           'application_rejection',
-          `Application ${applicationId} rejected by platform admin: ${rejectStudentReason || 'No reason provided'}`,
+          `Application rejected by platform admin: ${rejectStudentReason || 'No reason provided'}`,
           user?.id || '',
           'admin',
           {
             application_id: applicationId,
+            student_id: student.student_id,
+            student_name: student.student_name || 'N/A',
             rejection_reason: rejectStudentReason || null,
-            rejected_by: user?.email || 'Platform Admin'
+            rejected_by: user?.email || 'Platform Admin',
+            rejected_at: new Date().toISOString()
           }
         );
+        console.log('✅ [rejectApplication] Ação logada com sucesso');
       } catch (logError) {
-        console.error('Failed to log application rejection:', logError);
+        console.error('⚠️ [rejectApplication] Erro ao logar ação (não crítico):', logError);
       }
       
       // Atualizar o estado local com os dados atualizados do banco
@@ -2834,6 +2842,28 @@ const AdminStudentDetails: React.FC = () => {
                 onSaveProcessType={async () => {
                   setSavingProcessType(true);
                   await saveProfile(student.student_id, { student_process_type: editingProcessType });
+                  
+                  // Log da ação
+                  try {
+                    await logAction(
+                      'process_type_update',
+                      `Student process type updated by platform admin to: ${editingProcessType}`,
+                      user?.id || '',
+                      'admin',
+                      {
+                        student_id: student.student_id,
+                        student_name: student.student_name || 'N/A',
+                        old_process_type: student.student_process_type || 'N/A',
+                        new_process_type: editingProcessType,
+                        updated_by: user?.email || 'Platform Admin',
+                        updated_at: new Date().toISOString()
+                      }
+                    );
+                    console.log('✅ [onSaveProcessType] Ação logada com sucesso');
+                  } catch (logError) {
+                    console.error('⚠️ [onSaveProcessType] Erro ao logar ação (não crítico):', logError);
+                  }
+                  
                   setSavingProcessType(false);
                   setIsEditingProcessType(false);
                 }}

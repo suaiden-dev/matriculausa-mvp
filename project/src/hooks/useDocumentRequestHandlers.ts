@@ -8,7 +8,9 @@ interface StudentRecord {
 export const useDocumentRequestHandlers = (
   student: StudentRecord | null,
   userId?: string,
-  setDocumentRequests?: (requests: any[]) => void
+  setDocumentRequests?: (requests: any[]) => void,
+  logAction?: (actionType: string, actionDescription: string, performedBy: string, performedByType: 'student' | 'admin' | 'university', metadata?: any) => Promise<any>,
+  studentId?: string
 ) => {
   const [uploadingDocumentRequest, setUploadingDocumentRequest] = useState<Record<string, boolean>>({});
   const [approvingDocumentRequest, setApprovingDocumentRequest] = useState<Record<string, boolean>>({});
@@ -52,6 +54,29 @@ export const useDocumentRequestHandlers = (
 
       if (recordError) throw recordError;
 
+      // Log da ação
+      if (logAction && userId) {
+        try {
+          await logAction(
+            'document_request_upload',
+            `Document uploaded for document request by platform admin`,
+            userId,
+            'admin',
+            {
+              request_id: requestId,
+              student_id: studentId || student?.user_id || '',
+              file_name: file.name,
+              file_url: publicUrl,
+              uploaded_by: userId,
+              uploaded_at: new Date().toISOString()
+            }
+          );
+          console.log('✅ [handleUploadDocumentRequest] Ação logada com sucesso');
+        } catch (logError) {
+          console.error('⚠️ [handleUploadDocumentRequest] Erro ao logar ação (não crítico):', logError);
+        }
+      }
+
       alert('Document uploaded successfully!');
       
       // Reload document requests if callback provided
@@ -72,7 +97,7 @@ export const useDocumentRequestHandlers = (
     } finally {
       setUploadingDocumentRequest(prev => ({ ...prev, [requestId]: false }));
     }
-  }, [student, userId, setDocumentRequests]);
+  }, [student, userId, setDocumentRequests, logAction, studentId]);
 
   // Handler para aprovar documento
   const handleApproveDocumentRequest = useCallback(async (uploadId: string) => {
@@ -141,6 +166,29 @@ export const useDocumentRequestHandlers = (
         .eq('id', uploadId);
 
       if (error) throw error;
+
+      // Log da ação
+      if (logAction && userId) {
+        try {
+          await logAction(
+            'document_request_approval',
+            `Document request upload approved by platform admin`,
+            userId,
+            'admin',
+            {
+              upload_id: uploadId,
+              request_id: uploadData?.document_request_id || '',
+              student_id: studentId || studentProfile?.user_id || student?.user_id || '',
+              document_title: uploadData?.document_requests?.title || 'Document',
+              approved_by: userId,
+              approved_at: new Date().toISOString()
+            }
+          );
+          console.log('✅ [handleApproveDocumentRequest] Ação logada com sucesso');
+        } catch (logError) {
+          console.error('⚠️ [handleApproveDocumentRequest] Erro ao logar ação (não crítico):', logError);
+        }
+      }
 
       // ✅ ENVIAR NOTIFICAÇÕES PARA O ALUNO
       if (studentProfile?.email && studentProfile?.user_id) {
@@ -227,7 +275,7 @@ export const useDocumentRequestHandlers = (
     } finally {
       setApprovingDocumentRequest(prev => ({ ...prev, [uploadId]: false }));
     }
-  }, [userId]);
+  }, [userId, logAction, studentId, student]);
 
   // Handler para rejeitar documento
   const handleRejectDocumentRequest = useCallback(async (uploadId: string, reason: string) => {
@@ -271,6 +319,37 @@ export const useDocumentRequestHandlers = (
         .eq('id', uploadId);
 
       if (error) throw error;
+
+      // Extrair studentProfile do uploadData
+      const studentProfile = uploadData?.document_requests?.scholarship_applications?.user_profiles 
+        ? (Array.isArray(uploadData.document_requests.scholarship_applications.user_profiles)
+          ? uploadData.document_requests.scholarship_applications.user_profiles[0]
+          : uploadData.document_requests.scholarship_applications.user_profiles)
+        : null;
+
+      // Log da ação
+      if (logAction && userId) {
+        try {
+          await logAction(
+            'document_request_rejection',
+            `Document request upload rejected by platform admin: ${reason}`,
+            userId,
+            'admin',
+            {
+              upload_id: uploadId,
+              request_id: uploadData?.document_request_id || '',
+              student_id: studentId || studentProfile?.user_id || student?.user_id || '',
+              document_title: uploadData?.document_requests?.title || 'Document',
+              rejection_reason: reason,
+              rejected_by: userId,
+              rejected_at: new Date().toISOString()
+            }
+          );
+          console.log('✅ [handleRejectDocumentRequest] Ação logada com sucesso');
+        } catch (logError) {
+          console.error('⚠️ [handleRejectDocumentRequest] Erro ao logar ação (não crítico):', logError);
+        }
+      }
 
       // ✅ ENVIAR NOTIFICAÇÕES PARA O ALUNO
       if (studentProfile?.email && studentProfile?.user_id) {
@@ -356,7 +435,7 @@ export const useDocumentRequestHandlers = (
     } finally {
       setRejectingDocumentRequest(prev => ({ ...prev, [uploadId]: false }));
     }
-  }, [userId]);
+  }, [userId, logAction, studentId, student]);
 
   // Handler para fazer download de documento
   const handleDownloadDocument = useCallback(async (doc: { file_url: string; filename?: string }) => {
@@ -407,8 +486,28 @@ export const useDocumentRequestHandlers = (
 
   // Handler para editar template
   const handleEditTemplate = useCallback((requestId: string) => {
+    // Log da ação
+    if (logAction && userId) {
+      logAction(
+        'document_request_template_edit',
+        `Document request template edited by platform admin`,
+        userId,
+        'admin',
+        {
+          request_id: requestId,
+          student_id: studentId || student?.user_id || '',
+          edited_by: userId,
+          edited_at: new Date().toISOString()
+        }
+      ).then(() => {
+        console.log('✅ [handleEditTemplate] Ação logada com sucesso');
+      }).catch((logError) => {
+        console.error('⚠️ [handleEditTemplate] Erro ao logar ação (não crítico):', logError);
+      });
+    }
+    
     // Implementation would go here - placeholder for future functionality
-  }, []);
+  }, [logAction, userId, studentId, student]);
 
   // Handler para deletar document request
   const handleDeleteDocumentRequest = useCallback(async (requestId: string) => {
@@ -432,6 +531,27 @@ export const useDocumentRequestHandlers = (
 
       if (deleteRequestError) throw deleteRequestError;
 
+      // Log da ação
+      if (logAction && userId) {
+        try {
+          await logAction(
+            'document_request_deletion',
+            `Document request deleted by platform admin`,
+            userId,
+            'admin',
+            {
+              request_id: requestId,
+              student_id: studentId || student?.user_id || '',
+              deleted_by: userId,
+              deleted_at: new Date().toISOString()
+            }
+          );
+          console.log('✅ [handleDeleteDocumentRequest] Ação logada com sucesso');
+        } catch (logError) {
+          console.error('⚠️ [handleDeleteDocumentRequest] Erro ao logar ação (não crítico):', logError);
+        }
+      }
+
       alert('Document request deleted successfully!');
       
       // Reload document requests if callback provided
@@ -452,7 +572,7 @@ export const useDocumentRequestHandlers = (
     } finally {
       setDeletingDocumentRequest(prev => ({ ...prev, [requestId]: false }));
     }
-  }, [student, setDocumentRequests]);
+  }, [student, setDocumentRequests, logAction, userId, studentId]);
 
   return {
     uploadingDocumentRequest,

@@ -295,6 +295,11 @@ export function useStudentSecondaryDataQuery(userId: string | undefined) {
         // ✅ identity_photo_path e identity_photo_name já vêm do select * (ou da RPC)
         identity_photo_path: acc.identity_photo_path || null,
         identity_photo_name: acc.identity_photo_name || null,
+        // ✅ Novos campos de status da verificação
+        identity_photo_status: acc.identity_photo_status || null,
+        identity_photo_rejection_reason: acc.identity_photo_rejection_reason || null,
+        identity_photo_reviewed_at: acc.identity_photo_reviewed_at || null,
+        identity_photo_reviewed_by: acc.identity_photo_reviewed_by || null,
       }));
 
       const individualFeePayments = paymentsResult.data || [];
@@ -305,10 +310,10 @@ export function useStudentSecondaryDataQuery(userId: string | undefined) {
         individualFeePayments,
       };
     },
-    staleTime: 2 * 60 * 1000, // 2 minutos - dados secundários mudam menos frequentemente
-    gcTime: 10 * 60 * 1000, // 10 minutos
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
+    staleTime: 0, // Sempre considerar dados stale para permitir refetch imediato
+    gcTime: 5 * 60 * 1000, // 5 minutos
+    refetchOnWindowFocus: true, // Refetch quando janela ganha foco
+    refetchOnMount: true, // Refetch quando componente monta
   });
 }
 
