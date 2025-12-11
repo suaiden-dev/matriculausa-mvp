@@ -37,6 +37,7 @@ const PaymentStatusCard = lazy(() => import('../../components/AdminDashboard/Stu
 const ApplicationProgressCard = lazy(() => import('../../components/AdminDashboard/StudentDetails/ApplicationProgressCard'));
 const I20DeadlineTimerCard = lazy(() => import('../../components/AdminDashboard/StudentDetails/I20DeadlineTimerCard'));
 const TermAcceptancesCard = lazy(() => import('../../components/AdminDashboard/StudentDetails/TermAcceptancesCard'));
+const IdentityPhotoVerificationCard = lazy(() => import('../../components/AdminDashboard/StudentDetails/IdentityPhotoVerificationCard'));
 
 // Modals
 import PaymentConfirmationModal from '../../components/AdminDashboard/StudentDetails/PaymentConfirmationModal';
@@ -83,9 +84,116 @@ const AdminStudentDetails: React.FC = () => {
   // Dados secundários
   const secondaryDataQuery = useStudentSecondaryDataQuery(student?.user_id);
   const pendingZelleQuery = usePendingZellePaymentsQuery(student?.user_id);
+  const [directTermAcceptances, setDirectTermAcceptances] = useState<any[] | null>(null);
   
+  // Forçar refetch de dados secundários se estiverem vazios no mount/local refresh.
+  React.useEffect(() => {
+    if (!student?.user_id) return;
+    try {
+      const hasData = !!secondaryDataQuery.data;
+      const termCount = (secondaryDataQuery.data && Array.isArray(secondaryDataQuery.data.termAcceptances))
+        ? secondaryDataQuery.data.termAcceptances.length
+        : 0;
+
+      if (!hasData || termCount === 0) {
+        console.log('🔁 [AdminStudentDetails] Forçando refetch de secondaryDataQuery (no cliente local)...', { hasData, termCount });
+        secondaryDataQuery.refetch().catch(err => console.error('Erro ao refetch secondaryDataQuery:', err));
+      }
+    } catch (err) {
+      console.error('Erro ao verificar/refetch secondaryDataQuery:', err);
+    }
+  }, [student?.user_id]);
+
+  // Hotfix: se o RPC/cache não trouxer dados, buscar diretamente do banco
+  React.useEffect(() => {
+    let cancelled = false;
+    const loadDirectTermAcceptances = async () => {
+      if (!student?.user_id) return;
+      const hasData = !!secondaryDataQuery.data;
+      const termCount = (secondaryDataQuery.data && Array.isArray(secondaryDataQuery.data.termAcceptances))
+        ? secondaryDataQuery.data.termAcceptances.length
+        : 0;
+
+      if (hasData && termCount > 0) {
+        setDirectTermAcceptances(null);
+        return;
+      }
+
+      try {
+        console.log('🔁 [AdminStudentDetails] Hotfix: tentando RPC get_admin_student_secondary_data...');
+        const { data: rpcData, error: rpcError } = await supabase.rpc('get_admin_student_secondary_data', {
+          target_user_id: student.user_id
+        });
+
+        if (!rpcError && rpcData) {
+          const parsed = typeof rpcData === 'string' ? JSON.parse(rpcData) : rpcData;
+          const termAcceptancesFromRpc = parsed.term_acceptances || [];
+          if (!cancelled) {
+            setDirectTermAcceptances(termAcceptancesFromRpc);
+            console.log('🔁 [AdminStudentDetails] Hotfix: directTermAcceptances loaded from RPC:', termAcceptancesFromRpc.length);
+            return;
+          }
+        } else {
+          console.log('🔁 [AdminStudentDetails] Hotfix: RPC não disponível ou retornou erro, fallback para select simples', rpcError);
+        }
+
+        // Fallback simples: buscar acceptances sem tentar usar relationships no select
+        const { data, error } = await supabase
+          .from('comprehensive_term_acceptance')
+          .select('*')
+          .eq('user_id', student.user_id)
+          .order('accepted_at', { ascending: false });
+
+        if (error) {
+          console.error('🔁 [AdminStudentDetails] Hotfix fetch error (fallback):', error);
+          return;
+        }
+
+        if (cancelled) return;
+
+        const mapped = (data || []).map((acc: any) => ({
+          ...acc,
+          user_email: acc.user_email || null,
+          user_full_name: acc.user_full_name || null,
+          term_title: acc.term_title || 'Term',
+          term_content: acc.term_content || '',
+          identity_photo_path: acc.identity_photo_path || acc.photo_path || null,
+          identity_photo_name: acc.identity_photo_name || null,
+          identity_photo_status: acc.identity_photo_status || null,
+          identity_photo_rejection_reason: acc.identity_photo_rejection_reason || null,
+          identity_photo_reviewed_at: acc.identity_photo_reviewed_at || null,
+          identity_photo_reviewed_by: acc.identity_photo_reviewed_by || null,
+        }));
+
+        setDirectTermAcceptances(mapped);
+        console.log('🔁 [AdminStudentDetails] Hotfix: directTermAcceptances loaded (fallback):', mapped.length);
+      } catch (err) {
+        console.error('🔁 [AdminStudentDetails] Hotfix exception:', err);
+      }
+    };
+
+    loadDirectTermAcceptances();
+    return () => { cancelled = true; };
+  }, [student?.user_id, secondaryDataQuery.data]);
+
   // Extrair dados secundários
   const termAcceptances = secondaryDataQuery.data?.termAcceptances || [];
+  // Debug: log secondary data for admin details
+  console.log('🔍 [AdminStudentDetails] secondaryDataQuery.data:', secondaryDataQuery.data);
+  console.log('🔍 [AdminStudentDetails] termAcceptances:', termAcceptances);
+  
+  // Log específico para status de foto de identidade
+  const identityPhotoAcceptance = termAcceptances.find((acc: any) => 
+    acc.term_type === 'checkout_terms' && (acc.identity_photo_path || acc.identity_photo_status)
+  );
+  if (identityPhotoAcceptance) {
+    console.log('🔍 [AdminStudentDetails] Identity Photo Status:', {
+      id: identityPhotoAcceptance.id,
+      status: identityPhotoAcceptance.identity_photo_status,
+      rejection_reason: identityPhotoAcceptance.identity_photo_rejection_reason,
+      reviewed_at: identityPhotoAcceptance.identity_photo_reviewed_at
+    });
+  }
   const [realPaidAmounts, setRealPaidAmounts] = useState<Record<string, number>>({});
   const [loadingPaidAmounts, setLoadingPaidAmounts] = useState<Record<string, boolean>>({});
   const pendingZellePayments = pendingZelleQuery.data || [];
@@ -312,6 +420,7 @@ const AdminStudentDetails: React.FC = () => {
   const [uploadingDocs, setUploadingDocs] = useState<Record<string, boolean>>({});
   const [approvingDocs, setApprovingDocs] = useState<Record<string, boolean>>({});
   const [rejectingDocs] = useState<Record<string, boolean>>({});
+  const [processingIdentityPhoto, setProcessingIdentityPhoto] = useState(false);
   
   // Estados de modal
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -1328,6 +1437,428 @@ const AdminStudentDetails: React.FC = () => {
       console.error('Error rejecting document:', error);
     }
   }, [rejectDocData, rejectDocument, student, setStudent, user, logAction, profileId, queryClient]);
+
+  // Handlers para aprovar/rejeitar foto de identidade
+  const handleApproveIdentityPhoto = useCallback(async (acceptanceId: string) => {
+    if (!student || !user) {
+      console.error('❌ [handleApproveIdentityPhoto] Student ou user não encontrado');
+      alert('Error: Student or user not found');
+      return;
+    }
+
+    setProcessingIdentityPhoto(true);
+    console.log('🔄 [handleApproveIdentityPhoto] Iniciando aprovação...', { acceptanceId, studentId: student.student_id });
+
+    try {
+      // Atualizar status usando RPC (que tem SECURITY DEFINER e bypass RLS)
+      console.log('📝 [handleApproveIdentityPhoto] Atualizando via RPC update_identity_photo_status...');
+      const { data: rpcResult, error: rpcError } = await supabase.rpc('update_identity_photo_status', {
+        p_acceptance_id: acceptanceId,
+        p_status: 'approved',
+        p_rejection_reason: null,
+        p_reviewed_by: user.id
+      });
+
+      if (rpcError) {
+        console.error('❌ [handleApproveIdentityPhoto] Erro ao atualizar via RPC:', rpcError);
+        throw rpcError;
+      }
+
+      if (rpcResult === false || rpcResult === null) {
+        console.error('❌ [handleApproveIdentityPhoto] RPC retornou false - nenhum registro atualizado');
+        throw new Error(`RPC function returned false. Record update failed. ID: ${acceptanceId}`);
+      }
+
+      console.log('✅ [handleApproveIdentityPhoto] Status atualizado via RPC com sucesso:', rpcResult);
+
+      // Log da ação
+      try {
+        await logAction(
+          'identity_photo_approval',
+          `Identity photo approved by platform admin`,
+          user?.id || '',
+          'admin',
+          {
+            acceptance_id: acceptanceId,
+            student_id: student.student_id,
+            student_name: student.student_name || 'N/A',
+            approved_by: user?.email || 'Platform Admin',
+            approved_at: new Date().toISOString()
+          }
+        );
+        console.log('✅ [handleApproveIdentityPhoto] Ação logada com sucesso');
+      } catch (logError) {
+        console.error('⚠️ [handleApproveIdentityPhoto] Erro ao logar ação (não crítico):', logError);
+      }
+
+      // Verificar se a atualização foi persistida
+      console.log('🔍 [handleApproveIdentityPhoto] Verificando se status foi atualizado no banco...');
+      const { data: verifyData, error: verifyError } = await supabase
+        .from('comprehensive_term_acceptance')
+        .select('id, identity_photo_status')
+        .eq('id', acceptanceId)
+        .single();
+
+      if (verifyError) {
+        console.error('⚠️ [handleApproveIdentityPhoto] Erro ao verificar atualização:', verifyError);
+      } else {
+        console.log('✅ [handleApproveIdentityPhoto] Status verificado no banco:', verifyData);
+        if (verifyData.identity_photo_status !== 'approved') {
+          console.error('❌ [handleApproveIdentityPhoto] Status não foi atualizado corretamente! Esperado: approved, Recebido:', verifyData.identity_photo_status);
+        }
+      }
+
+      // Aguardar um pouco para garantir que o banco foi atualizado
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Limpar estado do hotfix para forçar reload
+      setDirectTermAcceptances(null);
+
+      // Invalidar e refetch queries para atualizar UI
+      console.log('🔄 [handleApproveIdentityPhoto] Invalidando e refazendo queries...');
+      
+      // Limpar cache completamente para forçar refetch
+      queryClient.removeQueries({ queryKey: queryKeys.students.secondaryData(student?.user_id) });
+      queryClient.removeQueries({ queryKey: queryKeys.students.details(profileId) });
+      
+      // Refetch forçado
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: queryKeys.students.secondaryData(student?.user_id), type: 'active' }),
+        queryClient.refetchQueries({ queryKey: queryKeys.students.details(profileId), type: 'active' })
+      ]);
+
+      console.log('✅ [handleApproveIdentityPhoto] Aprovação concluída com sucesso');
+    } catch (err: any) {
+      console.error('❌ [handleApproveIdentityPhoto] Erro ao aprovar foto:', err);
+      alert('Error approving identity photo: ' + (err?.message || String(err)));
+    } finally {
+      setProcessingIdentityPhoto(false);
+    }
+  }, [student, user, logAction, queryClient, profileId]);
+
+  const handleRejectIdentityPhoto = useCallback(async (acceptanceId: string, reason: string) => {
+    if (!student || !user) {
+      console.error('❌ [handleRejectIdentityPhoto] Student ou user não encontrado');
+      alert('Error: Student or user not found');
+      return;
+    }
+
+    if (!reason || reason.trim() === '') {
+      console.error('❌ [handleRejectIdentityPhoto] Motivo de rejeição não fornecido');
+      alert('Error: Rejection reason is required');
+      return;
+    }
+
+    setProcessingIdentityPhoto(true);
+    console.log('🔄 [handleRejectIdentityPhoto] Iniciando rejeição...', { acceptanceId, reason, studentId: student.student_id });
+
+    try {
+      // 1. Verificar se o registro existe primeiro
+      console.log('🔍 [handleRejectIdentityPhoto] Verificando se registro existe...', { acceptanceId });
+      const { data: existingRecord, error: checkError } = await supabase
+        .from('comprehensive_term_acceptance')
+        .select('id, user_id, identity_photo_path, identity_photo_status')
+        .eq('id', acceptanceId)
+        .maybeSingle();
+
+      if (checkError) {
+        console.error('❌ [handleRejectIdentityPhoto] Erro ao verificar registro:', checkError);
+        throw checkError;
+      }
+
+      if (!existingRecord) {
+        console.error('❌ [handleRejectIdentityPhoto] Registro não encontrado com ID:', acceptanceId);
+        throw new Error(`Record not found with ID: ${acceptanceId}`);
+      }
+
+      console.log('✅ [handleRejectIdentityPhoto] Registro encontrado:', existingRecord);
+
+      // 2. Atualizar status no banco usando RPC (que tem SECURITY DEFINER e bypass RLS)
+      console.log('📝 [handleRejectIdentityPhoto] Atualizando via RPC update_identity_photo_status...');
+      const { data: rpcResult, error: rpcError } = await supabase.rpc('update_identity_photo_status', {
+        p_acceptance_id: acceptanceId,
+        p_status: 'rejected',
+        p_rejection_reason: reason,
+        p_reviewed_by: user.id
+      });
+
+      if (rpcError) {
+        console.error('❌ [handleRejectIdentityPhoto] Erro ao atualizar via RPC:', rpcError);
+        console.error('❌ [handleRejectIdentityPhoto] Detalhes do erro:', {
+          code: rpcError.code,
+          message: rpcError.message,
+          details: rpcError.details,
+          hint: rpcError.hint
+        });
+        throw rpcError;
+      }
+
+      if (rpcResult === false || rpcResult === null) {
+        console.error('❌ [handleRejectIdentityPhoto] RPC retornou false - nenhum registro atualizado');
+        console.error('❌ [handleRejectIdentityPhoto] Registro que tentamos atualizar:', existingRecord);
+        console.error('❌ [handleRejectIdentityPhoto] ID usado:', acceptanceId);
+        throw new Error(`RPC function returned false. Record exists but update failed. ID: ${acceptanceId}`);
+      }
+
+      console.log('✅ [handleRejectIdentityPhoto] Status atualizado via RPC com sucesso:', rpcResult);
+
+      // 2. Log da ação
+      try {
+        await logAction(
+          'identity_photo_rejection',
+          `Identity photo rejected by platform admin: ${reason}`,
+          user?.id || '',
+          'admin',
+          {
+            acceptance_id: acceptanceId,
+            student_id: student.student_id,
+            student_name: student.student_name || 'N/A',
+            rejection_reason: reason,
+            rejected_by: user?.email || 'Platform Admin',
+            rejected_at: new Date().toISOString()
+          }
+        );
+        console.log('✅ [handleRejectIdentityPhoto] Ação logada com sucesso');
+      } catch (logError) {
+        console.error('⚠️ [handleRejectIdentityPhoto] Erro ao logar ação (não crítico):', logError);
+      }
+
+      // 3. Enviar notificações (webhook/in-app)
+      try {
+        console.log('📤 [handleRejectIdentityPhoto] Buscando dados do aluno para notificação...');
+        const { data: studentProfile, error: profileError } = await supabase
+          .from('user_profiles')
+          .select('email, full_name')
+          .eq('user_id', student.user_id)
+          .single();
+
+        if (profileError) {
+          console.error('❌ [handleRejectIdentityPhoto] Erro ao buscar perfil do aluno:', profileError);
+        } else {
+          console.log('✅ [handleRejectIdentityPhoto] Perfil do aluno encontrado:', studentProfile);
+        }
+
+        if (studentProfile?.email) {
+          // 3.1. Enviar email via webhook
+          const rejectionPayload = {
+            tipo_notf: 'Identity Photo Rejected',
+            email_aluno: studentProfile.email,
+            nome_aluno: studentProfile.full_name || student.student_name || 'Student',
+            email_universidade: user?.email || '',
+            document_type: 'Identity Photo',
+            document_title: 'Identity Photo',
+            rejection_reason: reason,
+            o_que_enviar: `Your identity photo has been rejected. Reason: <strong>${reason}</strong>. Please review the terms again and upload a corrected version.`
+          };
+
+          console.log('📤 [handleRejectIdentityPhoto] Enviando webhook de rejeição:', rejectionPayload);
+
+          try {
+            const webhookResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(rejectionPayload),
+            });
+
+            if (webhookResponse.ok) {
+              console.log('✅ [handleRejectIdentityPhoto] Webhook enviado com sucesso');
+            } else {
+              const errorText = await webhookResponse.text();
+              console.error('❌ [handleRejectIdentityPhoto] Erro ao enviar webhook:', webhookResponse.status, errorText);
+            }
+          } catch (webhookError) {
+            console.error('❌ [handleRejectIdentityPhoto] Erro na requisição do webhook:', webhookError);
+          }
+        } else {
+          console.warn('⚠️ [handleRejectIdentityPhoto] Email do aluno não encontrado, pulando webhook');
+        }
+
+        // 3.2. Enviar notificação in-app (sino)
+        const { data: { session } } = await supabase.auth.getSession();
+        const accessToken = session?.access_token;
+
+        if (accessToken) {
+          const notificationPayload = {
+            user_id: student.user_id,
+            title: 'Identity Photo Rejected',
+            message: `Your identity photo has been rejected. Reason: ${reason}. Please review and upload a corrected version.`,
+            link: '/student/dashboard/identity-verification',
+          };
+
+          console.log('📤 [handleRejectIdentityPhoto] Enviando notificação in-app:', notificationPayload);
+
+          try {
+            const notificationResponse = await fetch(`${import.meta.env.VITE_SUPABASE_FUNCTIONS_URL}/create-student-notification`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${accessToken}`,
+              },
+              body: JSON.stringify(notificationPayload),
+            });
+
+            if (notificationResponse.ok) {
+              console.log('✅ [handleRejectIdentityPhoto] Notificação in-app criada com sucesso');
+            } else {
+              const errorText = await notificationResponse.text();
+              console.error('❌ [handleRejectIdentityPhoto] Erro ao criar notificação in-app:', notificationResponse.status, errorText);
+            }
+          } catch (notificationError) {
+            console.error('❌ [handleRejectIdentityPhoto] Erro na requisição de notificação in-app:', notificationError);
+          }
+        } else {
+          console.warn('⚠️ [handleRejectIdentityPhoto] Access token não encontrado para notificação in-app');
+        }
+      } catch (notificationError) {
+        console.error('❌ [handleRejectIdentityPhoto] Erro ao enviar notificações:', notificationError);
+        // Não falha a rejeição por causa das notificações
+      }
+
+      // 4. Verificar se a atualização foi persistida (com retry)
+      console.log('🔍 [handleRejectIdentityPhoto] Verificando se status foi atualizado no banco...');
+      let verifyData: any = null;
+      let attempts = 0;
+      const maxAttempts = 5;
+      
+      while (attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 300)); // Aguardar entre tentativas
+        
+        const { data: checkData, error: verifyError } = await supabase
+          .from('comprehensive_term_acceptance')
+          .select('id, identity_photo_status, identity_photo_rejection_reason, identity_photo_reviewed_at')
+          .eq('id', acceptanceId)
+          .single();
+
+        if (verifyError) {
+          console.error(`⚠️ [handleRejectIdentityPhoto] Erro ao verificar atualização (tentativa ${attempts + 1}/${maxAttempts}):`, verifyError);
+          attempts++;
+          continue;
+        }
+
+        verifyData = checkData;
+        console.log(`✅ [handleRejectIdentityPhoto] Status verificado no banco (tentativa ${attempts + 1}/${maxAttempts}):`, verifyData);
+        
+        if (verifyData.identity_photo_status === 'rejected') {
+          console.log('✅ [handleRejectIdentityPhoto] Status confirmado como "rejected" no banco!');
+          break;
+        } else {
+          console.warn(`⚠️ [handleRejectIdentityPhoto] Status ainda não atualizado. Esperado: rejected, Recebido: ${verifyData.identity_photo_status}. Tentando novamente...`);
+          attempts++;
+        }
+      }
+
+      if (!verifyData || verifyData.identity_photo_status !== 'rejected') {
+        console.error('❌ [handleRejectIdentityPhoto] Status não foi atualizado após múltiplas tentativas!', verifyData);
+        // Não lançar erro, apenas logar - pode ser um problema de cache do banco
+      }
+
+      // 6. Limpar estado do hotfix para forçar reload
+      setDirectTermAcceptances(null);
+
+      // 7. Invalidar e refetch queries para atualizar UI
+      console.log('🔄 [handleRejectIdentityPhoto] Invalidando e refazendo queries...');
+      
+      // Limpar cache completamente para forçar refetch
+      queryClient.removeQueries({ queryKey: queryKeys.students.secondaryData(student?.user_id) });
+      queryClient.removeQueries({ queryKey: queryKeys.students.details(profileId) });
+      
+      // Refetch forçado via queryClient
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: queryKeys.students.secondaryData(student?.user_id), type: 'active' }),
+        queryClient.refetchQueries({ queryKey: queryKeys.students.details(profileId), type: 'active' })
+      ]);
+
+      // Aguardar um pouco e refetch novamente para garantir que os dados foram atualizados
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: queryKeys.students.secondaryData(student?.user_id), type: 'active' }),
+        queryClient.refetchQueries({ queryKey: queryKeys.students.details(profileId), type: 'active' })
+      ]);
+
+      console.log('✅ [handleRejectIdentityPhoto] Rejeição concluída com sucesso');
+    } catch (err: any) {
+      console.error('❌ [handleRejectIdentityPhoto] Erro ao rejeitar foto:', err);
+      alert('Error rejecting identity photo: ' + (err?.message || String(err)));
+    } finally {
+      setProcessingIdentityPhoto(false);
+    }
+  }, [student, user, logAction, queryClient, profileId]);
+
+  const handleUpdateRejectionReason = useCallback(async (acceptanceId: string, reason: string) => {
+    if (!student || !user) {
+      console.error('❌ [handleUpdateRejectionReason] Student ou user não encontrado');
+      return;
+    }
+
+    if (!reason || reason.trim() === '') {
+      console.error('❌ [handleUpdateRejectionReason] Motivo de rejeição não fornecido');
+      return;
+    }
+
+    setProcessingIdentityPhoto(true);
+    console.log('🔄 [handleUpdateRejectionReason] Atualizando motivo de rejeição...', { acceptanceId, reason });
+
+    try {
+      // Atualizar apenas o motivo usando RPC (mantém status como rejected)
+      const { data: rpcResult, error: rpcError } = await supabase.rpc('update_identity_photo_status', {
+        p_acceptance_id: acceptanceId,
+        p_status: 'rejected', // Manter como rejected
+        p_rejection_reason: reason, // Novo motivo
+        p_reviewed_by: user.id // Manter o mesmo admin
+      });
+
+      if (rpcError) {
+        console.error('❌ [handleUpdateRejectionReason] Erro ao atualizar via RPC:', rpcError);
+        throw rpcError;
+      }
+
+      if (rpcResult === false || rpcResult === null) {
+        console.error('❌ [handleUpdateRejectionReason] RPC retornou false');
+        throw new Error('RPC function returned false');
+      }
+
+      console.log('✅ [handleUpdateRejectionReason] Motivo atualizado via RPC com sucesso');
+
+      // Log da ação
+      try {
+        await logAction(
+          'identity_photo_rejection_reason_updated',
+          `Identity photo rejection reason updated by platform admin: ${reason}`,
+          user?.id || '',
+          'admin',
+          {
+            acceptance_id: acceptanceId,
+            student_id: student.student_id,
+            student_name: student.student_name || 'N/A',
+            new_rejection_reason: reason,
+            updated_by: user?.email || 'Platform Admin',
+            updated_at: new Date().toISOString()
+          }
+        );
+        console.log('✅ [handleUpdateRejectionReason] Ação logada com sucesso');
+      } catch (logError) {
+        console.error('⚠️ [handleUpdateRejectionReason] Erro ao logar ação (não crítico):', logError);
+      }
+
+      // Invalidar e refetch queries
+      queryClient.removeQueries({ queryKey: queryKeys.students.secondaryData(student?.user_id) });
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: queryKeys.students.secondaryData(student?.user_id), type: 'active' }),
+        queryClient.refetchQueries({ queryKey: queryKeys.students.details(profileId), type: 'active' })
+      ]);
+
+      setDirectTermAcceptances(null); // Limpar hotfix
+
+      console.log('✅ [handleUpdateRejectionReason] Motivo atualizado com sucesso');
+    } catch (err: any) {
+      console.error('❌ [handleUpdateRejectionReason] Erro ao atualizar motivo:', err);
+      alert('Error updating rejection reason: ' + (err?.message || String(err)));
+    } finally {
+      setProcessingIdentityPhoto(false);
+    }
+  }, [student, user, logAction, queryClient, profileId]);
 
   const handleViewDocument = useCallback((doc: { file_url: string; filename: string }) => {
     // ✅ Aceitar tanto file_url quanto url (fallback)
@@ -2434,6 +2965,48 @@ const AdminStudentDetails: React.FC = () => {
                 />
               </Suspense>
             )}
+            
+            {/* Identity Photo Verification Card */}
+            {(() => {
+              const combinedTermAcceptances = (termAcceptances && termAcceptances.length > 0)
+                ? termAcceptances
+                : (directTermAcceptances || []);
+
+              const checkoutTermsAcceptances = combinedTermAcceptances.filter(acc => acc.term_type === 'checkout_terms');
+              let identityPhotoAcceptance = checkoutTermsAcceptances.find(acc => {
+                // aceitar caminhos em diferentes chaves ou formatos
+                const path = acc.identity_photo_path || acc.identity_photo || acc.photo_path || null;
+                return path && String(path).trim() !== '';
+              });
+
+              // Fallback: se não encontrar por caminho, usar o primeiro checkout_terms disponível
+              if (!identityPhotoAcceptance && checkoutTermsAcceptances.length > 0) {
+                console.log('ℹ️ [AdminStudentDetails] identityPhotoAcceptance não encontrada por path — usando primeiro checkout_terms como fallback');
+                identityPhotoAcceptance = checkoutTermsAcceptances[0];
+              }
+
+              if (termAcceptances.length > 0 || checkoutTermsAcceptances.length > 0) {
+                // Debug logs (useful during local development)
+                console.log('🔍 [AdminStudentDetails] checkoutTermsAcceptances:', checkoutTermsAcceptances);
+                console.log('🔍 [AdminStudentDetails] identityPhotoAcceptance:', identityPhotoAcceptance);
+                if (identityPhotoAcceptance) {
+                  console.log('🔍 [AdminStudentDetails] identityPhotoAcceptance.status:', identityPhotoAcceptance.identity_photo_status);
+                  console.log('🔍 [AdminStudentDetails] identityPhotoAcceptance.rejection_reason:', identityPhotoAcceptance.identity_photo_rejection_reason);
+                }
+              }
+
+              return identityPhotoAcceptance ? (
+                <Suspense fallback={<div className="animate-pulse bg-slate-100 h-64 rounded-2xl"></div>}>
+                  <IdentityPhotoVerificationCard
+                    termAcceptance={identityPhotoAcceptance}
+                    onApprove={handleApproveIdentityPhoto}
+                    onReject={handleRejectIdentityPhoto}
+                    onUpdateRejectionReason={handleUpdateRejectionReason}
+                    isProcessing={processingIdentityPhoto}
+                  />
+                </Suspense>
+              ) : null;
+            })()}
           </div>
         </div>
       )}

@@ -76,6 +76,8 @@ const Overview: React.FC<OverviewProps> = ({
     finalAmount: number;
     code?: string;
   } | null>(null);
+  const [identityPhotoStatus, setIdentityPhotoStatus] = useState<'pending' | 'approved' | 'rejected' | null>(null);
+  const [identityPhotoLoading, setIdentityPhotoLoading] = useState(true);
   
   // Verificar se há pagamento Zelle pendente do tipo selection_process
   const hasPendingSelectionProcessPayment = isBlocked && pendingPayment && pendingPayment.fee_type === 'selection_process';
@@ -220,6 +222,43 @@ const Overview: React.FC<OverviewProps> = ({
   useEffect(() => {
     checkSelectionProcessPromotionalCouponFromDatabase();
   }, [checkSelectionProcessPromotionalCouponFromDatabase]);
+
+  // Verificar status da foto de identidade
+  useEffect(() => {
+    const checkIdentityPhotoStatus = async () => {
+      if (!user?.id) {
+        setIdentityPhotoLoading(false);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('comprehensive_term_acceptance')
+          .select('identity_photo_status, identity_photo_path')
+          .eq('user_id', user.id)
+          .eq('term_type', 'checkout_terms')
+          .not('identity_photo_path', 'is', null)
+          .order('accepted_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (error) throw error;
+
+        if (data?.identity_photo_status) {
+          setIdentityPhotoStatus(data.identity_photo_status as 'pending' | 'approved' | 'rejected');
+        } else {
+          setIdentityPhotoStatus(null);
+        }
+      } catch (error) {
+        console.error('Error checking identity photo status:', error);
+        setIdentityPhotoStatus(null);
+      } finally {
+        setIdentityPhotoLoading(false);
+      }
+    };
+
+    checkIdentityPhotoStatus();
+  }, [user?.id]);
 
   // Ouvir eventos de validação de cupom promocional
   useEffect(() => {
@@ -644,6 +683,31 @@ const Overview: React.FC<OverviewProps> = ({
       
       {/* Alerta de desconto duplicado removido para evitar repetição com a mensagem de boas‑vindas */}
       
+      {/* Identity Photo Status Banner - Only show if rejected */}
+      {!identityPhotoLoading && identityPhotoStatus === 'rejected' && (
+        <div className="mb-6 rounded-2xl p-4 border-2 bg-red-50 border-red-200">
+          <div className="flex items-start justify-between">
+            <div className="flex items-start space-x-3 flex-1">
+              <XCircle className="w-6 h-6 text-red-600 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <h3 className="font-semibold mb-1 text-red-800">
+                  Identity Photo Rejected
+                </h3>
+                <p className="text-sm text-red-700">
+                  Your identity photo has been rejected. Please review the reason and upload a new photo.
+                </p>
+              </div>
+            </div>
+            <Link
+              to="/student/dashboard/identity-verification"
+              className="ml-4 px-4 py-2 rounded-lg font-medium text-sm transition-colors bg-red-600 hover:bg-red-700 text-white"
+            >
+              View Details
+            </Link>
+          </div>
+        </div>
+      )}
+
       {/* Welcome Message / Hero */}
       <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl p-4 sm:p-6 md:p-6 text-white relative overflow-hidden ring-1 ring-white/10 shadow-xl">
         <div className="absolute inset-0 bg-black/10"></div>

@@ -19,11 +19,15 @@ BEGIN
     RETURN false;
   END IF;
   
-  -- Atualizar com a foto
+  -- Atualizar com a foto e resetar status para 'pending' quando nova foto é enviada
   UPDATE comprehensive_term_acceptance
   SET 
     identity_photo_path = p_photo_path,
-    identity_photo_name = p_photo_name
+    identity_photo_name = p_photo_name,
+    identity_photo_status = 'pending', -- ✅ Resetar status para 'pending' quando nova foto é enviada
+    identity_photo_rejection_reason = NULL, -- ✅ Limpar motivo de rejeição anterior
+    identity_photo_reviewed_at = NULL, -- ✅ Limpar data de revisão anterior
+    identity_photo_reviewed_by = NULL -- ✅ Limpar quem revisou anteriormente
   WHERE id = p_acceptance_id;
   
   RETURN true;
@@ -32,6 +36,7 @@ $$;
 
 -- Comentário na função
 COMMENT ON FUNCTION update_term_acceptance_photo IS 'Atualiza a foto de identidade em um registro de aceitação de termos. Usa SECURITY DEFINER para permitir atualização mesmo com RLS ativo.';
+
 
 
 

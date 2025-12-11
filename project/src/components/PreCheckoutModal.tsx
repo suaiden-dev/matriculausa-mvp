@@ -965,12 +965,13 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
           console.error('🔍 [PreCheckoutModal] Erro ao buscar registro de aceitação:', termError);
         } else if (termAcceptance) {
           console.log('🔍 [PreCheckoutModal] Registro encontrado:', termAcceptance.id);
-          // Atualizar com a foto
+          // Atualizar com a foto e definir status como 'pending'
           const { data: updateData, error: updateError } = await supabase
             .from('comprehensive_term_acceptance')
             .update({
               identity_photo_path: identityPhotoPath,
-              identity_photo_name: identityPhotoName
+              identity_photo_name: identityPhotoName,
+              identity_photo_status: 'pending' // ✅ Status inicial sempre 'pending' quando foto é enviada
             })
             .eq('id', termAcceptance.id)
             .select();

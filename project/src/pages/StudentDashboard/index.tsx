@@ -34,6 +34,7 @@ import ManualReview from './manual-review';
 import { ZelleCheckoutPage } from '../../components/ZelleCheckoutPage';
 import I20ControlFeeSuccess from './I20ControlFeeSuccess';
 import I20ControlFeeError from './I20ControlFeeError';
+import IdentityVerification from './IdentityVerification';
 
 interface StudentProfile {
   id: string;
@@ -436,6 +437,7 @@ const StudentDashboard: React.FC = () => {
           <Route path="rewards/store" element={<RewardsStore />} />
           <Route path="manual-review" element={<ManualReview />} />
           <Route path="zelle-payment" element={<ZelleCheckoutPage />} />
+          <Route path="identity-verification" element={<IdentityVerification />} />
         </Routes>
         
         {/* Fase 5: Modal de Parabéns para Código de Referência */}
