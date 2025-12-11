@@ -225,8 +225,12 @@ const StudentInformationCard: React.FC<StudentInformationCardProps> = React.memo
                 {isEditingProcessType ? (
                   <div className="flex items-center gap-2">
                     <select
-                      value={editingProcessType}
-                      onChange={(e) => onProcessTypeChange(e.target.value)}
+                      key={`process-type-select-${editingProcessType}`}
+                      value={editingProcessType || 'initial'}
+                      onChange={(e) => {
+                        console.log('🔍 [StudentInformationCard] Process Type selecionado:', e.target.value);
+                        onProcessTypeChange(e.target.value);
+                      }}
                       className="px-3 py-1 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                       disabled={savingProcessType}
                     >
@@ -261,7 +265,11 @@ const StudentInformationCard: React.FC<StudentInformationCardProps> = React.memo
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">
-                    <span>{student.student_process_type || 'Not defined'}</span>
+                    <span className="capitalize">
+                      {student.student_process_type 
+                        ? student.student_process_type.replace(/_/g, ' ')
+                        : 'Not defined'}
+                    </span>
                     <button
                       onClick={onEditProcessType}
                       className="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors"
@@ -363,14 +371,20 @@ const StudentInformationCard: React.FC<StudentInformationCardProps> = React.memo
   );
 }, (prevProps, nextProps) => {
   // Custom comparison to avoid unnecessary re-renders
-  return (
-    prevProps.student.student_id === nextProps.student.student_id &&
-    prevProps.isEditing === nextProps.isEditing &&
-    prevProps.savingProfile === nextProps.savingProfile &&
-    prevProps.dependents === nextProps.dependents &&
-    prevProps.isEditingProcessType === nextProps.isEditingProcessType &&
-    prevProps.savingProcessType === nextProps.savingProcessType
+  // IMPORTANTE: Não bloquear re-render quando editingProcessType muda (para o select funcionar)
+  const shouldUpdate = (
+    prevProps.student.student_id !== nextProps.student.student_id ||
+    prevProps.student.student_process_type !== nextProps.student.student_process_type ||
+    prevProps.isEditing !== nextProps.isEditing ||
+    prevProps.savingProfile !== nextProps.savingProfile ||
+    prevProps.dependents !== nextProps.dependents ||
+    prevProps.isEditingProcessType !== nextProps.isEditingProcessType ||
+    prevProps.editingProcessType !== nextProps.editingProcessType ||
+    prevProps.savingProcessType !== nextProps.savingProcessType
   );
+  
+  // Retornar false para permitir re-render quando há mudanças
+  return !shouldUpdate;
 });
 
 StudentInformationCard.displayName = 'StudentInformationCard';

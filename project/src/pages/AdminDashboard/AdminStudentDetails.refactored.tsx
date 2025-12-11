@@ -2836,39 +2836,107 @@ const AdminStudentDetails: React.FC = () => {
                 onSaveProfile={handleSaveProfile}
                 onCancelEdit={() => setIsEditing(false)}
                 onEditProcessType={() => {
+                  const currentValue = student.student_process_type || 'initial';
+                  // Garantir que o valor é válido (está nas opções do select)
+                  const validValues = ['initial', 'transfer', 'change_of_status', 'enrolled'];
+                  const validValue = validValues.includes(currentValue) ? currentValue : 'initial';
+                  console.log('🔍 [AdminStudentDetails] Editando Process Type:', { currentValue, validValue });
                   setIsEditingProcessType(true);
-                  setEditingProcessType(student.student_process_type || 'initial');
+                  setEditingProcessType(validValue);
                 }}
                 onSaveProcessType={async () => {
                   setSavingProcessType(true);
-                  await saveProfile(student.student_id, { student_process_type: editingProcessType });
                   
-                  // Log da ação
                   try {
-                    await logAction(
-                      'process_type_update',
-                      `Student process type updated by platform admin to: ${editingProcessType}`,
-                      user?.id || '',
-                      'admin',
-                      {
-                        student_id: student.student_id,
-                        student_name: student.student_name || 'N/A',
-                        old_process_type: student.student_process_type || 'N/A',
-                        new_process_type: editingProcessType,
-                        updated_by: user?.email || 'Platform Admin',
-                        updated_at: new Date().toISOString()
-                      }
-                    );
-                    console.log('✅ [onSaveProcessType] Ação logada com sucesso');
-                  } catch (logError) {
-                    console.error('⚠️ [onSaveProcessType] Erro ao logar ação (não crítico):', logError);
+                    // student_process_type está na tabela scholarship_applications, não em user_profiles
+                    // Precisamos atualizar todas as aplicações do estudante ou a aplicação ativa/locked
+                    const applications = student.all_applications || [];
+                    
+                    if (applications.length === 0) {
+                      alert('Error: Student has no applications. Cannot update process type.');
+                      setSavingProcessType(false);
+                      return;
+                    }
+                    
+                    // Atualizar todas as aplicações do estudante com o novo process type
+                    const applicationIds = applications.map((app: any) => app.id).filter(Boolean);
+                    
+                    if (applicationIds.length === 0) {
+                      alert('Error: No valid application IDs found.');
+                      setSavingProcessType(false);
+                      return;
+                    }
+                    
+                    console.log('🔄 [onSaveProcessType] Atualizando student_process_type em aplicações:', applicationIds);
+                    
+                    const { error: updateError } = await supabase
+                      .from('scholarship_applications')
+                      .update({ student_process_type: editingProcessType })
+                      .in('id', applicationIds);
+                    
+                    if (updateError) {
+                      console.error('❌ [onSaveProcessType] Erro ao atualizar:', updateError);
+                      throw updateError;
+                    }
+                    
+                    console.log('✅ [onSaveProcessType] student_process_type atualizado com sucesso');
+                    
+                    // Atualizar estado local imediatamente
+                    setStudent((prev: any) => {
+                      if (!prev) return prev;
+                      // Atualizar todas as aplicações no estado local
+                      const updatedApps = (prev.all_applications || []).map((app: any) => ({
+                        ...app,
+                        student_process_type: editingProcessType
+                      }));
+                      return { 
+                        ...prev, 
+                        student_process_type: editingProcessType,
+                        all_applications: updatedApps
+                      } as any;
+                    });
+                    
+                    // Invalidar queries para garantir sincronização
+                    queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
+                    
+                    // Log da ação
+                    try {
+                      await logAction(
+                        'process_type_update',
+                        `Student process type updated by platform admin to: ${editingProcessType}`,
+                        user?.id || '',
+                        'admin',
+                        {
+                          student_id: student.student_id,
+                          student_name: student.student_name || 'N/A',
+                          old_process_type: student.student_process_type || 'N/A',
+                          new_process_type: editingProcessType,
+                          updated_by: user?.email || 'Platform Admin',
+                          updated_at: new Date().toISOString(),
+                          application_ids: applicationIds
+                        }
+                      );
+                      console.log('✅ [onSaveProcessType] Ação logada com sucesso');
+                    } catch (logError) {
+                      console.error('⚠️ [onSaveProcessType] Erro ao logar ação (não crítico):', logError);
+                    }
+                    
+                    setIsEditingProcessType(false);
+                  } catch (error: any) {
+                    console.error('❌ [onSaveProcessType] Erro ao atualizar process type:', error);
+                    alert('Error updating process type: ' + (error?.message || 'Unknown error'));
+                  } finally {
+                    setSavingProcessType(false);
                   }
-                  
-                  setSavingProcessType(false);
-                  setIsEditingProcessType(false);
                 }}
-                onCancelProcessType={() => setIsEditingProcessType(false)}
-                onProcessTypeChange={setEditingProcessType}
+                onCancelProcessType={() => {
+                  setIsEditingProcessType(false);
+                  setEditingProcessType(student.student_process_type || 'initial');
+                }}
+                onProcessTypeChange={(value) => {
+                  console.log('🔍 [AdminStudentDetails] Process Type mudou para:', value);
+                  setEditingProcessType(value);
+                }}
               />
 
               {student.seller_referral_code && student.all_applications && (
