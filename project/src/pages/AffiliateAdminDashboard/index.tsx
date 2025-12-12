@@ -246,6 +246,7 @@ const AffiliateAdminDashboard: React.FC = () => {
               sellers={sellers}
               students={students}
               onRefresh={() => loadAffiliateAdminData(true)}
+              userId={userId}
             />
           } 
         />

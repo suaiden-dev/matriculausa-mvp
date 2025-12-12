@@ -2,8 +2,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import {
-  useStudentData,
-  useStudentDetails,
   useFilters,
   getFilteredAndSortedData,
   handleViewDocument,
@@ -16,8 +14,17 @@ import {
 } from '../../components/EnhancedStudentTracking';
 import { supabase } from '../../lib/supabase';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
-import { useDynamicFeeCalculation, useDynamicFeeCalculationForUser } from '../../hooks/useDynamicFeeCalculation';
-import { getDisplayAmounts } from '../../utils/paymentConverter';
+import { 
+  useAdjustedStudentsCalculation, 
+  useBlackCouponUsersQuery,
+  useAffiliateAdminDataQuery,
+  useAffiliateSellersQuery,
+  useAffiliateStudentProfilesQuery,
+  useCachedStudentDetails
+} from '../../hooks/useAffiliateAdminQueries';
+import RefreshButton from '../../components/RefreshButton';
+import { useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '../../lib/queryKeys';
 
 function EnhancedStudentTracking(props) {
   const { userId } = props || {};
@@ -33,7 +40,27 @@ function EnhancedStudentTracking(props) {
 
   // Hooks personalizados
   const effectiveUserId = userId || user?.id;
-  const { sellers, students, universities, loading } = useStudentData(effectiveUserId);
+  const queryClient = useQueryClient();
+  
+  // ✅ React Query hooks para dados com cache
+  const { data: adminData } = useAffiliateAdminDataQuery(effectiveUserId);
+  const { data: sellers = [], isLoading: loadingSellers } = useAffiliateSellersQuery(adminData?.affiliateAdminId);
+  const { data: students = [], isLoading: loadingStudents } = useAffiliateStudentProfilesQuery(effectiveUserId);
+  
+  // Loading combinado
+  const loading = loadingSellers || loadingStudents;
+  
+  // Mock de universidades (não usado no componente atualmente)
+  const universities: any[] = [];
+  
+  // Estado para refresh
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  // Estados locais para o estudante selecionado
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+  const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
+  
+  // ✅ Usar o novo hook com cache para detalhes do estudante
   const {
     selectedStudent,
     studentDetails,
@@ -41,9 +68,25 @@ function EnhancedStudentTracking(props) {
     studentDocuments,
     documentRequests,
     i20ControlFeeDeadline,
-    loadStudentDetails,
-    backToList
-  } = useStudentDetails();
+    loadStudentDetails: loadStudentDetailsFromHook,
+    backToList,
+    isLoading: loadingStudentDetails
+  } = useCachedStudentDetails(selectedStudentId, selectedProfileId);
+
+  // Função wrapper para carregar detalhes do estudante
+  const loadStudentDetails = async (studentId: string, profileId?: string) => {
+    console.log('🔍 [DEBUG] loadStudentDetails called with:', { studentId, profileId });
+    setSelectedStudentId(studentId);
+    setSelectedProfileId(profileId || studentId);
+    await loadStudentDetailsFromHook(studentId, profileId);
+  };
+
+  // Função para voltar à lista
+  const handleBackToList = () => {
+    setSelectedStudentId(null);
+    setSelectedProfileId(null);
+    backToList();
+  };
   const {
     filters,
     showAdvancedFilters,
@@ -54,22 +97,54 @@ function EnhancedStudentTracking(props) {
 
   // Obter dados filtrados e ordenados com memoização para evitar recálculos desnecessários
   const { filteredSellers, filteredStudents } = useMemo(() => {
-    return getFilteredAndSortedData(sellers, students, filters);
-  }, [sellers, students, filters]);
+    // Aplicar filtros básicos
+    const filtered = getFilteredAndSortedData(sellers, students, filters);
+    
+    // Se não há dados ainda, retornar arrays vazios para evitar loading infinito
+    if (!sellers.length && !students.length && !loading) {
+      return { filteredSellers: [], filteredStudents: [] };
+    }
+    
+    return filtered;
+  }, [sellers, students, filters, loading]);
 
   // Carregar defaults de taxas (sem userId) para usar quando não houver override
   const { feeConfig } = useFeeConfig();
 
-  // Map de overrides por student_id
-  const [overridesMap, setOverridesMap] = useState({});
-  // Map de dependentes por profile_id
-  const [dependentsMap, setDependentsMap] = useState({});
-  // Map de valores reais pagos por user_id (já com desconto e convertido se PIX)
-  const [realPaidAmountsMap, setRealPaidAmountsMap] = useState<Record<string, { selection_process?: number; scholarship?: number; i20_control?: number }>>({});
-  // Estado de loading para valores reais pagos
-  const [loadingRealPaidAmounts, setLoadingRealPaidAmounts] = useState(true);
-  // Estado para usuários que usaram cupom BLACK
-  const [blackCouponUsers, setBlackCouponUsers] = useState<Set<string>>(new Set());
+  // ✅ React Query Hooks para dados pesados
+  const { data: blackCouponUsers = new Set() } = useBlackCouponUsersQuery();
+  
+  // ✅ Hook composto para cálculos de receita ajustada (substitui toda a lógica manual)
+  const {
+    allAdjustedStudents,
+    adjustedStudents,
+    isLoading: isLoadingAdjustments,
+    overridesMap,
+    dependentsMap,
+    realPaidAmountsMap
+  } = useAdjustedStudentsCalculation(students, filteredStudents);
+  
+  // Função de refresh usando React Query
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      // Invalidar todas as queries relacionadas para forçar refetch
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.affiliateAdmin.adminData(effectiveUserId) }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.affiliateAdmin.sellers(adminData?.affiliateAdminId) }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.affiliateAdmin.studentProfiles(effectiveUserId) }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.affiliateAdmin.feeOverrides }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.affiliateAdmin.realPaidAmounts }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.affiliateAdmin.studentDependents }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.affiliateAdmin.blackCouponUsers })
+      ]);
+    } finally {
+      // Delay para mostrar feedback visual
+      setTimeout(() => {
+        setIsRefreshing(false);
+      }, 300);
+    }
+  };
   // Função para calcular taxas de um estudante específico
   const getStudentFees = (student: any) => {
     // Usar system_type do estudante para determinar os valores
@@ -83,311 +158,6 @@ function EnhancedStudentTracking(props) {
       isSimplified: isSimplified
     };
   };
-
-  // Cache para overrides para evitar requisições desnecessárias
-  const [overridesCache, setOverridesCache] = useState<Record<string, any>>({});
-
-  // Buscar overrides para os estudantes (baseado nos students originais, não filtrados)
-  useEffect(() => {
-    const loadOverrides = async () => {
-      try {
-        const uniqueIds = Array.from(new Set((students || []).map((s) => s.user_id).filter(Boolean)));
-        if (uniqueIds.length === 0) {
-          setOverridesMap({});
-          return;
-        }
-
-        // ✅ OTIMIZAÇÃO: Filtrar apenas IDs que não estão no cache
-        const idsToFetch = uniqueIds.filter(id => !overridesCache[id]);
-
-        if (idsToFetch.length === 0) {
-          // Todos os overrides já estão no cache
-          const cachedMap = {};
-          uniqueIds.forEach(id => {
-            if (overridesCache[id]) {
-              cachedMap[id] = overridesCache[id];
-            }
-          });
-          setOverridesMap(cachedMap);
-          return;
-        }
-
-        const results = await Promise.allSettled(
-          idsToFetch.map(async (userId) => {
-            const { data, error } = await supabase.rpc('get_user_fee_overrides', { target_user_id: userId });
-            return { userId, data: error ? null : data };
-          })
-        );
-
-        const map = {};
-        const newCacheEntries = {};
-        
-        results.forEach((res) => {
-          if (res.status === 'fulfilled') {
-            const v = res.value;
-            const userId = v.userId;
-            const data = v.data;
-            // ✅ CORREÇÃO: get_user_fee_overrides pode retornar array ou objeto único
-            const override = Array.isArray(data) ? (data.length > 0 ? data[0] : null) : data;
-            if (override) {
-              const overrideData = {
-                selection_process_fee: override.selection_process_fee != null ? Number(override.selection_process_fee) : undefined,
-                application_fee: override.application_fee != null ? Number(override.application_fee) : undefined,
-                scholarship_fee: override.scholarship_fee != null ? Number(override.scholarship_fee) : undefined,
-                i20_control_fee: override.i20_control_fee != null ? Number(override.i20_control_fee) : undefined
-              };
-              map[userId] = overrideData;
-              newCacheEntries[userId] = overrideData; // Adicionar ao cache
-            } else {
-              newCacheEntries[userId] = null; // Cache null para evitar requisições futuras
-            }
-          }
-        });
-
-        // ✅ OTIMIZAÇÃO: Atualizar cache com novos dados
-        setOverridesCache(prev => ({ ...prev, ...newCacheEntries }));
-
-        // ✅ OTIMIZAÇÃO: Incluir dados do cache existente
-        uniqueIds.forEach(id => {
-          if (overridesCache[id] && !map[id]) {
-            map[id] = overridesCache[id];
-          }
-        });
-
-        setOverridesMap(map);
-      } catch (e) {
-        console.error('🔍 OVERRIDES ERROR:', e);
-        setOverridesMap({});
-      }
-    };
-    loadOverrides();
-  }, [students, overridesCache]);
-
-  // Buscar dependentes para os estudantes (baseado nos students originais, não filtrados)
-  useEffect(() => {
-    const loadDependents = async () => {
-      try {
-        const profileIds = Array.from(new Set((students || []).map((s) => s.profile_id).filter(Boolean)));
-        if (profileIds.length === 0) {
-          setDependentsMap({});
-          return;
-        }
-
-        const { data, error } = await supabase
-          .from('user_profiles')
-          .select('id, dependents')
-          .in('id', profileIds);
-
-        if (error) {
-          setDependentsMap({});
-          return;
-        }
-
-        const map = {};
-        (data || []).forEach((row) => {
-          map[row.id] = Number(row.dependents) || 0;
-        });
-        setDependentsMap(map);
-      } catch (e) {
-        setDependentsMap({});
-      }
-    };
-    loadDependents();
-  }, [students]);
-
-  // Buscar valores reais pagos de individual_fee_payments (já com desconto e convertido se PIX)
-  // Mantém loading até carregar todos os valores reais
-  useEffect(() => {
-    const loadRealPaidAmounts = async () => {
-      setLoadingRealPaidAmounts(true);
-      try {
-        const uniqueUserIds = Array.from(new Set((students || []).map((s) => s.user_id).filter(Boolean)));
-        if (uniqueUserIds.length === 0) {
-          setRealPaidAmountsMap({});
-          setLoadingRealPaidAmounts(false);
-          return;
-        }
-
-        // Buscar valores pagos para cada estudante (mantém loading até carregar tudo)
-        // Processar todos em paralelo para melhor performance
-        const amountsMap: Record<string, { selection_process?: number; scholarship?: number; i20_control?: number }> = {};
-        
-        await Promise.allSettled(uniqueUserIds.map(async (userId) => {
-          try {
-            // ✅ CORREÇÃO: Usar getDisplayAmounts para exibição (valores "Zelle" sem taxas)
-            const amounts = await getDisplayAmounts(userId, ['selection_process', 'scholarship', 'i20_control']);
-            amountsMap[userId] = {
-              selection_process: amounts.selection_process,
-              scholarship: amounts.scholarship,
-              i20_control: amounts.i20_control
-            };
-          } catch (error) {
-            console.error(`[EnhancedStudentTrackingRefactored] Erro ao buscar valores pagos para user_id ${userId}:`, error);
-          }
-        }));
-
-        // Atualizar apenas após carregar todos os valores
-        setRealPaidAmountsMap(amountsMap);
-      } catch (e) {
-        console.error('🔍 [EnhancedStudentTrackingRefactored] Erro ao carregar valores reais pagos:', e);
-        setRealPaidAmountsMap({});
-      } finally {
-        setLoadingRealPaidAmounts(false);
-      }
-    };
-    loadRealPaidAmounts();
-  }, [students]);
-
-  // Carregar estudantes que usaram cupom BLACK
-  useEffect(() => {
-    const loadBlackCouponUsers = async () => {
-      try {
-        // Buscar com ilike para ser case-insensitive
-        const { data, error } = await supabase
-          .from('promotional_coupon_usage')
-          .select('user_id, coupon_code')
-          .ilike('coupon_code', 'BLACK');
-
-        if (error) {
-          return;
-        }
-
-        const userIds = new Set<string>();
-        (data || []).forEach((row: any) => {
-          if (row.user_id) {
-            userIds.add(row.user_id);
-          }
-        });
-        
-        setBlackCouponUsers(userIds);
-      } catch (e) {
-        // Silently fail - não é crítico se não conseguir carregar os cupons
-      }
-    };
-
-    loadBlackCouponUsers();
-  }, [students]);
-
-  // Calcular receita ajustada para TODOS os estudantes (para StatsCards)
-  const allAdjustedStudents = useMemo(() => {
-    const result = (students || []).map((s) => {
-      const o = overridesMap[s.user_id] || {};
-      const dependents = Number(dependentsMap[s.profile_id]) || 0;
-      const realPaid = realPaidAmountsMap[s.user_id] || {};
-
-      let total = 0;
-      
-      if (s.has_paid_selection_process_fee) {
-        if (realPaid.selection_process !== undefined && realPaid.selection_process > 0) {
-          total += realPaid.selection_process;
-        } else {
-          const systemType = s.system_type || 'legacy';
-          const baseSelectionFee = systemType === 'simplified' ? 350 : 400;
-          total += systemType === 'simplified' ? baseSelectionFee : baseSelectionFee + (dependents * 150);
-        }
-      }
-      
-      const hasAnyScholarshipPaid = s.is_scholarship_fee_paid || false;
-      if (hasAnyScholarshipPaid) {
-        if (realPaid.scholarship !== undefined && realPaid.scholarship > 0) {
-          total += realPaid.scholarship;
-        } else {
-          const systemType = s.system_type || 'legacy';
-          const scholarshipFee = systemType === 'simplified' ? 550 : 900;
-          total += scholarshipFee;
-        }
-      }
-      
-      if (hasAnyScholarshipPaid && s.has_paid_i20_control_fee) {
-        if (realPaid.i20_control !== undefined && realPaid.i20_control > 0) {
-          total += realPaid.i20_control;
-        } else {
-          total += 900;
-        }
-      }
-
-      return { 
-        ...s, 
-        total_paid_adjusted: total,
-        hasMultipleApplications: s.hasMultipleApplications,
-        applicationCount: s.applicationCount,
-        allApplications: s.allApplications
-      };
-    });
-    
-    return result;
-  }, [students, overridesMap, feeConfig, dependentsMap, realPaidAmountsMap]);
-
-  // Calcular receita ajustada por estudante usando valores reais pagos quando disponíveis
-  // Usa valores reais pagos quando disponíveis, com fallback para cálculo fixo se não houver registro
-  const adjustedStudents = useMemo(() => {
-    const result = (filteredStudents || []).map((s) => {
-      
-      const o = overridesMap[s.user_id] || {};
-      const dependents = Number(dependentsMap[s.profile_id]) || 0;
-      const realPaid = realPaidAmountsMap[s.user_id] || {};
-
-      // ✅ CORREÇÃO: Usar valores reais pagos (já com desconto e convertido se PIX) quando disponíveis
-      // Mesma lógica do Overview.tsx e Analytics.tsx
-      let total = 0;
-      
-      // Selection Process Fee - usar valor real pago se disponível, senão calcular
-      if (s.has_paid_selection_process_fee) {
-        if (realPaid.selection_process !== undefined && realPaid.selection_process > 0) {
-          // Usar valor real pago (já com desconto e convertido se PIX)
-          total += realPaid.selection_process;
-        } else {
-          // Fallback: cálculo fixo para dados antigos sem registro
-          const systemType = s.system_type || 'legacy';
-          const baseSelectionFee = systemType === 'simplified' ? 350 : 400;
-          // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
-          // Dependentes só afetam Application Fee ($100 por dependente)
-          total += systemType === 'simplified' ? baseSelectionFee : baseSelectionFee + (dependents * 150);
-        }
-      }
-      
-      // Scholarship Fee - usar valor real pago se disponível, senão calcular
-      const hasAnyScholarshipPaid = s.is_scholarship_fee_paid || false;
-      if (hasAnyScholarshipPaid) {
-        if (realPaid.scholarship !== undefined && realPaid.scholarship > 0) {
-          // Usar valor real pago (já com desconto e convertido se PIX)
-          total += realPaid.scholarship;
-        } else {
-          // Fallback: cálculo fixo para dados antigos sem registro
-          const systemType = s.system_type || 'legacy';
-          const scholarshipFee = systemType === 'simplified' ? 550 : 900;
-          total += scholarshipFee;
-        }
-      }
-      
-      // I-20 Control Fee - usar valor real pago se disponível, senão calcular
-      if (hasAnyScholarshipPaid && s.has_paid_i20_control_fee) {
-        if (realPaid.i20_control !== undefined && realPaid.i20_control > 0) {
-          // Usar valor real pago (já com desconto e convertido se PIX)
-          total += realPaid.i20_control;
-        } else {
-          // Fallback: cálculo fixo para dados antigos sem registro
-          total += 900; // Sempre $900 para ambos os sistemas
-        }
-      }
-      
-
-      const adjusted = { 
-        ...s, 
-        total_paid_adjusted: total,
-        // Preservar propriedades de múltiplas aplicações
-        hasMultipleApplications: s.hasMultipleApplications,
-        applicationCount: s.applicationCount,
-        allApplications: s.allApplications
-      };
-      
-      
-      return adjusted;
-    });
-    
-    
-    return result;
-  }, [filteredStudents, overridesMap, feeConfig, dependentsMap, realPaidAmountsMap]);
 
   // Toggle expandir vendedor
   const toggleSellerExpansion = (sellerId) => {
@@ -535,8 +305,10 @@ function EnhancedStudentTracking(props) {
   }, [realScholarshipApplication?.id, realScholarshipApplication?.student_process_type]);
 
   // Loading state - usar skeleton ao invés de spinner
-  // ✅ OTIMIZAÇÃO: Só mostrar skeleton no carregamento inicial, não enquanto busca valores reais
-  if (loading) {
+  // ✅ OTIMIZAÇÃO: Só mostrar skeleton no carregamento inicial dos dados essenciais
+  const shouldShowSkeleton = (loading && (!sellers.length || !students.length)) || isLoadingAdjustments;
+  
+  if (shouldShowSkeleton) {
     return (
       <div className="min-h-screen bg-slate-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 animate-pulse">
@@ -599,7 +371,7 @@ function EnhancedStudentTracking(props) {
   }
 
   // Se um estudante está selecionado, mostrar detalhes
-  if (selectedStudent && studentDetails) {
+  if (selectedStudentId && studentDetails) {
     return (
       <div className="min-h-screen">
         {/* Header Section */}
@@ -608,7 +380,7 @@ function EnhancedStudentTracking(props) {
             <div className="flex items-center justify-between">
               <div className="flex flex-col sm:flex-row items-start sm:items-center sm:space-x-4 min-w-0 w-full">
                 <button
-                  onClick={backToList}
+                  onClick={handleBackToList}
                   className="flex items-center space-x-2 text-slate-600 hover:text-slate-900 transition-colors py-2 px-3 rounded-lg hover:bg-slate-100 mb-4 sm:mb-0 w-full sm:w-auto justify-start"
                 >
                   <span className="text-sm md:text-base">← Back to list</span>
@@ -664,7 +436,7 @@ function EnhancedStudentTracking(props) {
               studentDocuments={studentDocuments}
               scholarshipApplication={scholarshipApplication}
               i20ControlFeeDeadline={i20ControlFeeDeadline}
-              onBack={backToList}
+              onBack={handleBackToList}
               activeTab={activeTab}
               onTabChange={setActiveTab}
               onViewDocument={handleViewDocument}
@@ -922,6 +694,13 @@ function EnhancedStudentTracking(props) {
                     <p className="text-sm text-slate-600 mt-1">
                       Comprehensive tracking and management of student applications and progress
                     </p>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RefreshButton
+                      onClick={handleRefresh}
+                      isRefreshing={isRefreshing}
+                      title="Refresh student and seller data"
+                    />
                   </div>
                 </div>
               </div>

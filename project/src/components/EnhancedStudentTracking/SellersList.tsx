@@ -93,7 +93,7 @@ const SellersList: React.FC<SellersListProps> = ({
     <div className="space-y-4">
       {filteredSellers.map((seller) => {
         const sellerStudents = filteredStudents.filter((student: any) => 
-          student.referred_by_seller_id === seller.id
+          student.seller_referral_code === seller.referral_code
         );
 
         return (
@@ -131,7 +131,7 @@ const SellersList: React.FC<SellersListProps> = ({
                       {(() => {
                         // Somar receita ajustada apenas dos estudantes que pagaram (não registrados)
                         const studentsForSeller = filteredStudents.filter((student: any) => 
-                          student.referred_by_seller_id === seller.id && student.has_paid_selection_process_fee
+                          student.seller_referral_code === seller.referral_code && student.has_paid_selection_process_fee
                         );
                         const adjusted = studentsForSeller.reduce((sum: number, st: any) => {
                           const val = Number(st.total_paid_adjusted ?? st.total_paid ?? 0);

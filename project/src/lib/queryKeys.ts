@@ -82,6 +82,26 @@ export const queryKeys = {
       universities: () => ['student-dashboard', 'rewards', 'universities'] as const,
     },
   },
+  // Affiliate Admin Dashboard
+  affiliateAdmin: {
+    all: ['affiliate-admin'] as const,
+    adminData: (userId?: string) => ['affiliate-admin', 'admin-data', userId] as const,
+    sellers: (affiliateAdminId?: string) => ['affiliate-admin', 'sellers', affiliateAdminId] as const,
+    studentProfiles: (userId?: string) => ['affiliate-admin', 'student-profiles', userId] as const,
+    feeOverrides: (userIds: string[]) => ['affiliate-admin', 'fee-overrides', ...userIds] as const,
+    realPaidAmounts: (userIds: string[]) => ['affiliate-admin', 'real-paid-amounts', ...userIds] as const,
+    paymentMethods: (profileIds: string[]) => ['affiliate-admin', 'payment-methods', ...profileIds] as const,
+    revenueCalculation: (userId?: string, profileCount?: number) => ['affiliate-admin', 'revenue-calculation', userId, profileCount] as const,
+    // Enhanced Student Tracking específicos
+    studentOverrides: (userIds: string[]) => ['affiliate-admin', 'student-overrides', ...userIds] as const,
+    studentDependents: (profileIds: string[]) => ['affiliate-admin', 'student-dependents', ...profileIds] as const,
+    blackCouponUsers: () => ['affiliate-admin', 'black-coupon-users'] as const,
+    // Student Details Cache
+    studentDetails: (studentId?: string, profileId?: string) => ['affiliate-admin', 'student-details', studentId, profileId] as const,
+    studentApplications: (profileId?: string) => ['affiliate-admin', 'student-applications', profileId] as const,
+    studentDocuments: (profileId?: string) => ['affiliate-admin', 'student-documents', profileId] as const,
+    studentFeeHistory: (studentUserId?: string) => ['affiliate-admin', 'student-fee-history', studentUserId] as const,
+  },
 } as const;
 
 /**
@@ -136,4 +156,23 @@ export const invalidateStudentDashboardAll = (queryClient: any) => {
 
 export const invalidateStudentDashboardRewards = (queryClient: any) => {
   queryClient.invalidateQueries({ queryKey: queryKeys.studentDashboard.rewards.all });
+};
+
+/**
+ * Helpers para invalidação de queries do Affiliate Admin Dashboard
+ */
+export const invalidateAffiliateAdminAll = (queryClient: any) => {
+  queryClient.invalidateQueries({ queryKey: queryKeys.affiliateAdmin.all });
+};
+
+export const invalidateAffiliateAdminSellers = (queryClient: any) => {
+  queryClient.invalidateQueries({ queryKey: ['affiliate-admin', 'sellers'] });
+};
+
+export const invalidateAffiliateAdminStudentProfiles = (queryClient: any) => {
+  queryClient.invalidateQueries({ queryKey: ['affiliate-admin', 'student-profiles'] });
+};
+
+export const invalidateAffiliateAdminRevenueCalculation = (queryClient: any) => {
+  queryClient.invalidateQueries({ queryKey: ['affiliate-admin', 'revenue-calculation'] });
 };
