@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import CustomLoading from '../../components/CustomLoading';
 import PaymentSuccessOverlay from '../../components/PaymentSuccessOverlay';
-
+import { dispatchCacheInvalidationEvent, CacheInvalidationEvent } from '../../utils/cacheInvalidation';
 import { useTranslation } from 'react-i18next';
 
 const ScholarshipFeeSuccess: React.FC = () => {
@@ -97,6 +97,8 @@ const ScholarshipFeeSuccess: React.FC = () => {
         }
         console.log('[ScholarshipFeeSuccess] applicationId definido:', appId);
         setApplicationId(appId);
+        // Invalidar cache
+        dispatchCacheInvalidationEvent(CacheInvalidationEvent.PAYMENT_COMPLETED);
         // Força refetch de applications para refletir is_scholarship_fee_paid e status atualizados
         try {
           if (userProfile?.id) {
