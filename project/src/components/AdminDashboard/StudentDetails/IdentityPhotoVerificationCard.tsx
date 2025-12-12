@@ -29,6 +29,7 @@ const IdentityPhotoVerificationCard: React.FC<IdentityPhotoVerificationCardProps
   const [showPhotoModal, setShowPhotoModal] = useState(false);
   const [isEditingReason, setIsEditingReason] = useState(false);
   const [editedReason, setEditedReason] = useState('');
+  const [isSavingReason, setIsSavingReason] = useState(false);
 
   // Fechar modal com ESC
   useEffect(() => {
@@ -133,8 +134,17 @@ const IdentityPhotoVerificationCard: React.FC<IdentityPhotoVerificationCardProps
       return;
     }
 
-    await onUpdateRejectionReason(termAcceptance.id, editedReason.trim());
-    setIsEditingReason(false);
+    setIsSavingReason(true);
+    try {
+      await onUpdateRejectionReason(termAcceptance.id, editedReason.trim());
+      setIsEditingReason(false);
+    } catch (error: any) {
+      console.error('Error updating rejection reason:', error);
+      alert('Error updating rejection reason: ' + (error?.message || 'Unknown error occurred. Please try again.'));
+      // Não fechar o modo de edição em caso de erro, para que o usuário possa tentar novamente
+    } finally {
+      setIsSavingReason(false);
+    }
   };
 
   const getStatusBadge = () => {
@@ -164,9 +174,15 @@ const IdentityPhotoVerificationCard: React.FC<IdentityPhotoVerificationCardProps
   };
 
   const handleReject = async (reason: string) => {
-    if (termAcceptance.id) {
+    if (!termAcceptance?.id) return;
+    
+    try {
       await onReject(termAcceptance.id, reason);
       setShowRejectModal(false);
+    } catch (error: any) {
+      console.error('Error rejecting identity photo:', error);
+      alert('Error rejecting identity photo: ' + (error?.message || 'Unknown error occurred. Please try again.'));
+      // Não fechar o modal em caso de erro, para que o usuário possa tentar novamente
     }
   };
 
@@ -255,7 +271,7 @@ const IdentityPhotoVerificationCard: React.FC<IdentityPhotoVerificationCardProps
                       <textarea
                         value={editedReason}
                         onChange={(e) => setEditedReason(e.target.value)}
-                        disabled={isProcessing}
+                        disabled={isSavingReason || isProcessing}
                         className="w-full px-3 py-2 border border-red-300 rounded-lg text-sm text-red-900 bg-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed resize-none"
                         rows={4}
                         placeholder="Enter rejection reason..."
@@ -263,15 +279,27 @@ const IdentityPhotoVerificationCard: React.FC<IdentityPhotoVerificationCardProps
                       <div className="flex items-center gap-2">
                         <button
                           onClick={handleSaveEditReason}
-                          disabled={isProcessing || !editedReason.trim()}
+                          disabled={isSavingReason || isProcessing || !editedReason.trim()}
                           className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                         >
-                          <Save className="w-4 h-4" />
-                          Save
+                          {isSavingReason ? (
+                            <>
+                              <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                              </svg>
+                              Saving...
+                            </>
+                          ) : (
+                            <>
+                              <Save className="w-4 h-4" />
+                              Save
+                            </>
+                          )}
                         </button>
                         <button
                           onClick={handleCancelEditReason}
-                          disabled={isProcessing}
+                          disabled={isSavingReason || isProcessing}
                           className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           Cancel
