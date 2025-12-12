@@ -4,6 +4,7 @@ import CustomLoading from '../../components/CustomLoading';
 import PaymentSuccessOverlay from '../../components/PaymentSuccessOverlay';
 import { useDynamicFees } from '../../hooks/useDynamicFees';
 import { useTranslation } from 'react-i18next';
+import { dispatchCacheInvalidationEvent, CacheInvalidationEvent } from '../../utils/cacheInvalidation';
 
 const SelectionProcessFeeSuccess: React.FC = () => {
   const navigate = useNavigate();
@@ -89,6 +90,8 @@ const SelectionProcessFeeSuccess: React.FC = () => {
         // Se for PIX e estiver completo, mostrar animação de sucesso
         if (data.payment_method === 'pix' && data.status === 'complete') {
           console.log('[PIX] ✅ Webhook processou PIX! Mostrando animação...');
+          // Invalidar cache
+          dispatchCacheInvalidationEvent(CacheInvalidationEvent.PAYMENT_COMPLETED);
           setLoading(false);
           setAnimationSuccess(true);
           setShowAnimation(true);
