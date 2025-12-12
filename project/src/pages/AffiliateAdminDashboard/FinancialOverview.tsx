@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { 
   DollarSign, 
   TrendingUp, 
@@ -11,9 +11,9 @@ import {
   Award,
   Activity
 } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
-import { getDisplayAmounts } from '../../utils/paymentConverter';
-import { AffiliatePaymentRequestService } from '../../services/AffiliatePaymentRequestService';
+import { useQueryClient } from '@tanstack/react-query';
+import { useFinancialStatsQuery } from '../../hooks/useAffiliateAdminQueries';
+import { invalidateAffiliateAdminFinancialOverview } from '../../lib/queryKeys';
 
 
 // Declare Chart.js types
@@ -26,17 +26,6 @@ declare global {
 interface FinancialOverviewProps {
   userId?: string;
   forceReloadToken?: number;
-}
-
-interface FinancialStats {
-  totalCredits: number;
-  totalEarned: number;
-  totalReferrals: number;
-  activeReferrals: number;
-  completedReferrals: number;
-  last7DaysRevenue: number;
-  averageCommissionPerReferral: number;
-  manualRevenue: number;
 }
 
 interface FinancialAnalytics {
@@ -65,21 +54,12 @@ interface CalculatedMetrics {
 }
 
 const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceReloadToken }) => {
+  const queryClient = useQueryClient();
 
+  // ✅ React Query hook para dados financeiros com cache
+  const { data: financialData, isLoading, isPending } = useFinancialStatsQuery(userId);
   
-  // Financial statistics state
-  const [financialStats, setFinancialStats] = useState<FinancialStats>({
-    totalCredits: 0,
-    totalEarned: 0,
-    totalReferrals: 0,
-    activeReferrals: 0,
-    completedReferrals: 0,
-    last7DaysRevenue: 0,
-    averageCommissionPerReferral: 0,
-    manualRevenue: 0
-  });
-
-  // Detailed financial analytics state
+  // Detailed financial analytics state (computado a partir de financialData)
   const [financialAnalytics, setFinancialAnalytics] = useState<FinancialAnalytics>({
     dailyRevenue: [],
     monthlyRevenue: [],
@@ -120,12 +100,27 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
     totalReferrals: 0
   });
 
-  const [loading, setLoading] = useState(true); // ✅ Iniciar como true para mostrar skeleton imediatamente
-  // Memoização e TTL
-  const lastUserIdRef = useRef<string | undefined>(undefined);
-  const lastFetchAtRef = useRef<number>(0);
-  const isLoadingRef = useRef<boolean>(false);
-  const TTL_MS = 60_000; // 60s
+  // ✅ Extrair stats dos dados cacheados
+  const financialStats = useMemo(() => {
+    if (!financialData?.stats) {
+      return {
+        totalCredits: 0,
+        totalEarned: 0,
+        totalReferrals: 0,
+        activeReferrals: 0,
+        completedReferrals: 0,
+        last7DaysRevenue: 0,
+        averageCommissionPerReferral: 0,
+        manualRevenue: 0
+      };
+    }
+    return financialData.stats;
+  }, [financialData]);
+
+  // ✅ Função para forçar refresh (invalida cache)
+  const handleRefresh = useCallback(async () => {
+    await invalidateAffiliateAdminFinancialOverview(queryClient);
+  }, [queryClient]);
 
   // Load Chart.js dynamically
   useEffect(() => {
@@ -145,595 +140,68 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
     loadChartJS();
   }, []);
 
-  // Load affiliate financial data (memoizado + TTL)
-  const loadAffiliateFinancialData = useCallback(async () => {
-    if (!userId) return;
-    // evita concorrência e excesso
-    if (isLoadingRef.current) return;
-    // força refetch quando muda userId
-    const userChanged = lastUserIdRef.current !== userId;
-    const now = Date.now();
-    const ttlValid = now - lastFetchAtRef.current < TTL_MS;
-    if (!userChanged && ttlValid) {
-      return; // TTL ainda válido, não recarrega
+  // ✅ Função para calcular receita de um profile usando overrides
+  const calculateProfileRevenue = useCallback((profile: any) => {
+    if (!financialData) return 0;
+    
+    const { overridesMap, realPaidAmountsMap } = financialData;
+    const deps = Number(profile?.dependents || 0);
+    const ov = overridesMap[profile?.user_id] || {};
+    const realPaid = realPaidAmountsMap[profile?.user_id] || {};
+    
+    let totalRevenue = 0;
+    
+    // Selection Process Fee
+    if (profile?.has_paid_selection_process_fee) {
+      if (realPaid.selection_process !== undefined && realPaid.selection_process > 0) {
+        totalRevenue += realPaid.selection_process;
+      } else if (ov.selection_process_fee != null) {
+        totalRevenue += Number(ov.selection_process_fee);
+      } else {
+        const baseSelDefault = profile?.system_type === 'simplified' ? 350 : 400;
+        totalRevenue += profile?.system_type === 'simplified' 
+          ? baseSelDefault 
+          : baseSelDefault + (deps * 150);
+      }
     }
     
-    try {
-      isLoadingRef.current = true;
-      setLoading(true);
-      
-      // Usar lógica ajustada com overrides (mesmo padrão do Overview/Analytics/PaymentManagement)
-      // 1. Descobrir affiliate_admin_id
-      const { data: aaList, error: aaErr } = await supabase
-        .from('affiliate_admins')
-        .select('id')
-        .eq('user_id', userId)
-        .limit(1);
-      if (aaErr || !aaList || aaList.length === 0) {
-        console.error('No affiliate admin found for user:', userId);
-        return;
+    // Scholarship Fee
+    if (profile?.is_scholarship_fee_paid) {
+      if (realPaid.scholarship !== undefined && realPaid.scholarship > 0) {
+        totalRevenue += realPaid.scholarship;
+      } else if (ov.scholarship_fee != null) {
+        totalRevenue += Number(ov.scholarship_fee);
+      } else {
+        totalRevenue += profile?.system_type === 'simplified' ? 550 : 900;
       }
-      const affiliateAdminId = aaList[0].id;
-
-      // 2. Buscar sellers vinculados a este affiliate admin
-      const { data: sellers, error: sellersErr } = await supabase
-        .from('sellers')
-        .select('referral_code')
-        .eq('affiliate_admin_id', affiliateAdminId);
-      
-      if (sellersErr || !sellers || sellers.length === 0) {
-        console.error('No sellers found for affiliate admin:', affiliateAdminId);
-        return;
-      }
-      
-      const referralCodes = sellers.map(s => s.referral_code);
-      
-      // ✅ CORREÇÃO: Buscar perfis usando RPC centralizada que verifica TODAS as aplicações
-      const { data: profiles, error: profilesErr } = await supabase
-        .rpc('get_affiliate_admin_profiles_with_fees', { admin_user_id: userId });
-      if (profilesErr || !profiles) {
-        console.error('Error fetching student profiles:', profilesErr);
-        return;
-      }
-
-      console.group('🔍 [FinancialOverview] Dados Iniciais');
-      console.log('userId:', userId);
-      console.log('affiliateAdminId:', affiliateAdminId);
-      console.log('sellers count:', sellers.length);
-      console.log('profiles count (RPC):', profiles.length);
-      console.log('sample profile:', profiles[0]);
-      console.groupEnd();
-
-      // 3.1 Buscar payment methods, scholarship applications e created_at para cálculo de manual revenue e last7Days
-      const profileIds = profiles.map((p: any) => p.profile_id).filter(Boolean);
-      const { data: userProfilesData, error: userProfilesError } = await supabase
-        .from('user_profiles')
-        .select(`
-          id,
-          created_at,
-          selection_process_fee_payment_method,
-          i20_control_fee_payment_method,
-          scholarship_applications (
-            id,
-            is_scholarship_fee_paid,
-            scholarship_fee_payment_method
-          )
-        `)
-        .in('id', profileIds);
-      
-      if (userProfilesError) {
-        console.error('Error fetching payment methods:', userProfilesError);
-      }
-
-      // Criar mapa de payment_methods e created_at por profile_id
-      const paymentMethodsMap: Record<string, any> = {};
-      const createdAtMap: Record<string, string> = {};
-      (userProfilesData || []).forEach((p: any) => {
-        paymentMethodsMap[p.id] = {
-          selection_process: p.selection_process_fee_payment_method,
-          i20_control: p.i20_control_fee_payment_method,
-          scholarship: Array.isArray(p.scholarship_applications) 
-            ? p.scholarship_applications.map((a: any) => ({
-                is_paid: a.is_scholarship_fee_paid,
-                method: a.scholarship_fee_payment_method
-              }))
-            : []
-        };
-        if (p.created_at) {
-          createdAtMap[p.id] = p.created_at;
-        }
-      });
-
-      // 4. Preparar overrides por user_id
-      const uniqueUserIds = Array.from(new Set((profiles || []).map((p) => p.user_id).filter(Boolean)));
-      const overrideEntries = await Promise.allSettled(uniqueUserIds.map(async (uid) => {
-        const { data, error } = await supabase.rpc('get_user_fee_overrides', { target_user_id: uid });
-        return [uid, error ? null : data];
-      }));
-      const overridesMap: Record<string, any> = overrideEntries.reduce((acc: Record<string, any>, res) => {
-        if (res.status === 'fulfilled') {
-          const arr = res.value;
-          const uid = arr[0];
-          const data = arr[1];
-          if (data) acc[uid] = {
-            selection_process_fee: data.selection_process_fee != null ? Number(data.selection_process_fee) : undefined,
-            scholarship_fee: data.scholarship_fee != null ? Number(data.scholarship_fee) : undefined,
-            i20_control_fee: data.i20_control_fee != null ? Number(data.i20_control_fee) : undefined,
-          };
-        }
-        return acc;
-      }, {});
-
-      // 5. Buscar valores reais pagos de individual_fee_payments
-      const realPaidAmountsMap: Record<string, { selection_process?: number; scholarship?: number; i20_control?: number }> = {};
-      
-      // Buscar valores pagos para cada estudante
-      await Promise.all(profiles.map(async (p: any) => {
-        if (!p.user_id) return;
-        
-        try {
-          // ✅ CORREÇÃO: Usar getDisplayAmounts para exibição (valores "Zelle" sem taxas)
-          const amounts = await getDisplayAmounts(p.user_id, ['selection_process', 'scholarship', 'i20_control']);
-          realPaidAmountsMap[p.user_id] = {
-            selection_process: amounts.selection_process,
-            scholarship: amounts.scholarship,
-            i20_control: amounts.i20_control
-          };
-        } catch (error) {
-          console.error(`[FinancialOverview] Erro ao buscar valores pagos para user_id ${p.user_id}:`, error);
-        }
-      }));
-
-      // 6. Calcular total usando valores reais pagos, com fallback para cálculo fixo se não houver registro
-      const totalRevenueBreakdown: Array<{profile_id: string, selection: number, scholarship: number, i20: number, total: number}> = [];
-      const totalRevenue = (profiles || []).reduce((sum, p) => {
-        const deps = Number(p?.dependents || 0);
-        const ov = overridesMap[p?.user_id] || {};
-        const realPaid = realPaidAmountsMap[p?.user_id] || {};
-
-        // Selection Process - usar valor real pago se disponível, senão calcular
-        let selPaid = 0;
-        if (p?.has_paid_selection_process_fee) {
-          if (realPaid.selection_process !== undefined) {
-            // Usar valor real pago (já com desconto e convertido se PIX)
-            selPaid = realPaid.selection_process;
-          } else {
-            // Fallback: cálculo fixo para dados antigos sem registro
-            const baseSelDefault = p?.system_type === 'simplified' ? 350 : 400;
-            const baseSel = ov.selection_process_fee != null ? Number(ov.selection_process_fee) : baseSelDefault;
-            // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
-            // Dependentes só afetam Application Fee ($100 por dependente)
-            selPaid = ov.selection_process_fee != null 
-              ? baseSel 
-              : (p?.system_type === 'simplified' ? baseSel : baseSel + (deps * 150));
-          }
-        }
-
-        // Scholarship Fee - usar valor real pago se disponível, senão calcular
-        const hasAnyScholarshipPaid = p?.is_scholarship_fee_paid || false;
-        let schPaid = 0;
-        if (hasAnyScholarshipPaid) {
-          if (realPaid.scholarship !== undefined) {
-            // Usar valor real pago (já com desconto e convertido se PIX)
-            schPaid = realPaid.scholarship;
-          } else {
-            // Fallback: cálculo fixo para dados antigos sem registro
-            const schBaseDefault = p?.system_type === 'simplified' ? 550 : 900;
-            const schBase = ov.scholarship_fee != null ? Number(ov.scholarship_fee) : schBaseDefault;
-            schPaid = schBase;
-          }
-        }
-
-        // I-20 Control Fee - usar valor real pago se disponível, senão calcular
-        let i20Paid = 0;
-        if (hasAnyScholarshipPaid && p?.has_paid_i20_control_fee) {
-          if (realPaid.i20_control !== undefined) {
-            // Usar valor real pago (já com desconto e convertido se PIX)
-            i20Paid = realPaid.i20_control;
-          } else {
-            // Fallback: cálculo fixo para dados antigos sem registro
-            const i20Base = ov.i20_control_fee != null ? Number(ov.i20_control_fee) : 900;
-            i20Paid = i20Base;
-          }
-        }
-
-        const studentTotal = selPaid + schPaid + i20Paid;
-        if (studentTotal > 0) {
-          totalRevenueBreakdown.push({
-            profile_id: p.profile_id,
-            selection: selPaid,
-            scholarship: schPaid,
-            i20: i20Paid,
-            total: studentTotal
-          });
-        }
-
-        return sum + studentTotal;
-      }, 0);
-
-      console.group('🔍 [FinancialOverview] Total Revenue Calculation');
-      console.log('Total Revenue:', totalRevenue);
-      console.log('Students with revenue:', totalRevenueBreakdown.length);
-      console.log('Breakdown by student:', totalRevenueBreakdown.slice(0, 10)); // Primeiros 10 para não poluir
-      console.log('Total students:', profiles.length);
-      console.groupEnd();
-
-      // 7. Buscar valores de pagamentos manuais de individual_fee_payments
-      const manualPaidAmountsMap: Record<string, { selection_process?: number; scholarship?: number; i20_control?: number }> = {};
-      
-      // Buscar apenas pagamentos manuais para cada estudante
-      await Promise.all(profiles.map(async (p: any) => {
-        if (!p.user_id) return;
-        
-        try {
-          const { data: manualPayments, error } = await supabase
-            .from('individual_fee_payments')
-            .select('fee_type, amount')
-            .eq('user_id', p.user_id)
-            .eq('payment_method', 'manual')
-            .in('fee_type', ['selection_process', 'scholarship', 'i20_control']);
-          
-          if (error) {
-            console.error(`[FinancialOverview] Erro ao buscar pagamentos manuais para user_id ${p.user_id}:`, error);
-            return;
-          }
-          
-          const amounts: { selection_process?: number; scholarship?: number; i20_control?: number } = {};
-          manualPayments?.forEach((payment: any) => {
-            const amount = Number(payment.amount);
-            if (payment.fee_type === 'selection_process') {
-              amounts.selection_process = amount;
-            } else if (payment.fee_type === 'scholarship') {
-              amounts.scholarship = amount;
-            } else if (payment.fee_type === 'i20_control') {
-              amounts.i20_control = amount;
-            }
-          });
-          
-          if (Object.keys(amounts).length > 0) {
-            manualPaidAmountsMap[p.user_id] = amounts;
-          }
-        } catch (error) {
-          console.error(`[FinancialOverview] Exceção ao buscar pagamentos manuais para user_id ${p.user_id}:`, error);
-        }
-      }));
-
-      // 8. Calcular receita manual usando valores reais pagos, com fallback para cálculo fixo
-      const manualRevenueBreakdown: Array<{profile_id: string, selection: number, scholarship: number, i20: number, total: number}> = [];
-      const manualRevenue = (profiles || []).reduce((sum, p) => {
-        const deps = Number(p?.dependents || 0);
-        const ov = overridesMap[p?.user_id] || {};
-        const methods = paymentMethodsMap[p?.profile_id] || {};
-        const manualPaid = manualPaidAmountsMap[p?.user_id] || {};
-        
-        // Selection Process manual - usar valor real pago se disponível, senão calcular
-        let selManual = 0;
-        if (p?.has_paid_selection_process_fee && methods.selection_process === 'manual') {
-          if (manualPaid.selection_process !== undefined) {
-            selManual = manualPaid.selection_process;
-          } else {
-            // Fallback: cálculo fixo para dados antigos sem registro
-            const baseSelectionFee = p?.system_type === 'simplified' ? 350 : 400;
-            const sel = ov.selection_process_fee != null
-              ? Number(ov.selection_process_fee)
-              // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
-              // Dependentes só afetam Application Fee ($100 por dependente)
-              : (p?.system_type === 'simplified' ? baseSelectionFee : baseSelectionFee + (deps * 150));
-            selManual = sel || 0;
-          }
-        }
-
-        // Scholarship manual - usar valor real pago se disponível, senão calcular
-        let schManual = 0;
-        const hasScholarshipPaidManual = Array.isArray(methods.scholarship)
-          ? methods.scholarship.some((a: any) => !!a?.is_paid && a?.method === 'manual')
-          : false;
-        if (hasScholarshipPaidManual) {
-          if (manualPaid.scholarship !== undefined) {
-            schManual = manualPaid.scholarship;
-          } else {
-            // Fallback: cálculo fixo para dados antigos sem registro
-            const baseScholarshipFee = p?.system_type === 'simplified' ? 550 : 900;
-            const schol = ov.scholarship_fee != null
-              ? Number(ov.scholarship_fee)
-              : baseScholarshipFee;
-            schManual = schol || 0;
-          }
-        }
-
-        // I-20 Control manual - usar valor real pago se disponível, senão calcular
-        let i20Manual = 0;
-        if (p?.is_scholarship_fee_paid && p?.has_paid_i20_control_fee && methods.i20_control === 'manual') {
-          if (manualPaid.i20_control !== undefined) {
-            i20Manual = manualPaid.i20_control;
-          } else {
-            // Fallback: cálculo fixo para dados antigos sem registro
-            const baseI20Fee = 900; // Sempre 900 para ambos os sistemas
-            const i20 = ov.i20_control_fee != null
-              ? Number(ov.i20_control_fee)
-              : baseI20Fee;
-            i20Manual = i20 || 0;
-          }
-        }
-
-        const studentManualTotal = selManual + schManual + i20Manual;
-        if (studentManualTotal > 0) {
-          manualRevenueBreakdown.push({
-            profile_id: p.profile_id,
-            selection: selManual,
-            scholarship: schManual,
-            i20: i20Manual,
-            total: studentManualTotal
-          });
-        }
-
-        return sum + studentManualTotal;
-      }, 0);
-
-      console.group('🔍 [FinancialOverview] Manual Revenue Calculation');
-      console.log('Manual Revenue (Outside Payments):', manualRevenue);
-      console.log('Students with manual payments:', manualRevenueBreakdown.length);
-      console.log('Breakdown by student:', manualRevenueBreakdown);
-      console.groupEnd();
-
-      const rows = profiles || []; // Usar profiles em vez de studentsAnalytics
-      const totalReferrals = rows.length || 0;
-      
-      // Derivar status usando a lógica de overrides ajustada
-      let derivedCompleted = 0;
-      let derivedPending = 0;
-      rows.forEach((p: any) => {
-        // Verificar se tem algum pagamento usando a nova lógica
-        const hasSelectionPaid = !!p?.has_paid_selection_process_fee;
-        // ✅ CORREÇÃO: Usar diretamente a flag já calculada pela RPC
-        const hasScholarshipPaid = p?.is_scholarship_fee_paid || false;
-        const hasI20Paid = !!p?.has_paid_i20_control_fee;
-        
-        const hasAnyPayment = hasSelectionPaid || hasScholarshipPaid || hasI20Paid;
-        if (hasAnyPayment) derivedCompleted += 1; else derivedPending += 1;
-      });
-      const completedReferrals = derivedCompleted;
-      const activeReferrals = derivedPending;
-
-      // Receita últimos 7 dias baseada na data do registro com lógica ajustada
-      // ✅ CORREÇÃO: Usar valores reais pagos (mesma lógica do totalRevenue)
-      const sevenDaysAgo = new Date();
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-      const last7DaysRevenue = rows
-        .filter((p: any) => {
-          const createdAt = createdAtMap[p?.profile_id];
-          return createdAt && new Date(createdAt) >= sevenDaysAgo;
-        })
-        .reduce((sum: number, p: any) => {
-          const deps = Number(p?.dependents || 0);
-          const ov = overridesMap[p?.user_id] || {};
-          const realPaid = realPaidAmountsMap[p?.user_id] || {};
-
-          // Selection Process - usar valor real pago se disponível, senão calcular
-          let selPaid = 0;
-          if (p?.has_paid_selection_process_fee) {
-            if (realPaid.selection_process !== undefined) {
-              // Usar valor real pago (já com desconto e convertido se PIX)
-              selPaid = realPaid.selection_process;
-            } else {
-              // Fallback: cálculo fixo para dados antigos sem registro
-              const baseSelDefault = p?.system_type === 'simplified' ? 350 : 400;
-              const baseSel = ov.selection_process_fee != null ? Number(ov.selection_process_fee) : baseSelDefault;
-              // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
-              // Dependentes só afetam Application Fee ($100 por dependente)
-              selPaid = ov.selection_process_fee != null 
-                ? baseSel 
-                : (p?.system_type === 'simplified' ? baseSel : baseSel + (deps * 150));
-            }
-          }
-
-          // Scholarship Fee - usar valor real pago se disponível, senão calcular
-          const hasAnyScholarshipPaid = p?.is_scholarship_fee_paid || false;
-          let schPaid = 0;
-          if (hasAnyScholarshipPaid) {
-            if (realPaid.scholarship !== undefined) {
-              // Usar valor real pago (já com desconto e convertido se PIX)
-              schPaid = realPaid.scholarship;
-            } else {
-              // Fallback: cálculo fixo para dados antigos sem registro
-              const schBaseDefault = p?.system_type === 'simplified' ? 550 : 900;
-              const schBase = ov.scholarship_fee != null ? Number(ov.scholarship_fee) : schBaseDefault;
-              schPaid = schBase;
-            }
-          }
-
-          // I-20 Control Fee - usar valor real pago se disponível, senão calcular
-          let i20Paid = 0;
-          if (hasAnyScholarshipPaid && p?.has_paid_i20_control_fee) {
-            if (realPaid.i20_control !== undefined) {
-              // Usar valor real pago (já com desconto e convertido se PIX)
-              i20Paid = realPaid.i20_control;
-            } else {
-              // Fallback: cálculo fixo para dados antigos sem registro
-              const i20Base = ov.i20_control_fee != null ? Number(ov.i20_control_fee) : 900;
-              i20Paid = i20Base;
-            }
-          }
-
-          return sum + selPaid + schPaid + i20Paid;
-        }, 0);
-
-      const averageCommissionPerReferral = totalReferrals > 0 ? totalRevenue / totalReferrals : 0;
-
-      // Carregar payment requests do afiliado para calcular saldo (excluir rejeitados)
-      // Available balance NÃO deve contar valores pagos por fora (manual)
-      let availableBalance = Math.max(0, totalRevenue - manualRevenue);
-      try {
-        const affiliateRequests = await AffiliatePaymentRequestService.listAffiliatePaymentRequests(userId);
-        const totalPaidOut = affiliateRequests
-          .filter((r: any) => r.status === 'paid')
-          .reduce((sum: number, r: any) => sum + (Number(r.amount_usd) || 0), 0);
-        const totalApproved = affiliateRequests
-          .filter((r: any) => r.status === 'approved')
-          .reduce((sum: number, r: any) => sum + (Number(r.amount_usd) || 0), 0);
-        const totalPending = affiliateRequests
-          .filter((r: any) => r.status === 'pending')
-          .reduce((sum: number, r: any) => sum + (Number(r.amount_usd) || 0), 0);
-
-        console.group('🔍 [FinancialOverview] Payment Requests');
-        console.log('Total requests:', affiliateRequests.length);
-        console.log('Requests by status:', {
-          paid: affiliateRequests.filter((r: any) => r.status === 'paid').length,
-          approved: affiliateRequests.filter((r: any) => r.status === 'approved').length,
-          pending: affiliateRequests.filter((r: any) => r.status === 'pending').length,
-          rejected: affiliateRequests.filter((r: any) => r.status === 'rejected').length
-        });
-        console.log('Total Paid Out:', totalPaidOut);
-        console.log('Total Approved:', totalApproved);
-        console.log('Total Pending:', totalPending);
-        console.log('All requests:', affiliateRequests.map((r: any) => ({
-          id: r.id,
-          amount: r.amount_usd,
-          status: r.status,
-          created_at: r.created_at
-        })));
-        console.groupEnd();
-
-        availableBalance = Math.max(0, (totalRevenue - manualRevenue) - totalPaidOut - totalApproved - totalPending);
-
-        console.group('🔍 [FinancialOverview] Available Balance Final Calculation');
-        console.log('Total Revenue:', totalRevenue);
-        console.log('Manual Revenue (Outside):', manualRevenue);
-        console.log('Net Revenue (Total - Manual):', totalRevenue - manualRevenue);
-        console.log('Payment Requests Total:', totalPaidOut + totalApproved + totalPending);
-        console.log('Available Balance:', availableBalance);
-        console.log('Formula: (', totalRevenue, '-', manualRevenue, ') - (', totalPaidOut, '+', totalApproved, '+', totalPending, ') =', availableBalance);
-        console.groupEnd();
-      } catch (err) {
-        console.error('Error loading affiliate payment requests for balance:', err);
-      }
-
-      // No cartão principal, exibiremos Total Revenue usando o campo totalCredits para manter layout
-      setFinancialStats({
-        totalCredits: totalRevenue,
-        totalEarned: availableBalance,
-        totalReferrals,
-        activeReferrals,
-        completedReferrals,
-        last7DaysRevenue,
-        averageCommissionPerReferral,
-        manualRevenue
-      });
-
-      // Processar dados para analytics detalhados - enriquecer profiles com created_at
-      const enrichedRows = rows.map((p: any) => ({
-        ...p,
-        created_at: createdAtMap[p.profile_id] || null
-      }));
-      await processDetailedAnalytics(enrichedRows, []);
-
-      // Atualiza controle de cache
-      lastUserIdRef.current = userId;
-      lastFetchAtRef.current = Date.now();
-    } catch (error: any) {
-      console.error('Error loading affiliate financial data:', error);
-    } finally {
-      setLoading(false);
-      isLoadingRef.current = false;
     }
-  }, [userId]);
+    
+    // I20 Control Fee
+    if (profile?.is_scholarship_fee_paid && profile?.has_paid_i20_control_fee) {
+      if (realPaid.i20_control !== undefined && realPaid.i20_control > 0) {
+        totalRevenue += realPaid.i20_control;
+      } else if (ov.i20_control_fee != null) {
+        totalRevenue += Number(ov.i20_control_fee);
+      } else {
+        totalRevenue += 900;
+      }
+    }
+    
+    return totalRevenue;
+  }, [financialData]);
+
+  // ✅ Processar analytics quando os dados mudarem
+  useEffect(() => {
+    if (financialData?.enrichedProfiles) {
+      processDetailedAnalytics(financialData.enrichedProfiles, []);
+    }
+  }, [financialData]);
 
   // Process detailed analytics
   const processDetailedAnalytics = async (referralsData: any[], transactionsData: any[]) => {
-    // Preparar overrides para cálculos
-    const uniqueUserIds = Array.from(new Set((referralsData || []).map((p) => p.user_id).filter(Boolean)));
-    const overrideEntries = await Promise.allSettled(uniqueUserIds.map(async (uid) => {
-      const { data, error } = await supabase.rpc('get_user_fee_overrides', { target_user_id: uid });
-      return [uid, error ? null : data];
-    }));
-    const overridesMap: Record<string, any> = overrideEntries.reduce((acc: Record<string, any>, res) => {
-      if (res.status === 'fulfilled') {
-        const arr = res.value;
-        const uid = arr[0];
-        const data = arr[1];
-        if (data) acc[uid] = {
-          selection_process_fee: data.selection_process_fee != null ? Number(data.selection_process_fee) : undefined,
-          scholarship_fee: data.scholarship_fee != null ? Number(data.scholarship_fee) : undefined,
-          i20_control_fee: data.i20_control_fee != null ? Number(data.i20_control_fee) : undefined,
-        };
-      }
-      return acc;
-    }, {});
+    if (!financialData) return;
 
-    // ✅ CORREÇÃO: Buscar valores reais pagos para usar nos cálculos (mesma lógica do totalRevenue)
-    const realPaidAmountsMap: Record<string, { selection_process?: number; scholarship?: number; i20_control?: number }> = {};
-    
-    // Buscar valores pagos para cada estudante
-    await Promise.all((referralsData || []).map(async (p: any) => {
-      if (!p.user_id) return;
-      
-      try {
-        // ✅ CORREÇÃO: Usar getDisplayAmounts para exibição (valores "Zelle" sem taxas)
-        const amounts = await getDisplayAmounts(p.user_id, ['selection_process', 'scholarship', 'i20_control']);
-        realPaidAmountsMap[p.user_id] = {
-          selection_process: amounts.selection_process,
-          scholarship: amounts.scholarship,
-          i20_control: amounts.i20_control
-        };
-      } catch (error) {
-        console.error(`[FinancialOverview] Erro ao buscar valores pagos para user_id ${p.user_id}:`, error);
-      }
-    }));
-
-    // Função para calcular revenue de um perfil usando valores reais pagos quando disponível
-    const calculateProfileRevenue = (p: any) => {
-      const deps = Number(p?.dependents || 0);
-      const ov = overridesMap[p?.user_id] || {};
-      const realPaid = realPaidAmountsMap[p?.user_id] || {};
-
-      // Selection Process - usar valor real pago se disponível, senão calcular
-      let selPaid = 0;
-      if (p?.has_paid_selection_process_fee) {
-        if (realPaid.selection_process !== undefined) {
-          // Usar valor real pago (já com desconto e convertido se PIX)
-          selPaid = realPaid.selection_process;
-        } else {
-          // Fallback: cálculo fixo para dados antigos sem registro
-          const baseSelDefault = p?.system_type === 'simplified' ? 350 : 400;
-          const baseSel = ov.selection_process_fee != null ? Number(ov.selection_process_fee) : baseSelDefault;
-          // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
-          // Dependentes só afetam Application Fee ($100 por dependente)
-          selPaid = ov.selection_process_fee != null 
-            ? baseSel 
-            : (p?.system_type === 'simplified' ? baseSel : baseSel + (deps * 150));
-        }
-      }
-
-      // Scholarship Fee - usar valor real pago se disponível, senão calcular
-      const hasAnyScholarshipPaid = p?.is_scholarship_fee_paid || false;
-      let schPaid = 0;
-      if (hasAnyScholarshipPaid) {
-        if (realPaid.scholarship !== undefined) {
-          // Usar valor real pago (já com desconto e convertido se PIX)
-          schPaid = realPaid.scholarship;
-        } else {
-          // Fallback: cálculo fixo para dados antigos sem registro
-          const schBaseDefault = p?.system_type === 'simplified' ? 550 : 900;
-          const schBase = ov.scholarship_fee != null ? Number(ov.scholarship_fee) : schBaseDefault;
-          schPaid = schBase;
-        }
-      }
-
-      // I-20 Control Fee - usar valor real pago se disponível, senão calcular
-      let i20Paid = 0;
-      if (hasAnyScholarshipPaid && p?.has_paid_i20_control_fee) {
-        if (realPaid.i20_control !== undefined) {
-          // Usar valor real pago (já com desconto e convertido se PIX)
-          i20Paid = realPaid.i20_control;
-        } else {
-          // Fallback: cálculo fixo para dados antigos sem registro
-          const i20Base = ov.i20_control_fee != null ? Number(ov.i20_control_fee) : 900;
-          i20Paid = i20Base;
-        }
-      }
-
-      return selPaid + schPaid + i20Paid;
-    };
+    const { overridesMap, realPaidAmountsMap } = financialData;
 
     // Calcular receita diária dos últimos 30 dias usando lógica de overrides
     const dailyRevenue = [];
@@ -1195,23 +663,12 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
     }
   }, [financialAnalytics]);
 
-  // Load financial data when userId changes / TTL expira
+  // ✅ Invalidar cache quando forceReloadToken mudar (quando clicar em refresh)
   useEffect(() => {
-    if (!userId) return;
-    // se user mudou, invalidar cache para forçar recarga
-    if (lastUserIdRef.current !== userId) {
-      lastFetchAtRef.current = 0;
+    if (forceReloadToken && userId) {
+      invalidateAffiliateAdminFinancialOverview(queryClient);
     }
-    loadAffiliateFinancialData();
-  }, [userId, loadAffiliateFinancialData]);
-
-  // Forçar recarregar quando o token mudar
-  useEffect(() => {
-    if (!userId) return;
-    // invalidar TTL e recarregar
-    lastFetchAtRef.current = 0;
-    loadAffiliateFinancialData();
-  }, [forceReloadToken]);
+  }, [forceReloadToken, userId, queryClient]);
 
   const formatCurrency = (amount: number, currency: string = 'USD') => {
     return new Intl.NumberFormat('en-US', {
@@ -1224,7 +681,7 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
   //   return `${amount.toFixed(0)} credits`;
   // };
 
-  if (loading) {
+  if (isPending) {
     return (
       <div className="space-y-8 px-4 sm:px-6 lg:px-8 animate-pulse">
         {/* Key Financial Metrics Skeleton */}

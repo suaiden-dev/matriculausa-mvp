@@ -101,6 +101,13 @@ export const queryKeys = {
     studentApplications: (profileId?: string) => ['affiliate-admin', 'student-applications', profileId] as const,
     studentDocuments: (profileId?: string) => ['affiliate-admin', 'student-documents', profileId] as const,
     studentFeeHistory: (studentUserId?: string) => ['affiliate-admin', 'student-fee-history', studentUserId] as const,
+    // Financial Overview Cache
+    financialOverview: {
+      all: (userId?: string) => ['affiliate-admin', 'financial-overview', userId] as const,
+      stats: (userId?: string) => ['affiliate-admin', 'financial-overview', 'stats', userId] as const,
+      analytics: (userId?: string) => ['affiliate-admin', 'financial-overview', 'analytics', userId] as const,
+      paymentRequests: (userId?: string) => ['affiliate-admin', 'financial-overview', 'payment-requests', userId] as const,
+    },
   },
 } as const;
 
@@ -175,4 +182,8 @@ export const invalidateAffiliateAdminStudentProfiles = (queryClient: any) => {
 
 export const invalidateAffiliateAdminRevenueCalculation = (queryClient: any) => {
   queryClient.invalidateQueries({ queryKey: ['affiliate-admin', 'revenue-calculation'] });
+};
+
+export const invalidateAffiliateAdminFinancialOverview = (queryClient: any) => {
+  queryClient.invalidateQueries({ queryKey: ['affiliate-admin', 'financial-overview'] });
 };
