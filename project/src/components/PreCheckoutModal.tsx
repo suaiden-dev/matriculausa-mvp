@@ -13,6 +13,7 @@ import { useReferralCode } from '../hooks/useReferralCode';
 import { ModalContent } from './ModalContent';
 import { useModal } from '../contexts/ModalContext';
 import { IdentityPhotoUpload } from './IdentityPhotoUpload';
+import { useStudentLogs } from '../hooks/useStudentLogs';
 import {
   Drawer,
   DrawerContent,
@@ -151,6 +152,7 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
   const { recordAffiliateTermAcceptance, checkIfUserHasAffiliate } = useAffiliateTermsAcceptance();
   const { activeDiscount } = useReferralCode();
   const { openModal, closeModal } = useModal();
+  const { logAction } = useStudentLogs(userProfile?.id || '');
 
   // Mobile detection
   const [isMobile, setIsMobile] = useState(false);
@@ -614,6 +616,30 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
         }
         
         console.log('🔍 [PreCheckoutModal] Termos aceitos e registrados');
+        
+        // Log da ação
+        if (logAction && userProfile?.id && user?.id && activeTerm) {
+          try {
+            await logAction(
+              'checkout_terms_accepted',
+              `Checkout terms and conditions accepted by student`,
+              user.id,
+              'student',
+              {
+                student_id: userProfile.id,
+                term_id: activeTerm.id,
+                term_type: 'checkout_terms',
+                term_title: activeTerm.title,
+                accepted_at: new Date().toISOString(),
+                fee_type: feeType
+              }
+            );
+            console.log('✅ [PreCheckoutModal] Aceitação de termos logada com sucesso');
+          } catch (logError) {
+            console.error('⚠️ [PreCheckoutModal] Erro ao logar aceitação de termos (não crítico):', logError);
+          }
+        }
+        
         setTermsAccepted(true);
         
         // Avançar para etapa de upload de foto
@@ -965,12 +991,13 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
           console.error('🔍 [PreCheckoutModal] Erro ao buscar registro de aceitação:', termError);
         } else if (termAcceptance) {
           console.log('🔍 [PreCheckoutModal] Registro encontrado:', termAcceptance.id);
-          // Atualizar com a foto
+          // Atualizar com a foto e definir status como 'pending'
           const { data: updateData, error: updateError } = await supabase
             .from('comprehensive_term_acceptance')
             .update({
               identity_photo_path: identityPhotoPath,
-              identity_photo_name: identityPhotoName
+              identity_photo_name: identityPhotoName,
+              identity_photo_status: 'pending' // ✅ Status inicial sempre 'pending' quando foto é enviada
             })
             .eq('id', termAcceptance.id)
             .select();
@@ -1139,9 +1166,31 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
                   </div>
                   
                   <IdentityPhotoUpload
-                    onUploadSuccess={(filePath, fileName) => {
+                    onUploadSuccess={async (filePath, fileName) => {
                       setIdentityPhotoPath(filePath);
                       setIdentityPhotoName(fileName);
+                      
+                      // Log da ação
+                      if (logAction && userProfile?.id && user?.id) {
+                        try {
+                          await logAction(
+                            'identity_photo_upload',
+                            `Identity photo uploaded by student during checkout`,
+                            user.id,
+                            'student',
+                            {
+                              student_id: userProfile.id,
+                              file_path: filePath,
+                              file_name: fileName,
+                              uploaded_at: new Date().toISOString(),
+                              fee_type: feeType
+                            }
+                          );
+                          console.log('✅ [PreCheckoutModal] Upload de foto logado com sucesso');
+                        } catch (logError) {
+                          console.error('⚠️ [PreCheckoutModal] Erro ao logar upload de foto (não crítico):', logError);
+                        }
+                      }
                     }}
                     onUploadError={(error) => {
                       console.error('Erro ao fazer upload:', error);
@@ -1258,9 +1307,31 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
                   </div>
                   
                   <IdentityPhotoUpload
-                    onUploadSuccess={(filePath, fileName) => {
+                    onUploadSuccess={async (filePath, fileName) => {
                       setIdentityPhotoPath(filePath);
                       setIdentityPhotoName(fileName);
+                      
+                      // Log da ação
+                      if (logAction && userProfile?.id && user?.id) {
+                        try {
+                          await logAction(
+                            'identity_photo_upload',
+                            `Identity photo uploaded by student during checkout`,
+                            user.id,
+                            'student',
+                            {
+                              student_id: userProfile.id,
+                              file_path: filePath,
+                              file_name: fileName,
+                              uploaded_at: new Date().toISOString(),
+                              fee_type: feeType
+                            }
+                          );
+                          console.log('✅ [PreCheckoutModal] Upload de foto logado com sucesso');
+                        } catch (logError) {
+                          console.error('⚠️ [PreCheckoutModal] Erro ao logar upload de foto (não crítico):', logError);
+                        }
+                      }
                     }}
                     onUploadError={(error) => {
                       console.error('Erro ao fazer upload:', error);

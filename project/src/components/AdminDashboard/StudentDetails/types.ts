@@ -73,6 +73,10 @@ export interface TermAcceptance {
   created_at: string;
   identity_photo_path?: string; // ✅ Caminho da foto de identidade no bucket
   identity_photo_name?: string; // ✅ Nome do arquivo da foto
+  identity_photo_status?: 'pending' | 'approved' | 'rejected'; // ✅ Status da verificação da foto
+  identity_photo_rejection_reason?: string | null; // ✅ Motivo da rejeição
+  identity_photo_reviewed_at?: string | null; // ✅ Data da revisão
+  identity_photo_reviewed_by?: string | null; // ✅ ID do admin que revisou
   user_email?: string;
   user_full_name?: string;
   term_title?: string;

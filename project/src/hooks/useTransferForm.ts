@@ -11,7 +11,8 @@ export const useTransferForm = (
   student: StudentRecord | null,
   isPlatformAdmin: boolean,
   userId?: string,
-  adminEmail?: string // Email do admin para incluir nas notificações
+  adminEmail?: string, // Email do admin para incluir nas notificações
+  logAction?: (actionType: string, actionDescription: string, performedBy: string, performedByType: 'student' | 'admin' | 'university', metadata?: any) => Promise<any>
 ) => {
   const [transferFormFile, setTransferFormFile] = useState<File | null>(null);
   const [uploadingTransferForm, setUploadingTransferForm] = useState(false);
@@ -116,6 +117,28 @@ export const useTransferForm = (
         .eq('id', transferApp.id);
         
       if (updateError) throw updateError;
+
+      // Log da ação
+      if (logAction && userId) {
+        try {
+          await logAction(
+            'transfer_form_upload',
+            `Transfer form uploaded by platform admin`,
+            userId,
+            'admin',
+            {
+              application_id: transferApp.id,
+              student_id: student?.user_id || '',
+              file_name: transferFormFile.name,
+              uploaded_by: adminEmail || 'Platform Admin',
+              uploaded_at: new Date().toISOString()
+            }
+          );
+          console.log('✅ [handleUploadTransferForm] Ação logada com sucesso');
+        } catch (logError) {
+          console.error('⚠️ [handleUploadTransferForm] Erro ao logar ação (não crítico):', logError);
+        }
+      }
 
       // ✅ ENVIAR NOTIFICAÇÕES PARA O ALUNO (quando admin envia template do Transfer Form)
       console.log('📤 [Transfer Form Template] Enviando notificações para o aluno sobre envio do template...');
@@ -232,7 +255,7 @@ export const useTransferForm = (
     } finally {
       setUploadingTransferForm(false);
     }
-  }, [isPlatformAdmin, student, transferFormFile, getTransferApplication]);
+  }, [isPlatformAdmin, student, transferFormFile, getTransferApplication, logAction, userId, adminEmail]);
 
   // Handler para aprovar upload de Transfer Form
   const handleApproveTransferFormUpload = useCallback(async (uploadId: string) => {
@@ -247,6 +270,27 @@ export const useTransferForm = (
         .eq('id', uploadId);
       
       if (error) throw error;
+      
+      // Log da ação
+      if (logAction && userId) {
+        try {
+          await logAction(
+            'transfer_form_approval',
+            `Transfer form upload approved by platform admin`,
+            userId,
+            'admin',
+            {
+              upload_id: uploadId,
+              student_id: student?.user_id || '',
+              approved_by: adminEmail || 'Platform Admin',
+              approved_at: new Date().toISOString()
+            }
+          );
+          console.log('✅ [handleApproveTransferFormUpload] Ação logada com sucesso');
+        } catch (logError) {
+          console.error('⚠️ [handleApproveTransferFormUpload] Erro ao logar ação (não crítico):', logError);
+        }
+      }
       
       // Recarregar uploads
       const transferApp = getTransferApplication();
@@ -350,7 +394,7 @@ export const useTransferForm = (
       console.error('Error approving transfer form:', error);
       alert('Error approving transfer form: ' + error.message);
     }
-  }, [userId, getTransferApplication, student]);
+  }, [userId, getTransferApplication, student, logAction, adminEmail]);
 
   // Handler para rejeitar upload de Transfer Form
   const handleRejectTransferFormUpload = useCallback(async (uploadId: string, reason: string) => {
@@ -366,6 +410,28 @@ export const useTransferForm = (
         .eq('id', uploadId);
       
       if (error) throw error;
+      
+      // Log da ação
+      if (logAction && userId) {
+        try {
+          await logAction(
+            'transfer_form_rejection',
+            `Transfer form upload rejected by platform admin: ${reason}`,
+            userId,
+            'admin',
+            {
+              upload_id: uploadId,
+              student_id: student?.user_id || '',
+              rejection_reason: reason,
+              rejected_by: adminEmail || 'Platform Admin',
+              rejected_at: new Date().toISOString()
+            }
+          );
+          console.log('✅ [handleRejectTransferFormUpload] Ação logada com sucesso');
+        } catch (logError) {
+          console.error('⚠️ [handleRejectTransferFormUpload] Erro ao logar ação (não crítico):', logError);
+        }
+      }
       
       // Recarregar uploads
       const transferApp = getTransferApplication();
@@ -469,7 +535,7 @@ export const useTransferForm = (
       console.error('Error rejecting transfer form:', error);
       alert('Error rejecting transfer form: ' + error.message);
     }
-  }, [userId, getTransferApplication, student]);
+  }, [userId, getTransferApplication, student, logAction, adminEmail]);
 
   return {
     transferFormFile,

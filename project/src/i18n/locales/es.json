@@ -2121,6 +2121,50 @@
         "checkAllInformation": "Revise toda la información de su aplicación",
         "completeI20Payment": "Complete el pago de la tarifa de control I-20 para proceder con su aplicación"
       }
+    },
+    "identityVerification": {
+      "title": "Verificación de Identidad",
+      "subtitle": "Verifica tu identidad subiendo una foto con tu documento de identidad",
+      "backToDashboard": "Volver al Panel",
+      "noPhotoFound": {
+        "title": "Verificación de Identidad",
+        "message": "No se encontró foto de identidad. Por favor, complete el proceso de pago para subir su foto de identidad.",
+        "goToDashboard": "Ir al Panel"
+      },
+      "status": {
+        "approved": {
+          "title": "Foto de Identidad Aprobada",
+          "message": "Su foto de identidad ha sido aprobada. Puede continuar con su solicitud."
+        },
+        "rejected": {
+          "title": "Foto de Identidad Rechazada",
+          "message": "Su foto de identidad ha sido rechazada. Por favor, revise el motivo y suba una nueva foto.",
+          "rejectionReason": "Motivo del Rechazo"
+        },
+        "pending": {
+          "title": "Foto de Identidad en Revisión",
+          "message": "Su foto de identidad está actualmente en revisión por nuestros administradores."
+        }
+      },
+      "uploadNewPhoto": {
+        "title": "Subir Nueva Foto de Identidad",
+        "termsTitle": "Términos y Condiciones",
+        "termsDescription": "Por favor, lea y acepte los términos y condiciones antes de subir una nueva foto.",
+        "scrollToBottom": "Por favor, desplácese hasta el final para continuar",
+        "acceptTerms": "He leído y acepto los términos y condiciones",
+        "termsNotAvailable": "Términos no disponibles",
+        "submitButton": "Enviar Nueva Foto",
+        "submitting": "Enviando...",
+        "successMessage": "¡Foto de identidad subida exitosamente! Será revisada por un administrador."
+      },
+      "errors": {
+        "loadingStatus": "Error al cargar el estado de verificación. Por favor, inténtelo de nuevo.",
+        "acceptingTerms": "Error al aceptar los términos. Por favor, inténtelo de nuevo.",
+        "termsRequired": "Por favor, acepte los términos primero.",
+        "photoRequired": "Por favor, suba su foto de identidad.",
+        "termAcceptanceNotFound": "Error: Registro de aceptación de términos no encontrado.",
+        "submittingPhoto": "Error al enviar la foto. Por favor, inténtelo de nuevo."
+      }
     }
   },
   "profileManagement": {
