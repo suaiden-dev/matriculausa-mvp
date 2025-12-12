@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle, XCircle, Clock, AlertCircle, Camera, ArrowLeft, Scroll } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { IdentityPhotoUpload } from '../../components/IdentityPhotoUpload';
@@ -33,6 +34,7 @@ interface TermAcceptance {
 }
 
 const IdentityVerification: React.FC = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { user, userProfile } = useAuth();
   const { recordTermAcceptance } = useTermsAcceptance();
@@ -97,7 +99,7 @@ const IdentityVerification: React.FC = () => {
         }
       } catch (err: any) {
         console.error('Error loading term acceptance:', err);
-        setError('Error loading verification status. Please try again.');
+        setError(t('studentDashboard.identityVerification.errors.loadingStatus'));
       } finally {
         setLoading(false);
       }
@@ -168,24 +170,24 @@ const IdentityVerification: React.FC = () => {
       setTermsAccepted(true);
     } catch (err: any) {
       console.error('Error accepting terms:', err);
-      setError('Error accepting terms. Please try again.');
+      setError(t('studentDashboard.identityVerification.errors.acceptingTerms'));
     }
   };
 
   // Enviar nova foto
   const handleSubmitNewPhoto = async () => {
     if (!termsAccepted) {
-      setError('Please accept the terms first.');
+      setError(t('studentDashboard.identityVerification.errors.termsRequired'));
       return;
     }
 
     if (!identityPhotoPath) {
-      setError('Please upload your identity photo.');
+      setError(t('studentDashboard.identityVerification.errors.photoRequired'));
       return;
     }
 
     if (!termAcceptance || !activeTerm) {
-      setError('Error: Term acceptance not found.');
+      setError(t('studentDashboard.identityVerification.errors.termAcceptanceNotFound'));
       return;
     }
 
@@ -232,7 +234,7 @@ const IdentityVerification: React.FC = () => {
           if (rpcError) throw rpcError;
         }
 
-        setSuccess('Identity photo uploaded successfully! It will be reviewed by an administrator.');
+        setSuccess(t('studentDashboard.identityVerification.uploadNewPhoto.successMessage'));
         
         // Redirecionar para a página de aplicações após alguns segundos
         setTimeout(() => {
@@ -243,7 +245,7 @@ const IdentityVerification: React.FC = () => {
       }
     } catch (err: any) {
       console.error('Error submitting photo:', err);
-      setError('Error submitting photo. Please try again.');
+        setError(t('studentDashboard.identityVerification.errors.submittingPhoto'));
     } finally {
       setSaving(false);
     }
@@ -273,15 +275,15 @@ const IdentityVerification: React.FC = () => {
     return (
       <div className="max-w-4xl mx-auto px-4 py-8">
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-          <h2 className="text-2xl font-bold text-slate-900 mb-4">Identity Verification</h2>
+          <h2 className="text-2xl font-bold text-slate-900 mb-4">{t('studentDashboard.identityVerification.noPhotoFound.title')}</h2>
           <p className="text-slate-600">
-            No identity photo found. Please complete the checkout process to upload your identity photo.
+            {t('studentDashboard.identityVerification.noPhotoFound.message')}
           </p>
           <button
             onClick={() => navigate('/student/dashboard')}
             className="mt-4 px-4 py-2 bg-[#05294E] text-white rounded-lg hover:bg-[#041f38] transition-colors"
           >
-            Go to Dashboard
+            {t('studentDashboard.identityVerification.noPhotoFound.goToDashboard')}
           </button>
         </div>
       </div>
@@ -296,22 +298,22 @@ const IdentityVerification: React.FC = () => {
       case 'approved':
         return {
           icon: <CheckCircle className="w-8 h-8 text-green-600" />,
-          title: 'Identity Photo Approved',
-          message: 'Your identity photo has been approved. You can proceed with your application.',
+          title: t('studentDashboard.identityVerification.status.approved.title'),
+          message: t('studentDashboard.identityVerification.status.approved.message'),
           color: 'green',
         };
       case 'rejected':
         return {
           icon: <XCircle className="w-8 h-8 text-red-600" />,
-          title: 'Identity Photo Rejected',
-          message: 'Your identity photo has been rejected. Please review the reason and upload a new photo.',
+          title: t('studentDashboard.identityVerification.status.rejected.title'),
+          message: t('studentDashboard.identityVerification.status.rejected.message'),
           color: 'red',
         };
       default:
         return {
           icon: <Clock className="w-8 h-8 text-yellow-600" />,
-          title: 'Identity Photo Under Review',
-          message: 'Your identity photo is currently under review by our administrators.',
+          title: t('studentDashboard.identityVerification.status.pending.title'),
+          message: t('studentDashboard.identityVerification.status.pending.message'),
           color: 'yellow',
         };
     }
@@ -328,10 +330,10 @@ const IdentityVerification: React.FC = () => {
           className="flex items-center text-slate-600 hover:text-slate-900 mb-4 transition-colors"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Dashboard
+          {t('studentDashboard.identityVerification.backToDashboard')}
         </button>
-        <h1 className="text-3xl font-bold text-slate-900">Identity Verification</h1>
-        <p className="text-slate-600 mt-2">Verify your identity by uploading a photo with your ID document</p>
+        <h1 className="text-3xl font-bold text-slate-900">{t('studentDashboard.identityVerification.title')}</h1>
+        <p className="text-slate-600 mt-2">{t('studentDashboard.identityVerification.subtitle')}</p>
       </div>
 
       {/* Status Card - Unificado com motivo de rejeição quando aplicável */}
@@ -353,7 +355,7 @@ const IdentityVerification: React.FC = () => {
               <div className="mt-4 pt-4 border-t border-red-200">
                 <div className="flex items-start gap-3">
                   <div className="flex-1">
-                    <h3 className="text-sm font-semibold text-red-800 mb-2">Rejection Reason</h3>
+                    <h3 className="text-sm font-semibold text-red-800 mb-2">{t('studentDashboard.identityVerification.status.rejected.rejectionReason')}</h3>
                     <p className="text-sm text-red-700 whitespace-pre-wrap leading-relaxed bg-red-50 rounded-lg p-3 border border-red-100">
                       {rejectionReason}
                     </p>
@@ -368,14 +370,14 @@ const IdentityVerification: React.FC = () => {
       {/* Upload New Photo (only if rejected or if admin requests reupload) */}
       {status === 'rejected' && (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-6">
-          <h2 className="text-xl font-semibold text-slate-900">Upload New Identity Photo</h2>
+          <h2 className="text-xl font-semibold text-slate-900">{t('studentDashboard.identityVerification.uploadNewPhoto.title')}</h2>
 
           {/* Terms Acceptance */}
           {!termsAccepted && (
             <div className="border border-slate-200 rounded-xl p-6">
-              <h3 className="text-lg font-semibold text-slate-900 mb-4">Terms and Conditions</h3>
+              <h3 className="text-lg font-semibold text-slate-900 mb-4">{t('studentDashboard.identityVerification.uploadNewPhoto.termsTitle')}</h3>
               <p className="text-sm text-slate-600 mb-4">
-                Please read and accept the terms and conditions before uploading a new photo.
+                {t('studentDashboard.identityVerification.uploadNewPhoto.termsDescription')}
               </p>
 
               {loadingTerms ? (
@@ -387,7 +389,7 @@ const IdentityVerification: React.FC = () => {
                   <div
                     ref={termsContentRef}
                     onScroll={handleTermsScroll}
-                    className="max-h-64 overflow-y-auto prose prose-sm max-w-none prose-headings:text-gray-900 prose-p:text-gray-600 mb-4 border border-slate-200 rounded-lg p-4"
+                    className="max-h-[600px] overflow-y-auto prose prose-base max-w-none prose-headings:text-gray-900 prose-p:text-gray-600 prose-headings:text-xl prose-headings:font-bold prose-p:text-base prose-p:leading-relaxed mb-4 border border-slate-200 rounded-lg p-6 bg-slate-50"
                     dangerouslySetInnerHTML={{ __html: activeTerm.content }}
                   />
 
@@ -395,7 +397,7 @@ const IdentityVerification: React.FC = () => {
                     <div className="flex items-center justify-center p-3 bg-amber-50 border border-amber-200 rounded-lg mb-4">
                       <Scroll className="h-4 w-4 text-amber-600 mr-2" />
                       <span className="text-amber-800 text-sm font-medium">
-                        Please scroll to the bottom to continue
+                        {t('studentDashboard.identityVerification.uploadNewPhoto.scrollToBottom')}
                       </span>
                     </div>
                   )}
@@ -415,12 +417,12 @@ const IdentityVerification: React.FC = () => {
                       className="mt-1 w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
                     />
                     <span className="text-sm text-slate-700">
-                      I have read and accept the terms and conditions
+                      {t('studentDashboard.identityVerification.uploadNewPhoto.acceptTerms')}
                     </span>
                   </label>
                 </>
               ) : (
-                <p className="text-slate-600">Terms not available</p>
+                <p className="text-slate-600">{t('studentDashboard.identityVerification.uploadNewPhoto.termsNotAvailable')}</p>
               )}
             </div>
           )}
@@ -460,10 +462,10 @@ const IdentityVerification: React.FC = () => {
                 {saving ? (
                   <div className="flex items-center justify-center space-x-2">
                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    <span>Submitting...</span>
+                    <span>{t('studentDashboard.identityVerification.uploadNewPhoto.submitting')}</span>
                   </div>
                 ) : (
-                  'Submit New Photo'
+                  t('studentDashboard.identityVerification.uploadNewPhoto.submitButton')
                 )}
               </button>
             </div>

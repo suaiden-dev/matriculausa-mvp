@@ -2341,6 +2341,50 @@
         "rejectionExplanationPlaceholder": "Ex.: The document is cut off. Please send it again in PDF with all pages.",
         "confirm": "Confirm"
       }
+    },
+    "identityVerification": {
+      "title": "Identity Verification",
+      "subtitle": "Verify your identity by uploading a photo with your ID document",
+      "backToDashboard": "Back to Dashboard",
+      "noPhotoFound": {
+        "title": "Identity Verification",
+        "message": "No identity photo found. Please complete the checkout process to upload your identity photo.",
+        "goToDashboard": "Go to Dashboard"
+      },
+      "status": {
+        "approved": {
+          "title": "Identity Photo Approved",
+          "message": "Your identity photo has been approved. You can proceed with your application."
+        },
+        "rejected": {
+          "title": "Identity Photo Rejected",
+          "message": "Your identity photo has been rejected. Please review the reason and upload a new photo.",
+          "rejectionReason": "Rejection Reason"
+        },
+        "pending": {
+          "title": "Identity Photo Under Review",
+          "message": "Your identity photo is currently under review by our administrators."
+        }
+      },
+      "uploadNewPhoto": {
+        "title": "Upload New Identity Photo",
+        "termsTitle": "Terms and Conditions",
+        "termsDescription": "Please read and accept the terms and conditions before uploading a new photo.",
+        "scrollToBottom": "Please scroll to the bottom to continue",
+        "acceptTerms": "I have read and accept the terms and conditions",
+        "termsNotAvailable": "Terms not available",
+        "submitButton": "Submit New Photo",
+        "submitting": "Submitting...",
+        "successMessage": "Identity photo uploaded successfully! It will be reviewed by an administrator."
+      },
+      "errors": {
+        "loadingStatus": "Error loading verification status. Please try again.",
+        "acceptingTerms": "Error accepting terms. Please try again.",
+        "termsRequired": "Please accept the terms first.",
+        "photoRequired": "Please upload your identity photo.",
+        "termAcceptanceNotFound": "Error: Term acceptance record not found.",
+        "submittingPhoto": "Error submitting photo. Please try again."
+      }
     }
   },
   "profileManagement": {
