@@ -3,6 +3,8 @@ import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { Scholarship } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
+import { useQueryClient } from '@tanstack/react-query';
+import { setupCacheInvalidationListener } from '../../utils/cacheInvalidation';
 
 import StudentDashboardLayout from './StudentDashboardLayout';
 import Overview from './Overview';
@@ -62,6 +64,7 @@ interface Application {
 
 const StudentDashboard: React.FC = () => {
   const location = useLocation();
+  const queryClient = useQueryClient();
   const [scholarships, setScholarships] = useState<Scholarship[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
   const [profile, setProfile] = useState<StudentProfile | null>(null);
@@ -72,6 +75,12 @@ const StudentDashboard: React.FC = () => {
   const navigate = useNavigate();
   const [dashboardError, setDashboardError] = useState<string | null>(null);
   const [recentApplications, setRecentApplications] = useState<Application[]>([]);
+  
+  // Setup cache invalidation listener
+  useEffect(() => {
+    const cleanup = setupCacheInvalidationListener(queryClient);
+    return cleanup;
+  }, [queryClient]);
   
 
   
