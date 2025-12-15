@@ -853,10 +853,19 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
               </th>
               <th 
                 className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                onClick={() => handleSort('payment_date')}
+              >
+                <div className="flex items-center gap-1">
+                  Payment Date
+                  <span className="text-blue-600">{renderSortIcon('payment_date')}</span>
+                </div>
+              </th>
+              <th 
+                className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
                 onClick={() => handleSort('student_name')}
               >
                 <div className="flex items-center gap-1">
-                  Transaction / Name
+                  Student Name
                   <span className="text-blue-600">{renderSortIcon('student_name')}</span>
                 </div>
               </th>
@@ -922,13 +931,13 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
                       />
                     </td>
                     <td className="px-6 py-4">
-                      <div className="flex flex-col">
-                        <span className="text-sm font-medium text-gray-900">{transaction.student_name}</span>
-                        <span className="text-xs text-gray-500 flex items-center gap-1">
-                          <Calendar className="w-3 h-3" />
-                          {formatDate(transaction.payment_date)}
-                        </span>
+                      <div className="flex items-center gap-1 text-sm text-gray-700">
+                        <Calendar className="w-4 h-4 text-gray-400" />
+                        {formatDate(transaction.payment_date)}
                       </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-sm font-medium text-gray-900">{transaction.student_name}</span>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex flex-col gap-1">
@@ -992,7 +1001,7 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
               })
             ) : (
               <tr>
-                        <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
+                        <td colSpan={9} className="px-6 py-8 text-center text-gray-500">
                           No transactions found.
                 </td>
               </tr>

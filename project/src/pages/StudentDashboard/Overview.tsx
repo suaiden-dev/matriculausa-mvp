@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   Award, 
@@ -24,11 +24,17 @@ import { StripeCheckout } from '../../components/StripeCheckout';
 import { useAuth } from '../../hooks/useAuth';
 import { useReferralCode } from '../../hooks/useReferralCode';
 import { ProgressBar } from '../../components/ProgressBar';
-import StepByStepButton from '../../components/OnboardingTour/StepByStepButton';
 import StepByStepGuide from '../../components/OnboardingTour/StepByStepGuide';
 import { useStepByStepGuide } from '../../hooks/useStepByStepGuide';
 import { supabase } from '../../lib/supabase';
-import { getGrossPaidAmounts } from '../../utils/paymentConverter';
+import { useQueryClient } from '@tanstack/react-query';
+import { 
+  useStudentDocumentsQuery, 
+  useStudentPaidAmountsQuery, 
+  usePromotionalCouponQuery, 
+  useIdentityPhotoStatusQuery 
+} from '../../hooks/useStudentDashboardQueries';
+import { invalidateStudentDashboardDocuments, invalidateStudentDashboardCoupons } from '../../lib/queryKeys';
 import './Overview.css'; // Adicionar um arquivo de estilos dedicado para padronização visual
 
 // Componente de skeleton para valores de taxa
@@ -57,27 +63,23 @@ const Overview: React.FC<OverviewProps> = ({
   recentApplications = []
 }) => {
   const { t } = useTranslation();
-  
+  const queryClient = useQueryClient();
 
   const { user, userProfile, refetchUserProfile } = useAuth();
   const { activeDiscount } = useReferralCode();
-  const { getFeeAmount, userFeeOverrides } = useFeeConfig(user?.id);
-  const { selectionProcessFee, scholarshipFee, i20ControlFee, selectionProcessFeeAmount, scholarshipFeeAmount, i20ControlFeeAmount } = useDynamicFees();
+  const { userFeeOverrides } = useFeeConfig(user?.id);
+  const { selectionProcessFeeAmount, scholarshipFeeAmount, i20ControlFeeAmount } = useDynamicFees();
   const { isGuideOpen, openGuide, closeGuide } = useStepByStepGuide();
   const { isBlocked, pendingPayment, loading: paymentBlockedLoading } = usePaymentBlocked();
   const [visibleApplications, setVisibleApplications] = useState(5); // Mostrar 5 inicialmente
-  const [feesLoading, setFeesLoading] = useState(true);
-  const [studentDocuments, setStudentDocuments] = useState<any[]>([]);
-  const [documentsLoading, setDocumentsLoading] = useState(true);
-  const [realPaidAmounts, setRealPaidAmounts] = useState<Record<string, number>>({});
-  const [loadingPaidAmounts, setLoadingPaidAmounts] = useState(false);
-  const [selectionProcessPromotionalCoupon, setSelectionProcessPromotionalCoupon] = useState<{
-    discountAmount: number;
-    finalAmount: number;
-    code?: string;
-  } | null>(null);
-  const [identityPhotoStatus, setIdentityPhotoStatus] = useState<'pending' | 'approved' | 'rejected' | null>(null);
-  const [identityPhotoLoading, setIdentityPhotoLoading] = useState(true);
+  
+  // React Query hooks para dados com cache
+  // isPending = sem dados no cache ainda (primeira carga)
+  // isFetching = buscando em background (pode ter dados em cache)
+  const { data: studentDocuments = [], isPending: documentsLoading } = useStudentDocumentsQuery(user?.id);
+  const { data: realPaidAmounts = {}, isPending: loadingPaidAmounts } = useStudentPaidAmountsQuery(user?.id);
+  const { data: selectionProcessPromotionalCoupon } = usePromotionalCouponQuery(user?.id, 'selection_process');
+  const { data: identityPhotoStatus, isPending: identityPhotoLoading } = useIdentityPhotoStatusQuery(user?.id);
   
   // Verificar se há pagamento Zelle pendente do tipo selection_process
   const hasPendingSelectionProcessPayment = isBlocked && pendingPayment && pendingPayment.fee_type === 'selection_process';
@@ -88,39 +90,6 @@ const Overview: React.FC<OverviewProps> = ({
   const handleLoadMore = () => {
     setVisibleApplications(prev => Math.min(prev + 5, recentApplications.length));
   };
-
-  // Função para buscar documentos do estudante
-  const fetchStudentDocuments = React.useCallback(async () => {
-    if (!user?.id) {
-      setDocumentsLoading(false);
-      return;
-    }
-
-    try {
-      const { data, error } = await supabase
-        .from('student_documents')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('uploaded_at', { ascending: false });
-
-      if (error) {
-        console.error('Erro ao buscar documentos:', error);
-        setStudentDocuments([]);
-      } else {
-        setStudentDocuments(data || []);
-      }
-    } catch (error) {
-      console.error('Erro ao buscar documentos:', error);
-      setStudentDocuments([]);
-    } finally {
-      setDocumentsLoading(false);
-    }
-  }, [user?.id]);
-
-  // Buscar documentos do estudante
-  useEffect(() => {
-    fetchStudentDocuments();
-  }, [fetchStudentDocuments]);
 
   // Configurar real-time subscription para atualizações de documentos
   useEffect(() => {
@@ -137,8 +106,9 @@ const Overview: React.FC<OverviewProps> = ({
           filter: `user_id=eq.${user.id}`
         },
         () => {
-          // Refetch documentos quando houver mudanças
-          fetchStudentDocuments();
+          // Invalidar cache do React Query quando houver mudanças
+          console.log('[Overview] Realtime: Invalidando cache de documentos');
+          invalidateStudentDashboardDocuments(queryClient);
         }
       )
       .subscribe();
@@ -146,7 +116,7 @@ const Overview: React.FC<OverviewProps> = ({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user?.id, fetchStudentDocuments]);
+  }, [user?.id, queryClient]);
 
   // Refetch perfil quando necessário (ex: após atualização)
   useEffect(() => {
@@ -155,169 +125,43 @@ const Overview: React.FC<OverviewProps> = ({
     }
   }, [user?.id, refetchUserProfile]);
 
-  // Atualizar documentos quando o componente receber foco (ex: ao voltar da página de perfil)
+  // Atualizar dados quando o componente receber foco (ex: ao voltar da página de perfil)
   useEffect(() => {
     const handleFocus = () => {
       if (user?.id && !documentsLoading) {
-        fetchStudentDocuments();
+        console.log('[Overview] Window focus: Invalidando caches');
+        invalidateStudentDashboardDocuments(queryClient);
         refetchUserProfile();
       }
     };
 
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
-  }, [user?.id, documentsLoading, refetchUserProfile, fetchStudentDocuments]);
-
-  // Buscar cupom promocional do banco de dados para Selection Process Fee
-  const checkSelectionProcessPromotionalCouponFromDatabase = React.useCallback(async () => {
-    if (!user?.id) return;
-    
-    try {
-      // Buscar registro mais recente de uso do cupom para selection_process
-      const { data: couponUsage, error } = await supabase
-        .from('promotional_coupon_usage')
-        .select('coupon_code, original_amount, discount_amount, final_amount, metadata, used_at')
-        .eq('user_id', user.id)
-        .eq('fee_type', 'selection_process')
-        .order('used_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      
-      if (error) {
-        console.error('[Overview] Erro ao buscar cupom do banco:', error);
-        return;
-      }
-      
-      if (couponUsage && couponUsage.coupon_code) {
-        // Verificar se é uma validação recente (menos de 24 horas) ou se já foi usado em pagamento
-        const usedAt = new Date(couponUsage.used_at);
-        const now = new Date();
-        const hoursDiff = (now.getTime() - usedAt.getTime()) / (1000 * 60 * 60);
-        const isRecentValidation = hoursDiff < 24 || couponUsage.metadata?.is_validation === true;
-        
-        if (isRecentValidation) {
-          const discountAmount = Number(couponUsage.discount_amount);
-          const finalAmount = Number(couponUsage.final_amount);
-          
-          setSelectionProcessPromotionalCoupon({
-            discountAmount,
-            finalAmount,
-            code: couponUsage.coupon_code
-          });
-          
-          console.log('[Overview] Cupom promocional carregado do banco:', couponUsage.coupon_code);
-        } else {
-          setSelectionProcessPromotionalCoupon(null);
-        }
-      } else {
-        setSelectionProcessPromotionalCoupon(null);
-      }
-    } catch (error) {
-      console.error('[Overview] Erro ao verificar cupom no banco:', error);
-      setSelectionProcessPromotionalCoupon(null);
-    }
-  }, [user?.id]);
-
-  // Verificar cupom promocional do banco quando componente monta
-  useEffect(() => {
-    checkSelectionProcessPromotionalCouponFromDatabase();
-  }, [checkSelectionProcessPromotionalCouponFromDatabase]);
-
-  // Verificar status da foto de identidade
-  useEffect(() => {
-    const checkIdentityPhotoStatus = async () => {
-      if (!user?.id) {
-        setIdentityPhotoLoading(false);
-        return;
-      }
-
-      try {
-        const { data, error } = await supabase
-          .from('comprehensive_term_acceptance')
-          .select('identity_photo_status, identity_photo_path')
-          .eq('user_id', user.id)
-          .eq('term_type', 'checkout_terms')
-          .not('identity_photo_path', 'is', null)
-          .order('accepted_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (error) throw error;
-
-        if (data?.identity_photo_status) {
-          setIdentityPhotoStatus(data.identity_photo_status as 'pending' | 'approved' | 'rejected');
-        } else {
-          setIdentityPhotoStatus(null);
-        }
-      } catch (error) {
-        console.error('Error checking identity photo status:', error);
-        setIdentityPhotoStatus(null);
-      } finally {
-        setIdentityPhotoLoading(false);
-      }
-    };
-
-    checkIdentityPhotoStatus();
-  }, [user?.id]);
+  }, [user?.id, documentsLoading, refetchUserProfile, queryClient]);
 
   // Ouvir eventos de validação de cupom promocional
   useEffect(() => {
-    // Verificar window ao montar
-    const windowCoupon = (window as any).__promotional_coupon_validation;
-    if (windowCoupon?.isValid && windowCoupon?.discountAmount) {
-      const baseAmount = selectionProcessFeeAmount || 0;
-      setSelectionProcessPromotionalCoupon({
-        discountAmount: windowCoupon.discountAmount,
-        finalAmount: windowCoupon.finalAmount || Math.max(0, baseAmount - windowCoupon.discountAmount),
-        code: (window as any).__checkout_promotional_coupon
-      });
-    }
-    
-    // Ouvir eventos de validação de cupom
     const handleCouponValidation = (event: CustomEvent) => {
-      if (event.detail?.isValid && event.detail?.discountAmount) {
-        // Verificar se é para selection_process (pode vir no detail ou inferir pelo contexto)
-        const feeType = event.detail?.fee_type || 'selection_process';
-        
-        if (feeType === 'selection_process') {
-          const baseAmount = selectionProcessFeeAmount || 0;
-          setSelectionProcessPromotionalCoupon({
-            discountAmount: event.detail.discountAmount,
-            finalAmount: event.detail.finalAmount || Math.max(0, baseAmount - event.detail.discountAmount),
-            code: (window as any).__checkout_promotional_coupon
-          });
-        }
-      } else {
-        // Se o cupom foi removido, verificar novamente no banco
-        checkSelectionProcessPromotionalCouponFromDatabase();
+      const feeType = event.detail?.fee_type || 'selection_process';
+      if (feeType === 'selection_process') {
+        console.log('[Overview] Cupom validado - invalidando cache');
+        invalidateStudentDashboardCoupons(queryClient);
       }
+    };
+
+    const handleCouponRemoved = () => {
+      console.log('[Overview] Cupom removido - invalidando cache');
+      invalidateStudentDashboardCoupons(queryClient);
     };
 
     window.addEventListener('promotionalCouponValidated', handleCouponValidation as EventListener);
-    window.addEventListener('promotionalCouponRemoved', checkSelectionProcessPromotionalCouponFromDatabase);
+    window.addEventListener('promotionalCouponRemoved', handleCouponRemoved);
     
     return () => {
       window.removeEventListener('promotionalCouponValidated', handleCouponValidation as EventListener);
-      window.removeEventListener('promotionalCouponRemoved', checkSelectionProcessPromotionalCouponFromDatabase);
+      window.removeEventListener('promotionalCouponRemoved', handleCouponRemoved);
     };
-  }, [selectionProcessFeeAmount, checkSelectionProcessPromotionalCouponFromDatabase]);
-
-  // Exibir skeleton até os dados de perfil e taxas estarem prontos para evitar flicker
-  useEffect(() => {
-    // Considera carregado quando perfil está resolvido e as taxas do useDynamicFees estão carregadas
-    const debounce = setTimeout(() => {
-      const hasProfileResolved = user !== undefined; // quando hook de auth já rodou
-      const feesLoaded = selectionProcessFeeAmount !== undefined && 
-                        scholarshipFeeAmount !== undefined && 
-                        i20ControlFeeAmount !== undefined;
-      
-      if (hasProfileResolved && feesLoaded) {
-        setFeesLoading(false);
-      }
-    }, 250);
-
-    return () => clearTimeout(debounce);
-  }, [user, userProfile, selectionProcessFeeAmount, scholarshipFeeAmount, i20ControlFeeAmount]);
+  }, [queryClient]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -368,8 +212,8 @@ const Overview: React.FC<OverviewProps> = ({
     const requiredDocTypes = ['passport', 'diploma', 'funds_proof'];
     const uploadedDocTypes = new Set(
       studentDocuments
-        .filter(doc => doc.file_url && doc.status !== 'rejected')
-        .map(doc => doc.type)
+        .filter((doc: any) => doc.file_url && doc.status !== 'rejected')
+        .map((doc: any) => doc.type)
     );
     
     return requiredDocTypes.every(type => uploadedDocTypes.has(type));
@@ -411,36 +255,17 @@ const Overview: React.FC<OverviewProps> = ({
   const hasApplicationFeePaid = recentApplications.some(app => app.is_application_fee_paid);
   const hasScholarshipFeePaid = recentApplications.some(app => app.is_scholarship_fee_paid);
 
-  // Buscar valores reais pagos de individual_fee_payments
-  useEffect(() => {
-    const fetchRealPaidAmounts = async () => {
-      if (!user?.id) return;
-
-      setLoadingPaidAmounts(true);
-      try {
-        const amounts = await getGrossPaidAmounts(user.id, ['selection_process', 'scholarship', 'i20_control', 'application']);
-        setRealPaidAmounts(amounts);
-        console.log('[Overview] Valores reais pagos carregados:', amounts);
-      } catch (error) {
-        console.error('[Overview] Erro ao buscar valores reais pagos:', error);
-        setRealPaidAmounts({});
-      } finally {
-        setLoadingPaidAmounts(false);
-      }
-    };
-
-    fetchRealPaidAmounts();
-  }, [user?.id, userProfile?.has_paid_selection_process_fee, hasApplicationFeePaid, hasScholarshipFeePaid, userProfile?.has_paid_i20_control_fee]);
+  // React Query hook já busca valores pagos automaticamente com cache
 
   // Base fee amounts with user overrides - usar valores do useDynamicFees
   const selectionBase = selectionProcessFeeAmount || 0;
   const scholarshipBase = scholarshipFeeAmount || 0;
   const i20Base = i20ControlFeeAmount || 0;
 
-  // Verificar se as taxas estão carregando
-  const isFeesLoading = selectionProcessFeeAmount === undefined || 
-                       scholarshipFeeAmount === undefined || 
-                       i20ControlFeeAmount === undefined;
+  // Verificar se as taxas estão carregando (só verdadeiro na primeira carga sem cache)
+  const isFeesLoading = (selectionProcessFeeAmount === undefined || 
+                        scholarshipFeeAmount === undefined || 
+                        i20ControlFeeAmount === undefined) && !userProfile;
 
   // ✅ CORREÇÃO: selectionBase já vem com dependentes calculados do useDynamicFees
   // Não recalcular dependentes aqui para evitar duplicação
@@ -468,7 +293,8 @@ const Overview: React.FC<OverviewProps> = ({
 
   // ✅ CORREÇÃO: Prioridade: Valor real pago > Override > Valor esperado
   const getSelectionProcessFeeDisplay = () => {
-    if (loadingPaidAmounts) return <FeeSkeleton />;
+    // Só mostrar skeleton se não houver dados em cache E estiver carregando pela primeira vez
+    if (loadingPaidAmounts && !realPaidAmounts) return <FeeSkeleton />;
     
     // PRIORIDADE 1 (MÁXIMA): Valor real pago quando já foi pago
     // Se já foi pago, usar o valor realmente pago (gross_amount_usd ou amount)
@@ -489,7 +315,8 @@ const Overview: React.FC<OverviewProps> = ({
   };
 
   const getScholarshipFeeDisplay = () => {
-    if (loadingPaidAmounts) return <FeeSkeleton />;
+    // Só mostrar skeleton se não houver dados em cache E estiver carregando pela primeira vez
+    if (loadingPaidAmounts && !realPaidAmounts) return <FeeSkeleton />;
     
     // PRIORIDADE 1: Override (MÁXIMA PRIORIDADE)
     if (userFeeOverrides?.scholarship_fee !== undefined) {
@@ -506,7 +333,8 @@ const Overview: React.FC<OverviewProps> = ({
   };
 
   const getI20ControlFeeDisplay = () => {
-    if (loadingPaidAmounts) return <FeeSkeleton />;
+    // Só mostrar skeleton se não houver dados em cache E estiver carregando pela primeira vez
+    if (loadingPaidAmounts && !realPaidAmounts) return <FeeSkeleton />;
     
     // PRIORIDADE 1: Override (MÁXIMA PRIORIDADE)
     if (userFeeOverrides?.i20_control_fee !== undefined) {
@@ -742,7 +570,7 @@ const Overview: React.FC<OverviewProps> = ({
                   </div>
                 </div>
                 <div className="text-left sm:text-right">
-                  {feesLoading ? (
+                  {isFeesLoading ? (
                     <div className="inline-block w-24 h-6 bg-white/30 rounded animate-pulse" />
                   ) : selectionProcessPromotionalCoupon ? (
                     <div className="flex flex-col sm:text-center">

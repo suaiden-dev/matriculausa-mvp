@@ -6,6 +6,7 @@ import CustomLoading from '../../components/CustomLoading';
 import PaymentSuccessOverlay from '../../components/PaymentSuccessOverlay';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
+import { dispatchCacheInvalidationEvent, CacheInvalidationEvent } from '../../utils/cacheInvalidation';
 
 type VerificationStatus = 'loading' | 'success' | 'error';
 
@@ -94,6 +95,9 @@ const ApplicationFeeSuccess: React.FC = () => {
         }
 
 
+        
+        // Invalidar cache
+        dispatchCacheInvalidationEvent(CacheInvalidationEvent.PAYMENT_COMPLETED);
         
         setStatus('success');
         setShowAnimation(true);
