@@ -94,6 +94,7 @@ export function useFinancialAnalytics() {
       const processedData = await transformFinancialData({
         ...loadedData,
         currentRange,
+        individualPaymentDates: loadedData.individualPaymentDates,
         getFeeAmount
       });
 

@@ -2,6 +2,7 @@ import { supabase } from '../../../../../lib/supabase';
 import type { DateRange, LoadedFinancialData } from '../types';
 import { getPreviousPeriodRange } from '../../utils/dateRange';
 import { getGrossPaidAmounts } from '../../../../../utils/paymentConverter';
+import { getPaymentDatesForUsersLoaderOptimized } from '@/pages/AdminDashboard/PaymentManagement/data/loaders/paymentDatesLoaderOptimized';
 
 /**
  * Verifica se está em produção ou staging
@@ -727,6 +728,9 @@ export async function loadFinancialData(
     loadAffiliateRequests(currentRange)
   ]);
 
+  // ✅ CORREÇÃO: Carregar datas reais de pagamento (mesma lógica do PaymentManagement)
+  const individualPaymentDates = await getPaymentDatesForUsersLoaderOptimized(supabase, uniqueUserIds);
+
   return {
     applications,
     zellePayments,
@@ -739,7 +743,8 @@ export async function loadFinancialData(
     overridesMap,
     userSystemTypesMap,
     realPaymentAmounts, // Agora contém valores reais pagos via getGrossPaidAmounts
-    individualFeePayments
+    individualFeePayments,
+    individualPaymentDates // ✅ NOVO: Datas reais de pagamento
   };
 }
 

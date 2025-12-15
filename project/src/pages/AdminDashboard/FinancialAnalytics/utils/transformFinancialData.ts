@@ -9,6 +9,7 @@ function processApplications(
   overridesMap: { [key: string]: any },
   userSystemTypesMap: Map<string, string>,
   realPaymentAmounts: Map<string, { selection_process?: number; scholarship?: number; i20_control?: number; application?: number }>,
+  individualPaymentDates: Map<string, Map<string, string>>,
   getFeeAmount: (key: 'i20_control_fee' | 'application_fee') => number,
   globalFeesProcessed: { [userId: string]: { selection_process: boolean; i20_control: boolean; application_fee: boolean } },
   paymentRecords: any[]
@@ -156,6 +157,7 @@ function processApplications(
         fee_type: 'selection_process',
         amount: selectionProcessFee,
         status: 'paid',
+        payment_date: individualPaymentDates.get(student.user_id)?.get('selection_process') || student.last_payment_date || app.paid_at || app.created_at,
         payment_method: student.selection_process_fee_payment_method || 'manual',
         student_name: studentName,
         student_email: studentEmail,
@@ -175,6 +177,7 @@ function processApplications(
         fee_type: 'application',
         amount: applicationFee,
         status: 'paid',
+        payment_date: individualPaymentDates.get(student.user_id)?.get('application') || student.last_payment_date || app.paid_at || app.created_at,
         payment_method: app.application_fee_payment_method || 'manual',
         student_name: studentName,
         student_email: studentEmail,
@@ -194,6 +197,7 @@ function processApplications(
         fee_type: 'scholarship',
         amount: scholarshipFee,
         status: 'paid',
+        payment_date: individualPaymentDates.get(student.user_id)?.get('scholarship') || student.last_payment_date || app.paid_at || app.created_at,
         payment_method: app.scholarship_fee_payment_method || 'manual',
         student_name: studentName,
         student_email: studentEmail,
@@ -211,6 +215,7 @@ function processApplications(
         fee_type: 'i20_control_fee',
         amount: i20ControlFee,
         status: 'paid',
+        payment_date: individualPaymentDates.get(student.user_id)?.get('i20_control') || student.last_payment_date || app.paid_at || app.created_at,
         payment_method: student.i20_control_fee_payment_method || 'manual',
         student_name: studentName,
         student_email: studentEmail,
@@ -231,7 +236,8 @@ function processApplications(
 function processZellePayments(
   applications: any[],
   paymentRecords: any[],
-  zellePaymentsByUser: { [userId: string]: any[] }
+  zellePaymentsByUser: { [userId: string]: any[] },
+  individualPaymentDates: Map<string, Map<string, string>>
 ): void {
   Object.keys(zellePaymentsByUser).forEach(userId => {
     const userZellePayments = zellePaymentsByUser[userId];
@@ -262,6 +268,7 @@ function processZellePayments(
         fee_type: 'selection_process',
         amount: Math.round(parseFloat(selectionPayment.amount) * 100),
         status: 'paid',
+        payment_date: individualPaymentDates.get(userId)?.get('selection_process') || selectionPayment.admin_approved_at || selectionPayment.created_at,
         payment_method: 'zelle',
         student_name: studentName,
         student_email: studentEmail,
@@ -280,6 +287,7 @@ function processZellePayments(
         fee_type: 'application',
         amount: applicationAmount,
         status: 'paid',
+        payment_date: individualPaymentDates.get(userId)?.get('application') || applicationPayment.admin_approved_at || applicationPayment.created_at,
         payment_method: 'zelle',
         student_name: studentName,
         student_email: studentEmail,
@@ -297,6 +305,7 @@ function processZellePayments(
         fee_type: 'scholarship',
         amount: Math.round(parseFloat(scholarshipPayment.amount) * 100),
         status: 'paid',
+        payment_date: individualPaymentDates.get(userId)?.get('scholarship') || scholarshipPayment.admin_approved_at || scholarshipPayment.created_at,
         payment_method: 'zelle',
         student_name: studentName,
         student_email: studentEmail,
@@ -314,6 +323,7 @@ function processZellePayments(
         fee_type: 'i20_control_fee',
         amount: Math.round(parseFloat(i20Payment.amount) * 100),
         status: 'paid',
+        payment_date: individualPaymentDates.get(userId)?.get('i20_control') || i20Payment.admin_approved_at || i20Payment.created_at,
         payment_method: 'zelle',
         student_name: studentName,
         student_email: studentEmail,
@@ -336,6 +346,7 @@ function processStripeUsers(
   overridesMap: { [key: string]: any },
   userSystemTypesMap: Map<string, string>,
   realPaymentAmounts: Map<string, { selection_process?: number; scholarship?: number; i20_control?: number; application?: number }>,
+  individualPaymentDates: Map<string, Map<string, string>>,
   getFeeAmount: (key: 'i20_control_fee' | 'application_fee') => number,
   globalFeesProcessed: { [userId: string]: { selection_process: boolean; i20_control: boolean; application_fee: boolean } },
   paymentRecords: any[]
@@ -432,6 +443,7 @@ function processStripeUsers(
         fee_type: 'selection_process',
         amount: selectionProcessFee,
         status: 'paid',
+        payment_date: individualPaymentDates.get(stripeUser.user_id)?.get('selection_process') || stripeUser.last_payment_date || stripeUser.created_at,
         payment_method: stripeUser.selection_process_fee_payment_method || 'manual',
         student_name: studentName,
         student_email: studentEmail,
@@ -448,6 +460,7 @@ function processStripeUsers(
         fee_type: 'application',
         amount: applicationFee,
         status: 'paid',
+        payment_date: individualPaymentDates.get(stripeUser.user_id)?.get('application') || stripeUser.last_payment_date || stripeUser.created_at,
         payment_method: 'manual',
         student_name: studentName,
         student_email: studentEmail,
@@ -464,6 +477,7 @@ function processStripeUsers(
         fee_type: 'scholarship',
         amount: scholarshipFee,
         status: 'paid',
+        payment_date: individualPaymentDates.get(stripeUser.user_id)?.get('scholarship') || stripeUser.last_payment_date || stripeUser.created_at,
         payment_method: 'manual',
         student_name: studentName,
         student_email: studentEmail,
@@ -481,6 +495,7 @@ function processStripeUsers(
         fee_type: 'i20_control_fee',
         amount: i20ControlFee,
         status: 'paid',
+        payment_date: individualPaymentDates.get(stripeUser.user_id)?.get('i20_control') || stripeUser.last_payment_date || stripeUser.created_at,
         payment_method: stripeUser.i20_control_fee_payment_method || 'manual',
         student_name: studentName,
         student_email: studentEmail,
@@ -505,6 +520,7 @@ export async function transformFinancialData(
     overridesMap,
     userSystemTypesMap,
     realPaymentAmounts,
+    individualPaymentDates,
     getFeeAmount
   } = inputs;
 
@@ -531,6 +547,7 @@ export async function transformFinancialData(
     overridesMap,
     userSystemTypesMap,
     realPaymentAmounts,
+    individualPaymentDates,
     getFeeAmount,
     globalFeesProcessed,
     paymentRecords
@@ -549,7 +566,7 @@ export async function transformFinancialData(
   });
   
   // Processar Zelle payments
-  processZellePayments(applications, paymentRecords, zellePaymentsByUser);
+  processZellePayments(applications, paymentRecords, zellePaymentsByUser, individualPaymentDates);
 
   // Processar Stripe users
   processStripeUsers(
@@ -559,6 +576,7 @@ export async function transformFinancialData(
     overridesMap,
     userSystemTypesMap,
     realPaymentAmounts,
+    individualPaymentDates,
     getFeeAmount,
     globalFeesProcessed,
     paymentRecords
