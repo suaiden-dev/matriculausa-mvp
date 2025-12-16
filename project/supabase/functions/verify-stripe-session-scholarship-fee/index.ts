@@ -39,6 +39,7 @@ function formatAmountWithCurrency(amount, session) {
  * Em ambiente de desenvolvimento (localhost), filtra emails específicos
  */
 async function getAllAdmins(supabase, isDevelopment: boolean = false): Promise<Array<{
+  user_id: string;
   email: string;
   full_name: string;
   phone: string;
@@ -70,6 +71,7 @@ async function getAllAdmins(supabase, isDevelopment: boolean = false): Promise<A
           const adminUsers = authUsers.users
             .filter(user => user.user_metadata?.role === 'admin' || user.email === 'admin@matriculausa.com')
             .map(user => ({
+              user_id: user.id,
               email: user.email || '',
               full_name: user.user_metadata?.full_name || user.user_metadata?.name || 'Admin MatriculaUSA',
               phone: user.user_metadata?.phone || ''
@@ -82,6 +84,7 @@ async function getAllAdmins(supabase, isDevelopment: boolean = false): Promise<A
               : adminUsers;
             console.log(`[getAllAdmins] Encontrados ${filteredAdmins.length} admin(s) via auth.users${isDevelopment ? ' (filtrados para dev)' : ''}:`, filteredAdmins.map(a => a.email));
             return filteredAdmins.length > 0 ? filteredAdmins : [{
+              user_id: '',
               email: 'admin@matriculausa.com',
               full_name: 'Admin MatriculaUSA',
               phone: ''
@@ -93,6 +96,7 @@ async function getAllAdmins(supabase, isDevelopment: boolean = false): Promise<A
       }
       
       return [{
+        user_id: '',
         email: 'admin@matriculausa.com',
         full_name: 'Admin MatriculaUSA',
         phone: ''
@@ -109,6 +113,7 @@ async function getAllAdmins(supabase, isDevelopment: boolean = false): Promise<A
           const adminUsers = authUsers.users
             .filter(user => user.user_metadata?.role === 'admin' || user.email === 'admin@matriculausa.com')
             .map(user => ({
+              user_id: user.id,
               email: user.email || '',
               full_name: user.user_metadata?.full_name || user.user_metadata?.name || 'Admin MatriculaUSA',
               phone: user.user_metadata?.phone || ''
@@ -121,6 +126,7 @@ async function getAllAdmins(supabase, isDevelopment: boolean = false): Promise<A
               : adminUsers;
             console.log(`[getAllAdmins] Encontrados ${filteredAdmins.length} admin(s) via auth.users${isDevelopment ? ' (filtrados para dev)' : ''}:`, filteredAdmins.map(a => a.email));
             return filteredAdmins.length > 0 ? filteredAdmins : [{
+              user_id: '',
               email: 'admin@matriculausa.com',
               full_name: 'Admin MatriculaUSA',
               phone: ''
@@ -132,6 +138,7 @@ async function getAllAdmins(supabase, isDevelopment: boolean = false): Promise<A
       }
       
       return [{
+        user_id: '',
         email: 'admin@matriculausa.com',
         full_name: 'Admin MatriculaUSA',
         phone: ''
@@ -143,6 +150,7 @@ async function getAllAdmins(supabase, isDevelopment: boolean = false): Promise<A
       adminProfiles.map(async (profile) => {
         if (profile.email) {
           return {
+            user_id: profile.user_id,
             email: profile.email,
             full_name: profile.full_name || 'Admin MatriculaUSA',
             phone: profile.phone || ''
@@ -151,6 +159,7 @@ async function getAllAdmins(supabase, isDevelopment: boolean = false): Promise<A
           try {
             const { data: authUser } = await supabase.auth.admin.getUserById(profile.user_id);
             return {
+              user_id: profile.user_id,
               email: authUser?.user?.email || '',
               full_name: profile.full_name || authUser?.user?.user_metadata?.full_name || 'Admin MatriculaUSA',
               phone: profile.phone || authUser?.user?.user_metadata?.phone || ''
@@ -165,7 +174,7 @@ async function getAllAdmins(supabase, isDevelopment: boolean = false): Promise<A
 
     // Filtrar nulos e admins sem email
     let admins = adminsWithEmail
-      .filter((admin): admin is { email: string; full_name: string; phone: string } => 
+      .filter((admin): admin is { user_id: string; email: string; full_name: string; phone: string } => 
         admin !== null && !!admin.email
       );
 
@@ -181,6 +190,7 @@ async function getAllAdmins(supabase, isDevelopment: boolean = false): Promise<A
     if (admins.length === 0) {
       console.warn('[getAllAdmins] Nenhum admin válido encontrado após processamento, usando admin padrão');
       return [{
+        user_id: '',
         email: 'admin@matriculausa.com',
         full_name: 'Admin MatriculaUSA',
         phone: ''
@@ -193,6 +203,7 @@ async function getAllAdmins(supabase, isDevelopment: boolean = false): Promise<A
   } catch (error) {
     console.error('[getAllAdmins] Erro inesperado ao buscar admins:', error);
     return [{
+      user_id: '',
       email: 'admin@matriculausa.com',
       full_name: 'Admin MatriculaUSA',
       phone: ''
@@ -953,7 +964,7 @@ Deno.serve(async (req)=>{
           } else {
         
         // Buscar dados do aluno (incluindo seller_referral_code e phone)
-        const { data: alunoData, error: alunoError } = await supabase.from('user_profiles').select('full_name, email, phone, seller_referral_code').eq('user_id', userId).single();
+        const { data: alunoData, error: alunoError } = await supabase.from('user_profiles').select('id, full_name, email, phone, seller_referral_code').eq('user_id', userId).single();
         // Detectar ambiente de desenvolvimento
         const isDevelopment = config.environment.isTest || config.environment.environment === 'test';
         // Buscar todos os admins do sistema
@@ -1099,6 +1110,32 @@ Deno.serve(async (req)=>{
         });
         const alunoResult = await alunoNotificationResponse.text();
         console.log('[NOTIFICAÇÃO ALUNO] Resposta do n8n (aluno):', alunoNotificationResponse.status, alunoResult);
+
+        // ✅ IN-APP NOTIFICATION FOR STUDENT (Scholarship Fee)
+        try {
+          if (alunoData?.id) {
+            console.log('[NOTIFICAÇÃO ALUNO] Criando notificação in-app de Scholarship Fee...');
+            const { error: inAppError } = await supabase
+              .from('student_notifications')
+              .insert({
+                student_id: alunoData.id,
+                title: 'Scholarship Fee Confirmed',
+                message: `Your Scholarship Fee payment for ${bolsasText} has been confirmed. You are now approved!`,
+                link: '/student/dashboard/applications',
+                created_at: new Date().toISOString()
+              });
+
+            if (inAppError) {
+              console.error('[NOTIFICAÇÃO ALUNO] Erro ao criar notificação in-app:', inAppError);
+            } else {
+              console.log('[NOTIFICAÇÃO ALUNO] Notificação in-app criada com sucesso!');
+            }
+          } else {
+            console.warn('[NOTIFICAÇÃO ALUNO] Dados do aluno (ID) não encontrados para notificação in-app.');
+          }
+        } catch (inAppEx) {
+            console.error('[NOTIFICAÇÃO ALUNO] Exceção ao criar notificação in-app:', inAppEx);
+        }
         
         // Coletar informações de todas as bolsas para notificação consolidada para admin
         const scholarshipInfoList: Array<{ title: string; university: string }> = [];
@@ -1182,6 +1219,7 @@ Deno.serve(async (req)=>{
                 
                 // Buscar dados do affiliate_admin para notificação individual
                 let affiliateAdminData = {
+                  user_id: "",
                   email: "",
                   name: "Affiliate Admin",
                   phone: ""
@@ -1192,6 +1230,7 @@ Deno.serve(async (req)=>{
                     const { data: affiliateProfile, error: profileError } = await supabase.from('user_profiles').select('email, full_name, phone').eq('user_id', affiliateData.user_id).single();
                     if (affiliateProfile && !profileError) {
                       affiliateAdminData = {
+                        user_id: affiliateData.user_id,
                         email: affiliateProfile.email || "",
                         name: affiliateProfile.full_name || "Affiliate Admin",
                         phone: affiliateProfile.phone || ""
@@ -1239,6 +1278,28 @@ Deno.serve(async (req)=>{
                   const sellerError = await sellerNotificationResponse.text();
                   console.error('📧 [verify-stripe-session-scholarship-fee] Erro ao enviar notificação para seller:', sellerError);
                 }
+
+                // ✅ IN-APP NOTIFICATION FOR SELLER
+                if (sellerData.user_id) {
+                    try {
+                      await supabase.from('admin_notifications').insert({
+                        user_id: sellerData.user_id,
+                        title: 'New Commission Potential',
+                        message: `Your student ${alunoData.full_name} has paid the Scholarship Fee for "${scholarship.title}" (${formattedAmount}).`,
+                        type: 'payment',
+                        link: '/admin/dashboard/users',
+                        metadata: {
+                           student_id: alunoData.id,
+                           student_name: alunoData.full_name,
+                           amount: amountValue,
+                           fee_type: 'scholarship',
+                           payment_id: sessionId
+                        }
+                      });
+                    } catch (sellerInAppErr) {
+                       console.error(`[NOTIFICAÇÃO SELLER] Erro ao criar in-app notification para seller ${sellerData.email}:`, sellerInAppErr);
+                    }
+                }
                 // 3.2. NOTIFICAÇÃO PARA O AFFILIATE ADMIN (se existir)
                 if (affiliateAdminData.email) {
                   const affiliateNotificationPayload = {
@@ -1282,6 +1343,28 @@ Deno.serve(async (req)=>{
                   } else {
                     const affiliateError = await affiliateNotificationResponse.text();
                     console.error('📧 [verify-stripe-session-scholarship-fee] Erro ao enviar notificação para affiliate admin:', affiliateError);
+                  }
+
+                  // ✅ IN-APP NOTIFICATION FOR AFFILIATE ADMIN
+                  if (affiliateAdminData.user_id) {
+                      try {
+                        await supabase.from('admin_notifications').insert({
+                          user_id: affiliateAdminData.user_id,
+                          title: 'Affiliate Payment',
+                          message: `A student from your network (${alunoData.full_name}) has paid the Scholarship Fee for "${scholarship.title}" (${formattedAmount}).`,
+                          type: 'payment',
+                          link: '/admin/dashboard/affiliate-management',
+                          metadata: {
+                             student_id: alunoData.id,
+                             student_name: alunoData.full_name,
+                             amount: amountValue,
+                             fee_type: 'scholarship',
+                             payment_id: sessionId
+                          }
+                        });
+                      } catch (affiliateInAppErr) {
+                         console.error(`[NOTIFICAÇÃO AFFILIATE] Erro ao criar in-app notification para affiliate ${affiliateAdminData.email}:`, affiliateInAppErr);
+                      }
                   }
                 }
                 // Notificações para admin serão enviadas UMA ÚNICA VEZ após o loop (consolidadas)
@@ -1356,6 +1439,36 @@ Deno.serve(async (req)=>{
           } else {
             const adminError = await adminNotificationResponse.text();
             console.error(`📧 [verify-stripe-session-scholarship-fee] Erro ao enviar notificação consolidada para ADMIN ${admin.email}:`, adminError);
+          }
+
+          // ✅ IN-APP NOTIFICATION FOR ADMIN (Consolidated)
+          if (admin.user_id) {
+            try {
+              const { error: insertError } = await supabase.from('admin_notifications').insert({
+                user_id: admin.user_id,
+                title: 'New Scholarship Fee Payment',
+                message: oQueEnviar,
+                type: 'payment',
+                link: '/admin/dashboard/scholarships',
+                metadata: {
+                   student_id: alunoData.id,
+                   student_name: alunoData.full_name,
+                   amount: amountValue,
+                   fee_type: 'scholarship',
+                   payment_id: sessionId
+                }
+              });
+              
+              if (insertError) {
+                console.error(`[NOTIFICAÇÃO ADMIN] Erro ao criar in-app notification para admin ${admin.email}:`, insertError);
+              } else {
+                console.log(`[NOTIFICAÇÃO ADMIN] ✅ In-app notification criada com sucesso para admin ${admin.email} (ID: ${admin.user_id})`);
+              }
+            } catch (adminInAppErr) {
+               console.error(`[NOTIFICAÇÃO ADMIN] Exceção ao criar in-app notification para admin ${admin.email}:`, adminInAppErr);
+            }
+          } else {
+            console.warn(`[NOTIFICAÇÃO ADMIN] ⚠️ Admin ${admin.email} não possui user_id, pulando in-app notification.`);
           }
         });
         
