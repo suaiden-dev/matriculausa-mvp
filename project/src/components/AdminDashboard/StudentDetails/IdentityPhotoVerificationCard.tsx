@@ -199,11 +199,7 @@ const IdentityPhotoVerificationCard: React.FC<IdentityPhotoVerificationCardProps
               <h3 className="text-lg font-semibold text-slate-900">
                 Identity Photo Verification
               </h3>
-              {termAcceptance.identity_photo_name && (
-                <p className="text-xs text-slate-500 mt-0.5">
-                  {termAcceptance.identity_photo_name}
-                </p>
-              )}
+
             </div>
           </div>
           {getStatusBadge()}
