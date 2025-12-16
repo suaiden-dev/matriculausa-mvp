@@ -836,6 +836,7 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
               .single();
             applicationId = newApp?.id || null;
             
+            
             // Log the scholarship application creation
             if (applicationId) {
               try {
@@ -852,8 +853,40 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
                     application_method: 'ai_approved_documents'
                   }
                 });
+
+                // ✅ Notificar admins (in-app) sobre nova aplicação
+                // Buscar admins
+                const { data: admins } = await supabase
+                  .from('user_profiles')
+                  .select('user_id')
+                  .eq('role', 'admin');
+
+                if (admins && admins.length > 0) {
+                  const studentName = userProfile?.full_name || user.email || 'Student';
+                  const notifications = admins.map(admin => ({
+                    user_id: admin.user_id,
+                    type: 'application',
+                    title: 'New Application',
+                    message: `${studentName} created a new application.`,
+                    link: `/admin/dashboard/students/${profile.id}`,
+                    created_at: new Date().toISOString(),
+                    is_read: false
+                  }));
+
+                  // Use Edge Function to bypass RLS policies
+                  const { data: { session } } = await supabase.auth.getSession();
+                  await fetch(`${import.meta.env.VITE_SUPABASE_FUNCTIONS_URL}/create-admin-notification`, {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'Authorization': `Bearer ${session?.access_token || ''}`
+                    },
+                    body: JSON.stringify({ notifications }),
+                  });
+                }
+
               } catch (logError) {
-                console.error('Failed to log application creation:', logError);
+                console.error('Failed to log application creation or notify admins:', logError);
               }
             }
           }
