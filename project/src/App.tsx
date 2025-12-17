@@ -14,6 +14,7 @@ import Scholarships from './pages/Scholarships';
 import Universities from './pages/Universities';
 import UniversityDetail from './pages/UniversityDetail';
 import HowItWorks from './pages/HowItWorks';
+import ProcessoDetalhado from './pages/ProcessoDetalhado';
 import TermsAndConditions from './pages/TermsAndConditions';
 import StudentTermsAcceptance from './pages/StudentTermsAcceptance';
 import { captureUtmFromUrl } from './utils/utmTracker';
@@ -107,6 +108,7 @@ const AppContent = () => {
           <Route path="/schools" element={<Universities />} />
           <Route path="/schools/:slug" element={<UniversityDetail />} />
           <Route path="/how-it-works" element={<HowItWorks />} />
+          <Route path="/processo-detalhado" element={<ProcessoDetalhado />} />
           <Route path="/matricula-rewards" element={<MatriculaRewardsLanding />} />
           {/* Student Routes */}
           <Route path="/student/terms" element={<StudentTermsAcceptance />} />

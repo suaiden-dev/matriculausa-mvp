@@ -167,25 +167,28 @@ const AdminStudentChat: React.FC<AdminStudentChatProps> = ({
     }
   };
 
-  // ✅ CORREÇÃO: Auto-mark messages as read when STUDENT enters a conversation
-  // Admins não devem marcar mensagens como lidas - apenas alunos devem fazer isso
+  // ✅ Auto-mark messages as read when user enters a conversation
   useEffect(() => {
-    // Para alunos, usar o conversationId do hook (que pode ser criado automaticamente)
     const conversationId = selectedConversationId || chat.conversationId;
     
-    if (
-      conversationId && 
-      chat.messages.length > 0 && 
-      userProfile?.role === 'student' // ✅ Apenas para alunos
-    ) {
-      // Wait a bit for messages to load, then mark as read
-      const timer = setTimeout(async () => {
-        await chat.markAllAsRead();
-      }, 1000);
-
-      return () => clearTimeout(timer);
+    if (conversationId && chat.messages.length > 0) {
+      // Para alunos, usar markAllAsRead do hook
+      if (userProfile?.role === 'student') {
+        const timer = setTimeout(async () => {
+          await chat.markAllAsRead();
+        }, 1000);
+        return () => clearTimeout(timer);
+      }
+      
+      // ✅ NOVO: Para admins, marcar mensagens como lidas quando visualizam
+      if ((userProfile?.role === 'admin' || userProfile?.role === 'affiliate_admin') && chat.markAdminMessagesAsRead) {
+        const timer = setTimeout(async () => {
+          await chat.markAdminMessagesAsRead(conversationId);
+        }, 1000);
+        return () => clearTimeout(timer);
+      }
     }
-  }, [selectedConversationId, chat.conversationId, chat.messages.length, userProfile?.role, chat.markAllAsRead]);
+  }, [selectedConversationId, chat.conversationId, chat.messages.length, userProfile?.role, chat.markAllAsRead, chat.markAdminMessagesAsRead]);
 
   if (!user || !userProfile) {
     return (
