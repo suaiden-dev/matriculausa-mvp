@@ -251,6 +251,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
         .from('scholarships')
         .select(`
           *,
+          internal_fees,
           universities (
             id,
             name,

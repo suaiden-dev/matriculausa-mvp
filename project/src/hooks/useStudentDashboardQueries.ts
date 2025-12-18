@@ -117,6 +117,7 @@ export function useStudentApplicationsQuery(userProfileId?: string) {
           *,
           scholarships(
             *,
+            internal_fees,
             universities!inner(
               id,
               name,
@@ -406,6 +407,7 @@ export function useScholarshipsQuery() {
         .from('scholarships')
         .select(`
           *,
+          internal_fees,
           universities!inner(
             id,
             name,

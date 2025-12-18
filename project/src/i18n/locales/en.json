@@ -711,7 +711,10 @@
       "expired": "Expired",
       "scholarshipExpired": "Scholarship Expired",
       "noLongerAccepting": "Not Available for application",
-      "canStillView": "You can still view the information, but it will not be possible to apply for this scholarship."
+      "canStillView": "You can still view the information, but it will not be possible to apply for this scholarship.",
+      "universityInternalFees": "University Internal Fees",
+      "internalFeesNote": "Fees paid directly to university. Subject to change.",
+      "days": "days"
     }
   },
   "universitiesPage": {
