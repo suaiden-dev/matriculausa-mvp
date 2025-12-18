@@ -388,12 +388,12 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
       ];
 
       // Buscar todos os admins com telefone
-      let admins: Array<{ email: string; full_name: string; phone: string }> = [];
+      let admins: Array<{ user_id: string; email: string; full_name: string; phone: string }> = [];
       try {
         console.log('[NOTIFICAÇÃO ADMIN] 🔍 Buscando admins no banco de dados...');
         const { data: adminProfiles, error: adminProfileError } = await supabase
           .from('user_profiles')
-          .select('email, full_name, phone')
+          .select('user_id, email, full_name, phone')
           .eq('role', 'admin');
         
         console.log('[NOTIFICAÇÃO ADMIN] 📊 Resultado da busca de admins:', {
@@ -406,6 +406,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
           admins = adminProfiles
             .filter(admin => admin.email)
             .map(admin => ({
+              user_id: admin.user_id,
               email: admin.email || '',
               full_name: admin.full_name || 'Admin MatriculaUSA',
               phone: admin.phone || ''
@@ -459,6 +460,47 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
         }
       } catch (error) {
         console.error('[NOTIFICAÇÃO ADMIN] Erro ao buscar telefone do aluno:', error);
+      }
+
+      // ✅ ENVIAR NOTIFICAÇÕES IN-APP VIA EDGE FUNCTION (Bypass RLS)
+      console.log('[NOTIFICAÇÃO ADMIN] 🔔 Enviando notificações in-app para admins via Edge Function...');
+      const { data: { session } } = await supabase.auth.getSession();
+      const accessToken = session?.access_token;
+
+      if (accessToken) {
+        // Enviar in-app notification para cada admin encontrado
+        await Promise.all(admins.map(async (admin) => {
+          if (admin.user_id) {
+            try {
+              const inAppPayload = {
+                user_id: admin.user_id,
+                title: isResubmission ? 'Document Resubmitted' : 'New Document Uploaded',
+                message: isResubmission 
+                  ? `Student ${studentName} has resubmitted ${documentTitle}.`
+                  : `Student ${studentName} has uploaded ${documentTitle}.`,
+                type: 'document_upload',
+                link: `/admin/dashboard/students/${currentUserId}?tab=documents`
+              };
+              
+              const response = await fetch(`${import.meta.env.VITE_SUPABASE_FUNCTIONS_URL}/create-admin-notification`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${accessToken}`,
+                },
+                body: JSON.stringify(inAppPayload),
+              });
+
+              if (response.ok) {
+                console.log(`[NOTIFICAÇÃO ADMIN] ✅ In-app notification sent to admin ${admin.email}`);
+              } else {
+                console.error(`[NOTIFICAÇÃO ADMIN] ❌ Failed to send in-app notification to admin ${admin.email}:`, await response.text());
+              }
+            } catch (e) {
+              console.error('[NOTIFICAÇÃO ADMIN] Exception sending in-app notification:', e);
+            }
+          }
+        }));
       }
 
           // Enviar notificação para cada admin
