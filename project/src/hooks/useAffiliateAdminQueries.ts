@@ -825,8 +825,8 @@ export function useFinancialStatsQuery(userId?: string) {
 
       console.log('[useFinancialStatsQuery] Fetching financial stats for userId:', userId);
 
-      // Importar serviço apenas quando necessário
-      const { AffiliatePaymentRequestService } = await import('../services/affiliatePaymentRequestService');
+      // Importar serviço apenas quando necessário (atenção ao case no nome do arquivo)
+      const { AffiliatePaymentRequestService } = await import('../services/AffiliatePaymentRequestService');
       
       // 1. Descobrir affiliate_admin_id
       const { data: aaList, error: aaErr } = await supabase
@@ -1195,8 +1195,8 @@ export function useAffiliatePaymentRequestsQuery(userId?: string) {
 
       console.log('[useAffiliatePaymentRequestsQuery] Fetching payment requests for userId:', userId);
 
-      // Importar serviço apenas quando necessário
-      const { AffiliatePaymentRequestService } = await import('../services/affiliatePaymentRequestService');
+      // Importar serviço apenas quando necessário (atenção ao case no nome do arquivo)
+      const { AffiliatePaymentRequestService } = await import('../services/AffiliatePaymentRequestService');
       const requests = await AffiliatePaymentRequestService.listAffiliatePaymentRequests(userId);
       
       return requests;

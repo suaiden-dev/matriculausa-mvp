@@ -28,8 +28,32 @@ serve(async (req) => {
     // Parse request body
     const { user_id, fee_type_global, temp_payment_id, scholarship_ids } = await req.json()
 
-    // Normalizar fee_type_global para remover hífens e underscores extras
-    const normalizedFeeTypeGlobal = fee_type_global?.replace(/-/g, '').replace(/_+/g, '_');
+    // Função para mapear fee_type_global para valores aceitos pela constraint
+    // Constraint aceita: 'selection_process', 'i20_control_fee', 'application_fee', 'scholarship_fee'
+    const mapFeeTypeGlobal = (feeType: string): string => {
+      if (!feeType) return feeType;
+      
+      // Normalizar removendo hífens e underscores extras
+      const normalized = feeType.replace(/-/g, '').replace(/_+/g, '_').toLowerCase();
+      
+      // Mapear valores comuns para valores aceitos pela constraint
+      const mapping: { [key: string]: string } = {
+        'i20_control': 'i20_control_fee',
+        'i20control': 'i20_control_fee',
+        'i20controlfee': 'i20_control_fee',
+        'selection_process': 'selection_process',
+        'selectionprocess': 'selection_process',
+        'application_fee': 'application_fee',
+        'applicationfee': 'application_fee',
+        'scholarship_fee': 'scholarship_fee',
+        'scholarshipfee': 'scholarship_fee'
+      };
+      
+      return mapping[normalized] || normalized;
+    };
+
+    // Normalizar e mapear fee_type_global
+    const normalizedFeeTypeGlobal = mapFeeTypeGlobal(fee_type_global);
 
     console.log('🔍 [approve-zelle-payment-automatic] Parâmetros recebidos:', {
       user_id,
@@ -51,17 +75,29 @@ serve(async (req) => {
     let paymentAmount: number = 0;
     
     // Primeiro, tentar buscar um pagamento pendente do usuário
+    // Buscar tanto pelo valor normalizado quanto pelo original (para compatibilidade)
+    const searchValues = [normalizedFeeTypeGlobal];
+    if (fee_type_global && fee_type_global !== normalizedFeeTypeGlobal) {
+      searchValues.push(fee_type_global);
+    }
+    // Também buscar por valores alternativos comuns (ex: i20_control vs i20_control_fee)
+    if (normalizedFeeTypeGlobal === 'i20_control_fee') {
+      searchValues.push('i20_control');
+    } else if (fee_type_global === 'i20_control') {
+      searchValues.push('i20_control_fee');
+    }
+    
     const { data: existingPayment, error: searchError } = await supabaseClient
       .from('zelle_payments')
-      .select('id, status, amount')
+      .select('id, status, amount, fee_type_global')
       .eq('user_id', user_id)
-      .eq('fee_type_global', normalizedFeeTypeGlobal)
+      .in('fee_type_global', searchValues.length > 0 ? searchValues : [normalizedFeeTypeGlobal])
       .eq('status', 'pending')
       .order('created_at', { ascending: false })
       .limit(1)
-      .single()
+      .maybeSingle()
 
-    if (searchError && searchError.code !== 'PGRST116') {
+    if (searchError) {
       console.error('❌ [approve-zelle-payment-automatic] Erro ao buscar pagamento existente:', searchError)
       throw searchError
     }
@@ -72,11 +108,12 @@ serve(async (req) => {
       paymentAmount = existingPayment.amount || 0;
       console.log('✅ [approve-zelle-payment-automatic] Pagamento existente encontrado:', paymentId, 'Amount:', paymentAmount)
       
-      // Atualizar o status do pagamento para aprovado
+      // Atualizar o status do pagamento para aprovado e garantir fee_type_global correto
       const { error: paymentError } = await supabaseClient
         .from('zelle_payments')
         .update({
           status: 'approved',
+          fee_type_global: normalizedFeeTypeGlobal, // Garantir que está com o valor correto
           admin_approved_at: new Date().toISOString(),
           admin_notes: 'Automatically approved by n8n system'
         })
@@ -241,7 +278,7 @@ serve(async (req) => {
       }
       // --- FIM MATRICULA REWARDS ---
 
-    } else if (normalizedFeeTypeGlobal === 'i20_control_fee') {
+    } else if (normalizedFeeTypeGlobal === 'i20_control_fee' || normalizedFeeTypeGlobal === 'i20_control') {
       console.log('🎯 [approve-zelle-payment-automatic] Atualizando has_paid_i20_control_fee...')
       
       const { data: updateData, error: profileError } = await supabaseClient

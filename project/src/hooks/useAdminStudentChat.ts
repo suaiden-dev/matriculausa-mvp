@@ -547,6 +547,51 @@ export const useAdminStudentChat = (conversationId?: string, recipientId?: strin
     }
   };
 
+  // Function for admins to mark messages as read when viewing conversation
+  const markAdminMessagesAsRead = async (conversationId: string) => {
+    if (!user || !userProfile) return;
+    
+    // Only allow admins and affiliate_admins to mark messages as read
+    if (userProfile.role !== 'admin' && userProfile.role !== 'affiliate_admin') {
+      return;
+    }
+
+    try {
+      const { error, data } = await supabase
+        .from('admin_student_messages')
+        .update({ read_at: new Date().toISOString() })
+        .eq('conversation_id', conversationId)
+        .eq('recipient_id', user.id) // ✅ Garante que só marca mensagens onde o admin é o destinatário
+        .is('read_at', null)
+        .eq('is_system_message', false) // ✅ Excluir mensagens do sistema
+        .select('id, sender_id, recipient_id, read_at');
+
+      if (error) {
+        console.error('Failed to mark admin messages as read:', error);
+        return;
+      }
+
+      // Update local state to reflect read status immediately
+      setMessages(prevMessages => 
+        prevMessages.map(msg => 
+          msg.recipientId === user.id && !msg.readAt
+            ? { ...msg, readAt: new Date().toISOString() }
+            : msg
+        )
+      );
+
+      // Update the conversation unread count to 0
+      if (updateConversationUnreadCount) {
+        updateConversationUnreadCount(conversationId, 0);
+      }
+
+      // Mark conversation notifications as read
+      markConversationAsRead(conversationId);
+    } catch (e) {
+      console.error('Failed to mark admin messages as read:', e);
+    }
+  };
+
   const markAllAsRead = async () => {
     if (!user || !currentConversationId) return;
 
@@ -673,6 +718,7 @@ export const useAdminStudentChat = (conversationId?: string, recipientId?: strin
     conversationId: currentConversationId,
     markAsRead,
     markAllAsRead,
+    markAdminMessagesAsRead,
   };
 };
 

@@ -234,7 +234,7 @@ const ChatInbox: React.FC<ChatInboxProps> = ({
     return () => clearInterval(interval);
   }, [refetchConversations]);
 
-  const handleConversationClick = (conversation: any) => {
+  const handleConversationClick = async (conversation: any) => {
     const recipient = (userProfile?.role === 'affiliate_admin' || userProfile?.role === 'admin')
       ? conversation.student_profile 
       : conversation.admin_profile;
@@ -242,6 +242,22 @@ const ChatInbox: React.FC<ChatInboxProps> = ({
     const recipientId = (userProfile?.role === 'affiliate_admin' || userProfile?.role === 'admin')
       ? conversation.student_id 
       : conversation.admin_id;
+
+    // ✅ NOVO: Se for admin/affiliate_admin, marcar mensagens como lidas quando visualiza
+    if ((userProfile?.role === 'admin' || userProfile?.role === 'affiliate_admin') && user) {
+      try {
+        // Marcar mensagens não lidas como lidas quando admin visualiza a conversa
+        await supabase
+          .from('admin_student_messages')
+          .update({ read_at: new Date().toISOString() })
+          .eq('conversation_id', conversation.id)
+          .eq('recipient_id', user.id) // Apenas mensagens onde o admin é o destinatário
+          .is('read_at', null)
+          .eq('is_system_message', false); // Excluir mensagens do sistema
+      } catch (error) {
+        console.error('Failed to mark admin messages as read:', error);
+      }
+    }
 
     // Update unread count locally to 0 when conversation is selected
     if (conversation.unread_count > 0) {
