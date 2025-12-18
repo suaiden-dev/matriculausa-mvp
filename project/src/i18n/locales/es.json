@@ -3436,5 +3436,35 @@
     "3800Expired": "Not Available for application",
     "3800Expiring": "Last hours to apply! Deadline expires tomorrow (November 6th)",
     "3800ExpiringShort": "Deadline expires tomorrow"
+  },
+  "scholarshipsPage": {
+    "modal": {
+      "exclusive": "Exclusive",
+      "expired": "Expired",
+      "annualSavings": "Annual Savings",
+      "coverage": "Coverage",
+      "deadline": "Deadline",
+      "days": "days",
+      "financialBreakdown": "Financial Details",
+      "originalAnnualCost": "Original Annual Cost",
+      "withScholarship": "With Scholarship",
+      "costPerCredit": "Cost per Credit",
+      "additionalBenefits": "Benefits",
+      "programDescription": "Scholarship Description",
+      "programInformation": "Scholarship Information",
+      "academicLevel": "Academic Level",
+      "studyMode": "Study Mode",
+      "programDuration": "Scholarship Duration",
+      "language": "Language",
+      "workAuthorization": "Work Authorization",
+      "requirements": "Requirements",
+      "applicationDeadline": "Application Deadline",
+      "internalFeesNote": "Internal fees are shown only after payment of the selection process fee",
+      "anyField": "Any Field",
+      "inPerson": "In-Person"
+    },
+    "scholarshipCard": {
+      "applicationFee": "Application Fee"
+    }
   }
 }
