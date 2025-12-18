@@ -275,7 +275,8 @@ const UniversityDetails: React.FC = () => {
         return;
       }
 
-      const response = await fetch('https://fitpynguasqqutuhzifx.supabase.co/functions/v1/create-document-request', {
+      const functionsUrl = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL || 'https://fitpynguasqqutuhzifx.supabase.co/functions/v1';
+      const response = await fetch(`${functionsUrl}/create-document-request`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

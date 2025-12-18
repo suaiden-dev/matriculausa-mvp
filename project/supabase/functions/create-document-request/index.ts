@@ -215,18 +215,84 @@ Deno.serve(async (req) => {
           console.log('[Edge] ERRO: university_id ausente para request global.');
           return new Response(JSON.stringify({ error: 'Missing university_id for global request.' }), { status: 400, headers: corsHeaders });
         }
+        
         const { data: universidadeData, error: universidadeError } = await supabase
           .from('universities')
           .select('name, contact')
           .eq('id', university_id)
           .single();
+          
         if (universidadeError || !universidadeData) {
           console.log('[Edge] ERRO: Universidade não encontrada (global):', universidadeError);
           return new Response(JSON.stringify({ error: 'University not found.' }), { status: 400, headers: corsHeaders });
         }
+        
         nomeUniversidade = universidadeData.name;
         const contact = universidadeData.contact || {};
         emailUniversidade = contact.admissionsEmail || contact.email || '';
+        
+        // Para global status, usamos valores genéricos para não quebrar o template
+        nomeAluno = 'Todos os alunos elegíveis (Solicitação Global)';
+        emailAluno = 'multiple-recipients@matriculausa.com';
+        nomeBolsa = 'Todas as bolsas vinculadas';
+        
+        // ✅ BUSCAR E NOTIFICAR ALUNOS AFETADOS (IN-APP)
+        try {
+          console.log('[Edge] Buscando alunos para notificação global...');
+          
+          // Buscar todas as applications dessa universidade
+          const { data: globalApps, error: globalAppsError } = await supabase
+            .from('scholarship_applications')
+            .select('id, student_id, student_process_type, scholarships!inner(university_id)')
+            .eq('scholarships.university_id', university_id);
+            
+          if (globalAppsError) {
+            console.error('[Edge] Erro ao buscar applications para global request:', globalAppsError);
+          } else if (globalApps && globalApps.length > 0) {
+            // Filtrar por applicable_student_types se necessário
+            let targetedApps = globalApps;
+            
+             // Garantir que applicable_student_types é um array válido
+            const typesFilter = Array.isArray(applicable_student_types) ? applicable_student_types : [];
+            const hasFilter = typesFilter.length > 0 && !typesFilter.includes('all');
+
+            if (hasFilter) {
+               console.log('[Edge] Filtrando alunos por tipo:', typesFilter);
+               targetedApps = globalApps.filter((app: any) => {
+                 // student_process_type deve bater com um dos tipos no filtro
+                 return app.student_process_type && typesFilter.includes(app.student_process_type);
+               });
+            }
+
+            console.log(`[Edge] Encontrados ${targetedApps.length} alunos para notificação global.`);
+            
+            // O student_id na application já é o Profile ID (user_profiles.id), confirmado via SQL.
+            // Então podemos usar diretamente para inserir na tabela student_notifications.
+            
+            const notificationsToInsert = targetedApps.map((app: any) => ({
+              student_id: app.student_id,
+              title: 'New global document request',
+              message: `University ${nomeUniversidade} requested a new document: ${title}.`,
+              link: `/student/dashboard/application/${app.id}/chat?tab=documents`, // Deep link para a app específica
+              created_at: new Date().toISOString()
+            }));
+
+            if (notificationsToInsert.length > 0) {
+              const { error: notifInsertError } = await supabase
+                .from('student_notifications')
+                .insert(notificationsToInsert);
+                
+              if (notifInsertError) {
+                console.error('[Edge] Erro ao inserir notificações em massa:', notifInsertError);
+              } else {
+                console.log('[Edge] ✅ Sucesso: Notificações in-app enviadas em massa.');
+              }
+            }
+          }
+        } catch (globalNotifError) {
+          console.error('[Edge] Erro durante processamento de notificação global:', globalNotifError);
+        }
+
         isPayloadReady = true;
       }
 

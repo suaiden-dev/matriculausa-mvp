@@ -711,7 +711,10 @@
       "expired": "Expirada",
       "scholarshipExpired": "Bolsa Expirada",
       "noLongerAccepting": "Esta bolsa não está mais aceitando novas aplicações.",
-      "canStillView": "Você ainda pode visualizar as informações, mas não será possível aplicar para esta bolsa."
+      "canStillView": "Você ainda pode visualizar as informações, mas não será possível aplicar para esta bolsa.",
+      "universityInternalFees": "Taxas Internas da Universidade",
+      "internalFeesNote": "Taxas pagas diretamente à universidade. Sujeito a alteração.",
+      "days": "dias"
     }
   },
   "universitiesPage": {
