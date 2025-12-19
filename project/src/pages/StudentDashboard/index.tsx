@@ -140,7 +140,7 @@ const StudentDashboard: React.FC = () => {
             work_permissions,
             application_fee_amount,
             internal_fees,
-            universities (id, name, logo_url, location, is_approved)
+            universities (id, name, logo_url, location, is_approved, university_fees_page_url)
           `);
           // Removido filtro is_active=true - estudantes podem ver bolsas inativas mas não podem aplicar
           
@@ -154,7 +154,7 @@ const StudentDashboard: React.FC = () => {
       // Buscar applications reais do Supabase
       const { data: applicationsData, error: applicationsError } = await supabase
         .from('scholarship_applications')
-        .select(`*,scholarship:scholarships(*,universities!inner(id, name, logo_url, location, is_approved))`)
+        .select(`*,scholarship:scholarships(*,universities!inner(id, name, logo_url, location, is_approved, university_fees_page_url))`)
         .eq('student_id', userProfile.id);
       if (applicationsError) {
         setApplications([]);

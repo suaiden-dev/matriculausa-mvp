@@ -39,7 +39,7 @@ const getCartItemsFromDB = async (userId: string): Promise<CartItem[]> => {
         id, 
         scholarships (
           *,
-          universities!inner(id, name, logo_url, location, is_approved)
+          universities!inner(id, name, logo_url, location, is_approved, university_fees_page_url)
         )
       `)
       .eq('user_id', userId);
