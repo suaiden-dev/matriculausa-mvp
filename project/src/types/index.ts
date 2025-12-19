@@ -32,6 +32,7 @@ export interface University {
   participates_in_matricula_rewards?: boolean;
   matricula_rewards_opted_in_at?: string;
   matricula_rewards_opt_in_notes?: string;
+  university_fees_page_url?: string;
   created_at: string;
 }
 
@@ -79,6 +80,7 @@ export interface Scholarship {
     logo_url?: string;
     location: string;
     is_approved: boolean;
+    university_fees_page_url?: string;
   } | null;
 }
 

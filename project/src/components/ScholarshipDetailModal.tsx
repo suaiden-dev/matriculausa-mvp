@@ -20,7 +20,8 @@ import {
   CheckCircle,
   AlertTriangle,
   Calendar,
-  Info
+  Info,
+  ExternalLink
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { is3800Scholarship, is3800ScholarshipBlocked } from '../utils/scholarshipDeadlineValidation';
@@ -312,6 +313,17 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
                             <p className="text-[10px] text-blue-700 mt-1 font-medium">
                               {t('scholarshipsPage.modal.internalFeesDisclaimer') || 'These fees are paid directly to the university, not through our platform'}
                             </p>
+                            {scholarship.universities?.university_fees_page_url && (
+                              <a 
+                                href={scholarship.universities.university_fees_page_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 mt-2 font-medium hover:underline"
+                              >
+                                <ExternalLink className="h-3 w-3" />
+                                {t('scholarshipsPage.modal.viewUniversityFeesPage')}
+                              </a>
+                            )}
                           </div>
                           <table className="w-full text-sm">
                             <tbody className="divide-y divide-amber-100">

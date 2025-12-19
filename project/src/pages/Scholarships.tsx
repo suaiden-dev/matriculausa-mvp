@@ -158,7 +158,7 @@ const Scholarships: React.FC = () => {
           .from('scholarships')
           .select(`
             *,
-            universities (id, name, location, logo_url)
+            universities (id, name, location, logo_url, university_fees_page_url)
           `)
           .eq('is_highlighted', true)
           // Removido filtro is_active=true - estudantes podem ver bolsas inativas mas não podem aplicar

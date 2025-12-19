@@ -33,4 +33,5 @@ export interface ProfileFormData {
     fax: string;
   };
   programs: string[];
+  university_fees_page_url?: string;
 }

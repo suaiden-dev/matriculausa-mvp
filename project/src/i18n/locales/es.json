@@ -3466,7 +3466,8 @@
       "internalFeesNotice": "Esta beca puede tener tarifas internas adicionales de la universidad. Estas tarifas serán visibles después del pago de la Tarifa de Proceso de Selección.",
       "anyField": "Any Field",
       "inPerson": "In-Person",
-      "universityInternalFees": "Tarifas Internas de la Universidad"
+      "universityInternalFees": "Tarifas Internas de la Universidad",
+      "viewUniversityFeesPage": "Ver Página de Tarifas de la Universidad"
     },
     "scholarshipCard": {
       "applicationFee": "Application Fee",
