@@ -234,16 +234,34 @@ export const useDocumentRequestHandlers = (
           const { data: { session } } = await supabase.auth.getSession();
           const accessToken = session?.access_token;
           
-          if (accessToken && studentProfile.user_id) {
+          if (accessToken) {
             const documentTitle = uploadData.document_requests.title || 'Document';
             const fileName = uploadData.file_url?.split('/').pop() || 'document';
+            const studentProfileId = uploadData?.document_requests?.scholarship_applications?.student_id;
+
+            // Buscar o student_id do user_profiles se ainda não temos
+            let finalStudentId = studentProfileId;
+            if (!finalStudentId && studentProfile?.user_id) {
+              const { data: profile } = await supabase
+                .from('user_profiles')
+                .select('id')
+                .eq('user_id', studentProfile.user_id)
+                .single();
+              finalStudentId = profile?.id;
+            }
 
             const notificationPayload = {
-              user_id: studentProfile.user_id,
+              student_id: finalStudentId,
               title: 'Document Approved',
-              message: `Your document ${fileName} was approved for request ${documentTitle}.`,
-              link: '/student/dashboard/applications',
+              message: `Your document for request "${documentTitle}" has been approved.`,
+              link: '/student/dashboard/applications?tab=documents',
             };
+
+            console.log('📤 [handleApproveDocumentRequest] Enviando notificação in-app:', {
+              student_id: finalStudentId,
+              documentTitle,
+              accessToken: accessToken ? '✅' : '❌'
+            });
             
             const response = await fetch(`${import.meta.env.VITE_SUPABASE_FUNCTIONS_URL}/create-student-notification`, {
               method: 'POST',
@@ -261,13 +279,14 @@ export const useDocumentRequestHandlers = (
               await response.json();
               console.log('✅ [handleApproveDocumentRequest] Notificação in-app enviada com sucesso!');
             }
+          } else {
+            console.error('❌ [handleApproveDocumentRequest] Sem access token disponível');
           }
         } catch (notificationError) {
           console.error('❌ [handleApproveDocumentRequest] Erro ao enviar notificação in-app:', notificationError);
         }
       }
 
-      alert('Document approved!');
       window.location.reload();
     } catch (error: any) {
       console.error('Error approving document:', error);
@@ -395,15 +414,33 @@ export const useDocumentRequestHandlers = (
           const { data: { session } } = await supabase.auth.getSession();
           const accessToken = session?.access_token;
           
-          if (accessToken && studentProfile.user_id) {
+          if (accessToken) {
             const documentTitle = uploadData.document_requests.title || 'Document';
+            const studentProfileId = uploadData?.document_requests?.scholarship_applications?.student_id;
+
+            // Buscar o student_id do user_profiles se ainda não temos
+            let finalStudentId = studentProfileId;
+            if (!finalStudentId && studentProfile?.user_id) {
+              const { data: profile } = await supabase
+                .from('user_profiles')
+                .select('id')
+                .eq('user_id', studentProfile.user_id)
+                .single();
+              finalStudentId = profile?.id;
+            }
 
             const notificationPayload = {
-              user_id: studentProfile.user_id,
+              student_id: finalStudentId,
               title: 'Document Rejected',
-              message: `Your document for request ${documentTitle} has been rejected. Reason: ${reason}. Please review and upload a corrected version.`,
-              link: '/student/dashboard/applications',
+              message: `Your document for request "${documentTitle}" has been rejected. Reason: ${reason}. Please review and upload a corrected version.`,
+              link: '/student/dashboard/applications?tab=documents',
             };
+
+            console.log('📤 [handleRejectDocumentRequest] Enviando notificação in-app:', {
+              student_id: finalStudentId,
+              documentTitle,
+              accessToken: accessToken ? '✅' : '❌'
+            });
             
             const response = await fetch(`${import.meta.env.VITE_SUPABASE_FUNCTIONS_URL}/create-student-notification`, {
               method: 'POST',
@@ -421,14 +458,15 @@ export const useDocumentRequestHandlers = (
               await response.json();
               console.log('✅ [handleRejectDocumentRequest] Notificação in-app enviada com sucesso!');
             }
+          } else {
+            console.error('❌ [handleRejectDocumentRequest] Sem access token disponível');
           }
         } catch (notificationError) {
           console.error('❌ [handleRejectDocumentRequest] Erro ao enviar notificação in-app:', notificationError);
         }
       }
 
-      alert('Document rejected!');
-      window.location.reload();
+      // window.location.reload();
     } catch (error: any) {
       console.error('Error rejecting document:', error);
       alert('Failed to reject document: ' + error.message);

@@ -194,7 +194,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
           .from('document_requests')
           .select(`
             *,
-            document_request_uploads!inner (
+            document_request_uploads (
               *,
               reviewed_by,
               reviewed_at
@@ -202,17 +202,25 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
           `)
           .eq('is_global', true)
           .eq('university_id', universityId)
-          .eq('document_request_uploads.uploaded_by', studentId)  // ✅ CORREÇÃO: Filtrar apenas uploads do aluno específico
           .order('created_at', { ascending: false });
 
         if (globalError) {
           console.error('❌ [DOCUMENTS VIEW] Error fetching global requests:', globalError);
           throw globalError;
         }
-        // Global requests found
-        allRequests = [...allRequests, ...(globalRequests || [])];
+        
+        // Filtrar uploads apenas do aluno específico para cada global request
+        const filteredGlobalRequests = (globalRequests || []).map(request => ({
+          ...request,
+          document_request_uploads: (request.document_request_uploads || []).filter(
+            (upload: any) => upload.uploaded_by === studentId
+          )
+        }));
+        
+        console.log('✅ [DOCUMENTS VIEW] Found global requests:', filteredGlobalRequests?.length || 0, filteredGlobalRequests);
+        allRequests = [...allRequests, ...filteredGlobalRequests];
       } else {
-        // No university_id provided, skipping global requests
+        console.log('⚠️ [DOCUMENTS VIEW] No university_id provided, skipping global requests');
       }
       
       // Remover busca de TODOS os requests globais - apenas mostrar os específicos do aluno
