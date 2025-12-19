@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
+import TruncatedText from '../../components/TruncatedText';
 import { 
   ArrowLeft, 
   DollarSign,
@@ -62,6 +63,7 @@ interface University {
     status?: string;
   };
   programs?: string[];
+  university_fees_page_url?: string;
 }
 
 const UniversityDetails: React.FC = () => {
@@ -87,7 +89,8 @@ const UniversityDetails: React.FC = () => {
     location: '',
     website: '',
     description: '',
-    is_approved: false
+    is_approved: false,
+    university_fees_page_url: ''
   });
 
   // Estado para novo document request
@@ -168,7 +171,8 @@ const UniversityDetails: React.FC = () => {
         location: combinedData.location || '',
         website: combinedData.website || '',
         description: combinedData.description || '',
-        is_approved: combinedData.is_approved || false
+        is_approved: combinedData.is_approved || false,
+        university_fees_page_url: combinedData.university_fees_page_url || ''
       });
     } catch (err: any) {
       console.error('Unexpected error:', err);
@@ -212,7 +216,8 @@ const UniversityDetails: React.FC = () => {
           location: editForm.location,
           website: editForm.website,
           description: editForm.description,
-          is_approved: editForm.is_approved
+          is_approved: editForm.is_approved,
+          university_fees_page_url: editForm.university_fees_page_url
         })
         .eq('id', university.id);
 
@@ -544,7 +549,8 @@ const UniversityDetails: React.FC = () => {
                           location: university.location || '',
                           website: university.website || '',
                           description: university.description || '',
-                          is_approved: university.is_approved || false
+                          is_approved: university.is_approved || false,
+                          university_fees_page_url: university.university_fees_page_url || ''
                         });
                       }}
                       className="inline-flex items-center gap-2 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors shadow-sm"
@@ -628,6 +634,19 @@ const UniversityDetails: React.FC = () => {
                         placeholder="Brief description of the university"
                       />
                     </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">University Fees Page URL</label>
+                      <input
+                        type="url"
+                        value={editForm.university_fees_page_url}
+                        onChange={(e) => setEditForm(prev => ({ ...prev, university_fees_page_url: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                        placeholder="https://university.edu/fees"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Link to the university's official page about internal fees (optional)
+                      </p>
+                    </div>
                     <div className="pt-3 border-t">
                       <label className="flex items-center gap-3">
                         <input
@@ -653,20 +672,54 @@ const UniversityDetails: React.FC = () => {
                     {university.website && (
                       <div className="flex items-start gap-3">
                         <Globe className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
-                        <div>
+                        <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-gray-900">Website</p>
                           <a 
                             href={university.website} 
                             target="_blank" 
                             rel="noopener noreferrer"
-                            className="text-sm text-blue-600 hover:text-blue-800 transition-colors flex items-center gap-1"
+                            className="text-sm text-blue-600 hover:text-blue-800 transition-colors flex items-center gap-1 min-w-0"
                           >
-                            {university.website.replace(/^https?:\/\//, '')}
-                            <ExternalLink className="h-3 w-3" />
+                            <TruncatedText
+                              text={university.website.replace(/^https?:\/\//, '')}
+                              maxLength={50}
+                              className="min-w-0 flex-1"
+                              showTooltip={true}
+                              tooltipPosition="top"
+                              breakWords={true}
+                            />
+                            <ExternalLink className="h-3 w-3 flex-shrink-0" />
                           </a>
                         </div>
                       </div>
                     )}
+                    
+                    <div className="flex items-start gap-3">
+                      <DollarSign className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900">Fees Page</p>
+                        {university.university_fees_page_url ? (
+                          <a 
+                            href={university.university_fees_page_url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-sm text-blue-600 hover:text-blue-800 transition-colors flex items-center gap-1 min-w-0"
+                          >
+                            <TruncatedText
+                              text={university.university_fees_page_url.replace(/^https?:\/\//, '')}
+                              maxLength={50}
+                              className="min-w-0 flex-1"
+                              showTooltip={true}
+                              tooltipPosition="top"
+                              breakWords={true}
+                            />
+                            <ExternalLink className="h-3 w-3 flex-shrink-0" />
+                          </a>
+                        ) : (
+                          <p className="text-sm text-gray-400 italic">Not configured</p>
+                        )}
+                      </div>
+                    </div>
                     
                     {university.contact?.email && (
                       <div className="flex items-start gap-3">
