@@ -139,6 +139,7 @@ const StudentDashboard: React.FC = () => {
             scholarship_type,
             work_permissions,
             application_fee_amount,
+            internal_fees,
             universities (id, name, logo_url, location, is_approved)
           `);
           // Removido filtro is_active=true - estudantes podem ver bolsas inativas mas não podem aplicar

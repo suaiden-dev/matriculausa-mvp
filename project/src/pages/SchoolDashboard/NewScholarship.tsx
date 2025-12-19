@@ -14,7 +14,9 @@ import {
   Info,
   RefreshCw,
   Plus,
-  X
+  X,
+  Trash2,
+  FileText
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
@@ -67,6 +69,7 @@ const NewScholarship: React.FC = () => {
     work_permissions: [] as string[],
     // Novos campos para taxas dinâmicas
     application_fee_amount: '350.00',
+    internal_fees: [] as { category: string; amount: string; details: string; }[],
   });
 
   // Helper texts for work permissions
@@ -81,6 +84,29 @@ const NewScholarship: React.FC = () => {
       const has = prev.work_permissions.includes(wp);
       const next = has ? prev.work_permissions.filter(x => x !== wp) : [...prev.work_permissions, wp];
       return { ...prev, work_permissions: next };
+    });
+  };
+
+  // Internal Fees Handlers
+  const addInternalFee = () => {
+    setFormData(prev => ({
+      ...prev,
+      internal_fees: [...prev.internal_fees, { category: '', amount: '', details: '' }]
+    }));
+  };
+
+  const removeInternalFee = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      internal_fees: prev.internal_fees.filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleInternalFeeChange = (index: number, field: 'category' | 'amount' | 'details', value: string) => {
+    setFormData(prev => {
+      const newFees = [...prev.internal_fees];
+      newFees[index] = { ...newFees[index], [field]: value };
+      return { ...prev, internal_fees: newFees };
     });
   };
 
@@ -164,6 +190,21 @@ const NewScholarship: React.FC = () => {
           work_permissions: Array.isArray(scholarship.work_permissions) ? scholarship.work_permissions : [],
           // Novos campos para taxas dinâmicas
           application_fee_amount: scholarship.application_fee_amount || '350.00',
+          internal_fees: (() => {
+            let fees = [];
+            if (scholarship.internal_fees) {
+              if (Array.isArray(scholarship.internal_fees)) {
+                fees = scholarship.internal_fees;
+              } else if (typeof scholarship.internal_fees === 'string') {
+                try { fees = JSON.parse(scholarship.internal_fees); } catch (e) { console.warn(e); }
+              }
+            }
+            return fees.map((f: any) => ({
+              category: f.category || '',
+              amount: f.amount?.toString() || '',
+              details: f.details || ''
+            }));
+          })(),
         });
 
         // Set image preview if exists
@@ -502,6 +543,15 @@ const NewScholarship: React.FC = () => {
     const eligibility = formData.eligibility.filter(item => item.trim());
     const benefits = formData.benefits.filter(item => item.trim());
 
+    // Filter Internal Fees
+    const internalFees = formData.internal_fees
+      .filter(fee => fee.category.trim() && fee.amount.trim())
+      .map(fee => ({
+        category: fee.category.trim(),
+        amount: Number(fee.amount),
+        details: fee.details.trim()
+      }));
+
     if (requirements.length === 0) {
       setError('At least one requirement is required');
       setLoading(false);
@@ -529,6 +579,7 @@ const NewScholarship: React.FC = () => {
           annual_value_with_scholarship: Number(formData.annual_value_with_scholarship),
           // Novos campos para taxas dinâmicas
           application_fee_amount: Number(formData.application_fee_amount),
+          internal_fees: internalFees,
         };
         
         // Only set image_url to null if we're not preserving the existing image
@@ -1272,6 +1323,98 @@ const NewScholarship: React.FC = () => {
                     </ul>
                   </div>
                 </div>
+              </div>
+            </div>
+
+            {/* University Internal Fees Configuration */}
+            <div>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-slate-900 flex items-center">
+                  <FileText className="h-5 w-5 mr-2 text-[#05294E]" />
+                  University Internal Fees
+                </h2>
+                <button
+                  type="button"
+                  onClick={addInternalFee}
+                  className="text-sm bg-[#05294E]/10 text-[#05294E] hover:bg-[#05294E]/20 px-3 py-2 rounded-lg font-medium transition-colors flex items-center gap-1"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Fee
+                </button>
+              </div>
+
+              {formData.internal_fees.length === 0 ? (
+                <div className="bg-slate-50 border border-dashed border-slate-200 rounded-xl p-8 text-center">
+                  <p className="text-slate-500 mb-2">No internal fees configured.</p>
+                  <p className="text-sm text-slate-400">Add fees like registration, technology fee, or student services fee.</p>
+                  <button
+                    type="button"
+                    onClick={addInternalFee}
+                    className="mt-4 text-[#05294E] font-medium hover:underline"
+                  >
+                    Add your first fee
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {formData.internal_fees.map((fee, index) => (
+                    <div key={index} className="bg-slate-50 p-4 rounded-xl border border-slate-200 relative group">
+                      <button
+                        type="button"
+                        onClick={() => removeInternalFee(index)}
+                        className="absolute top-2 right-2 p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors"
+                        title="Remove fee"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                      <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+                        <div className="md:col-span-5">
+                          <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+                            Fee Name
+                          </label>
+                          <input
+                            type="text"
+                            value={fee.category}
+                            onChange={(e) => handleInternalFeeChange(index, 'category', e.target.value)}
+                            className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E]/20 focus:border-[#05294E]"
+                            placeholder="e.g. Registration Fee"
+                          />
+                        </div>
+                        <div className="md:col-span-3">
+                          <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+                            Amount (USD)
+                          </label>
+                          <div className="relative">
+                            <span className="absolute left-3 top-2 text-slate-400">$</span>
+                            <input
+                              type="number"
+                              value={fee.amount}
+                              onChange={(e) => handleInternalFeeChange(index, 'amount', e.target.value)}
+                              className="w-full pl-6 pr-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E]/20 focus:border-[#05294E]"
+                              placeholder="0.00"
+                            />
+                          </div>
+                        </div>
+                        <div className="md:col-span-4">
+                          <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+                            Frequency / Detail
+                          </label>
+                          <input
+                            type="text"
+                            value={fee.details}
+                            onChange={(e) => handleInternalFeeChange(index, 'details', e.target.value)}
+                            className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E]/20 focus:border-[#05294E]"
+                            placeholder="e.g. One-time fee"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="mt-2 text-xs text-slate-500 flex gap-2 items-center">
+                 <Info className="h-3 w-3" />
+                 <span>These fees will be displayed to the student in the program breakdown.</span>
               </div>
             </div>
 

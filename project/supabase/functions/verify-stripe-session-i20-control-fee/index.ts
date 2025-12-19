@@ -61,6 +61,7 @@ function formatAmountWithCurrency(amount, session) {
  * Em ambiente de desenvolvimento (localhost), filtra emails específicos
  */
 async function getAllAdmins(supabase, isDevelopment: boolean = false): Promise<Array<{
+  user_id: string;
   email: string;
   full_name: string;
   phone: string;
@@ -92,6 +93,7 @@ async function getAllAdmins(supabase, isDevelopment: boolean = false): Promise<A
           const adminUsers = authUsers.users
             .filter(user => user.user_metadata?.role === 'admin' || user.email === 'admin@matriculausa.com')
             .map(user => ({
+              user_id: user.id,
               email: user.email || '',
               full_name: user.user_metadata?.full_name || user.user_metadata?.name || 'Admin MatriculaUSA',
               phone: user.user_metadata?.phone || ''
@@ -104,6 +106,7 @@ async function getAllAdmins(supabase, isDevelopment: boolean = false): Promise<A
               : adminUsers;
             console.log(`[getAllAdmins] Encontrados ${filteredAdmins.length} admin(s) via auth.users${isDevelopment ? ' (filtrados para dev)' : ''}:`, filteredAdmins.map(a => a.email));
             return filteredAdmins.length > 0 ? filteredAdmins : [{
+              user_id: '',
               email: 'admin@matriculausa.com',
               full_name: 'Admin MatriculaUSA',
               phone: ''
@@ -115,6 +118,7 @@ async function getAllAdmins(supabase, isDevelopment: boolean = false): Promise<A
       }
       
       return [{
+        user_id: '',
         email: 'admin@matriculausa.com',
         full_name: 'Admin MatriculaUSA',
         phone: ''
@@ -165,6 +169,7 @@ async function getAllAdmins(supabase, isDevelopment: boolean = false): Promise<A
       adminProfiles.map(async (profile) => {
         if (profile.email) {
           return {
+            user_id: profile.user_id,
             email: profile.email,
             full_name: profile.full_name || 'Admin MatriculaUSA',
             phone: profile.phone || ''
@@ -176,6 +181,7 @@ async function getAllAdmins(supabase, isDevelopment: boolean = false): Promise<A
           const { data: authUser } = await supabase.auth.admin.getUserById(profile.user_id);
           if (authUser?.user?.email) {
             return {
+              user_id: profile.user_id,
               email: authUser.user.email,
               full_name: profile.full_name || authUser.user.user_metadata?.full_name || authUser.user.user_metadata?.name || 'Admin MatriculaUSA',
               phone: profile.phone || authUser.user.user_metadata?.phone || ''
@@ -190,6 +196,7 @@ async function getAllAdmins(supabase, isDevelopment: boolean = false): Promise<A
     );
 
     const validAdmins = adminsWithEmail.filter(admin => admin !== null && admin.email) as Array<{
+      user_id: string;
       email: string;
       full_name: string;
       phone: string;
@@ -882,7 +889,7 @@ Deno.serve(async (req)=>{
         
         console.log(`📤 [verify-stripe-session-i20-control-fee] Iniciando notificações...`);
         // Buscar dados do aluno (incluindo seller_referral_code)
-        const { data: alunoData, error: alunoError } = await supabase.from('user_profiles').select('full_name, email, phone, seller_referral_code').eq('user_id', userId).single();
+        const { data: alunoData, error: alunoError } = await supabase.from('user_profiles').select('id, full_name, email, phone, seller_referral_code').eq('user_id', userId).single();
         // Detectar ambiente de desenvolvimento
         const isDevelopment = config.environment.isTest || config.environment.environment === 'test';
         // Buscar todos os admins do sistema
@@ -922,6 +929,32 @@ Deno.serve(async (req)=>{
         });
         const alunoResult = await alunoNotificationResponse.text();
         console.log('[NOTIFICAÇÃO ALUNO] Resposta do n8n (aluno):', alunoNotificationResponse.status, alunoResult);
+
+        // ✅ IN-APP NOTIFICATION FOR STUDENT (I-20 Control Fee)
+        try {
+          if (alunoData?.id) {
+            console.log('[NOTIFICAÇÃO ALUNO] Criando notificação in-app de pagamento I-20...');
+            const { error: inAppError } = await supabase
+              .from('student_notifications')
+              .insert({
+                student_id: alunoData.id,
+                title: 'Payment Confirmed',
+                message: 'Your I-20 Control Fee has been confirmed. Your I-20 document will be processed shortly.',
+                link: applicationId ? `/student/dashboard/application/${applicationId}/chat` : '/student/dashboard/financial',
+                created_at: new Date().toISOString()
+              });
+
+            if (inAppError) {
+              console.error('[NOTIFICAÇÃO ALUNO] Erro ao criar notificação in-app:', inAppError);
+            } else {
+              console.log('[NOTIFICAÇÃO ALUNO] Notificação in-app criada com sucesso!');
+            }
+          } else {
+            console.warn('[NOTIFICAÇÃO ALUNO] Dados do aluno (ID) não encontrados para notificação in-app.');
+          }
+        } catch (inAppEx) {
+            console.error('[NOTIFICAÇÃO ALUNO] Exceção ao criar notificação in-app:', inAppEx);
+        }
         // 2. NOTIFICAÇÃO PARA SELLER/ADMIN/AFFILIATE (se houver código de seller)
         console.log(`📤 [verify-stripe-session-i20-control-fee] DEBUG - alunoData.seller_referral_code:`, alunoData.seller_referral_code);
         console.log(`📤 [verify-stripe-session-i20-control-fee] DEBUG - alunoData completo:`, alunoData);
@@ -950,6 +983,7 @@ Deno.serve(async (req)=>{
             console.log(`📤 [verify-stripe-session-i20-control-fee] ✅ SELLER ENCONTRADO! Dados:`, sellerData);
             // Buscar dados do affiliate_admin se houver
             let affiliateAdminData = {
+              user_id: "",
               email: "",
               name: "Affiliate Admin"
             };
@@ -960,6 +994,7 @@ Deno.serve(async (req)=>{
                 const { data: affiliateProfile, error: profileError } = await supabase.from('user_profiles').select('email, full_name').eq('user_id', affiliateData.user_id).single();
                 if (affiliateProfile && !profileError) {
                   affiliateAdminData = {
+                    user_id: affiliateData.user_id,
                     email: affiliateProfile.email || "",
                     name: affiliateProfile.full_name || "Affiliate Admin"
                   };
@@ -973,6 +1008,27 @@ Deno.serve(async (req)=>{
             const affiliateAdminPhone = affiliateAdminData.email ? (await (async ()=>{ try { const { data: a, error: e } = await supabase.from('user_profiles').select('phone').eq('email', affiliateAdminData.email).single(); return a?.phone || "" } catch { return "" } })()) : "";
             console.log(`📧 [verify-stripe-session-i20-control-fee] Enviando notificações para ${admins.length} admin(s)...`);
             const adminNotificationPromises = admins.map(async (admin) => {
+              // ✅ IN-APP NOTIFICATION FOR ADMIN
+              if (admin.user_id) {
+                try {
+                  await supabase.from('admin_notifications').insert({
+                    user_id: admin.user_id,
+                    title: 'New I-20 Control Fee Payment',
+                    message: `Student ${alunoData.full_name} has paid the I-20 Control Fee (${formattedAmount}).`,
+                    type: 'payment',
+                    link: '/admin/dashboard/payments',
+                    metadata: {
+                       student_id: alunoData.id,
+                       student_name: alunoData.full_name,
+                       amount: amountValue,
+                       fee_type: 'i20_control',
+                       payment_id: sessionId
+                    }
+                  });
+                } catch (adminInAppErr) {
+                   console.error(`[NOTIFICAÇÃO ADMIN] Erro ao criar in-app notification para admin ${admin.email}:`, adminInAppErr);
+                }
+              }
               const adminNotificationPayload = {
                 tipo_notf: "Pagamento Stripe de I-20 control fee confirmado - Admin",
                 email_admin: admin.email,
@@ -1061,8 +1117,29 @@ Deno.serve(async (req)=>{
               const sellerResult = await sellerNotificationResponse.text();
               console.log('📧 [verify-stripe-session-i20-control-fee] Notificação para SELLER enviada com sucesso:', sellerResult);
             } else {
-              const sellerError = await sellerNotificationResponse.text();
               console.error('📧 [verify-stripe-session-i20-control-fee] Erro ao enviar notificação para SELLER:', sellerError);
+            }
+
+            // ✅ IN-APP NOTIFICATION FOR SELLER
+            if (sellerData.user_id) {
+                try {
+                  await supabase.from('admin_notifications').insert({
+                    user_id: sellerData.user_id,
+                    title: 'New Commission Potential (I-20)',
+                    message: `Your student ${alunoData.full_name} has paid the I-20 Control Fee (${formattedAmount}).`,
+                    type: 'payment',
+                    link: '/admin/dashboard/users',
+                    metadata: {
+                       student_id: alunoData.id,
+                       student_name: alunoData.full_name,
+                       amount: amountValue,
+                       fee_type: 'i20_control_fee',
+                       payment_id: sessionId
+                    }
+                  });
+                } catch (sellerInAppErr) {
+                   console.error(`[NOTIFICAÇÃO SELLER] Erro ao criar in-app notification para seller ${sellerData.email}:`, sellerInAppErr);
+                }
             }
             // 3. NOTIFICAÇÃO PARA AFFILIATE ADMIN (se houver)
             if (affiliateAdminData.email) {
@@ -1103,8 +1180,29 @@ Deno.serve(async (req)=>{
                 const affiliateResult = await affiliateNotificationResponse.text();
                 console.log('📧 [verify-stripe-session-i20-control-fee] Notificação para AFFILIATE ADMIN enviada com sucesso:', affiliateResult);
               } else {
-                const affiliateError = await affiliateNotificationResponse.text();
                 console.error('📧 [verify-stripe-session-i20-control-fee] Erro ao enviar notificação para AFFILIATE ADMIN:', affiliateError);
+              }
+
+              // ✅ IN-APP NOTIFICATION FOR AFFILIATE ADMIN
+              if (affiliateAdminData.user_id) {
+                  try {
+                    await supabase.from('admin_notifications').insert({
+                      user_id: affiliateAdminData.user_id,
+                      title: 'Affiliate I-20 Payment',
+                      message: `A student from your network (${alunoData.full_name}) has paid the I-20 Control Fee (${formattedAmount}).`,
+                      type: 'payment',
+                      link: '/admin/dashboard/affiliate-management',
+                      metadata: {
+                         student_id: alunoData.id,
+                         student_name: alunoData.full_name,
+                         amount: amountValue,
+                         fee_type: 'i20_control_fee',
+                         payment_id: sessionId
+                      }
+                    });
+                  } catch (affiliateInAppErr) {
+                     console.error(`[NOTIFICAÇÃO AFFILIATE] Erro ao criar in-app notification para affiliate ${affiliateAdminData.email}:`, affiliateInAppErr);
+                  }
               }
             } else {
               console.log('📧 [verify-stripe-session-i20-control-fee] Não há affiliate admin para notificar');
@@ -1116,6 +1214,26 @@ Deno.serve(async (req)=>{
             // Notificar todos os admins quando seller não é encontrado
             console.log(`📧 [verify-stripe-session-i20-control-fee] Enviando notificações para ${admins.length} admin(s) (seller não encontrado)...`);
             const adminNotificationPromises = admins.map(async (admin) => {
+              // ✅ IN-APP NOTIFICATION FOR ADMIN
+              if (admin.user_id) {
+                try {
+                  await supabase.from('admin_student_chat_notifications').insert({
+                    recipient_id: admin.user_id,
+                    title: 'New I-20 Control Fee Payment',
+                    message: `Student ${alunoData.full_name} has paid the I-20 Control Fee (${formattedAmount}).`,
+                    notification_type: 'system',
+                    metadata: {
+                       student_id: alunoData.id,
+                       student_name: alunoData.full_name,
+                       amount: amountValue,
+                       fee_type: 'i20_control',
+                       payment_id: sessionId
+                    }
+                  });
+                } catch (adminInAppErr) {
+                   console.error(`[NOTIFICAÇÃO ADMIN] Erro ao criar in-app notification para admin ${admin.email}:`, adminInAppErr);
+                }
+              }
               const adminNotificationPayload = {
                 tipo_notf: "Pagamento Stripe de I-20 control fee confirmado - Admin",
                 email_admin: admin.email,
@@ -1167,6 +1285,27 @@ Deno.serve(async (req)=>{
           // Notificar todos os admins quando não há seller
           console.log(`📧 [verify-stripe-session-i20-control-fee] Enviando notificações para ${admins.length} admin(s) (sem seller)...`);
           const adminNotificationPromises = admins.map(async (admin) => {
+            // ✅ IN-APP NOTIFICATION FOR ADMIN
+            if (admin.user_id) {
+              try {
+                await supabase.from('admin_notifications').insert({
+                  user_id: admin.user_id,
+                  title: 'New I-20 Control Fee Payment',
+                  message: `Student ${alunoData.full_name} has paid the I-20 Control Fee (${formattedAmount}).`,
+                  type: 'payment',
+                  link: '/admin/dashboard/payments',
+                  metadata: {
+                     student_id: alunoData.id,
+                     student_name: alunoData.full_name,
+                     amount: amountValue,
+                     fee_type: 'i20_control',
+                     payment_id: sessionId
+                  }
+                });
+              } catch (adminInAppErr) {
+                 console.error(`[NOTIFICAÇÃO ADMIN] Erro ao criar in-app notification para admin ${admin.email}:`, adminInAppErr);
+              }
+            }
             const adminNotificationPayload = {
               tipo_notf: "Pagamento Stripe de I-20 control fee confirmado - Admin",
               email_admin: admin.email,

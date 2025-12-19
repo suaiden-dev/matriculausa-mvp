@@ -966,6 +966,48 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
                   </div>
                 </div>
 
+                {/* Internal Fees Section */}
+                {(() => {
+                  let fees: any[] = [];
+                  if (Array.isArray(selectedScholarship.internal_fees)) {
+                    fees = selectedScholarship.internal_fees;
+                  } else if (typeof selectedScholarship.internal_fees === 'string') {
+                    try {
+                      fees = JSON.parse(selectedScholarship.internal_fees);
+                    } catch (e) {
+                      fees = [];
+                    }
+                  }
+                  
+                  if (fees && fees.length > 0) {
+                    return (
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-500 mb-2">University Internal Fees</h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {fees.map((fee: any, idx: number) => (
+                            <div key={idx} className="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                              <div className="flex justify-between items-center">
+                                <div>
+                                  <p className="font-medium text-slate-900 text-sm">{fee.category || fee.name}</p>
+                                  <p className="text-xs text-slate-500">{fee.details || fee.frequency}</p>
+                                </div>
+                                <span className="font-semibold text-[#05294E] text-sm whitespace-nowrap ml-2">
+                                  {new Intl.NumberFormat('en-US', {
+                                    style: 'currency',
+                                    currency: 'USD',
+                                    minimumFractionDigits: 2
+                                  }).format(Number(fee.amount || 0))}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
+
                 {selectedScholarship.requirements && selectedScholarship.requirements.length > 0 && (
                   <div>
                     <h3 className="text-sm font-medium text-gray-500 mb-2">Requirements</h3>

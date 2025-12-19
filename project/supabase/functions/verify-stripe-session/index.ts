@@ -173,6 +173,20 @@ Deno.serve(async (req) => {
           });
           const n8nText = await n8nRes.text();
           console.log('[NOTIFICAÇÃO] Resposta do n8n:', n8nRes.status, n8nText);
+
+          // ✅ IN-APP NOTIFICATION FOR STUDENT (Application Fee)
+          try {
+            await supabase.from('student_notifications').insert({
+                student_id: studentId,
+                title: 'Application Fee Confirmed',
+                message: `Your Application Fee for ${scholarship.title} at ${universidade.name} has been confirmed.`,
+                link: '/student/dashboard/applications',
+                created_at: new Date().toISOString()
+            });
+          } catch (inAppError) {
+             console.error('Error creating in-app notification:', inAppError);
+          }
+
         } catch (notifErr) {
           console.error('[NOTIFICAÇÃO] Erro ao notificar universidade:', notifErr);
         }
@@ -202,6 +216,18 @@ Deno.serve(async (req) => {
         } catch (cleanupErr) {
           console.error('[CLEANUP] Exceção ao remover outras aplicações:', cleanupErr);
         }
+        // ✅ IN-APP NOTIFICATION FOR STUDENT (Scholarship Fee)
+        try {
+          await supabase.from('student_notifications').insert({
+              student_id: studentId,
+              title: 'Scholarship Fee Confirmed',
+              message: 'Your Scholarship Fee has been confirmed. You are now approved!',
+              link: '/student/dashboard/applications',
+              created_at: new Date().toISOString()
+          });
+        } catch (inAppError) {
+           console.error('Error creating in-app notification:', inAppError);
+        }
         return corsResponse({ status: 'complete', message: 'Session verified and processed successfully.' }, 200);
       } else if (feeType === 'selection_process') {
         console.log('Processing: Selection Process Fee');
@@ -223,6 +249,20 @@ Deno.serve(async (req) => {
         // Limpa carrinho
         const { error: cartError } = await supabase.from('user_cart').delete().eq('user_id', userId);
         if (cartError) throw new Error(`Failed to clear user_cart: ${cartError.message}`);
+
+        // ✅ IN-APP NOTIFICATION FOR STUDENT (Selection Process Fee)
+        try {
+          await supabase.from('student_notifications').insert({
+              student_id: studentId,
+              title: 'Payment Confirmed',
+              message: 'Your Selection Process Fee has been confirmed. You can now proceed to select your schools.',
+              link: '/student/dashboard/applications',
+              created_at: new Date().toISOString()
+          });
+        } catch (inAppError) {
+           console.error('Error creating in-app notification:', inAppError);
+        }
+
         return corsResponse({ status: 'complete', message: 'Session verified and processed successfully.' }, 200);
       } else {
         console.warn(`Unhandled fee_type: ${feeType}`);

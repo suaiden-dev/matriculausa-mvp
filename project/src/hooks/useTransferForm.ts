@@ -63,7 +63,22 @@ export const useTransferForm = (
 
   // Handler para upload de Transfer Form
   const handleUploadTransferForm = useCallback(async () => {
-    if (!isPlatformAdmin || !student || !transferFormFile) return;
+    console.log('🚀 [Transfer Form] handleUploadTransferForm iniciado', {
+      isPlatformAdmin,
+      student: student?.user_id,
+      transferFormFile: transferFormFile?.name,
+      userId,
+      adminEmail
+    });
+    
+    if (!isPlatformAdmin || !student || !transferFormFile) {
+      console.log('❌ [Transfer Form] Pré-condições falharam:', {
+        isPlatformAdmin,
+        hasStudent: !!student,
+        hasFile: !!transferFormFile
+      });
+      return;
+    }
     
     try {
       setUploadingTransferForm(true);
@@ -140,8 +155,11 @@ export const useTransferForm = (
         }
       }
 
-      // ✅ ENVIAR NOTIFICAÇÕES PARA O ALUNO (quando admin envia template do Transfer Form)
-      console.log('📤 [Transfer Form Template] Enviando notificações para o aluno sobre envio do template...');
+      // Determinar se é um novo envio ou substituição
+      const isReplacement = !!transferApp.transfer_form_url;
+      
+      // ✅ ENVIAR NOTIFICAÇÕES PARA O ALUNO (sempre que admin envia/substitui Transfer Form)
+      console.log(`📤 [Transfer Form] Enviando notificações para o aluno sobre ${isReplacement ? 'substituição' : 'envio'} do formulário...`);
       
       try {
         // Buscar dados do aluno
@@ -179,16 +197,18 @@ export const useTransferForm = (
 
           // 1. ENVIAR EMAIL VIA WEBHOOK
           const templatePayload = {
-            tipo_notf: "Novo documento solicitado", // Reutilizando tipo existente de Document Request
+            tipo_notf: isReplacement ? "Documento atualizado" : "Novo documento solicitado",
             email_aluno: studentProfile.email,
             nome_aluno: studentProfile.full_name || 'Student',
             email_universidade: adminEmail || '',
             document_type: 'Transfer Form',
             document_title: 'Transfer Form',
-            o_que_enviar: `The Transfer Form template has been sent to you for the scholarship <strong>${scholarshipTitle}</strong> at <strong>${universityName}</strong>. Please download, fill out, and upload the completed form in your dashboard.`
+            o_que_enviar: isReplacement 
+              ? `The Transfer Form has been updated for the scholarship <strong>${scholarshipTitle}</strong> at <strong>${universityName}</strong>. Please download the new version, fill it out, and upload the completed form in your dashboard.`
+              : `The Transfer Form template has been sent to you for the scholarship <strong>${scholarshipTitle}</strong> at <strong>${universityName}</strong>. Please download, fill out, and upload the completed form in your dashboard.`
           };
 
-          console.log('📤 [Transfer Form Template] Payload de envio:', templatePayload);
+          console.log(`📤 [Transfer Form] Payload de ${isReplacement ? 'atualização' : 'envio'}:`, templatePayload);
 
           const webhookResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
             method: 'POST',
@@ -199,55 +219,129 @@ export const useTransferForm = (
           });
 
           if (webhookResponse.ok) {
-            console.log('✅ [Transfer Form Template] Email enviado com sucesso!');
+            console.log(`✅ [Transfer Form] Email de ${isReplacement ? 'atualização' : 'envio'} enviado com sucesso!`);
           } else {
-            console.warn('⚠️ [Transfer Form Template] Erro ao enviar email:', webhookResponse.status);
+            console.warn(`⚠️ [Transfer Form] Erro ao enviar email de ${isReplacement ? 'atualização' : 'envio'}:`, webhookResponse.status);
           }
         }
 
         // 2. ENVIAR NOTIFICAÇÃO IN-APP PARA O ALUNO (SINO)
         if (student?.user_id) {
-          console.log('📤 [Transfer Form Template] Enviando notificação in-app para o aluno...');
+          console.log(`📤 [Transfer Form] Enviando notificação in-app para o aluno sobre ${isReplacement ? 'atualização' : 'disponibilidade'}...`, {
+            studentUserId: student.user_id,
+            transferAppId: transferApp.id,
+            isReplacement
+          });
           
           try {
-            const { data: { session } } = await supabase.auth.getSession();
-            const accessToken = session?.access_token;
+            // Buscar o user_profiles.id correto (que é referenciado por student_notifications.student_id)
+            console.log('🔍 [Transfer Form] Buscando user_profiles.id para student_id:', student.user_id);
             
-            if (accessToken) {
-              const notificationPayload = {
-                user_id: student.user_id,
-                title: 'Transfer Form Template Sent',
-                message: 'The Transfer Form template has been sent to you. Please download, fill out, and upload the completed form.',
-                link: '/student/dashboard/applications',
-              };
+            try {
+              const { data: profileData, error: profileError } = await supabase
+                .from('user_profiles')
+                .select('id, user_id')
+                .eq('user_id', student.user_id)
+                .single();
               
-              const response = await fetch(`${import.meta.env.VITE_SUPABASE_FUNCTIONS_URL}/create-student-notification`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${accessToken}`,
-                },
-                body: JSON.stringify(notificationPayload),
+              console.log('📋 [Transfer Form] Resultado da busca do profile:', {
+                data: profileData,
+                error: profileError,
+                hasError: !!profileError,
+                hasData: !!profileData
+              });
+                
+              if (profileError) {
+                console.error('❌ [Transfer Form] Erro ao buscar profile:', profileError);
+                console.error('❌ [Transfer Form] Detalhes do erro do profile:', {
+                  code: profileError.code,
+                  message: profileError.message,
+                  details: profileError.details
+                });
+                return;
+              }
+              
+              if (!profileData) {
+                console.error('❌ [Transfer Form] Profile não encontrado para user_id:', student.user_id);
+                return;
+              }
+            
+            console.log('✅ [Transfer Form] Profile encontrado:', {
+              profileId: profileData.id,
+              userId: profileData.user_id
+            });
+            
+            const notificationData = {
+              student_id: profileData.id, // student_notifications.student_id referencia user_profiles.id
+              title: isReplacement ? 'Transfer Form Updated' : 'Transfer Form Available',
+              message: isReplacement 
+                ? `The Transfer Form has been updated for your scholarship application. Please download the new version, fill it out, and upload the completed form.`
+                : `The Transfer Form has been uploaded for your scholarship application. Please download, fill out, and upload the completed form.`,
+              link: `/student/dashboard/application/${transferApp.id}/chat?tab=documents`, // Deep link para a aplicação específica
+              created_at: new Date().toISOString()
+            };
+            
+            console.log('📝 [Transfer Form] Payload da notificação:', notificationData);
+
+            try {
+              console.log('🔄 [Transfer Form] Iniciando inserção na tabela student_notifications...');
+              console.log('🔧 [Transfer Form] Verificando cliente Supabase:', {
+                supabaseExists: !!supabase,
+                supabaseFrom: typeof supabase?.from
               });
               
-              if (!response.ok) {
-                const errorText = await response.text();
-                console.error('❌ [Transfer Form Template] Erro ao criar notificação:', response.status, errorText);
+              console.log('🔄 [Transfer Form] Executando inserção...');
+              const insertResult = await supabase
+                .from('student_notifications')
+                .insert([notificationData])
+                .select('*');
+              
+              console.log('📋 [Transfer Form] Raw result:', insertResult);
+              const { data, error: notifInsertError } = insertResult;
+
+              console.log('📋 [Transfer Form] Resultado da inserção:', {
+                data: data,
+                error: notifInsertError,
+                hasError: !!notifInsertError,
+                hasData: !!data,
+                dataLength: data?.length || 0
+              });
+
+              if (notifInsertError) {
+                console.error(`❌ [Transfer Form] Erro ao criar notificação de ${isReplacement ? 'atualização' : 'disponibilidade'}:`, notifInsertError);
+                console.error('❌ [Transfer Form] Detalhes do erro:', {
+                  code: notifInsertError.code,
+                  message: notifInsertError.message,
+                  details: notifInsertError.details,
+                  hint: notifInsertError.hint,
+                  payload: notificationData
+                });
+                console.error('❌ [Transfer Form] Insert error stringified:', JSON.stringify(notifInsertError, null, 2));
               } else {
-                await response.json();
-                console.log('✅ [Transfer Form Template] Notificação in-app enviada com sucesso!');
+                console.log(`✅ [Transfer Form] Notificação in-app de ${isReplacement ? 'atualização' : 'disponibilidade'} criada com sucesso!`, data);
               }
+            } catch (insertException) {
+              console.error('💥 [Transfer Form] Exceção durante inserção:', insertException);
+              console.error('💥 [Transfer Form] Stack trace:', insertException.stack);
+              console.error('💥 [Transfer Form] Exception tipo:', typeof insertException);
+              console.error('💥 [Transfer Form] Exception toString:', insertException.toString());
+            }
+            } catch (profileException) {
+              console.error('💥 [Transfer Form] Exceção durante busca do profile:', profileException);
+              console.error('💥 [Transfer Form] Stack trace:', profileException.stack);
             }
           } catch (notificationError) {
-            console.error('❌ [Transfer Form Template] Erro ao enviar notificação in-app:', notificationError);
+            console.error(`❌ [Transfer Form] Erro ao enviar notificação in-app de ${isReplacement ? 'atualização' : 'disponibilidade'}:`, notificationError);
+            console.error('❌ [Transfer Form] Stack trace completo:', notificationError.stack);
           }
+        } else {
+          console.warn('⚠️ [Transfer Form] student.user_id não encontrado, pulando notificação in-app');
         }
       } catch (notifyError) {
-        console.error('❌ [Transfer Form Template] Erro ao enviar notificações:', notifyError);
+        console.error(`❌ [Transfer Form] Erro ao enviar notificações de ${isReplacement ? 'atualização' : 'disponibilidade'}:`, notifyError);
         // Não falhar o processo se a notificação falhar
       }
       
-      alert('Transfer form uploaded successfully!');
       window.location.reload();
     } catch (error: any) {
       console.error('Error uploading transfer form:', error);
@@ -352,36 +446,39 @@ export const useTransferForm = (
           console.log('📤 [Transfer Form] Enviando notificação in-app para o aluno...');
           
           try {
-            const { data: { session } } = await supabase.auth.getSession();
-            const accessToken = session?.access_token;
+            // Buscar o user_profiles.id correto
+            const { data: profileData, error: profileError } = await supabase
+              .from('user_profiles')
+              .select('id, user_id')
+              .eq('user_id', student.user_id)
+              .single();
+              
+            if (profileError) {
+              console.error('❌ [Transfer Form Approval] Erro ao buscar profile:', profileError);
+              return;
+            }
             
-            if (accessToken) {
-              const notificationPayload = {
-                user_id: student.user_id,
-                title: 'Transfer Form Approved',
-                message: 'Your Transfer Form has been approved. You can now proceed with the next steps of your application.',
-                link: '/student/dashboard/applications',
-              };
-              
-              const response = await fetch(`${import.meta.env.VITE_SUPABASE_FUNCTIONS_URL}/create-student-notification`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${accessToken}`,
-                },
-                body: JSON.stringify(notificationPayload),
-              });
-              
-              if (!response.ok) {
-                const errorText = await response.text();
-                console.error('❌ [Transfer Form] Erro ao criar notificação:', response.status, errorText);
-              } else {
-                await response.json();
-                console.log('✅ [Transfer Form] Notificação in-app enviada com sucesso!');
-              }
+            const transferApp = getTransferApplication();
+            const notificationData = {
+              student_id: profileData.id, // student_notifications.student_id referencia user_profiles.id
+              title: 'Transfer Form Approved',
+              message: `Your Transfer Form has been approved. You can now proceed with the next steps of your application.`,
+              link: `/student/dashboard/application/${transferApp?.id || ''}/chat?tab=documents`, // Deep link para a aplicação específica
+              created_at: new Date().toISOString()
+            };
+
+            const { data: insertResult, error: notifInsertError } = await supabase
+              .from('student_notifications')
+              .insert([notificationData])
+              .select('*');
+
+            if (notifInsertError) {
+              console.error('❌ [Transfer Form Approval] Erro ao criar notificação:', notifInsertError);
+            } else {
+              console.log('✅ [Transfer Form Approval] Notificação in-app criada com sucesso!', insertResult);
             }
           } catch (notificationError) {
-            console.error('❌ [Transfer Form] Erro ao enviar notificação in-app:', notificationError);
+            console.error('❌ [Transfer Form Approval] Erro ao enviar notificação in-app:', notificationError);
           }
         }
       } catch (webhookError) {
@@ -493,36 +590,39 @@ export const useTransferForm = (
           console.log('📤 [Transfer Form] Enviando notificação in-app para o aluno...');
           
           try {
-            const { data: { session } } = await supabase.auth.getSession();
-            const accessToken = session?.access_token;
+            // Buscar o user_profiles.id correto
+            const { data: profileData, error: profileError } = await supabase
+              .from('user_profiles')
+              .select('id, user_id')
+              .eq('user_id', student.user_id)
+              .single();
+              
+            if (profileError) {
+              console.error('❌ [Transfer Form Rejection] Erro ao buscar profile:', profileError);
+              return;
+            }
             
-            if (accessToken) {
-              const notificationPayload = {
-                user_id: student.user_id,
-                title: 'Transfer Form Rejected',
-                message: `Your Transfer Form has been rejected. Reason: ${reason}. Please review and upload a corrected version.`,
-                link: '/student/dashboard/applications',
-              };
-              
-              const response = await fetch(`${import.meta.env.VITE_SUPABASE_FUNCTIONS_URL}/create-student-notification`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${accessToken}`,
-                },
-                body: JSON.stringify(notificationPayload),
-              });
-              
-              if (!response.ok) {
-                const errorText = await response.text();
-                console.error('❌ [Transfer Form] Erro ao criar notificação:', response.status, errorText);
-              } else {
-                await response.json();
-                console.log('✅ [Transfer Form] Notificação in-app enviada com sucesso!');
-              }
+            const transferApp = getTransferApplication();
+            const notificationData = {
+              student_id: profileData.id, // student_notifications.student_id referencia user_profiles.id
+              title: 'Transfer Form Rejected',
+              message: `Your Transfer Form has been rejected. Reason: ${reason}. Please review and upload a corrected version.`,
+              link: `/student/dashboard/application/${transferApp?.id || ''}/chat?tab=documents`, // Deep link para a aplicação específica
+              created_at: new Date().toISOString()
+            };
+
+            const { data: insertResult, error: notifInsertError } = await supabase
+              .from('student_notifications')
+              .insert([notificationData])
+              .select('*');
+
+            if (notifInsertError) {
+              console.error('❌ [Transfer Form Rejection] Erro ao criar notificação:', notifInsertError);
+            } else {
+              console.log('✅ [Transfer Form Rejection] Notificação in-app criada com sucesso!', insertResult);
             }
           } catch (notificationError) {
-            console.error('❌ [Transfer Form] Erro ao enviar notificação in-app:', notificationError);
+            console.error('❌ [Transfer Form Rejection] Erro ao enviar notificação in-app:', notificationError);
           }
         }
       } catch (webhookError) {

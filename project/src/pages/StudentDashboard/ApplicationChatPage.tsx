@@ -11,7 +11,7 @@ import DocumentRequestsCard from '../../components/DocumentRequestsCard';
 import { supabase } from '../../lib/supabase';
 import DocumentViewerModal from '../../components/DocumentViewerModal';
 import { STRIPE_PRODUCTS } from '../../stripe-config';
-import { FileText, UserCircle, GraduationCap, CheckCircle, Building, Award, Home, Info, FileCheck, FolderOpen, MapPin, Phone, Globe, Mail, BookOpen } from 'lucide-react';
+import { FileText, UserCircle, GraduationCap, CheckCircle, Building, Award, Home, Info, FileCheck, FolderOpen, MapPin, Phone, Globe, Mail, BookOpen, DollarSign } from 'lucide-react';
 import { I20ControlFeeModal } from '../../components/I20ControlFeeModal';
 import TruncatedText from '../../components/TruncatedText';
 import { ExpandableTabs } from '../../components/ui/expandable-tabs';
@@ -71,7 +71,7 @@ const ApplicationChatPage: React.FC = () => {
     if (applicationId) {
       supabase
         .from('scholarship_applications')
-        .select(`*, user_profiles!student_id(*), scholarships(*, universities(*))`)
+        .select(`*, user_profiles!student_id(*), scholarships(*, internal_fees, universities(*))`)
         .eq('id', applicationId)
         .single()
         .then(({ data }) => {
@@ -583,6 +583,19 @@ const ApplicationChatPage: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, applicationDetails?.is_scholarship_fee_paid]);
 
+  // Helper for Application Fee with dependents
+  const getApplicationFeeWithDependents = (base: number): number => {
+    if (!userProfile) return base;
+    const isLegacy = userProfile.system_type === 'legacy';
+    if (isLegacy) return base;
+
+    const dependentsCount = userProfile.dependents 
+      ? (Array.isArray(userProfile.dependents) ? userProfile.dependents.length : Number(userProfile.dependents)) 
+      : 0;
+    
+    return base + (dependentsCount * 100);
+  };
+
   return (
     <div ref={containerRef} className="p-6 md:p-12 flex flex-col items-center min-h-screen h-full">
       <div className="w-full max-w-7xl mx-auto space-y-8 flex-1 flex flex-col h-full">
@@ -1026,50 +1039,92 @@ const ApplicationChatPage: React.FC = () => {
               </div>
 
               {/* Scholarship Information Card */}
-              <div className="group bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100 hover:border-[#D0151C]/20 overflow-hidden">
-                <div className="bg-gradient-to-br from-[#D0151C] via-red-600 to-red-700 p-6 sm:p-8">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-sm">
-                      <Award className="w-6 h-6 text-white" />
-                    </div>
-                    <h2 className="text-xl sm:text-2xl font-bold text-white">
+              <div className="group bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-all duration-300">
+                <div className="bg-gradient-to-r from-[#05294E] to-[#08427e] px-6 py-4">
+                  <div className="flex items-center gap-3">
+                    <Award className="w-6 h-6 text-white/90" />
+                    <h2 className="text-lg font-semibold text-white">
                       {t('studentDashboard.applicationChatPage.details.scholarshipDetails.title')}
                     </h2>
                   </div>
                 </div>
-                <div className="p-6 sm:p-8">
-                  <div className="space-y-6">
-                    <div className="bg-red-50 rounded-2xl p-6 hover:bg-red-100 transition-colors duration-200">
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="w-8 h-8 bg-red-100 rounded-xl flex items-center justify-center">
-                          <Award className="w-5 h-5 text-red-600" />
-                        </div>
-                        <span className="text-sm font-medium text-red-600">{t('studentDashboard.applicationChatPage.details.scholarshipDetails.scholarshipName')}</span>
+                <div className="p-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Scholarship Name */}
+                    <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 dark:border-slate-800">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Award className="w-4 h-4 text-[#05294E]" />
+                        <span className="text-xs font-bold uppercase tracking-wider text-slate-500">{t('studentDashboard.applicationChatPage.details.scholarshipDetails.scholarshipName')}</span>
                       </div>
-                      <div className="text-lg font-bold text-gray-900">{applicationDetails.scholarships?.title || applicationDetails.scholarships?.name || 'N/A'}</div>
+                      <div className="text-base font-bold text-gray-900 leading-tight">
+                        {applicationDetails.scholarships?.title || applicationDetails.scholarships?.name || 'N/A'}
+                      </div>
                     </div>
                     
+                    {/* Course */}
                     {applicationDetails.scholarships?.course && (
-                      <div className="bg-red-50 rounded-2xl p-6 hover:bg-red-100 transition-colors duration-200">
-                        <div className="flex items-center gap-3 mb-3">
-                          <div className="w-8 h-8 bg-red-100 rounded-xl flex items-center justify-center">
-                            <BookOpen className="w-5 h-5 text-red-600" />
-                          </div>
-                          <span className="text-sm font-medium text-red-600">{t('studentDashboard.applicationChatPage.details.scholarshipDetails.course')}</span>
+                      <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                        <div className="flex items-center gap-2 mb-2">
+                          <BookOpen className="w-4 h-4 text-[#05294E]" />
+                          <span className="text-xs font-bold uppercase tracking-wider text-slate-500">{t('studentDashboard.applicationChatPage.details.scholarshipDetails.course')}</span>
                         </div>
-                        <div className="text-lg font-bold text-gray-900">{applicationDetails.scholarships.course}</div>
+                        <div className="text-base font-bold text-gray-900 leading-tight">{applicationDetails.scholarships.course}</div>
                       </div>
                     )}
                     
+                    {/* Description - Full width */}
                     {applicationDetails.scholarships?.description && (
-                      <div className="bg-red-50 rounded-2xl p-6 hover:bg-red-100 transition-colors duration-200">
-                        <div className="flex items-center gap-3 mb-3">
-                          <div className="w-8 h-8 bg-red-100 rounded-xl flex items-center justify-center">
-                            <FileText className="w-5 h-5 text-red-600" />
-                          </div>
-                          <span className="text-sm font-medium text-red-600">{t('studentDashboard.applicationChatPage.details.scholarshipDetails.description')}</span>
+                      <div className="col-span-1 md:col-span-2 bg-slate-50 rounded-xl p-4 border border-slate-100">
+                        <div className="flex items-center gap-2 mb-2">
+                          <FileText className="w-4 h-4 text-[#05294E]" />
+                          <span className="text-xs font-bold uppercase tracking-wider text-slate-500">{t('studentDashboard.applicationChatPage.details.scholarshipDetails.description')}</span>
                         </div>
-                        <div className="text-base font-medium text-gray-900 leading-relaxed">{applicationDetails.scholarships.description}</div>
+                        <div className="text-sm text-gray-700 leading-relaxed">{applicationDetails.scholarships.description}</div>
+                      </div>
+                    )}
+
+                    {/* Application Fee */}
+                    {userProfile?.has_paid_selection_process_fee && (
+                      <div className="col-span-1 md:col-span-2 bg-slate-50 rounded-xl p-4 border border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <div className="flex items-start gap-2">
+                          <div className="p-1.5 bg-white rounded-md shadow-sm border border-slate-100 mt-0.5">
+                            <DollarSign className="w-4 h-4 text-[#05294E]" />
+                          </div>
+                          <div>
+                            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 block mb-0.5">{t('scholarshipsPage.scholarshipCard.applicationFee')}</span>
+                            <span className="text-xs text-slate-500">
+                              {applicationDetails.scholarships.application_fee_amount && Number(applicationDetails.scholarships.application_fee_amount) !== 350
+                                ? t('scholarshipsPage.scholarshipCard.customFee') 
+                                : t('scholarshipsPage.scholarshipCard.standardFee')}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="text-lg font-bold text-gray-900 bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm">
+                           {applicationDetails.scholarships.application_fee_amount 
+                              ? formatFeeAmount(getApplicationFeeWithDependents(Number(applicationDetails.scholarships.application_fee_amount)))
+                              : formatFeeAmount(getApplicationFeeWithDependents(350))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* University Internal Fees */}
+                    {applicationDetails.scholarships?.internal_fees && Array.isArray(applicationDetails.scholarships.internal_fees) && applicationDetails.scholarships.internal_fees.length > 0 && userProfile?.has_paid_selection_process_fee && (
+                      <div className="col-span-1 md:col-span-2 bg-slate-50 rounded-xl p-4 border border-slate-100">
+                        <div className="flex items-center gap-2 mb-4 pb-2 border-b border-slate-200/60">
+                          <Building className="w-4 h-4 text-[#05294E]" />
+                          <span className="text-xs font-bold uppercase tracking-wider text-slate-500">{t('scholarshipsPage.modal.universityInternalFees')}</span>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {applicationDetails.scholarships.internal_fees.map((fee: any, idx: number) => (
+                            <div key={idx} className="flex justify-between items-center p-3 bg-white rounded-lg border border-slate-200 shadow-sm">
+                               <div className="min-w-0 mr-3">
+                                 <p className="text-sm font-semibold text-gray-900 truncate" title={fee.category || fee.name}>{fee.category || fee.name}</p>
+                                 <p className="text-[10px] text-slate-500 uppercase tracking-wide">{fee.details || fee.frequency}</p>
+                               </div>
+                               <span className="font-bold text-gray-900 whitespace-nowrap">${Number(fee.amount).toFixed(2)}</span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     )}
                   </div>

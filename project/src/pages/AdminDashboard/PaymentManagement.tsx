@@ -567,6 +567,75 @@ const PaymentManagement = (): React.JSX.Element => {
       if (!payment) throw new Error('Payment not found');
 
       await approveZelleMutation.mutateAsync({ paymentId, adminUserId: user.id, payment });
+
+      // ✅ IN-APP NOTIFICATION FOR STUDENT (Manual Zelle Approval)
+      try {
+        const targetUserId = payment.user_id;
+        if (targetUserId) {
+          const { data: { session } } = await supabase.auth.getSession();
+          const accessToken = session?.access_token; 
+
+          if (accessToken) {
+             const feeLabel = FEE_TYPES.find(f => f.value === payment.fee_type)?.label || 'Fee';
+             
+             // Determine redirection link based on Fee Type
+             let link = '/student/dashboard'; // Default
+             
+             if (payment.fee_type === 'selection_process') {
+               link = '/student/dashboard/scholarships';
+             } else if (payment.fee_type === 'application' || payment.fee_type === 'application_fee') {
+               link = '/student/dashboard/applications';
+             } else if (['scholarship', 'scholarship_fee', 'i20_control_fee', 'i-20_control_fee'].includes(payment.fee_type)) {
+               // Try to find the latest application to redirect to chat
+               try {
+                 // First try using payment.student_id (Profile ID)
+                 let studentProfileId = payment.student_id;
+                 
+                 // If not available, try to fetch profile from user_id
+                 if (!studentProfileId && payment.user_id) {
+                    const { data: profile } = await supabase.from('user_profiles').select('id').eq('user_id', payment.user_id).single();
+                    if (profile) studentProfileId = profile.id;
+                 }
+
+                 if (studentProfileId) {
+                   const { data: apps } = await supabase
+                     .from('scholarship_applications')
+                     .select('id')
+                     .eq('student_id', studentProfileId)
+                     .order('created_at', { ascending: false })
+                     .limit(1);
+                   
+                   if (apps && apps.length > 0) {
+                     link = `/student/dashboard/application/${apps[0].id}/chat`;
+                   }
+                 }
+               } catch (e) {
+                 console.warn('Error fetching application for redirection:', e);
+               }
+             }
+
+             const notificationPayload = {
+               user_id: targetUserId,
+               title: 'Payment Approved',
+               message: `Your manual payment for ${feeLabel} has been approved by an administrator.`,
+               link: link,
+             };
+
+            // Non-blocking fetch
+            fetch(`${import.meta.env.VITE_SUPABASE_FUNCTIONS_URL}/create-student-notification`, {
+               method: 'POST',
+               headers: {
+                 'Content-Type': 'application/json',
+                 'Authorization': `Bearer ${accessToken}`,
+               },
+               body: JSON.stringify(notificationPayload),
+             }).catch(console.error);
+          }
+        }
+      } catch (notifError) {
+        console.error('Error initiating in-app notification:', notifError);
+      }
+
       setShowZelleReviewModal(false);
     } catch (error: any) {
       console.error('❌ [approveZellePayment] Error approving Zelle payment:', error);
