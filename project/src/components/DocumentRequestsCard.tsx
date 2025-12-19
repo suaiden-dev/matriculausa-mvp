@@ -361,7 +361,8 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
     scholarshipTitle: string,
     universityName: string,
     applicationId: string | null,
-    isResubmission: boolean
+    isResubmission: boolean,
+    studentProfileId: string // ID do user_profiles do aluno
   ) => {
     console.log('[NOTIFICAÇÃO ADMIN] 🚀 Iniciando notificação para admins', {
       studentName,
@@ -370,7 +371,8 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
       scholarshipTitle,
       universityName,
       applicationId,
-      isResubmission
+      isResubmission,
+      studentProfileId
     });
 
     try {
@@ -473,13 +475,15 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
           if (admin.user_id) {
             try {
               const inAppPayload = {
-                user_id: admin.user_id,
-                title: isResubmission ? 'Document Resubmitted' : 'New Document Uploaded',
-                message: isResubmission 
-                  ? `Student ${studentName} has resubmitted ${documentTitle}.`
-                  : `Student ${studentName} has uploaded ${documentTitle}.`,
-                type: 'document_upload',
-                link: `/admin/dashboard/students/${currentUserId}?tab=documents`
+                notifications: [{
+                  user_id: admin.user_id,
+                  title: isResubmission ? 'Document Resubmitted' : 'New Document Uploaded',
+                  message: isResubmission 
+                    ? `Student ${studentName} has resubmitted ${documentTitle}.`
+                    : `Student ${studentName} has uploaded ${documentTitle}.`,
+                  type: 'document_upload',
+                  link: `/admin/dashboard/students/${studentProfileId}?tab=documents`
+                }]
               };
               
               const response = await fetch(`${import.meta.env.VITE_SUPABASE_FUNCTIONS_URL}/create-admin-notification`, {
@@ -643,6 +647,19 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
             return;
           }
 
+          // Buscar o ID do perfil do aluno (user_profiles.id)
+          const { data: studentProfile, error: profileError } = await supabase
+            .from('user_profiles')
+            .select('id')
+            .eq('user_id', user.id)
+            .single();
+          
+          const studentProfileId = studentProfile?.id || user.id;
+          
+          if (profileError) {
+            console.error('[REENVIO] Erro ao buscar perfil do aluno:', profileError);
+          }
+
           // Usar dados do usuário autenticado
           const studentData = {
             full_name: user.user_metadata?.full_name || user.user_metadata?.name || 'Usuário',
@@ -700,6 +717,45 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                 // console.log('[REENVIO] Resposta do n8n (global):', n8nRes.status, n8nText);
               }
 
+              // ✅ Notificar universidade in-app para documento global reenviado
+              console.log('[REENVIO] 🔔 Enviando notificação in-app para universidade sobre documento global reenviado');
+              try {
+                const { data: globalRequestData } = await supabase
+                  .from('document_requests')
+                  .select('university_id')
+                  .eq('id', requestId)
+                  .single();
+                
+                if (globalRequestData?.university_id) {
+                  const { error: universityNotifError } = await supabase
+                    .from('university_notifications')
+                    .insert({
+                      university_id: globalRequestData.university_id,
+                      title: 'Document Re-uploaded',
+                      message: `Student ${studentData.full_name} has re-uploaded the document "${requestData.title}" after previous rejection.`,
+                      type: 'document_reupload',
+                      link: '/school/dashboard/document-requests',
+                      metadata: {
+                        student_name: studentData.full_name,
+                        student_email: studentData.email,
+                        document_title: requestData.title,
+                        request_id: requestId,
+                        is_global: true,
+                        is_resubmission: true
+                      },
+                      idempotency_key: `${globalRequestData.university_id}:${requestId}:${Date.now()}`
+                    });
+                  
+                  if (universityNotifError) {
+                    console.error('[REENVIO] ❌ Erro ao criar notificação in-app para universidade:', universityNotifError);
+                  } else {
+                    console.log('[REENVIO] ✅ Notificação in-app criada com sucesso para universidade');
+                  }
+                }
+              } catch (inAppError) {
+                console.error('[REENVIO] ❌ Erro ao enviar notificação in-app para universidade:', inAppError);
+              }
+
               // ✅ Notificar admins para documento global reenviado
               console.log('[REENVIO] 📧 Chamando notifyAdmins para documento global reenviado');
               await notifyAdmins(
@@ -709,7 +765,8 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                 'Documento Global',
                 university.name,
                 null,
-                true
+                true,
+                studentProfileId
               );
             }
           } else {
@@ -778,6 +835,39 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                 // console.log('[REENVIO] Resposta do n8n:', n8nRes.status, n8nText);
               }
 
+              // ✅ Notificar universidade in-app para documento reenviado
+              console.log('[REENVIO] 🔔 Enviando notificação in-app para universidade sobre documento reenviado');
+              try {
+                const { error: universityNotifError } = await supabase
+                  .from('university_notifications')
+                  .insert({
+                    university_id: university.id,
+                    title: 'Document Re-uploaded',
+                    message: `Student ${studentData.full_name} has re-uploaded the document "${requestData.title}" for scholarship "${scholarship.title}" after previous rejection.`,
+                    type: 'document_reupload',
+                    link: '/school/dashboard/selection-process',
+                    metadata: {
+                      student_name: studentData.full_name,
+                      student_email: studentData.email,
+                      document_title: requestData.title,
+                      scholarship_title: scholarship.title,
+                      application_id: requestData.scholarship_application_id,
+                      request_id: requestId,
+                      is_global: false,
+                      is_resubmission: true
+                    },
+                    idempotency_key: `${university.id}:${requestId}:${Date.now()}`
+                  });
+                
+                if (universityNotifError) {
+                  console.error('[REENVIO] ❌ Erro ao criar notificação in-app para universidade:', universityNotifError);
+                } else {
+                  console.log('[REENVIO] ✅ Notificação in-app criada com sucesso para universidade');
+                }
+              } catch (inAppError) {
+                console.error('[REENVIO] ❌ Erro ao enviar notificação in-app para universidade:', inAppError);
+              }
+
               // ✅ Notificar admins para documento reenviado
               console.log('[REENVIO] 📧 Chamando notifyAdmins para documento reenviado');
               await notifyAdmins(
@@ -787,7 +877,8 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                 scholarship.title,
                 university.name,
                 requestData.scholarship_application_id,
-                true
+                true,
+                studentProfileId
               );
             }
           }
@@ -822,6 +913,19 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
           if (!user) {
             console.error('[NOVO UPLOAD] Usuário não autenticado');
             return;
+          }
+
+          // Buscar o ID do perfil do aluno (user_profiles.id)
+          const { data: studentProfile, error: profileError } = await supabase
+            .from('user_profiles')
+            .select('id')
+            .eq('user_id', user.id)
+            .single();
+          
+          const studentProfileId = studentProfile?.id || user.id;
+          
+          if (profileError) {
+            console.error('[NOVO UPLOAD] Erro ao buscar perfil do aluno:', profileError);
           }
 
           // Usar dados do usuário autenticado
@@ -862,6 +966,45 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                 // console.log('[NOVO UPLOAD] Resposta do n8n (global):', n8nRes.status, n8nText);
               }
 
+              // ✅ Notificar universidade in-app para documento global novo
+              console.log('[NOVO UPLOAD] 🔔 Enviando notificação in-app para universidade sobre documento global novo');
+              try {
+                const { data: globalRequestData } = await supabase
+                  .from('document_requests')
+                  .select('university_id')
+                  .eq('id', requestId)
+                  .single();
+                
+                if (globalRequestData?.university_id) {
+                  const { error: universityNotifError } = await supabase
+                    .from('university_notifications')
+                    .insert({
+                      university_id: globalRequestData.university_id,
+                      title: 'New Document Uploaded',
+                      message: `Student ${studentData.full_name} has uploaded the document "${requestData.title}".`,
+                      type: 'document_upload',
+                      link: '/school/dashboard/document-requests',
+                      metadata: {
+                        student_name: studentData.full_name,
+                        student_email: studentData.email,
+                        document_title: requestData.title,
+                        request_id: requestId,
+                        is_global: true,
+                        is_resubmission: false
+                      },
+                      idempotency_key: `${globalRequestData.university_id}:${requestId}:${Date.now()}`
+                    });
+                  
+                  if (universityNotifError) {
+                    console.error('[NOVO UPLOAD] ❌ Erro ao criar notificação in-app para universidade:', universityNotifError);
+                  } else {
+                    console.log('[NOVO UPLOAD] ✅ Notificação in-app criada com sucesso para universidade');
+                  }
+                }
+              } catch (inAppError) {
+                console.error('[NOVO UPLOAD] ❌ Erro ao enviar notificação in-app para universidade:', inAppError);
+              }
+
               // ✅ Notificar admins para documento global novo
               console.log('[NOVO UPLOAD] 📧 Chamando notifyAdmins para documento global novo');
               await notifyAdmins(
@@ -871,7 +1014,8 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                 'Documento Global',
                 university.name,
                 null,
-                false
+                false,
+                studentProfileId
               );
             }
           } else {
@@ -926,6 +1070,39 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                 // console.log('[NOVO UPLOAD] Resposta do n8n:', n8nRes.status, n8nText);
               }
 
+              // ✅ Notificar universidade in-app para novo documento
+              console.log('[NOVO UPLOAD] 🔔 Enviando notificação in-app para universidade sobre novo documento');
+              try {
+                const { error: universityNotifError } = await supabase
+                  .from('university_notifications')
+                  .insert({
+                    university_id: university.id,
+                    title: 'New Document Uploaded',
+                    message: `Student ${studentData.full_name} has uploaded the document "${requestData.title}" for scholarship "${scholarship.title}".`,
+                    type: 'document_upload',
+                    link: '/school/dashboard/selection-process',
+                    metadata: {
+                      student_name: studentData.full_name,
+                      student_email: studentData.email,
+                      document_title: requestData.title,
+                      scholarship_title: scholarship.title,
+                      application_id: requestData.scholarship_application_id,
+                      request_id: requestId,
+                      is_global: false,
+                      is_resubmission: false
+                    },
+                    idempotency_key: `${university.id}:${requestId}:${Date.now()}`
+                  });
+                
+                if (universityNotifError) {
+                  console.error('[NOVO UPLOAD] ❌ Erro ao criar notificação in-app para universidade:', universityNotifError);
+                } else {
+                  console.log('[NOVO UPLOAD] ✅ Notificação in-app criada com sucesso para universidade');
+                }
+              } catch (inAppError) {
+                console.error('[NOVO UPLOAD] ❌ Erro ao enviar notificação in-app para universidade:', inAppError);
+              }
+
               // ✅ Notificar admins para novo documento
               console.log('[NOVO UPLOAD] 📧 Chamando notifyAdmins para novo documento');
               await notifyAdmins(
@@ -935,7 +1112,8 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                 scholarship.title,
                 university.name,
                 requestData.scholarship_application_id,
-                false
+                false,
+                studentProfileId
               );
             }
           }
@@ -1056,6 +1234,23 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
   // Handler para aprovar upload
   const handleApproveUpload = async (uploadId: string) => {
     try {
+      // Buscar informações do upload antes de atualizar
+      const { data: uploadData, error: uploadError } = await supabase
+        .from('document_request_uploads')
+        .select(`
+          uploaded_by,
+          document_request_id,
+          document_requests!inner(
+            title
+          )
+        `)
+        .eq('id', uploadId)
+        .single();
+
+      if (uploadError) {
+        console.error('[APROVAÇÃO] Erro ao buscar dados do upload:', uploadError);
+      }
+
       const { error } = await supabase
         .from('document_request_uploads')
         .update({ status: 'approved' })
@@ -1064,6 +1259,44 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
         setError(t('studentDashboard.documentRequests.forms.failedToApproveDocument') + ' ' + error.message);
         return;
       }
+
+      // ✅ Enviar notificação para o aluno
+      if (uploadData?.uploaded_by) {
+        try {
+          const documentTitle = Array.isArray(uploadData.document_requests)
+            ? uploadData.document_requests[0]?.title
+            : uploadData.document_requests?.title;
+
+          const { data: { session } } = await supabase.auth.getSession();
+          const accessToken = session?.access_token;
+
+          if (accessToken) {
+            const response = await fetch(`${import.meta.env.VITE_SUPABASE_FUNCTIONS_URL}/create-student-notification`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${accessToken}`,
+              },
+              body: JSON.stringify({
+                student_id: uploadData.uploaded_by,
+                title: 'Document Approved',
+                message: `Your document "${documentTitle || 'document'}" has been approved.`,
+                link: `/student/dashboard/application/${applicationId}/chat?tab=documents`
+              }),
+            });
+
+            if (response.ok) {
+              console.log('[APROVAÇÃO] ✅ Notificação enviada para aluno');
+            } else {
+              const errorText = await response.text();
+              console.error('[APROVAÇÃO] ❌ Failed to send notification:', errorText);
+            }
+          }
+        } catch (notifError) {
+          console.error('[APROVAÇÃO] ❌ Erro ao enviar notificação:', notifError);
+        }
+      }
+
       fetchRequests();
     } catch (e: any) {
       setError('Unexpected error while approving: ' + (e.message || e));
@@ -1073,6 +1306,23 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
   // Handler para rejeitar upload
   const handleRejectUpload = async (uploadId: string, notes?: string) => {
     try {
+      // Buscar informações do upload antes de atualizar
+      const { data: uploadData, error: uploadError } = await supabase
+        .from('document_request_uploads')
+        .select(`
+          uploaded_by,
+          document_request_id,
+          document_requests!inner(
+            title
+          )
+        `)
+        .eq('id', uploadId)
+        .single();
+
+      if (uploadError) {
+        console.error('[REJEIÇÃO] Erro ao buscar dados do upload:', uploadError);
+      }
+
       const { error } = await supabase
         .from('document_request_uploads')
         .update({ status: 'rejected', review_notes: notes || null })
@@ -1081,6 +1331,73 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
         setError(t('studentDashboard.documentRequests.forms.failedToRejectDocument') + ' ' + error.message);
         return;
       }
+
+      // ✅ Enviar notificação para o aluno
+      if (uploadData?.uploaded_by) {
+        console.log('[REJEIÇÃO] 🔔 Enviando notificação para o aluno', {
+          uploaded_by: uploadData.uploaded_by,
+          documentTitle: Array.isArray(uploadData.document_requests)
+            ? uploadData.document_requests[0]?.title
+            : uploadData.document_requests?.title,
+          notes
+        });
+
+        try {
+          const documentTitle = Array.isArray(uploadData.document_requests)
+            ? uploadData.document_requests[0]?.title
+            : uploadData.document_requests?.title;
+
+          const notificationMessage = notes
+            ? `Your document "${documentTitle || 'document'}" has been rejected. Reason: ${notes}`
+            : `Your document "${documentTitle || 'document'}" has been rejected. Please resubmit.`;
+
+          const { data: { session } } = await supabase.auth.getSession();
+          const accessToken = session?.access_token;
+
+          console.log('[REJEIÇÃO] 📤 Payload:', {
+            student_id: uploadData.uploaded_by,
+            title: 'Document Rejected',
+            message: notificationMessage,
+            link: `/student/dashboard/application/${applicationId}/chat?tab=documents`,
+            accessToken: accessToken ? '✅ presente' : '❌ ausente'
+          });
+
+          if (accessToken) {
+            const response = await fetch(`${import.meta.env.VITE_SUPABASE_FUNCTIONS_URL}/create-student-notification`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${accessToken}`,
+              },
+              body: JSON.stringify({
+                student_id: uploadData.uploaded_by,
+                title: 'Document Rejected',
+                message: notificationMessage,
+                link: `/student/dashboard/application/${applicationId}/chat?tab=documents`
+              }),
+            });
+
+            console.log('[REJEIÇÃO] 📥 Response status:', response.status);
+
+            if (response.ok) {
+              console.log('[REJEIÇÃO] ✅ Notificação enviada para aluno');
+            } else {
+              const errorText = await response.text();
+              console.error('[REJEIÇÃO] ❌ Failed to send notification:', {
+                status: response.status,
+                error: errorText
+              });
+            }
+          } else {
+            console.error('[REJEIÇÃO] ❌ Sem access token disponível');
+          }
+        } catch (notifError) {
+          console.error('[REJEIÇÃO] ❌ Erro ao enviar notificação:', notifError);
+        }
+      } else {
+        console.warn('[REJEIÇÃO] ⚠️ uploadData.uploaded_by não encontrado', uploadData);
+      }
+
       fetchRequests();
     } catch (e: any) {
       setError('Unexpected error while rejecting: ' + (e.message || e));
@@ -1179,15 +1496,17 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
         const { data: { user } } = await supabase.auth.getUser();
         let studentName = 'Student';
         let studentEmail = '';
+        let studentProfileId = '';
         
         if (user) {
           const { data: studentProfile } = await supabase
             .from('user_profiles')
-            .select('full_name, email')
+            .select('id, full_name, email')
             .eq('user_id', user.id)
             .maybeSingle();
           
           if (studentProfile) {
+            studentProfileId = studentProfile.id;
             studentName = studentProfile.full_name || 'Student';
             studentEmail = studentProfile.email || '';
           }
@@ -1212,7 +1531,8 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
           scholarshipTitle,
           universityName,
           applicationId,
-          isResubmission // Detecta se é reenvio baseado em uploads rejeitados anteriores
+          isResubmission, // Detecta se é reenvio baseado em uploads rejeitados anteriores
+          studentProfileId
         );
 
         console.log('[TRANSFER FORM] ✅ Notificação enviada para admins', {
@@ -1233,6 +1553,17 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
 
   const handleApproveTransferFormUpload = async (uploadId: string) => {
     try {
+      // Buscar informações do upload antes de atualizar
+      const { data: uploadData, error: uploadError } = await supabase
+        .from('transfer_form_uploads')
+        .select('uploaded_by')
+        .eq('id', uploadId)
+        .single();
+
+      if (uploadError) {
+        console.error('[APROVAÇÃO TRANSFER FORM] Erro ao buscar dados do upload:', uploadError);
+      }
+
       const { error } = await supabase
         .from('transfer_form_uploads')
         .update({ 
@@ -1243,6 +1574,39 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
         .eq('id', uploadId);
       
       if (error) throw error;
+
+      // ✅ Enviar notificação para o aluno
+      if (uploadData?.uploaded_by) {
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          const accessToken = session?.access_token;
+
+          if (accessToken) {
+            const response = await fetch(`${import.meta.env.VITE_SUPABASE_FUNCTIONS_URL}/create-student-notification`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${accessToken}`,
+              },
+              body: JSON.stringify({
+                student_id: uploadData.uploaded_by,
+                title: 'Transfer Form Approved',
+                message: 'Your Transfer Form has been approved.',
+                link: `/student/dashboard/application/${applicationId}/chat?tab=documents`
+              }),
+            });
+
+            if (response.ok) {
+              console.log('[APROVAÇÃO TRANSFER FORM] ✅ Notificação enviada para aluno');
+            } else {
+              const errorText = await response.text();
+              console.error('[APROVAÇÃO TRANSFER FORM] ❌ Failed to send notification:', errorText);
+            }
+          }
+        } catch (notifError) {
+          console.error('[APROVAÇÃO TRANSFER FORM] ❌ Erro ao enviar notificação:', notifError);
+        }
+      }
       
       // Recarregar uploads
       const { data: newUploads } = await supabase
@@ -1263,6 +1627,17 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
 
   const handleRejectTransferFormUpload = async (uploadId: string, reason: string) => {
     try {
+      // Buscar informações do upload antes de atualizar
+      const { data: uploadData, error: uploadError } = await supabase
+        .from('transfer_form_uploads')
+        .select('uploaded_by')
+        .eq('id', uploadId)
+        .single();
+
+      if (uploadError) {
+        console.error('[REJEIÇÃO TRANSFER FORM] Erro ao buscar dados do upload:', uploadError);
+      }
+
       const { error } = await supabase
         .from('transfer_form_uploads')
         .update({ 
@@ -1274,6 +1649,43 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
         .eq('id', uploadId);
       
       if (error) throw error;
+
+      // ✅ Enviar notificação para o aluno
+      if (uploadData?.uploaded_by) {
+        try {
+          const notificationMessage = reason
+            ? `Your Transfer Form has been rejected. Reason: ${reason}`
+            : 'Your Transfer Form has been rejected. Please resubmit.';
+
+          const { data: { session } } = await supabase.auth.getSession();
+          const accessToken = session?.access_token;
+
+          if (accessToken) {
+            const response = await fetch(`${import.meta.env.VITE_SUPABASE_FUNCTIONS_URL}/create-student-notification`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${accessToken}`,
+              },
+              body: JSON.stringify({
+                student_id: uploadData.uploaded_by,
+                title: 'Transfer Form Rejected',
+                message: notificationMessage,
+                link: `/student/dashboard/application/${applicationId}/chat?tab=documents`
+              }),
+            });
+
+            if (response.ok) {
+              console.log('[REJEIÇÃO TRANSFER FORM] ✅ Notificação enviada para aluno');
+            } else {
+              const errorText = await response.text();
+              console.error('[REJEIÇÃO TRANSFER FORM] ❌ Failed to send notification:', errorText);
+            }
+          }
+        } catch (notifError) {
+          console.error('[REJEIÇÃO TRANSFER FORM] ❌ Erro ao enviar notificação:', notifError);
+        }
+      }
       
       // Recarregar uploads
       const { data: newUploads } = await supabase
@@ -1754,13 +2166,21 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                       return (
                         <div key={upload.id} className="bg-white border border-slate-200 rounded-lg p-4">
                           <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center gap-2">
-                              <svg className="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                              <svg className="w-4 h-4 text-slate-600 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m2 4H7a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2z" />
                               </svg>
-                              <span className="text-sm font-medium text-slate-700">
-                                {upload.file_url.split('/').pop()}
-                              </span>
+                              <div className="min-w-0 flex-1">
+                                <TruncatedText
+                                  text={upload.file_url.split('/').pop() || 'transfer_form.pdf'}
+                                  maxLength={40}
+                                  className="text-sm font-medium text-slate-700"
+                                  showTooltip={true}
+                                  tooltipPosition="top"
+                                  breakWords={true}
+                                  isFilename={true}
+                                />
+                              </div>
                             </div>
                             <span className={`px-2 py-1 rounded-full text-xs font-medium border ${statusColor}`}>
                               {upload.status.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
@@ -1951,13 +2371,21 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                           .filter(upload => upload.status === 'approved')
                           .map((upload) => (
                             <div key={upload.id} className="text-center">
-                              <div className="flex items-center justify-center gap-2 mb-3">
-                                <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                              <div className="flex items-center justify-center gap-2 mb-3 min-w-0 w-full px-2">
+                                <svg className="w-5 h-5 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
-                                <span className="text-sm font-medium text-slate-700">
-                                  {upload.file_url.split('/').pop()}
-                                </span>
+                                <div className="min-w-0 flex-1 text-center">
+                                  <TruncatedText
+                                    text={upload.file_url.split('/').pop() || 'transfer_form.pdf'}
+                                    maxLength={40}
+                                    className="text-sm font-medium text-slate-700"
+                                    showTooltip={true}
+                                    tooltipPosition="top"
+                                    breakWords={true}
+                                    isFilename={true}
+                                  />
+                                </div>
                               </div>
                               
                               {/* Botões de ação simplificados */}
@@ -2063,10 +2491,18 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                               
                               return (
                                 <div key={upload.id} className="mb-3">
-                                  <div className="flex flex-col items-center justify-between mb-2">
-                                    <span className="text-sm font-medium text-slate-700">
-                                      {upload.file_url.split('/').pop()}
-                                    </span>
+                                  <div className="flex flex-col items-center justify-between mb-2 gap-2">
+                                    <div className="w-full min-w-0 px-2">
+                                      <TruncatedText
+                                        text={upload.file_url.split('/').pop() || 'transfer_form.pdf'}
+                                        maxLength={40}
+                                        className="text-sm font-medium text-slate-700"
+                                        showTooltip={true}
+                                        tooltipPosition="top"
+                                        breakWords={true}
+                                        isFilename={true}
+                                      />
+                                    </div>
                                     <span className={`px-2 py-1 rounded-full text-xs font-medium border ${statusColor}`}>
                                       {upload.status.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
                                     </span>
