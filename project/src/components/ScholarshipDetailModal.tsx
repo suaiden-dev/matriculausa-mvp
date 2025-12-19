@@ -323,7 +323,7 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
                       <section>
                          <h3 className="text-sm font-semibold text-slate-800 uppercase tracking-wide mb-2 flex items-center gap-2">
                           <FileText className="h-4 w-4 text-[#05294E]" />
-                          {t('scholarshipsPage.modal.programDescription') || 'Description'}
+                          {t('scholarshipsPage.modal.programDescription') || 'Scholarship Description'}
                         </h3>
                         <p className="text-sm text-slate-600 leading-relaxed bg-white p-4 border border-slate-100 rounded-xl shadow-sm">
                           {scholarship.description}
@@ -336,7 +336,7 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
                   <div className="lg:col-span-1 order-1 lg:order-2">
                     <div className="bg-slate-50 rounded-xl p-5 border border-slate-200 sticky top-4">
                       <h3 className="text-sm font-bold text-[#05294E] uppercase tracking-wider mb-4 border-b border-slate-200 pb-2">
-                        {t('scholarshipsPage.modal.programInformation') || 'Program Details'}
+                        {t('scholarshipsPage.modal.programInformation') || 'Scholarship Information'}
                       </h3>
                       
                       <div className="space-y-4">
@@ -418,18 +418,7 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
                   </div>
                 </div>
 
-                {/* Description */}
-                {scholarship.description && (
-                  <section className="mb-6">
-                    <h3 className="text-sm font-semibold text-slate-800 uppercase tracking-wide mb-3 flex items-center gap-2">
-                      <FileText className="h-4 w-4 text-[#05294E]" />
-                      {t('scholarshipsPage.modal.programDescription') || 'Description'}
-                    </h3>
-                    <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line">
-                      {scholarship.description}
-                    </p>
-                  </section>
-                )}
+                {/* Removed duplicate Description section to avoid repeated content */}
 
                 {/* Deadline Footer */}
                 <div className="mt-6 pt-4 border-t border-slate-200 text-center">
