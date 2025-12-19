@@ -1908,6 +1908,8 @@ const AdminStudentDetails: React.FC = () => {
   }, []);
 
   const handleUploadDocument = useCallback(async (appId: string, docType: string, file: File) => {
+    console.log('🔵 [handleUploadDocument] Called with:', { appId, docType, fileName: file.name });
+    
     if (!canUniversityManage || !student) return;
     const k = `${appId}:${docType}`;
     setUploadingDocs(prev => ({ ...prev, [k]: true }));
@@ -1972,6 +1974,104 @@ const AdminStudentDetails: React.FC = () => {
         return;
       }
 
+      // 🔔 NOTIFICAÇÕES PARA ACCEPTANCE LETTER
+      // Normalizar para garantir match
+      const normalizedType = docType.toLowerCase().replace(/[^a-z0-9]/g, '');
+      const isAcceptanceLetter = normalizedType.includes('acceptanceletter') || 
+                                 normalizedType.includes('cartadeaceite') || 
+                                 docType === 'acceptance_letter';
+
+      console.log('🔍 [handleUploadDocument] Check type:', { docType, normalizedType, isAcceptanceLetter });
+
+      if (isAcceptanceLetter) {
+        console.log('📤 [handleUploadDocument] Enviando notificações de Acceptance Letter...');
+        
+        // 1. Webhook n8n (Email)
+        try {
+          // Buscar email do aluno se não estiver disponível diretamente (garantir)
+          let studentEmail = student.student_email;
+          if (!studentEmail) {
+            const { data: profile } = await supabase
+              .from('user_profiles')
+              .select('email')
+              .eq('user_id', student.user_id)
+              .single();
+            studentEmail = profile?.email;
+          }
+
+          if (studentEmail) {
+            const webhookPayload = {
+              tipo_notf: "Carta de aceite enviada",
+              email_aluno: studentEmail,
+              nome_aluno: student.student_name,
+              email_universidade: user?.email,
+              o_que_enviar: "Your Acceptance Letter has been sent! Please check your documents."
+            };
+            
+            console.log('📤 [handleUploadDocument] Enviando webhook (awaiting):', webhookPayload);
+            
+            // Usar await para garantir execução e debug
+            const response = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(webhookPayload),
+            });
+            
+            if (response.ok) {
+              console.log('✅ Webhook n8n enviado com sucesso');
+            } else {
+              const text = await response.text();
+              console.error('❌ Erro no envio do webhook n8n:', response.status, text);
+            }
+          } else {
+            console.warn('⚠️ [handleUploadDocument] Email do aluno não encontrado, pulando webhook');
+          }
+        } catch (err) {
+          console.error('❌ Erro ao preparar/enviar webhook acceptance letter:', err);
+        }
+
+        // 2. Notificação In-App
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          const accessToken = session?.access_token;
+          
+          if (accessToken) {
+            // Validar appId
+            if (!appId) {
+                console.error('❌ [handleUploadDocument] appId is missing for notification link!');
+            }
+            const link = appId ? `/student/dashboard/application/${appId}/chat?tab=documents` : `/student/dashboard/applications`;
+            
+            const notificationPayload = {
+              user_id: student.user_id,
+              title: 'Acceptance Letter Sent',
+              message: 'Your Acceptance Letter has been uploaded. Please check your documents.',
+              link: link,
+              type: 'acceptance_letter'
+            };
+
+            console.log('📤 [handleUploadDocument] Payload in-app:', notificationPayload);
+
+            const notifRes = await fetch(`${import.meta.env.VITE_SUPABASE_FUNCTIONS_URL}/create-student-notification`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${accessToken}`,
+              },
+              body: JSON.stringify(notificationPayload),
+            });
+            
+            if (notifRes.ok) {
+                console.log('✅ [handleUploadDocument] Notificação in-app enviada.');
+            } else {
+                console.error('❌ [handleUploadDocument] Falha ao enviar notificação in-app:', await notifRes.text());
+            }
+          }
+        } catch (err) {
+          console.error('❌ Erro ao enviar notificação in-app acceptance letter:', err);
+        }
+      }
+
       // Atualizar estado local
       setStudent((prev: any) => {
         if (!prev) return prev;
@@ -2007,6 +2107,118 @@ const AdminStudentDetails: React.FC = () => {
       setUploadingDocs(prev => ({ ...prev, [k]: false }));
     }
   }, [student, canUniversityManage, setStudent, user, logAction, profileId, queryClient]);
+
+  // ✅ Wrapper wrapper para handleUploadDocumentRequest para tratar notificações na aba Documents
+  const handleUploadDocumentRequestWrapped = useCallback(async (requestId: string, file: File) => {
+    console.log('🔵 [handleUploadDocumentRequestWrapped] Called with:', { requestId });
+    
+    // 1. Executar o upload original
+    await handleUploadDocumentRequest(requestId, file);
+
+    // 2. Verificar se é Acceptance Letter
+    const request = documentRequests.find(r => r.id === requestId);
+    if (!request) {
+      console.warn('⚠️ [handleUploadDocumentRequestWrapped] Request não encontrado:', requestId);
+      return;
+    }
+
+    console.log('🔍 [handleUploadDocumentRequestWrapped] Request found:', request);
+
+    const title = (request.title || '').toLowerCase();
+    const isAcceptanceLetter = title.includes('acceptance letter') || 
+                               title.includes('carta de aceite') ||
+                               title.includes('acceptance_letter');
+
+    if (isAcceptanceLetter) {
+        console.log('🔔 [handleUploadDocumentRequestWrapped] Enviando notificações para Acceptance Letter');
+        const appId = request.scholarship_application_id;
+        
+        if (!appId) {
+          console.error('❌ [handleUploadDocumentRequestWrapped] appId (scholarship_application_id) não encontrado no request! Link ficará incorreto.', request);
+        }
+
+        // 2.1 Webhook n8n
+        try {
+          let studentEmail = student?.student_email;
+          if (!studentEmail && student?.user_id) {
+            const { data: profile } = await supabase
+              .from('user_profiles')
+              .select('email')
+              .eq('user_id', student.user_id)
+              .single();
+            studentEmail = profile?.email;
+          }
+
+          if (studentEmail) {
+             const webhookPayload = {
+              tipo_notf: "Carta de aceite enviada",
+              email_aluno: studentEmail,
+              nome_aluno: student?.student_name || 'Student',
+              email_universidade: user?.email,
+              o_que_enviar: "Your Acceptance Letter has been sent! Please check your documents."
+            };
+            
+            console.log('📤 [handleUploadDocumentRequestWrapped] Enviando webhook (awaiting):', webhookPayload);
+            const response = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(webhookPayload),
+            });
+            
+            if (response.ok) {
+              console.log('✅ Webhook n8n enviado com sucesso');
+            } else {
+              const text = await response.text();
+              console.error('❌ Erro no envio do webhook n8n:', response.status, text);
+            }
+          } else {
+            console.warn('⚠️ [handleUploadDocumentRequestWrapped] Email do aluno não encontrado, pulando webhook');
+          }
+        } catch (err) {
+            console.error('❌ Erro ao preparar/enviar webhook:', err);
+        }
+
+        // 2.2 Notificação In-App
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          const accessToken = session?.access_token;
+          
+          if (accessToken && student?.user_id) {
+             // Garantir link correto
+             const link = appId ? `/student/dashboard/application/${appId}/chat?tab=documents` : '/student/dashboard/applications';
+             
+             const notificationPayload = {
+              user_id: student.user_id,
+              title: 'Acceptance Letter Sent',
+              message: 'Your Acceptance Letter has been uploaded. Please check your documents.',
+              link: link,
+              type: 'acceptance_letter'
+            };
+            
+            console.log('📤 [handleUploadDocumentRequestWrapped] Payload in-app:', notificationPayload);
+            const notifRes = await fetch(`${import.meta.env.VITE_SUPABASE_FUNCTIONS_URL}/create-student-notification`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${accessToken}`,
+              },
+              body: JSON.stringify(notificationPayload),
+            });
+            
+            if (notifRes.ok) {
+                console.log('✅ Notificação in-app enviada');
+            } else {
+                console.error('❌ Erro envio in-app:', await notifRes.text());
+            }
+            
+          }
+        } catch (err) {
+            console.error('❌ Erro ao enviar notificação in-app:', err);
+        }
+    } else {
+        console.log('ℹ️ [handleUploadDocumentRequestWrapped] Not Sending Notification. Title match fail:', title);
+    }
+  }, [handleUploadDocumentRequest, documentRequests, student, user]);
 
   // Funções para aprovar/rejeitar aplicação
   const approveApplication = useCallback(async (applicationId: string) => {
@@ -3165,7 +3377,7 @@ const AdminStudentDetails: React.FC = () => {
               studentId={student?.user_id || ''}
               onViewDocument={handleViewDocument}
               onDownloadDocument={handleDownloadDocument}
-              onUploadDocument={handleUploadDocumentRequest}
+              onUploadDocument={handleUploadDocumentRequestWrapped}
               onApproveDocument={handleApproveDocumentRequest}
               onRejectDocument={handleRejectDocumentRequest}
               onEditTemplate={handleEditTemplate}

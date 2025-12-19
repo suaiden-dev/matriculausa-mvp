@@ -1010,28 +1010,57 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                               currentApplication.id,
                               publicUrl
                             );
-
+                            
+                            // 🔔 NOTIFICAÇÕES (n8n + In-App)
                             try {
-                              const { data: { session } } = await supabase.auth.getSession();
-                              const accessToken = session?.access_token;
-                              if (accessToken) {
-                                const FUNCTIONS_URL = (import.meta as any).env.VITE_SUPABASE_FUNCTIONS_URL as string;
-                                await fetch(`${FUNCTIONS_URL}/create-student-notification`, {
-                                  method: 'POST',
-                                  headers: {
-                                    'Content-Type': 'application/json',
-                                    'Authorization': `Bearer ${accessToken}`
-                                  },
-                                  body: JSON.stringify({
-                                    user_id: studentId,
-                                    title: 'Acceptance letter sent',
-                                    message: 'Your acceptance letter was sent. Check your dashboard for details.',
-                                    type: 'acceptance_letter_sent',
-                                    link: '/student/dashboard'
-                                  })
-                                });
-                              }
-                            } catch { /* ignore notify errors */ }
+                                // 1. Buscar dados para o Webhook (Email + Nome)
+                                const { data: studentData } = await supabase
+                                  .from('user_profiles')
+                                  .select('email, full_name')
+                                  .eq('user_id', studentId)
+                                  .single();
+                                
+                                const { data: { user } } = await supabase.auth.getUser();
+
+                                // 2. Enviar Webhook n8n
+                                if (studentData?.email) {
+                                  // Disparar sem await (ou com await se preferir garantir entrega)
+                                  fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                      tipo_notf: "Carta de aceite enviada",
+                                      email_aluno: studentData.email,
+                                      nome_aluno: studentData.full_name || 'Student',
+                                      email_universidade: user?.email,
+                                      o_que_enviar: "Your Acceptance Letter has been sent! Please check your documents."
+                                    }),
+                                  }).catch(e => console.error('Erro webhook:', e));
+                                }
+
+                                // 3. Enviar notificação In-App
+                                const { data: { session } } = await supabase.auth.getSession();
+                                const accessToken = session?.access_token;
+                                if (accessToken) {
+                                  const FUNCTIONS_URL = (import.meta as any).env.VITE_SUPABASE_FUNCTIONS_URL as string;
+                                  await fetch(`${FUNCTIONS_URL}/create-student-notification`, {
+                                    method: 'POST',
+                                    headers: {
+                                      'Content-Type': 'application/json',
+                                      'Authorization': `Bearer ${accessToken}`
+                                    },
+                                    body: JSON.stringify({
+                                      user_id: studentId,
+                                      title: 'Acceptance Letter Sent',
+                                      message: 'Your Acceptance Letter has been uploaded. Please check your documents.',
+                                      type: 'acceptance_letter_sent',
+                                      link: `/student/dashboard/application/${currentApplication.id}/chat?tab=documents`
+                                    })
+                                  });
+                                }
+                            } catch (errNotify) {
+                                console.error('Error sending notifications:', errNotify);
+                            }
 
                             setAcceptanceLetterFile(null);
                           } catch (err) {
@@ -1170,27 +1199,57 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                               status: 'enrolled' // Atualizar status local também
                             }) : prev);
 
+                            // 🔔 NOTIFICAÇÕES (n8n + In-App)
                             try {
-                              const { data: { session } } = await supabase.auth.getSession();
-                              const accessToken = session?.access_token;
-                              if (accessToken) {
-                                const FUNCTIONS_URL = (import.meta as any).env.VITE_SUPABASE_FUNCTIONS_URL as string;
-                                await fetch(`${FUNCTIONS_URL}/create-student-notification`, {
-                                  method: 'POST',
-                                  headers: {
-                                    'Content-Type': 'application/json',
-                                    'Authorization': `Bearer ${accessToken}`
-                                  },
-                                  body: JSON.stringify({
-                                    user_id: studentId,
-                                    title: 'Acceptance letter sent',
-                                    message: 'Your acceptance letter was sent. Check your dashboard for details.',
-                                    type: 'acceptance_letter_sent',
-                                    link: '/student/dashboard'
-                                  })
-                                });
-                              }
-                            } catch { /* ignore notify errors */ }
+                                // 1. Buscar dados para o Webhook (Email + Nome)
+                                const { data: studentData } = await supabase
+                                  .from('user_profiles')
+                                  .select('email, full_name')
+                                  .eq('user_id', studentId)
+                                  .single();
+                                
+                                const { data: { user } } = await supabase.auth.getUser();
+
+                                // 2. Enviar Webhook n8n
+                                if (studentData?.email) {
+                                  // Disparar sem await (ou com await se preferir garantir entrega)
+                                  fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                      tipo_notf: "Carta de aceite enviada",
+                                      email_aluno: studentData.email,
+                                      nome_aluno: studentData.full_name || 'Student',
+                                      email_universidade: user?.email,
+                                      o_que_enviar: "Your Acceptance Letter has been sent! Please check your documents."
+                                    }),
+                                  }).catch(e => console.error('Erro webhook:', e));
+                                }
+
+                                // 3. Enviar notificação In-App
+                                const { data: { session } } = await supabase.auth.getSession();
+                                const accessToken = session?.access_token;
+                                if (accessToken) {
+                                  const FUNCTIONS_URL = (import.meta as any).env.VITE_SUPABASE_FUNCTIONS_URL as string;
+                                  await fetch(`${FUNCTIONS_URL}/create-student-notification`, {
+                                    method: 'POST',
+                                    headers: {
+                                      'Content-Type': 'application/json',
+                                      'Authorization': `Bearer ${accessToken}`
+                                    },
+                                    body: JSON.stringify({
+                                      user_id: studentId,
+                                      title: 'Acceptance Letter Sent',
+                                      message: 'Your Acceptance Letter has been uploaded. Please check your documents.',
+                                      type: 'acceptance_letter_sent',
+                                      // Usar applicationId local
+                                      link: `/student/dashboard/application/${applicationId}/chat?tab=documents`
+                                    })
+                                  });
+                                }
+                            } catch (errNotify) {
+                                console.error('Error sending notifications:', errNotify);
+                            }
 
                             setAcceptanceLetterFile(null);
                             setMarkSentSuccess('Acceptance letter sent successfully.');

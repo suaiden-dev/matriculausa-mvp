@@ -96,7 +96,11 @@ const ApplicationChatPage: React.FC = () => {
   useEffect(() => {
     const tabParam = searchParams.get('tab');
     if (tabParam && ['welcome', 'details', 'i20', 'documents'].includes(tabParam)) {
+      console.log('🔍 [ApplicationChatPage] Setting active tab from URL:', tabParam);
       setActiveTab(tabParam as typeof activeTab);
+      // Forçar atualização do selectedTabIndex imediatamente
+      const index = ['welcome', 'details', 'i20', 'documents'].indexOf(tabParam);
+      if (index !== -1) setSelectedTabIndex(index);
     }
   }, [searchParams]);
 
