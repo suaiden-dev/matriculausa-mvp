@@ -94,7 +94,9 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
   if (typeof internalFees === 'string') {
     try { internalFees = JSON.parse(internalFees); } catch (e) { internalFees = []; }
   }
-  const hasInternalFees = internalFees && Array.isArray(internalFees) && internalFees.length > 0 && userProfile?.has_paid_selection_process_fee;
+  const hasInternalFees = internalFees && Array.isArray(internalFees) && internalFees.length > 0;
+  const canViewInternalFees = hasInternalFees && userProfile?.has_paid_selection_process_fee;
+  const shouldShowInternalFeesNotice = hasInternalFees && !userProfile?.has_paid_selection_process_fee;
 
   const applicationFee = scholarship.application_fee_amount 
     ? getApplicationFeeWithDependents(Number(scholarship.application_fee_amount)) 
@@ -247,7 +249,9 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
                         <DollarSign className="h-4 w-4 text-[#05294E]" />
                         {t('scholarshipsPage.modal.financialBreakdown') || 'Financial Details'}
                       </h3>
-                      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+                      
+                      {/* Taxas Pagas no Sistema */}
+                      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm mb-4">
                         <table className="w-full text-sm">
                           <tbody className="divide-y divide-slate-100">
                             {/* Annual Costs */}
@@ -260,24 +264,11 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
                               <td className="py-3 px-4 text-right text-green-700 font-bold text-base">${formatAmount(scholarship.annual_value_with_scholarship)}</td>
                             </tr>
                             
-                            {/* Fees */}
+                            {/* Application Fee */}
                             <tr>
                               <td className="py-3 px-4 text-slate-600">{t('scholarshipsPage.scholarshipCard.applicationFee') || 'Application Fee'}</td>
                               <td className="py-3 px-4 text-right text-slate-700 font-medium">${applicationFee.toFixed(0)}</td>
                             </tr>
-                            
-                            {/* Internal Fees (Integrated) */}
-                            {hasInternalFees && internalFees.map((fee: any, idx: number) => (
-                              <tr key={`internal-${idx}`} className="bg-slate-50/30">
-                                <td className="py-3 px-4">
-                                  <div className="flex flex-col">
-                                    <span className="text-slate-600">{fee.category || fee.name}</span>
-                                    {fee.details && <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wide mt-0.5">{fee.details}</span>}
-                                  </div>
-                                </td>
-                                <td className="py-3 px-4 text-right text-slate-700 font-medium">${Number(fee.amount).toLocaleString()}</td>
-                              </tr>
-                            ))}
                             
                             {/* Per Credit */}
                             {scholarship.original_value_per_credit && (
@@ -288,13 +279,57 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
                             )}
                           </tbody>
                         </table>
-                        {hasInternalFees && (
-                          <div className="px-4 py-2 bg-slate-50 border-t border-slate-100 flex items-center gap-1.5 text-[10px] text-slate-400 uppercase tracking-wide font-medium">
-                            <Info className="h-3 w-3" />
-                            {t('scholarshipsPage.modal.internalFeesNote')}
-                          </div>
-                        )}
                       </div>
+
+                      {/* Aviso sobre Taxas Internas (quando não pagou selection process) */}
+                      {shouldShowInternalFeesNotice && (
+                        <div className="bg-blue-50/30 rounded-xl border-2 border-blue-200 overflow-hidden shadow-sm">
+                          <div className="px-4 py-3 bg-blue-100/50 border-b border-blue-200">
+                            <div className="flex items-start gap-2">
+                              <Info className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                              <div className="flex-1">
+                                <h4 className="text-xs font-bold text-blue-800 uppercase tracking-wide mb-1">
+                                  {t('scholarshipsPage.modal.internalFeesAvailable') || 'University Internal Fees Available'}
+                                </h4>
+                                <p className="text-[11px] text-blue-700 font-medium leading-relaxed">
+                                  {t('scholarshipsPage.modal.internalFeesNotice') || 'This scholarship may have additional internal fees from the university. These fees will be visible after payment of the Selection Process Fee.'}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Taxas Internas (Não Pagas no Sistema) - Visível apenas após pagar selection process */}
+                      {canViewInternalFees && (
+                        <div className="bg-blue-50/30 rounded-xl border-2 border-blue-200 overflow-hidden shadow-sm">
+                          <div className="px-4 py-2.5 bg-blue-100/50 border-b border-blue-200">
+                            <div className="flex items-center gap-2">
+                              <h4 className="text-xs font-bold text-blue-800 uppercase tracking-wide">
+                                {t('scholarshipsPage.modal.internalFeesTitle') || 'Internal University Fees'}
+                              </h4>
+                            </div>
+                            <p className="text-[10px] text-blue-700 mt-1 font-medium">
+                              {t('scholarshipsPage.modal.internalFeesDisclaimer') || 'These fees are paid directly to the university, not through our platform'}
+                            </p>
+                          </div>
+                          <table className="w-full text-sm">
+                            <tbody className="divide-y divide-amber-100">
+                              {internalFees.map((fee: any, idx: number) => (
+                                <tr key={`internal-${idx}`} className="bg-white/50">
+                                  <td className="py-3 px-4">
+                                    <div className="flex flex-col">
+                                      <span className="text-slate-700 font-medium">{fee.category || fee.name}</span>
+                                      {fee.details && <span className="text-[10px] text-slate-500 font-medium uppercase tracking-wide mt-0.5">{fee.details}</span>}
+                                    </div>
+                                  </td>
+                                  <td className="py-3 px-4 text-right text-slate-700 font-medium">${Number(fee.amount).toLocaleString()}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
                     </section>
 
                     {/* Benefits (Requirements moved to Sidebar) */}

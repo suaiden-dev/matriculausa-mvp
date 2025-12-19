@@ -3802,10 +3802,17 @@
       "requirements": "Requisitos",
       "applicationDeadline": "Prazo de Candidatura",
       "internalFeesNote": "As taxas internas são mostradas apenas após o pagamento da taxa de processo de seleção",
-      "anyField": "Qualquer Área"
+      "internalFeesTitle": "Taxas Internas da Universidade",
+      "internalFeesDisclaimer": "Estas taxas são pagas diretamente à universidade, não através da nossa plataforma",
+      "internalFeesAvailable": "Taxas Internas da Universidade Disponíveis",
+      "internalFeesNotice": "Esta bolsa pode ter taxas internas adicionais da universidade. Essas taxas serão visíveis após o pagamento da Taxa de Processo de Seleção.",
+      "anyField": "Qualquer Área",
+      "universityInternalFees": "Taxas Internas da Universidade"
     },
     "scholarshipCard": {
-      "applicationFee": "Taxa de Candidatura"
+      "applicationFee": "Taxa de Matrícula",
+      "customFee": "Taxa personalizada",
+      "standardFee": "Taxa padrão"
     }
   }
 }

@@ -1112,7 +1112,7 @@ const ApplicationChatPage: React.FC = () => {
                       <div className="col-span-1 md:col-span-2 bg-slate-50 rounded-xl p-4 border border-slate-100">
                         <div className="flex items-center gap-2 mb-4 pb-2 border-b border-slate-200/60">
                           <Building className="w-4 h-4 text-[#05294E]" />
-                          <span className="text-xs font-bold uppercase tracking-wider text-slate-500">{t('scholarshipsPage.modal.universityInternalFees') || 'University Internal Fees'}</span>
+                          <span className="text-xs font-bold uppercase tracking-wider text-slate-500">{t('scholarshipsPage.modal.universityInternalFees')}</span>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           {applicationDetails.scholarships.internal_fees.map((fee: any, idx: number) => (
