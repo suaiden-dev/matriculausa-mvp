@@ -255,7 +255,8 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
           universities (
             id,
             name,
-            logo_url
+            logo_url,
+            university_fees_page_url
           )
         `)
         .eq('is_highlighted', true)
