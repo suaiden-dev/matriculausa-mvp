@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import type { UserProfile } from '../hooks/useAuth';
@@ -18,14 +18,15 @@ import {
   Globe,
   FileText,
   CheckCircle,
-  AlertCircle,
   AlertTriangle,
-  BookOpen,
-  TrendingUp
+  Calendar,
+  Info,
+  ExternalLink
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { is3800Scholarship, is3800ScholarshipBlocked } from '../utils/scholarshipDeadlineValidation';
 import { ScholarshipCountdownTimer } from './ScholarshipCountdownTimer';
+import { useModal } from '../contexts/ModalContext';
 
 interface ScholarshipDetailModalProps {
   scholarship: any;
@@ -45,32 +46,27 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
   userRole
 }) => {
   const { t } = useTranslation();
+  const { openModal, closeModal } = useModal();
   
-  // Helper: calcular Application Fee exibida considerando dependentes (legacy e simplified)
   const getApplicationFeeWithDependents = (base: number): number => {
     const deps = Number(userProfile?.dependents) || 0;
-    // ✅ CORREÇÃO: Adicionar $100 por dependente para ambos os sistemas (legacy e simplified)
     return deps > 0 ? base + deps * 100 : base;
   };
   
-  // Controlar o scroll do body quando o modal estiver aberto
   React.useEffect(() => {
     if (isOpen) {
-      // Salvar o estado atual
+      openModal();
       const originalOverflow = document.body.style.overflow;
       const originalHtmlOverflow = document.documentElement.style.overflow;
-      
-      // Desabilitar scroll apenas no modal aberto
       document.body.style.overflow = 'hidden';
       document.documentElement.style.overflow = 'hidden';
-      
-      // Cleanup - restaurar estados originais
       return () => {
+        closeModal();
         document.body.style.overflow = originalOverflow || '';
         document.documentElement.style.overflow = originalHtmlOverflow || '';
       };
     }
-  }, [isOpen]);
+  }, [isOpen, openModal, closeModal]);
 
   if (!scholarship) return null;
   const canViewSensitive = !!((userRole && userRole !== 'student') || userProfile?.has_paid_selection_process_fee);
@@ -81,77 +77,40 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
     return amount;
   };
 
-  const getFieldBadgeColor = (field: string | undefined) => {
-    switch (field?.toLowerCase()) {
-      case 'stem':
-        return 'bg-gradient-to-r from-blue-600 to-indigo-600';
-      case 'business':
-        return 'bg-gradient-to-r from-green-600 to-emerald-600';
-      case 'engineering':
-        return 'bg-gradient-to-r from-purple-600 to-violet-600';
-      case 'arts':
-        return 'bg-gradient-to-r from-pink-600 to-rose-600';
-      case 'medicine':
-        return 'bg-gradient-to-r from-red-600 to-pink-600';
-      case 'law':
-        return 'bg-gradient-to-r from-amber-600 to-orange-600';
-      default:
-        return 'bg-gradient-to-r from-slate-600 to-slate-700';
-    }
-  };
-
-  const getCourseModalityIcon = (mode: string) => {
-    switch (mode?.toLowerCase()) {
-      case 'online':
-        return <Monitor className="h-4 w-4" />;
-      case 'in_person':
-        return <Building className="h-4 w-4" />;
-      case 'hybrid':
-        return <Globe className="h-4 w-4" />;
-      default:
-        return <MapPin className="h-4 w-4" />;
-    }
-  };
-
-  const getCourseModalityColor = (mode: string) => {
-    switch (mode?.toLowerCase()) {
-      case 'online':
-        return 'bg-blue-100 text-blue-700 border-blue-200';
-      case 'in_person':
-        return 'bg-green-100 text-green-700 border-green-200';
-      case 'hybrid':
-        return 'bg-purple-100 text-purple-700 border-purple-200';
-      default:
-        return 'bg-gray-100 text-gray-700 border-gray-200';
-    }
-  };
-
   const getDaysUntilDeadline = (deadline: string) => {
-    // Criar data atual sem hora (apenas dia)
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
-    // Criar deadline como data local (não UTC) para evitar problemas de timezone
-    // Parse da data no formato YYYY-MM-DD como local
     const [year, month, day] = deadline.split('-').map(Number);
-    const deadlineDate = new Date(year, month - 1, day); // month - 1 porque Date usa 0-11
-    deadlineDate.setHours(23, 59, 59, 999); // Fim do dia
-    
+    const deadlineDate = new Date(year, month - 1, day);
+    deadlineDate.setHours(23, 59, 59, 999);
     const diffTime = deadlineDate.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   };
 
-  const getDeadlineStatus = (deadline: string) => {
-    const days = getDaysUntilDeadline(deadline);
-    if (days < 0) return { status: 'expired', color: 'text-red-600', bg: 'bg-red-50 border-red-200', icon: AlertCircle };
-    if (days <= 7) return { status: 'urgent', color: 'text-orange-600', bg: 'bg-orange-50 border-orange-200', icon: AlertCircle };
-    if (days <= 30) return { status: 'soon', color: 'text-yellow-600', bg: 'bg-yellow-50 border-yellow-200', icon: Clock };
-    return { status: 'normal', color: 'text-green-600', bg: 'bg-green-50 border-green-200', icon: CheckCircle };
-  };
+  const daysLeft = getDaysUntilDeadline(scholarship.deadline);
+  const isExpired = !scholarship.is_active || is3800ScholarshipBlocked(scholarship) || daysLeft < 0;
 
-  const deadlineInfo = getDeadlineStatus(scholarship.deadline);
-  const DeadlineIcon = deadlineInfo.icon;
+  // Parse internal fees
+  let internalFees = scholarship.internal_fees;
+  if (typeof internalFees === 'string') {
+    try { internalFees = JSON.parse(internalFees); } catch (e) { internalFees = []; }
+  }
+  const hasInternalFees = internalFees && Array.isArray(internalFees) && internalFees.length > 0;
+  const canViewInternalFees = hasInternalFees && userProfile?.has_paid_selection_process_fee;
+  const shouldShowInternalFeesNotice = hasInternalFees && !userProfile?.has_paid_selection_process_fee;
+
+  const applicationFee = scholarship.application_fee_amount 
+    ? getApplicationFeeWithDependents(Number(scholarship.application_fee_amount)) 
+    : getApplicationFeeWithDependents(350);
+
+  const annualSavings = (scholarship.original_annual_value || 0) - (scholarship.annual_value_with_scholarship || 0);
+
+  const deadlineFormatted = (() => {
+    const [year, month, day] = scholarship.deadline.split('-').map(Number);
+    return new Date(year, month - 1, day).toLocaleDateString('en-US', {
+      month: 'long', day: 'numeric', year: 'numeric'
+    });
+  })();
 
   const modalContent = (
     <AnimatePresence>
@@ -160,446 +119,360 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-3"
           onClick={onClose}
-          style={{ 
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            width: '100vw',
-            height: '100vh'
-          }}
         >
           <motion.div
-            initial={{ scale: 0.9, opacity: 0, y: 20 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.9, opacity: 0, y: 20 }}
-            transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden"
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.95, opacity: 0 }}
+            transition={{ type: "spring", damping: 30, stiffness: 400 }}
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Header */}
-            <div className="relative">
-              {/* Hero Image */}
-              <div className="h-64 overflow-hidden relative">
-                {scholarship.image_url ? (
-                  <div className="relative w-full h-full">
-                    <img
-                      src={scholarship.image_url}
-                      alt={scholarship.title}
-                      className={`w-full h-full object-contain transition-all duration-300 ${
-                        canViewSensitive 
-                          ? 'blur-0 opacity-100' 
-                          : 'blur-md opacity-30'
-                      }`}
-                    />
-                    {/* Overlay para usuários não logados ou não pagos */}
-                    {(!canViewSensitive) && (
-                      <div className="absolute inset-0 bg-gradient-to-br from-blue-600/80 via-blue-700/80 to-indigo-800/80 flex items-center justify-center">
-                        <div className="text-center text-white">
-                          <GraduationCap className="h-16 w-16 mx-auto mb-2 text-white/60" />
-                          <p className="text-sm font-medium opacity-80">
-                            {t('scholarshipsPage.modal.unlockImage')}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 flex items-center justify-center">
-                    <GraduationCap className="h-24 w-24 text-white/30" />
-                  </div>
+            {/* Header with Image */}
+            <div className="relative flex-shrink-0">
+              <div className="h-40 sm:h-48 bg-gradient-to-br from-[#05294E] via-[#0a3d6e] to-[#05294E] relative">
+                {scholarship.image_url && canViewSensitive && (
+                  <img 
+                    src={scholarship.image_url} 
+                    alt="" 
+                    className="absolute inset-0 w-full h-full object-cover opacity-30"
+                  />
                 )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                 
-                {/* Close Button - Sempre no topo direito */}
+                {/* Close Button */}
                 <button
                   onClick={onClose}
-                  className="absolute top-4 right-4 bg-white text-black p-2 rounded-full border border-gray-300 shadow-md hover:bg-gray-100 transition-all duration-200 z-10"
+                  className="absolute top-3 right-3 p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors"
                 >
-                  <X className="h-6 w-6" />
+                  <X className="h-5 w-5 text-white" />
                 </button>
 
-                {/* Exclusive Badge */}
-                {scholarship.is_exclusive && (
-                  <div className="absolute top-4 left-4">
-                    <span className="bg-[#D0151C] text-white px-4 py-2 rounded-xl text-sm font-bold shadow-lg flex items-center gap-2">
-                      <Star className="h-4 w-4" />
-                      {t('scholarshipsPage.modal.exclusiveScholarship')}
+                {/* Badges */}
+                <div className="absolute top-3 left-3 flex gap-2">
+                  {scholarship.is_exclusive && (
+                    <span className="inline-flex items-center gap-1 bg-amber-500 text-white px-2.5 py-1 rounded-full text-xs font-semibold shadow-lg">
+                      <Star className="h-3 w-3" />
+                      {t('scholarshipsPage.modal.exclusive') || 'Exclusive'}
                     </span>
-                  </div>
-                )}
-
-                {/* Inactive/Expired Badge - Posicionado abaixo do botão de fechar */}
-                {(!scholarship.is_active || is3800ScholarshipBlocked(scholarship)) && (
-                  <div className="absolute top-16 right-4">
-                    <span className="bg-red-500 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-lg flex items-center gap-2">
-                      <AlertTriangle className="h-4 w-4" />
-                      {t('scholarshipsPage.modal.expired')}
+                  )}
+                  {isExpired && (
+                    <span className="inline-flex items-center gap-1 bg-red-500 text-white px-2.5 py-1 rounded-full text-xs font-semibold shadow-lg">
+                      <AlertTriangle className="h-3 w-3" />
+                      {t('scholarshipsPage.modal.expired') || 'Expired'}
                     </span>
-                  </div>
-                )}
+                  )}
+                </div>
 
-                {/* Title Overlay */}
-                <div className="absolute bottom-6 left-6 right-6">
-                  <h2 className="text-3xl font-bold text-white mb-2 leading-tight">
+                {/* Title Section */}
+                <div className="absolute bottom-4 left-4 right-4">
+                  <p className="text-white/70 text-sm mb-1">
+                    {scholarship.field_of_study || t('scholarshipsPage.modal.anyField')}
+                  </p>
+                  <h2 className="text-xl sm:text-2xl font-bold text-white leading-tight mb-2">
                     {scholarship.title}
                   </h2>
-                  <div className="flex items-center gap-3">
-                    <span className={`px-3 py-1 rounded-lg text-sm font-medium text-white ${getFieldBadgeColor(scholarship.field_of_study)}`}>
-                      {scholarship.field_of_study || t('scholarshipsPage.modal.anyField')}
+                  <div className="flex items-center gap-2 text-white/80 text-sm">
+                    <Building className="h-4 w-4" />
+                    <span className={!canViewSensitive ? 'blur-[3px]' : ''}>
+                      {canViewSensitive ? scholarship.universities?.name : '••••••••••••'}
                     </span>
-                    <span className={`text-white/80 text-sm flex items-center gap-1 ${
-                      !canViewSensitive ? 'blur-sm opacity-50' : ''
-                    }`}>
-                      <Building className="h-4 w-4" />
-                      {canViewSensitive
-                        ? (scholarship.universities?.name || t('scholarshipsPage.modal.universityInfoAvailable'))
-                        : t('scholarshipsPage.modal.universityHidden')}
-                    </span>
+                    {canViewSensitive && scholarship.universities?.location && (
+                      <>
+                        <span className="text-white/50">•</span>
+                        <MapPin className="h-3.5 w-3.5" />
+                        <span>{scholarship.universities.location}</span>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Content */}
-            <div className="p-8 overflow-y-auto max-h-[calc(90vh-16rem)]">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Main Content */}
-                <div className="lg:col-span-2 space-y-6">
-                  {/* Financial Overview - Destacado */}
-                  <div className="bg-white rounded-2xl p-6 border-2 border-[#05294E]/20 shadow-sm">
-                    <h3 className="text-xl font-bold text-[#05294E] mb-6 flex items-center gap-2">
-                      <DollarSign className="h-5 w-5" />
-                      {t('scholarshipsPage.modal.financialBreakdown')}
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-3">
-                        <div className="flex justify-between items-center p-4 bg-slate-50 rounded-xl border border-slate-200">
-                          <span className="text-slate-600 font-medium">{t('scholarshipsPage.modal.originalAnnualCost')}</span>
-                          <span className="font-bold text-xl text-slate-900">
-                            ${formatAmount(scholarship.original_annual_value)}
-                          </span>
+            <div className="flex-1 overflow-y-auto">
+              <div className="p-5 sm:p-6">
+                
+                {/* Content Grid */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                  {/* Left Column (Main Info) - Order 2 on Mobile, Order 1 on Desktop */}
+                  <div className="lg:col-span-2 space-y-6 order-2 lg:order-1">
+                    {/* Key Metrics - Consolidada */}
+                    <div className="flex flex-wrap gap-4 sm:gap-6 p-4 bg-slate-50 rounded-xl border border-slate-100">
+                      <div className="flex items-center gap-2">
+                        <div className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center">
+                          <DollarSign className="h-5 w-5 text-green-600" />
                         </div>
-                        <div className="flex justify-between items-center p-4 bg-green-50 rounded-xl border border-green-200">
-                          <span className="text-slate-600 font-medium">{t('scholarshipsPage.modal.withScholarship')}</span>
-                          <span className="font-bold text-xl text-green-700">
-                            ${formatAmount(scholarship.annual_value_with_scholarship)}
-                          </span>
-                        </div>
-                        <div className="flex justify-between items-center p-4 bg-[#05294E] text-white rounded-xl">
-                          <span className="font-medium">{t('scholarshipsPage.modal.annualSavings')}</span>
-                          <span className="font-bold text-xl">
-                            ${formatAmount((scholarship.original_annual_value || 0) - (scholarship.annual_value_with_scholarship || 0))}
-                          </span>
+                        <div>
+                          <p className="text-xs text-slate-500 font-medium uppercase">{t('scholarshipsPage.modal.annualSavings') || 'Annual Savings'}</p>
+                          <p className="text-lg font-bold text-green-700">${formatAmount(annualSavings)}</p>
                         </div>
                       </div>
-                      <div className="space-y-3">
-                        <div className="flex justify-between items-center p-4 bg-slate-50 rounded-xl border border-slate-200">
-                          <span className="text-slate-600 font-medium">{t('scholarshipsPage.modal.costPerCredit')}</span>
-                          <span className="font-bold text-lg text-slate-900">
-                            ${formatAmount(scholarship.original_value_per_credit)}
-                          </span>
-                        </div>
-                        {scholarship.total_credits && (
-                          <div className="flex justify-between items-center p-4 bg-slate-50 rounded-xl border border-slate-200">
-                            <span className="text-slate-600 font-medium">{t('scholarshipsPage.modal.totalCredits')}</span>
-                            <span className="font-bold text-lg text-slate-900">
-                              {scholarship.total_credits}
-                            </span>
-                          </div>
-                        )}
-                        {scholarship.scholarship_percentage && (
-                          <div className="flex justify-between items-center p-4 bg-blue-50 rounded-xl border border-blue-200">
-                            <span className="text-slate-600 font-medium">{t('scholarshipsPage.modal.coverage')}</span>
-                            <span className="font-bold text-xl text-blue-700">
-                              {scholarship.scholarship_percentage}%
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    
-                    {/* Application Fee Information */}
-                    <div className="mt-6 p-4 bg-purple-50 rounded-xl border border-purple-200">
-                      <div className="flex items-center justify-between">
+                      
+                      {scholarship.scholarship_percentage && (
                         <div className="flex items-center gap-2">
-                          <FileText className="h-5 w-5 text-purple-600" />
-                          <span className="text-slate-600 font-medium">{t('scholarshipsPage.scholarshipCard.applicationFee')}</span>
-                        </div>
-                        <div className="text-right">
-                          <span className="font-semibold text-purple-600 text-lg">
-                            ${scholarship.application_fee_amount 
-                              ? getApplicationFeeWithDependents(Number(scholarship.application_fee_amount)).toFixed(2) 
-                              : getApplicationFeeWithDependents(350).toFixed(2)}
-                          </span>
-                          <div className="text-xs text-slate-400">
-                            {scholarship.application_fee_amount && Number(scholarship.application_fee_amount) !== 350 ? 
-                              t('scholarshipsPage.scholarshipCard.customFee') : 
-                              t('scholarshipsPage.scholarshipCard.standardFee')
-                            }
+                          <div className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center">
+                            <Award className="h-5 w-5 text-blue-600" />
                           </div>
+                          <div>
+                            <p className="text-xs text-slate-500 font-medium uppercase">{t('scholarshipsPage.modal.coverage') || 'Coverage'}</p>
+                            <p className="text-lg font-bold text-blue-700">{scholarship.scholarship_percentage}%</p>
+                          </div>
+                        </div>
+                      )}
+                      
+                      <div className="flex items-center gap-2">
+                        <div className={`w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center`}>
+                          <Calendar className={`h-5 w-5 ${
+                            daysLeft <= 7 ? 'text-red-600' : daysLeft <= 30 ? 'text-amber-600' : 'text-slate-600'
+                          }`} />
+                        </div>
+                        <div>
+                          <p className="text-xs text-slate-500 font-medium uppercase">{t('scholarshipsPage.modal.deadline') || 'Deadline'}</p>
+                          {is3800Scholarship(scholarship) ? (
+                            <ScholarshipCountdownTimer scholarship={scholarship} className="text-sm font-bold" />
+                          ) : (
+                            <p className={`text-lg font-bold ${
+                              daysLeft <= 7 ? 'text-red-600' : daysLeft <= 30 ? 'text-amber-600' : 'text-slate-800'
+                            }`}>
+                              {daysLeft > 0 ? `${daysLeft} ${t('scholarshipsPage.modal.days')}` : t('scholarshipsPage.modal.expired')}
+                            </p>
+                          )}
                         </div>
                       </div>
                     </div>
+
+                    {/* Financial Details Table */}
+                    <section>
+                      <h3 className="text-sm font-semibold text-slate-800 uppercase tracking-wide mb-3 flex items-center gap-2">
+                        <DollarSign className="h-4 w-4 text-[#05294E]" />
+                        {t('scholarshipsPage.modal.financialBreakdown') || 'Financial Details'}
+                      </h3>
+                      
+                      {/* Taxas Pagas no Sistema */}
+                      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm mb-4">
+                        <table className="w-full text-sm">
+                          <tbody className="divide-y divide-slate-100">
+                            {/* Annual Costs */}
+                            <tr className="bg-slate-50/50">
+                              <td className="py-3 px-4 text-slate-600 font-medium">{t('scholarshipsPage.modal.originalAnnualCost') || 'Original Annual Cost'}</td>
+                              <td className="py-3 px-4 text-right text-slate-400 line-through decoration-slate-400">${formatAmount(scholarship.original_annual_value)}</td>
+                            </tr>
+                            <tr className="bg-green-50/30">
+                              <td className="py-3 px-4 text-slate-700 font-bold">{t('scholarshipsPage.modal.withScholarship') || 'With Scholarship'}</td>
+                              <td className="py-3 px-4 text-right text-green-700 font-bold text-base">${formatAmount(scholarship.annual_value_with_scholarship)}</td>
+                            </tr>
+                            
+                            {/* Application Fee */}
+                            <tr>
+                              <td className="py-3 px-4 text-slate-600">{t('scholarshipsPage.scholarshipCard.applicationFee') || 'Application Fee'}</td>
+                              <td className="py-3 px-4 text-right text-slate-700 font-medium">${applicationFee.toFixed(0)}</td>
+                            </tr>
+                            
+                            {/* Per Credit */}
+                            {scholarship.original_value_per_credit && (
+                              <tr className="bg-slate-50/50">
+                                <td className="py-3 px-4 text-slate-500 text-xs">{t('scholarshipsPage.modal.costPerCredit') || 'Cost per Credit'}</td>
+                                <td className="py-3 px-4 text-right text-slate-500 text-xs">${formatAmount(scholarship.original_value_per_credit)}</td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Aviso sobre Taxas Internas (quando não pagou selection process) */}
+                      {shouldShowInternalFeesNotice && (
+                        <div className="bg-blue-50/30 rounded-xl border-2 border-blue-200 overflow-hidden shadow-sm">
+                          <div className="px-4 py-3 bg-blue-100/50 border-b border-blue-200">
+                            <div className="flex items-start gap-2">
+                              <Info className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                              <div className="flex-1">
+                                <h4 className="text-xs font-bold text-blue-800 uppercase tracking-wide mb-1">
+                                  {t('scholarshipsPage.modal.internalFeesAvailable') || 'University Internal Fees Available'}
+                                </h4>
+                                <p className="text-[11px] text-blue-700 font-medium leading-relaxed">
+                                  {t('scholarshipsPage.modal.internalFeesNotice') || 'This scholarship may have additional internal fees from the university. These fees will be visible after payment of the Selection Process Fee.'}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Taxas Internas (Não Pagas no Sistema) - Visível apenas após pagar selection process */}
+                      {canViewInternalFees && (
+                        <div className="bg-blue-50/30 rounded-xl border-2 border-blue-200 overflow-hidden shadow-sm">
+                          <div className="px-4 py-2.5 bg-blue-100/50 border-b border-blue-200">
+                            <div className="flex items-center gap-2">
+                              <h4 className="text-xs font-bold text-blue-800 uppercase tracking-wide">
+                                {t('scholarshipsPage.modal.internalFeesTitle') || 'Internal University Fees'}
+                              </h4>
+                            </div>
+                            <p className="text-[10px] text-blue-700 mt-1 font-medium">
+                              {t('scholarshipsPage.modal.internalFeesDisclaimer') || 'These fees are paid directly to the university, not through our platform'}
+                            </p>
+                            {scholarship.universities?.university_fees_page_url && (
+                              <a 
+                                href={scholarship.universities.university_fees_page_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 mt-2 font-medium hover:underline"
+                              >
+                                <ExternalLink className="h-3 w-3" />
+                                {t('scholarshipsPage.modal.viewUniversityFeesPage')}
+                              </a>
+                            )}
+                          </div>
+                          <table className="w-full text-sm">
+                            <tbody className="divide-y divide-amber-100">
+                              {internalFees.map((fee: any, idx: number) => (
+                                <tr key={`internal-${idx}`} className="bg-white/50">
+                                  <td className="py-3 px-4">
+                                    <div className="flex flex-col">
+                                      <span className="text-slate-700 font-medium">{fee.category || fee.name}</span>
+                                      {fee.details && <span className="text-[10px] text-slate-500 font-medium uppercase tracking-wide mt-0.5">{fee.details}</span>}
+                                    </div>
+                                  </td>
+                                  <td className="py-3 px-4 text-right text-slate-700 font-medium">${Number(fee.amount).toLocaleString()}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </section>
+
+                    {/* Benefits (Requirements moved to Sidebar) */}
+                    {scholarship.benefits && (Array.isArray(scholarship.benefits) ? scholarship.benefits.length > 0 : !!scholarship.benefits) && (
+                      <div className="bg-green-50/50 p-4 rounded-xl border border-green-100">
+                        <h3 className="text-sm font-semibold text-slate-800 uppercase tracking-wide mb-3 flex items-center gap-2">
+                          <Award className="h-4 w-4 text-[#05294E]" />
+                          {t('scholarshipsPage.modal.additionalBenefits') || 'Benefits'}
+                        </h3>
+                        <ul className="space-y-2 text-sm text-slate-600">
+                          {Array.isArray(scholarship.benefits) ? (
+                            scholarship.benefits.map((benefit: string, idx: number) => (
+                              <li key={idx} className="flex items-start gap-2">
+                                <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                                <span className="text-slate-700">{benefit}</span>
+                              </li>
+                            ))
+                          ) : (
+                            <li className="whitespace-pre-line">{scholarship.benefits}</li>
+                          )}
+                        </ul>
+                      </div>
+                    )}
+                    
+                    {scholarship.description && (
+                      <section>
+                         <h3 className="text-sm font-semibold text-slate-800 uppercase tracking-wide mb-2 flex items-center gap-2">
+                          <FileText className="h-4 w-4 text-[#05294E]" />
+                          {t('scholarshipsPage.modal.programDescription') || 'Scholarship Description'}
+                        </h3>
+                        <p className="text-sm text-slate-600 leading-relaxed bg-white p-4 border border-slate-100 rounded-xl shadow-sm">
+                          {scholarship.description}
+                        </p>
+                      </section>
+                    )}
                   </div>
 
-                  {/* Program Details */}
-                  <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
-                    <h3 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
-                      <BookOpen className="h-5 w-5 text-slate-600" />
-                      {t('scholarshipsPage.modal.programInformation')}
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Right Column (Program Info Panel) - Order 1 on Mobile, Order 2 on Desktop */}
+                  <div className="lg:col-span-1 order-1 lg:order-2">
+                    <div className="bg-slate-50 rounded-xl p-5 border border-slate-200 sticky top-4">
+                      <h3 className="text-sm font-bold text-[#05294E] uppercase tracking-wider mb-4 border-b border-slate-200 pb-2">
+                        {t('scholarshipsPage.modal.programInformation') || 'Scholarship Information'}
+                      </h3>
+                      
                       <div className="space-y-4">
-                        <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-                          <div className="flex items-center gap-2 mb-2">
-                            <GraduationCap className="h-4 w-4 text-slate-600" />
-                            <span className="font-semibold text-slate-700">{t('scholarshipsPage.modal.academicLevel')}</span>
+                        <div className="group">
+                          <p className="text-[10px] uppercase tracking-wider text-slate-400 font-bold mb-1">{t('scholarshipsPage.modal.academicLevel')}</p>
+                          <div className="flex items-center gap-2 text-slate-700 font-medium">
+                            <GraduationCap className="h-4 w-4 text-[#05294E]" />
+                            <span className="capitalize">{scholarship.level || 'N/A'}</span>
                           </div>
-                          <span className="text-slate-900 capitalize">{scholarship.level || t('scholarshipsPage.modal.notSpecified')}</span>
                         </div>
-                        
-                        {scholarship.delivery_mode && (
-                          <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-                            <div className="flex items-center gap-2 mb-2">
-                              {getCourseModalityIcon(scholarship.delivery_mode)}
-                              <span className="font-semibold text-slate-700">{t('scholarshipsPage.modal.studyMode')}</span>
-                            </div>
-                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${getCourseModalityColor(scholarship.delivery_mode)}`}>
-                              {scholarship.delivery_mode === 'online' ? t('scholarshipsPage.modal.onlineLearning') : 
-                               scholarship.delivery_mode === 'in_person' ? t('scholarshipsPage.modal.inPerson') : 
-                               scholarship.delivery_mode === 'hybrid' ? t('scholarshipsPage.modal.hybridMode') : scholarship.delivery_mode}
+
+                        <div className="group">
+                          <p className="text-[10px] uppercase tracking-wider text-slate-400 font-bold mb-1">{t('scholarshipsPage.modal.studyMode')}</p>
+                          <div className="flex items-center gap-2 text-slate-700 font-medium">
+                            <Monitor className="h-4 w-4 text-[#05294E]" />
+                            <span className="capitalize">
+                              {scholarship.delivery_mode === 'in_person' ? t('scholarshipsPage.modal.inPerson') : scholarship.delivery_mode}
                             </span>
                           </div>
-                        )}
-                      </div>
+                        </div>
 
-                      <div className="space-y-4">
                         {scholarship.duration && (
-                          <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-                            <div className="flex items-center gap-2 mb-2">
-                              <Clock className="h-4 w-4 text-slate-600" />
-                              <span className="font-semibold text-slate-700">{t('scholarshipsPage.modal.programDuration')}</span>
+                          <div className="group">
+                            <p className="text-[10px] uppercase tracking-wider text-slate-400 font-bold mb-1">{t('scholarshipsPage.modal.programDuration')}</p>
+                            <div className="flex items-center gap-2 text-slate-700 font-medium">
+                              <Clock className="h-4 w-4 text-[#05294E]" />
+                              <span>{scholarship.duration}</span>
                             </div>
-                            <span className="text-slate-900">{scholarship.duration}</span>
                           </div>
                         )}
 
                         {scholarship.language && (
-                          <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-                            <div className="flex items-center gap-2 mb-2">
-                              <Globe className="h-4 w-4 text-slate-600" />
-                              <span className="font-semibold text-slate-700">{t('scholarshipsPage.modal.language')}</span>
+                          <div className="group">
+                            <p className="text-[10px] uppercase tracking-wider text-slate-400 font-bold mb-1">{t('scholarshipsPage.modal.language')}</p>
+                            <div className="flex items-center gap-2 text-slate-700 font-medium">
+                              <Globe className="h-4 w-4 text-[#05294E]" />
+                              <span>{scholarship.language}</span>
                             </div>
-                            <span className="text-slate-900">{scholarship.language}</span>
+                          </div>
+                        )}
+
+                        {scholarship.work_permissions && scholarship.work_permissions.length > 0 && (
+                          <div className="pt-4 border-t border-slate-200">
+                             <p className="text-[10px] uppercase tracking-wider text-slate-400 font-bold mb-2">{t('scholarshipsPage.modal.workAuthorization')}</p>
+                             <div className="flex flex-wrap gap-2">
+                                {scholarship.work_permissions.map((permission: string, index: number) => (
+                                  <span key={index} className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-slate-200 text-slate-600 rounded-md text-xs font-semibold shadow-sm">
+                                    <CheckCircle className="h-3 w-3 text-green-500" />
+                                    {permission}
+                                  </span>
+                                ))}
+                             </div>
+                          </div>
+                        )}
+
+                        {/* Requirements Moved Here */}
+                        {scholarship.requirements && (
+                          <div className="pt-4 border-t border-slate-200">
+                             <p className="text-[10px] uppercase tracking-wider text-slate-400 font-bold mb-2 flex items-center gap-1">
+                                <Target className="h-3 w-3" />
+                                {t('scholarshipsPage.modal.requirements') || 'Requirements'}
+                             </p>
+                             <ul className="space-y-2 text-sm text-slate-600">
+                              {Array.isArray(scholarship.requirements) ? (
+                                scholarship.requirements.map((req: string, idx: number) => (
+                                  <li key={idx} className="flex items-start gap-2">
+                                    <div className="w-1.5 h-1.5 bg-[#05294E] rounded-full mt-1.5 flex-shrink-0" />
+                                    <span>{req}</span>
+                                  </li>
+                                ))
+                              ) : (
+                                <li className="whitespace-pre-line">{scholarship.requirements}</li>
+                              )}
+                            </ul>
                           </div>
                         )}
                       </div>
                     </div>
                   </div>
-
-                  {/* Work Permissions - Se disponível */}
-                  {scholarship.work_permissions && scholarship.work_permissions.length > 0 && (
-                    <div className="bg-white rounded-2xl p-6 border-2 border-green-200 shadow-sm">
-                      <h3 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
-                        <Briefcase className="h-5 w-5 text-green-600" />
-                        {t('scholarshipsPage.modal.workAuthorization')}
-                      </h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {scholarship.work_permissions.map((permission: string, index: number) => (
-                          <div
-                            key={index}
-                            className="flex items-center justify-center p-4 bg-green-50 rounded-xl border border-green-200"
-                          >
-                            <span className="font-semibold text-green-700 text-center">
-                              {permission}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Description */}
-                  {scholarship.description && (
-                    <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
-                      <h3 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
-                        <FileText className="h-5 w-5 text-slate-600" />
-                        {t('scholarshipsPage.modal.programDescription')}
-                      </h3>
-                      <div className="prose prose-slate max-w-none">
-                        <p className="text-slate-700 leading-relaxed whitespace-pre-line">
-                          {scholarship.description}
-                        </p>
-                      </div>
-                    </div>
-                  )}
                 </div>
 
-                {/* Sidebar */}
-                <div className="space-y-6">
-                  {/* Inactive Scholarship Warning */}
-                  {(!scholarship.is_active || is3800ScholarshipBlocked(scholarship)) && (
-                    <div className="p-6 rounded-2xl border-2 border-red-200 bg-red-50">
-                      <div className="flex items-center gap-3 mb-3">
-                        <AlertTriangle className="h-6 w-6 text-red-600" />
-                        <span className="font-bold text-lg text-red-600">
-                          {t('scholarshipsPage.modal.scholarshipExpired')}
-                        </span>
-                      </div>
-                      <div className="space-y-2">
-                        <p className="text-red-700 font-semibold">
-                          {t('scholarshipsPage.modal.noLongerAccepting')}
-                        </p>
-                        <p className="text-red-600 text-sm">
-                          {t('scholarshipsPage.modal.canStillView')}
-                        </p>
-                      </div>
-                    </div>
-                  )}
+                {/* Removed duplicate Description section to avoid repeated content */}
 
-                  {/* Deadline Status */}
-                  {scholarship.is_active && (
-                    <div className={`p-6 rounded-2xl border-2 ${deadlineInfo.bg}`}>
-                      <div className="flex items-center gap-3 mb-3">
-                        <DeadlineIcon className={`h-6 w-6 ${deadlineInfo.color}`} />
-                        <span className={`font-bold text-lg ${deadlineInfo.color}`}>
-                          {t('scholarshipsPage.modal.applicationDeadline')}
-                        </span>
-                      </div>
-                      <div className="space-y-2">
-                        {/* Timer para bolsas de $3800, ou dias restantes para outras */}
-                        {is3800Scholarship(scholarship) ? (
-                          <div className="flex items-center gap-2">
-                            <ScholarshipCountdownTimer 
-                              scholarship={scholarship} 
-                              className="text-sm px-4 py-2"
-                            />
-                          </div>
-                        ) : (
-                          <p className="text-2xl font-bold text-slate-900">
-                            {getDaysUntilDeadline(scholarship.deadline)} {t('scholarshipsPage.modal.daysLeft')}
-                          </p>
-                        )}
-                        <p className="text-slate-700">
-                          {t('scholarshipsPage.modal.deadline')} {(() => {
-                            // Parse da data como local para evitar problemas de timezone
-                            const [year, month, day] = scholarship.deadline.split('-').map(Number);
-                            const deadlineDate = new Date(year, month - 1, day);
-                            return deadlineDate.toLocaleDateString('en-US', {
-                              weekday: 'long',
-                              year: 'numeric',
-                              month: 'long',
-                              day: 'numeric'
-                            });
-                          })()}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* University Info */}
-                  <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm relative">
-                    <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
-                      <Building className="h-5 w-5 text-slate-600" />
-                      {t('scholarshipsPage.modal.universityInformation')}
-                    </h4>
-                    {!canViewSensitive ? (
-                      <div className="p-4 bg-blue-50 rounded-xl border border-blue-200">
-                        <p className="text-blue-800 text-sm">
-                          {!user ? t('scholarshipsPage.modal.loginRequired') : t('scholarshipsPage.modal.universityDetailsLocked')}
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        <p className="font-semibold text-slate-900">
-                          {scholarship.universities?.name || t('scholarshipsPage.modal.universityNameAvailable')}
-                        </p>
-                        {scholarship.universities?.location && (
-                          <p className="text-slate-600 flex items-center gap-1">
-                            <MapPin className="h-4 w-4" />
-                            {scholarship.universities.location}
-                          </p>
-                        )}
-                        {scholarship.universities?.ranking && (
-                          <p className="text-slate-600 flex items-center gap-1">
-                            <TrendingUp className="h-4 w-4" />
-                            {t('scholarshipsPage.modal.ranking')} #{scholarship.universities.ranking}
-                          </p>
-                        )}
-                      </div>
-                    )}
-                    
-                    {/* Overlay de bloqueio para usuários não logados ou não pagos */}
-                    {!canViewSensitive && (
-                      <div className="absolute inset-0 bg-white/95 backdrop-blur-sm rounded-2xl flex items-center justify-center z-10">
-                        <div className="text-center p-6">
-                          <Building className="h-10 w-10 mx-auto mb-3 text-slate-400" />
-                          <p className="text-base font-semibold text-slate-700 mb-1">
-                            {t('scholarshipsPage.modal.unlockUniversityInfo')}
-                          </p>
-                          <p className="text-sm text-slate-500">
-                            {!user ? t('scholarshipsPage.modal.loginRequired') : t('scholarshipsPage.modal.universityDetailsLocked')}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Additional Requirements */}
-                  {scholarship.requirements && (
-                    <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
-                      <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
-                        <Target className="h-5 w-5 text-slate-600" />
-                        {t('scholarshipsPage.modal.requirements')}
-                      </h4>
-                      <div className="space-y-3">
-                        {Array.isArray(scholarship.requirements) ? (
-                          scholarship.requirements.map((requirement: string, index: number) => (
-                            <div key={index} className="flex items-start gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
-                              <div className="flex-shrink-0 w-2 h-2 bg-slate-400 rounded-full mt-2"></div>
-                              <span className="text-slate-700 text-sm leading-relaxed">
-                                {requirement}
-                              </span>
-                            </div>
-                          ))
-                        ) : (
-                          <div className="text-slate-700 text-sm leading-relaxed whitespace-pre-line">
-                            {scholarship.requirements}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Additional Benefits */}
-                  {scholarship.benefits && (
-                    <div className="bg-white rounded-2xl p-6 border-2 border-blue-200 shadow-sm">
-                      <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
-                        <Award className="h-5 w-5 text-blue-600" />
-                        {t('scholarshipsPage.modal.additionalBenefits')}
-                      </h4>
-                      <div className="space-y-3">
-                        {Array.isArray(scholarship.benefits) ? (
-                          scholarship.benefits.map((benefit: string, index: number) => (
-                            <div key={index} className="flex items-start gap-3 p-3 bg-blue-50 rounded-xl border border-blue-100">
-                              <div className="flex-shrink-0 w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
-                              <span className="text-blue-700 text-sm leading-relaxed">
-                                {benefit}
-                              </span>
-                            </div>
-                          ))
-                        ) : (
-                          <div className="text-slate-700 text-sm leading-relaxed whitespace-pre-line">
-                            {scholarship.benefits}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
+                {/* Deadline Footer */}
+                <div className="mt-6 pt-4 border-t border-slate-200 text-center">
+                  <p className="text-sm text-slate-500">
+                    {t('scholarshipsPage.modal.applicationDeadline') || 'Application Deadline'}: 
+                    <span className="ml-1 font-semibold text-slate-700">{deadlineFormatted}</span>
+                  </p>
                 </div>
               </div>
             </div>

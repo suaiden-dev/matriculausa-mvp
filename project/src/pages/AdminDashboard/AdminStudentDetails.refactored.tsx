@@ -1,5 +1,5 @@
-﻿import React, { useState, Suspense, lazy, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+﻿import React, { useState, Suspense, lazy, useCallback, useEffect } from 'react';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
@@ -73,6 +73,7 @@ const TabLoadingSkeleton: React.FC = () => (
 const AdminStudentDetails: React.FC = () => {
   const { profileId } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user, userProfile } = useAuth();
   const queryClient = useQueryClient();
   
@@ -411,6 +412,14 @@ const AdminStudentDetails: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabId>('overview');
   const [dependents, setDependents] = useState(0);
   const [isEditing, setIsEditing] = useState(false);
+  
+  // Ler parâmetro 'tab' da URL e definir aba inicial
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam && ['overview', 'documents', 'scholarships', 'logs'].includes(tabParam)) {
+      setActiveTab(tabParam as TabId);
+    }
+  }, [searchParams]);
   const [expandedApps, setExpandedApps] = useState<Record<string, boolean>>({});
   const [isProgressExpanded, setIsProgressExpanded] = useState(false);
   const [i20Deadline, setI20Deadline] = useState<string | null>(null);
@@ -744,7 +753,7 @@ const AdminStudentDetails: React.FC = () => {
 
         // ✅ CORREÇÃO: Incluir uploads na query para garantir que apareçam no DocumentsView
         const fields = 'id,title,description,due_date,is_global,university_id,scholarship_application_id,created_at,updated_at,template_url,attachment_url';
-        const fieldsWithUploads = `${fields},document_request_uploads(*,reviewed_by,reviewed_at)`;
+        const fieldsWithUploads = `${fields},document_request_uploads(*)`;
 
         // ✅ OTIMIZAÇÃO: Executar queries em paralelo
         const [specificResult, globalResult] = await Promise.all([

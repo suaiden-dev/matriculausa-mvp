@@ -39,6 +39,7 @@ function formatAmountWithCurrency(amount, session) {
  * Em ambiente de desenvolvimento (localhost), filtra emails específicos
  */
 async function getAllAdmins(supabase, isDevelopment: boolean = false): Promise<Array<{
+  user_id: string;
   email: string;
   full_name: string;
   phone: string;
@@ -70,6 +71,7 @@ async function getAllAdmins(supabase, isDevelopment: boolean = false): Promise<A
           const adminUsers = authUsers.users
             .filter(user => user.user_metadata?.role === 'admin' || user.email === 'admin@matriculausa.com')
             .map(user => ({
+              user_id: user.id,
               email: user.email || '',
               full_name: user.user_metadata?.full_name || user.user_metadata?.name || 'Admin MatriculaUSA',
               phone: user.user_metadata?.phone || ''
@@ -82,6 +84,7 @@ async function getAllAdmins(supabase, isDevelopment: boolean = false): Promise<A
               : adminUsers;
             console.log(`[getAllAdmins] Encontrados ${filteredAdmins.length} admin(s) via auth.users${isDevelopment ? ' (filtrados para dev)' : ''}:`, filteredAdmins.map(a => a.email));
             return filteredAdmins.length > 0 ? filteredAdmins : [{
+              user_id: '',
               email: 'admin@matriculausa.com',
               full_name: 'Admin MatriculaUSA',
               phone: ''
@@ -93,6 +96,7 @@ async function getAllAdmins(supabase, isDevelopment: boolean = false): Promise<A
       }
       
       return [{
+        user_id: '',
         email: 'admin@matriculausa.com',
         full_name: 'Admin MatriculaUSA',
         phone: ''
@@ -143,6 +147,7 @@ async function getAllAdmins(supabase, isDevelopment: boolean = false): Promise<A
       adminProfiles.map(async (profile) => {
         if (profile.email) {
           return {
+            user_id: profile.user_id,
             email: profile.email,
             full_name: profile.full_name || 'Admin MatriculaUSA',
             phone: profile.phone || ''
@@ -151,6 +156,7 @@ async function getAllAdmins(supabase, isDevelopment: boolean = false): Promise<A
           try {
             const { data: authUser } = await supabase.auth.admin.getUserById(profile.user_id);
             return {
+              user_id: profile.user_id,
               email: authUser?.user?.email || '',
               full_name: profile.full_name || authUser?.user?.user_metadata?.full_name || 'Admin MatriculaUSA',
               phone: profile.phone || authUser?.user?.user_metadata?.phone || ''
@@ -165,7 +171,7 @@ async function getAllAdmins(supabase, isDevelopment: boolean = false): Promise<A
 
     // Filtrar nulos e admins sem email
     let admins = adminsWithEmail
-      .filter((admin): admin is { email: string; full_name: string; phone: string } => 
+      .filter((admin): admin is { user_id: string; email: string; full_name: string; phone: string } => 
         admin !== null && !!admin.email
       );
 
@@ -432,6 +438,11 @@ Deno.serve(async (req)=>{
       }
       console.log('User profile updated - application fee paid');
 
+      // Tracking vars for duplication control
+      let paymentInserted = false;
+      let duplicateFound = false;
+      let existingPaymentDate: Date | null = null;
+
       // Registrar pagamento na tabela individual_fee_payments
       try {
         const paymentDate = new Date().toISOString();
@@ -564,7 +575,7 @@ Deno.serve(async (req)=>{
           // Primeira verificação
           const { data: existingPayment, error: checkError } = await supabase
             .from('individual_fee_payments')
-            .select('id, payment_intent_id')
+            .select('id, payment_intent_id, payment_date, created_at')
             .eq('payment_intent_id', paymentIntentId)
             .eq('fee_type', 'application')
             .eq('user_id', userId)
@@ -574,12 +585,14 @@ Deno.serve(async (req)=>{
             console.warn('[Individual Fee Payment] Warning: Erro ao verificar duplicação:', checkError);
           } else if (existingPayment) {
             console.log(`[DUPLICAÇÃO] Payment já registrado em individual_fee_payments com payment_intent_id: ${paymentIntentId}, pulando inserção.`);
+            duplicateFound = true;
+            existingPaymentDate = existingPayment.created_at ? new Date(existingPayment.created_at) : (existingPayment.payment_date ? new Date(existingPayment.payment_date) : null);
             // Não inserir novamente, mas continuar o fluxo normalmente
           } else {
             // ✅ SEGUNDA VERIFICAÇÃO imediatamente antes de inserir (para evitar race condition)
             const { data: doubleCheckPayment, error: doubleCheckError } = await supabase
               .from('individual_fee_payments')
-              .select('id, payment_intent_id')
+              .select('id, payment_intent_id, payment_date, created_at')
               .eq('payment_intent_id', paymentIntentId)
               .eq('fee_type', 'application')
               .eq('user_id', userId)
@@ -589,6 +602,8 @@ Deno.serve(async (req)=>{
               console.warn('[Individual Fee Payment] Warning: Erro na segunda verificação de duplicação:', doubleCheckError);
             } else if (doubleCheckPayment) {
               console.log(`[DUPLICAÇÃO] Payment já registrado (segunda verificação) com payment_intent_id: ${paymentIntentId}, pulando inserção.`);
+              duplicateFound = true;
+              existingPaymentDate = doubleCheckPayment.created_at ? new Date(doubleCheckPayment.created_at) : (doubleCheckPayment.payment_date ? new Date(doubleCheckPayment.payment_date) : null);
               // Não inserir novamente
             } else {
               // Não existe, pode inserir
@@ -613,7 +628,7 @@ Deno.serve(async (req)=>{
                   console.log(`[DUPLICAÇÃO] Erro de constraint única detectado, verificando se o registro foi criado por outra chamada...`);
                   const { data: finalCheckPayment } = await supabase
                     .from('individual_fee_payments')
-                    .select('id, payment_intent_id')
+                    .select('id, payment_intent_id, payment_date, created_at')
                     .eq('payment_intent_id', paymentIntentId)
                     .eq('fee_type', 'application')
                     .eq('user_id', userId)
@@ -621,6 +636,8 @@ Deno.serve(async (req)=>{
                   
                   if (finalCheckPayment) {
                     console.log(`[DUPLICAÇÃO] Registro foi criado por outra chamada simultânea, continuando normalmente.`);
+                    duplicateFound = true;
+                    existingPaymentDate = finalCheckPayment.created_at ? new Date(finalCheckPayment.created_at) : (finalCheckPayment.payment_date ? new Date(finalCheckPayment.payment_date) : null);
                   } else {
                     console.warn('[Individual Fee Payment] Warning: Erro ao inserir mas registro não encontrado:', insertError);
                   }
@@ -629,6 +646,7 @@ Deno.serve(async (req)=>{
                 }
               } else {
                 console.log('[Individual Fee Payment] Application fee recorded successfully:', insertResult);
+                paymentInserted = true;
               }
             }
           }
@@ -691,10 +709,46 @@ Deno.serve(async (req)=>{
       }
       
       // --- NOTIFICAÇÕES VIA WEBHOOK N8N (para PIX e cartão) ---
-      try {
+      
+      // Decidir se deve enviar notificações
+      // 1. Se nós inserimos o pagamento agora -> ENVIAR
+      // 2. Se não foi inserido (duplicata), verificar quão antiga é a duplicata
+      //    - Se < 2 minutos: Provável race condition, outro processo está enviando -> NÃO ENVIAR
+      //    - Se > 2 minutos: Provável retry após falha -> ENVIAR
+      // 3. Se não temos info de data (fallback) -> NÃO ENVIAR para evitar spam
+      
+      let shouldSendNotifications = false;
+      const TWO_MINUTES_MS = 2 * 60 * 1000;
+      
+      if (paymentInserted) {
+        shouldSendNotifications = true;
+        console.log('🔔 [NOTIFICAÇÕES] Pagamento inserido com sucesso nesta execução. Enviando notificações.');
+      } else if (duplicateFound && existingPaymentDate) {
+        const timeDiff = new Date().getTime() - existingPaymentDate.getTime();
+        if (timeDiff > TWO_MINUTES_MS) {
+           shouldSendNotifications = true;
+           console.log(`🔔 [NOTIFICAÇÕES] Duplicata encontrada, mas registro é antigo (${timeDiff}ms > 2min). Assumindo retry e enviando notificações.`);
+        } else {
+           shouldSendNotifications = false;
+           console.log(`🔇 [NOTIFICAÇÕES] Duplicata encontrada e registro é recente (${timeDiff}ms < 2min). Assumindo race condition e PULANDO notificações.`);
+        }
+      } else if (duplicateFound && !existingPaymentDate) {
+         shouldSendNotifications = false;
+         console.log('🔇 [NOTIFICAÇÕES] Duplicata encontrada mas sem data de criação. Por segurança, PULANDO notificações.');
+      } else {
+         // Fallback default: se não foi duplicata mas também não inserted (ex: erro, ou sem paymentIntentId), permitimos enviar ou não?
+         // Se chegou aqui, provavelmente paymentInserted=false e duplicateFound=false.
+         // Talvez erro na inserção. Se houve erro na inserção, melhor tentar notificar?
+         // Mas se paymentIntentId não existe... 
+         shouldSendNotifications = true;
+         console.log('🔔 [NOTIFICAÇÕES] Caso não coberto por proteção de duplicata (ex: sem paymentIntentId). Enviando notificações por precaução.');
+      }
+
+      if (shouldSendNotifications) {
+        try {
         console.log(`📤 [verify-stripe-session-application-fee] Iniciando notificações...`);
         // Buscar dados do aluno (incluindo seller_referral_code e phone)
-        const { data: alunoData, error: alunoError } = await supabase.from('user_profiles').select('full_name, email, phone, seller_referral_code').eq('user_id', userId).single();
+        const { data: alunoData, error: alunoError } = await supabase.from('user_profiles').select('id, full_name, email, phone, seller_referral_code').eq('user_id', userId).single();
         // Detectar ambiente de desenvolvimento
         const isDevelopment = config.environment.isTest || config.environment.environment === 'test';
         // Buscar todos os admins do sistema
@@ -755,6 +809,32 @@ Deno.serve(async (req)=>{
         });
         const alunoResult = await alunoNotificationResponse.text();
         console.log('[NOTIFICAÇÃO ALUNO] Resposta do n8n (aluno):', alunoNotificationResponse.status, alunoResult);
+
+        // ✅ IN-APP NOTIFICATION FOR STUDENT (Application Fee)
+        try {
+          if (alunoData?.id) {
+            console.log('[NOTIFICAÇÃO ALUNO] Criando notificação in-app de Application Fee...');
+            const { error: inAppError } = await supabase
+              .from('student_notifications')
+              .insert({
+                student_id: alunoData.id,
+                title: 'Application Fee Confirmd',
+                message: `Your Application Fee for ${scholarship.title} at ${universidade.name} has been confirmed.`,
+                link: '/student/dashboard/applications',
+                created_at: new Date().toISOString()
+              });
+
+            if (inAppError) {
+              console.error('[NOTIFICAÇÃO ALUNO] Erro ao criar notificação in-app:', inAppError);
+            } else {
+              console.log('[NOTIFICAÇÃO ALUNO] Notificação in-app criada com sucesso!');
+            }
+          } else {
+            console.warn('[NOTIFICAÇÃO ALUNO] Dados do aluno (ID) não encontrados para notificação in-app.');
+          }
+        } catch (inAppEx) {
+            console.error('[NOTIFICAÇÃO ALUNO] Exceção ao criar notificação in-app:', inAppEx);
+        }
         // 2. NOTIFICAÇÃO PARA A UNIVERSIDADE
         const mensagemUniversidade = `O aluno ${alunoData.full_name} pagou a taxa de aplicação de ${formattedAmount} via Stripe para a bolsa "${scholarship.title}" da universidade ${universidade.name}. Acesse o painel para revisar a candidatura.`;
         const universidadeNotificationPayload = {
@@ -814,6 +894,7 @@ Deno.serve(async (req)=>{
             const sellerPhone = sellerProfile?.phone || "";
             // Buscar dados do affiliate_admin se houver
             let affiliateAdminData = {
+              user_id: "",
               email: "",
               name: "Affiliate Admin",
               phone: ""
@@ -825,6 +906,7 @@ Deno.serve(async (req)=>{
                 const { data: affiliateProfile, error: profileError } = await supabase.from('user_profiles').select('email, full_name, phone').eq('user_id', affiliateData.user_id).single();
                 if (affiliateProfile && !profileError) {
                   affiliateAdminData = {
+                    user_id: affiliateData.user_id,
                     email: affiliateProfile.email || "",
                     name: affiliateProfile.full_name || "Affiliate Admin",
                     phone: affiliateProfile.phone || ""
@@ -873,6 +955,28 @@ Deno.serve(async (req)=>{
               const sellerError = await sellerNotificationResponse.text();
               console.error('📧 [verify-stripe-session-application-fee] Erro ao enviar notificação para seller:', sellerError);
             }
+
+            // ✅ IN-APP NOTIFICATION FOR SELLER
+            if (sellerData.user_id) {
+                try {
+                  await supabase.from('admin_notifications').insert({
+                    user_id: sellerData.user_id,
+                    title: 'New Commission Potential (Application)',
+                    message: `Your student ${alunoData.full_name} has paid the Application Fee for "${scholarship.title}" (${formattedAmount}).`,
+                    type: 'payment',
+                    link: '/admin/dashboard/users',
+                    metadata: {
+                       student_id: alunoData.id,
+                       student_name: alunoData.full_name,
+                       amount: amountValue,
+                       fee_type: 'application_fee',
+                       payment_id: sessionId
+                    }
+                  });
+                } catch (sellerInAppErr) {
+                   console.error(`[NOTIFICAÇÃO SELLER] Erro ao criar in-app notification para seller ${sellerData.email}:`, sellerInAppErr);
+                }
+            }
             // 3.2. NOTIFICAÇÃO PARA O AFFILIATE ADMIN (se existir)
             if (affiliateAdminData.email) {
               const affiliateNotificationPayload = {
@@ -916,6 +1020,28 @@ Deno.serve(async (req)=>{
               } else {
                 const affiliateError = await affiliateNotificationResponse.text();
                 console.error('📧 [verify-stripe-session-application-fee] Erro ao enviar notificação para affiliate admin:', affiliateError);
+              }
+
+              // ✅ IN-APP NOTIFICATION FOR AFFILIATE ADMIN
+              if (affiliateAdminData.user_id) {
+                  try {
+                    await supabase.from('admin_notifications').insert({
+                      user_id: affiliateAdminData.user_id,
+                      title: 'Affiliate Application Fee',
+                      message: `A student from your network (${alunoData.full_name}) has paid the Application Fee for "${scholarship.title}" (${formattedAmount}).`,
+                      type: 'payment',
+                      link: '/admin/dashboard/affiliate-management',
+                      metadata: {
+                         student_id: alunoData.id,
+                         student_name: alunoData.full_name,
+                         amount: amountValue,
+                         fee_type: 'application_fee',
+                         payment_id: sessionId
+                      }
+                    });
+                  } catch (affiliateInAppErr) {
+                     console.error(`[NOTIFICAÇÃO AFFILIATE] Erro ao criar in-app notification para affiliate ${affiliateAdminData.email}:`, affiliateInAppErr);
+                  }
               }
             }
             // 3.3. NOTIFICAÇÃO PARA TODOS OS ADMINS
@@ -965,6 +1091,36 @@ Deno.serve(async (req)=>{
                 const adminError = await adminNotificationResponse.text();
                 console.error(`📧 [verify-stripe-session-application-fee] Erro ao enviar notificação para ADMIN ${admin.email}:`, adminError);
               }
+
+              // ✅ IN-APP NOTIFICATION FOR ADMIN
+              if (admin.user_id) {
+                try {
+                  const { error: insertError } = await supabase.from('admin_notifications').insert({
+                    user_id: admin.user_id,
+                    title: 'New Application Fee Payment',
+                    message: `Student ${alunoData.full_name} has paid the Application Fee (${formattedAmount}).`,
+                    type: 'payment',
+                    link: '/admin/dashboard/payments',
+                    metadata: {
+                       student_id: alunoData.id,
+                       student_name: alunoData.full_name,
+                       amount: amountValue,
+                       fee_type: 'application',
+                       payment_id: sessionId
+                    }
+                  });
+                  
+                  if (insertError) {
+                    console.error(`[NOTIFICAÇÃO ADMIN] Erro ao criar in-app notification para admin ${admin.email}:`, insertError);
+                  } else {
+                    console.log(`[NOTIFICAÇÃO ADMIN] ✅ In-app notification criada com sucesso para admin ${admin.email} (ID: ${admin.user_id})`);
+                  }
+                } catch (adminInAppErr) {
+                   console.error(`[NOTIFICAÇÃO ADMIN] Exceção ao criar in-app notification para admin ${admin.email}:`, adminInAppErr);
+                }
+              } else {
+                 console.warn(`[NOTIFICAÇÃO ADMIN] ⚠️ Admin ${admin.email} não possui user_id, pulando in-app notification.`);
+              }
             });
             await Promise.allSettled(adminNotificationPromises);
           } else {
@@ -1008,6 +1164,36 @@ Deno.serve(async (req)=>{
               } else {
                 const adminError = await adminNotificationResponse.text();
                 console.error(`📧 [verify-stripe-session-application-fee] Erro ao enviar notificação para ADMIN ${admin.email}:`, adminError);
+              }
+
+              // ✅ IN-APP NOTIFICATION FOR ADMIN
+              if (admin.user_id) {
+                try {
+                  const { error: insertError } = await supabase.from('admin_notifications').insert({
+                    user_id: admin.user_id,
+                    title: 'New Application Fee Payment',
+                    message: `Student ${alunoData.full_name} has paid the Application Fee (${formattedAmount}).`,
+                    type: 'payment',
+                    link: '/admin/dashboard/payments',
+                    metadata: {
+                       student_id: alunoData.id,
+                       student_name: alunoData.full_name,
+                       amount: amountValue,
+                       fee_type: 'application',
+                       payment_id: sessionId
+                    }
+                  });
+                  
+                  if (insertError) {
+                    console.error(`[NOTIFICAÇÃO ADMIN] Erro ao criar in-app notification para admin ${admin.email}:`, insertError);
+                  } else {
+                    console.log(`[NOTIFICAÇÃO ADMIN] ✅ In-app notification criada com sucesso para admin ${admin.email} (ID: ${admin.user_id})`);
+                  }
+                } catch (adminInAppErr) {
+                   console.error(`[NOTIFICAÇÃO ADMIN] Exceção ao criar in-app notification para admin ${admin.email}:`, adminInAppErr);
+                }
+              } else {
+                 console.warn(`[NOTIFICAÇÃO ADMIN] ⚠️ Admin ${admin.email} não possui user_id, pulando in-app notification.`);
               }
             });
             await Promise.allSettled(adminNotificationPromises);
@@ -1054,11 +1240,42 @@ Deno.serve(async (req)=>{
               const adminError = await adminNotificationResponse.text();
               console.error(`📧 [verify-stripe-session-application-fee] Erro ao enviar notificação para ADMIN ${admin.email}:`, adminError);
             }
+
+            // ✅ IN-APP NOTIFICATION FOR ADMIN
+            if (admin.user_id) {
+                try {
+                  const { error: insertError } = await supabase.from('admin_notifications').insert({
+                    user_id: admin.user_id,
+                    title: 'New Application Fee Payment',
+                    message: `Student ${alunoData.full_name} has paid the Application Fee (${formattedAmount}).`,
+                    type: 'payment',
+                    link: '/admin/dashboard/payments',
+                    metadata: {
+                       student_id: alunoData.id,
+                       student_name: alunoData.full_name,
+                       amount: amountValue,
+                       fee_type: 'application',
+                       payment_id: sessionId
+                    }
+                  });
+                  
+                  if (insertError) {
+                    console.error(`[NOTIFICAÇÃO ADMIN] Erro ao criar in-app notification para admin ${admin.email}:`, insertError);
+                  } else {
+                    console.log(`[NOTIFICAÇÃO ADMIN] ✅ In-app notification criada com sucesso para admin ${admin.email} (ID: ${admin.user_id})`);
+                  }
+                } catch (adminInAppErr) {
+                   console.error(`[NOTIFICAÇÃO ADMIN] Exceção ao criar in-app notification para admin ${admin.email}:`, adminInAppErr);
+                }
+            } else {
+                 console.warn(`[NOTIFICAÇÃO ADMIN] ⚠️ Admin ${admin.email} não possui user_id, pulando in-app notification.`);
+            }
           });
           await Promise.allSettled(adminNotificationPromises);
         }
       } catch (notifErr) {
         console.error('[NOTIFICAÇÃO] Erro ao notificar application fee via n8n:', notifErr);
+      }
       }
       
       // Criar log DEPOIS das notificações para marcar que o processamento foi concluído

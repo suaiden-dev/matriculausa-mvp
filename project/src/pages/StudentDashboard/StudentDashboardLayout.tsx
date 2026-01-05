@@ -17,7 +17,6 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
-import { supabase } from '../../lib/supabase';
 import { useSmartPollingNotifications } from '../../hooks/useSmartPollingNotifications';
 import { useStudentChatUnreadCount } from '../../hooks/useStudentChatUnreadCount';
 import { useUnreadMessages } from '../../contexts/UnreadMessagesContext';
@@ -54,6 +53,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
     unreadCount: newNotificationCount,
     markAsRead,
     markAllAsRead,
+    clearAll, // Use clearAll directly from the hook to ensure UI updates
     requestNotificationPermission
   } = useSmartPollingNotifications({
     userType: 'student',
@@ -75,12 +75,8 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
   useEffect(() => {
     requestNotificationPermission();
   }, []);
-
   
-  // Solicitar permissão para notificações nativas na primeira renderização
-  useEffect(() => {
-    requestNotificationPermission();
-  }, []);
+  // Clean up duplicate useEffect if present (lines 80-83 in original file were duplicate)
 
   const openNotification = async (n: any) => {
     try {
@@ -99,25 +95,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
     } catch {}
   };
 
-  const clearAll = async () => {
-    try {
-      if (!user?.id) return;
-      
-      // Busca o perfil do usuário para obter o student_id
-      const { data: profileData } = await supabase
-        .from('user_profiles')
-        .select('id')
-        .eq('user_id', user.id)
-        .single();
-      
-      if (profileData) {
-        await supabase
-          .from('student_notifications')
-          .delete()
-          .eq('student_id', profileData.id);
-      }
-    } catch {}
-  };  // Close notifications dropdown when clicking outside
+  // Local clearAll removed in favor of hook's clearAll which manages state  // Close notifications dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Element;

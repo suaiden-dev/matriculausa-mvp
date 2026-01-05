@@ -638,7 +638,7 @@ export function useStudentApplicationsQuery(profileId?: string) {
             title,
             amount_usd,
             application_deadline,
-            universities(id, name, logo_url)
+            universities(id, name, logo_url, university_fees_page_url)
           )
         `)
         .eq('student_id', profileId)

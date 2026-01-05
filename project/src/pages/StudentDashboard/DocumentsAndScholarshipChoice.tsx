@@ -364,25 +364,29 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
       console.log('🔍 [DEBUG] n8nData received:', n8nData);
       
       if (n8nData) {
-        const respPassport = n8nData[0].response_passaport;
-        const respFunds = n8nData[0].response_funds;
-        const respDegree = n8nData[0].response_degree;
+        // Safe data extraction handling both array and object formats
+        const dataItem = Array.isArray(n8nData) && n8nData.length > 0 ? n8nData[0] : 
+                        (typeof n8nData === 'object' && n8nData !== null ? n8nData : {});
+
+        const respPassport = dataItem.response_passaport;
+        const respFunds = dataItem.response_funds;
+        const respDegree = dataItem.response_degree;
 
         const passportOk = respPassport === true;
         const fundsOk = respFunds === true;
         const degreeOk = respDegree === true;
 
-        console.log('🔍 [DEBUG] n8nData[0]:', n8nData[0]);
+        console.log('🔍 [DEBUG] dataItem:', dataItem);
         console.log('🔍 [DEBUG] respPassport:', respPassport, 'passportOk:', passportOk);
         console.log('🔍 [DEBUG] respFunds:', respFunds, 'fundsOk:', fundsOk);
         console.log('🔍 [DEBUG] respDegree:', respDegree, 'degreeOk:', degreeOk);
         
         const passportErr = typeof respPassport === 'string' ? getFormattedErrorMessage(respPassport, 'passport') : 
-                           (passportOk ? '' : getFormattedErrorMessage(n8nData[0].details_passport || 'Invalid document.', 'passport'));
+                           (passportOk ? '' : getFormattedErrorMessage(dataItem.details_passport || 'Invalid document.', 'passport'));
         const fundsErr = typeof respFunds === 'string' ? getFormattedErrorMessage(respFunds, 'funds_proof') : 
-                        (fundsOk ? '' : getFormattedErrorMessage(n8nData[0].details_funds || 'Invalid document.', 'funds_proof'));
+                        (fundsOk ? '' : getFormattedErrorMessage(dataItem.details_funds || 'Invalid document.', 'funds_proof'));
         const degreeErr = typeof respDegree === 'string' ? getFormattedErrorMessage(respDegree, 'diploma') : 
-                         (degreeOk ? '' : getFormattedErrorMessage(n8nData[0].details_degree || 'Invalid document.', 'diploma'));
+                         (degreeOk ? '' : getFormattedErrorMessage(dataItem.details_degree || 'Invalid document.', 'diploma'));
         
         console.log('🔍 [DEBUG] Final errors:', { passportErr, fundsErr, degreeErr });
 
@@ -832,6 +836,7 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
               .single();
             applicationId = newApp?.id || null;
             
+            
             // Log the scholarship application creation
             if (applicationId) {
               try {
@@ -848,8 +853,40 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
                     application_method: 'ai_approved_documents'
                   }
                 });
+
+                // ✅ Notificar admins (in-app) sobre nova aplicação
+                // Buscar admins
+                const { data: admins } = await supabase
+                  .from('user_profiles')
+                  .select('user_id')
+                  .eq('role', 'admin');
+
+                if (admins && admins.length > 0) {
+                  const studentName = userProfile?.full_name || user.email || 'Student';
+                  const notifications = admins.map(admin => ({
+                    user_id: admin.user_id,
+                    type: 'application',
+                    title: 'New Application',
+                    message: `${studentName} created a new application.`,
+                    link: `/admin/dashboard/students/${profile.id}`,
+                    created_at: new Date().toISOString(),
+                    is_read: false
+                  }));
+
+                  // Use Edge Function to bypass RLS policies
+                  const { data: { session } } = await supabase.auth.getSession();
+                  await fetch(`${import.meta.env.VITE_SUPABASE_FUNCTIONS_URL}/create-admin-notification`, {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'Authorization': `Bearer ${session?.access_token || ''}`
+                    },
+                    body: JSON.stringify({ notifications }),
+                  });
+                }
+
               } catch (logError) {
-                console.error('Failed to log application creation:', logError);
+                console.error('Failed to log application creation or notify admins:', logError);
               }
             }
           }

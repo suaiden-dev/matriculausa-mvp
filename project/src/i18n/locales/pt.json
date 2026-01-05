@@ -711,7 +711,10 @@
       "expired": "Expirada",
       "scholarshipExpired": "Bolsa Expirada",
       "noLongerAccepting": "Esta bolsa não está mais aceitando novas aplicações.",
-      "canStillView": "Você ainda pode visualizar as informações, mas não será possível aplicar para esta bolsa."
+      "canStillView": "Você ainda pode visualizar as informações, mas não será possível aplicar para esta bolsa.",
+      "universityInternalFees": "Taxas Internas da Universidade",
+      "internalFeesNote": "Taxas pagas diretamente à universidade. Sujeito a alteração.",
+      "days": "dias"
     }
   },
   "universitiesPage": {
@@ -3775,5 +3778,42 @@
     "3800Expired": "Esta bolsa não está mais aceitando candidaturas",
     "3800Expiring": "Últimas horas para se candidatar! Prazo expira amanhã (6 de novembro)",
     "3800ExpiringShort": "Prazo expira amanhã"
+  },
+  "scholarshipsPage": {
+    "modal": {
+      "exclusive": "Exclusiva",
+      "expired": "Expirada",
+      "annualSavings": "Economia Anual",
+      "coverage": "Cobertura",
+      "deadline": "Prazo",
+      "days": "dias",
+      "financialBreakdown": "Detalhes Financeiros",
+      "originalAnnualCost": "Custo Anual Original",
+      "withScholarship": "Com a Bolsa",
+      "costPerCredit": "Custo por Crédito",
+      "additionalBenefits": "Benefícios Adicionais",
+      "programDescription": "Descrição da Bolsa",
+      "programInformation": "Informações da Bolsa",
+      "academicLevel": "Nível Acadêmico",
+      "studyMode": "Modo de Estudo",
+      "programDuration": "Duração da Bolsa",
+      "language": "Idioma",
+      "workAuthorization": "Autorização de Trabalho",
+      "requirements": "Requisitos",
+      "applicationDeadline": "Prazo de Candidatura",
+      "internalFeesNote": "As taxas internas são mostradas apenas após o pagamento da taxa de processo de seleção",
+      "internalFeesTitle": "Taxas Internas da Universidade",
+      "internalFeesDisclaimer": "Estas taxas são pagas diretamente à universidade, não através da nossa plataforma",
+      "internalFeesAvailable": "Taxas Internas da Universidade Disponíveis",
+      "internalFeesNotice": "Esta bolsa pode ter taxas internas adicionais da universidade. Essas taxas serão visíveis após o pagamento da Taxa de Processo de Seleção.",
+      "anyField": "Qualquer Área",
+      "universityInternalFees": "Taxas Internas da Universidade",
+      "viewUniversityFeesPage": "Ver Página de Taxas da Universidade"
+    },
+    "scholarshipCard": {
+      "applicationFee": "Taxa de Matrícula",
+      "customFee": "Taxa personalizada",
+      "standardFee": "Taxa padrão"
+    }
   }
 }

@@ -3436,5 +3436,43 @@
     "3800Expired": "Not Available for application",
     "3800Expiring": "Last hours to apply! Deadline expires tomorrow (November 6th)",
     "3800ExpiringShort": "Deadline expires tomorrow"
+  },
+  "scholarshipsPage": {
+    "modal": {
+      "exclusive": "Exclusive",
+      "expired": "Expired",
+      "annualSavings": "Annual Savings",
+      "coverage": "Coverage",
+      "deadline": "Deadline",
+      "days": "days",
+      "financialBreakdown": "Financial Details",
+      "originalAnnualCost": "Original Annual Cost",
+      "withScholarship": "With Scholarship",
+      "costPerCredit": "Cost per Credit",
+      "additionalBenefits": "Benefits",
+      "programDescription": "Scholarship Description",
+      "programInformation": "Scholarship Information",
+      "academicLevel": "Academic Level",
+      "studyMode": "Study Mode",
+      "programDuration": "Scholarship Duration",
+      "language": "Language",
+      "workAuthorization": "Work Authorization",
+      "requirements": "Requirements",
+      "applicationDeadline": "Application Deadline",
+      "internalFeesNote": "Internal fees are shown only after payment of the selection process fee",
+      "internalFeesTitle": "Tarifas Internas de la Universidad",
+      "internalFeesDisclaimer": "Estas tarifas se pagan directamente a la universidad, no a través de nuestra plataforma",
+      "internalFeesAvailable": "Tarifas Internas de la Universidad Disponibles",
+      "internalFeesNotice": "Esta beca puede tener tarifas internas adicionales de la universidad. Estas tarifas serán visibles después del pago de la Tarifa de Proceso de Selección.",
+      "anyField": "Any Field",
+      "inPerson": "In-Person",
+      "universityInternalFees": "Tarifas Internas de la Universidad",
+      "viewUniversityFeesPage": "Ver Página de Tarifas de la Universidad"
+    },
+    "scholarshipCard": {
+      "applicationFee": "Application Fee",
+      "customFee": "Tarifa personalizada",
+      "standardFee": "Tarifa estándar"
+    }
   }
 }

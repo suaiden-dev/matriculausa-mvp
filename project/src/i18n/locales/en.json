@@ -711,7 +711,10 @@
       "expired": "Expired",
       "scholarshipExpired": "Scholarship Expired",
       "noLongerAccepting": "Not Available for application",
-      "canStillView": "You can still view the information, but it will not be possible to apply for this scholarship."
+      "canStillView": "You can still view the information, but it will not be possible to apply for this scholarship.",
+      "universityInternalFees": "University Internal Fees",
+      "internalFeesNote": "Fees paid directly to university. Subject to change.",
+      "days": "days"
     }
   },
   "universitiesPage": {
@@ -3664,5 +3667,43 @@
     "3800Expired": "Not Available for application",
     "3800Expiring": "Last hours to apply! Deadline expires tomorrow (November 6th)",
     "3800ExpiringShort": "Deadline expires tomorrow"
+  },
+  "scholarshipsPage": {
+    "modal": {
+      "exclusive": "Exclusive",
+      "expired": "Expired",
+      "annualSavings": "Annual Savings",
+      "coverage": "Coverage",
+      "deadline": "Deadline",
+      "days": "days",
+      "financialBreakdown": "Financial Details",
+      "originalAnnualCost": "Original Annual Cost",
+      "withScholarship": "With Scholarship",
+      "costPerCredit": "Cost per Credit",
+      "additionalBenefits": "Benefits",
+      "programDescription": "Scholarship Description",
+      "programInformation": "Scholarship Information",
+      "academicLevel": "Academic Level",
+      "studyMode": "Study Mode",
+      "programDuration": "Scholarship Duration",
+      "language": "Language",
+      "workAuthorization": "Work Authorization",
+      "requirements": "Requirements",
+      "applicationDeadline": "Application Deadline",
+      "internalFeesNote": "Internal fees are shown only after payment of the selection process fee",
+      "internalFeesTitle": "Internal University Fees",
+      "internalFeesDisclaimer": "These fees are paid directly to the university, not through our platform",
+      "internalFeesAvailable": "University Internal Fees Available",
+      "internalFeesNotice": "This scholarship may have additional internal fees from the university. These fees will be visible after payment of the Selection Process Fee.",
+      "anyField": "Any Field",
+      "inPerson": "In-Person",
+      "universityInternalFees": "University Internal Fees",
+      "viewUniversityFeesPage": "View University Fees Page"
+    },
+    "scholarshipCard": {
+      "applicationFee": "Application Fee",
+      "customFee": "Custom fee",
+      "standardFee": "Standard fee"
+    }
   }
 }

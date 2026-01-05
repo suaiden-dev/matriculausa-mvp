@@ -32,6 +32,7 @@ export interface University {
   participates_in_matricula_rewards?: boolean;
   matricula_rewards_opted_in_at?: string;
   matricula_rewards_opt_in_notes?: string;
+  university_fees_page_url?: string;
   created_at: string;
 }
 
@@ -66,6 +67,7 @@ export interface Scholarship {
   // Novos campos para taxas dinâmicas
   application_fee_amount?: number;
   scholarship_fee_amount?: number;
+  internal_fees?: any[];
   is_stripe_connect_enabled?: boolean;
   university_stripe_account_id?: string;
   // Algumas consultas retornam também um campo denormalizado com o nome da universidade
@@ -78,6 +80,7 @@ export interface Scholarship {
     logo_url?: string;
     location: string;
     is_approved: boolean;
+    university_fees_page_url?: string;
   } | null;
 }
 
