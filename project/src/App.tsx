@@ -45,6 +45,7 @@ import ForStudents from './pages/ForStudents';
 import EmailOAuthCallback from './pages/EmailOAuthCallback';
 import AuthCallback from './pages/AuthCallback';
 import MicrosoftCallback from './pages/MicrosoftCallback';
+import Auth323NetworkCallback from './pages/Auth323NetworkCallback';
 import { useReferralCodeCapture } from './hooks/useReferralCodeCapture';
 import { ZelleCheckoutPage } from './components/ZelleCheckoutPage';
 import { ZelleWaitingPage } from './components/ZelleWaitingPage';
@@ -150,6 +151,9 @@ const AppContent = () => {
           <Route path="/email-oauth-callback" element={<EmailOAuthCallback />} />
           <Route path="/auth-callback" element={<AuthCallback />} />
           <Route path="/microsoft-email" element={<MicrosoftCallback />} />
+          {/* SSO 323 Network - Suporta ambas as rotas para compatibilidade */}
+          <Route path="/auth/callback" element={<Auth323NetworkCallback />} />
+          <Route path="/auth/323-network/callback" element={<Auth323NetworkCallback />} />
           <Route path="/eb3-jobs" element={<EB3JobsLanding />} />
           <Route path="/unsubscribe" element={<UnsubscribeNewsletter />} />
           
