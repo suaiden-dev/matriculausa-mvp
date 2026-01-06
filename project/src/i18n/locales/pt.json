@@ -3780,6 +3780,61 @@
     "3800ExpiringShort": "Prazo expira amanhã"
   },
   "scholarshipsPage": {
+    "filters": {
+      "levels": {
+        "all": "Todos os Níveis",
+        "graduate": "Pós-Graduação",
+        "doctorate": "Doutorado",
+        "undergraduate": "Graduação"
+      },
+      "courseModalities": {
+        "online": "Online",
+        "inPerson": "Presencial",
+        "hybrid": "Híbrido",
+        "mixed": "Misto"
+      },
+      "allFields": "Todas as Áreas",
+      "allLevels": "Todos os Níveis",
+      "allModes": "Todos os Modos",
+      "allPermissions": "Todas as Permissões",
+      "allUniversities": "Todas as Universidades",
+      "anyField": "Qualquer Área",
+      "business": "Negócios",
+      "engineering": "Engenharia",
+      "stem": "STEM",
+      "online": "Online",
+      "inPerson": "Presencial",
+      "hybrid": "Híbrido",
+      "opt": "OPT",
+      "cpt": "CPT",
+      "f1": "Visto F1",
+      "min": "Mín",
+      "max": "Máx",
+      "loading": "Carregando...",
+      "scholarshipsFound": "bolsas encontradas",
+      "university": "Universidade",
+      "universityTooltip": "Crie uma conta e pague a Taxa do Processo Seletivo para filtrar por universidade"
+    },
+    "featuredSection": {
+      "title": "Bolsas em Destaque",
+      "subtitle": "Melhores Oportunidades da Temporada",
+      "description": "Bolsas selecionadas com o melhor valor e maiores taxas de aprovação"
+    },
+    "allScholarships": {
+      "title": "Todas as Bolsas",
+      "description": "Navegue por todas as oportunidades de bolsas disponíveis"
+    },
+    "noResults": {
+      "title": "Nenhuma Bolsa Encontrada",
+      "description": "Tente ajustar seus filtros ou termos de busca para encontrar mais oportunidades.",
+      "clearFilters": "Limpar Filtros"
+    },
+    "pagination": {
+      "page": "Página",
+      "of": "de",
+      "previous": "Anterior",
+      "next": "Próximo"
+    },
     "modal": {
       "exclusive": "Exclusiva",
       "expired": "Expirada",
@@ -3807,13 +3862,27 @@
       "internalFeesAvailable": "Taxas Internas da Universidade Disponíveis",
       "internalFeesNotice": "Esta bolsa pode ter taxas internas adicionais da universidade. Essas taxas serão visíveis após o pagamento da Taxa de Processo de Seleção.",
       "anyField": "Qualquer Área",
+      "inPerson": "Presencial",
       "universityInternalFees": "Taxas Internas da Universidade",
       "viewUniversityFeesPage": "Ver Página de Taxas da Universidade"
     },
     "scholarshipCard": {
       "applicationFee": "Taxa de Matrícula",
       "customFee": "Taxa personalizada",
-      "standardFee": "Taxa padrão"
+      "standardFee": "Taxa padrão",
+      "days": "dias",
+      "expired": "Expirada",
+      "university": "Universidade",
+      "studyMode": "Modo de Estudo",
+      "workAuthorization": "Autorização de Trabalho",
+      "financialOverview": "Visão Financeira",
+      "originalPrice": "Preço Original",
+      "withScholarship": "Com a Bolsa",
+      "perCredit": "por crédito",
+      "scholarshipDiscount": "Desconto da Bolsa",
+      "notAvailable": "N/D",
+      "details": "Ver Detalhes",
+      "applyNow": "Candidatar-se"
     }
   }
 }

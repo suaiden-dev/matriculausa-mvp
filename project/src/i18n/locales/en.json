@@ -3669,6 +3669,61 @@
     "3800ExpiringShort": "Deadline expires tomorrow"
   },
   "scholarshipsPage": {
+    "filters": {
+      "levels": {
+        "all": "All Levels",
+        "graduate": "Graduate",
+        "doctorate": "Doctorate",
+        "undergraduate": "Undergraduate"
+      },
+      "courseModalities": {
+        "online": "Online",
+        "inPerson": "In-Person",
+        "hybrid": "Hybrid",
+        "mixed": "Mixed"
+      },
+      "allFields": "All Fields",
+      "allLevels": "All Levels",
+      "allModes": "All Modes",
+      "allPermissions": "All Permissions",
+      "allUniversities": "All Universities",
+      "anyField": "Any Field",
+      "business": "Business",
+      "engineering": "Engineering",
+      "stem": "STEM",
+      "online": "Online",
+      "inPerson": "In-Person",
+      "hybrid": "Hybrid",
+      "opt": "OPT",
+      "cpt": "CPT",
+      "f1": "F1 Visa",
+      "min": "Min",
+      "max": "Max",
+      "loading": "Loading...",
+      "scholarshipsFound": "scholarships found",
+      "university": "University",
+      "universityTooltip": "Create an account and pay the Selection Process Fee to filter by university"
+    },
+    "featuredSection": {
+      "title": "Featured Scholarships",
+      "subtitle": "Top Opportunities This Season",
+      "description": "Hand-picked scholarships with the best value and highest approval rates"
+    },
+    "allScholarships": {
+      "title": "All Scholarships",
+      "description": "Browse all available scholarship opportunities"
+    },
+    "noResults": {
+      "title": "No Scholarships Found",
+      "description": "Try adjusting your filters or search terms to find more opportunities.",
+      "clearFilters": "Clear Filters"
+    },
+    "pagination": {
+      "page": "Page",
+      "of": "of",
+      "previous": "Previous",
+      "next": "Next"
+    },
     "modal": {
       "exclusive": "Exclusive",
       "expired": "Expired",
@@ -3703,7 +3758,20 @@
     "scholarshipCard": {
       "applicationFee": "Application Fee",
       "customFee": "Custom fee",
-      "standardFee": "Standard fee"
+      "standardFee": "Standard fee",
+      "days": "days",
+      "expired": "Expired",
+      "university": "University",
+      "studyMode": "Study Mode",
+      "workAuthorization": "Work Authorization",
+      "financialOverview": "Financial Overview",
+      "originalPrice": "Original Price",
+      "withScholarship": "With Scholarship",
+      "perCredit": "per credit",
+      "scholarshipDiscount": "Scholarship Discount",
+      "notAvailable": "N/A",
+      "details": "View Details",
+      "applyNow": "Apply Now"
     }
   }
 }
