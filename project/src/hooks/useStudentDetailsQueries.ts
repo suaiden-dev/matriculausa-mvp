@@ -260,6 +260,7 @@ export function useStudentSecondaryDataQuery(userId: string | undefined) {
           termAcceptances: parsed.term_acceptances || [],
           referralInfo: parsed.referral_info || null,
           individualFeePayments,
+          matriculaRewardsInfo: parsed.matricula_rewards_info || null, // ✅ Adicionar Matricula Rewards info
         };
       }
 
@@ -308,6 +309,7 @@ export function useStudentSecondaryDataQuery(userId: string | undefined) {
         termAcceptances,
         referralInfo: null, // Será carregado separadamente se necessário
         individualFeePayments,
+        matriculaRewardsInfo: null, // Fallback não retorna Matricula Rewards info
       };
     },
     staleTime: 0, // Sempre considerar dados stale para permitir refetch imediato

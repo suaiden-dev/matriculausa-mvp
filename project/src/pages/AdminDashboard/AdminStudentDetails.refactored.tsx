@@ -449,6 +449,13 @@ const AdminStudentDetails: React.FC = () => {
   // Estados de dados secundários (alguns ainda são locais)
   const [referralInfo, setReferralInfo] = useState<any>(null);
   const [hasMatriculaRewardsDiscount, setHasMatriculaRewardsDiscount] = useState(false);
+  const [matriculaRewardsInfo, setMatriculaRewardsInfo] = useState<{
+    name: string | null;
+    email: string | null;
+    code: string;
+    usedAt: string;
+  } | null>(null);
+  const [loadingMatriculaRewards, setLoadingMatriculaRewards] = useState(false);
   // termAcceptances, realPaidAmounts e pendingZellePayments agora vêm dos React Query hooks (definidos acima)
   
   // Estados de edição
@@ -722,6 +729,56 @@ const AdminStudentDetails: React.FC = () => {
       setReferralInfo(null);
     }
   }, [student?.seller_referral_code]);
+
+  // Carregar informações do Matricula Rewards (quem indicou este aluno usando código MATR)
+  // Usa os dados do secondaryDataQuery que já carrega via RPC (contorna RLS)
+  React.useEffect(() => {
+    // Usar dados do secondaryDataQuery que já carrega matricula_rewards_info via RPC
+    const rewardsInfo = secondaryDataQuery.data?.matriculaRewardsInfo;
+    const isLoading = secondaryDataQuery.isLoading;
+
+    console.log('🔍 [MatriculaRewards] secondaryDataQuery data:', secondaryDataQuery.data);
+    console.log('🔍 [MatriculaRewards] Matricula Rewards info from query:', rewardsInfo);
+    console.log('🔍 [MatriculaRewards] Loading:', isLoading);
+
+    setLoadingMatriculaRewards(isLoading);
+
+    // Se não há informações de Matricula Rewards ou é null, limpar estado
+    if (!rewardsInfo || rewardsInfo === 'null' || (typeof rewardsInfo === 'object' && Object.keys(rewardsInfo).length === 0)) {
+      console.log('ℹ️ [MatriculaRewards] No MATR code found for this student');
+      setMatriculaRewardsInfo(null);
+      return;
+    }
+
+    // Extrair informações do resultado da RPC
+    // A RPC retorna: code, used_at, referrer_id, referrer_name, referrer_email
+    const referrerName = rewardsInfo.referrer_name || null;
+    const referrerEmail = rewardsInfo.referrer_email || null;
+    const code = rewardsInfo.code || null;
+    const usedAt = rewardsInfo.used_at || null; // Campo retornado pela RPC é 'used_at'
+
+    // Se não temos código, não há nada para mostrar
+    if (!code) {
+      console.log('ℹ️ [MatriculaRewards] No code found in rewards info');
+      setMatriculaRewardsInfo(null);
+      return;
+    }
+
+    console.log('✅ [MatriculaRewards] Found Matricula Rewards info:', {
+      code,
+      referrerName,
+      referrerEmail,
+      usedAt
+    });
+
+    setMatriculaRewardsInfo({
+      name: referrerName,
+      email: referrerEmail,
+      code: code,
+      usedAt: usedAt // Usar used_at da RPC
+    });
+    console.log('✅ [MatriculaRewards] Info set successfully');
+  }, [secondaryDataQuery.data?.matriculaRewardsInfo, secondaryDataQuery.isLoading]);
 
   // Pagamentos Zelle pendentes agora vêm do usePendingZellePaymentsQuery hook
 
@@ -2948,11 +3005,21 @@ const AdminStudentDetails: React.FC = () => {
                 }}
               />
 
-              {student.seller_referral_code && student.all_applications && (
+              {/* Referral Info Card - mostra seller referral OU Matricula Rewards */}
+              {(student.seller_referral_code || matriculaRewardsInfo?.code) && student.all_applications && (
                 <ReferralInfoCard
-                  referralCode={student.seller_referral_code}
-                  referralInfo={referralInfo}
-                  loading={false}
+                  referralCode={matriculaRewardsInfo?.code || student.seller_referral_code || null}
+                  referralInfo={
+                    matriculaRewardsInfo
+                      ? {
+                          type: 'student',
+                          name: matriculaRewardsInfo.name || 'Unknown',
+                          email: matriculaRewardsInfo.email || 'No email',
+                          isRewards: true, // ✅ Indica que é Matricula Rewards
+                        }
+                      : referralInfo
+                  }
+                  loading={matriculaRewardsInfo ? loadingMatriculaRewards : false}
                 />
               )}
 
@@ -3079,8 +3146,8 @@ const AdminStudentDetails: React.FC = () => {
                 ? termAcceptances
                 : (directTermAcceptances || []);
 
-              const checkoutTermsAcceptances = combinedTermAcceptances.filter(acc => acc.term_type === 'checkout_terms');
-              let identityPhotoAcceptance = checkoutTermsAcceptances.find(acc => {
+              const checkoutTermsAcceptances = combinedTermAcceptances.filter((acc: any) => acc.term_type === 'checkout_terms');
+              let identityPhotoAcceptance = checkoutTermsAcceptances.find((acc: any) => {
                 // aceitar caminhos em diferentes chaves ou formatos
                 const path = acc.identity_photo_path || acc.identity_photo || acc.photo_path || null;
                 return path && String(path).trim() !== '';
