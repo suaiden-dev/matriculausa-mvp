@@ -66,8 +66,9 @@ serve(async (req) => {
     const isLocalhost = supabaseUrl.includes('localhost') || supabaseUrl.includes('127.0.0.1');
     
     // =====================================================
-    // 1. Verificar idempotência
+    // 1. Verificar idempotência (Desativado temporariamente para permitir regeração)
     // =====================================================
+    /*
     const { data: existingDoc } = await supabase
       .from('legal_documents')
       .select('id')
@@ -87,6 +88,7 @@ serve(async (req) => {
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+    */
 
     // =====================================================
     // 2. Coletar dados do banco
@@ -272,13 +274,32 @@ serve(async (req) => {
       } else if (trigger_table === 'individual_fee_payments') {
         const { data: payment, error: paymentError } = await supabase
           .from('individual_fee_payments')
-          .select('fee_type, amount, payment_method, payment_date, payment_intent_id')
+          .select('fee_type, amount, gross_amount_usd, payment_method, payment_date, payment_intent_id')
           .eq('id', related_id)
           .single();
         
         if (!paymentError && payment) {
           paymentInfo = payment;
           paymentInfo.payment_method_name = payment.payment_method === 'stripe' ? 'Stripe' : payment.payment_method;
+        }
+      } else if (trigger_table === 'user_profiles') {
+        // Se disparado por user_profiles, buscar o último pagamento de selection_process
+        console.log(`[generate-legal-pdf] Buscando pagamento para trigger de user_profiles: ${user_id}`);
+        const { data: payment, error: paymentError } = await supabase
+          .from('individual_fee_payments')
+          .select('fee_type, amount, gross_amount_usd, payment_method, payment_date, payment_intent_id')
+          .eq('user_id', user_id)
+          .eq('fee_type', 'selection_process')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        
+        if (!paymentError && payment) {
+          paymentInfo = payment;
+          paymentInfo.payment_method_name = payment.payment_method === 'stripe' ? 'Stripe' : payment.payment_method === 'zelle' ? 'Zelle' : 'Stripe/Zelle';
+          console.log(`[generate-legal-pdf] Pagamento encontrado: ${paymentInfo.amount} USD`);
+        } else {
+          console.warn(`[generate-legal-pdf] Aviso: Nenhum pagamento encontrado para o trigger de user_profiles (${user_id})`);
         }
       }
 
@@ -294,14 +315,16 @@ serve(async (req) => {
         identity_photo_path: termAcceptance.identity_photo_path,
         identity_photo_name: termAcceptance.identity_photo_name,
         // Adicionar informações do pagamento se disponível
-        payment_amount: paymentInfo?.amount || null,
+        // ✅ CORREÇÃO: Usar gross_amount_usd quando disponível (valor que o aluno realmente pagou)
+        // Se não houver gross_amount_usd, usar amount (para pagamentos antigos ou Zelle)
+        payment_amount: paymentInfo?.gross_amount_usd || paymentInfo?.amount || null,
         payment_method: paymentInfo?.payment_method_name || paymentInfo?.payment_method || null,
         payment_date: paymentInfo?.verified_at || paymentInfo?.payment_date || null,
         fee_type: paymentInfo?.fee_type || null,
       };
 
     } else if (type === 'selection_process_contract') {
-      // Buscar dados de pagamento de Selection Process
+      // Buscar dados do perfil do usuário
       const { data: userProfiles, error: userError } = await supabase
         .from('user_profiles')
         .select('full_name, email, country, has_paid_selection_process_fee, updated_at')
@@ -338,14 +361,31 @@ serve(async (req) => {
         .limit(1)
         .maybeSingle();
 
-      // Buscar valor pago (tentar obter do package ou usar valor padrão)
-      const { data: packageData } = await supabase
-        .from('simplified_packages')
-        .select('selection_process_fee')
-        .eq('user_id', user_id)
-        .maybeSingle();
+      // ✅ CORREÇÃO: Buscar o pagamento REAL do selection_process
+      // Se tivermos related_id e for desta tabela, usamos ele. Caso contrário, buscamos o último.
+      let paymentInfo: any = null;
+      
+      if (trigger_table === 'individual_fee_payments' && related_id) {
+        const { data: payment } = await supabase
+          .from('individual_fee_payments')
+          .select('fee_type, amount, gross_amount_usd, payment_method, payment_date')
+          .eq('id', related_id)
+          .single();
+        if (payment) paymentInfo = payment;
+      } else {
+        const { data: payment } = await supabase
+          .from('individual_fee_payments')
+          .select('fee_type, amount, gross_amount_usd, payment_method, payment_date')
+          .eq('user_id', user_id)
+          .eq('fee_type', 'selection_process')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (payment) paymentInfo = payment;
+      }
 
-      const selectionProcessFee = packageData?.selection_process_fee || 600;
+      const selectionProcessFee = paymentInfo?.gross_amount_usd || paymentInfo?.amount || 600;
+      const paymentMethodName = paymentInfo?.payment_method === 'stripe' ? 'Stripe' : paymentInfo?.payment_method === 'zelle' ? 'Zelle' : 'Stripe/Zelle';
 
       studentData = {
         student_name: userProfile.full_name || 'N/A',
@@ -359,8 +399,8 @@ serve(async (req) => {
         identity_photo_path: recentTerm?.identity_photo_path,
         identity_photo_name: recentTerm?.identity_photo_name,
         payment_amount: selectionProcessFee,
-        payment_method: 'Stripe/Zelle', // TODO: melhorar detecção do método
-        payment_date: userProfile.updated_at,
+        payment_method: paymentMethodName,
+        payment_date: paymentInfo?.payment_date || userProfile.updated_at,
       };
     } else {
       throw new Error(`Tipo de documento não suportado: ${type}`);
@@ -628,18 +668,65 @@ serve(async (req) => {
     currentY += 8;
 
     // ===== IDENTITY PHOTO (if available) =====
-    // Note: Skipping photo embedding in Edge Function for simplicity
-    // Photos are stored separately and can be viewed via Storage
     if (studentData.identity_photo_path) {
-      currentY += 8;
-      pdf.setFontSize(11);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('Identity Photo:', margin, currentY);
-      pdf.setFont('helvetica', 'normal');
-      currentY += 6;
-      pdf.setFontSize(9);
-      pdf.text(`Stored at: ${studentData.identity_photo_path}`, margin, currentY);
-      currentY += 8;
+      try {
+        console.log(`[generate-legal-pdf] Buscando foto de identidade: ${studentData.identity_photo_path}`);
+        
+        // Download image from storage
+        const { data: photoBlob, error: photoError } = await supabase.storage
+          .from('identity-photos')
+          .download(studentData.identity_photo_path);
+
+        if (photoError) {
+          throw photoError;
+        }
+
+        if (photoBlob) {
+          // Convert Blob to ArrayBuffer then to base64
+          const arrayBuffer = await photoBlob.arrayBuffer();
+          const bytes = new Uint8Array(arrayBuffer);
+          let binary = '';
+          for (let i = 0; i < bytes.byteLength; i++) {
+            binary += String.fromCharCode(bytes[i]);
+          }
+          const base64Image = btoa(binary);
+          
+          // Determine format
+          const ext = studentData.identity_photo_path.split('.').pop()?.toLowerCase();
+          const format = ext === 'png' ? 'PNG' : 'JPEG';
+
+          // Add to PDF
+          currentY += 15;
+          pdf.setFontSize(14);
+          pdf.setFont('helvetica', 'bold');
+          pdf.text('IDENTITY PHOTO', margin, currentY);
+          currentY += 10;
+
+          // Check for page break
+          if (currentY + 60 > pdf.internal.pageSize.getHeight() - margin) {
+            pdf.addPage();
+            currentY = margin;
+          }
+
+          // Add image (scaled to max 80x60)
+          pdf.addImage(base64Image, format, margin, currentY, 80, 60);
+          currentY += 65;
+          
+          console.log('[generate-legal-pdf] Foto de identidade incorporada com sucesso');
+        }
+      } catch (error) {
+        console.error('[generate-legal-pdf] Erro ao incorporar foto de identidade:', error);
+        // Fallback to text info if image fails
+        currentY += 8;
+        pdf.setFontSize(11);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Identity Photo (Link):', margin, currentY);
+        pdf.setFont('helvetica', 'normal');
+        currentY += 6;
+        pdf.setFontSize(9);
+        pdf.text(`Path: ${studentData.identity_photo_path}`, margin, currentY);
+        currentY += 8;
+      }
     }
 
     // ===== FOOTER =====
@@ -669,7 +756,7 @@ serve(async (req) => {
       .from('legal-documents')
       .upload(storagePath, pdfBytes, {
         contentType: 'application/pdf',
-        upsert: false
+        upsert: true // ✅ Permitir sobrescrever se já existir (para retries ou múltiplos disparos da trigger)
       });
 
     if (uploadError) {
@@ -709,10 +796,14 @@ serve(async (req) => {
     console.log(`[generate-legal-pdf] Documento registrado: ${documentRecord.id}`);
 
     // =====================================================
-    // 6. Send email (skip if localhost)
+    // 6. Send email (skip if localhost or uorak user)
     // =====================================================
+    const isUorakUser = studentData.student_email.toLowerCase().endsWith('@uorak.com');
+
     if (isLocalhost) {
       console.log('[generate-legal-pdf] Localhost detectado, pulando envio de email');
+    } else if (isUorakUser) {
+      console.log(`[generate-legal-pdf] Usuário uorak (${studentData.student_email}) detectado, pulando envio de email`);
     } else {
       try {
         // Get signed URL for PDF
