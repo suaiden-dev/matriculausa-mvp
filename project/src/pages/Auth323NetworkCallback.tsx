@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { CheckCircle, XCircle, ArrowRight, RefreshCw } from 'lucide-react';
 import { supabase } from '../lib/supabase';
@@ -11,11 +11,23 @@ const Auth323NetworkCallback: React.FC = () => {
   const [status, setStatus] = useState<'processing' | 'success' | 'error'>('processing');
   const [message, setMessage] = useState('Estamos preparando o ambiente para você...');
   const [step, setStep] = useState(1);
+  const hasProcessed = useRef(false); // Flag para evitar execução dupla
 
   useEffect(() => {
+    // Prevenir execução dupla (React StrictMode em desenvolvimento)
+    if (hasProcessed.current) {
+      console.log('[SSO Callback] ⚠️ Callback já foi processado, ignorando execução dupla');
+      return;
+    }
+
     const handleCallback = async () => {
       try {
+        // Marcar como processado imediatamente para evitar duplicação
+        hasProcessed.current = true;
         console.log('[SSO Callback] 🚀 Iniciando processamento SSO...');
+        console.log('[SSO Callback] 🌐 URL atual:', window.location.href);
+        console.log('[SSO Callback] 🌐 Origin:', window.location.origin);
+        console.log('[SSO Callback] 🌐 Hostname:', window.location.hostname);
         
         // Verificar se há tokens no hash (vindo do Supabase após magic link)
         const hash = window.location.hash.substring(1);
@@ -88,13 +100,18 @@ const Auth323NetworkCallback: React.FC = () => {
         }
 
         const edgeFunctionUrl = `${supabaseUrl}/functions/v1/sso-323-network-callback`;
+        const currentOrigin = window.location.origin;
+        
         console.log('[SSO Callback] 🔗 Chamando Edge Function:', edgeFunctionUrl);
+        console.log('[SSO Callback] 🌐 Origin atual (será enviado no header):', currentOrigin);
 
         const response = await fetch(edgeFunctionUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            'Origin': currentOrigin, // Enviar origin explicitamente
+            'Referer': window.location.href, // Enviar referer completo
           },
           body: JSON.stringify({ token }),
         });
@@ -170,105 +187,137 @@ const Auth323NetworkCallback: React.FC = () => {
             throw sessionErr;
           }
         } 
-        // Se temos magic link, usar para fazer login
+        // Se temos magic link, extrair token e verificar diretamente (sem redirecionar)
         else if (data.magicLink) {
           console.log('[SSO Callback] 🔗 Usando magic link...');
           console.log('[SSO Callback] 🔗 Magic link URL:', data.magicLink);
           
-          // Verificar se o magic link aponta para produção quando estamos em dev
           const magicLinkUrl = new URL(data.magicLink);
           const currentOrigin = window.location.origin;
           
           console.log('[SSO Callback] 🔗 Magic link origin:', magicLinkUrl.origin);
           console.log('[SSO Callback] 🔗 Current origin:', currentOrigin);
           
-          // Se o magic link aponta para produção mas estamos em dev, tentar extrair tokens
-          if (magicLinkUrl.origin !== currentOrigin && magicLinkUrl.origin.includes('matriculausa.com')) {
-            console.warn('[SSO Callback] ⚠️ Magic link aponta para produção, mas estamos em dev!');
-            console.warn('[SSO Callback] ⚠️ Tentando extrair tokens do hash...');
-          }
-          
-          // Extrair tokens do hash do link
+          // Extrair token do magic link
           try {
-            const hash = magicLinkUrl.hash.substring(1); // Remove o #
-            const params = new URLSearchParams(hash);
-            const accessToken = params.get('access_token');
-            const refreshToken = params.get('refresh_token');
-
-            console.log('[SSO Callback] 🔑 Tokens extraídos:', {
-              hasAccessToken: !!accessToken,
-              hasRefreshToken: !!refreshToken,
+            const token = magicLinkUrl.searchParams.get('token');
+            const type = magicLinkUrl.searchParams.get('type');
+            
+            console.log('[SSO Callback] 🔑 Token extraído do magic link:', {
+              hasToken: !!token,
+              type,
             });
 
-            if (accessToken && refreshToken) {
-              console.log('[SSO Callback] 🔑 Tokens extraídos do magic link com sucesso');
+            if (token && type === 'magiclink') {
+              console.log('[SSO Callback] 🔑 Verificando token via fetch direto ao Supabase Auth...');
+              
+              // Fazer fetch direto ao endpoint de verificação do Supabase Auth
+              // Isso evita o redirecionamento que causa o problema
+              const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+              const currentOrigin = window.location.origin;
+              
+              // Construir URL de verificação com redirect_to local
+              const verifyUrl = new URL(`${supabaseUrl}/auth/v1/verify`);
+              verifyUrl.searchParams.set('token', token);
+              verifyUrl.searchParams.set('type', type);
+              verifyUrl.searchParams.set('redirect_to', `${currentOrigin}/auth/callback`);
+              
+              console.log('[SSO Callback] 🔗 URL de verificação:', verifyUrl.toString());
               
               try {
-                const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
-                  access_token: accessToken,
-                  refresh_token: refreshToken,
+                // Fazer fetch com redirect: 'manual' para interceptar a resposta
+                const verifyResponse = await fetch(verifyUrl.toString(), {
+                  method: 'GET',
+                  headers: {
+                    'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+                  },
+                  redirect: 'manual', // Não seguir redirects automaticamente
                 });
 
-                if (sessionError) {
-                  console.error('[SSO Callback] ❌ Erro ao criar sessão via magic link:', sessionError);
-                  throw new Error(`Erro ao criar sessão: ${sessionError.message}`);
-                }
+                console.log('[SSO Callback] 📡 Status da resposta:', verifyResponse.status);
+                console.log('[SSO Callback] 📡 Headers:', Object.fromEntries(verifyResponse.headers.entries()));
 
-                if (!sessionData.session) {
-                  throw new Error('Sessão não foi criada corretamente');
-                }
+                // Se a resposta é um redirect (301, 302, etc), extrair tokens do Location header
+                if (verifyResponse.status >= 300 && verifyResponse.status < 400) {
+                  const location = verifyResponse.headers.get('Location');
+                  console.log('[SSO Callback] 🔄 Redirect detectado para:', location);
+                  
+                  if (location) {
+                    try {
+                      const redirectUrl = new URL(location);
+                      const hash = redirectUrl.hash.substring(1);
+                      const hashParams = new URLSearchParams(hash);
+                      const accessToken = hashParams.get('access_token');
+                      const refreshToken = hashParams.get('refresh_token');
+                      
+                      if (accessToken && refreshToken) {
+                        console.log('[SSO Callback] 🔑 Tokens extraídos do redirect');
+                        
+                        const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+                          access_token: accessToken,
+                          refresh_token: refreshToken,
+                        });
 
-                console.log('[SSO Callback] ✅ Sessão criada com sucesso via magic link!');
-              } catch (sessionErr: any) {
-                console.error('[SSO Callback] ❌ ERRO ao criar sessão do magic link:', sessionErr);
-                throw sessionErr;
+                        if (sessionError) {
+                          throw new Error(`Erro ao criar sessão: ${sessionError.message}`);
+                        }
+
+                        if (!sessionData.session) {
+                          throw new Error('Sessão não foi criada corretamente');
+                        }
+
+                        console.log('[SSO Callback] ✅ Sessão criada com sucesso!');
+                        console.log('[SSO Callback] 👤 Usuário:', sessionData.user?.email);
+                      } else {
+                        throw new Error('Tokens não encontrados no redirect');
+                      }
+                    } catch (parseErr: any) {
+                      console.error('[SSO Callback] ❌ Erro ao parsear redirect:', parseErr);
+                      throw new Error(`Erro ao processar redirect: ${parseErr.message}`);
+                    }
+                  } else {
+                    throw new Error('Location header não encontrado no redirect');
+                  }
+                } else if (verifyResponse.ok) {
+                  // Se a resposta é OK, tentar extrair tokens do body
+                  const verifyResult = await verifyResponse.json().catch(() => ({}));
+                  
+                  if (verifyResult.access_token && verifyResult.refresh_token) {
+                    console.log('[SSO Callback] 🔑 Tokens obtidos do body da resposta');
+                    
+                    const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+                      access_token: verifyResult.access_token,
+                      refresh_token: verifyResult.refresh_token,
+                    });
+
+                    if (sessionError) {
+                      throw new Error(`Erro ao criar sessão: ${sessionError.message}`);
+                    }
+
+                    if (!sessionData.session) {
+                      throw new Error('Sessão não foi criada corretamente');
+                    }
+
+                    console.log('[SSO Callback] ✅ Sessão criada com sucesso!');
+                  } else {
+                    throw new Error('Tokens não encontrados na resposta');
+                  }
+                } else {
+                  const errorText = await verifyResponse.text().catch(() => 'Erro desconhecido');
+                  throw new Error(`Erro HTTP ${verifyResponse.status}: ${errorText}`);
+                }
+              } catch (fetchErr: any) {
+                console.error('[SSO Callback] ❌ ERRO ao verificar token:', fetchErr);
+                throw new Error(`Erro ao verificar token: ${fetchErr.message}`);
               }
             } else {
-              // Se não conseguimos extrair tokens, verificar o redirect_to no magic link
-              console.warn('[SSO Callback] ⚠️ Não foi possível extrair tokens do magic link');
-              
-              const redirectTo = magicLinkUrl.searchParams.get('redirect_to');
-              console.log('[SSO Callback] 🔗 redirect_to no magic link:', redirectTo);
-              
-              // Se estamos em desenvolvimento e o redirect_to aponta para produção, corrigir
-              if (currentOrigin.includes('localhost') || currentOrigin.includes('192.168') || currentOrigin.includes('127.0.0.1')) {
-                if (redirectTo && redirectTo.includes('matriculausa.com')) {
-                  console.error('[SSO Callback] ❌ ERRO: redirect_to aponta para produção em ambiente de desenvolvimento!');
-                  console.error('[SSO Callback] ❌ redirect_to:', redirectTo);
-                  console.error('[SSO Callback] ❌ Deveria ser:', `${currentOrigin}/auth/callback`);
-                  
-                  // Corrigir o redirect_to no magic link
-                  magicLinkUrl.searchParams.set('redirect_to', `${currentOrigin}/auth/callback`);
-                  const correctedLink = magicLinkUrl.toString();
-                  console.log('[SSO Callback] ✅ Magic link corrigido:', correctedLink);
-                  
-                  // Redirecionar para o link corrigido
-                  window.location.href = correctedLink;
-                  return;
-                }
-              }
-              
-              // Se não estamos em dev, redirecionar normalmente
-              console.log('[SSO Callback] 🔄 Redirecionando para magic link...');
-              window.location.href = data.magicLink;
-              return;
+              console.error('[SSO Callback] ❌ Token ou type não encontrados no magic link');
+              throw new Error('Token ou type não encontrados no magic link');
             }
           } catch (e: any) {
             console.error('[SSO Callback] ❌ ERRO ao processar magic link:', e);
             console.error('[SSO Callback] ❌ Stack:', e.stack);
-            
-            // Se estamos em dev e o erro é relacionado a produção, não redirecionar
-            const currentOrigin = window.location.origin;
-            if (currentOrigin.includes('localhost') || currentOrigin.includes('192.168') || currentOrigin.includes('127.0.0.1')) {
-              if (e.message?.includes('produção') || e.message?.includes('matriculausa.com')) {
-                throw e; // Re-throw para mostrar o erro
-              }
-            }
-            
-            // Se não conseguimos processar o link, redirecionar para ele (apenas se não for dev)
-            console.warn('[SSO Callback] ⚠️ Não foi possível processar magic link, redirecionando:', e);
-            window.location.href = data.magicLink;
-            return;
+            throw e;
           }
         } else {
           console.error('[SSO Callback] ❌ Nenhum método de autenticação disponível');
@@ -301,6 +350,9 @@ const Auth323NetworkCallback: React.FC = () => {
         console.error('[SSO Callback] ❌ Mensagem:', error.message);
         console.error('[SSO Callback] ❌ Stack:', error.stack);
         console.error('[SSO Callback] ❌ Erro completo:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
+        
+        // Resetar flag em caso de erro para permitir retry
+        hasProcessed.current = false;
         
         setStatus('error');
         const errorMessage = error.message || 'Erro ao processar autenticação';
@@ -396,7 +448,10 @@ const Auth323NetworkCallback: React.FC = () => {
               </div>
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 <button
-                  onClick={() => window.location.reload()}
+                  onClick={() => {
+                    hasProcessed.current = false; // Resetar flag para permitir retry
+                    window.location.reload();
+                  }}
                   className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 font-medium"
                 >
                   <RefreshCw className="w-4 h-4" />
