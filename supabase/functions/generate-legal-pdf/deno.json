@@ -1,0 +1,11 @@
+{
+  "imports": {
+    "jspdf": "npm:jspdf@2.5.1"
+  },
+  "tasks": {
+    "dev": "deno run --allow-all --watch index.ts"
+  },
+  "compilerOptions": {
+    "lib": ["deno.window", "dom"]
+  }
+}
