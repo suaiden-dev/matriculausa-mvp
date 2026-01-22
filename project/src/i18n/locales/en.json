@@ -1367,6 +1367,41 @@
       "emailAlreadyRegistered": "This email is already registered. Please sign in or use another email."
     }
   },
+  "ssoCallback": {
+    "processing": {
+      "title": "Please wait a moment",
+      "preparing": "We are preparing the environment for you...",
+      "connecting": "Connecting to 323 Network...",
+      "preparingAccount": "Preparing your account...",
+      "creatingSession": "Creating session...",
+      "waitMessage": "This may take a few seconds...",
+      "secureConnection": "Securely connecting to Matrícula USA"
+    },
+    "success": {
+      "title": "All set!",
+      "newUser": "All set! Redirecting you...",
+      "returningUser": "Welcome back! Redirecting...",
+      "redirecting": "Redirecting you now...",
+      "welcomeNew": "Welcome to Matrícula US!",
+      "loginSuccess": "Login successful!"
+    },
+    "error": {
+      "title": "Oops, something went wrong",
+      "authenticationFailed": "Could not complete authentication. You will be redirected to the login page shortly.",
+      "tokenNotProvided": "Token not provided in URL",
+      "tokenValidationError": "Error validating token",
+      "sessionCreationError": "Error creating session",
+      "sessionNotCreated": "Session was not created correctly",
+      "noAuthMethod": "No authentication method available",
+      "tokenNotFoundInMagicLink": "Token or type not found in magic link",
+      "tokensNotFoundInRedirect": "Tokens not found in redirect",
+      "locationHeaderNotFound": "Location header not found in redirect",
+      "tokensNotFoundInResponse": "Tokens not found in response",
+      "supabaseUrlNotConfigured": "VITE_SUPABASE_URL not configured",
+      "tryAgain": "Try Again",
+      "goToLogin": "Go to Login"
+    }
+  },
   "features": {
     "whyChoose": "Why Choose MatriculaUSA?",
     "subtitle": "Everything you need to succeed in your American education journey",

@@ -4,14 +4,33 @@ import { CheckCircle, XCircle, ArrowRight, RefreshCw } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { toast } from 'react-hot-toast';
 import PencilLoader from '../components/PencilLoader';
+import { useTranslation } from 'react-i18next';
 
 const Auth323NetworkCallback: React.FC = () => {
+  const { t, ready } = useTranslation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [status, setStatus] = useState<'processing' | 'success' | 'error'>('processing');
-  const [message, setMessage] = useState('Estamos preparando o ambiente para você...');
+  const [message, setMessage] = useState('');
   const [step, setStep] = useState(1);
   const hasProcessed = useRef(false); // Flag para evitar execução dupla
+
+  // Inicializar mensagem quando i18n estiver pronto
+  useEffect(() => {
+    if (ready) {
+      const translatedMessage = t('ssoCallback.processing.preparing');
+      console.log('[SSO Callback] 🔍 Tradução:', translatedMessage);
+      console.log('[SSO Callback] 🔍 Ready:', ready);
+      // Verificar se a tradução foi resolvida (não retornou a chave)
+      if (translatedMessage && translatedMessage !== 'ssoCallback.processing.preparing') {
+        setMessage(translatedMessage);
+      } else {
+        console.warn('[SSO Callback] ⚠️ Tradução não encontrada, usando fallback');
+        // Fallback se a tradução não estiver disponível
+        setMessage('Estamos preparando o ambiente para você...');
+      }
+    }
+  }, [ready, t]);
 
   useEffect(() => {
     // Prevenir execução dupla (React StrictMode em desenvolvimento)
@@ -38,7 +57,7 @@ const Auth323NetworkCallback: React.FC = () => {
         if (accessTokenFromHash && refreshTokenFromHash) {
           console.log('[SSO Callback] 🔑 Tokens encontrados no hash (vindo do Supabase)');
           setStep(3);
-          setMessage('Criando sessão...');
+          setMessage(t('ssoCallback.processing.creatingSession'));
           
           try {
             const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
@@ -47,18 +66,18 @@ const Auth323NetworkCallback: React.FC = () => {
             });
 
             if (sessionError) {
-              throw new Error(`Erro ao criar sessão: ${sessionError.message}`);
+              throw new Error(`${t('ssoCallback.error.sessionCreationError')}: ${sessionError.message}`);
             }
 
             if (!sessionData.session) {
-              throw new Error('Sessão não foi criada corretamente');
+              throw new Error(t('ssoCallback.error.sessionNotCreated'));
             }
 
             console.log('[SSO Callback] ✅ Sessão criada com sucesso via hash!');
             setStep(4);
             setStatus('success');
-            setMessage('Bem-vindo! Redirecionando...');
-            toast.success('Login realizado com sucesso!');
+            setMessage(t('ssoCallback.success.returningUser'));
+            toast.success(t('ssoCallback.success.loginSuccess'));
 
             setTimeout(() => {
               navigate('/student/dashboard');
@@ -82,7 +101,7 @@ const Auth323NetworkCallback: React.FC = () => {
         });
 
         if (!token) {
-          throw new Error('Token não fornecido na URL');
+          throw new Error(t('ssoCallback.error.tokenNotProvided'));
         }
 
         if (source && source !== '323-network') {
@@ -91,12 +110,12 @@ const Auth323NetworkCallback: React.FC = () => {
         }
 
         setStep(2);
-        setMessage('Conectando com o 323 Network...');
+        setMessage(t('ssoCallback.processing.connecting'));
 
         // Chamar Edge Function do Matrícula US para processar SSO
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
         if (!supabaseUrl) {
-          throw new Error('VITE_SUPABASE_URL não configurada');
+          throw new Error(t('ssoCallback.error.supabaseUrlNotConfigured'));
         }
 
         const edgeFunctionUrl = `${supabaseUrl}/functions/v1/sso-323-network-callback`;
@@ -119,7 +138,7 @@ const Auth323NetworkCallback: React.FC = () => {
         console.log('[SSO Callback] 📡 Response status:', response.status);
 
         if (!response.ok) {
-          const errorData = await response.json().catch(() => ({ error: 'Erro ao validar token' }));
+          const errorData = await response.json().catch(() => ({ error: t('ssoCallback.error.tokenValidationError') }));
           console.error('[SSO Callback] ❌ Erro na resposta:', errorData);
           throw new Error(errorData.error || `Erro HTTP: ${response.status}`);
         }
@@ -133,11 +152,28 @@ const Auth323NetworkCallback: React.FC = () => {
         });
 
         if (!data.success) {
-          throw new Error(data.error || 'Falha ao processar autenticação');
+          // Traduzir mensagem de erro antes de lançar
+          let errorMsg = data.error || t('authPage.messages.authenticationFailed');
+          const msgLower = errorMsg.toLowerCase().trim();
+          
+          if (
+            msgLower === 'this email is already registered. please sign in or use another email.' ||
+            msgLower.includes('this email is already registered') ||
+            msgLower.includes('email is already registered') ||
+            msgLower.includes('already registered') ||
+            msgLower.includes('user with this email address has already been registered') ||
+            msgLower.includes('email already registered') ||
+            msgLower.includes('user_already_registered') ||
+            msgLower.includes('a user with this email address has already been registered')
+          ) {
+            errorMsg = t('authPage.messages.emailAlreadyRegistered');
+          }
+          
+          throw new Error(errorMsg);
         }
 
         setStep(3);
-        setMessage('Preparando sua conta...');
+        setMessage(t('ssoCallback.processing.preparingAccount'));
 
         console.log('[SSO Callback] 📍 Step 3 - Iniciando criação de sessão');
         console.log('[SSO Callback] 📍 URL atual:', window.location.href);
@@ -170,12 +206,12 @@ const Auth323NetworkCallback: React.FC = () => {
             if (sessionError) {
               console.error('[SSO Callback] ❌ Erro ao criar sessão:', sessionError);
               console.error('[SSO Callback] ❌ Detalhes do erro:', JSON.stringify(sessionError, null, 2));
-              throw new Error(`Erro ao criar sessão: ${sessionError.message}`);
+              throw new Error(`${t('ssoCallback.error.sessionCreationError')}: ${sessionError.message}`);
             }
 
             if (!sessionData.session) {
               console.error('[SSO Callback] ❌ Sessão não foi criada - sessionData:', sessionData);
-              throw new Error('Sessão não foi criada corretamente');
+              throw new Error(t('ssoCallback.error.sessionNotCreated'));
             }
 
             console.log('[SSO Callback] ✅ Sessão criada com sucesso!');
@@ -259,24 +295,24 @@ const Auth323NetworkCallback: React.FC = () => {
                         });
 
                         if (sessionError) {
-                          throw new Error(`Erro ao criar sessão: ${sessionError.message}`);
+                          throw new Error(`${t('ssoCallback.error.sessionCreationError')}: ${sessionError.message}`);
                         }
 
                         if (!sessionData.session) {
-                          throw new Error('Sessão não foi criada corretamente');
+                          throw new Error(t('ssoCallback.error.sessionNotCreated'));
                         }
 
                         console.log('[SSO Callback] ✅ Sessão criada com sucesso!');
                         console.log('[SSO Callback] 👤 Usuário:', sessionData.user?.email);
                       } else {
-                        throw new Error('Tokens não encontrados no redirect');
+                        throw new Error(t('ssoCallback.error.tokensNotFoundInRedirect'));
                       }
                     } catch (parseErr: any) {
                       console.error('[SSO Callback] ❌ Erro ao parsear redirect:', parseErr);
-                      throw new Error(`Erro ao processar redirect: ${parseErr.message}`);
+                      throw new Error(`${t('ssoCallback.error.sessionCreationError')}: ${parseErr.message}`);
                     }
                   } else {
-                    throw new Error('Location header não encontrado no redirect');
+                    throw new Error(t('ssoCallback.error.locationHeaderNotFound'));
                   }
                 } else if (verifyResponse.ok) {
                   // Se a resposta é OK, tentar extrair tokens do body
@@ -291,16 +327,16 @@ const Auth323NetworkCallback: React.FC = () => {
                     });
 
                     if (sessionError) {
-                      throw new Error(`Erro ao criar sessão: ${sessionError.message}`);
+                      throw new Error(`${t('ssoCallback.error.sessionCreationError')}: ${sessionError.message}`);
                     }
 
                     if (!sessionData.session) {
-                      throw new Error('Sessão não foi criada corretamente');
+                      throw new Error(t('ssoCallback.error.sessionNotCreated'));
                     }
 
                     console.log('[SSO Callback] ✅ Sessão criada com sucesso!');
                   } else {
-                    throw new Error('Tokens não encontrados na resposta');
+                    throw new Error(t('ssoCallback.error.tokensNotFoundInResponse'));
                   }
                 } else {
                   const errorText = await verifyResponse.text().catch(() => 'Erro desconhecido');
@@ -308,11 +344,11 @@ const Auth323NetworkCallback: React.FC = () => {
                 }
               } catch (fetchErr: any) {
                 console.error('[SSO Callback] ❌ ERRO ao verificar token:', fetchErr);
-                throw new Error(`Erro ao verificar token: ${fetchErr.message}`);
+                throw new Error(`${t('ssoCallback.error.tokenValidationError')}: ${fetchErr.message}`);
               }
             } else {
               console.error('[SSO Callback] ❌ Token ou type não encontrados no magic link');
-              throw new Error('Token ou type não encontrados no magic link');
+              throw new Error(t('ssoCallback.error.tokenNotFoundInMagicLink'));
             }
           } catch (e: any) {
             console.error('[SSO Callback] ❌ ERRO ao processar magic link:', e);
@@ -322,18 +358,18 @@ const Auth323NetworkCallback: React.FC = () => {
         } else {
           console.error('[SSO Callback] ❌ Nenhum método de autenticação disponível');
           console.error('[SSO Callback] ❌ Dados completos recebidos:', JSON.stringify(data, null, 2));
-          throw new Error('Nenhum método de autenticação disponível');
+          throw new Error(t('ssoCallback.error.noAuthMethod'));
         }
 
         setStep(4);
         setStatus('success');
         setMessage(data.isNewUser 
-          ? 'Tudo pronto! Redirecionando você...' 
-          : 'Bem-vindo de volta! Redirecionando...'
+          ? t('ssoCallback.success.newUser')
+          : t('ssoCallback.success.returningUser')
         );
 
         // Mostrar toast de sucesso
-        toast.success(data.isNewUser ? 'Bem-vindo ao Matrícula US!' : 'Login realizado com sucesso!');
+        toast.success(data.isNewUser ? t('ssoCallback.success.welcomeNew') : t('ssoCallback.success.loginSuccess'));
 
         // Redirecionar após 1.5 segundos
         setTimeout(() => {
@@ -355,7 +391,50 @@ const Auth323NetworkCallback: React.FC = () => {
         hasProcessed.current = false;
         
         setStatus('error');
-        const errorMessage = error.message || 'Erro ao processar autenticação';
+        
+        // Extrair mensagem de erro de várias fontes possíveis
+        let errorMessage = 
+          error?.message || 
+          error?.error || 
+          error?.data?.error ||
+          error?.response?.data?.error ||
+          (typeof error === 'string' ? error : null) ||
+          t('authPage.messages.authenticationFailed');
+        
+        // Traduzir mensagens de erro comuns
+        if (errorMessage) {
+          const messageLower = errorMessage.toLowerCase().trim();
+          
+          // Detectar mensagens de email já cadastrado (todas as variações possíveis)
+          if (
+            messageLower === 'this email is already registered. please sign in or use another email.' ||
+            messageLower.includes('this email is already registered') ||
+            messageLower.includes('email is already registered') ||
+            messageLower.includes('already registered') ||
+            messageLower.includes('user with this email address has already been registered') ||
+            messageLower.includes('email already registered') ||
+            messageLower.includes('user_already_registered') ||
+            messageLower.includes('a user with this email address has already been registered') ||
+            messageLower.includes('email_already_registered')
+          ) {
+            errorMessage = t('authPage.messages.emailAlreadyRegistered');
+          } else if (messageLower.includes('invalid_credentials') || messageLower.includes('invalid login credentials')) {
+            errorMessage = t('authPage.messages.invalidCredentials');
+          } else if (messageLower.includes('email_not_confirmed')) {
+            errorMessage = t('authPage.messages.emailNotConfirmed');
+          } else if (messageLower.includes('too_many_requests')) {
+            errorMessage = t('authPage.messages.tooManyRequests');
+          } else if (messageLower.includes('user_not_found')) {
+            errorMessage = t('authPage.messages.userNotFound');
+          } else if (messageLower.includes('weak_password')) {
+            errorMessage = t('authPage.messages.weakPassword');
+          } else if (messageLower.includes('email_address_invalid')) {
+            errorMessage = t('authPage.messages.invalidEmail');
+          } else if (messageLower.includes('signup_disabled')) {
+            errorMessage = t('authPage.messages.signupDisabled');
+          }
+        }
+        
         setMessage(errorMessage);
         toast.error(errorMessage);
         
@@ -400,12 +479,15 @@ const Auth323NetworkCallback: React.FC = () => {
           {/* Main Message */}
           <div className="text-center mb-6">
             <h1 className="text-2xl font-bold text-gray-900 mb-3">
-              {status === 'processing' && 'Aguarde um momento'}
-              {status === 'success' && 'Tudo pronto!'}
-              {status === 'error' && 'Ops, algo deu errado'}
+              {ready && status === 'processing' && t('ssoCallback.processing.title')}
+              {ready && status === 'success' && t('ssoCallback.success.title')}
+              {ready && status === 'error' && t('ssoCallback.error.title')}
+              {!ready && status === 'processing' && 'Aguarde um momento'}
+              {!ready && status === 'success' && 'Tudo pronto!'}
+              {!ready && status === 'error' && 'Ops, algo deu errado'}
             </h1>
             <p className="text-lg text-gray-600 leading-relaxed">
-              {message}
+              {message || (ready ? t('ssoCallback.processing.preparing') : 'Estamos preparando o ambiente para você...')}
             </p>
           </div>
 
@@ -419,7 +501,7 @@ const Auth323NetworkCallback: React.FC = () => {
                 ></div>
               </div>
               <p className="text-xs text-gray-500 text-center mt-2">
-                Isso pode levar alguns segundos...
+                {t('ssoCallback.processing.waitMessage')}
               </p>
             </div>
           )}
@@ -431,7 +513,7 @@ const Auth323NetworkCallback: React.FC = () => {
                 <div className="flex items-center justify-center gap-2">
                   <ArrowRight className="w-5 h-5 text-green-600 animate-pulse" />
                   <p className="text-sm font-medium text-green-700">
-                    Redirecionando você agora...
+                    {t('ssoCallback.success.redirecting')}
                   </p>
                 </div>
               </div>
@@ -443,7 +525,7 @@ const Auth323NetworkCallback: React.FC = () => {
             <div className="text-center space-y-4">
               <div className="bg-red-50 border border-red-200 rounded-xl p-4">
                 <p className="text-sm text-red-700">
-                  Não foi possível completar a autenticação. Você será redirecionado para a página de login em instantes.
+                  {t('ssoCallback.error.authenticationFailed')}
                 </p>
               </div>
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
@@ -455,13 +537,13 @@ const Auth323NetworkCallback: React.FC = () => {
                   className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 font-medium"
                 >
                   <RefreshCw className="w-4 h-4" />
-                  Tentar Novamente
+                  {t('ssoCallback.error.tryAgain')}
                 </button>
                 <button
                   onClick={() => navigate('/login')}
                   className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
                 >
-                  Ir para Login
+                  {t('ssoCallback.error.goToLogin')}
                 </button>
               </div>
             </div>
@@ -472,7 +554,7 @@ const Auth323NetworkCallback: React.FC = () => {
         {status === 'processing' && (
           <div className="text-center mt-8">
             <p className="text-xs text-gray-400">
-              Conectando com segurança ao Matrícula USA
+              {t('ssoCallback.processing.secureConnection')}
             </p>
           </div>
         )}

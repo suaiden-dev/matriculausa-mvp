@@ -1388,8 +1388,8 @@
             "address": {
               "label": "Address",
               "value": "Los Angeles - CA - USA"
-                    }
-      }
+            }
+          }
         }
       }
     },
@@ -1461,7 +1461,42 @@
       "registrationFailed": "Registration Failed",
       "emailAlreadyRegistered": "This email is already registered. Please sign in or use another email."
     }
+  },
+  "ssoCallback": {
+    "processing": {
+      "title": "Espere un momento",
+      "preparing": "Estamos preparando el entorno para usted...",
+      "connecting": "Conectando con 323 Network...",
+      "preparingAccount": "Preparando su cuenta...",
+      "creatingSession": "Creando sesión...",
+      "waitMessage": "Esto puede llevar unos segundos...",
+      "secureConnection": "Conectando de forma segura a Matrícula USA"
     },
+    "success": {
+      "title": "¡Todo listo!",
+      "newUser": "¡Todo listo! Redirigiéndote...",
+      "returningUser": "¡Bienvenido de nuevo! Redirigiéndote...",
+      "redirecting": "Redirigiéndote ahora...",
+      "welcomeNew": "¡Bienvenido a Matrícula US!",
+      "loginSuccess": "¡Inicio de sesión exitoso!"
+    },
+    "error": {
+      "title": "Ups, algo salió mal",
+      "authenticationFailed": "No se pudo completar la autenticación. Será redirigido a la página de inicio de sesión en breve.",
+      "tokenNotProvided": "Token no proporcionado en la URL",
+      "tokenValidationError": "Error al validar el token",
+      "sessionCreationError": "Error al crear la sesión",
+      "sessionNotCreated": "La sesión no se creó correctamente",
+      "noAuthMethod": "Ningún método de autenticación disponible",
+      "tokenNotFoundInMagicLink": "Token o tipo no encontrado en el magic link",
+      "tokensNotFoundInRedirect": "Tokens no encontrados en el redireccionamiento",
+      "locationHeaderNotFound": "Encabezado de ubicación no encontrado en el redireccionamiento",
+      "tokensNotFoundInResponse": "Tokens no encontrados en la respuesta",
+      "supabaseUrlNotConfigured": "VITE_SUPABASE_URL no configurada",
+      "tryAgain": "Intentar de nuevo",
+      "goToLogin": "Ir al inicio de sesión"
+    }
+  },
   "features": {
     "whyChoose": "Why Choose MatriculaUSA?",
     "subtitle": "Everything you need to succeed in your American education journey",
@@ -1537,12 +1572,12 @@
       "title": "Esta es tu barra de progreso de tasas de solicitud. Completa cada paso para avanzar.",
       "allStepsCompleted": "¡Todos los pasos completados! 🎉",
       "selectionProcessFee": "Tarifa de Proceso de Selección",
-      "applicationFee": "Tarifa de Solicitud", 
+      "applicationFee": "Tarifa de Solicitud",
       "scholarshipFee": "Tarifa de Beca",
       "i20ControlFee": "Tarifa de Control I-20",
       "completed": "¡Completado!",
       "payApplicationFee": "Paga la Tarifa de Solicitud para aplicar a una beca específica.",
-      "payScholarshipFee": "Paga la Tarifa de Beca para confirmar tu solicitud de beca.", 
+      "payScholarshipFee": "Paga la Tarifa de Beca para confirmar tu solicitud de beca.",
       "payI20Fee": "Paga la Tarifa de Control I-20 para iniciar tu proceso de validación de documentos e I-20.",
       "daysRemaining": "Tienes 10 días después de la tarifa de beca."
     },
@@ -1564,7 +1599,7 @@
     "stats": {
       "myApplications": "Mis Solicitudes",
       "totalSubmitted": "Total enviadas",
-      "approved": "Aprobadas", 
+      "approved": "Aprobadas",
       "successful": "Exitosas",
       "pending": "Pendientes",
       "underReview": "En revisión"
@@ -1579,7 +1614,7 @@
     },
     "sidebar": {
       "overview": "Resumen",
-      "browseScholarships": "Explorar Becas", 
+      "browseScholarships": "Explorar Becas",
       "selectedScholarships": "Becas Seleccionadas",
       "myApplications": "Mis Solicitudes",
       "matriculaRewards": "Matricula Rewards",
