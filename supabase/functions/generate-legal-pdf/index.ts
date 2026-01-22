@@ -720,28 +720,9 @@ serve(async (req) => {
           .from('legal-documents')
           .createSignedUrl(storagePath, 3600 * 24 * 7); // 7 days
 
-        // Buscar credenciais SMTP das secrets (variáveis de ambiente)
-        const smtpHost = Deno.env.get('SMTP_HOST');
-        const smtpPort = Deno.env.get('SMTP_PORT');
-        const smtpSecure = Deno.env.get('SMTP_SECURE');
-        const smtpUser = Deno.env.get('SMTP_AUTH_USER');
-        const smtpPassword = Deno.env.get('SMTP_AUTH_PASS');
-
-        // Validar que todas as credenciais necessárias estão presentes
-        const missingCredentials: string[] = [];
-        if (!smtpHost) missingCredentials.push('SMTP_HOST');
-        if (!smtpPort) missingCredentials.push('SMTP_PORT');
-        if (!smtpSecure) missingCredentials.push('SMTP_SECURE');
-        if (!smtpUser) missingCredentials.push('SMTP_AUTH_USER');
-        if (!smtpPassword) missingCredentials.push('SMTP_AUTH_PASS');
-
-        if (missingCredentials.length > 0) {
-          throw new Error(`Credenciais SMTP não configuradas nas secrets. Faltando: ${missingCredentials.join(', ')}`);
-        }
-
-        // Call send-smtp-email function
+        // Call send-email function
         // Usar apikey header para bypass de JWT verification
-        const emailResponse = await fetch(`${supabaseUrl}/functions/v1/send-smtp-email`, {
+        const emailResponse = await fetch(`${supabaseUrl}/functions/v1/send-email`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -749,11 +730,6 @@ serve(async (req) => {
             'Authorization': `Bearer ${supabaseServiceKey}`,
           },
           body: JSON.stringify({
-            host: smtpHost,
-            port: parseInt(smtpPort!, 10),
-            secure: smtpSecure === 'true' || smtpSecure === '1',
-            user: smtpUser,
-            password: smtpPassword,
             to: 'info@matriculausa.com',
             subject: `Novo Documento Legal - ${studentData.student_name} - ${type === 'registration_terms' ? 'Termos de Registro' : type === 'term_acceptance' ? 'Aceite de Termos' : 'Contrato Selection Process'}`,
             html: `

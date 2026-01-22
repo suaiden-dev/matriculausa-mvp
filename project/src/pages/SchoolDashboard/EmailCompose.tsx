@@ -496,7 +496,7 @@ const EmailCompose = () => {
 
     // Send email via Supabase Edge Function to avoid CORS issues
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    const response = await fetch(`${supabaseUrl}/functions/v1/send-smtp-email`, {
+    const response = await fetch(`${supabaseUrl}/functions/v1/send-email`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
