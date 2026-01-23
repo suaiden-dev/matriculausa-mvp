@@ -74,6 +74,22 @@ const Auth323NetworkCallback: React.FC = () => {
             }
 
             console.log('[SSO Callback] ✅ Sessão criada com sucesso via hash!');
+            
+            // ✅ Atualizar IP e User-Agent dos termos auto-aceitos
+            try {
+              const { getClientInfo } = await import('../utils/clientInfo');
+              const clientInfo = await getClientInfo();
+              if (clientInfo.registration_ip) {
+                await supabase.rpc('update_term_acceptance_client_info', {
+                  p_ip_address: clientInfo.registration_ip,
+                  p_user_agent: clientInfo.user_agent
+                });
+                console.log('[SSO Callback] 📝 Informações de IP/UA atualizadas nos termos');
+              }
+            } catch (e) {
+              console.warn('[SSO Callback] ⚠️ Erro ao atualizar informações legais:', e);
+            }
+
             setStep(4);
             setStatus('success');
             setMessage(t('ssoCallback.success.returningUser'));
@@ -304,6 +320,21 @@ const Auth323NetworkCallback: React.FC = () => {
 
                         console.log('[SSO Callback] ✅ Sessão criada com sucesso!');
                         console.log('[SSO Callback] 👤 Usuário:', sessionData.user?.email);
+
+                        // ✅ Atualizar IP e User-Agent dos termos auto-aceitos
+                        try {
+                          const { getClientInfo } = await import('../utils/clientInfo');
+                          const clientInfo = await getClientInfo();
+                          if (clientInfo.registration_ip) {
+                            await supabase.rpc('update_term_acceptance_client_info', {
+                              p_ip_address: clientInfo.registration_ip,
+                              p_user_agent: clientInfo.user_agent
+                            });
+                            console.log('[SSO Callback] 📝 Informações de IP/UA atualizadas nos termos');
+                          }
+                        } catch (e) {
+                          console.warn('[SSO Callback] ⚠️ Erro ao atualizar informações legais:', e);
+                        }
                       } else {
                         throw new Error(t('ssoCallback.error.tokensNotFoundInRedirect'));
                       }
