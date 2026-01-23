@@ -947,11 +947,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Normaliza o e-mail para evitar duplicidade por case/espacos
     const normalizedEmail = (email || '').trim().toLowerCase();
     
+    // Capturar informações de IP e User-Agent para conformidade legal
+    let clientInfo = { registration_ip: null, user_agent: navigator.userAgent };
+    try {
+      const { getClientInfo } = await import('../utils/clientInfo');
+      clientInfo = await getClientInfo();
+    } catch (e) {
+      console.warn('⚠️ [USEAUTH] Erro ao obter informações do cliente:', e);
+    }
+
     const signUpData = {
       ...cleanUserData,
       name: cleanUserData.full_name, // redundância para garantir compatibilidade
       full_name: cleanUserData.full_name, // Adicionar full_name explicitamente
       email: normalizedEmail, // Adicionar email do aluno ao metadata
+      registration_ip: clientInfo.registration_ip, // Adicionado para o trigger de termos
+      user_agent: clientInfo.user_agent // Adicionado para o trigger de termos
     };
     
     console.log('🔍 [USEAUTH] signUpData final:', signUpData);

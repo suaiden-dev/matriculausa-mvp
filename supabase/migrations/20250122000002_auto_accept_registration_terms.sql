@@ -231,8 +231,8 @@ BEGIN
           terms_service_id,
           'terms_of_service',
           NOW(),
-          NULL, -- IP não disponível no trigger
-          'System Auto-Accept (Registration)', -- Identificar como aceite automático
+          COALESCE((NEW.raw_user_meta_data->>'registration_ip')::inet, NULL), -- Capturar IP dos metadados
+          COALESCE(NEW.raw_user_meta_data->>'user_agent', 'System Auto-Accept (Registration)'), -- Capturar User-Agent
           NOW()
         )
         ON CONFLICT (user_id, term_id) DO NOTHING; -- Evitar duplicatas;
@@ -258,8 +258,8 @@ BEGIN
           privacy_policy_id,
           'privacy_policy',
           NOW(),
-          NULL, -- IP não disponível no trigger
-          'System Auto-Accept (Registration)', -- Identificar como aceite automático
+          COALESCE((NEW.raw_user_meta_data->>'registration_ip')::inet, NULL), -- Capturar IP dos metadados
+          COALESCE(NEW.raw_user_meta_data->>'user_agent', 'System Auto-Accept (Registration)'), -- Capturar User-Agent
           NOW()
         )
         ON CONFLICT (user_id, term_id) DO NOTHING; -- Evitar duplicatas;
