@@ -11,6 +11,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
 interface BulkGenerateRequest {
@@ -49,7 +50,21 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Parse request body
-    const requestData: BulkGenerateRequest = await req.json();
+    let requestData: BulkGenerateRequest;
+    try {
+      requestData = await req.json();
+    } catch (parseError: any) {
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Erro ao parsear JSON: ' + (parseError.message || 'Invalid JSON') 
+        }),
+        { 
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
     const { user_ids } = requestData;
 
     if (!user_ids || !Array.isArray(user_ids) || user_ids.length === 0) {
@@ -66,9 +81,6 @@ serve(async (req) => {
     }
 
     console.log(`[bulk-generate-legal-documents] Iniciando processamento para ${user_ids.length} usuários`);
-    console.log(`[bulk-generate-legal-documents] Supabase URL: ${supabaseUrl}`);
-    console.log(`[bulk-generate-legal-documents] Service Key presente: ${supabaseServiceKey ? 'Sim' : 'Não'}`);
-    console.log(`[bulk-generate-legal-documents] Anon Key presente: ${supabaseAnonKey ? 'Sim' : 'Não'}`);
 
     const results: DocumentResult[] = [];
     let successCount = 0;
@@ -261,8 +273,6 @@ serve(async (req) => {
           // Chamar Edge Function para gerar registration_terms usando fetch direto
           console.log(`[bulk-generate-legal-documents] Gerando registration_terms para user_id: ${user_id}`);
           const functionUrl = `${supabaseUrl}/functions/v1/generate-legal-pdf`;
-          console.log(`[bulk-generate-legal-documents] Chamando: ${functionUrl}`);
-          console.log(`[bulk-generate-legal-documents] Headers: apikey=${supabaseServiceKey?.substring(0, 20)}..., Authorization=Bearer ${supabaseServiceKey?.substring(0, 20)}...`);
           
           const generatePdfResponse = await fetch(functionUrl, {
             method: 'POST',
@@ -279,24 +289,14 @@ serve(async (req) => {
               trigger_table: 'bulk_generation'
             })
           });
-          
-          console.log(`[bulk-generate-legal-documents] Response status: ${generatePdfResponse.status} ${generatePdfResponse.statusText}`);
-          console.log(`[bulk-generate-legal-documents] Response headers:`, Object.fromEntries(generatePdfResponse.headers.entries()));
 
           if (!generatePdfResponse.ok) {
             let errorMessage = '';
-            let errorBody = '';
             try {
-              errorBody = await generatePdfResponse.text();
-              console.log(`[bulk-generate-legal-documents] Response body (text):`, errorBody);
-              try {
-                const errorJson = JSON.parse(errorBody);
-                errorMessage = errorJson.error || errorJson.message || JSON.stringify(errorJson);
-              } catch {
-                errorMessage = errorBody;
-              }
+              const errorJson = await generatePdfResponse.json();
+              errorMessage = errorJson.error || errorJson.message || JSON.stringify(errorJson);
             } catch {
-              errorMessage = 'Erro ao ler resposta';
+              errorMessage = await generatePdfResponse.text();
             }
             console.error(`[bulk-generate-legal-documents] Erro ao gerar registration_terms para ${user_id}: ${generatePdfResponse.status} - ${errorMessage}`);
             result.registration_terms = 'error';
@@ -327,8 +327,6 @@ serve(async (req) => {
           // Chamar Edge Function para gerar selection_process_contract usando fetch direto
           console.log(`[bulk-generate-legal-documents] Gerando selection_process_contract para user_id: ${user_id}, student_id: ${student_id}`);
           const functionUrl = `${supabaseUrl}/functions/v1/generate-legal-pdf`;
-          console.log(`[bulk-generate-legal-documents] Chamando: ${functionUrl}`);
-          console.log(`[bulk-generate-legal-documents] Headers: apikey=${supabaseServiceKey?.substring(0, 20)}..., Authorization=Bearer ${supabaseServiceKey?.substring(0, 20)}...`);
           
           const generateContractResponse = await fetch(functionUrl, {
             method: 'POST',
@@ -345,24 +343,14 @@ serve(async (req) => {
               trigger_table: 'bulk_generation'
             })
           });
-          
-          console.log(`[bulk-generate-legal-documents] Response status: ${generateContractResponse.status} ${generateContractResponse.statusText}`);
-          console.log(`[bulk-generate-legal-documents] Response headers:`, Object.fromEntries(generateContractResponse.headers.entries()));
 
           if (!generateContractResponse.ok) {
             let errorMessage = '';
-            let errorBody = '';
             try {
-              errorBody = await generateContractResponse.text();
-              console.log(`[bulk-generate-legal-documents] Response body (text):`, errorBody);
-              try {
-                const errorJson = JSON.parse(errorBody);
-                errorMessage = errorJson.error || errorJson.message || JSON.stringify(errorJson);
-              } catch {
-                errorMessage = errorBody;
-              }
+              const errorJson = await generateContractResponse.json();
+              errorMessage = errorJson.error || errorJson.message || JSON.stringify(errorJson);
             } catch {
-              errorMessage = 'Erro ao ler resposta';
+              errorMessage = await generateContractResponse.text();
             }
             console.error(`[bulk-generate-legal-documents] Erro ao gerar selection_process_contract para ${user_id}: ${generateContractResponse.status} - ${errorMessage}`);
             result.selection_process_contract = 'error';

@@ -118,6 +118,7 @@ serve(async (req) => {
         .from('comprehensive_term_acceptance')
         .select(`
           id,
+          term_id,
           accepted_at,
           ip_address,
           user_agent,
@@ -137,6 +138,7 @@ serve(async (req) => {
         .from('comprehensive_term_acceptance')
         .select(`
           id,
+          term_id,
           accepted_at,
           ip_address,
           user_agent,
@@ -159,6 +161,60 @@ serve(async (req) => {
         throw new Error(`Erro ao buscar Privacy Policy: ${ppError?.message || 'Não encontrado'}`);
       }
 
+      // Verificar se application_terms foi carregado corretamente
+      // Se não foi carregado via relação, buscar diretamente pelo term_id
+      let tosContent = '';
+      let tosTitle = 'Terms of Service';
+      let ppContent = '';
+      let ppTitle = 'Privacy Policy';
+
+      if (termsOfService.application_terms && termsOfService.application_terms.content) {
+        tosContent = termsOfService.application_terms.content;
+        tosTitle = termsOfService.application_terms.title || 'Terms of Service';
+      } else {
+        // Buscar diretamente pelo term_id
+        const { data: tosTerm, error: tosTermError } = await supabase
+          .from('application_terms')
+          .select('title, content')
+          .eq('id', termsOfService.term_id)
+          .maybeSingle();
+        
+        if (tosTermError || !tosTerm) {
+          throw new Error(`Erro ao buscar Terms of Service diretamente: ${tosTermError?.message || 'Term não encontrado'}. Term ID: ${termsOfService.term_id}`);
+        }
+        
+        tosContent = tosTerm.content || '';
+        tosTitle = tosTerm.title || 'Terms of Service';
+      }
+
+      if (privacyPolicy.application_terms && privacyPolicy.application_terms.content) {
+        ppContent = privacyPolicy.application_terms.content;
+        ppTitle = privacyPolicy.application_terms.title || 'Privacy Policy';
+      } else {
+        // Buscar diretamente pelo term_id
+        const { data: ppTerm, error: ppTermError } = await supabase
+          .from('application_terms')
+          .select('title, content')
+          .eq('id', privacyPolicy.term_id)
+          .maybeSingle();
+        
+        if (ppTermError || !ppTerm) {
+          throw new Error(`Erro ao buscar Privacy Policy diretamente: ${ppTermError?.message || 'Term não encontrado'}. Term ID: ${privacyPolicy.term_id}`);
+        }
+        
+        ppContent = ppTerm.content || '';
+        ppTitle = ppTerm.title || 'Privacy Policy';
+      }
+
+      // Verificar se os conteúdos estão vazios
+      if (!tosContent || tosContent.trim() === '') {
+        throw new Error(`Terms of Service encontrado mas conteúdo está vazio. Term ID: ${termsOfService.term_id}`);
+      }
+
+      if (!ppContent || ppContent.trim() === '') {
+        throw new Error(`Privacy Policy encontrado mas conteúdo está vazio. Term ID: ${privacyPolicy.term_id}`);
+      }
+
       // Usar a data de aceite mais recente
       const mostRecentAcceptance = new Date(termsOfService.accepted_at) > new Date(privacyPolicy.accepted_at)
         ? termsOfService
@@ -172,11 +228,13 @@ serve(async (req) => {
         user_agent: mostRecentAcceptance.user_agent || 'N/A',
         term_title: 'Registration Terms Acceptance',
         accepted_at: mostRecentAcceptance.accepted_at || new Date().toISOString(),
-        terms_of_service_content: termsOfService.application_terms?.content || '',
-        privacy_policy_content: privacyPolicy.application_terms?.content || '',
-        terms_of_service_title: termsOfService.application_terms?.title || 'Terms of Service',
-        privacy_policy_title: privacyPolicy.application_terms?.title || 'Privacy Policy',
+        terms_of_service_content: tosContent,
+        privacy_policy_content: ppContent,
+        terms_of_service_title: tosTitle,
+        privacy_policy_title: ppTitle,
       };
+
+      console.log(`[generate-legal-pdf] Student data preparado com sucesso para user_id: ${user_id}`);
 
     } else if (type === 'term_acceptance') {
       // Se for pagamento Zelle ou Stripe, buscar o último checkout_terms aceito
