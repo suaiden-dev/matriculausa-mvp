@@ -1371,6 +1371,41 @@
     "registrationFailed": "Falha no Registro",
     "emailAlreadyRegistered": "Este email já está cadastrado. Faça login ou use outro email."
   },
+  "ssoCallback": {
+    "processing": {
+      "title": "Aguarde um momento",
+      "preparing": "Estamos preparando o ambiente para você...",
+      "connecting": "Conectando com o 323 Network...",
+      "preparingAccount": "Preparando sua conta...",
+      "creatingSession": "Criando sessão...",
+      "waitMessage": "Isso pode levar alguns segundos...",
+      "secureConnection": "Conectando com segurança ao Matrícula USA"
+    },
+    "success": {
+      "title": "Tudo pronto!",
+      "newUser": "Tudo pronto! Redirecionando você...",
+      "returningUser": "Bem-vindo de volta! Redirecionando...",
+      "redirecting": "Redirecionando você agora...",
+      "welcomeNew": "Bem-vindo ao Matrícula US!",
+      "loginSuccess": "Login realizado com sucesso!"
+    },
+    "error": {
+      "title": "Ops, algo deu errado",
+      "authenticationFailed": "Não foi possível completar a autenticação. Você será redirecionado para a página de login em instantes.",
+      "tokenNotProvided": "Token não fornecido na URL",
+      "tokenValidationError": "Erro ao validar token",
+      "sessionCreationError": "Erro ao criar sessão",
+      "sessionNotCreated": "Sessão não foi criada corretamente",
+      "noAuthMethod": "Nenhum método de autenticação disponível",
+      "tokenNotFoundInMagicLink": "Token ou type não encontrados no magic link",
+      "tokensNotFoundInRedirect": "Tokens não encontrados no redirect",
+      "locationHeaderNotFound": "Location header não encontrado no redirect",
+      "tokensNotFoundInResponse": "Tokens não encontrados na resposta",
+      "supabaseUrlNotConfigured": "VITE_SUPABASE_URL não configurada",
+      "tryAgain": "Tentar Novamente",
+      "goToLogin": "Ir para Login"
+    }
+  },
   "features": {
     "whyChoose": "Por Que Escolher MatriculaUSA?",
     "subtitle": "Tudo que você precisa para ter sucesso na sua jornada educacional americana",

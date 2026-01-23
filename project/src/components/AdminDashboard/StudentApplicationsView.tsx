@@ -34,6 +34,8 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs from 'dayjs';
 import DocumentViewerModal from '../DocumentViewerModal';
+import { toast } from 'react-hot-toast';
+import BulkDocumentActionsBar from './BulkDocumentActionsBar';
 
 interface StudentRecord {
   // Dados do estudante (sempre presentes)
@@ -83,6 +85,11 @@ const StudentApplicationsView: React.FC = () => {
   const [approvingDocs, setApprovingDocs] = useState<{[key: string]: boolean}>({});
   const [pendingZelleByUser, setPendingZelleByUser] = useState<{ [userId: string]: number }>({});
   const [blackCouponUsers, setBlackCouponUsers] = useState<Set<string>>(new Set());
+  
+  // Estados para geração em massa de documentos
+  const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set());
+  const [selectAll, setSelectAll] = useState(false);
+  const [isGeneratingDocuments, setIsGeneratingDocuments] = useState(false);
 
   // React Query Hooks
   const studentsQuery = useStudentsQuery();
@@ -505,6 +512,96 @@ const StudentApplicationsView: React.FC = () => {
 
   // Funções fetchStudents e fetchFilterData removidas - agora usando React Query hooks
   // useStudentsQuery e useFilterDataQuery fazem o trabalho
+
+  // Handlers para seleção em massa de documentos
+  const handleSelectStudent = (studentId: string) => {
+    setSelectedStudents(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(studentId)) {
+        newSet.delete(studentId);
+      } else {
+        newSet.add(studentId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (selectAll) {
+      setSelectedStudents(new Set());
+    } else {
+      const ids = currentStudents.map(s => s.student_id);
+      setSelectedStudents(new Set(ids));
+    }
+    setSelectAll(!selectAll);
+  };
+
+  const handleClearSelection = () => {
+    setSelectedStudents(new Set());
+    setSelectAll(false);
+  };
+
+  const handleBulkGenerateDocuments = async () => {
+    setIsGeneratingDocuments(true);
+    
+    const selectedRecords = currentStudents.filter(s => 
+      selectedStudents.has(s.student_id)
+    );
+    
+    // Extrair apenas os user_ids
+    const user_ids = selectedRecords.map(s => s.user_id);
+    
+    try {
+      // Chamar Edge Function para processamento em massa
+      const { data, error } = await supabase.functions.invoke(
+        'bulk-generate-legal-documents',
+        {
+          body: {
+            user_ids
+          }
+        }
+      );
+      
+      if (error) {
+        console.error('Erro ao gerar documentos em massa:', error);
+        toast.error(
+          `Erro ao processar documentos: ${error.message}`,
+          { duration: 5000 }
+        );
+        setIsGeneratingDocuments(false);
+        return;
+      }
+      
+      // Exibir toast com resumo
+      const { success_count, skipped_count, error_count, total } = data;
+      const totalDocs = success_count + skipped_count;
+      
+      if (error_count > 0) {
+        toast.error(
+          `Processamento concluído com erros: ${totalDocs} processados (${success_count} gerados, ${skipped_count} pulados, ${error_count} erros)`,
+          { duration: 6000 }
+        );
+      } else {
+        toast.success(
+          `Documents processed: ${totalDocs} total (${success_count} generated, ${skipped_count} skipped)`,
+          { duration: 5000 }
+        );
+      }
+      
+    } catch (error: any) {
+      console.error('Erro ao chamar Edge Function:', error);
+      toast.error(
+        `Erro ao processar documentos: ${error.message || 'Erro desconhecido'}`,
+        { duration: 5000 }
+      );
+    } finally {
+      setIsGeneratingDocuments(false);
+      
+      // Limpar seleção
+      setSelectedStudents(new Set());
+      setSelectAll(false);
+    }
+  };
 
   const getStepStatus = (student: StudentRecord, step: string) => {
     switch (step) {
@@ -1168,12 +1265,30 @@ const StudentApplicationsView: React.FC = () => {
         </div>
       </div>
 
+      {/* Bulk Actions Bar - aparece quando há estudantes selecionados */}
+      {selectedStudents.size > 0 && (
+        <BulkDocumentActionsBar
+          selectedCount={selectedStudents.size}
+          onGenerateDocuments={handleBulkGenerateDocuments}
+          onClearSelection={handleClearSelection}
+          isGenerating={isGeneratingDocuments}
+        />
+      )}
+
       {/* Applications List */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <input
+                    type="checkbox"
+                    checked={selectAll}
+                    onChange={handleSelectAll}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Student
                 </th>
@@ -1199,6 +1314,14 @@ const StudentApplicationsView: React.FC = () => {
                   className="hover:bg-gray-50 cursor-pointer"
                   onClick={() => { window.location.href = `/admin/dashboard/students/${student.student_id}`; }}
                 >
+                  <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      checked={selectedStudents.has(student.student_id)}
+                      onChange={() => handleSelectStudent(student.student_id)}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="flex-shrink-0 h-10 w-10 relative">
