@@ -7,8 +7,5 @@
   },
   "compilerOptions": {
     "lib": ["deno.window", "dom"]
-  },
-  "supabase": {
-    "verify_jwt": false
   }
 }
