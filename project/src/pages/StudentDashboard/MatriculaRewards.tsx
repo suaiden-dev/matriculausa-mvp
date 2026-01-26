@@ -18,8 +18,7 @@ import {
   AffiliateStats 
 } from '../../types';
 import { Link } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
-import { Separator } from '../../components/ui/Separator';
+import { Card } from '../../components/ui/Card';
 import { Alert, AlertDescription, AlertTitle } from '../../components/ui/Alert';
 import WhatsAppIcon from '../../components/icons/WhatsApp';
 import { 
@@ -46,12 +45,6 @@ const MatriculaRewards: React.FC = () => {
       <path d="M22.46 6c-.77.35-1.6.58-2.46.69a4.28 4.28 0 0 0 1.88-2.36 8.57 8.57 0 0 1-2.71 1.04 4.27 4.27 0 0 0-7.27 3.89A12.12 12.12 0 0 1 3.15 4.9a4.26 4.26 0 0 0 1.32 5.7c-.65-.02-1.26-.2-1.8-.5v.05a4.27 4.27 0 0 0 3.43 4.18c-.31.08-.64.12-.98.12-.24 0-.48-.02-.7-.07a4.27 4.27 0 0 0 3.98 2.96A8.56 8.56 0 0 1 2 19.54a12.08 12.08 0 0 0 6.56 1.92c7.88 0 12.2-6.53 12.2-12.2v-.56c.84-.61 1.57-1.36 2.14-2.22-.78.35-1.62.58-2.5.68z"/>
     </svg>
   );
-  const LinkedInLogo = () => (
-    <svg viewBox="0 0 24 24" className="h-4 w-4 fill-white" aria-hidden>
-      <path d="M20.45 20.45h-3.55v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.13 1.45-2.13 2.95v5.66H9.37V9h3.4v1.56h.05c.47-.9 1.6-1.85 3.29-1.85 3.52 0 4.17 2.32 4.17 5.34v6.4zM5.34 7.43a2.06 2.06 0 1 1 0-4.12 2.06 2.06 0 0 1 0 4.12zM7.12 20.45H3.56V9h3.56v11.45z"/>
-    </svg>
-  );
-  
   const { user } = useAuth();
   const queryClient = useQueryClient();
   
@@ -192,6 +185,45 @@ const MatriculaRewards: React.FC = () => {
       month: 'short',
       day: 'numeric'
     });
+  };
+
+  const removeEmailFromDescription = (description: string, referredUserName?: string): string => {
+    if (!description) return description;
+    
+    let cleaned = description;
+    
+    // Se temos o nome do usuário referido, substituir o email pelo nome
+    if (referredUserName) {
+      // Padrão de email
+      const emailPattern = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+      
+      // Substituir "paid by email@domain.com" por "paid by Nome" (mais específico primeiro)
+      cleaned = cleaned.replace(
+        /\s+paid\s+by\s+[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/gi,
+        ` paid by ${referredUserName}`
+      );
+      
+      // Substituir (email@domain.com) por (Nome)
+      cleaned = cleaned.replace(
+        /\([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\)/g,
+        `(${referredUserName})`
+      );
+      
+      // Substituir qualquer email restante pelo nome
+      cleaned = cleaned.replace(emailPattern, referredUserName);
+    } else {
+      // Se não temos o nome, apenas remove o email
+      cleaned = cleaned
+        .replace(/\s+paid\s+by\s+[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/gi, '') // Remove "paid by email@domain.com"
+        .replace(/\s*\([^)]*@[^)]+\)/g, '') // Remove (email@domain.com)
+        .replace(/\s+[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '') // Remove email@domain.com
+        .trim();
+    }
+    
+    // Limpa espaços duplos
+    cleaned = cleaned.replace(/\s+/g, ' ').trim();
+    
+    return cleaned;
   };
 
   if (loading) {
@@ -369,7 +401,7 @@ const MatriculaRewards: React.FC = () => {
                       <div>
                         <p className="font-medium text-slate-900">
                           {referral.referred_user?.full_name 
-                            ? `${referral.referred_user.full_name} (${referral.referred_user.email})`
+                            ? referral.referred_user.full_name
                             : t('matriculaRewards.referralNumber', { id: referral.id.slice(0,8) })
                           }
                         </p>
@@ -401,7 +433,12 @@ const MatriculaRewards: React.FC = () => {
                         {tx.type==='earned'?<TrendingUp className="h-4 w-4"/>:tx.type==='spent'?<DollarSign className="h-4 w-4"/>:<Clock className="h-4 w-4"/>}
                       </span>
                       <div>
-                        <p className="font-medium text-slate-900">{tx.description || (tx.type === 'earned' ? t('matriculaRewards.earned') : tx.type === 'spent' ? t('matriculaRewards.spent') : t('matriculaRewards.pending'))}</p>
+                        <p className="font-medium text-slate-900">
+                          {tx.description 
+                            ? removeEmailFromDescription(tx.description, tx.referred_user_name)
+                            : (tx.type === 'earned' ? t('matriculaRewards.earned') : tx.type === 'spent' ? t('matriculaRewards.spent') : t('matriculaRewards.pending'))
+                          }
+                        </p>
                         <p className="text-xs text-slate-500">{formatDate(tx.created_at)}</p>
                       </div>
                     </div>
