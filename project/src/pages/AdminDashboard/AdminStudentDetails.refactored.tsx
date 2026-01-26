@@ -16,6 +16,7 @@ import { generateTermAcceptancePDF, StudentTermAcceptanceData } from '../../util
 import { recordIndividualFeePayment } from '../../lib/paymentRecorder';
 import { useStudentLogs } from '../../hooks/useStudentLogs';
 import { getGrossPaidAmounts } from '../../utils/paymentConverter';
+import { handleViewDocument } from '../../components/EnhancedStudentTracking/utils/documentUtils';
 
 // Componentes de UI Base
 import {
@@ -1926,43 +1927,7 @@ const AdminStudentDetails: React.FC = () => {
     }
   }, [student, user, logAction, queryClient, profileId]);
 
-  const handleViewDocument = useCallback((doc: { file_url: string; filename: string }) => {
-    // ✅ Aceitar tanto file_url quanto url (fallback)
-    const fileUrl: string | undefined = doc?.file_url || (doc as any)?.url;
-    if (!doc || !fileUrl) {
-      console.error('Documento ou file_url/url está vazio ou undefined');
-      return;
-    }
-    
-    try {
-      // ✅ CORREÇÃO: Se já é uma URL completa do Supabase, usar diretamente
-      if (fileUrl && (fileUrl.startsWith('https://') || fileUrl.startsWith('http://'))) {
-        // Se já é uma URL completa, usar diretamente
-        window.open(fileUrl, '_blank');
-      } else {
-        // ✅ CORREÇÃO: Determinar o bucket correto baseado no caminho do arquivo
-        // Transfer Form uploads estão no bucket 'document-attachments' com caminho 'transfer-forms-filled/...'
-        // Outros documentos estão no bucket 'student-documents'
-        let bucket = 'student-documents'; // padrão
-        
-        if (fileUrl.includes('transfer-forms-filled/') || fileUrl.includes('transfer-forms/')) {
-          bucket = 'document-attachments';
-        }
-        
-        // Se file_url é um path do storage, converter para URL pública
-        const publicUrl = supabase.storage
-          .from(bucket)
-          .getPublicUrl(fileUrl)
-          .data.publicUrl;
-        
-        window.open(publicUrl, '_blank');
-      }
-    } catch (error) {
-      console.error('Erro ao gerar URL pública:', error);
-      // Fallback: tentar usar a URL original
-      window.open(fileUrl, '_blank');
-    }
-  }, []);
+  // handleViewDocument removido daqui pois agora é importado de documentUtils
 
   const handleUploadDocument = useCallback(async (appId: string, docType: string, file: File) => {
     if (!canUniversityManage || !student) return;
