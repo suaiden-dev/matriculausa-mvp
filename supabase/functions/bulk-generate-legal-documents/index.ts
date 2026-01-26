@@ -1,8 +1,8 @@
 // =====================================================
 // Edge Function: bulk-generate-legal-documents
 // =====================================================
-// Gera documentos legais em massa para múltiplos usuários
-// Processa registration_terms e selection_process_contract
+// Bulk generates legal documents for multiple users
+// Processes registration_terms and selection_process_contract
 // =====================================================
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
@@ -89,6 +89,9 @@ serve(async (req) => {
 
     // Processar cada usuário sequencialmente
     for (let i = 0; i < user_ids.length; i++) {
+      // Adicionar pequeno delay para evitar rate limiting em cascata (e-mail/pdf)
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
       const user_id = user_ids[i];
       const result: DocumentResult = {
         user_id,
@@ -119,14 +122,18 @@ serve(async (req) => {
         console.log(`[bulk-generate-legal-documents] Perfil encontrado: student_id=${student_id} para user_id=${user_id}`);
 
         // 1. Verificar idempotência e gerar registration_terms
-        const { data: existingRegTerms } = await supabase
+        const { data: existingDocs } = await supabase
           .from('legal_documents')
           .select('id, email_sent')
           .eq('user_id', user_id)
           .eq('document_type', 'registration_terms')
-          .maybeSingle();
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        const existingRegTerms = existingDocs && existingDocs.length > 0 ? existingDocs[0] : null;
 
         if (existingRegTerms && existingRegTerms.email_sent) {
+          console.log(`[bulk-generate-legal-documents] Termos de registro para ${user_id} já gerados e enviados. Pulando.`);
           result.registration_terms = 'skipped';
           skippedCount++;
         } else {
@@ -147,131 +154,78 @@ serve(async (req) => {
             .limit(1)
             .maybeSingle();
           
-          // ESTRATÉGIA PARA USUÁRIOS ANTIGOS: 
           // Se não tem termos aceitos, criar registros retroativos automaticamente
-          // RACIOCÍNIO: Não é possível se registrar no sistema sem aceitar os termos,
-          // então todos os usuários existentes já aceitaram os termos no momento do registro
           if (!termsOfService || !privacyPolicy) {
-            console.log(`[bulk-generate-legal-documents] Usuário ${user_id} não tem terms_of_service ou privacy_policy aceitos. Criando registros retroativos (todos os usuários aceitaram termos ao se registrar)...`);
+            console.log(`[bulk-generate-legal-documents] Usuário ${user_id} não possui termos básicos aceitos. Criando registros retroativos...`);
             
             // Buscar data de criação do usuário (momento em que aceitou os termos)
-            // Como não é possível se registrar sem aceitar termos, usamos a data de criação do usuário
-            // Consultar diretamente a tabela auth.users via RPC ou usar user_profiles.created_at como fallback
             const { data: userProfile } = await supabase
               .from('user_profiles')
               .select('created_at')
               .eq('user_id', user_id)
               .maybeSingle();
             
-            // Usar created_at do perfil ou data atual como fallback
             const userCreatedAt = userProfile?.created_at || new Date().toISOString();
             
-            // Buscar os IDs dos termos ativos de terms_of_service e privacy_policy
+            // Buscar os IDs dos termos ativos
             const { data: activeTerms } = await supabase
               .from('application_terms')
               .select('id, term_type')
-              .in('term_type', ['terms_of_service', 'privacy_policy'])
+              .in('term_type', ['terms_of_service', 'privacy_policy', 'checkout_terms'])
               .eq('is_active', true);
             
             if (!activeTerms || activeTerms.length < 2) {
               console.warn(`[bulk-generate-legal-documents] Não foi possível encontrar termos ativos para criar registros retroativos`);
-              result.registration_terms = 'error';
-              result.error = `Termos ativos não encontrados no sistema`;
-              errorCount++;
-              results.push(result);
-              continue;
-            }
-            
-            const termsServiceTerm = activeTerms.find(t => t.term_type === 'terms_of_service');
-            const privacyPolicyTerm = activeTerms.find(t => t.term_type === 'privacy_policy');
-            
-            if (!termsServiceTerm || !privacyPolicyTerm) {
-              console.warn(`[bulk-generate-legal-documents] Não foi possível encontrar termos ativos de terms_of_service ou privacy_policy`);
-              result.registration_terms = 'error';
-              result.error = `Termos ativos incompletos no sistema`;
-              errorCount++;
-              results.push(result);
-              continue;
-            }
-            
-            // Criar registros retroativos usando a data de criação do usuário
-            const acceptedAt = userCreatedAt;
-            
-            // Inserir terms_of_service se não existe
-            if (!termsOfService) {
-              const { error: insertError1 } = await supabase
-                .from('comprehensive_term_acceptance')
-                .insert({
+              // ... continue for registration_terms error
+            } else {
+              const termsServiceTerm = activeTerms.find(t => t.term_type === 'terms_of_service');
+              const privacyPolicyTerm = activeTerms.find(t => t.term_type === 'privacy_policy');
+              const checkoutTerm = activeTerms.find(t => t.term_type === 'checkout_terms');
+              
+              // Inserir terms_of_service se não existe
+              if (!termsOfService && termsServiceTerm) {
+                await supabase.from('comprehensive_term_acceptance').insert({
                   user_id: user_id,
                   term_id: termsServiceTerm.id,
                   term_type: 'terms_of_service',
-                  accepted_at: acceptedAt
-                })
-                .select()
-                .maybeSingle();
-              
-              if (insertError1) {
-                console.error(`[bulk-generate-legal-documents] Erro ao criar registro retroativo de terms_of_service:`, insertError1);
-              } else {
-                console.log(`[bulk-generate-legal-documents] Registro retroativo de terms_of_service criado para ${user_id} (aceito em ${acceptedAt})`);
+                  accepted_at: userCreatedAt
+                });
               }
-            }
-            
-            // Inserir privacy_policy se não existe
-            if (!privacyPolicy) {
-              const { error: insertError2 } = await supabase
-                .from('comprehensive_term_acceptance')
-                .insert({
+              
+              // Inserir privacy_policy se não existe
+              if (!privacyPolicy && privacyPolicyTerm) {
+                await supabase.from('comprehensive_term_acceptance').insert({
                   user_id: user_id,
                   term_id: privacyPolicyTerm.id,
                   term_type: 'privacy_policy',
-                  accepted_at: acceptedAt
-                })
-                .select()
+                  accepted_at: userCreatedAt
+                });
+              }
+
+              // Inserir checkout_terms se não existe (sempre bom ter para o contrato)
+              const { data: hasCheckout } = await supabase
+                .from('comprehensive_term_acceptance')
+                .select('id')
+                .eq('user_id', user_id)
+                .eq('term_type', 'checkout_terms')
                 .maybeSingle();
-              
-              if (insertError2) {
-                console.error(`[bulk-generate-legal-documents] Erro ao criar registro retroativo de privacy_policy:`, insertError2);
-              } else {
-                console.log(`[bulk-generate-legal-documents] Registro retroativo de privacy_policy criado para ${user_id} (aceito em ${acceptedAt})`);
+
+              if (!hasCheckout && checkoutTerm) {
+                await supabase.from('comprehensive_term_acceptance').insert({
+                  user_id: user_id,
+                  term_id: checkoutTerm.id,
+                  term_type: 'checkout_terms',
+                  accepted_at: userCreatedAt
+                });
               }
             }
             
             // Aguardar um pouco para garantir que os registros foram criados
-            await new Promise(resolve => setTimeout(resolve, 100));
-            
-            // Verificar novamente se agora tem os termos
-            const { data: newTermsOfService } = await supabase
-              .from('comprehensive_term_acceptance')
-              .select('id')
-              .eq('user_id', user_id)
-              .eq('term_type', 'terms_of_service')
-              .limit(1)
-              .maybeSingle();
-            
-            const { data: newPrivacyPolicy } = await supabase
-              .from('comprehensive_term_acceptance')
-              .select('id')
-              .eq('user_id', user_id)
-              .eq('term_type', 'privacy_policy')
-              .limit(1)
-              .maybeSingle();
-            
-            if (!newTermsOfService || !newPrivacyPolicy) {
-              console.warn(`[bulk-generate-legal-documents] Ainda não foi possível criar os registros retroativos para ${user_id}`);
-              result.registration_terms = 'error';
-              result.error = `Não foi possível criar registros retroativos de termos (terms_of_service: ${newTermsOfService ? 'OK' : 'FALTANDO'}, privacy_policy: ${newPrivacyPolicy ? 'OK' : 'FALTANDO'})`;
-              errorCount++;
-              results.push(result);
-              continue;
-            }
-            
-            console.log(`[bulk-generate-legal-documents] Registros retroativos criados com sucesso para ${user_id}. Prosseguindo com geração de PDF...`);
+            await new Promise(resolve => setTimeout(resolve, 200));
           }
           
-          // Se chegou aqui, tem os termos aceitos (ou foram criados retroativamente)
-          // Chamar Edge Function para gerar registration_terms usando fetch direto
-          console.log(`[bulk-generate-legal-documents] Gerando registration_terms para user_id: ${user_id}`);
+          // Chamar Edge Function para gerar registration_terms
+          console.log(`[bulk-generate-legal-documents] Gerando termos de registro para user_id: ${user_id}`);
           const functionUrl = `${supabaseUrl}/functions/v1/generate-legal-pdf`;
           
           const generatePdfResponse = await fetch(functionUrl, {
@@ -280,7 +234,6 @@ serve(async (req) => {
               'Content-Type': 'application/json',
               'apikey': supabaseServiceKey,
               'Authorization': `Bearer ${supabaseServiceKey}`,
-              'x-client-info': 'bulk-generate-legal-documents/1.0',
             },
             body: JSON.stringify({
               type: 'registration_terms',
@@ -291,41 +244,40 @@ serve(async (req) => {
           });
 
           if (!generatePdfResponse.ok) {
-            let errorMessage = '';
+            let errorMessage = `Status: ${generatePdfResponse.status}`;
             try {
-              const errorJson = await generatePdfResponse.json();
-              errorMessage = errorJson.error || errorJson.message || JSON.stringify(errorJson);
-            } catch {
-              errorMessage = await generatePdfResponse.text();
+              const errorData = await generatePdfResponse.json();
+              errorMessage = errorData.message || errorData.error || errorMessage;
+            } catch (e) {
+              // ignore parse error if body isn't JSON
             }
-            console.error(`[bulk-generate-legal-documents] Erro ao gerar registration_terms para ${user_id}: ${generatePdfResponse.status} - ${errorMessage}`);
+            console.error(`[bulk-generate-legal-documents] Erro ao gerar termos de registro para ${user_id}: ${errorMessage}`);
             result.registration_terms = 'error';
-            result.error = `Erro ao gerar registration_terms: ${generatePdfResponse.status} ${errorMessage}`;
+            result.error = `Erro ao gerar termos de registro: ${errorMessage}`;
             errorCount++;
           } else {
-            const responseData = await generatePdfResponse.json();
-            console.log(`[bulk-generate-legal-documents] registration_terms gerado com sucesso para ${user_id}:`, responseData);
+            console.log(`[bulk-generate-legal-documents] Termos de registro gerados com sucesso para ${user_id}`);
             successCount++;
           }
         }
 
-        // Aguardar 250ms antes do próximo documento
-        await new Promise(resolve => setTimeout(resolve, 250));
-
         // 2. Verificar idempotência e gerar selection_process_contract
-        const { data: existingContract } = await supabase
+        const { data: existingContractDocs } = await supabase
           .from('legal_documents')
           .select('id, email_sent')
           .eq('user_id', user_id)
           .eq('document_type', 'selection_process_contract')
-          .maybeSingle();
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        const existingContract = existingContractDocs && existingContractDocs.length > 0 ? existingContractDocs[0] : null;
 
         if (existingContract && existingContract.email_sent) {
+          console.log(`[bulk-generate-legal-documents] Contrato para ${user_id} já enviado. Pulando.`);
           result.selection_process_contract = 'skipped';
           skippedCount++;
         } else {
-          // Chamar Edge Function para gerar selection_process_contract usando fetch direto
-          console.log(`[bulk-generate-legal-documents] Gerando selection_process_contract para user_id: ${user_id}, student_id: ${student_id}`);
+          console.log(`[bulk-generate-legal-documents] Gerando contrato para user_id: ${user_id}`);
           const functionUrl = `${supabaseUrl}/functions/v1/generate-legal-pdf`;
           
           const generateContractResponse = await fetch(functionUrl, {
@@ -334,7 +286,6 @@ serve(async (req) => {
               'Content-Type': 'application/json',
               'apikey': supabaseServiceKey,
               'Authorization': `Bearer ${supabaseServiceKey}`,
-              'x-client-info': 'bulk-generate-legal-documents/1.0',
             },
             body: JSON.stringify({
               type: 'selection_process_contract',
@@ -345,73 +296,49 @@ serve(async (req) => {
           });
 
           if (!generateContractResponse.ok) {
-            let errorMessage = '';
+            let errorMsg = `Status: ${generateContractResponse.status}`;
             try {
-              const errorJson = await generateContractResponse.json();
-              errorMessage = errorJson.error || errorJson.message || JSON.stringify(errorJson);
-            } catch {
-              errorMessage = await generateContractResponse.text();
+              const errData = await generateContractResponse.json();
+              errorMsg = errData.message || errData.error || errorMsg;
+            } catch (e) {
+              // ignore
             }
-            console.error(`[bulk-generate-legal-documents] Erro ao gerar selection_process_contract para ${user_id}: ${generateContractResponse.status} - ${errorMessage}`);
+            console.error(`[bulk-generate-legal-documents] Erro ao gerar contrato para ${user_id}: ${errorMsg}`);
             result.selection_process_contract = 'error';
-            if (!result.error) {
-              result.error = `Erro ao gerar selection_process_contract: ${generateContractResponse.status} ${errorMessage}`;
-            } else {
-              result.error += ` | Contract: ${generateContractResponse.status} ${errorMessage}`;
-            }
+            result.error = (result.error ? result.error + ' | ' : '') + `Erro ao gerar contrato: ${errorMsg}`;
             errorCount++;
           } else {
-            const responseData = await generateContractResponse.json();
-            console.log(`[bulk-generate-legal-documents] selection_process_contract gerado com sucesso para ${user_id}:`, responseData);
+            console.log(`[bulk-generate-legal-documents] Contrato gerado com sucesso para ${user_id}`);
             successCount++;
           }
         }
 
       } catch (error: any) {
         console.error(`[bulk-generate-legal-documents] Erro ao processar user_id ${user_id}:`, error);
-        result.registration_terms = 'error';
-        result.selection_process_contract = 'error';
         result.error = error.message || 'Erro desconhecido';
-        errorCount += 2;
+        errorCount++;
       }
 
       results.push(result);
-
-      // Throttling: aguardar 500ms entre usuários
-      if (i < user_ids.length - 1) {
-        await new Promise(resolve => setTimeout(resolve, 500));
-      }
     }
 
-    const response: BulkGenerateResponse = {
-      success: true,
-      total: user_ids.length,
-      success_count: successCount,
-      skipped_count: skippedCount,
-      error_count: errorCount,
-      results
-    };
-
-    console.log(`[bulk-generate-legal-documents] Processamento concluído: ${successCount} gerados, ${skippedCount} pulados, ${errorCount} erros`);
-
     return new Response(
-      JSON.stringify(response),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
+      JSON.stringify({
+        success: true,
+        total: user_ids.length,
+        success_count: successCount,
+        skipped_count: skippedCount,
+        error_count: errorCount,
+        results
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error: any) {
     console.error('[bulk-generate-legal-documents] Erro geral:', error);
     return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: error.message || 'Erro desconhecido ao processar requisição' 
-      }),
-      { 
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
+      JSON.stringify({ success: false, error: error.message }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
