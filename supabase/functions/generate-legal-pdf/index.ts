@@ -2,12 +2,13 @@
 // Edge Function: generate-legal-pdf
 // =====================================================
 // Gera PDFs de documentos legais (contratos e aceites de termos)
-// Salva no Storage e envia por email para info@matriculausa.com
+// Salva no Storage e envia por email para antoniocruz@alu.ufc.br
 // =====================================================
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 import { jsPDF } from 'npm:jspdf@2.5.1';
+import { encode as base64Encode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -154,11 +155,11 @@ serve(async (req) => {
         .maybeSingle();
 
       if (tosError || !termsOfService) {
-        throw new Error(`Erro ao buscar Terms of Service: ${tosError?.message || 'Não encontrado'}`);
+        throw new Error(`Erro ao buscar Terms of Service para o usuário ${user_id}: ${tosError?.message || 'Documento não encontrado na tabela comprehensive_term_acceptance'}`);
       }
 
       if (ppError || !privacyPolicy) {
-        throw new Error(`Erro ao buscar Privacy Policy: ${ppError?.message || 'Não encontrado'}`);
+        throw new Error(`Erro ao buscar Privacy Policy para o usuário ${user_id}: ${ppError?.message || 'Documento não encontrado na tabela comprehensive_term_acceptance'}`);
       }
 
       // Verificar se application_terms foi carregado corretamente
@@ -824,17 +825,29 @@ serve(async (req) => {
     console.log(`[generate-legal-pdf] PDF salvo no Storage: ${storagePath}`);
 
     // =====================================================
-    // 5. Register in legal_documents table
+    // 5. Register in legal_documents table (Upsert logic)
     // =====================================================
-    const { data: documentRecord, error: insertError } = await supabase
+    // Verificar se já existe um registro para este documento
+    const { data: existingRecords } = await supabase
       .from('legal_documents')
-      .insert({
+      .select('id')
+      .eq('user_id', user_id)
+      .eq('document_type', type)
+      .eq('related_id', related_id)
+      .limit(1);
+
+    const existingRecordId = existingRecords && existingRecords.length > 0 ? existingRecords[0].id : null;
+
+    let documentRecord;
+    let dbError;
+
+    const documentData = {
         user_id,
         document_type: type,
         related_id,
         storage_path: storagePath,
         filename,
-        email_sent: false,
+        email_sent: false, // Reset to false to trigger email if not sent
         metadata: {
           student_name: studentData.student_name,
           student_email: studentData.student_email,
@@ -843,12 +856,31 @@ serve(async (req) => {
           term_title: studentData.term_title,
           generated_at: new Date().toISOString()
         }
-      })
-      .select()
-      .single();
+    };
 
-    if (insertError) {
-      throw new Error(`Erro ao registrar documento: ${insertError.message}`);
+    if (existingRecordId) {
+      console.log(`[generate-legal-pdf] Atualizando registro existente: ${existingRecordId}`);
+      const { data, error } = await supabase
+        .from('legal_documents')
+        .update(documentData)
+        .eq('id', existingRecordId)
+        .select()
+        .single();
+      documentRecord = data;
+      dbError = error;
+    } else {
+      console.log(`[generate-legal-pdf] Criando novo registro`);
+      const { data, error } = await supabase
+        .from('legal_documents')
+        .insert(documentData)
+        .select()
+        .single();
+      documentRecord = data;
+      dbError = error;
+    }
+
+    if (dbError || !documentRecord) {
+      throw new Error(`Erro ao registrar documento no banco: ${dbError?.message || 'Falha no retorno'}`);
     }
 
     console.log(`[generate-legal-pdf] Documento registrado: ${documentRecord.id}`);
@@ -864,10 +896,8 @@ serve(async (req) => {
       console.log(`[generate-legal-pdf] Usuário uorak (${studentData.student_email}) detectado, pulando envio de email`);
     } else {
       try {
-        // Get signed URL for PDF
-        const { data: signedUrlData } = await supabase.storage
-          .from('legal-documents')
-          .createSignedUrl(storagePath, 3600 * 24 * 7); // 7 days
+        // Converter ArrayBuffer para Base64 para envio como anexo
+        const base64Content = base64Encode(new Uint8Array(pdfOutput));
 
         // Call send-email function
         // Usar apikey header para bypass de JWT verification
@@ -889,10 +919,18 @@ serve(async (req) => {
               ${studentData.payment_amount ? `<p><strong>Valor:</strong> $${studentData.payment_amount.toFixed(2)} USD</p>` : ''}
               <p><strong>Data:</strong> ${new Date().toLocaleString('pt-BR')}</p>
               <br/>
-              <p>O documento PDF foi gerado e salvo no sistema.</p>
-              <p><strong>Link para download (válido por 7 dias):</strong> <a href="${signedUrlData?.signedUrl}">${signedUrlData?.signedUrl}</a></p>
+              <p>O documento PDF foi gerado com sucesso e está anexo a este e-mail para sua conveniência.</p>
+              <p>Ele também permanece salvo de forma segura no sistema.</p>
               <p><strong>Nome do arquivo:</strong> ${filename}</p>
-            `
+            `,
+            attachments: [
+              {
+                content: base64Content,
+                filename: filename,
+                type: 'application/pdf',
+                disposition: 'attachment'
+              }
+            ]
           })
         });
 
@@ -909,7 +947,14 @@ serve(async (req) => {
           console.log('[generate-legal-pdf] Email enviado com sucesso');
         } else {
           const errorText = await emailResponse.text();
-          throw new Error(`Erro ao enviar email: ${errorText}`);
+          console.error(`[generate-legal-pdf] Erro ao enviar email (Status ${emailResponse.status}): ${errorText}`);
+          
+          await supabase
+            .from('legal_documents')
+            .update({
+              email_error: `Status ${emailResponse.status}: ${errorText}`
+            })
+            .eq('id', documentRecord.id);
         }
       } catch (emailError) {
         console.error('[generate-legal-pdf] Erro ao enviar email:', emailError);

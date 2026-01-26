@@ -486,42 +486,27 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
     console.log('🔍 [ACCEPTANCE_LETTER_DEBUG] acceptance_letter_sent_at:', currentApplication.acceptance_letter_sent_at);
   }
   
-  // ✅ CORREÇÃO: Função para extrair nome do arquivo e construir URL completa
   const getDocumentInfo = (upload: any) => {
     // Extrair nome do arquivo do file_url
-    let filename = 'Document';
-    let fullUrl = upload.file_url;
+    let filename = upload.filename || 'Document';
+    let fileUrl = upload.file_url || upload.url;
     
-    if (upload.file_url) {
-      const urlParts = upload.file_url.split('/');
+    if (fileUrl && !filename) {
+      const urlParts = fileUrl.split('/');
       filename = urlParts[urlParts.length - 1] || 'Document';
-      
-      // Se é apenas um path (não começa com http), converter para URL completa
-      if (!upload.file_url.startsWith('http')) {
-        const baseUrl = 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/document-attachments/';
-        fullUrl = `${baseUrl}${upload.file_url}`;
-      }
     }
     
+    // Se for apenas um path (não começa com http), ou se for uma URL do Supabase,
+    // o handler onViewDocument já vai saber lidar se passarmos o objeto correto.
     return {
       filename,
-      fullUrl
+      fullUrl: fileUrl
     };
   };
 
-  // Função para obter URL correta do acceptance letter
   const getAcceptanceLetterUrl = (application: any) => {
     if (!application?.acceptance_letter_url) return null;
-    
-    // Se já é uma URL completa, usar diretamente
-    if (application.acceptance_letter_url.startsWith('http')) {
-      return application.acceptance_letter_url;
-    }
-    
-    // Se é um path do storage, construir URL completa
-    // O acceptance letter está no bucket 'document-attachments'
-    const baseUrl = 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/document-attachments/';
-    return `${baseUrl}${application.acceptance_letter_url}`;
+    return application.acceptance_letter_url;
   };
 
   return (

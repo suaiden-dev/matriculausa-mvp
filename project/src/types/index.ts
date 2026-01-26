@@ -313,6 +313,7 @@ export interface MatriculacoinTransaction {
   reference_type?: string;
   balance_after: number;
   created_at: string;
+  referred_user_name?: string; // Nome do usuário referido (quando a transação é de referral)
 }
 
 export interface AffiliateStats {

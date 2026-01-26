@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
+import { handleDownloadDocument as centralizedDownloadDocument } from '../components/EnhancedStudentTracking/utils/documentUtils';
 
 interface StudentRecord {
   user_id: string;
@@ -34,12 +35,11 @@ export const useDocumentRequestHandlers = (
 
       if (uploadError) throw uploadError;
 
-      // Get public URL
+      // Note: We're still getting the public URL for DB compatibility, 
+      // but the centralized handlers will route access through the proxy.
       const { data: { publicUrl } } = supabase.storage
         .from('student-documents')
         .getPublicUrl(filePath);
-
-      if (!publicUrl) throw new Error('Uploaded file is not accessible');
 
       // Save upload record
       const { error: recordError } = await supabase
@@ -113,7 +113,10 @@ export const useDocumentRequestHandlers = (
           uploaded_by,
           document_requests!inner(
             title,
-            scholarship_application_id
+            scholarship_application_id,
+            scholarship_applications(
+              student_id
+            )
           )
         `)
         .eq('id', uploadId)
@@ -136,11 +139,12 @@ export const useDocumentRequestHandlers = (
         }
 
         // Se não encontrou, tentar buscar pela aplicação
-        if (!studentProfile && uploadData.document_requests?.scholarship_application_id) {
+        const docRequest: any = Array.isArray(uploadData.document_requests) ? uploadData.document_requests[0] : uploadData.document_requests;
+        if (!studentProfile && docRequest?.scholarship_application_id) {
           const { data: appData } = await supabase
             .from('scholarship_applications')
             .select('student_id, user_profiles!inner(user_id, email, full_name)')
-            .eq('id', uploadData.document_requests.scholarship_application_id)
+            .eq('id', docRequest.scholarship_application_id)
             .maybeSingle();
 
           if (appData?.user_profiles) {
@@ -168,7 +172,8 @@ export const useDocumentRequestHandlers = (
       if (error) throw error;
 
       // Log da ação
-      if (logAction && userId) {
+      if (logAction && userId && uploadData) {
+        const docRequest = Array.isArray(uploadData.document_requests) ? uploadData.document_requests[0] : uploadData.document_requests;
         try {
           await logAction(
             'document_request_approval',
@@ -179,7 +184,7 @@ export const useDocumentRequestHandlers = (
               upload_id: uploadId,
               request_id: uploadData?.document_request_id || '',
               student_id: studentId || studentProfile?.user_id || student?.user_id || '',
-              document_title: uploadData?.document_requests?.title || 'Document',
+              document_title: docRequest?.title || 'Document',
               approved_by: userId,
               approved_at: new Date().toISOString()
             }
@@ -191,11 +196,12 @@ export const useDocumentRequestHandlers = (
       }
 
       // ✅ ENVIAR NOTIFICAÇÕES PARA O ALUNO
-      if (studentProfile?.email && studentProfile?.user_id) {
+      if (studentProfile?.email && studentProfile?.user_id && uploadData) {
         console.log('📤 [handleApproveDocumentRequest] Enviando notificações de aprovação para o aluno...');
         
         try {
-          const documentTitle = uploadData?.document_requests?.title || 'Document';
+          const docRequest: any = Array.isArray(uploadData.document_requests) ? uploadData.document_requests[0] : uploadData.document_requests;
+          const documentTitle = docRequest?.title || 'Document';
           const fileName = uploadData?.file_url?.split('/').pop() || 'document';
 
           // 1. ENVIAR EMAIL VIA WEBHOOK (mesmo padrão do Student Documents)
@@ -234,10 +240,11 @@ export const useDocumentRequestHandlers = (
           const { data: { session } } = await supabase.auth.getSession();
           const accessToken = session?.access_token;
           
-          if (accessToken) {
-            const documentTitle = uploadData.document_requests.title || 'Document';
-            const fileName = uploadData.file_url?.split('/').pop() || 'document';
-            const studentProfileId = uploadData?.document_requests?.scholarship_applications?.student_id;
+          if (accessToken && uploadData) {
+            const docRequest: any = Array.isArray(uploadData.document_requests) ? uploadData.document_requests[0] : uploadData.document_requests;
+            const documentTitle = docRequest?.title || 'Document';
+            const scholarshipApp = Array.isArray(docRequest?.scholarship_applications) ? docRequest.scholarship_applications[0] : docRequest?.scholarship_applications;
+            const studentProfileId = scholarshipApp?.student_id;
 
             // Buscar o student_id do user_profiles se ainda não temos
             let finalStudentId = studentProfileId;
@@ -340,11 +347,10 @@ export const useDocumentRequestHandlers = (
       if (error) throw error;
 
       // Extrair studentProfile do uploadData
-      const studentProfile = uploadData?.document_requests?.scholarship_applications?.user_profiles 
-        ? (Array.isArray(uploadData.document_requests.scholarship_applications.user_profiles)
-          ? uploadData.document_requests.scholarship_applications.user_profiles[0]
-          : uploadData.document_requests.scholarship_applications.user_profiles)
-        : null;
+      const docRequest: any = Array.isArray(uploadData?.document_requests) ? (uploadData as any).document_requests[0] : uploadData?.document_requests;
+      const scholarshipApp = Array.isArray(docRequest?.scholarship_applications) ? docRequest.scholarship_applications[0] : docRequest?.scholarship_applications;
+      const userProfiles = Array.isArray(scholarshipApp?.user_profiles) ? scholarshipApp.user_profiles[0] : scholarshipApp?.user_profiles;
+      const studentProfile = userProfiles || null;
 
       // Log da ação
       if (logAction && userId) {
@@ -358,7 +364,7 @@ export const useDocumentRequestHandlers = (
               upload_id: uploadId,
               request_id: uploadData?.document_request_id || '',
               student_id: studentId || studentProfile?.user_id || student?.user_id || '',
-              document_title: uploadData?.document_requests?.title || 'Document',
+              document_title: docRequest?.title || 'Document',
               rejection_reason: reason,
               rejected_by: userId,
               rejected_at: new Date().toISOString()
@@ -371,11 +377,11 @@ export const useDocumentRequestHandlers = (
       }
 
       // ✅ ENVIAR NOTIFICAÇÕES PARA O ALUNO
-      if (studentProfile?.email && studentProfile?.user_id) {
+      if (studentProfile?.email && studentProfile?.user_id && uploadData) {
         console.log('📤 [handleRejectDocumentRequest] Enviando notificações de rejeição para o aluno...');
         
         try {
-          const documentTitle = uploadData?.document_requests?.title || 'Document';
+          const documentTitle = docRequest?.title || 'Document';
           const fileName = uploadData?.file_url?.split('/').pop() || 'document';
 
           // 1. ENVIAR EMAIL VIA WEBHOOK (mesmo padrão do Student Documents)
@@ -477,49 +483,7 @@ export const useDocumentRequestHandlers = (
 
   // Handler para fazer download de documento
   const handleDownloadDocument = useCallback(async (doc: { file_url: string; filename?: string }) => {
-    try {
-      let downloadUrl = doc.file_url;
-      
-      // ✅ CORREÇÃO: Se file_url é um caminho relativo (não começa com http), converter para URL pública
-      if (doc.file_url && !doc.file_url.startsWith('http')) {
-        // ✅ Determinar o bucket correto baseado no caminho do arquivo
-        // Transfer Form uploads estão no bucket 'document-attachments' com caminho 'transfer-forms-filled/...'
-        // Outros documentos estão no bucket 'student-documents'
-        let bucket = 'student-documents'; // padrão
-        
-        if (doc.file_url.includes('transfer-forms-filled/') || doc.file_url.includes('transfer-forms/')) {
-          bucket = 'document-attachments';
-        }
-        
-        // Converter caminho relativo para URL pública
-        const { data: { publicUrl } } = supabase.storage
-          .from(bucket)
-          .getPublicUrl(doc.file_url);
-        
-        downloadUrl = publicUrl;
-      }
-      
-      // Fazer download usando fetch para garantir que funciona
-      const response = await fetch(downloadUrl);
-      if (!response.ok) {
-        throw new Error('Failed to download document: ' + response.statusText);
-      }
-      
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      // Extrair filename da URL se não fornecido
-      const filename = doc.filename || doc.file_url.split('/').pop() || 'document.pdf';
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    } catch (error: any) {
-      console.error('Erro no download:', error);
-      alert(`Failed to download document: ${error.message}`);
-    }
+    return centralizedDownloadDocument(doc);
   }, []);
 
   // Handler para editar template

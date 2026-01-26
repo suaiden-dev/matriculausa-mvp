@@ -608,7 +608,105 @@ export function useMatriculacoinTransactionsQuery(userId?: string) {
         return [];
       }
 
-      return data || [];
+      // Processar os dados para incluir o nome do usuário referido quando for transação de referral
+      const processedData = await Promise.all((data || []).map(async (tx) => {
+        let referredUserName: string | undefined;
+        
+        // Método 1: Buscar através de reference_id e reference_type
+        if (tx.reference_type === 'referral' && tx.reference_id) {
+          // Buscar o affiliate_referral para obter o referred_id
+          const { data: referral } = await supabase
+            .from('affiliate_referrals')
+            .select('referred_id')
+            .eq('id', tx.reference_id)
+            .maybeSingle();
+          
+          if (referral?.referred_id) {
+            // Buscar o nome do usuário referido
+            const { data: userProfile } = await supabase
+              .from('user_profiles')
+              .select('full_name')
+              .eq('user_id', referral.referred_id)
+              .maybeSingle();
+            
+            if (userProfile?.full_name) {
+              referredUserName = userProfile.full_name;
+            }
+          }
+        }
+        
+        // Método 2: Se não encontrou pelo método 1 e a descrição contém "Referral reward", extrair email da descrição
+        if (!referredUserName && tx.description && tx.description.includes('Referral reward')) {
+          // Extrair email da descrição usando regex
+          const emailMatch = tx.description.match(/\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b/);
+          if (emailMatch && emailMatch[0]) {
+            const email = emailMatch[0].toLowerCase().trim();
+            // Buscar o nome do usuário por email (case insensitive)
+            const { data: userProfile } = await supabase
+              .from('user_profiles')
+              .select('full_name, user_id')
+              .ilike('email', email)
+              .maybeSingle();
+            
+            if (userProfile?.full_name) {
+              referredUserName = userProfile.full_name;
+            } else if (userProfile?.user_id) {
+              // Se não tem full_name, tentar buscar pelo user_id diretamente
+              const { data: profileById } = await supabase
+                .from('user_profiles')
+                .select('full_name')
+                .eq('user_id', userProfile.user_id)
+                .maybeSingle();
+              
+              if (profileById?.full_name) {
+                referredUserName = profileById.full_name;
+              }
+            }
+          }
+        }
+        
+        // Método 3: Buscar affiliate_referral pelo referrer_id e data aproximada (quando reference_id não está definido)
+        if (!referredUserName && tx.description && tx.description.includes('Referral reward') && tx.user_id) {
+          // Buscar affiliate_referrals do referrer criados próximo à data da transação
+          const txDate = new Date(tx.created_at);
+          const startDate = new Date(txDate.getTime() - 24 * 60 * 60 * 1000); // 24 horas antes
+          const endDate = new Date(txDate.getTime() + 24 * 60 * 60 * 1000); // 24 horas depois
+          
+          const { data: referral } = await supabase
+            .from('affiliate_referrals')
+            .select('referred_id')
+            .eq('referrer_id', tx.user_id)
+            .gte('created_at', startDate.toISOString())
+            .lte('created_at', endDate.toISOString())
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          
+          if (referral?.referred_id) {
+            const { data: userProfile } = await supabase
+              .from('user_profiles')
+              .select('full_name')
+              .eq('user_id', referral.referred_id)
+              .maybeSingle();
+            
+            if (userProfile?.full_name) {
+              referredUserName = userProfile.full_name;
+            }
+          }
+        }
+        
+        // Retornar transação com nome se encontrado
+        if (referredUserName) {
+          return {
+            ...tx,
+            referred_user_name: referredUserName
+          };
+        }
+        
+        return tx;
+      }));
+
+      return processedData;
     },
     enabled: !!userId,
     staleTime: 3 * 60 * 1000, // 3 minutos
