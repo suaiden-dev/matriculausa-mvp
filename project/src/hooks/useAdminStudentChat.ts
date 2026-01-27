@@ -37,6 +37,8 @@ interface Conversation {
   };
   unread_count?: number;
   last_message?: string;
+  last_message_sender_id?: string;
+  last_message_read_at?: string | null;
 }
 
 export const useAdminStudentChat = (conversationId?: string, recipientId?: string, updateConversationUnreadCount?: (conversationId: string, newUnreadCount: number) => void) => {
@@ -771,7 +773,7 @@ export const useAdminStudentConversations = () => {
       if (conversationIds.length > 0) {
         const { data: messagesData } = await supabase
           .from('admin_student_messages')
-          .select('conversation_id, message, created_at, recipient_id, id, read_at')
+          .select('conversation_id, message, created_at, recipient_id, id, read_at, sender_id')
           .in('conversation_id', conversationIds)
           .order('created_at', { ascending: false });
         
@@ -795,6 +797,8 @@ export const useAdminStudentConversations = () => {
           ...conv,
           unread_count: unreadCount || 0,
           last_message: lastMessage?.message || '',
+          last_message_sender_id: lastMessage?.sender_id,
+          last_message_read_at: lastMessage?.read_at,
         };
       });
 
