@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useAdminStudentConversations } from '../../hooks/useAdminStudentChat';
+import MessageReadStatus from './MessageReadStatus';
 import { useAdminStudentChatNotifications } from '../../hooks/useAdminStudentChatNotifications';
 import { useUnreadMessages } from '../../contexts/UnreadMessagesContext';
 import { useGlobalStudentUnread } from '../../hooks/useGlobalStudentUnread';
@@ -23,30 +24,30 @@ interface ConversationItemProps {
 }
 
 const ConversationItem: React.FC<ConversationItemProps> = ({ conversation, isSelected, onClick, getGlobalUnreadCount }) => {
-  const { userProfile } = useAuth();
-  
+  const { user, userProfile } = useAuth();
+
   // Determine recipient based on current user role
   const recipient = (userProfile?.role === 'affiliate_admin' || userProfile?.role === 'admin')
-    ? conversation.student_profile 
+    ? conversation.student_profile
     : conversation.admin_profile;
-  
+
   const recipientName = recipient?.full_name || 'Unknown User';
-  
+
   // Get global unread count for this student (if it's a student conversation)
-  const globalUnreadCount = (userProfile?.role === 'affiliate_admin' || userProfile?.role === 'admin') 
-    ? getGlobalUnreadCount(conversation.student_id) 
+  const globalUnreadCount = (userProfile?.role === 'affiliate_admin' || userProfile?.role === 'admin')
+    ? getGlobalUnreadCount(conversation.student_id)
     : 0;
-  
+
   // Use the maximum between conversation unread count and global unread count
   const effectiveUnreadCount = Math.max(conversation.unread_count, globalUnreadCount);
   const hasEffectiveUnread = effectiveUnreadCount > 0;
-  
+
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
     const diff = now.getTime() - date.getTime();
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    
+
     if (days === 0) {
       return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
     } else if (days === 1) {
@@ -60,9 +61,8 @@ const ConversationItem: React.FC<ConversationItemProps> = ({ conversation, isSel
 
   return (
     <div
-      className={`flex items-center p-4 cursor-pointer border-b border-slate-100 hover:bg-slate-50 transition-all duration-200 ease-in-out ${
-        isSelected ? 'bg-blue-50 border-blue-200' : ''
-      }`}
+      className={`flex items-center p-4 cursor-pointer border-b border-slate-100 hover:bg-slate-50 transition-all duration-200 ease-in-out ${isSelected ? 'bg-blue-50 border-blue-200' : ''
+        }`}
       onClick={onClick}
     >
       {/* Avatar */}
@@ -84,19 +84,33 @@ const ConversationItem: React.FC<ConversationItemProps> = ({ conversation, isSel
 
       {/* Content */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between mb-1">
-          <h3 className={`text-sm font-medium text-slate-900 truncate ${hasEffectiveUnread ? 'font-semibold' : ''}`}>
+        <div className="flex items-baseline justify-between mb-1 min-w-0">
+          <h3 className={`text-sm font-medium text-slate-900 truncate pr-2 ${hasEffectiveUnread ? 'font-semibold' : ''}`}>
             {recipientName}
           </h3>
-          <span className="text-xs text-slate-500 flex items-center">
+          <span className="text-xs text-slate-500 whitespace-nowrap flex-shrink-0">
             {formatTime(conversation.last_message_at)}
           </span>
         </div>
 
-        <div className="flex items-center justify-between">
-          <p className={`text-sm text-slate-600 truncate ${hasEffectiveUnread ? 'font-medium' : ''}`}>
-            {conversation.last_message || 'No messages yet'}
-          </p>
+        <div className="flex items-center justify-between gap-2 overflow-hidden">
+          <div className="flex items-center gap-1.5 min-w-0 flex-1">
+            {/* Mostrar checks se a última mensagem foi enviada por um admin (no dashboard de admin) 
+                ou se foi enviada pelo próprio usuário logado */}
+            {user && conversation.last_message && (
+              ((userProfile?.role === 'admin' || userProfile?.role === 'affiliate_admin') && conversation.last_message_sender_id !== conversation.student_id) ||
+              (conversation.last_message_sender_id === user.id)
+            ) && (
+                <MessageReadStatus
+                  isRead={!!conversation.last_message_read_at}
+                  isSent={true}
+                  className="flex-shrink-0 text-slate-400"
+                />
+              )}
+            <p className={`text-sm text-slate-600 truncate ${hasEffectiveUnread ? 'font-medium' : ''}`}>
+              {conversation.last_message || 'No messages yet'}
+            </p>
+          </div>
           {hasEffectiveUnread && (
             <span className="ml-2 bg-blue-500 text-white text-xs rounded-full px-2 py-1 min-w-[1.25rem] text-center animate-pulse">
               {effectiveUnreadCount > 99 ? '99+' : effectiveUnreadCount}
@@ -108,10 +122,10 @@ const ConversationItem: React.FC<ConversationItemProps> = ({ conversation, isSel
   );
 };
 
-const ChatInbox: React.FC<ChatInboxProps> = ({ 
-  className = '', 
+const ChatInbox: React.FC<ChatInboxProps> = ({
+  className = '',
   onConversationSelect,
-  selectedConversationId 
+  selectedConversationId
 }) => {
   const { user, userProfile } = useAuth();
   const { isDevelopment } = useEnvironment();
@@ -127,19 +141,19 @@ const ChatInbox: React.FC<ChatInboxProps> = ({
   const shouldFilter = useMemo(() => {
     const hostname = window.location.hostname;
     const href = window.location.href;
-    
-    const isProd = hostname === 'matriculausa.com' || 
-                   hostname.includes('matriculausa.com') ||
-                   href.includes('matriculausa.com');
-    
-    const isStaging = hostname === 'staging-matriculausa.netlify.app' || 
-                      hostname.includes('staging-matriculausa.netlify.app') ||
-                      hostname.includes('staging-matriculausa') ||
-                      href.includes('staging-matriculausa.netlify.app') ||
-                      href.includes('staging-matriculausa');
-    
+
+    const isProd = hostname === 'matriculausa.com' ||
+      hostname.includes('matriculausa.com') ||
+      href.includes('matriculausa.com');
+
+    const isStaging = hostname === 'staging-matriculausa.netlify.app' ||
+      hostname.includes('staging-matriculausa.netlify.app') ||
+      hostname.includes('staging-matriculausa') ||
+      href.includes('staging-matriculausa.netlify.app') ||
+      href.includes('staging-matriculausa');
+
     const result = isProd || isStaging;
-    
+
     console.log('🔍 [ChatInbox] shouldFilter debug:', {
       hostname,
       href,
@@ -148,7 +162,7 @@ const ChatInbox: React.FC<ChatInboxProps> = ({
       isStaging,
       result
     });
-    
+
     return result;
   }, [isDevelopment]);
 
@@ -204,7 +218,7 @@ const ChatInbox: React.FC<ChatInboxProps> = ({
   // Filtrar conversas excluindo @uorak.com em produção/staging
   const filteredConversationsByEmail = useMemo(() => {
     if (!shouldFilter) return conversations;
-    
+
     return conversations.filter(conversation => {
       // Para admin/affiliate_admin, filtrar por email do estudante
       if (userProfile?.role === 'affiliate_admin' || userProfile?.role === 'admin') {
@@ -219,7 +233,7 @@ const ChatInbox: React.FC<ChatInboxProps> = ({
   // Filter conversations based on search term
   const filteredConversations = filteredConversationsByEmail.filter(conversation => {
     const recipient = (userProfile?.role === 'affiliate_admin' || userProfile?.role === 'admin')
-      ? conversation.student_profile 
+      ? conversation.student_profile
       : conversation.admin_profile;
     const recipientName = recipient?.full_name || '';
     return recipientName.toLowerCase().includes(searchTerm.toLowerCase());
@@ -236,11 +250,11 @@ const ChatInbox: React.FC<ChatInboxProps> = ({
 
   const handleConversationClick = async (conversation: any) => {
     const recipient = (userProfile?.role === 'affiliate_admin' || userProfile?.role === 'admin')
-      ? conversation.student_profile 
+      ? conversation.student_profile
       : conversation.admin_profile;
     const recipientName = recipient?.full_name || 'Unknown User';
     const recipientId = (userProfile?.role === 'affiliate_admin' || userProfile?.role === 'admin')
-      ? conversation.student_id 
+      ? conversation.student_id
       : conversation.admin_id;
 
     // ✅ NOVO: Se for admin/affiliate_admin, marcar mensagens como lidas quando visualiza
@@ -401,8 +415,8 @@ const ChatInbox: React.FC<ChatInboxProps> = ({
           <div className="p-6 text-center">
             <Users className="w-12 h-12 text-slate-300 mx-auto mb-3" />
             <p className="text-sm text-slate-500">
-              {conversations.length === 0 
-                ? 'No conversations yet' 
+              {conversations.length === 0
+                ? 'No conversations yet'
                 : 'No conversations match your search'
               }
             </p>
