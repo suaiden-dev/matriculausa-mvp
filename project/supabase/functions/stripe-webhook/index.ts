@@ -1691,6 +1691,53 @@ async function handleCheckoutSessionCompleted(session: any, stripe: any) {
             console.error('[MATRICULA REWARDS] Erro ao adicionar coins:', coinsError);
           } else {
             console.log('[MATRICULA REWARDS] Coins adicionados com sucesso:', coinsResult);
+
+            // --- NOTIFICAÇÃO DE RECOMPENSA PARA O ALUNO (PADRINHO) ---
+            try {
+              console.log('📤 [MATRICULA REWARDS] Enviando notificação de recompensa para o padrinho...');
+              
+              // Buscar dados do padrinho (referrer)
+              const { data: referrerProfile } = await supabase
+                .from('user_profiles')
+                .select('full_name, email')
+                .eq('user_id', usedCode.referrer_id)
+                .single();
+              
+              // Buscar dados do aluno indicado (referred)
+              const { data: referredProfile } = await supabase
+                .from('user_profiles')
+                .select('full_name, email')
+                .eq('user_id', userId)
+                .single();
+
+              if (referrerProfile?.email) {
+                const rewardPayload = {
+                  tipo_notf: "Recompensa de MatriculaCoins por Indicacao",
+                  email_aluno: referrerProfile.email,
+                  nome_aluno: referrerProfile.full_name || "Aluno",
+                  referred_student_name: referredProfile?.full_name || "Seu amigo",
+                  referred_student_email: referredProfile?.email || "",
+                  payment_method: "Stripe",
+                  fee_type: "Selection Process Fee",
+                  reward_type: "MatriculaCoins",
+                  o_que_enviar: `Great news! Your friend ${referredProfile?.full_name || "someone"} has completed their enrollment process. 180 MatriculaCoins have been added to your account!`
+                };
+
+                console.log('📤 [MATRICULA REWARDS] Payload de recompensa:', rewardPayload);
+
+                await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'User-Agent': 'PostmanRuntime/7.36.3'
+                  },
+                  body: JSON.stringify(rewardPayload),
+                });
+                console.log('✅ [MATRICULA REWARDS] Notificação de recompensa enviada com sucesso!');
+              }
+            } catch (rewardNotifError) {
+              console.error('❌ [MATRICULA REWARDS] Erro ao enviar notificação de recompensa:', rewardNotifError);
+            }
           }
         } else {
           console.log('[MATRICULA REWARDS] Usuário não usou código de referência, não há coins para adicionar');

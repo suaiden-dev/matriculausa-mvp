@@ -1,11 +1,14 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
+// @ts-ignore
 import Stripe from 'npm:stripe@17.7.0';
+// @ts-ignore
 import { createClient, SupabaseClient } from 'npm:@supabase/supabase-js@2.49.1';
 import { getStripeConfig } from './stripe-config.ts';
 // Import jsPDF for Deno environment
 // @ts-ignore
 import jsPDF from "https://esm.sh/jspdf@2.5.1?target=deno";
 
+// @ts-ignore
 const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
 
 /**
@@ -45,21 +48,21 @@ async function getAllAdmins(supabase: SupabaseClient, isDevelopment: boolean = f
         const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
         if (!authError && authUsers) {
           const adminUsers = authUsers.users
-            .filter(user => user.user_metadata?.role === 'admin' || user.email === 'admin@matriculausa.com')
-            .map(user => ({
+            .filter((user: any) => user.user_metadata?.role === 'admin' || user.email === 'admin@matriculausa.com')
+            .map((user: any) => ({
               user_id: user.id,
               email: user.email || '',
               full_name: user.user_metadata?.full_name || user.user_metadata?.name || 'Admin MatriculaUSA',
               phone: user.user_metadata?.phone || ''
             }))
-            .filter(admin => admin.email); // Apenas admins com email
+            .filter((admin: any) => admin.email); // Apenas admins com email
           
           if (adminUsers.length > 0) {
             // Filtrar emails bloqueados em desenvolvimento
             const filteredAdmins = isDevelopment 
-              ? adminUsers.filter(admin => !devBlockedEmails.includes(admin.email))
+              ? adminUsers.filter((admin: any) => !devBlockedEmails.includes(admin.email))
               : adminUsers;
-            console.log(`[getAllAdmins] Encontrados ${filteredAdmins.length} admin(s) via auth.users${isDevelopment ? ' (filtrados para dev)' : ''}:`, filteredAdmins.map(a => a.email));
+            console.log(`[getAllAdmins] Encontrados ${filteredAdmins.length} admin(s) via auth.users${isDevelopment ? ' (filtrados para dev)' : ''}:`, filteredAdmins.map((a: any) => a.email));
             return filteredAdmins.length > 0 ? filteredAdmins : [{
               user_id: '',
               email: 'admin@matriculausa.com',
@@ -89,21 +92,21 @@ async function getAllAdmins(supabase: SupabaseClient, isDevelopment: boolean = f
         const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
         if (!authError && authUsers) {
           const adminUsers = authUsers.users
-            .filter(user => user.user_metadata?.role === 'admin' || user.email === 'admin@matriculausa.com')
-            .map(user => ({
+            .filter((user: any) => user.user_metadata?.role === 'admin' || user.email === 'admin@matriculausa.com')
+            .map((user: any) => ({
               user_id: user.id,
               email: user.email || '',
               full_name: user.user_metadata?.full_name || user.user_metadata?.name || 'Admin MatriculaUSA',
               phone: user.user_metadata?.phone || ''
             }))
-            .filter(admin => admin.email);
+            .filter((admin: any) => admin.email);
           
           if (adminUsers.length > 0) {
             // Filtrar emails bloqueados em desenvolvimento
             const filteredAdmins = isDevelopment 
-              ? adminUsers.filter(admin => !devBlockedEmails.includes(admin.email))
+              ? adminUsers.filter((admin: any) => !devBlockedEmails.includes(admin.email))
               : adminUsers;
-            console.log(`[getAllAdmins] Encontrados ${filteredAdmins.length} admin(s) via auth.users${isDevelopment ? ' (filtrados para dev)' : ''}:`, filteredAdmins.map(a => a.email));
+            console.log(`[getAllAdmins] Encontrados ${filteredAdmins.length} admin(s) via auth.users${isDevelopment ? ' (filtrados para dev)' : ''}:`, filteredAdmins.map((a: any) => a.email));
             return filteredAdmins.length > 0 ? filteredAdmins : [{
               user_id: '',
               email: 'admin@matriculausa.com',
@@ -128,7 +131,7 @@ async function getAllAdmins(supabase: SupabaseClient, isDevelopment: boolean = f
 
     // Se algum admin não tem email em user_profiles, buscar de auth.users
     const adminsWithEmail = await Promise.all(
-      adminProfiles.map(async (profile) => {
+      adminProfiles.map(async (profile: any) => {
         if (profile.email) {
           return {
             user_id: profile.user_id,
@@ -156,14 +159,14 @@ async function getAllAdmins(supabase: SupabaseClient, isDevelopment: boolean = f
 
     // Filtrar nulos e admins sem email
     let admins = adminsWithEmail
-      .filter((admin): admin is { user_id: string; email: string; full_name: string; phone: string } => 
+      .filter((admin: any): admin is { user_id: string; email: string; full_name: string; phone: string } => 
         admin !== null && !!admin.email
       );
 
     // Filtrar emails bloqueados em desenvolvimento
     if (isDevelopment) {
       const beforeFilter = admins.length;
-      admins = admins.filter(admin => !devBlockedEmails.includes(admin.email));
+      admins = admins.filter((admin: any) => !devBlockedEmails.includes(admin.email));
       if (beforeFilter !== admins.length) {
         console.log(`[getAllAdmins] Filtrados ${beforeFilter - admins.length} admin(s) em ambiente de desenvolvimento`);
       }
@@ -179,7 +182,7 @@ async function getAllAdmins(supabase: SupabaseClient, isDevelopment: boolean = f
       }];
     }
 
-    console.log(`[getAllAdmins] Encontrados ${admins.length} admin(s)${isDevelopment ? ' (filtrados para dev)' : ''}:`, admins.map(a => a.email));
+    console.log(`[getAllAdmins] Encontrados ${admins.length} admin(s)${isDevelopment ? ' (filtrados para dev)' : ''}:`, admins.map((a: any) => a.email));
 
     return admins;
   } catch (error) {
@@ -194,7 +197,7 @@ async function getAllAdmins(supabase: SupabaseClient, isDevelopment: boolean = f
   }
 }
 // Function to send term acceptance notification with PDF after successful payment
-async function sendTermAcceptanceNotificationAfterPayment(userId, feeType, isDevelopment: boolean = false) {
+async function sendTermAcceptanceNotificationAfterPayment(userId: string, feeType: string, isDevelopment: boolean = false) {
   try {
     console.log('[NOTIFICAÇÃO] Buscando dados do usuário para notificação...');
     // Get user profile data
@@ -261,7 +264,7 @@ async function sendTermAcceptanceNotificationAfterPayment(userId, feeType, isDev
       const margin = 20;
       let currentY = margin;
       // Function to add wrapped text
-      const addWrappedText = (text, x, y, maxWidth, fontSize = 12)=>{
+      const addWrappedText = (text: string, x: number, y: number, maxWidth: number, fontSize: number = 12)=>{
         pdf.setFontSize(fontSize);
         const lines = pdf.splitTextToSize(text, maxWidth);
         for(let i = 0; i < lines.length; i++){
@@ -708,7 +711,7 @@ async function sendTermAcceptanceNotificationAfterPayment(userId, feeType, isDev
   // Don't throw error to avoid breaking the payment process
   }
 }
-function corsResponse(body, status = 200) {
+function corsResponse(body: any, status: number = 200) {
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -730,7 +733,7 @@ function corsResponse(body, status = 200) {
 }
 
 // Função auxiliar para determinar moeda e símbolo baseado na session do Stripe
-function getCurrencyInfo(session) {
+function getCurrencyInfo(session: any) {
   const currency = session.currency?.toLowerCase() || 'usd';
   const isPix = session.payment_method_types?.includes('pix') || session.metadata?.payment_method === 'pix';
   
@@ -752,11 +755,12 @@ function getCurrencyInfo(session) {
 }
 
 // Função auxiliar para formatar valor com moeda
-function formatAmountWithCurrency(amount, session) {
+function formatAmountWithCurrency(amount: number, session: any) {
   const currencyInfo = getCurrencyInfo(session);
   return `${currencyInfo.symbol}${amount.toFixed(2)}`;
 }
-Deno.serve(async (req)=>{
+// @ts-ignore
+Deno.serve(async (req: Request) => {
   console.log('--- verify-stripe-session-selection-process-fee: Request received ---');
   try {
     if (req.method === 'OPTIONS') return corsResponse(null, 204);
@@ -795,7 +799,7 @@ Deno.serve(async (req)=>{
     
     if (allExistingLogs && allExistingLogs.length > 0) {
       // Verificar se há um log que indica que as notificações já foram enviadas ou estão sendo enviadas
-      const hasNotificationLog = allExistingLogs.some(log => {
+      const hasNotificationLog = allExistingLogs.some((log: any) => {
         const metadata = log.metadata || {};
         return metadata.notifications_sending === true || metadata.notifications_sent === true;
       });
@@ -809,7 +813,7 @@ Deno.serve(async (req)=>{
       }
       
       // Verificar se há múltiplos logs de processing_started (indicando chamadas simultâneas)
-      const processingLogs = allExistingLogs.filter(log => {
+      const processingLogs = allExistingLogs.filter((log: any) => {
         const metadata = log.metadata || {};
         return metadata.processing_started === true;
       });
@@ -818,7 +822,7 @@ Deno.serve(async (req)=>{
         // Se há múltiplos logs de processamento, verificar se algum foi criado há mais de 2 segundos
         // Isso indica que o processamento já está em andamento
         const now = new Date();
-        const recentProcessingLogs = processingLogs.filter(log => {
+        const recentProcessingLogs = processingLogs.filter((log: any) => {
           const logTime = new Date(log.created_at);
           const secondsDiff = (now.getTime() - logTime.getTime()) / 1000;
           return secondsDiff < 2; // Log criado há menos de 2 segundos
@@ -844,11 +848,11 @@ Deno.serve(async (req)=>{
         expand: ['payment_intent']
       });
       console.log(`Session status: ${session.status}, Payment status: ${session.payment_status}`);
-    } catch (stripeError) {
+    } catch (stripeError: any) {
       console.error(`Stripe error retrieving session ${sessionId}:`, stripeError.message);
       
       // Verificar se é erro de sessão não encontrada
-      if (stripeError.message.includes('No such checkout.session')) {
+      if (stripeError.message?.includes('No such checkout.session')) {
         console.error(`Session ${sessionId} not found - may have expired or been processed already`);
         return corsResponse({
           error: 'Session not found. It may have expired or been processed already.',
@@ -1173,6 +1177,52 @@ Deno.serve(async (req)=>{
           console.error('[Referral Reward] Failed to add credits:', rewardError);
         } else {
           console.log('[Referral Reward] 180 MatriculaCoins credited successfully');
+
+          // --- NOTIFICAÇÃO DE RECOMPENSA PARA O ALUNO (PADRINHO) ---
+          try {
+            console.log('📤 [Referral Reward] Enviando notificação de recompensa para o padrinho...');
+            
+            // Buscar dados do padrinho (referrer)
+            const { data: referrerProfile } = await supabase
+              .from('user_profiles')
+              .select('full_name, email')
+              .eq('user_id', referrerId)
+              .single();
+            
+            // Buscar email do aluno indicado (referred) se ainda não tivermos
+            const { data: referredProfileData } = await supabase
+              .from('user_profiles')
+              .select('email')
+              .eq('user_id', userId)
+              .single();
+
+            if (referrerProfile?.email) {
+              const rewardPayload = {
+                tipo_notf: "Recompensa de MatriculaCoins por Indicacao",
+                email_aluno: referrerProfile.email,
+                nome_aluno: referrerProfile.full_name || "Aluno",
+                referred_student_name: referredDisplayName,
+                referred_student_email: referredProfileData?.email || "",
+                payment_method: "Stripe",
+                fee_type: "Selection Process Fee",
+                reward_type: "MatriculaCoins",
+                o_que_enviar: `Great news! Your friend ${referredDisplayName} has completed their enrollment process. 180 MatriculaCoins have been added to your account!`
+              };
+
+              console.log('📤 [Referral Reward] Payload de recompensa:', rewardPayload);
+
+              await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(rewardPayload),
+              });
+              console.log('✅ [Referral Reward] Notificação de recompensa enviada com sucesso!');
+            }
+          } catch (rewardNotifError) {
+            console.error('❌ [Referral Reward] Erro ao enviar notificação de recompensa:', rewardNotifError);
+          }
         }
       } else {
         console.log('[Referral Reward] No used referral code found for this user.');
@@ -1189,7 +1239,7 @@ Deno.serve(async (req)=>{
         .eq('metadata->>session_id', sessionId);
       
       if (preCheckLogs && preCheckLogs.length > 0) {
-        const hasNotificationLog = preCheckLogs.some(log => {
+        const hasNotificationLog = preCheckLogs.some((log: any) => {
           const metadata = log.metadata || {};
           return metadata.notifications_sending === true || metadata.notifications_sent === true;
         });
@@ -1232,7 +1282,7 @@ Deno.serve(async (req)=>{
               .eq('metadata->>session_id', sessionId);
             
             if (recheckLogs && recheckLogs.length > 0) {
-              const hasNotificationLog = recheckLogs.some(log => {
+              const hasNotificationLog = recheckLogs.some((log: any) => {
                 const metadata = log.metadata || {};
                 return metadata.notifications_sending === true || metadata.notifications_sent === true;
               });
@@ -1258,7 +1308,7 @@ Deno.serve(async (req)=>{
               .eq('metadata->>session_id', sessionId);
             
             if (verifyLogs && verifyLogs.length > 0) {
-              const notificationLogs = verifyLogs.filter(log => {
+              const notificationLogs = verifyLogs.filter((log: any) => {
                 const metadata = log.metadata || {};
                 return metadata.notifications_sending === true || metadata.notifications_sent === true;
               });
@@ -1283,7 +1333,7 @@ Deno.serve(async (req)=>{
           .eq('metadata->>session_id', sessionId);
         
         if (allLogs && allLogs.length > 0) {
-          const hasNotificationLog = allLogs.some(log => {
+          const hasNotificationLog = allLogs.some((log: any) => {
             const metadata = log.metadata || {};
             return metadata.notifications_sending === true || metadata.notifications_sent === true;
           });
@@ -1929,14 +1979,15 @@ Deno.serve(async (req)=>{
     
     // Se chegou aqui, a sessão não está paga ou completa
     console.log('Session not paid or complete.');
+    console.log('Session not ready.');
     return corsResponse({
       message: 'Session not ready.',
       status: session.status
     }, 202);
-  } catch (error) {
-    console.error(`--- CRITICAL ERROR in verify-stripe-session-selection-process-fee ---:`, error.message);
+  } catch (error: any) {
+    console.error('Unhandled error:', error.message);
     return corsResponse({
-      error: 'An unexpected error occurred.',
+      error: 'Internal Server Error',
       details: error.message
     }, 500);
   }
