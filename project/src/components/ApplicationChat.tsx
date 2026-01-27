@@ -443,7 +443,7 @@ const ApplicationChat: React.FC<ApplicationChatProps & {
                       <MessageReadStatus
                         isRead={!!msg.readAt}
                         isSent={true}
-                        className="text-white/70"
+                        className={!!msg.readAt ? '' : 'text-white/70'}
                       />
                       {msg.readAt && (
                         <span

@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { 
-  GraduationCap, 
-  Award, 
-  FileText, 
-  User, 
+import {
+  GraduationCap,
+  Award,
+  FileText,
+  User,
   BarChart3,
   Menu,
   X,
@@ -46,7 +46,8 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [showNotif, setShowNotif] = useState(false);
   const [showNotificationsModal, setShowNotificationsModal] = useState(false);
-  
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
   // Usar Polling Inteligente em vez de Supabase Real-time
   const {
     notifications,
@@ -66,16 +67,23 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
   // Hook para mensagens não lidas do chat admin-estudante
   const { unreadCount: serverChatUnreadCount, markStudentMessagesAsRead } = useStudentChatUnreadCount();
   const { unreadCount: contextChatUnreadCount, resetUnreadCount } = useUnreadMessages();
-  
+
   // Use context count if it's been updated, otherwise use server count
   const displayChatUnreadCount = contextChatUnreadCount > 0 ? contextChatUnreadCount : serverChatUnreadCount;
-  
+
+
+  // Scroll to top when location changes
+  useEffect(() => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTo(0, 0);
+    }
+  }, [location.pathname]);
 
   // Solicitar permissão para notificações nativas na primeira renderização
   useEffect(() => {
     requestNotificationPermission();
   }, []);
-  
+
   // Clean up duplicate useEffect if present (lines 80-83 in original file were duplicate)
 
   const openNotification = async (n: any) => {
@@ -83,7 +91,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
       if (n && !n.read_at) {
         await markAsRead(n.id);
       }
-    } catch {}
+    } catch { }
     setShowNotif(false);
     const target = n?.link || '/student/dashboard';
     navigate(target);
@@ -92,7 +100,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
   const markAllNotificationsAsRead = async () => {
     try {
       await markAllAsRead();
-    } catch {}
+    } catch { }
   };
 
   // Local clearAll removed in favor of hook's clearAll which manages state  // Close notifications dropdown when clicking outside
@@ -177,9 +185,9 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
             {/* Logo */}
             <div className="flex items-center justify-between h-16 sm:h-20 px-4 sm:px-6 border-b border-slate-200">
               <Link to="/" className="flex items-center justify-center w-full">
-                <img 
-                  src="/logo.png.png" 
-                  alt="Matrícula USA" 
+                <img
+                  src="/logo.png.png"
+                  alt="Matrícula USA"
                   className="h-10 w-auto sm:h-12"
                 />
               </Link>
@@ -197,9 +205,9 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
               <div className="flex items-center space-x-3">
                 <div className="w-12 h-12 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg overflow-hidden flex-shrink-0">
                   {user?.avatar_url ? (
-                    <img 
-                      src={user.avatar_url} 
-                      alt="Profile Avatar" 
+                    <img
+                      src={user.avatar_url}
+                      alt="Profile Avatar"
                       className="w-full h-full object-cover"
                     />
                   ) : (
@@ -211,7 +219,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
                   <p className="text-xs sm:text-sm text-slate-500 truncate">{t('studentDashboard.title').replace(' Dashboard', '')}</p>
                 </div>
               </div>
-              
+
               <div className="flex items-center justify-center mt-3">
                 <span className="inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
                   <Star className="h-3 w-3 mr-1" />
@@ -225,19 +233,18 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
               {sidebarItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = activeTab === item.id;
-                
+
                 return (
                   <Link
                     key={item.id}
                     to={item.path}
-                    className={`group flex items-center justify-between px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl font-medium transition-all duration-200 ${
-                      isActive
-                        ? 'bg-blue-600 text-white shadow-lg'
-                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                    }`}
+                    className={`group flex items-center justify-between px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl font-medium transition-all duration-200 ${isActive
+                      ? 'bg-blue-600 text-white shadow-lg'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                      }`}
                     onClick={() => {
                       if (window.innerWidth < 1024) setSidebarOpen(false);
-                      
+
                       // Resetar contador de mensagens não lidas quando clicar no Support Chat
                       if (item.id === 'chat') {
                         markStudentMessagesAsRead();
@@ -249,11 +256,10 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
                       <div className="relative">
                         <Icon className={`h-4 w-4 sm:h-5 sm:w-5 ${isActive ? 'text-white' : 'text-slate-500'}`} />
                         {item.id === 'chat' && displayChatUnreadCount > 0 && (
-                          <div className={`absolute -top-1 -right-1 w-3 h-3 rounded-full animate-pulse ${
-                            isActive 
-                              ? 'bg-white border-2 border-blue-500' 
-                              : 'bg-blue-500'
-                          }`}></div>
+                          <div className={`absolute -top-1 -right-1 w-3 h-3 rounded-full animate-pulse ${isActive
+                            ? 'bg-white border-2 border-blue-500'
+                            : 'bg-blue-500'
+                            }`}></div>
                         )}
                       </div>
                       <span className="text-xs sm:text-sm">{item.label}</span>
@@ -278,7 +284,10 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
       )}
 
       {/* Main Content */}
-      <div className="flex-1 ml-0 lg:ml-72 overflow-x-hidden h-screen overflow-y-auto">
+      <div
+        ref={scrollContainerRef}
+        className="flex-1 ml-0 lg:ml-72 overflow-x-hidden h-screen overflow-y-auto"
+      >
         {/* Header */}
         <header className="bg-white border-b border-slate-200 py-1 sticky top-0 z-50 pt-3 pl-3 pr-3 sm:px-6 lg:px-10">
           <div className="flex items-center justify-between">
@@ -366,9 +375,9 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
                 >
                   <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
                     {user?.avatar_url ? (
-                      <img 
-                        src={user?.avatar_url} 
-                        alt="Profile Avatar" 
+                      <img
+                        src={user?.avatar_url}
+                        alt="Profile Avatar"
                         className="w-full h-full object-cover"
                       />
                     ) : (
@@ -388,7 +397,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
                       <p className="font-semibold text-slate-900 text-sm sm:text-base truncate">{profile?.name || user?.name}</p>
                       <p className="text-xs sm:text-sm text-slate-500 truncate max-w-[180px]" style={{ direction: 'ltr', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }} title={user?.email}>{user?.email}</p>
                     </div>
-                    
+
                     <div className="py-2">
                       <Link
                         to="/student/dashboard/profile"
@@ -402,7 +411,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
                       <div className="px-3 sm:px-4 py-2 sm:hidden border-t border-slate-100">
                         <div className="space-y-2">
                           <p className="text-xs font-medium text-slate-600 text-center">Language</p>
-                          
+
                           {/* Language buttons in a row */}
                           <div className="flex justify-center space-x-1">
                             {[
@@ -416,11 +425,10 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
                                   i18n.changeLanguage(language.code);
                                   setUserMenuOpen(false);
                                 }}
-                                className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all duration-200 ${
-                                  i18n.language === language.code
-                                    ? 'bg-blue-600 text-white shadow-md scale-105'
-                                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                                }`}
+                                className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all duration-200 ${i18n.language === language.code
+                                  ? 'bg-blue-600 text-white shadow-md scale-105'
+                                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                  }`}
                               >
                                 <span className="text-lg">{language.flag}</span>
                               </button>
@@ -429,7 +437,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
                         </div>
                       </div>
                     </div>
-                    
+
                     <div className="border-t border-slate-100 pt-2">
                       <button
                         onClick={handleLogout}
