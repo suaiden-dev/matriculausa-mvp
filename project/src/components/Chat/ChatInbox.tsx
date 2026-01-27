@@ -104,7 +104,7 @@ const ConversationItem: React.FC<ConversationItemProps> = ({ conversation, isSel
                 <MessageReadStatus
                   isRead={!!conversation.last_message_read_at}
                   isSent={true}
-                  className="flex-shrink-0 text-slate-400"
+                  className={!!conversation.last_message_read_at ? 'flex-shrink-0' : 'flex-shrink-0 text-slate-400'}
                 />
               )}
             <p className={`text-sm text-slate-600 truncate ${hasEffectiveUnread ? 'font-medium' : ''}`}>
