@@ -272,6 +272,45 @@ Deno.serve(async (req: Request) => {
             console.error('❌ [approve-zelle-payment-automatic] Erro ao adicionar coins:', coinsError);
           } else {
             console.log('✅ [approve-zelle-payment-automatic] 180 coins adicionados com sucesso:', coinsResult);
+            
+            // --- NOTIFICAÇÃO DE RECOMPENSA PARA O ALUNO (PADRINHO) ---
+            try {
+              console.log('📤 [approve-zelle-payment-automatic] Enviando notificação de recompensa para o padrinho...');
+              
+              // Buscar dados do padrinho (referrer)
+              const { data: referrerProfile } = await supabaseClient
+                .from('user_profiles')
+                .select('full_name, email')
+                .eq('user_id', usedCode.referrer_id)
+                .single();
+              
+              if (referrerProfile?.email) {
+                const rewardPayload = {
+                  tipo_notf: "Recompensa de MatriculaCoins por Indicacao",
+                  email_aluno: referrerProfile.email,
+                  nome_aluno: referrerProfile.full_name || "Aluno",
+                  referred_student_name: referredDisplayName,
+                  referred_student_email: referredUserProfile?.email || "",
+                  payment_method: "Zelle",
+                  fee_type: "Selection Process Fee",
+                  reward_type: "MatriculaCoins",
+                  o_que_enviar: `Great news! Your friend ${referredDisplayName} has completed their enrollment process. 180 MatriculaCoins have been added to your account!`
+                };
+
+                console.log('📤 [approve-zelle-payment-automatic] Payload de recompensa:', rewardPayload);
+
+                await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify(rewardPayload),
+                });
+                console.log('✅ [approve-zelle-payment-automatic] Notificação de recompensa enviada com sucesso!');
+              }
+            } catch (rewardNotifError) {
+              console.error('❌ [approve-zelle-payment-automatic] Erro ao enviar notificação de recompensa:', rewardNotifError);
+            }
           }
         } else {
           console.log('ℹ️ [approve-zelle-payment-automatic] Usuário não usou código de referência, não há coins para adicionar');
