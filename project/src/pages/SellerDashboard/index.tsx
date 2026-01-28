@@ -511,10 +511,92 @@ const SellerDashboard: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#3B82F6] mx-auto mb-4"></div>
-          <p className="text-slate-600">Loading dashboard...</p>
+      <div className="min-h-screen bg-slate-50 animate-pulse">
+        {/* Header + Tabs Section Skeleton (My Students style) */}
+        <div className="px-4 sm:px-6 lg:px-8">
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
+            <div className="max-w-full mx-auto bg-slate-50">
+              {/* Header: title + note + counter */}
+              <div className="px-4 sm:px-6 lg:px-8 py-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div className="flex-1">
+                  <div className="h-10 w-48 bg-slate-200 rounded-lg mb-2"></div>
+                  <div className="h-5 w-96 bg-slate-200 rounded-lg mb-2"></div>
+                  <div className="h-4 w-80 bg-slate-200 rounded-lg"></div>
+                </div>
+              </div>
+
+              {/* Action Buttons Section */}
+              <div className="border-t border-slate-200 bg-white">
+                <div className="px-4 sm:px-6 lg:px-8 py-4">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="h-6 w-40 bg-slate-200 rounded mb-2"></div>
+                      <div className="h-4 w-64 bg-slate-200 rounded"></div>
+                    </div>
+                    <div className="h-10 w-24 bg-slate-200 rounded-lg"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Main Content Skeleton */}
+        <div className="px-4 sm:px-6 lg:px-8">
+          <div className="space-y-6">
+            {/* Stats Cards Skeleton */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="h-4 w-32 bg-slate-200 rounded mb-2"></div>
+                      <div className="h-10 w-24 bg-slate-200 rounded"></div>
+                    </div>
+                    <div className="w-12 h-12 bg-slate-200 rounded-xl"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Search and Filters Skeleton */}
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <div className="flex flex-col lg:flex-row gap-4 mb-4">
+                <div className="flex-1">
+                  <div className="h-12 w-full bg-slate-200 rounded-xl"></div>
+                </div>
+                <div className="h-12 w-32 bg-slate-200 rounded-xl"></div>
+              </div>
+              <div className="h-4 w-40 bg-slate-200 rounded"></div>
+            </div>
+
+            {/* Student Cards Skeleton */}
+            <div className="space-y-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start space-x-4 flex-1">
+                      <div className="h-16 w-16 bg-slate-200 rounded-full"></div>
+                      <div className="flex-1 space-y-3">
+                        <div className="h-6 w-48 bg-slate-200 rounded"></div>
+                        <div className="h-4 w-64 bg-slate-200 rounded"></div>
+                        <div className="h-4 w-32 bg-slate-200 rounded"></div>
+                        <div className="flex items-center space-x-4 mt-4">
+                          <div className="h-4 w-32 bg-slate-200 rounded"></div>
+                          <div className="h-4 w-32 bg-slate-200 rounded"></div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end space-y-3">
+                      <div className="h-6 w-20 bg-slate-200 rounded-full"></div>
+                      <div className="h-8 w-32 bg-slate-200 rounded"></div>
+                      <div className="h-4 w-24 bg-slate-200 rounded"></div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     );

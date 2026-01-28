@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Send, 
-  RefreshCw, 
-  Sparkles, 
-  Edit3, 
-  X, 
-  CheckCircle, 
+import {
+  Send,
+  RefreshCw,
+  Sparkles,
+  Edit3,
+  X,
+  CheckCircle,
   AlertCircle,
   Save,
   Trash2,
@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useGmailConnection } from '../hooks/useGmailConnection';
+import RichTextEditor from './RichTextEditor/RichTextEditor';
 
 interface EmailComposerProps {
   originalEmail?: {
@@ -38,11 +39,11 @@ interface SendResult {
   error?: string;
 }
 
-const EmailComposer: React.FC<EmailComposerProps> = ({ 
-  originalEmail, 
-  onSend, 
-  onClose, 
-  isOpen 
+const EmailComposer: React.FC<EmailComposerProps> = ({
+  originalEmail,
+  onSend,
+  onClose,
+  isOpen
 }) => {
   const [to, setTo] = useState('');
   const [subject, setSubject] = useState('');
@@ -51,7 +52,6 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
   const [isSending, setIsSending] = useState(false);
   const [sendResult, setSendResult] = useState<SendResult | null>(null);
   const [tone, setTone] = useState<'professional' | 'friendly' | 'formal'>('professional');
-  const [isHtmlMode, setIsHtmlMode] = useState(false);
   const [attachments, setAttachments] = useState<File[]>([]);
   const { activeConnection } = useGmailConnection();
 
@@ -66,7 +66,7 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
       htmlBodyLength: originalEmail?.htmlBody?.length || 0,
       bodyLength: originalEmail?.body?.length || 0
     });
-    
+
     if (originalEmail) {
       console.log('📧 EmailComposer: originalEmail received:', {
         id: originalEmail.id,
@@ -89,30 +89,29 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
         isForward: !originalEmail.id,
         isReply: !!originalEmail.id
       });
-      
+
       if (!originalEmail.id) {
         setTo(originalEmail.to || '');
         setSubject(originalEmail.subject || '');
         // Para forward, usar o snippet em vez do body HTML
         setBody(originalEmail.snippet || '');
-        setIsHtmlMode(false);
       } else {
         // É um reply
         console.log('📧 EmailComposer: This is a REPLY (not forward)');
         setTo(originalEmail.from || '');
         setSubject(`Re: ${originalEmail.subject || ''}`);
-        
+
         // Para reply, incluir o email original completo
         // Priorizar htmlBody se disponível, senão usar body, senão snippet
         const originalEmailContent = originalEmail.htmlBody || originalEmail.body || originalEmail.snippet || '';
-        
+
         console.log('📧 EmailComposer: Content selection:', {
           usingHtmlBody: !!originalEmail.htmlBody,
           usingBody: !originalEmail.htmlBody && !!originalEmail.body,
           usingSnippet: !originalEmail.htmlBody && !originalEmail.body && !!originalEmail.snippet,
           finalContentLength: originalEmailContent.length
         });
-        
+
         console.log('📧 EmailComposer: Using content for reply:', {
           hasHtmlBody: !!originalEmail.htmlBody,
           hasBody: !!originalEmail.body,
@@ -123,17 +122,10 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
           bodyPreview: originalEmail.body?.substring(0, 200) + '...',
           contentPreview: originalEmailContent.substring(0, 200) + '...'
         });
-        
+
         // Se temos HTML, criar um reply HTML formatado
         const hasHtmlContent = originalEmail.htmlBody || (originalEmail.body && originalEmail.body.includes('<'));
-        console.log('📧 EmailComposer: HTML detection:', {
-          hasHtmlBody: !!originalEmail.htmlBody,
-          bodyHasHtml: originalEmail.body?.includes('<') || false,
-          hasHtmlContent,
-          htmlBodyFirstChars: originalEmail.htmlBody?.substring(0, 50) || 'N/A',
-          bodyFirstChars: originalEmail.body?.substring(0, 50) || 'N/A'
-        });
-        
+
         if (hasHtmlContent) {
           const replyHtml = `
 <div style="border-left: 3px solid #ccc; padding-left: 15px; margin: 20px 0; color: #666;">
@@ -147,14 +139,10 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
   </div>
 </div>`;
           setBody(replyHtml);
-          setIsHtmlMode(true);
-          console.log('📧 EmailComposer: Set HTML mode with formatted reply');
         } else {
           // Se é texto simples
           const replyTemplate = `\n\n--- Original Message ---\nFrom: ${originalEmail.from}\nSubject: ${originalEmail.subject}\nDate: ${new Date().toLocaleString()}\n\n${originalEmailContent}`;
           setBody(replyTemplate);
-          setIsHtmlMode(false);
-          console.log('📧 EmailComposer: Set text mode with simple reply');
         }
       }
     }
@@ -208,7 +196,7 @@ Yours sincerely,
 
       // Simulate AI generation delay
       await new Promise(resolve => setTimeout(resolve, 1500));
-      
+
       setBody(templates[tone]);
     } catch (error) {
       console.error('Error generating draft:', error);
@@ -235,17 +223,17 @@ Yours sincerely,
     try {
       // Get current user session
       const { data: { session } } = await supabase.auth.getSession();
-      
+
       if (!session) {
         throw new Error('User not authenticated. Please log in again.');
       }
 
       // Prepare email content
-      const emailContent = originalEmail?.htmlBody || (isHtmlMode ? body : body.replace(/\n/g, '<br>'));
-      
+      // Since we're using RichTextEditor, the body is already HTML
+      const emailContent = originalEmail?.htmlBody || body;
+
       console.log('📧 EmailComposer: Preparing email content:', {
         hasOriginalHtmlBody: !!originalEmail?.htmlBody,
-        isHtmlMode,
         bodyLength: body.length,
         emailContentLength: emailContent.length,
         emailContentPreview: emailContent.substring(0, 200) + '...'
@@ -272,7 +260,7 @@ Yours sincerely,
           to: to,
           subject: subject,
           htmlBody: emailContent,
-          textBody: !isHtmlMode ? body : undefined,
+          textBody: body.replace(/<[^>]*>/g, ''), // Strip HTML for text body
           threadId: originalEmail?.threadId,
           attachments: emailAttachments
         }
@@ -281,16 +269,16 @@ Yours sincerely,
       if (response.error) {
         throw new Error(response.error.message || 'Failed to send email');
       }
-      
+
       if (response.data?.success) {
         setSendResult({
           success: true,
           messageId: response.data.messageId
         });
-        
+
         // Call onSend callback
         onSend?.(response.data);
-        
+
         // Close composer after successful send
         setTimeout(() => {
           onClose?.();
@@ -317,11 +305,11 @@ Yours sincerely,
       body,
       timestamp: new Date().toISOString()
     };
-    
+
     const drafts = JSON.parse(localStorage.getItem('email-drafts') || '[]');
     drafts.push(draft);
     localStorage.setItem('email-drafts', JSON.stringify(drafts));
-    
+
     alert('Draft saved successfully!');
   };
 
@@ -369,22 +357,20 @@ Yours sincerely,
         <div className="p-6 space-y-4 max-h-[calc(90vh-120px)] overflow-y-auto">
           {/* Send Result */}
           {sendResult && (
-            <div className={`p-4 rounded-xl ${
-              sendResult.success 
-                ? 'bg-green-50 border border-green-200' 
-                : 'bg-red-50 border border-red-200'
-            }`}>
+            <div className={`p-4 rounded-xl ${sendResult.success
+              ? 'bg-green-50 border border-green-200'
+              : 'bg-red-50 border border-red-200'
+              }`}>
               <div className="flex items-center space-x-2">
                 {sendResult.success ? (
                   <CheckCircle className="h-5 w-5 text-green-500" />
                 ) : (
                   <AlertCircle className="h-5 w-5 text-red-500" />
                 )}
-                <span className={`font-medium ${
-                  sendResult.success ? 'text-green-700' : 'text-red-700'
-                }`}>
-                  {sendResult.success 
-                    ? 'Email sent successfully!' 
+                <span className={`font-medium ${sendResult.success ? 'text-green-700' : 'text-red-700'
+                  }`}>
+                  {sendResult.success
+                    ? 'Email sent successfully!'
                     : `Failed to send email: ${sendResult.error}`
                   }
                 </span>
@@ -475,101 +461,66 @@ Yours sincerely,
 
             {/* Message Editor */}
             <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="block text-sm font-medium text-slate-700">
+              <label className="block text-sm font-medium text-slate-700">
                 Message *
               </label>
-                <div className="flex items-center space-x-2">
-                  <button
-                    onClick={() => setIsHtmlMode(!isHtmlMode)}
-                    className="flex items-center space-x-1 px-2 py-1 text-xs bg-slate-100 hover:bg-slate-200 rounded transition-colors"
-                    title="Toggle HTML mode"
-                    aria-label="Toggle HTML mode"
-                  >
-                    {isHtmlMode ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
-                    <span>{isHtmlMode ? 'HTML' : 'Text'}</span>
-                  </button>
-                </div>
-              </div>
-              
-              {isHtmlMode ? (
-                <div className="space-y-2">
-                  <textarea
-                    value={body}
-                    onChange={(e) => setBody(e.target.value)}
-                    rows={8}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#05294E] focus:border-transparent resize-none font-mono text-sm"
-                    placeholder="Write your HTML message here...&#10;&#10;Example:&#10;&lt;h1&gt;Hello&lt;/h1&gt;&#10;&lt;p&gt;This is a paragraph.&lt;/p&gt;"
-                    required
-                    disabled={!activeConnection}
-                  />
-                  <div className="border border-slate-300 rounded-xl p-4 bg-slate-50">
-                    <div className="text-xs text-slate-500 mb-2">Preview:</div>
-                    <div 
-                      className="prose prose-sm max-w-none"
-                      dangerouslySetInnerHTML={{ __html: body }}
-                    />
-                  </div>
-                </div>
-              ) : (
-                <textarea
-                  value={body}
-                  onChange={(e) => setBody(e.target.value)}
-                  rows={12}
-                  className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#05294E] focus:border-transparent resize-none"
-                  placeholder="Write your message here..."
-                  required
-                  disabled={!activeConnection}
-                />
-              )}
             </div>
 
-            {/* Attachments */}
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Attachments
+            <div className="min-h-[500px]">
+              <RichTextEditor
+                content={body}
+                onChange={setBody}
+                placeholder="Type your message here..."
+                className="h-full"
+              />
+            </div>
+          </div>
+
+          {/* Attachments */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">
+              Attachments
+            </label>
+            <div className="space-y-2">
+              <input
+                type="file"
+                multiple
+                onChange={handleFileUpload}
+                className="hidden"
+                id="file-upload"
+                disabled={!activeConnection}
+              />
+              <label
+                htmlFor="file-upload"
+                className="inline-flex items-center space-x-2 px-4 py-2 border border-slate-300 rounded-xl hover:bg-slate-50 cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Paperclip className="h-4 w-4" />
+                <span>Add Files</span>
               </label>
-              <div className="space-y-2">
-                <input
-                  type="file"
-                  multiple
-                  onChange={handleFileUpload}
-                  className="hidden"
-                  id="file-upload"
-                  disabled={!activeConnection}
-                />
-                <label
-                  htmlFor="file-upload"
-                  className="inline-flex items-center space-x-2 px-4 py-2 border border-slate-300 rounded-xl hover:bg-slate-50 cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Paperclip className="h-4 w-4" />
-                  <span>Add Files</span>
-                </label>
-                
-                {attachments.length > 0 && (
-                  <div className="space-y-2">
-                    {attachments.map((file, index) => (
-                      <div key={index} className="flex items-center justify-between p-2 bg-slate-50 rounded-lg">
-                        <div className="flex items-center space-x-2">
-                          <Paperclip className="h-4 w-4 text-slate-500" />
-                          <span className="text-sm text-slate-700">{file.name}</span>
-                          <span className="text-xs text-slate-500">
-                            ({(file.size / 1024).toFixed(1)} KB)
-                          </span>
-                        </div>
-                        <button
-                          onClick={() => removeAttachment(index)}
-                          className="text-red-500 hover:text-red-700"
-                          title="Remove attachment"
-                          aria-label="Remove attachment"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
+
+              {attachments.length > 0 && (
+                <div className="space-y-2">
+                  {attachments.map((file, index) => (
+                    <div key={index} className="flex items-center justify-between p-2 bg-slate-50 rounded-lg">
+                      <div className="flex items-center space-x-2">
+                        <Paperclip className="h-4 w-4 text-slate-500" />
+                        <span className="text-sm text-slate-700">{file.name}</span>
+                        <span className="text-xs text-slate-500">
+                          ({(file.size / 1024).toFixed(1)} KB)
+                        </span>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+                      <button
+                        onClick={() => removeAttachment(index)}
+                        className="text-red-500 hover:text-red-700"
+                        title="Remove attachment"
+                        aria-label="Remove attachment"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -597,7 +548,7 @@ Yours sincerely,
               <span>Clear</span>
             </button>
           </div>
-          
+
           <div className="flex items-center space-x-3">
             <button
               onClick={onClose}

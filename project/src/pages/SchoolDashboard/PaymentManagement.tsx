@@ -37,6 +37,7 @@ import { usePayments } from '../../hooks/usePayments';
 import ProfileCompletionGuard from '../../components/ProfileCompletionGuard';
 import { UniversityPaymentRequestService } from '../../services/UniversityPaymentRequestService';
 import { supabase } from '../../lib/supabase';
+import { getRealPaidAmounts } from '../../utils/paymentConverter';
 
 const PaymentManagement: React.FC = () => {
   const { university } = useUniversity();
@@ -136,9 +137,9 @@ const PaymentManagement: React.FC = () => {
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
   const [showRequestDetailsModal, setShowRequestDetailsModal] = useState(false);
   
-  // Stripe Connect status state
-  const [hasStripeConnect, setHasStripeConnect] = useState(false);
-  const [loadingStripeStatus, setLoadingStripeStatus] = useState(true);
+  // Stripe Connect status state - COMENTADO: Funcionalidade removida temporariamente
+  // const [hasStripeConnect, setHasStripeConnect] = useState(false);
+  // const [loadingStripeStatus, setLoadingStripeStatus] = useState(true);
   
   const handleExport = async () => {
     try {
@@ -178,45 +179,46 @@ const PaymentManagement: React.FC = () => {
     loadChartJS();
   }, []);
 
-  const checkStripeConnectStatus = async () => {
-    if (!university?.id) return;
-    
-    try {
-      setLoadingStripeStatus(true);
-      
-      // Verificar se a universidade tem configuração de taxa com Stripe Connect
-      const { data: feeConfig, error } = await supabase
-        .from('university_fee_configurations')
-        .select('stripe_connect_enabled, stripe_connect_account_id')
-        .eq('university_id', university.id)
-        .single();
-      
-      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
-        console.error('Error checking Stripe Connect status:', error);
-        return;
-      }
-      
-      // Se existe configuração e tem Stripe Connect habilitado
-      const hasConnect = feeConfig && 
-        feeConfig.stripe_connect_enabled === true && 
-        feeConfig.stripe_connect_account_id;
-      
-      setHasStripeConnect(!!hasConnect);
-      
-      console.log('🔗 [Stripe Connect] Status check:', {
-        universityId: university.id,
-        feeConfig,
-        hasConnect,
-        stripeEnabled: feeConfig?.stripe_connect_enabled,
-        accountId: feeConfig?.stripe_connect_account_id
-      });
-      
-    } catch (error: any) {
-      console.error('Error checking Stripe Connect status:', error);
-    } finally {
-      setLoadingStripeStatus(false);
-    }
-  };
+  // COMENTADO: Função de verificação de status do Stripe Connect - Funcionalidade removida temporariamente
+  // const checkStripeConnectStatus = async () => {
+  //   if (!university?.id) return;
+  //   
+  //   try {
+  //     setLoadingStripeStatus(true);
+  //     
+  //     // Verificar se a universidade tem configuração de taxa com Stripe Connect
+  //     const { data: feeConfig, error } = await supabase
+  //       .from('university_fee_configurations')
+  //       .select('stripe_connect_enabled, stripe_connect_account_id')
+  //       .eq('university_id', university.id)
+  //       .single();
+  //     
+  //     if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+  //       console.error('Error checking Stripe Connect status:', error);
+  //       return;
+  //     }
+  //     
+  //     // Se existe configuração e tem Stripe Connect habilitado
+  //     const hasConnect = feeConfig && 
+  //       feeConfig.stripe_connect_enabled === true && 
+  //       feeConfig.stripe_connect_account_id;
+  //     
+  //     setHasStripeConnect(!!hasConnect);
+  //     
+  //     console.log('🔗 [Stripe Connect] Status check:', {
+  //       universityId: university.id,
+  //       feeConfig,
+  //       hasConnect,
+  //       stripeEnabled: feeConfig?.stripe_connect_enabled,
+  //       accountId: feeConfig?.stripe_connect_account_id
+  //     });
+  //     
+  //   } catch (error: any) {
+  //     console.error('Error checking Stripe Connect status:', error);
+  //   } finally {
+  //     setLoadingStripeStatus(false);
+  //   }
+  // };
 
   const loadUniversityPaymentRequests = async () => {
     if (!university?.id || !user?.id) return;
@@ -367,12 +369,12 @@ const PaymentManagement: React.FC = () => {
       }
 
       // Calcular receita total APENAS de application fees (em dólares) incluindo dependentes
+      // ✅ CORREÇÃO: Adicionar $100 por dependente para ambos os sistemas (igual à tabela Student Payments)
       const totalApplicationFeeRevenue = paidApplications?.reduce((sum: number, app: any) => {
         const feeAmount = Number(app.scholarships?.application_fee_amount || 0);
         const s = studentsMap[app.student_id];
         const deps = Number(s?.dependents) || 0;
-        const systemType = (s?.system_type as any) || 'legacy';
-        const withDeps = systemType === 'legacy' && deps > 0 ? feeAmount + deps * 100 : feeAmount;
+        const withDeps = deps > 0 ? feeAmount + deps * 100 : feeAmount;
         return sum + withDeps;
       }, 0) || 0;
        
@@ -387,8 +389,8 @@ const PaymentManagement: React.FC = () => {
         const feeAmount = Number(app.scholarships?.application_fee_amount || 0);
         const s = studentsMap[app.student_id];
         const deps = Number(s?.dependents) || 0;
-        const systemType = (s?.system_type as any) || 'legacy';
-        const withDeps = systemType === 'legacy' && deps > 0 ? feeAmount + deps * 100 : feeAmount;
+        // ✅ CORREÇÃO: Adicionar $100 por dependente para ambos os sistemas (igual à tabela Student Payments)
+        const withDeps = deps > 0 ? feeAmount + deps * 100 : feeAmount;
         return sum + withDeps;
        }, 0) || 0;
       
@@ -453,15 +455,19 @@ const PaymentManagement: React.FC = () => {
         return;
       }
 
-      // Montar mapa de estudantes para dependentes/system_type
+      // Montar mapa de estudantes para dependentes/system_type e user_id
       const appStudentIds = Array.from(new Set((applications || []).map((a: any) => a.student_id).filter(Boolean)));
       let analyticsStudentsMap: Record<string, any> = {};
+      let studentIdToUserIdMap: Record<string, string> = {}; // Mapa de profile_id -> user_id
       if (appStudentIds.length > 0) {
         const { data: students } = await supabase
           .from('user_profiles')
-          .select('id, dependents, system_type')
+          .select('id, user_id, dependents, system_type')
           .in('id', appStudentIds);
-        (students || []).forEach((s: any) => { analyticsStudentsMap[s.id] = s; });
+        (students || []).forEach((s: any) => { 
+          analyticsStudentsMap[s.id] = s;
+          studentIdToUserIdMap[s.id] = s.user_id; // Mapear profile_id para user_id
+        });
       }
 
       // Calcular receita diária de application fees dos últimos 30 dias
@@ -479,8 +485,8 @@ const PaymentManagement: React.FC = () => {
           const base = Number(scholarship?.application_fee_amount || 0);
           const s = analyticsStudentsMap[app.student_id];
           const deps = Number(s?.dependents) || 0;
-          const systemType = (s?.system_type as any) || 'legacy';
-          const withDeps = systemType === 'legacy' && deps > 0 ? base + deps * 100 : base;
+          // ✅ CORREÇÃO: Adicionar $100 por dependente para ambos os sistemas (igual à tabela Student Payments)
+          const withDeps = deps > 0 ? base + deps * 100 : base;
           return sum + withDeps;
          }, 0) || 0;
          
@@ -504,8 +510,8 @@ const PaymentManagement: React.FC = () => {
           const base = Number(scholarship?.application_fee_amount || 0);
           const s = analyticsStudentsMap[app.student_id];
           const deps = Number(s?.dependents) || 0;
-          const systemType = (s?.system_type as any) || 'legacy';
-          const withDeps = systemType === 'legacy' && deps > 0 ? base + deps * 100 : base;
+          // ✅ CORREÇÃO: Adicionar $100 por dependente para ambos os sistemas (igual à tabela Student Payments)
+          const withDeps = deps > 0 ? base + deps * 100 : base;
           return sum + withDeps;
          }, 0) || 0;
          
@@ -544,14 +550,15 @@ const PaymentManagement: React.FC = () => {
        const recentActivity: Array<{date: string, type: string, amount: number, description: string}> = [];
        
        // Adicionar application fees pagas recentes
-      applications?.slice(0, 5).forEach(app => {
+       // ✅ CORREÇÃO: Usar a mesma lógica da tabela Student Payments (base + dependentes)
+       applications?.slice(0, 10).forEach(app => {
          if (app.is_application_fee_paid) {
            const scholarship = Array.isArray(app.scholarships) ? app.scholarships[0] : app.scholarships;
           const base = Number(scholarship?.application_fee_amount || 0);
           const s = analyticsStudentsMap[app.student_id];
           const deps = Number(s?.dependents) || 0;
-          const systemType = (s?.system_type as any) || 'legacy';
-          const withDeps = systemType === 'legacy' && deps > 0 ? base + deps * 100 : base;
+           // ✅ CORREÇÃO: Adicionar $100 por dependente para ambos os sistemas (igual à tabela Student Payments)
+           const withDeps = deps > 0 ? base + deps * 100 : base;
           recentActivity.push({
              date: app.created_at,
              type: 'revenue',
@@ -595,14 +602,32 @@ const PaymentManagement: React.FC = () => {
 
   // Create revenue chart
   const createRevenueChart = () => {
-    if (!revenueChartRef.current || !window.Chart) return;
+    if (!revenueChartRef.current || !window.Chart) {
+      console.warn('Cannot create revenue chart: ref or Chart.js not available');
+      return;
+    }
+
+    // ✅ CORREÇÃO: Verificar se o canvas está realmente no DOM
+    if (!revenueChartRef.current.isConnected) {
+      console.warn('Revenue chart canvas not connected to DOM');
+      return;
+    }
 
     // Destroy existing chart
     if (revenueChart) {
+      try {
       revenueChart.destroy();
+        setRevenueChart(null);
+      } catch (error) {
+        console.warn('Error destroying existing revenue chart:', error);
+      }
     }
 
     const ctx = revenueChartRef.current.getContext('2d');
+    if (!ctx) {
+      console.warn('Cannot get 2d context from revenue chart canvas');
+      return;
+    }
     const data = revenueChartType === 'daily' 
       ? financialAnalytics.dailyRevenue.slice(-revenueChartPeriod)
       : financialAnalytics.monthlyRevenue.slice(-revenueChartPeriod);
@@ -751,14 +776,32 @@ const PaymentManagement: React.FC = () => {
 
   // Create trend analysis chart
   const createTrendChart = () => {
-    if (!trendChartRef.current || !window.Chart) return;
+    if (!trendChartRef.current || !window.Chart) {
+      console.warn('Cannot create trend chart: ref or Chart.js not available');
+      return;
+    }
+
+    // ✅ CORREÇÃO: Verificar se o canvas está realmente no DOM
+    if (!trendChartRef.current.isConnected) {
+      console.warn('Trend chart canvas not connected to DOM');
+      return;
+    }
 
     // Destroy existing chart
     if (trendChart) {
+      try {
       trendChart.destroy();
+        setTrendChart(null);
+      } catch (error) {
+        console.warn('Error destroying existing trend chart:', error);
+      }
     }
 
     const ctx = trendChartRef.current.getContext('2d');
+    if (!ctx) {
+      console.warn('Cannot get 2d context from trend chart canvas');
+      return;
+    }
     const data = financialAnalytics.monthlyRevenue.slice(-6); // Last 6 months
 
     const chart = new window.Chart(ctx, {
@@ -862,11 +905,61 @@ const PaymentManagement: React.FC = () => {
 
   // Update charts when data changes
   useEffect(() => {
-    if (window.Chart && financialAnalytics.dailyRevenue.length > 0) {
+    // ✅ CORREÇÃO: Adicionar cleanup e verificação mais robusta
+    if (!window.Chart) {
+      console.warn('Chart.js not loaded yet');
+      return;
+    }
+
+    // Verificar se os refs estão prontos
+    if (!revenueChartRef.current || !paymentStatusChartRef.current || !trendChartRef.current) {
+      console.warn('Chart canvas refs not ready');
+      return;
+    }
+
+    // Verificar se há dados para exibir
+    if (financialAnalytics.dailyRevenue.length === 0 && financialAnalytics.monthlyRevenue.length === 0) {
+      console.warn('No financial data available for charts');
+      return;
+    }
+
+    // ✅ CORREÇÃO: Usar setTimeout para garantir que o DOM está totalmente renderizado
+    const timeoutId = setTimeout(() => {
+      try {
       createRevenueChart();
       createPaymentStatusChart();
       createTrendChart();
-    }
+      } catch (error) {
+        console.error('Error creating charts:', error);
+      }
+    }, 100);
+
+    // ✅ CORREÇÃO: Cleanup function para destruir charts quando o componente desmonta ou dados mudam
+    return () => {
+      clearTimeout(timeoutId);
+      // Destruir charts existentes antes de recriar
+      if (revenueChart) {
+        try {
+          revenueChart.destroy();
+        } catch (error) {
+          console.warn('Error destroying revenue chart:', error);
+        }
+      }
+      if (paymentStatusChart) {
+        try {
+          paymentStatusChart.destroy();
+        } catch (error) {
+          console.warn('Error destroying payment status chart:', error);
+        }
+      }
+      if (trendChart) {
+        try {
+          trendChart.destroy();
+        } catch (error) {
+          console.warn('Error destroying trend chart:', error);
+        }
+      }
+    };
   }, [financialAnalytics, revenueChartType, revenueChartPeriod]);
 
   // Calculate metrics when financial data changes
@@ -880,7 +973,7 @@ const PaymentManagement: React.FC = () => {
   React.useEffect(() => {
     if (university?.id) {
       loadUniversityPaymentRequests();
-      checkStripeConnectStatus();
+      // COMENTADO: checkStripeConnectStatus(); - Funcionalidade removida temporariamente
       loadFinancialAnalytics();
     }
   }, [university?.id]);
@@ -1532,8 +1625,8 @@ const PaymentManagement: React.FC = () => {
       {/* University Payment Requests Tab Content */}
               {activeTab === 'university-requests' && (
         <>
-                    {/* Stripe Connect Banner - Only show if not connected */}
-                    {!loadingStripeStatus && !hasStripeConnect && (
+                    {/* COMENTADO: Stripe Connect Banner - Funcionalidade removida temporariamente */}
+                    {/* {!loadingStripeStatus && !hasStripeConnect && (
                       <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm mb-6">
                         <div className="flex items-start gap-4">
                           <div className="p-3 bg-[#05294E] rounded-xl">
@@ -1571,10 +1664,10 @@ const PaymentManagement: React.FC = () => {
                           </div>
                         </div>
                       </div>
-                    )}
+                    )} */}
 
-                    {/* Stripe Connect Success Message - Only show if connected */}
-                    {!loadingStripeStatus && hasStripeConnect && (
+                    {/* COMENTADO: Stripe Connect Success Message - Funcionalidade removida temporariamente */}
+                    {/* {!loadingStripeStatus && hasStripeConnect && (
                       <div className="bg-green-50 border border-green-200 rounded-2xl p-6 shadow-sm mb-6">
                         <div className="flex items-start gap-4">
                           <div className="p-3 bg-green-100 rounded-xl">
@@ -1591,7 +1684,7 @@ const PaymentManagement: React.FC = () => {
                           </div>
                         </div>
                       </div>
-                    )}
+                    )} */}
 
           {/* University Requests Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">

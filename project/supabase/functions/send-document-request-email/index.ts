@@ -1,36 +1,29 @@
-// @ts-nocheck
-import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
-import { createClient } from 'npm:@supabase/supabase-js@2.49.1';
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts"
 
-// Validação das variáveis de ambiente obrigatórias
-const mailerSendApiKey = Deno.env.get('MAILERSEND_API_KEY');
-if (!mailerSendApiKey) {
-  throw new Error('Missing required environment variable: MAILERSEND_API_KEY');
+const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// Configurações do MailerSend com fallbacks
-const mailerSendUrl = Deno.env.get('MAILERSEND_URL') || 'https://api.mailersend.com/v1/email';
-const fromEmail = Deno.env.get('FROM_EMAIL') || 'info@matriculausa.com';
-const fromName = Deno.env.get('FROM_NAME') || 'Matrícula USA';
-
-Deno.serve(async (req) => {
-  if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method Not Allowed' }), { status: 405 });
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
   }
 
   try {
     const {
-      student_id,
       student_email,
       student_name,
       university_name,
       document_titles,
-      application_id
     } = await req.json();
 
     if (!student_email || !student_name || !university_name || !document_titles) {
       return new Response(JSON.stringify({ error: 'Dados obrigatórios ausentes.' }), { status: 400 });
     }
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
     // Monta o conteúdo do e-mail (em inglês)
     const subject = `New document request from ${university_name}`;
@@ -40,7 +33,7 @@ Deno.serve(async (req) => {
         <p>You have new documents requested by <strong>${university_name}</strong>.</p>
         <p><strong>Requested documents:</strong></p>
         <ul>
-          ${document_titles.map((doc) => `<li>${doc}</li>`).join('')}
+          ${document_titles.map((doc: string) => `<li>${doc}</li>`).join('')}
         </ul>
         <p>Please log in to your student area and upload the required files as soon as possible.</p>
         <br>
@@ -48,28 +41,36 @@ Deno.serve(async (req) => {
       </div>
     `;
 
-    // Envia o e-mail via MailerSend
-    const response = await fetch(mailerSendUrl, {
+    // Chamar a edge function consolidada de envio de email
+    const emailResponse = await fetch(`${supabaseUrl}/functions/v1/send-email`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${mailerSendApiKey}`,
         'Content-Type': 'application/json',
+        'apikey': supabaseServiceKey,
+        'Authorization': `Bearer ${supabaseServiceKey}`,
       },
       body: JSON.stringify({
-        from: { email: fromEmail, name: fromName },
-        to: [{ email: student_email, name: student_name }],
-        subject,
-        html: htmlContent,
-      }),
+        to: student_email,
+        subject: subject,
+        html: htmlContent
+      })
     });
 
-    if (response.status !== 202) {
-      const result = await response.json().catch(() => ({}));
-      return new Response(JSON.stringify({ error: 'Falha ao enviar e-mail', details: result }), { status: 500 });
+    if (!emailResponse.ok) {
+      const errorText = await emailResponse.text();
+      console.error('Error calling send-email function:', errorText);
+      return new Response(JSON.stringify({ error: 'Falha ao enviar e-mail via send-email', details: errorText }), { status: 500 });
     }
 
-    return new Response(JSON.stringify({ success: true }), { status: 200 });
-  } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), { status: 500 });
+    return new Response(JSON.stringify({ success: true }), { 
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  } catch (error: any) {
+    console.error('Error in send-document-request-email:', error);
+    return new Response(JSON.stringify({ error: error.message }), { 
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
   }
-}); 
+});

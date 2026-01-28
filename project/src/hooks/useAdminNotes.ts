@@ -9,7 +9,9 @@ interface StudentRecord {
 export const useAdminNotes = (
   student: StudentRecord | null, 
   userId?: string,
-  setStudent?: (student: any) => void
+  setStudent?: (student: any) => void,
+  logAction?: (actionType: string, actionDescription: string, performedBy: string, performedByType: 'student' | 'admin' | 'university', metadata?: any) => Promise<any>,
+  studentId?: string
 ) => {
   const [adminNotes, setAdminNotes] = useState<any[]>([]);
   const [isAddingNote, setIsAddingNote] = useState(false);
@@ -94,6 +96,28 @@ export const useAdminNotes = (
 
       if (error) throw error;
       
+      // Log da ação
+      if (logAction && userId) {
+        try {
+          await logAction(
+            'admin_note_created',
+            `Admin note created by platform admin`,
+            userId,
+            'admin',
+            {
+              note_id: newNote.id,
+              student_id: studentId || student.student_id,
+              note_content: newNoteContent.trim().substring(0, 100), // Primeiros 100 caracteres
+              created_by: userEmail,
+              created_at: newNote.created_at
+            }
+          );
+          console.log('✅ [handleAddNote] Ação logada com sucesso');
+        } catch (logError) {
+          console.error('⚠️ [handleAddNote] Erro ao logar ação (não crítico):', logError);
+        }
+      }
+      
       setAdminNotes(updatedNotes);
       setNewNoteContent('');
       setIsAddingNote(false);
@@ -108,7 +132,7 @@ export const useAdminNotes = (
     } finally {
       setSavingNotes(false);
     }
-  }, [student, newNoteContent, userId, adminNotes, setStudent]);
+  }, [student, newNoteContent, userId, adminNotes, setStudent, logAction, studentId]);
 
   // Handler para iniciar edição de nota
   const handleEditNote = useCallback((noteId: string) => {
@@ -141,6 +165,28 @@ export const useAdminNotes = (
 
       if (error) throw error;
       
+      // Log da ação
+      if (logAction && userId) {
+        try {
+          await logAction(
+            'admin_note_updated',
+            `Admin note updated by platform admin`,
+            userId,
+            'admin',
+            {
+              note_id: editingNoteId,
+              student_id: studentId || student.student_id,
+              note_content: editingNoteContent.trim().substring(0, 100), // Primeiros 100 caracteres
+              updated_by: userId,
+              updated_at: new Date().toISOString()
+            }
+          );
+          console.log('✅ [handleSaveEditNote] Ação logada com sucesso');
+        } catch (logError) {
+          console.error('⚠️ [handleSaveEditNote] Erro ao logar ação (não crítico):', logError);
+        }
+      }
+      
       setAdminNotes(updatedNotes);
       setEditingNoteId(null);
       setEditingNoteContent('');
@@ -155,7 +201,7 @@ export const useAdminNotes = (
     } finally {
       setSavingNotes(false);
     }
-  }, [editingNoteId, editingNoteContent, student, adminNotes, setStudent]);
+  }, [editingNoteId, editingNoteContent, student, adminNotes, setStudent, logAction, userId, studentId]);
 
   // Handler para deletar nota
   const handleDeleteNote = useCallback(async (noteId: string) => {
@@ -175,6 +221,29 @@ export const useAdminNotes = (
 
       if (error) throw error;
       
+      // Log da ação
+      if (logAction && userId) {
+        try {
+          const deletedNote = adminNotes.find(note => note.id === noteId);
+          await logAction(
+            'admin_note_deleted',
+            `Admin note deleted by platform admin`,
+            userId,
+            'admin',
+            {
+              note_id: noteId,
+              student_id: studentId || student.student_id,
+              note_content: deletedNote?.content?.substring(0, 100) || 'N/A', // Primeiros 100 caracteres
+              deleted_by: userId,
+              deleted_at: new Date().toISOString()
+            }
+          );
+          console.log('✅ [handleDeleteNote] Ação logada com sucesso');
+        } catch (logError) {
+          console.error('⚠️ [handleDeleteNote] Erro ao logar ação (não crítico):', logError);
+        }
+      }
+      
       setAdminNotes(updatedNotes);
       
       // Atualizar o estado do student se setStudent for fornecido
@@ -187,7 +256,7 @@ export const useAdminNotes = (
     } finally {
       setSavingNotes(false);
     }
-  }, [student, adminNotes, setStudent]);
+  }, [student, adminNotes, setStudent, logAction, userId, studentId]);
 
   return {
     adminNotes,

@@ -175,7 +175,7 @@
       "recipientEmail": "Recipient Email",
       "paymentAmount": "Payment Amount",
       "important": "Important:",
-      "importantMessage": "Make sure to send the exact amount of <strong>{{amount}} USD</strong> to <strong>info@thefutureofenglish.com</strong> via Zelle. Any discrepancy in amount or recipient will delay your payment processing.",
+      "importantMessage": "Make sure to send the exact amount of <strong>{{amount}} USD</strong> to <strong>pay@matriculausa.com</strong> via Zelle. Any discrepancy in amount or recipient will delay your payment processing.",
       "importantMessageSimple": "Make sure the exact payment amount matches the amount shown above."
     }
   },
@@ -376,7 +376,7 @@
       "subtitle": "Real students, real results. See how MatriculaUSA transformed their educational journey to the United States.",
       "testimonial1": {
         "text": "MatriculaUSA made my dream of studying in America a reality. The scholarship opportunities and support were incredible!",
-        "author": "Maria Silva",
+        "author": "Gustavo Santos",
         "field": "Computer Science"
       },
       "testimonial2": {
@@ -608,6 +608,9 @@
       "allFields": "All Fields",
       "allModes": "All Modes",
       "allPermissions": "All Permissions",
+      "allUniversities": "All Universities",
+      "university": "University",
+      "universityTooltip": "Create an account and pay the Selection Process Fee to filter by university",
       "stem": "STEM",
       "business": "Business",
       "engineering": "Engineering",
@@ -708,7 +711,10 @@
       "expired": "Expired",
       "scholarshipExpired": "Scholarship Expired",
       "noLongerAccepting": "Not Available for application",
-      "canStillView": "You can still view the information, but it will not be possible to apply for this scholarship."
+      "canStillView": "You can still view the information, but it will not be possible to apply for this scholarship.",
+      "universityInternalFees": "University Internal Fees",
+      "internalFeesNote": "Fees paid directly to university. Subject to change.",
+      "days": "days"
     }
   },
   "universitiesPage": {
@@ -1361,6 +1367,41 @@
       "emailAlreadyRegistered": "This email is already registered. Please sign in or use another email."
     }
   },
+  "ssoCallback": {
+    "processing": {
+      "title": "Please wait a moment",
+      "preparing": "We are preparing the environment for you...",
+      "connecting": "Connecting to 323 Network...",
+      "preparingAccount": "Preparing your account...",
+      "creatingSession": "Creating session...",
+      "waitMessage": "This may take a few seconds...",
+      "secureConnection": "Securely connecting to Matrícula USA"
+    },
+    "success": {
+      "title": "All set!",
+      "newUser": "All set! Redirecting you...",
+      "returningUser": "Welcome back! Redirecting...",
+      "redirecting": "Redirecting you now...",
+      "welcomeNew": "Welcome to Matrícula US!",
+      "loginSuccess": "Login successful!"
+    },
+    "error": {
+      "title": "Oops, something went wrong",
+      "authenticationFailed": "Could not complete authentication. You will be redirected to the login page shortly.",
+      "tokenNotProvided": "Token not provided in URL",
+      "tokenValidationError": "Error validating token",
+      "sessionCreationError": "Error creating session",
+      "sessionNotCreated": "Session was not created correctly",
+      "noAuthMethod": "No authentication method available",
+      "tokenNotFoundInMagicLink": "Token or type not found in magic link",
+      "tokensNotFoundInRedirect": "Tokens not found in redirect",
+      "locationHeaderNotFound": "Location header not found in redirect",
+      "tokensNotFoundInResponse": "Tokens not found in response",
+      "supabaseUrlNotConfigured": "VITE_SUPABASE_URL not configured",
+      "tryAgain": "Try Again",
+      "goToLogin": "Go to Login"
+    }
+  },
   "features": {
     "whyChoose": "Why Choose MatriculaUSA?",
     "subtitle": "Everything you need to succeed in your American education journey",
@@ -1492,6 +1533,13 @@
       "matriculaRewards": "Matricula Rewards",
       "profile": "Profile",
       "supportChat": "Support Chat"
+    },
+    "chat": {
+      "welcomeMessage": {
+        "title": "Welcome to Support Chat!",
+        "body": "Hello! This is your support chat. Our team is available to help you from 9 AM to 5 PM (Arizona Time Zone). You can ask questions about scholarships, documents, and your application progress. Feel free to send messages and attachments at any time!",
+        "hours": "Support hours: 9 AM - 5 PM (Arizona Time Zone)"
+      }
     },
     "profileStatus": {
       "title": "Profile Status",
@@ -1888,6 +1936,25 @@
             "Pay the scholarship fee to complete enrollment",
             "Receive final confirmation",
             "Begin your academic program"
+          ]
+        },
+        "scholarshipFeePaidI20Required": {
+          "title": "Scholarship Fee Paid - Pending Documents",
+          "description": "Great! Your scholarship fee has been confirmed. Now you need to submit the pending document requests requested by the university.",
+          "nextSteps": [
+            "Submit pending document requests",
+            "Wait for university approval of documents",
+            "Pay the I-20 Control Fee to receive your acceptance letter",
+            "Receive the acceptance letter from the university"
+          ]
+        },
+        "allFeesPaidWaitingAcceptanceLetter": {
+          "title": "All Fees Paid - Waiting for Acceptance Letter",
+          "description": "Excellent! All fees have been paid successfully. You are now waiting for the university to send your official acceptance letter.",
+          "nextSteps": [
+            "Wait for the university to send your acceptance letter",
+            "Check the documents section regularly",
+            "Complete your enrollment after receiving the letter"
           ]
         },
         "fullyEnrolled": {
@@ -2312,6 +2379,50 @@
         "rejectionExplanationPlaceholder": "Ex.: The document is cut off. Please send it again in PDF with all pages.",
         "confirm": "Confirm"
       }
+    },
+    "identityVerification": {
+      "title": "Identity Verification",
+      "subtitle": "Verify your identity by uploading a photo with your ID document",
+      "backToDashboard": "Back to Dashboard",
+      "noPhotoFound": {
+        "title": "Identity Verification",
+        "message": "No identity photo found. Please complete the checkout process to upload your identity photo.",
+        "goToDashboard": "Go to Dashboard"
+      },
+      "status": {
+        "approved": {
+          "title": "Identity Photo Approved",
+          "message": "Your identity photo has been approved. You can proceed with your application."
+        },
+        "rejected": {
+          "title": "Identity Photo Rejected",
+          "message": "Your identity photo has been rejected. Please review the reason and upload a new photo.",
+          "rejectionReason": "Rejection Reason"
+        },
+        "pending": {
+          "title": "Identity Photo Under Review",
+          "message": "Your identity photo is currently under review by our administrators."
+        }
+      },
+      "uploadNewPhoto": {
+        "title": "Upload New Identity Photo",
+        "termsTitle": "Terms and Conditions",
+        "termsDescription": "Please read and accept the terms and conditions before uploading a new photo.",
+        "scrollToBottom": "Please scroll to the bottom to continue",
+        "acceptTerms": "I have read and accept the terms and conditions",
+        "termsNotAvailable": "Terms not available",
+        "submitButton": "Submit New Photo",
+        "submitting": "Submitting...",
+        "successMessage": "Identity photo uploaded successfully! It will be reviewed by an administrator."
+      },
+      "errors": {
+        "loadingStatus": "Error loading verification status. Please try again.",
+        "acceptingTerms": "Error accepting terms. Please try again.",
+        "termsRequired": "Please accept the terms first.",
+        "photoRequired": "Please upload your identity photo.",
+        "termAcceptanceNotFound": "Error: Term acceptance record not found.",
+        "submittingPhoto": "Error submitting photo. Please try again."
+      }
     }
   },
   "profileManagement": {
@@ -2705,6 +2816,52 @@
       "placeholder": "Enter your email",
       "subscribe": "Subscribe",
       "subscribed": "Thank you for subscribing!"
+    },
+    "unsubscribe": {
+      "invalidLink": {
+        "title": "Invalid Link",
+        "message": "The unsubscribe link is invalid or has expired.",
+        "button": "Back to Home"
+      },
+      "alreadyUnsubscribed": {
+        "title": "Already Unsubscribed",
+        "message": "You are already unsubscribed from MatriculaUSA newsletter emails.",
+        "button": "Back to Home"
+      },
+      "success": {
+        "title": "Successfully Unsubscribed",
+        "message": "You have been successfully removed from our newsletter list. You will no longer receive campaign emails from MatriculaUSA.",
+        "important": "<strong>Important:</strong> You will still receive important emails about your account, applications, and payment confirmations.",
+        "reactivate": "If you change your mind, you can reactivate your subscription by contacting us.",
+        "button": "Back to Home"
+      },
+      "error": {
+        "title": "Error",
+        "message": "An error occurred while processing your request. Please try again later.",
+        "tryAgain": "Try Again",
+        "backToHome": "Back to Home"
+      },
+      "form": {
+        "title": "Unsubscribe from Newsletter",
+        "question": "Are you sure you want to stop receiving campaign emails from MatriculaUSA?",
+        "reasonLabel": "Reason (optional)",
+        "reasonPlaceholder": "Tell us why you're unsubscribing (optional)",
+        "reasonHelp": "Your feedback helps us improve our services",
+        "note": "<strong>Note:</strong> You will still receive important emails about your account, applications, and payment confirmations.",
+        "disclaimer": "By unsubscribing, you will no longer receive campaign emails, but you will continue to receive important emails about your account and applications.",
+        "cancel": "Cancel",
+        "confirm": "Confirm Unsubscribe",
+        "processing": "Processing..."
+      },
+      "errors": {
+        "tokenMissing": "Token or user ID not provided",
+        "configError": "Configuration error: Supabase URL not found",
+        "httpError": "HTTP Error {{status}}",
+        "checkStatusError": "Error checking status ({{status}})",
+        "checkStatusGeneric": "Error checking subscription status. Please try again.",
+        "processError": "Error processing unsubscribe request",
+        "processErrorRetry": "Error processing unsubscribe request. Please try again."
+      }
     },
     "copyright": "© 2024 Matrícula USA. All rights reserved."
   },
@@ -3126,7 +3283,7 @@
       },
       "testimonials": [
         {
-          "name": "Maria Silva",
+          "name": "Gustavo Santos",
           "university": "University of California",
           "course": "Computer Science",
           "text": "I got a 40% scholarship and I'm fulfilling my dream of studying in the USA. The process was much simpler than I imagined.",
@@ -3545,5 +3702,111 @@
     "3800Expired": "Not Available for application",
     "3800Expiring": "Last hours to apply! Deadline expires tomorrow (November 6th)",
     "3800ExpiringShort": "Deadline expires tomorrow"
+  },
+  "scholarshipsPage": {
+    "filters": {
+      "levels": {
+        "all": "All Levels",
+        "graduate": "Graduate",
+        "doctorate": "Doctorate",
+        "undergraduate": "Undergraduate"
+      },
+      "courseModalities": {
+        "online": "Online",
+        "inPerson": "In-Person",
+        "hybrid": "Hybrid",
+        "mixed": "Mixed"
+      },
+      "allFields": "All Fields",
+      "allLevels": "All Levels",
+      "allModes": "All Modes",
+      "allPermissions": "All Permissions",
+      "allUniversities": "All Universities",
+      "anyField": "Any Field",
+      "business": "Business",
+      "engineering": "Engineering",
+      "stem": "STEM",
+      "online": "Online",
+      "inPerson": "In-Person",
+      "hybrid": "Hybrid",
+      "opt": "OPT",
+      "cpt": "CPT",
+      "f1": "F1 Visa",
+      "min": "Min",
+      "max": "Max",
+      "loading": "Loading...",
+      "scholarshipsFound": "scholarships found",
+      "university": "University",
+      "universityTooltip": "Create an account and pay the Selection Process Fee to filter by university"
+    },
+    "featuredSection": {
+      "title": "Featured Scholarships",
+      "subtitle": "Top Opportunities This Season",
+      "description": "Hand-picked scholarships with the best value and highest approval rates"
+    },
+    "allScholarships": {
+      "title": "All Scholarships",
+      "description": "Browse all available scholarship opportunities"
+    },
+    "noResults": {
+      "title": "No Scholarships Found",
+      "description": "Try adjusting your filters or search terms to find more opportunities.",
+      "clearFilters": "Clear Filters"
+    },
+    "pagination": {
+      "page": "Page",
+      "of": "of",
+      "previous": "Previous",
+      "next": "Next"
+    },
+    "modal": {
+      "exclusive": "Exclusive",
+      "expired": "Expired",
+      "annualSavings": "Annual Savings",
+      "coverage": "Coverage",
+      "deadline": "Deadline",
+      "days": "days",
+      "financialBreakdown": "Financial Details",
+      "originalAnnualCost": "Original Annual Cost",
+      "withScholarship": "With Scholarship",
+      "costPerCredit": "Cost per Credit",
+      "additionalBenefits": "Benefits",
+      "programDescription": "Scholarship Description",
+      "programInformation": "Scholarship Information",
+      "academicLevel": "Academic Level",
+      "studyMode": "Study Mode",
+      "programDuration": "Scholarship Duration",
+      "language": "Language",
+      "workAuthorization": "Work Authorization",
+      "requirements": "Requirements",
+      "applicationDeadline": "Application Deadline",
+      "internalFeesNote": "Internal fees are shown only after payment of the selection process fee",
+      "internalFeesTitle": "Internal University Fees",
+      "internalFeesDisclaimer": "These fees are paid directly to the university, not through our platform",
+      "internalFeesAvailable": "University Internal Fees Available",
+      "internalFeesNotice": "This scholarship may have additional internal fees from the university. These fees will be visible after payment of the Selection Process Fee.",
+      "anyField": "Any Field",
+      "inPerson": "In-Person",
+      "universityInternalFees": "University Internal Fees",
+      "viewUniversityFeesPage": "View University Fees Page"
+    },
+    "scholarshipCard": {
+      "applicationFee": "Application Fee",
+      "customFee": "Custom fee",
+      "standardFee": "Standard fee",
+      "days": "days",
+      "expired": "Expired",
+      "university": "University",
+      "studyMode": "Study Mode",
+      "workAuthorization": "Work Authorization",
+      "financialOverview": "Financial Overview",
+      "originalPrice": "Original Price",
+      "withScholarship": "With Scholarship",
+      "perCredit": "per credit",
+      "scholarshipDiscount": "Scholarship Discount",
+      "notAvailable": "N/A",
+      "details": "View Details",
+      "applyNow": "Apply Now"
+    }
   }
 }

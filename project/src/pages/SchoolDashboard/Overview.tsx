@@ -16,16 +16,25 @@ import {
   Clock,
   AlertTriangle,
   PlusCircle,
-  Home
+  Home,
+  Wallet
 } from 'lucide-react';
 import { useUniversity } from '../../context/UniversityContext';
+import { useAuth } from '../../hooks/useAuth';
 import ProfileCompletionGuard from '../../components/ProfileCompletionGuard';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { supabase } from '../../lib/supabase';
 
 const Overview: React.FC = () => {
   const { university, scholarships, applications } = useUniversity();
+  const { user } = useAuth();
   const [currentPage, setCurrentPage] = useState<number>(1);
   const itemsPerPage = 5;
+  
+  // Financial data state
+  const [totalBalance, setTotalBalance] = useState<number>(0);
+  const [totalAvailable, setTotalAvailable] = useState<number>(0);
+  const [loadingFinancial, setLoadingFinancial] = useState<boolean>(true);
 
   // Calculate stats
   const stats = {
@@ -34,6 +43,102 @@ const Overview: React.FC = () => {
     totalFunding: scholarships.reduce((sum, s) => sum + Number(s.amount), 0),
     avgAmount: scholarships.length > 0 ? scholarships.reduce((sum, s) => sum + Number(s.amount), 0) / scholarships.length : 0
   };
+
+  // Load financial data
+  useEffect(() => {
+    const loadFinancialData = async () => {
+      if (!university?.id || !user?.id) {
+        setLoadingFinancial(false);
+        return;
+      }
+
+      try {
+        setLoadingFinancial(true);
+
+        // Buscar todas as universidades do usuário
+        const { data: userUniversities } = await supabase
+          .from('universities')
+          .select('id')
+          .eq('user_id', user.id);
+
+        const universityIds = (userUniversities || []).map(u => u.id);
+        if (universityIds.length === 0) {
+          setTotalBalance(0);
+          setTotalAvailable(0);
+          setLoadingFinancial(false);
+          return;
+        }
+
+        // Buscar payment requests
+        const { data: allRequests } = await supabase
+          .from('university_payout_requests')
+          .select('status, amount_usd')
+          .in('university_id', universityIds)
+          .eq('request_type', 'university_payment');
+
+        const totalPaidOut = (allRequests || [])
+          .filter((r: any) => r.status === 'paid')
+          .reduce((sum: number, r: any) => sum + (Number(r.amount_usd) || 0), 0);
+
+        const totalApproved = (allRequests || [])
+          .filter((r: any) => r.status === 'approved')
+          .reduce((sum: number, r: any) => sum + (Number(r.amount_usd) || 0), 0);
+
+        const totalPending = (allRequests || [])
+          .filter((r: any) => r.status === 'pending')
+          .reduce((sum: number, r: any) => sum + (Number(r.amount_usd) || 0), 0);
+
+        // Buscar aplicações pagas
+        const { data: paidApplications } = await supabase
+          .from('scholarship_applications')
+          .select(`
+            scholarship_id,
+            student_id,
+            scholarships!inner(
+              university_id,
+              application_fee_amount
+            )
+          `)
+          .eq('is_application_fee_paid', true)
+          .in('scholarships.university_id', universityIds);
+
+        // Buscar dependentes dos estudantes
+        const studentIds = Array.from(new Set((paidApplications || []).map((a: any) => a.student_id).filter(Boolean)));
+        let studentsMap: Record<string, any> = {};
+        if (studentIds.length > 0) {
+          const { data: students } = await supabase
+            .from('user_profiles')
+            .select('id, dependents, system_type')
+            .in('id', studentIds);
+          (students || []).forEach((s: any) => { studentsMap[s.id] = s; });
+        }
+
+        // Calcular receita total de application fees (incluindo dependentes)
+        const totalApplicationFeeRevenue = (paidApplications || []).reduce((sum: number, app: any) => {
+          const feeAmount = Number(app.scholarships?.application_fee_amount || 0);
+          const s = studentsMap[app.student_id];
+          const deps = Number(s?.dependents) || 0;
+          const withDeps = deps > 0 ? feeAmount + deps * 100 : feeAmount;
+          return sum + withDeps;
+        }, 0);
+
+        // Total Balance = receita total
+        setTotalBalance(totalApplicationFeeRevenue);
+
+        // Total Available = receita total - payment requests (paid + approved + pending)
+        const availableBalance = Math.max(0, totalApplicationFeeRevenue - totalPaidOut - totalApproved - totalPending);
+        setTotalAvailable(availableBalance);
+      } catch (error) {
+        console.error('Error loading financial data:', error);
+        setTotalBalance(0);
+        setTotalAvailable(0);
+      } finally {
+        setLoadingFinancial(false);
+      }
+    };
+
+    loadFinancialData();
+  }, [university?.id, user?.id]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -264,15 +369,19 @@ const Overview: React.FC = () => {
         <div className="bg-white p-4 sm:p-5 lg:p-6 rounded-xl sm:rounded-2xl shadow-sm border border-slate-200 hover:shadow-lg transition-all duration-300 group">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0 pr-3">
-              <p className="text-xs sm:text-sm font-medium text-slate-500 mb-1">Total Funding</p>
-              <p className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold text-slate-900 truncate">{formatCurrency(stats.totalFunding)}</p>
+              <p className="text-xs sm:text-sm font-medium text-slate-500 mb-1">Total Available</p>
+              {loadingFinancial ? (
+                <div className="h-6 sm:h-8 lg:h-10 bg-slate-200 rounded animate-pulse mb-2"></div>
+              ) : (
+                <p className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold text-slate-900 truncate">{formatCurrency(totalAvailable)}</p>
+              )}
               <div className="flex items-center mt-2">
-                <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 text-blue-500 mr-1 flex-shrink-0" />
-                <span className="text-xs sm:text-sm font-medium text-blue-600 truncate">Amount offered</span>
+                <Wallet className="h-3 w-3 sm:h-4 sm:w-4 text-green-500 mr-1 flex-shrink-0" />
+                <span className="text-xs sm:text-sm font-medium text-green-600 truncate">Available to request</span>
               </div>
             </div>
-            <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 xl:w-14 xl:h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300 flex-shrink-0">
-              <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6 xl:h-7 xl:w-7 text-white" />
+            <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 xl:w-14 xl:h-14 bg-gradient-to-br from-green-500 to-green-600 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300 flex-shrink-0">
+              <Wallet className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6 xl:h-7 xl:w-7 text-white" />
             </div>
           </div>
         </div>
@@ -280,15 +389,19 @@ const Overview: React.FC = () => {
         <div className="bg-white p-4 sm:p-5 lg:p-6 rounded-xl sm:rounded-2xl shadow-sm border border-slate-200 hover:shadow-lg transition-all duration-300 group">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0 pr-3">
-              <p className="text-xs sm:text-sm font-medium text-slate-500 mb-1">Average Amount</p>
-              <p className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold text-slate-900 truncate">{formatCurrency(stats.avgAmount)}</p>
+              <p className="text-xs sm:text-sm font-medium text-slate-500 mb-1">Total Balance</p>
+              {loadingFinancial ? (
+                <div className="h-6 sm:h-8 lg:h-10 bg-slate-200 rounded animate-pulse mb-2"></div>
+              ) : (
+                <p className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold text-slate-900 truncate">{formatCurrency(totalBalance)}</p>
+              )}
               <div className="flex items-center mt-2">
-                <Target className="h-3 w-3 sm:h-4 sm:w-4 text-purple-500 mr-1 flex-shrink-0" />
-                <span className="text-xs sm:text-sm font-medium text-purple-600 truncate">Per scholarship</span>
+                <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 text-blue-500 mr-1 flex-shrink-0" />
+                <span className="text-xs sm:text-sm font-medium text-blue-600 truncate">Total revenue</span>
               </div>
             </div>
-            <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 xl:w-14 xl:h-14 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300 flex-shrink-0">
-              <Target className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6 xl:h-7 xl:w-7 text-white" />
+            <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 xl:w-14 xl:h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300 flex-shrink-0">
+              <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6 xl:h-7 xl:w-7 text-white" />
             </div>
           </div>
         </div>

@@ -44,15 +44,17 @@ export async function exportPaymentsToCsvViaEdge(filters: AdminPaymentsFilters) 
 // Fallback: geração client-side (usado apenas se a Edge Function falhar)
 export function downloadCsvFromPayments(sortedPayments: PaymentRecord[]) {
   const csvContent = [
-    ['Student Name', 'Email', 'University', 'Scholarship', 'Fee Type', 'Amount', 'Status', 'Payment Date'].join(','),
+    ['Student Name', 'Email', 'University', 'Scholarship', 'Field of Study', 'Fee Type', 'Amount', 'Status', 'Payment Method', 'Payment Date'].join(','),
     ...sortedPayments.map(payment => [
       payment.student_name,
       payment.student_email,
       payment.university_name,
       payment.scholarship_title || '',
+      payment.field_of_study || '',
       payment.fee_type,
       String(payment.amount),
       payment.status,
+      payment.payment_method || 'stripe',
       payment.payment_date || ''
     ].join(','))
   ].join('\n');

@@ -15,17 +15,21 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
 import { 
-  AffiliateCode, 
-  AffiliateReferral, 
-  MatriculacoinCredits, 
-  MatriculacoinTransaction,
   AffiliateStats 
 } from '../../types';
 import { Link } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
-import { Separator } from '../../components/ui/Separator';
+import { Card } from '../../components/ui/Card';
 import { Alert, AlertDescription, AlertTitle } from '../../components/ui/Alert';
 import WhatsAppIcon from '../../components/icons/WhatsApp';
+import { 
+  useAffiliateCodeQuery,
+  useMatriculacoinCreditsQuery,
+  useAffiliateReferralsQuery,
+  useMatriculacoinTransactionsQuery,
+  useParticipatingUniversitiesQuery
+} from '../../hooks/useStudentDashboardQueries';
+import { useQueryClient } from '@tanstack/react-query';
+import { invalidateStudentDashboardRewards } from '../../lib/queryKeys';
 
 const MatriculaRewards: React.FC = () => {
   const { t } = useTranslation();
@@ -41,213 +45,46 @@ const MatriculaRewards: React.FC = () => {
       <path d="M22.46 6c-.77.35-1.6.58-2.46.69a4.28 4.28 0 0 0 1.88-2.36 8.57 8.57 0 0 1-2.71 1.04 4.27 4.27 0 0 0-7.27 3.89A12.12 12.12 0 0 1 3.15 4.9a4.26 4.26 0 0 0 1.32 5.7c-.65-.02-1.26-.2-1.8-.5v.05a4.27 4.27 0 0 0 3.43 4.18c-.31.08-.64.12-.98.12-.24 0-.48-.02-.7-.07a4.27 4.27 0 0 0 3.98 2.96A8.56 8.56 0 0 1 2 19.54a12.08 12.08 0 0 0 6.56 1.92c7.88 0 12.2-6.53 12.2-12.2v-.56c.84-.61 1.57-1.36 2.14-2.22-.78.35-1.62.58-2.5.68z"/>
     </svg>
   );
-  const LinkedInLogo = () => (
-    <svg viewBox="0 0 24 24" className="h-4 w-4 fill-white" aria-hidden>
-      <path d="M20.45 20.45h-3.55v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.13 1.45-2.13 2.95v5.66H9.37V9h3.4v1.56h.05c.47-.9 1.6-1.85 3.29-1.85 3.52 0 4.17 2.32 4.17 5.34v6.4zM5.34 7.43a2.06 2.06 0 1 1 0-4.12 2.06 2.06 0 0 1 0 4.12zM7.12 20.45H3.56V9h3.56v11.45z"/>
-    </svg>
-  );
-  
   const { user } = useAuth();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [affiliateCode, setAffiliateCode] = useState<AffiliateCode | null>(null);
-  const [credits, setCredits] = useState<MatriculacoinCredits | null>(null);
-  const [referrals, setReferrals] = useState<AffiliateReferral[]>([]);
-  const [transactions, setTransactions] = useState<MatriculacoinTransaction[]>([]);
+  const queryClient = useQueryClient();
+  
+  // React Query hooks com cache
+  const { data: affiliateCode, isPending: affiliateCodeLoading } = useAffiliateCodeQuery(user?.id);
+  const { data: credits, isPending: creditsLoading } = useMatriculacoinCreditsQuery(user?.id);
+  const { data: referrals = [], isPending: referralsLoading } = useAffiliateReferralsQuery(user?.id);
+  const { data: transactions = [], isPending: transactionsLoading } = useMatriculacoinTransactionsQuery(user?.id);
+  const { data: participatingUniversities = [], isPending: universitiesLoading } = useParticipatingUniversitiesQuery();
+  
   const [stats, setStats] = useState<AffiliateStats | null>(null);
   const [copied, setCopied] = useState(false);
-  const [participatingUniversities, setParticipatingUniversities] = useState<any[]>([]);
-  const [universitiesLoading, setUniversitiesLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [universitiesPerPage] = useState(9); // 3x3 grid
   const [searchTerm, setSearchTerm] = useState('');
-  // Removido selectedType
+  
+  // Computed values
+  const loading = affiliateCodeLoading || creditsLoading || referralsLoading || transactionsLoading;
 
   useEffect(() => {
-    if (user?.id) {
-      loadAffiliateData();
-      loadParticipatingUniversities();
-    } else {
-      setLoading(false);
-    }
-    // Dispara apenas quando o identificador do usuário mudar,
-    // evitando re-fetch em eventos de refresh de token/visibility
-  }, [user?.id]);
-
-  useEffect(() => {
-    // Reset to first page when search changes
-    setCurrentPage(1);
-  }, [searchTerm]);
-
-  const loadParticipatingUniversities = async () => {
-    try {
-      setUniversitiesLoading(true);
-      setCurrentPage(1); // Reset to first page when loading new data
-      const { data, error } = await supabase
-        .from('universities')
-        .select('id, name, location, logo_url, type')
-        .eq('is_approved', true)
-        .eq('participates_in_matricula_rewards', true)
-        .order('name', { ascending: true });
-      
-      if (error) {
-        console.error('Error loading participating universities:', error);
-      } else {
-        setParticipatingUniversities(data || []);
-      }
-    } catch (error) {
-      console.error('Error loading participating universities:', error);
-    } finally {
-      setUniversitiesLoading(false);
-    }
-  };
-
-  const loadAffiliateData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      if (!user?.id) {
-        setError(t('matriculaRewards.errorLoadingData'));
-        return;
-      }
-
-      console.log('Loading affiliate data for user:', user.id);
-      
-      // Carrega código de afiliado
-      const { data: affiliateCodeData, error: affiliateError } = await supabase
-        .from('affiliate_codes')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-
-      console.log('Affiliate code data:', affiliateCodeData, 'Error:', affiliateError);
-
-      if (affiliateError && affiliateError.code !== 'PGRST116') {
-        console.error('Erro ao carregar código de afiliado:', affiliateError);
-      }
-
-      // Se não existe código, cria um
-      if (!affiliateCodeData) {
-        console.log('Creating new affiliate code for user:', user.id);
-        const { data: newCode, error: createError } = await supabase
-          .rpc('create_affiliate_code_for_user', { user_id_param: user.id });
-        
-        console.log('New code result:', newCode, 'Error:', createError);
-        
-        if (createError) {
-          console.error('Erro ao criar código de afiliado:', createError);
-          setError(t('matriculaRewards.errorLoadingData'));
-        } else {
-          // Recarrega o código criado
-          const { data: reloadedCode } = await supabase
-            .from('affiliate_codes')
-            .select('*')
-            .eq('user_id', user.id)
-            .single();
-          setAffiliateCode(reloadedCode);
-        }
-      } else {
-        setAffiliateCode(affiliateCodeData);
-      }
-
-      // Carrega créditos
-      const { data: creditsData, error: creditsError } = await supabase
-        .from('matriculacoin_credits')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-
-      console.log('Credits data:', creditsData, 'Error:', creditsError);
-
-      if (creditsError && creditsError.code !== 'PGRST116') {
-        console.error('Erro ao carregar créditos:', creditsError);
-      }
-
-      if (!creditsData) {
-        // Cria registro de créditos se não existir
-        const { data: newCredits, error: createCreditsError } = await supabase
-          .from('matriculacoin_credits')
-          .insert([
-            { user_id: user.id, balance: 0, total_earned: 0, total_spent: 0 }
-          ])
-          .select()
-          .single();
-
-        if (createCreditsError) {
-          console.error('Erro ao criar créditos:', createCreditsError);
-        } else {
-          setCredits(newCredits);
-        }
-      } else {
-        setCredits(creditsData);
-      }
-
-      // Carrega indicações (onde o usuário atual indicou alguém)
-      const { data: referralsData, error: referralsError } = await supabase
-        .from('affiliate_referrals')
-        .select('*')
-        .eq('referrer_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(5);
-
-      if (referralsError) {
-        console.error('Erro ao carregar indicações:', referralsError);
-      } else {
-        // Buscar nomes dos usuários indicados separadamente
-        if (referralsData && referralsData.length > 0) {
-          const referredIds = referralsData.map(r => r.referred_id).filter(Boolean);
-          const { data: userProfiles } = await supabase
-            .from('user_profiles')
-            .select('user_id, full_name, email')
-            .in('user_id', referredIds);
-          
-          // Adicionar dados do usuário a cada referral
-          const referralsWithUsers = referralsData.map(referral => ({
-            ...referral,
-            referred_user: userProfiles?.find(up => up.user_id === referral.referred_id)
-          }));
-          
-          setReferrals(referralsWithUsers);
-        } else {
-          setReferrals([]);
-        }
-      }
-
-      // Carrega transações
-      const { data: transactionsData, error: transactionsError } = await supabase
-        .from('matriculacoin_transactions')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(5);
-
-      if (transactionsError) {
-        console.error('Erro ao carregar transações:', transactionsError);
-      } else {
-        setTransactions(transactionsData || []);
-      }
-
-      // Calcula estatísticas
-      const totalReferrals = referralsData?.length || 0;
-      const totalEarnings = creditsData?.total_earned || 0; // Usar total_earned da tabela matriculacoin_credits
-      const currentBalance = creditsData?.balance || 0;
+    // Calcula estatísticas quando os dados estiverem disponíveis
+    if (credits && referrals) {
+      const totalReferrals = referrals.length || 0;
+      const totalEarnings = credits.total_earned || 0;
+      const currentBalance = credits.balance || 0;
 
       setStats({
         totalReferrals,
         totalEarnings,
         currentBalance,
-        recentTransactions: transactionsData || [],
-        recentReferrals: referralsData || []
+        recentTransactions: transactions || [],
+        recentReferrals: referrals || []
       });
-
-    } catch (error) {
-      console.error('Erro ao carregar dados de afiliado:', error);
-      setError(t('matriculaRewards.errorLoadingData'));
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [credits, referrals, transactions]);
+
+  useEffect(() => {
+    // Reset to first page when search changes
+    setCurrentPage(1);
+  }, [searchTerm]);
 
   const copyToClipboard = async (text: string) => {
     try {
@@ -307,6 +144,9 @@ const MatriculaRewards: React.FC = () => {
               shared_at: new Date().toISOString()
             }
           ]);
+        
+        // Invalidar cache de rewards após compartilhamento
+        invalidateStudentDashboardRewards(queryClient);
       }
     } catch (error) {
       console.error('Erro ao compartilhar:', error);
@@ -347,37 +187,51 @@ const MatriculaRewards: React.FC = () => {
     });
   };
 
+  const removeEmailFromDescription = (description: string, referredUserName?: string): string => {
+    if (!description) return description;
+    
+    let cleaned = description;
+    
+    // Se temos o nome do usuário referido, substituir o email pelo nome
+    if (referredUserName) {
+      // Padrão de email
+      const emailPattern = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+      
+      // Substituir "paid by email@domain.com" por "paid by Nome" (mais específico primeiro)
+      cleaned = cleaned.replace(
+        /\s+paid\s+by\s+[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/gi,
+        ` paid by ${referredUserName}`
+      );
+      
+      // Substituir (email@domain.com) por (Nome)
+      cleaned = cleaned.replace(
+        /\([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\)/g,
+        `(${referredUserName})`
+      );
+      
+      // Substituir qualquer email restante pelo nome
+      cleaned = cleaned.replace(emailPattern, referredUserName);
+    } else {
+      // Se não temos o nome, apenas remove o email
+      cleaned = cleaned
+        .replace(/\s+paid\s+by\s+[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/gi, '') // Remove "paid by email@domain.com"
+        .replace(/\s*\([^)]*@[^)]+\)/g, '') // Remove (email@domain.com)
+        .replace(/\s+[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '') // Remove email@domain.com
+        .trim();
+    }
+    
+    // Limpa espaços duplos
+    cleaned = cleaned.replace(/\s+/g, ' ').trim();
+    
+    return cleaned;
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="flex flex-col items-center space-y-4">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
         </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
-        <Card className="w-full max-w-lg">
-          <CardHeader>
-            <CardTitle>{t('matriculaRewards.title')}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Alert variant="destructive">
-              <AlertTitle>{t('matriculaRewards.errorLoadingData')}</AlertTitle>
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-            <Separator className="my-4" />
-            <button
-              onClick={loadAffiliateData}
-              className="inline-flex items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
-            >
-              {t('matriculaRewards.tryAgain')}
-            </button>
-          </CardContent>
-        </Card>
       </div>
     );
   }
@@ -547,7 +401,7 @@ const MatriculaRewards: React.FC = () => {
                       <div>
                         <p className="font-medium text-slate-900">
                           {referral.referred_user?.full_name 
-                            ? `${referral.referred_user.full_name} (${referral.referred_user.email})`
+                            ? referral.referred_user.full_name
                             : t('matriculaRewards.referralNumber', { id: referral.id.slice(0,8) })
                           }
                         </p>
@@ -579,7 +433,12 @@ const MatriculaRewards: React.FC = () => {
                         {tx.type==='earned'?<TrendingUp className="h-4 w-4"/>:tx.type==='spent'?<DollarSign className="h-4 w-4"/>:<Clock className="h-4 w-4"/>}
                       </span>
                       <div>
-                        <p className="font-medium text-slate-900">{tx.description || (tx.type === 'earned' ? t('matriculaRewards.earned') : tx.type === 'spent' ? t('matriculaRewards.spent') : t('matriculaRewards.pending'))}</p>
+                        <p className="font-medium text-slate-900">
+                          {tx.description 
+                            ? removeEmailFromDescription(tx.description, tx.referred_user_name)
+                            : (tx.type === 'earned' ? t('matriculaRewards.earned') : tx.type === 'spent' ? t('matriculaRewards.spent') : t('matriculaRewards.pending'))
+                          }
+                        </p>
                         <p className="text-xs text-slate-500">{formatDate(tx.created_at)}</p>
                       </div>
                     </div>

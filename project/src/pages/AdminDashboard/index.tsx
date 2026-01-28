@@ -26,6 +26,8 @@ import AdminTransferManagement from './AdminTransferManagement';
 import AutoTransferSettings from './AutoTransferSettings';
 import FinancialAnalytics from './FinancialAnalytics';
 import TermsManagement from './TermsManagement';
+import CouponManagement from './CouponManagement';
+import NewsletterManagement from './NewsletterManagement';
 import AffiliateManagement from './AffiliateManagement';
 import AdminChatPage from './AdminChatPage';
 import AdminStudentDetails from './AdminStudentDetails';
@@ -688,15 +690,15 @@ const AdminDashboard: React.FC = () => {
         <Route path="/matricula-rewards" element={<MatriculaRewardsAdmin />} />
         <Route path="/payout-requests" element={<AdminPayoutRequests />} />
         <Route path="/affiliate-payment-requests" element={<AffiliatePaymentRequests />} />
+        <Route path="affiliate-management" element={<AffiliateManagement />} />
 
         <Route path="/featured-universities" element={<FeaturedUniversitiesManagement />} />
         <Route path="/featured-scholarships" element={<FeaturedScholarshipsManagement />} />
         <Route path="/transfer-management" element={<AdminTransferManagement />} />
         <Route path="/transfer-settings" element={<AutoTransferSettings />} />
         <Route path="/financial-analytics" element={<FinancialAnalytics />} />
-        <Route path="/university-financial-management" element={<UniversityFinancialManagement />} />
-        <Route path="/affiliate-management" element={<AffiliateManagement />} />
-        <Route path="/chat" element={<AdminChatPage />} />
+        <Route path="/coupons" element={<CouponManagement />} />
+        <Route path="/newsletter" element={<NewsletterManagement />} />
         <Route path="/terms" element={<TermsManagement />} />
       </Routes>
 

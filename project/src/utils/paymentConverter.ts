@@ -148,17 +148,204 @@ function calculateNetAmountFromGross(grossAmount: number, isPIX: boolean = false
 }
 
 /**
+ * ✅ NOVA FUNÇÃO: Busca valores para EXIBIÇÃO nos dashboards (admin de afiliados e seller)
+ * Retorna valores "Zelle" (valor base esperado sem taxas do Stripe)
+ * 
+ * IMPORTANTE: Usa valores esperados baseados no system_type do usuário, não calcula a partir do gross_amount_usd
+ * Isso é mais confiável e evita problemas com conversões e cálculos de taxas
+ */
+export async function getDisplayAmounts(
+  userId: string,
+  feeTypes: ('selection_process' | 'scholarship' | 'i20_control' | 'application')[]
+): Promise<Record<string, number>> {
+  try {
+    // 1. Buscar system_type, dependents e scholarship_package_id do usuário
+    const { data: userProfile, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('system_type, dependents, scholarship_package_id')
+      .eq('user_id', userId)
+      .single();
+
+    if (profileError || !userProfile) {
+      console.error('[paymentConverter] Erro ao buscar perfil do usuário:', profileError);
+      return {};
+    }
+
+    const systemType = userProfile.system_type || 'legacy';
+    const dependents = Number(userProfile.dependents) || 0;
+
+    // 2. Buscar overrides do usuário
+    // ⚠️ IMPORTANTE: Packages NÃO alteram os valores que o aluno vai pagar
+    // Apenas overrides explícitos devem ser usados
+    const { data: overrideData, error: overrideError } = await supabase
+      .rpc('get_user_fee_overrides', { target_user_id: userId });
+
+    const overrides = overrideError || !overrideData ? {} : (Array.isArray(overrideData) ? overrideData[0] : overrideData);
+
+    // ✅ NOVO: 3. Buscar cupons promocionais usados (BLACK, etc)
+    // Mapear fee_types internos para os valores usados na tabela promotional_coupon_usage
+    const couponFeeTypeMap: Record<string, string> = {
+      'selection_process': 'selection_process',
+      'scholarship': 'scholarship_fee',
+      'i20_control': 'i20_control',
+      'application': 'application_fee'
+    };
+
+    const feeTypesForCoupon = feeTypes.map(ft => couponFeeTypeMap[ft] || ft);
+    const { data: couponUsage, error: couponError } = await supabase
+      .from('promotional_coupon_usage')
+      .select('fee_type, final_amount')
+      .eq('user_id', userId)
+      .in('fee_type', feeTypesForCoupon)
+      .order('used_at', { ascending: false });
+
+    // Mapear final_amount por fee_type (usar o mais recente para cada tipo)
+    const couponAmounts: Record<string, number> = {};
+    if (!couponError && couponUsage) {
+      for (const coupon of couponUsage) {
+        // Normalizar fee_type para a chave usada internamente
+        const feeTypeKey = coupon.fee_type === 'selection_process' ? 'selection_process' :
+                          coupon.fee_type === 'scholarship_fee' ? 'scholarship' :
+                          coupon.fee_type === 'i20_control' || coupon.fee_type === 'i20_control_fee' ? 'i20_control' :
+                          coupon.fee_type === 'application_fee' ? 'application' : null;
+        
+        if (feeTypeKey && !couponAmounts[feeTypeKey] && coupon.final_amount) {
+          couponAmounts[feeTypeKey] = Number(coupon.final_amount);
+          console.log(`[paymentConverter] ✅ [DISPLAY] Cupom promocional encontrado para ${feeTypeKey}: ${couponAmounts[feeTypeKey]} (final_amount)`);
+        }
+      }
+    }
+
+    // 4. Buscar valores reais pagos (para casos onde o aluno pagou um valor diferente do padrão)
+    const { data: payments, error: paymentsError } = await supabase
+      .from('individual_fee_payments')
+      .select('fee_type, gross_amount_usd, payment_method')
+      .eq('user_id', userId)
+      .in('fee_type', feeTypes)
+      .order('payment_date', { ascending: false, nullsFirst: false })
+      .order('created_at', { ascending: false });
+
+    // Mapear valores reais pagos (usar o mais recente para cada fee_type)
+    const realPaidMap: Record<string, number> = {};
+    if (!paymentsError && payments) {
+      for (const payment of payments) {
+        const feeTypeKey = payment.fee_type === 'selection_process' ? 'selection_process' :
+                          payment.fee_type === 'scholarship' ? 'scholarship' :
+                          payment.fee_type === 'i20_control' ? 'i20_control' :
+                          payment.fee_type === 'application' ? 'application' : null;
+        
+        if (feeTypeKey && !realPaidMap[feeTypeKey] && payment.gross_amount_usd) {
+          // Para Zelle, usar diretamente (sem taxas)
+          // Para Stripe, usar gross_amount_usd como referência (mas vamos usar valores esperados)
+          if (payment.payment_method === 'zelle') {
+            realPaidMap[feeTypeKey] = Number(payment.gross_amount_usd);
+          }
+          // Para Stripe, não usar gross_amount_usd diretamente, vamos usar valores esperados
+        }
+      }
+    }
+
+    // 4. Calcular valores esperados "Zelle" baseados no system_type
+    const amounts: Record<string, number> = {};
+
+    // Valores base por system_type
+    const baseSelectionFee = systemType === 'simplified' ? 350 : 400;
+    const baseScholarshipFee = systemType === 'simplified' ? 550 : 900;
+    const baseI20Fee = 900; // Sempre 900 para ambos os sistemas
+
+    // Selection Process Fee - Prioridade: override > cupom promocional > valor real pago (Zelle) > cálculo fixo
+    if (feeTypes.includes('selection_process')) {
+      if (overrides.selection_process_fee != null) {
+        amounts.selection_process = Number(overrides.selection_process_fee);
+      } else if (couponAmounts.selection_process) {
+        amounts.selection_process = couponAmounts.selection_process;
+        console.log(`[paymentConverter] ✅ [DISPLAY] Selection Process usando cupom promocional: ${amounts.selection_process}`);
+      } else if (realPaidMap.selection_process) {
+        amounts.selection_process = realPaidMap.selection_process;
+      } else {
+        // Para simplified, Selection Process Fee é fixo ($350), sem dependentes
+        // Dependentes só afetam Application Fee ($100 por dependente)
+        amounts.selection_process = systemType === 'simplified' 
+          ? baseSelectionFee 
+          : baseSelectionFee + (dependents * 150);
+      }
+    }
+
+    // Scholarship Fee - Prioridade: override > cupom promocional > valor real pago (Zelle) > cálculo fixo
+    if (feeTypes.includes('scholarship')) {
+      if (overrides.scholarship_fee != null) {
+        amounts.scholarship = Number(overrides.scholarship_fee);
+      } else if (couponAmounts.scholarship) {
+        amounts.scholarship = couponAmounts.scholarship;
+        console.log(`[paymentConverter] ✅ [DISPLAY] Scholarship usando cupom promocional: ${amounts.scholarship}`);
+      } else if (realPaidMap.scholarship) {
+        amounts.scholarship = realPaidMap.scholarship;
+      } else {
+        amounts.scholarship = baseScholarshipFee;
+      }
+    }
+
+    // I-20 Control Fee - Prioridade: override > cupom promocional > valor real pago (Zelle) > cálculo fixo ($900 padrão)
+    // ⚠️ IMPORTANTE: Packages NÃO alteram os valores que o aluno vai pagar
+    // Se o aluno tem I-20 de $999, deve haver um override explícito na tabela user_fee_overrides
+    if (feeTypes.includes('i20_control')) {
+      if (overrides.i20_control_fee != null) {
+        amounts.i20_control = Number(overrides.i20_control_fee);
+        console.log(`[paymentConverter] ✅ [DISPLAY] I-20 usando override: ${amounts.i20_control}`);
+      } else if (couponAmounts.i20_control) {
+        amounts.i20_control = couponAmounts.i20_control;
+        console.log(`[paymentConverter] ✅ [DISPLAY] I-20 usando cupom promocional: ${amounts.i20_control}`);
+      } else if (realPaidMap.i20_control) {
+        amounts.i20_control = realPaidMap.i20_control;
+        console.log(`[paymentConverter] ✅ [DISPLAY] I-20 usando valor Zelle: ${amounts.i20_control}`);
+      } else {
+        // Usar valor padrão: $900
+        amounts.i20_control = baseI20Fee;
+        console.log(`[paymentConverter] ✅ [DISPLAY] I-20 usando valor padrão: ${amounts.i20_control}`);
+      }
+    }
+
+    // Application Fee - Prioridade: override > cupom promocional > cálculo fixo
+    if (feeTypes.includes('application')) {
+      if (overrides.application_fee != null) {
+        amounts.application = Number(overrides.application_fee);
+      } else if (couponAmounts.application) {
+        amounts.application = couponAmounts.application;
+        console.log(`[paymentConverter] ✅ [DISPLAY] Application usando cupom promocional: ${amounts.application}`);
+      } else {
+        // Application Fee padrão: $100 + ($100 por dependente)
+        amounts.application = 100 + (dependents * 100);
+      }
+    }
+
+    console.log(`[paymentConverter] ✅ [DISPLAY] Valores "Zelle" para user_id ${userId} (${systemType}):`, amounts);
+
+    return amounts;
+  } catch (error) {
+    console.error('[paymentConverter] Exceção ao buscar valores para exibição:', error);
+    return {};
+  }
+}
+
+/**
  * Busca valores líquidos pagos (sem taxas do Stripe) de individual_fee_payments
- * ✅ CORREÇÃO: Agora retorna valores LÍQUIDOS (net) ao invés de brutos (gross)
+ * ✅ CORREÇÃO: Aplica remoção de taxas APENAS para pagamentos a partir de 19/11/2025
+ * Para pagamentos anteriores ou sem registro, retorna valor bruto (sem remover taxas)
+ * 
+ * Data de corte: 19/11/2025 (implementação de taxas do Stripe)
+ * - Pagamentos >= 19/11/2025: retorna valor líquido (após remover taxas)
+ * - Pagamentos < 19/11/2025: retorna valor bruto (sem remover taxas)
+ * - Sem registro na tabela: trata como antigo (< 19/11/2025), retorna valor bruto
  */
 export async function getRealPaidAmounts(
   userId: string,
   feeTypes: ('selection_process' | 'scholarship' | 'i20_control' | 'application')[]
 ): Promise<Record<string, number>> {
   try {
+    // ✅ CORREÇÃO: Buscar também payment_date e gross_amount_usd para determinar se deve remover taxas
     const { data: payments, error } = await supabase
       .from('individual_fee_payments')
-      .select('fee_type, amount, payment_method, payment_intent_id')
+      .select('fee_type, amount, payment_method, payment_intent_id, payment_date, gross_amount_usd')
       .eq('user_id', userId)
       .in('fee_type', feeTypes);
 
@@ -168,10 +355,19 @@ export async function getRealPaidAmounts(
     }
 
     const amounts: Record<string, number> = {};
+    
+    // Data de corte: 19/11/2025 (implementação de taxas do Stripe)
+    const STRIPE_FEE_IMPLEMENTATION_DATE = new Date('2025-11-19T00:00:00Z');
 
     // Processar cada pagamento
     for (const payment of payments || []) {
       let amountUSD = Number(payment.amount);
+      
+      // ✅ NOVO: Verificar data do pagamento
+      const paymentDate = payment.payment_date ? new Date(payment.payment_date) : null;
+      const shouldRemoveStripeFees = paymentDate && paymentDate >= STRIPE_FEE_IMPLEMENTATION_DATE;
+      
+      console.log(`[paymentConverter] 🔍 Payment date: ${paymentDate?.toISOString() || 'NULL'}, shouldRemoveFees: ${shouldRemoveStripeFees}`);
 
       // ✅ LÓGICA BASEADA EM METADADOS DO STRIPE (não em thresholds arbitrários)
       // Se for pagamento Stripe COM payment_intent_id, usar metadados para determinar moeda
@@ -189,9 +385,10 @@ export async function getRealPaidAmounts(
         const isBRL = originalCurrency === 'brl' || isPIX;
         
         // ✅ PRIORIDADE 1: Usar base_amount do metadata se disponível (já é líquido e em USD)
-        if (paymentInfo.base_amount !== null && paymentInfo.base_amount !== undefined) {
+        // Mas APENAS se for pagamento após 19/11/2025
+        if (shouldRemoveStripeFees && paymentInfo.base_amount !== null && paymentInfo.base_amount !== undefined) {
           amountUSD = paymentInfo.base_amount;
-          console.log(`[paymentConverter] ✅ Usando base_amount (líquido) do metadata: ${amountUSD.toFixed(2)} USD para payment_intent_id: ${payment.payment_intent_id}`);
+          console.log(`[paymentConverter] ✅ Usando base_amount (líquido) do metadata: ${amountUSD.toFixed(2)} USD para payment_intent_id: ${payment.payment_intent_id} (após 19/11/2025)`);
         } else if (isBRL) {
           // ✅ MOEDA ORIGINAL É BRL: converter BRL para USD usando exchange_rate
           const exchangeRate = paymentInfo.exchange_rate || await getExchangeRateFromStripe(payment.payment_intent_id);
@@ -199,26 +396,43 @@ export async function getRealPaidAmounts(
           if (exchangeRate && exchangeRate > 0) {
             // Converter BRL bruto para USD bruto
             const grossAmountUSD = convertBRLToUSD(amountUSD, exchangeRate);
-            // Remover taxas do Stripe para obter valor líquido
-            amountUSD = calculateNetAmountFromGross(grossAmountUSD, true);
-            console.log(`[paymentConverter] ✅ Convertido BRL para USD (via metadata): ${payment.amount} BRL → ${grossAmountUSD.toFixed(2)} USD (bruto) → ${amountUSD.toFixed(2)} USD (líquido)`);
+            // ✅ NOVO: Remover taxas APENAS se for pagamento após 19/11/2025
+            if (shouldRemoveStripeFees) {
+              amountUSD = calculateNetAmountFromGross(grossAmountUSD, true);
+              console.log(`[paymentConverter] ✅ Convertido BRL para USD (via metadata) - APÓS 19/11/2025: ${payment.amount} BRL → ${grossAmountUSD.toFixed(2)} USD (bruto) → ${amountUSD.toFixed(2)} USD (líquido)`);
+            } else {
+              amountUSD = grossAmountUSD;
+              console.log(`[paymentConverter] ✅ Convertido BRL para USD (via metadata) - ANTES de 19/11/2025: ${payment.amount} BRL → ${amountUSD.toFixed(2)} USD (bruto, sem remover taxas)`);
+            }
           } else {
             console.warn(`[paymentConverter] ⚠️ Moeda é BRL mas exchange_rate não encontrada para payment_intent_id: ${payment.payment_intent_id}, pulando pagamento`);
             continue;
           }
         } else {
-          // ✅ MOEDA ORIGINAL É USD: apenas remover taxas do Stripe
-          // Determinar se é PIX ou cartão para aplicar a taxa correta
-          if (isPIX) {
-            amountUSD = calculateNetAmountFromGross(amountUSD, true);
-            console.log(`[paymentConverter] ✅ PIX em USD: ${Number(payment.amount).toFixed(2)} USD (bruto) → ${amountUSD.toFixed(2)} USD (líquido)`);
+          // ✅ MOEDA ORIGINAL É USD
+          // ✅ NOVO: Remover taxas APENAS se for pagamento após 19/11/2025
+          if (shouldRemoveStripeFees) {
+            // Determinar se é PIX ou cartão para aplicar a taxa correta
+            if (isPIX) {
+              amountUSD = calculateNetAmountFromGross(amountUSD, true);
+              console.log(`[paymentConverter] ✅ PIX em USD (após 19/11/2025): ${Number(payment.amount).toFixed(2)} USD (bruto) → ${amountUSD.toFixed(2)} USD (líquido)`);
+            } else {
+              amountUSD = calculateNetAmountFromGross(amountUSD, false);
+              console.log(`[paymentConverter] ✅ Cartão em USD (após 19/11/2025): ${Number(payment.amount).toFixed(2)} USD (bruto) → ${amountUSD.toFixed(2)} USD (líquido)`);
+            }
           } else {
-            amountUSD = calculateNetAmountFromGross(amountUSD, false);
-            console.log(`[paymentConverter] ✅ Cartão em USD: ${Number(payment.amount).toFixed(2)} USD (bruto) → ${amountUSD.toFixed(2)} USD (líquido)`);
+            // ✅ ANTES de 19/11/2025: usar valor bruto (gross_amount_usd se disponível, senão amount)
+            if (payment.gross_amount_usd) {
+              amountUSD = Number(payment.gross_amount_usd);
+              console.log(`[paymentConverter] ✅ Pagamento ANTES de 19/11/2025: usando gross_amount_usd: ${amountUSD.toFixed(2)} USD (bruto)`);
+            } else {
+              amountUSD = Number(payment.amount);
+              console.log(`[paymentConverter] ✅ Pagamento ANTES de 19/11/2025: usando amount: ${amountUSD.toFixed(2)} USD (bruto)`);
+            }
           }
         }
       } else if (payment.payment_method === 'zelle') {
-        // ✅ Zelle sempre está em USD, usar diretamente
+        // ✅ Zelle sempre está em USD, usar diretamente (nunca tem taxas do Stripe)
         amountUSD = amountUSD;
         console.log(`[paymentConverter] ✅ Zelle payment: ${amountUSD.toFixed(2)} USD`);
       } else if (payment.payment_method === 'stripe' && !payment.payment_intent_id) {
@@ -319,4 +533,3 @@ export async function getGrossPaidAmounts(
     return {};
   }
 }
-

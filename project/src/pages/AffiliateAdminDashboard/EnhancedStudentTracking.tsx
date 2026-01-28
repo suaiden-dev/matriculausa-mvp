@@ -21,7 +21,7 @@ import {
 import { supabase } from '../../lib/supabase';
 import { getDocumentStatusDisplay } from '../../utils/documentStatusMapper';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
-import { getRealPaidAmounts } from '../../utils/paymentConverter';
+import { getDisplayAmounts } from '../../utils/paymentConverter';
 
 interface StudentInfo {
   student_id: string;
@@ -1193,9 +1193,8 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
       // Se não há pagamentos Zelle, usar valores reais pagos de individual_fee_payments
       console.log('🔍 No Zelle payments found, using real paid amounts from individual_fee_payments');
       
-      // Buscar valores reais pagos (já com desconto e convertido se PIX)
-      // ✅ Usa getRealPaidAmounts que busca base_amount do Stripe (valor líquido sem taxa)
-      const realPaidAmounts = await getRealPaidAmounts(studentId, ['selection_process', 'scholarship', 'i20_control']);
+      // ✅ CORREÇÃO: Usar getDisplayAmounts para exibição (valores "Zelle" sem taxas)
+      const realPaidAmounts = await getDisplayAmounts(studentId, ['selection_process', 'scholarship', 'i20_control']);
       
       console.log('🔍 [EnhancedStudentTracking] Real paid amounts for student:', {
         studentId,

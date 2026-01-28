@@ -18,7 +18,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
 import FinancialOverview from './FinancialOverview';
 import { AffiliatePaymentRequestService } from '../../services/AffiliatePaymentRequestService';
-import { getRealPaidAmounts } from '../../utils/paymentConverter';
+import { getDisplayAmounts } from '../../utils/paymentConverter';
 
 const PaymentManagement: React.FC = () => {
   const { user } = useAuth();
@@ -196,7 +196,8 @@ const PaymentManagement: React.FC = () => {
         if (!p.user_id) return;
         
         try {
-          const amounts = await getRealPaidAmounts(p.user_id, ['selection_process', 'scholarship', 'i20_control']);
+          // ✅ CORREÇÃO: Usar getDisplayAmounts para exibição (valores "Zelle" sem taxas)
+          const amounts = await getDisplayAmounts(p.user_id, ['selection_process', 'scholarship', 'i20_control']);
           realPaidAmountsMap[p.user_id] = {
             selection_process: amounts.selection_process,
             scholarship: amounts.scholarship,
@@ -225,7 +226,9 @@ const PaymentManagement: React.FC = () => {
             const baseSelectionFee = p?.system_type === 'simplified' ? 350 : 400;
             const sel = ov.selection_process_fee != null
               ? Number(ov.selection_process_fee)
-              : baseSelectionFee + (deps * 150);
+              // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
+              // Dependentes só afetam Application Fee ($100 por dependente)
+              : (p?.system_type === 'simplified' ? baseSelectionFee : baseSelectionFee + (deps * 150));
             selPaid = sel || 0;
           }
         }
@@ -341,7 +344,9 @@ const PaymentManagement: React.FC = () => {
             const baseSelectionFee = p?.system_type === 'simplified' ? 350 : 400;
             const sel = ov.selection_process_fee != null
               ? Number(ov.selection_process_fee)
-              : baseSelectionFee + (deps * 150);
+              // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
+              // Dependentes só afetam Application Fee ($100 por dependente)
+              : (p?.system_type === 'simplified' ? baseSelectionFee : baseSelectionFee + (deps * 150));
             selManual = sel || 0;
           }
         }

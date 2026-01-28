@@ -52,7 +52,7 @@ const FeaturedScholarshipsManagement: React.FC = () => {
         .from('scholarships')
         .select(`
           *,
-          universities (id, name, location, logo_url)
+          universities (id, name, location, logo_url, university_fees_page_url)
         `)
         .eq('is_active', true)
         .order('created_at', { ascending: false });

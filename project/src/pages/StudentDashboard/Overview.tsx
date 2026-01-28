@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   Award, 
@@ -24,10 +24,17 @@ import { StripeCheckout } from '../../components/StripeCheckout';
 import { useAuth } from '../../hooks/useAuth';
 import { useReferralCode } from '../../hooks/useReferralCode';
 import { ProgressBar } from '../../components/ProgressBar';
-import StepByStepButton from '../../components/OnboardingTour/StepByStepButton';
 import StepByStepGuide from '../../components/OnboardingTour/StepByStepGuide';
 import { useStepByStepGuide } from '../../hooks/useStepByStepGuide';
 import { supabase } from '../../lib/supabase';
+import { useQueryClient } from '@tanstack/react-query';
+import { 
+  useStudentDocumentsQuery, 
+  useStudentPaidAmountsQuery, 
+  usePromotionalCouponQuery, 
+  useIdentityPhotoStatusQuery 
+} from '../../hooks/useStudentDashboardQueries';
+import { invalidateStudentDashboardDocuments, invalidateStudentDashboardCoupons } from '../../lib/queryKeys';
 import './Overview.css'; // Adicionar um arquivo de estilos dedicado para padronização visual
 
 // Componente de skeleton para valores de taxa
@@ -56,27 +63,23 @@ const Overview: React.FC<OverviewProps> = ({
   recentApplications = []
 }) => {
   const { t } = useTranslation();
-  
+  const queryClient = useQueryClient();
 
   const { user, userProfile, refetchUserProfile } = useAuth();
   const { activeDiscount } = useReferralCode();
-  const { getFeeAmount, userFeeOverrides } = useFeeConfig(user?.id);
-  const { selectionProcessFee, scholarshipFee, i20ControlFee, selectionProcessFeeAmount, scholarshipFeeAmount, i20ControlFeeAmount } = useDynamicFees();
+  const { userFeeOverrides } = useFeeConfig(user?.id);
+  const { selectionProcessFeeAmount, scholarshipFeeAmount, i20ControlFeeAmount } = useDynamicFees();
   const { isGuideOpen, openGuide, closeGuide } = useStepByStepGuide();
   const { isBlocked, pendingPayment, loading: paymentBlockedLoading } = usePaymentBlocked();
   const [visibleApplications, setVisibleApplications] = useState(5); // Mostrar 5 inicialmente
-  const [feesLoading, setFeesLoading] = useState(true);
-  const [studentDocuments, setStudentDocuments] = useState<any[]>([]);
-  const [documentsLoading, setDocumentsLoading] = useState(true);
-  const [promotionalCouponDiscount, setPromotionalCouponDiscount] = useState<{ discountAmount: number; finalAmount: number } | null>(null);
-  const [scholarshipFeePromotionalCoupon, setScholarshipFeePromotionalCoupon] = useState<{ discountAmount: number; finalAmount: number } | null>(null);
-  const [i20PromotionalCoupon, setI20PromotionalCoupon] = useState<{ discountAmount: number; finalAmount: number } | null>(null);
-  // ✅ realPaidAmounts agora usado para exibição com gross_amount_usd quando disponível
-  const [realPaidAmounts, setRealPaidAmounts] = useState<{
-    selection_process?: number;
-    scholarship?: number;
-    i20_control?: number;
-  }>({});
+  
+  // React Query hooks para dados com cache
+  // isPending = sem dados no cache ainda (primeira carga)
+  // isFetching = buscando em background (pode ter dados em cache)
+  const { data: studentDocuments = [], isPending: documentsLoading } = useStudentDocumentsQuery(user?.id);
+  const { data: realPaidAmounts = {}, isPending: loadingPaidAmounts } = useStudentPaidAmountsQuery(user?.id);
+  const { data: selectionProcessPromotionalCoupon } = usePromotionalCouponQuery(user?.id, 'selection_process');
+  const { data: identityPhotoStatus, isPending: identityPhotoLoading } = useIdentityPhotoStatusQuery(user?.id);
   
   // Verificar se há pagamento Zelle pendente do tipo selection_process
   const hasPendingSelectionProcessPayment = isBlocked && pendingPayment && pendingPayment.fee_type === 'selection_process';
@@ -87,84 +90,6 @@ const Overview: React.FC<OverviewProps> = ({
   const handleLoadMore = () => {
     setVisibleApplications(prev => Math.min(prev + 5, recentApplications.length));
   };
-
-  // Função para buscar documentos do estudante
-  const fetchStudentDocuments = React.useCallback(async () => {
-    if (!user?.id) {
-      setDocumentsLoading(false);
-      return;
-    }
-
-    try {
-      const { data, error } = await supabase
-        .from('student_documents')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('uploaded_at', { ascending: false });
-
-      if (error) {
-        console.error('Erro ao buscar documentos:', error);
-        setStudentDocuments([]);
-      } else {
-        setStudentDocuments(data || []);
-      }
-    } catch (error) {
-      console.error('Erro ao buscar documentos:', error);
-      setStudentDocuments([]);
-    } finally {
-      setDocumentsLoading(false);
-    }
-  }, [user?.id]);
-
-  // Função para buscar valores reais pagos de individual_fee_payments
-  // Usa gross_amount_usd quando disponível, senão usa amount
-  // IMPORTANTE: Não usa valores de pagamentos PIX (que estão em BRL), apenas valores em USD
-  const fetchRealPaidAmounts = React.useCallback(async () => {
-    if (!user?.id) {
-      setRealPaidAmounts({});
-      return;
-    }
-
-    try {
-      const { data: payments, error } = await supabase
-        .from('individual_fee_payments')
-        .select('fee_type, amount, gross_amount_usd, payment_method')
-        .eq('user_id', user.id);
-      
-      if (error) {
-        console.error('Erro ao buscar valores pagos:', error);
-        setRealPaidAmounts({});
-        return;
-      }
-      
-      const amounts: typeof realPaidAmounts = {};
-      payments?.forEach(payment => {
-        // Usar gross_amount_usd quando disponível, senão usar amount
-        const displayAmount = payment.gross_amount_usd 
-          ? Number(payment.gross_amount_usd) 
-          : Number(payment.amount);
-        
-        if (payment.fee_type === 'selection_process') {
-          amounts.selection_process = displayAmount;
-        } else if (payment.fee_type === 'scholarship') {
-          amounts.scholarship = displayAmount;
-        } else if (payment.fee_type === 'i20_control') {
-          amounts.i20_control = displayAmount;
-        }
-      });
-      
-      setRealPaidAmounts(amounts);
-    } catch (error) {
-      console.error('Erro ao buscar valores pagos:', error);
-      setRealPaidAmounts({});
-    }
-  }, [user?.id]);
-
-  // Buscar documentos do estudante
-  useEffect(() => {
-    fetchStudentDocuments();
-    fetchRealPaidAmounts();
-  }, [fetchStudentDocuments, fetchRealPaidAmounts]);
 
   // Configurar real-time subscription para atualizações de documentos
   useEffect(() => {
@@ -181,8 +106,9 @@ const Overview: React.FC<OverviewProps> = ({
           filter: `user_id=eq.${user.id}`
         },
         () => {
-          // Refetch documentos quando houver mudanças
-          fetchStudentDocuments();
+          // Invalidar cache do React Query quando houver mudanças
+          console.log('[Overview] Realtime: Invalidando cache de documentos');
+          invalidateStudentDashboardDocuments(queryClient);
         }
       )
       .subscribe();
@@ -190,73 +116,52 @@ const Overview: React.FC<OverviewProps> = ({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user?.id, fetchStudentDocuments]);
-
-  // Configurar real-time subscription para atualizações de pagamentos
-  useEffect(() => {
-    if (!user?.id) return;
-
-    const channel = supabase
-      .channel(`student-payments-${user.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'individual_fee_payments',
-          filter: `user_id=eq.${user.id}`
-        },
-        () => {
-          // Refetch valores pagos quando houver mudanças
-          fetchRealPaidAmounts();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user?.id, fetchRealPaidAmounts]);
+  }, [user?.id, queryClient]);
 
   // Refetch perfil quando necessário (ex: após atualização)
   useEffect(() => {
     if (user?.id) {
       refetchUserProfile();
-      fetchRealPaidAmounts(); // Atualizar valores pagos quando perfil for atualizado
     }
-  }, [user?.id, refetchUserProfile, fetchRealPaidAmounts]);
+  }, [user?.id, refetchUserProfile]);
 
-  // Atualizar documentos quando o componente receber foco (ex: ao voltar da página de perfil)
+  // Atualizar dados quando o componente receber foco (ex: ao voltar da página de perfil)
   useEffect(() => {
     const handleFocus = () => {
       if (user?.id && !documentsLoading) {
-        fetchStudentDocuments();
+        console.log('[Overview] Window focus: Invalidando caches');
+        invalidateStudentDashboardDocuments(queryClient);
         refetchUserProfile();
-        fetchRealPaidAmounts(); // Atualizar valores pagos quando página receber foco
       }
     };
 
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
-  }, [user?.id, documentsLoading, refetchUserProfile, fetchStudentDocuments, fetchRealPaidAmounts]);
+  }, [user?.id, documentsLoading, refetchUserProfile, queryClient]);
 
-
-  // Exibir skeleton até os dados de perfil e taxas estarem prontos para evitar flicker
+  // Ouvir eventos de validação de cupom promocional
   useEffect(() => {
-    // Considera carregado quando perfil está resolvido e as taxas do useDynamicFees estão carregadas
-    const debounce = setTimeout(() => {
-      const hasProfileResolved = user !== undefined; // quando hook de auth já rodou
-      const feesLoaded = selectionProcessFeeAmount !== undefined && 
-                        scholarshipFeeAmount !== undefined && 
-                        i20ControlFeeAmount !== undefined;
-      
-      if (hasProfileResolved && feesLoaded) {
-        setFeesLoading(false);
+    const handleCouponValidation = (event: CustomEvent) => {
+      const feeType = event.detail?.fee_type || 'selection_process';
+      if (feeType === 'selection_process') {
+        console.log('[Overview] Cupom validado - invalidando cache');
+        invalidateStudentDashboardCoupons(queryClient);
       }
-    }, 250);
+    };
 
-    return () => clearTimeout(debounce);
-  }, [user, userProfile, selectionProcessFeeAmount, scholarshipFeeAmount, i20ControlFeeAmount]);
+    const handleCouponRemoved = () => {
+      console.log('[Overview] Cupom removido - invalidando cache');
+      invalidateStudentDashboardCoupons(queryClient);
+    };
+
+    window.addEventListener('promotionalCouponValidated', handleCouponValidation as EventListener);
+    window.addEventListener('promotionalCouponRemoved', handleCouponRemoved);
+    
+    return () => {
+      window.removeEventListener('promotionalCouponValidated', handleCouponValidation as EventListener);
+      window.removeEventListener('promotionalCouponRemoved', handleCouponRemoved);
+    };
+  }, [queryClient]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -307,8 +212,8 @@ const Overview: React.FC<OverviewProps> = ({
     const requiredDocTypes = ['passport', 'diploma', 'funds_proof'];
     const uploadedDocTypes = new Set(
       studentDocuments
-        .filter(doc => doc.file_url && doc.status !== 'rejected')
-        .map(doc => doc.type)
+        .filter((doc: any) => doc.file_url && doc.status !== 'rejected')
+        .map((doc: any) => doc.type)
     );
     
     return requiredDocTypes.every(type => uploadedDocTypes.has(type));
@@ -350,15 +255,17 @@ const Overview: React.FC<OverviewProps> = ({
   const hasApplicationFeePaid = recentApplications.some(app => app.is_application_fee_paid);
   const hasScholarshipFeePaid = recentApplications.some(app => app.is_scholarship_fee_paid);
 
+  // React Query hook já busca valores pagos automaticamente com cache
+
   // Base fee amounts with user overrides - usar valores do useDynamicFees
   const selectionBase = selectionProcessFeeAmount || 0;
   const scholarshipBase = scholarshipFeeAmount || 0;
   const i20Base = i20ControlFeeAmount || 0;
 
-  // Verificar se as taxas estão carregando
-  const isFeesLoading = selectionProcessFeeAmount === undefined || 
-                       scholarshipFeeAmount === undefined || 
-                       i20ControlFeeAmount === undefined;
+  // Verificar se as taxas estão carregando (só verdadeiro na primeira carga sem cache)
+  const isFeesLoading = (selectionProcessFeeAmount === undefined || 
+                        scholarshipFeeAmount === undefined || 
+                        i20ControlFeeAmount === undefined) && !userProfile;
 
   // ✅ CORREÇÃO: selectionBase já vem com dependentes calculados do useDynamicFees
   // Não recalcular dependentes aqui para evitar duplicação
@@ -371,146 +278,83 @@ const Overview: React.FC<OverviewProps> = ({
   const selectionWithDependents = selectionBase; // Já inclui dependentes
   const i20WithDependents = i20Base + i20Extra;
 
-  // Buscar cupons promocionais validados do banco de dados para cada tipo de taxa
-  useEffect(() => {
-    const fetchPromotionalCoupons = async () => {
-      if (!user?.id) return;
-
-      try {
-        // Buscar cupom para selection_process
-        const { data: selectionCoupon, error: selectionError } = await supabase
-          .from('promotional_coupon_usage')
-          .select('original_amount, discount_amount, final_amount, coupon_code, metadata, payment_id, created_at')
-          .eq('user_id', user.id)
-          .eq('fee_type', 'selection_process')
-          .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (!selectionError && selectionCoupon) {
-          const isValidation = selectionCoupon.metadata?.is_validation === true || 
-                               (selectionCoupon.payment_id && selectionCoupon.payment_id.startsWith('validation_'));
-          if (isValidation || (new Date(selectionCoupon.created_at).getTime() > Date.now() - 24 * 60 * 60 * 1000)) {
-            setPromotionalCouponDiscount({
-              discountAmount: Number(selectionCoupon.discount_amount),
-              finalAmount: Number(selectionCoupon.final_amount)
-            });
-          } else {
-            setPromotionalCouponDiscount(null);
-          }
-        } else {
-          setPromotionalCouponDiscount(null);
-        }
-
-        // Buscar cupom para scholarship_fee
-        const { data: scholarshipCoupon, error: scholarshipError } = await supabase
-          .from('promotional_coupon_usage')
-          .select('original_amount, discount_amount, final_amount, coupon_code, metadata, payment_id, created_at')
-          .eq('user_id', user.id)
-          .eq('fee_type', 'scholarship_fee')
-          .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (!scholarshipError && scholarshipCoupon) {
-          const isValidation = scholarshipCoupon.metadata?.is_validation === true || 
-                               (scholarshipCoupon.payment_id && scholarshipCoupon.payment_id.startsWith('validation_'));
-          if (isValidation || (new Date(scholarshipCoupon.created_at).getTime() > Date.now() - 24 * 60 * 60 * 1000)) {
-            setScholarshipFeePromotionalCoupon({
-              discountAmount: Number(scholarshipCoupon.discount_amount),
-              finalAmount: Number(scholarshipCoupon.final_amount)
-            });
-          } else {
-            setScholarshipFeePromotionalCoupon(null);
-          }
-        } else {
-          setScholarshipFeePromotionalCoupon(null);
-        }
-
-        // Buscar cupom para i20_control
-        const { data: i20Coupon, error: i20Error } = await supabase
-          .from('promotional_coupon_usage')
-          .select('original_amount, discount_amount, final_amount, coupon_code, metadata, payment_id, created_at')
-          .eq('user_id', user.id)
-          .eq('fee_type', 'i20_control')
-          .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (!i20Error && i20Coupon) {
-          const isValidation = i20Coupon.metadata?.is_validation === true || 
-                               (i20Coupon.payment_id && i20Coupon.payment_id.startsWith('validation_'));
-          if (isValidation || (new Date(i20Coupon.created_at).getTime() > Date.now() - 24 * 60 * 60 * 1000)) {
-            setI20PromotionalCoupon({
-              discountAmount: Number(i20Coupon.discount_amount),
-              finalAmount: Number(i20Coupon.final_amount)
-            });
-          } else {
-            setI20PromotionalCoupon(null);
-          }
-        } else {
-          setI20PromotionalCoupon(null);
-        }
-      } catch (error) {
-        console.error('[Overview] Erro ao buscar cupons promocionais:', error);
-      }
-    };
-
-    fetchPromotionalCoupons();
-
-    // Escutar eventos customizados de validação de cupom
-    const handleCouponValidation = (event: CustomEvent) => {
-      if (event.detail?.isValid && event.detail?.discountAmount) {
-        // Verificar qual tipo de taxa baseado no window ou evento
-        const couponCode = (window as any).__checkout_promotional_coupon;
-        if (couponCode) {
-          // O tipo será determinado pela lógica de busca acima
-          fetchPromotionalCoupons();
-        }
-      }
-    };
-
-    window.addEventListener('promotionalCouponValidated', handleCouponValidation as EventListener);
-    
-    return () => {
-      window.removeEventListener('promotionalCouponValidated', handleCouponValidation as EventListener);
-    };
-  }, [user?.id]);
-
-  // ✅ REMOVIDO: Lógica de buscar cupom de pagamentos Zelle pendentes
-  // Agora buscamos diretamente do promotional_coupon_usage no useEffect acima
-
   // Valores das taxas para o ProgressBar (Application fee é variável)
-  // ✅ NOVO: Priorizar gross_amount_usd de individual_fee_payments quando disponível
-  // Se não houver pagamento registrado, usar valores de cupons promocionais ou valores base
-  const selectionFeeToDisplay = realPaidAmounts.selection_process !== undefined
-    ? realPaidAmounts.selection_process // Valor bruto (gross_amount_usd) ou amount quando disponível
-    : promotionalCouponDiscount
-      ? promotionalCouponDiscount.finalAmount // Valor com desconto do cupom promocional
-      : activeDiscount?.has_discount 
-        ? Math.max(selectionWithDependents - (activeDiscount.discount_amount || 0), 0)
-        : selectionWithDependents; // Valor base normal
+  // ✅ CORREÇÃO: Aplicar desconto na barra de progresso se houver activeDiscount ou cupom promocional
+  const selectionFeeWithDiscount = (() => {
+    // Prioridade: cupom promocional > activeDiscount
+    if (selectionProcessPromotionalCoupon) {
+      return selectionProcessPromotionalCoupon.finalAmount;
+    }
+    if (activeDiscount?.has_discount) {
+      return Math.max(selectionWithDependents - (activeDiscount.discount_amount || 0), 0);
+    }
+    return selectionWithDependents;
+  })();
 
-  const scholarshipFeeToDisplay = realPaidAmounts.scholarship !== undefined
-    ? realPaidAmounts.scholarship // Valor bruto (gross_amount_usd) ou amount quando disponível
-    : scholarshipFeePromotionalCoupon
-      ? scholarshipFeePromotionalCoupon.finalAmount // Valor com desconto do cupom promocional
-      : scholarshipBase; // Valor base normal
+  // ✅ CORREÇÃO: Prioridade: Valor real pago > Override > Valor esperado
+  const getSelectionProcessFeeDisplay = () => {
+    // Só mostrar skeleton se não houver dados em cache E estiver carregando pela primeira vez
+    if (loadingPaidAmounts && !realPaidAmounts) return <FeeSkeleton />;
+    
+    // PRIORIDADE 1 (MÁXIMA): Valor real pago quando já foi pago
+    // Se já foi pago, usar o valor realmente pago (gross_amount_usd ou amount)
+    // Isso tem prioridade sobre overrides, pois representa o valor efetivamente pago
+    if (userProfile?.has_paid_selection_process_fee && realPaidAmounts?.selection_process !== undefined && realPaidAmounts.selection_process > 0) {
+      console.log('🔍 [Overview] Selection Process Fee - Usando valor real pago:', realPaidAmounts.selection_process);
+      return `$${realPaidAmounts.selection_process.toFixed(2)}`;
+    }
+    
+    // PRIORIDADE 2: Override (só usado se ainda não foi pago)
+    if (userFeeOverrides?.selection_process_fee !== undefined) {
+      console.log('🔍 [Overview] Selection Process Fee - Usando override:', userFeeOverrides.selection_process_fee);
+      return `$${userFeeOverrides.selection_process_fee.toFixed(2)}`;
+    }
+    
+    // PRIORIDADE 3: Valor esperado (com desconto se aplicável)
+    return `$${typeof selectionFeeWithDiscount === 'number' ? selectionFeeWithDiscount.toFixed(2) : selectionFeeWithDiscount}`;
+  };
 
-  const i20FeeToDisplay = realPaidAmounts.i20_control !== undefined
-    ? realPaidAmounts.i20_control // Valor bruto (gross_amount_usd) ou amount quando disponível
-    : i20PromotionalCoupon
-      ? i20PromotionalCoupon.finalAmount // Valor com desconto do cupom promocional
-      : i20WithDependents; // Valor base normal
+  const getScholarshipFeeDisplay = () => {
+    // Só mostrar skeleton se não houver dados em cache E estiver carregando pela primeira vez
+    if (loadingPaidAmounts && !realPaidAmounts) return <FeeSkeleton />;
+    
+    // PRIORIDADE 1: Override (MÁXIMA PRIORIDADE)
+    if (userFeeOverrides?.scholarship_fee !== undefined) {
+      return `$${userFeeOverrides.scholarship_fee.toFixed(2)}`;
+    }
+    
+    // PRIORIDADE 2: Valor real pago quando já foi pago
+    if (hasScholarshipFeePaid && realPaidAmounts?.scholarship !== undefined && realPaidAmounts.scholarship > 0) {
+      return `$${realPaidAmounts.scholarship.toFixed(2)}`;
+    }
+    
+    // PRIORIDADE 3: Valor esperado
+    return `$${typeof scholarshipBase === 'number' ? scholarshipBase.toFixed(2) : scholarshipBase}`;
+  };
+
+  const getI20ControlFeeDisplay = () => {
+    // Só mostrar skeleton se não houver dados em cache E estiver carregando pela primeira vez
+    if (loadingPaidAmounts && !realPaidAmounts) return <FeeSkeleton />;
+    
+    // PRIORIDADE 1: Override (MÁXIMA PRIORIDADE)
+    if (userFeeOverrides?.i20_control_fee !== undefined) {
+      return `$${userFeeOverrides.i20_control_fee.toFixed(2)}`;
+    }
+    
+    // PRIORIDADE 2: Valor real pago quando já foi pago
+    if (userProfile?.has_paid_i20_control_fee && realPaidAmounts?.i20_control !== undefined && realPaidAmounts.i20_control > 0) {
+      return `$${realPaidAmounts.i20_control.toFixed(2)}`;
+    }
+    
+    // PRIORIDADE 3: Valor esperado
+    return `$${typeof i20WithDependents === 'number' ? i20WithDependents.toFixed(2) : i20WithDependents}`;
+  };
 
   const dynamicFeeValues = [
-    isFeesLoading ? <FeeSkeleton /> : `$${selectionFeeToDisplay.toFixed(2)}`, // Selection Process Fee (valor real pago ou com desconto se aplicável)
+    isFeesLoading ? <FeeSkeleton /> : getSelectionProcessFeeDisplay(), // Selection Process Fee (valor real pago ou esperado)
     t('feeValues.asPerUniversity'), // Application Fee (variável - não mostra valor específico)
-    isFeesLoading ? <FeeSkeleton /> : `$${scholarshipFeeToDisplay.toFixed(2)}`, // Scholarship Fee (valor real pago ou base)
-    isFeesLoading ? <FeeSkeleton /> : `$${i20FeeToDisplay.toFixed(2)}`, // I-20 Control Fee (valor real pago ou base)
+    isFeesLoading ? <FeeSkeleton /> : getScholarshipFeeDisplay(), // Scholarship Fee (valor real pago ou esperado)
+    isFeesLoading ? <FeeSkeleton /> : getI20ControlFeeDisplay(), // I-20 Control Fee (valor real pago ou esperado)
   ];
 
   // Lógica da barra de progresso dinâmica
@@ -667,6 +511,31 @@ const Overview: React.FC<OverviewProps> = ({
       
       {/* Alerta de desconto duplicado removido para evitar repetição com a mensagem de boas‑vindas */}
       
+      {/* Identity Photo Status Banner - Only show if rejected */}
+      {!identityPhotoLoading && identityPhotoStatus === 'rejected' && (
+        <div className="mb-6 rounded-2xl p-4 border-2 bg-red-50 border-red-200">
+          <div className="flex items-start justify-between">
+            <div className="flex items-start space-x-3 flex-1">
+              <XCircle className="w-6 h-6 text-red-600 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <h3 className="font-semibold mb-1 text-red-800">
+                  Identity Photo Rejected
+                </h3>
+                <p className="text-sm text-red-700">
+                  Your identity photo has been rejected. Please review the reason and upload a new photo.
+                </p>
+              </div>
+            </div>
+            <Link
+              to="/student/dashboard/identity-verification"
+              className="ml-4 px-4 py-2 rounded-lg font-medium text-sm transition-colors bg-red-600 hover:bg-red-700 text-white"
+            >
+              View Details
+            </Link>
+          </div>
+        </div>
+      )}
+
       {/* Welcome Message / Hero */}
       <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl p-4 sm:p-6 md:p-6 text-white relative overflow-hidden ring-1 ring-white/10 shadow-xl">
         <div className="absolute inset-0 bg-black/10"></div>
@@ -701,27 +570,26 @@ const Overview: React.FC<OverviewProps> = ({
                   </div>
                 </div>
                 <div className="text-left sm:text-right">
-                  {feesLoading ? (
+                  {isFeesLoading ? (
                     <div className="inline-block w-24 h-6 bg-white/30 rounded animate-pulse" />
-                  ) : promotionalCouponDiscount ? (
-                    // Se há cupom promocional validado, mostrar valor com desconto
+                  ) : selectionProcessPromotionalCoupon ? (
                     <div className="flex flex-col sm:text-center">
-                      <div className="text-lg sm:text-xl md:text-2xl font-bold text-white line-through">${selectionWithDependents.toFixed(2)}</div>
+                      <div className="text-lg sm:text-xl md:text-2xl font-bold text-white line-through">${selectionWithDependents}</div>
                       <div className="text-base sm:text-lg md:text-xl font-bold text-green-300">
-                        ${promotionalCouponDiscount.finalAmount.toFixed(2)}
+                        ${selectionProcessPromotionalCoupon.finalAmount.toFixed(2)}
                       </div>
                       <div className="flex items-center sm:justify-center mt-1">
                         <Tag className="h-3 w-3 text-green-300 mr-1" />
                         <span className="text-xs text-green-300 font-medium">
-                          {t('studentDashboard.selectionProcess.couponAppliedLabel')} -${promotionalCouponDiscount.discountAmount.toFixed(2)}
+                          {t('studentDashboard.recentApplications.couponApplied')} -${selectionProcessPromotionalCoupon.discountAmount.toFixed(2)}
                         </span>
                       </div>
                     </div>
                   ) : activeDiscount?.has_discount ? (
                     <div className="flex flex-col sm:text-center">
-                      <div className="text-lg sm:text-xl md:text-2xl font-bold text-white line-through">${selectionWithDependents.toFixed(2)}</div>
+                      <div className="text-lg sm:text-xl md:text-2xl font-bold text-white line-through">${selectionWithDependents}</div>
                       <div className="text-base sm:text-lg md:text-xl font-bold text-green-300">
-                        ${Math.max(selectionWithDependents - (activeDiscount.discount_amount || 0), 0).toFixed(2)}
+                        ${Math.max(selectionWithDependents - (activeDiscount.discount_amount || 0), 0)}
                       </div>
                       <div className="flex items-center sm:justify-center mt-1">
                         <Tag className="h-3 w-3 text-green-300 mr-1" />
@@ -731,14 +599,13 @@ const Overview: React.FC<OverviewProps> = ({
                       </div>
                     </div>
                   ) : (
-                    // Valor normal sem desconto
-                    <div className="text-lg sm:text-xl md:text-2xl font-bold text-white">${selectionWithDependents.toFixed(2)}</div>
+                    <div className="text-lg sm:text-xl md:text-2xl font-bold text-white">${selectionWithDependents}</div>
                   )}
                 </div>
               </div>
               <p className="text-blue-100 text-xs sm:text-sm mb-3 sm:mb-4 leading-relaxed">
                 {t('studentDashboard.selectionProcess.description')}
-                {activeDiscount?.has_discount && (
+                {(selectionProcessPromotionalCoupon || activeDiscount?.has_discount) && (
                   <span className="block mt-1 text-green-300 font-medium">
                     {t('studentDashboard.selectionProcess.discountApplied')}
                   </span>

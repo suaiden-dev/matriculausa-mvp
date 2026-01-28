@@ -175,7 +175,7 @@
       "recipientEmail": "Email do Destinatário",
       "paymentAmount": "Valor do Pagamento",
       "important": "Importante:",
-      "importantMessage": "Certifique-se de enviar o valor exato de <strong>{{amount}} USD</strong> para <strong>info@thefutureofenglish.com</strong> via Zelle. Qualquer discrepância no valor ou destinatário atrasará o processamento do seu pagamento.",
+      "importantMessage": "Certifique-se de enviar o valor exato de <strong>{{amount}} USD</strong> para <strong>pay@matriculausa.com</strong> via Zelle. Qualquer discrepância no valor ou destinatário atrasará o processamento do seu pagamento.",
       "importantMessageSimple": "Certifique-se de que o valor exato do pagamento corresponde ao valor mostrado acima."
     }
   },
@@ -376,7 +376,7 @@
       "subtitle": "Estudantes reais, resultados reais. Veja como o MatriculaUSA transformou sua jornada educacional para os Estados Unidos.",
       "testimonial1": {
         "text": "O MatriculaUSA tornou meu sonho de estudar na América uma realidade. As oportunidades de bolsa e o suporte foram incríveis!",
-        "author": "Maria Silva",
+        "author": "Gustavo Santos",
         "field": "Ciência da Computação"
       },
       "testimonial2": {
@@ -608,6 +608,9 @@
       "allFields": "Todos os Campos",
       "allModes": "Todos os Modos",
       "allPermissions": "Todas as Permissões",
+      "allUniversities": "Todas as Universidades",
+      "university": "Universidade",
+      "universityTooltip": "Crie uma conta e pague a Selection Process Fee para filtrar por universidade",
       "stem": "STEM",
       "business": "Negócios",
       "engineering": "Engenharia",
@@ -708,7 +711,10 @@
       "expired": "Expirada",
       "scholarshipExpired": "Bolsa Expirada",
       "noLongerAccepting": "Esta bolsa não está mais aceitando novas aplicações.",
-      "canStillView": "Você ainda pode visualizar as informações, mas não será possível aplicar para esta bolsa."
+      "canStillView": "Você ainda pode visualizar as informações, mas não será possível aplicar para esta bolsa.",
+      "universityInternalFees": "Taxas Internas da Universidade",
+      "internalFeesNote": "Taxas pagas diretamente à universidade. Sujeito a alteração.",
+      "days": "dias"
     }
   },
   "universitiesPage": {
@@ -1365,6 +1371,41 @@
     "registrationFailed": "Falha no Registro",
     "emailAlreadyRegistered": "Este email já está cadastrado. Faça login ou use outro email."
   },
+  "ssoCallback": {
+    "processing": {
+      "title": "Aguarde um momento",
+      "preparing": "Estamos preparando o ambiente para você...",
+      "connecting": "Conectando com o 323 Network...",
+      "preparingAccount": "Preparando sua conta...",
+      "creatingSession": "Criando sessão...",
+      "waitMessage": "Isso pode levar alguns segundos...",
+      "secureConnection": "Conectando com segurança ao Matrícula USA"
+    },
+    "success": {
+      "title": "Tudo pronto!",
+      "newUser": "Tudo pronto! Redirecionando você...",
+      "returningUser": "Bem-vindo de volta! Redirecionando...",
+      "redirecting": "Redirecionando você agora...",
+      "welcomeNew": "Bem-vindo ao Matrícula US!",
+      "loginSuccess": "Login realizado com sucesso!"
+    },
+    "error": {
+      "title": "Ops, algo deu errado",
+      "authenticationFailed": "Não foi possível completar a autenticação. Você será redirecionado para a página de login em instantes.",
+      "tokenNotProvided": "Token não fornecido na URL",
+      "tokenValidationError": "Erro ao validar token",
+      "sessionCreationError": "Erro ao criar sessão",
+      "sessionNotCreated": "Sessão não foi criada corretamente",
+      "noAuthMethod": "Nenhum método de autenticação disponível",
+      "tokenNotFoundInMagicLink": "Token ou type não encontrados no magic link",
+      "tokensNotFoundInRedirect": "Tokens não encontrados no redirect",
+      "locationHeaderNotFound": "Location header não encontrado no redirect",
+      "tokensNotFoundInResponse": "Tokens não encontrados na resposta",
+      "supabaseUrlNotConfigured": "VITE_SUPABASE_URL não configurada",
+      "tryAgain": "Tentar Novamente",
+      "goToLogin": "Ir para Login"
+    }
+  },
   "features": {
     "whyChoose": "Por Que Escolher MatriculaUSA?",
     "subtitle": "Tudo que você precisa para ter sucesso na sua jornada educacional americana",
@@ -1492,6 +1533,13 @@
       "matriculaRewards": "Recompensas Matrícula",
       "profile": "Perfil",
       "supportChat": "Chat de Suporte"
+    },
+    "chat": {
+      "welcomeMessage": {
+        "title": "Bem-vindo ao Chat de Suporte!",
+        "body": "Olá! Este é o seu chat de suporte. Nossa equipe está disponível para ajudá-lo das 9h às 17h (Fuso Horário do Arizona). Você pode fazer perguntas sobre bolsas, documentos e o progresso da sua aplicação. Sinta-se à vontade para enviar mensagens e anexos a qualquer momento!",
+        "hours": "Horário de atendimento: 9 AM - 5 PM (Fuso Horário do Arizona)"
+      }
     },
     "profileStatus": {
       "title": "Status do Perfil",
@@ -1970,6 +2018,25 @@
             "Comece seu programa acadêmico"
           ]
         },
+        "scholarshipFeePaidI20Required": {
+          "title": "Taxa da Bolsa Paga - Documentos Pendentes",
+          "description": "Ótimo! Sua taxa da bolsa foi confirmada. Agora você precisa enviar as requisições de documentos pendentes solicitadas pela universidade.",
+          "nextSteps": [
+            "Envie as requisições de documentos pendentes",
+            "Aguarde a aprovação dos documentos pela universidade",
+            "Pague a I-20 Control Fee para poder receber a carta de aceite",
+            "Receba a carta de aceite da universidade"
+          ]
+        },
+        "allFeesPaidWaitingAcceptanceLetter": {
+          "title": "Todas as Taxas Pagas - Aguardando Carta de Aceite",
+          "description": "Excelente! Todas as taxas foram pagas com sucesso. Agora você está aguardando a universidade enviar sua carta de aceite oficial.",
+          "nextSteps": [
+            "Aguarde a universidade enviar sua carta de aceite",
+            "Verifique regularmente a seção de documentos",
+            "Complete sua matrícula após receber a carta"
+          ]
+        },
         "fullyEnrolled": {
           "title": "Totalmente Matriculado!",
           "description": "Perfeito! Você completou com sucesso todos os requisitos e está oficialmente matriculado.",
@@ -2391,6 +2458,50 @@
         "rejectionExplanation": "Explique o motivo da rejeição deste documento. O aluno verá esta mensagem.",
         "rejectionExplanationPlaceholder": "Ex.: O documento está cortado. Envie novamente em PDF com todas as páginas.",
         "confirm": "Confirmar"
+      }
+    },
+    "identityVerification": {
+      "title": "Verificação de Identidade",
+      "subtitle": "Verifique sua identidade fazendo upload de uma foto com seu documento de identidade",
+      "backToDashboard": "Voltar ao Painel",
+      "noPhotoFound": {
+        "title": "Verificação de Identidade",
+        "message": "Nenhuma foto de identidade encontrada. Por favor, complete o processo de checkout para fazer upload da sua foto de identidade.",
+        "goToDashboard": "Ir para o Painel"
+      },
+      "status": {
+        "approved": {
+          "title": "Foto de Identidade Aprovada",
+          "message": "Sua foto de identidade foi aprovada. Você pode prosseguir com sua candidatura."
+        },
+        "rejected": {
+          "title": "Foto de Identidade Rejeitada",
+          "message": "Sua foto de identidade foi rejeitada. Por favor, revise o motivo e faça upload de uma nova foto.",
+          "rejectionReason": "Motivo da Rejeição"
+        },
+        "pending": {
+          "title": "Foto de Identidade em Revisão",
+          "message": "Sua foto de identidade está atualmente em revisão por nossos administradores."
+        }
+      },
+      "uploadNewPhoto": {
+        "title": "Fazer Upload de Nova Foto de Identidade",
+        "termsTitle": "Termos e Condições",
+        "termsDescription": "Por favor, leia e aceite os termos e condições antes de fazer upload de uma nova foto.",
+        "scrollToBottom": "Por favor, role até o final para continuar",
+        "acceptTerms": "Li e aceito os termos e condições",
+        "termsNotAvailable": "Termos não disponíveis",
+        "submitButton": "Enviar Nova Foto",
+        "submitting": "Enviando...",
+        "successMessage": "Foto de identidade enviada com sucesso! Será revisada por um administrador."
+      },
+      "errors": {
+        "loadingStatus": "Erro ao carregar status de verificação. Por favor, tente novamente.",
+        "acceptingTerms": "Erro ao aceitar termos. Por favor, tente novamente.",
+        "termsRequired": "Por favor, aceite os termos primeiro.",
+        "photoRequired": "Por favor, faça upload da sua foto de identidade.",
+        "termAcceptanceNotFound": "Erro: Registro de aceitação de termos não encontrado.",
+        "submittingPhoto": "Erro ao enviar foto. Por favor, tente novamente."
       }
     }
   },
@@ -2817,6 +2928,52 @@
       "subscribe": "Inscrever-se",
       "subscribed": "Obrigado por se inscrever!"
     },
+    "unsubscribe": {
+      "invalidLink": {
+        "title": "Link Inválido",
+        "message": "O link de cancelamento de inscrição não é válido ou está expirado.",
+        "button": "Voltar para Home"
+      },
+      "alreadyUnsubscribed": {
+        "title": "Já Removido",
+        "message": "Você já está removido da lista de newsletter do MatriculaUSA.",
+        "button": "Voltar para Home"
+      },
+      "success": {
+        "title": "Inscrição Cancelada com Sucesso",
+        "message": "Você foi removido da lista de newsletter com sucesso. Não receberá mais emails de campanha do MatriculaUSA.",
+        "important": "<strong>Importante:</strong> Você ainda receberá emails importantes sobre sua conta, aplicações e confirmações de pagamento.",
+        "reactivate": "Se mudar de ideia, você pode reativar sua inscrição entrando em contato conosco.",
+        "button": "Voltar para Home"
+      },
+      "error": {
+        "title": "Erro",
+        "message": "Ocorreu um erro ao processar sua solicitação. Por favor, tente novamente mais tarde.",
+        "tryAgain": "Tentar Novamente",
+        "backToHome": "Voltar para Home"
+      },
+      "form": {
+        "title": "Cancelar Inscrição",
+        "question": "Tem certeza que deseja parar de receber emails de campanha do MatriculaUSA?",
+        "reasonLabel": "Motivo (opcional)",
+        "reasonPlaceholder": "Nos conte por que você está cancelando a inscrição (opcional)",
+        "reasonHelp": "Seu feedback nos ajuda a melhorar nossos serviços",
+        "note": "<strong>Nota:</strong> Você ainda receberá emails importantes sobre sua conta, aplicações e confirmações de pagamento.",
+        "disclaimer": "Ao cancelar, você não receberá mais emails de campanha, mas continuará recebendo emails importantes sobre sua conta e aplicações.",
+        "cancel": "Cancelar",
+        "confirm": "Confirmar Cancelamento",
+        "processing": "Processando..."
+      },
+      "errors": {
+        "tokenMissing": "Token ou ID de usuário não fornecido",
+        "configError": "Erro de configuração: URL do Supabase não encontrada",
+        "httpError": "Erro HTTP {{status}}",
+        "checkStatusError": "Erro ao verificar status ({{status}})",
+        "checkStatusGeneric": "Erro ao verificar status de inscrição. Por favor, tente novamente.",
+        "processError": "Erro ao processar cancelamento de inscrição",
+        "processErrorRetry": "Erro ao processar cancelamento de inscrição. Por favor, tente novamente."
+      }
+    },
     "copyright": "© 2024 Matrícula USA. Todos os direitos reservados."
   },
   "matriculaRewardsLanding": {
@@ -3237,7 +3394,7 @@
       },
       "testimonials": [
         {
-          "name": "Maria Silva",
+          "name": "Gustavo Santos",
           "university": "University of California",
           "course": "Computer Science",
           "text": "Consegui uma bolsa de 40% e estou realizando meu sonho de estudar nos EUA. O processo foi muito mais simples do que imaginava.",
@@ -3656,5 +3813,111 @@
     "3800Expired": "Esta bolsa não está mais aceitando candidaturas",
     "3800Expiring": "Últimas horas para se candidatar! Prazo expira amanhã (6 de novembro)",
     "3800ExpiringShort": "Prazo expira amanhã"
+  },
+  "scholarshipsPage": {
+    "filters": {
+      "levels": {
+        "all": "Todos os Níveis",
+        "graduate": "Pós-Graduação",
+        "doctorate": "Doutorado",
+        "undergraduate": "Graduação"
+      },
+      "courseModalities": {
+        "online": "Online",
+        "inPerson": "Presencial",
+        "hybrid": "Híbrido",
+        "mixed": "Misto"
+      },
+      "allFields": "Todas as Áreas",
+      "allLevels": "Todos os Níveis",
+      "allModes": "Todos os Modos",
+      "allPermissions": "Todas as Permissões",
+      "allUniversities": "Todas as Universidades",
+      "anyField": "Qualquer Área",
+      "business": "Negócios",
+      "engineering": "Engenharia",
+      "stem": "STEM",
+      "online": "Online",
+      "inPerson": "Presencial",
+      "hybrid": "Híbrido",
+      "opt": "OPT",
+      "cpt": "CPT",
+      "f1": "Visto F1",
+      "min": "Mín",
+      "max": "Máx",
+      "loading": "Carregando...",
+      "scholarshipsFound": "bolsas encontradas",
+      "university": "Universidade",
+      "universityTooltip": "Crie uma conta e pague a Taxa do Processo Seletivo para filtrar por universidade"
+    },
+    "featuredSection": {
+      "title": "Bolsas em Destaque",
+      "subtitle": "Melhores Oportunidades da Temporada",
+      "description": "Bolsas selecionadas com o melhor valor e maiores taxas de aprovação"
+    },
+    "allScholarships": {
+      "title": "Todas as Bolsas",
+      "description": "Navegue por todas as oportunidades de bolsas disponíveis"
+    },
+    "noResults": {
+      "title": "Nenhuma Bolsa Encontrada",
+      "description": "Tente ajustar seus filtros ou termos de busca para encontrar mais oportunidades.",
+      "clearFilters": "Limpar Filtros"
+    },
+    "pagination": {
+      "page": "Página",
+      "of": "de",
+      "previous": "Anterior",
+      "next": "Próximo"
+    },
+    "modal": {
+      "exclusive": "Exclusiva",
+      "expired": "Expirada",
+      "annualSavings": "Economia Anual",
+      "coverage": "Cobertura",
+      "deadline": "Prazo",
+      "days": "dias",
+      "financialBreakdown": "Detalhes Financeiros",
+      "originalAnnualCost": "Custo Anual Original",
+      "withScholarship": "Com a Bolsa",
+      "costPerCredit": "Custo por Crédito",
+      "additionalBenefits": "Benefícios Adicionais",
+      "programDescription": "Descrição da Bolsa",
+      "programInformation": "Informações da Bolsa",
+      "academicLevel": "Nível Acadêmico",
+      "studyMode": "Modo de Estudo",
+      "programDuration": "Duração da Bolsa",
+      "language": "Idioma",
+      "workAuthorization": "Autorização de Trabalho",
+      "requirements": "Requisitos",
+      "applicationDeadline": "Prazo de Candidatura",
+      "internalFeesNote": "As taxas internas são mostradas apenas após o pagamento da taxa de processo de seleção",
+      "internalFeesTitle": "Taxas Internas da Universidade",
+      "internalFeesDisclaimer": "Estas taxas são pagas diretamente à universidade, não através da nossa plataforma",
+      "internalFeesAvailable": "Taxas Internas da Universidade Disponíveis",
+      "internalFeesNotice": "Esta bolsa pode ter taxas internas adicionais da universidade. Essas taxas serão visíveis após o pagamento da Taxa de Processo de Seleção.",
+      "anyField": "Qualquer Área",
+      "inPerson": "Presencial",
+      "universityInternalFees": "Taxas Internas da Universidade",
+      "viewUniversityFeesPage": "Ver Página de Taxas da Universidade"
+    },
+    "scholarshipCard": {
+      "applicationFee": "Taxa de Matrícula",
+      "customFee": "Taxa personalizada",
+      "standardFee": "Taxa padrão",
+      "days": "dias",
+      "expired": "Expirada",
+      "university": "Universidade",
+      "studyMode": "Modo de Estudo",
+      "workAuthorization": "Autorização de Trabalho",
+      "financialOverview": "Visão Financeira",
+      "originalPrice": "Preço Original",
+      "withScholarship": "Com a Bolsa",
+      "perCredit": "por crédito",
+      "scholarshipDiscount": "Desconto da Bolsa",
+      "notAvailable": "N/D",
+      "details": "Ver Detalhes",
+      "applyNow": "Candidatar-se"
+    }
   }
 }

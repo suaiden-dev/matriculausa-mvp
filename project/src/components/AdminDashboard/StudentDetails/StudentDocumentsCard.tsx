@@ -90,8 +90,11 @@ const StudentDocumentsCard: React.FC<StudentDocumentsCardProps> = React.memo(({
   }
 
   const sortedApplications = [...applications].sort((a, b) => {
-    if (a.status === 'approved' && b.status !== 'approved') return -1;
-    if (b.status === 'approved' && a.status !== 'approved') return 1;
+    // Priorizar enrolled e approved primeiro
+    const aIsPriority = a.status === 'approved' || a.status === 'enrolled';
+    const bIsPriority = b.status === 'approved' || b.status === 'enrolled';
+    if (aIsPriority && !bIsPriority) return -1;
+    if (bIsPriority && !aIsPriority) return 1;
     return 0;
   });
 
@@ -119,7 +122,7 @@ const StudentDocumentsCard: React.FC<StudentDocumentsCardProps> = React.memo(({
               <div
                 key={appKey}
                 className={`border rounded-xl overflow-hidden ${
-                  app.status === 'approved'
+                  app.status === 'approved' || app.status === 'enrolled'
                     ? 'border-green-200 bg-green-50'
                     : app.status === 'rejected'
                     ? 'border-red-200 bg-red-50'
@@ -129,7 +132,7 @@ const StudentDocumentsCard: React.FC<StudentDocumentsCardProps> = React.memo(({
                 <button
                   onClick={() => onToggleExpand(appKey)}
                   className={`w-full px-4 py-3 transition-colors text-left flex items-center justify-between ${
-                    app.status === 'approved'
+                    app.status === 'approved' || app.status === 'enrolled'
                       ? 'bg-green-50 hover:bg-green-100'
                       : app.status === 'rejected'
                       ? 'bg-red-50 hover:bg-red-100'
@@ -137,7 +140,7 @@ const StudentDocumentsCard: React.FC<StudentDocumentsCardProps> = React.memo(({
                   }`}
                 >
                   <div className="flex items-center space-x-3">
-                    {app.status === 'approved' && (
+                    {(app.status === 'approved' || app.status === 'enrolled') && (
                       <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></div>
                     )}
                     {app.status === 'rejected' && (
@@ -149,6 +152,11 @@ const StudentDocumentsCard: React.FC<StudentDocumentsCardProps> = React.memo(({
                         {app.status === 'approved' && (
                           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
                             Approved
+                          </span>
+                        )}
+                        {app.status === 'enrolled' && (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            Enrolled
                           </span>
                         )}
                       </h4>
@@ -342,7 +350,7 @@ const StudentDocumentsCard: React.FC<StudentDocumentsCardProps> = React.memo(({
                     {/* Application Approval Section - Only for Platform Admins */}
                     {canPlatformAdmin && (
                       <div className={`mt-4 p-4 rounded-lg border ${
-                        app.status === 'approved' 
+                        app.status === 'approved' || app.status === 'enrolled'
                           ? 'bg-green-50 border-green-200' 
                           : app.status === 'rejected'
                           ? 'bg-red-50 border-red-200'
@@ -354,16 +362,18 @@ const StudentDocumentsCard: React.FC<StudentDocumentsCardProps> = React.memo(({
                             <p className="text-sm text-slate-600">
                               {app.status === 'approved' 
                                 ? 'This application has been approved.' 
+                                : app.status === 'enrolled'
+                                ? 'This student has been enrolled.'
                                 : app.status === 'rejected'
                                 ? 'This application has been rejected.'
                                 : 'You can approve this application regardless of document status.'
                               }
                             </p>
                           </div>
-                          {app.status === 'approved' && (
+                          {(app.status === 'approved' || app.status === 'enrolled') && (
                             <div className="flex items-center space-x-1 text-green-600">
                               <CheckCircle className="w-4 h-4" />
-                              <span className="text-sm font-medium">Approved</span>
+                              <span className="text-sm font-medium">{app.status === 'enrolled' ? 'Enrolled' : 'Approved'}</span>
                             </div>
                           )}
                           {app.status === 'rejected' && (
@@ -376,21 +386,27 @@ const StudentDocumentsCard: React.FC<StudentDocumentsCardProps> = React.memo(({
                         <div className="flex flex-col sm:flex-row gap-2">
                           <button
                             onClick={() => onRejectApplication && onRejectApplication(app.id)}
-                            disabled={approvingStudent || rejectingStudent || app.status === 'approved' || app.status === 'rejected'}
+                            disabled={approvingStudent || rejectingStudent || app.status === 'approved' || app.status === 'rejected' || app.status === 'enrolled'}
                             className={`px-4 py-2 rounded-lg font-medium border transition-colors text-center text-sm ${
                               app.status === 'rejected' 
                                 ? 'bg-red-100 text-red-700 border-red-300 cursor-not-allowed' 
                                 : 'text-red-600 border-red-200 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed'
                             }`}
                           >
-                            {app.status === 'approved' ? 'Application Approved' : app.status === 'rejected' ? 'Application Rejected' : 'Reject Application'}
+                            {app.status === 'approved' ? 'Application Approved' : app.status === 'rejected' ? 'Application Rejected' : app.status === 'enrolled' ? 'Application Enrolled' : 'Reject Application'}
                           </button>
                           <button
-                            disabled={approvingStudent || rejectingStudent || app.status === 'approved' || app.status === 'rejected'}
+                            disabled={approvingStudent || rejectingStudent || app.status === 'approved' || app.status === 'rejected' || app.status === 'enrolled'}
                             onClick={() => onApproveApplication && onApproveApplication(app.id)}
-                            className="px-4 py-2 rounded-lg font-medium bg-[#05294E] text-white hover:bg-[#041f38] disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-center text-sm"
+                            className={`px-4 py-2 rounded-lg font-medium text-white transition-colors text-center text-sm ${
+                              app.status === 'approved' || app.status === 'enrolled'
+                                ? 'bg-green-600 hover:bg-green-700 cursor-not-allowed'
+                                : app.status === 'rejected'
+                                ? 'bg-red-600 hover:bg-red-700 cursor-not-allowed'
+                                : 'bg-[#05294E] hover:bg-[#041f38] disabled:opacity-50 disabled:cursor-not-allowed'
+                            }`}
                           >
-                            {app.status === 'approved' ? 'Approved' : app.status === 'rejected' ? 'Rejected' : (approvingStudent ? 'Approving...' : 'Approve Application')}
+                            {app.status === 'approved' ? 'Approved' : app.status === 'rejected' ? 'Rejected' : app.status === 'enrolled' ? 'Enrolled' : (approvingStudent ? 'Approving...' : 'Approve Application')}
                           </button>
                         </div>
                       </div>

@@ -1,9 +1,7 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { CreditCard, Clock, CheckCircle2, XCircle, Grid3X3, List, Eye, CheckCircle, User, MessageSquare } from 'lucide-react';
-import { PaginationBar } from './PaginationBar';
 import { formatCentsToDollars } from '../../../../utils/currency';
 import ZellePaymentsSkeleton from '../../../../components/ZellePaymentsSkeleton';
-import { useEnvironment } from '../../../../hooks/useEnvironment';
 
 export interface ZellePaymentsProps {
 	zellePayments: any[];
@@ -13,12 +11,6 @@ export interface ZellePaymentsProps {
 	openZelleProofModal: (id: string) => void;
 	openZelleReviewModal: (id: string) => void;
 	openZelleNotesModal: (id: string) => void;
-  currentPage?: number;
-  totalPages?: number;
-  totalItems?: number;
-  itemsPerPage?: number;
-  onPageChange?: (page: number) => void;
-  onItemsPerPageChange?: (itemsPerPage: number) => void;
 }
 
 function ZellePaymentsBase(props: ZellePaymentsProps) {
@@ -30,33 +22,11 @@ function ZellePaymentsBase(props: ZellePaymentsProps) {
 		openZelleProofModal,
 		openZelleReviewModal,
 		openZelleNotesModal,
-    currentPage = 1,
-    totalPages = 1,
-    totalItems = 0,
-    itemsPerPage = 20,
-    onPageChange,
-    onItemsPerPageChange,
 	} = props;
 
-  const { isDevelopment } = useEnvironment();
-
-	// Filtrar pagamentos Zelle: excluir usuários com email @uorak.com (exceto em localhost)
-	// IMPORTANTE: Os dados já vêm paginados do servidor, então este filtro só remove itens da página atual
-	const filteredZellePayments = useMemo(() => {
-		if (isDevelopment) {
-			// Em localhost, mostrar todos os itens da página atual
-			return zellePayments;
-		}
-		// Em produção/staging, excluir pagamentos de estudantes com email @uorak.com da página atual
-		return zellePayments.filter((payment: any) => {
-			const email = payment.student_email?.toLowerCase() || '';
-			return !email.includes('@uorak.com');
-		});
-	}, [zellePayments, isDevelopment]);
-
-	// Calcular índices para paginação (baseado no total do servidor, não no filtrado local)
-	const startIndex = useMemo(() => (currentPage - 1) * itemsPerPage, [currentPage, itemsPerPage]);
-	const endIndex = useMemo(() => Math.min(currentPage * itemsPerPage, totalItems), [currentPage, itemsPerPage, totalItems]);
+	// ✅ FILTRO MOVIDO PARA O SERVIDOR: Os dados já vêm filtrados do loader
+	// Não precisa mais filtrar aqui, apenas usar os dados diretamente
+	const filteredZellePayments = zellePayments;
 
 	return (
 		<div className="space-y-6">
@@ -242,39 +212,6 @@ function ZellePaymentsBase(props: ZellePaymentsProps) {
 								</div>
 							</div>
 						)}
-
-            {totalPages > 1 && (
-              <div className="mt-6">
-                <PaginationBar
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  startIndex={startIndex}
-                  endIndex={endIndex}
-                  totalItems={totalItems || filteredZellePayments.length}
-                  itemsPerPage={itemsPerPage}
-                  onFirst={() => onPageChange && onPageChange(1)}
-                  onPrev={() => onPageChange && onPageChange(Math.max(1, currentPage - 1))}
-                  onNext={() => onPageChange && onPageChange(Math.min(totalPages, currentPage + 1))}
-                  onLast={() => onPageChange && onPageChange(totalPages)}
-                  onGoTo={(p) => onPageChange && onPageChange(p)}
-                  onItemsPerPageChange={(newItemsPerPage) => onItemsPerPageChange && onItemsPerPageChange(newItemsPerPage)}
-                  pageNumbers={(() => {
-                    // Mostrar até 10 páginas ao redor da página atual
-                    const maxPages = 10;
-                    const halfRange = Math.floor(maxPages / 2);
-                    let start = Math.max(1, currentPage - halfRange);
-                    let end = Math.min(totalPages, start + maxPages - 1);
-                    
-                    // Ajustar início se estiver muito próximo do final
-                    if (end - start < maxPages - 1) {
-                      start = Math.max(1, end - maxPages + 1);
-                    }
-                    
-                    return Array.from({ length: end - start + 1 }, (_, i) => start + i);
-                  })()}
-                />
-              </div>
-            )}
 					</div>
 				)}
 			</div>

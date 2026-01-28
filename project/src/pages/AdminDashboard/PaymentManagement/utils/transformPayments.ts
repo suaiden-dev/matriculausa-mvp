@@ -40,10 +40,12 @@ export function transformPaymentsToRecordsAndStats({
     if (!studentName || !universityName) return;
 
     const dependents = Number(student?.dependents) || 0;
-    const dependentCost = dependents * 150; // apenas selection process
     const userOverrides = overridesMap[student?.user_id] || {};
     const realPaid = realPaymentAmounts?.get(student?.user_id);
     const systemType = userSystemTypesMap.get(student.user_id) || 'legacy';
+    // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
+    // Dependentes só afetam Application Fee ($100 por dependente)
+    const dependentCost = systemType === 'simplified' ? 0 : (dependents * 150); // apenas selection process (legacy)
 
     // Helper: Verifica se o valor está dentro de uma faixa razoável (50% de tolerância)
     const isValueReasonable = (realValue: number, expectedValue: number): boolean => {
@@ -175,6 +177,7 @@ export function transformPaymentsToRecordsAndStats({
         university_name: universityName,
         scholarship_id: scholarship.id,
         scholarship_title: scholarshipTitle,
+        field_of_study: scholarship?.field_of_study || null,
         fee_type: 'selection_process',
         amount: selectionProcessFee,
         status: 'paid',
@@ -199,6 +202,7 @@ export function transformPaymentsToRecordsAndStats({
         university_name: universityName,
         scholarship_id: scholarship.id,
         scholarship_title: scholarshipTitle,
+        field_of_study: scholarship?.field_of_study || null,
         fee_type: 'application',
         amount: applicationFee,
         status: 'paid',
@@ -223,6 +227,7 @@ export function transformPaymentsToRecordsAndStats({
         university_name: universityName,
         scholarship_id: scholarship.id,
         scholarship_title: scholarshipTitle,
+        field_of_study: scholarship?.field_of_study || null,
         fee_type: 'scholarship',
         amount: scholarshipFee,
         status: 'paid',
@@ -245,6 +250,7 @@ export function transformPaymentsToRecordsAndStats({
         university_name: universityName,
         scholarship_id: scholarship.id,
         scholarship_title: scholarshipTitle,
+        field_of_study: scholarship?.field_of_study || null,
         fee_type: 'i20_control_fee',
         amount: i20ControlFee,
         status: 'paid',
@@ -302,6 +308,7 @@ export function transformPaymentsToRecordsAndStats({
         university_name: 'No University Selected',
         scholarship_id: '00000000-0000-0000-0000-000000000000',
         scholarship_title: 'No Scholarship Selected',
+        field_of_study: null,
         fee_type: 'selection_process',
         amount: Math.round(parseFloat(selectionPayment.amount) * 100),
         status: 'paid',
@@ -330,6 +337,7 @@ export function transformPaymentsToRecordsAndStats({
         university_name: 'No University Selected',
         scholarship_id: '00000000-0000-0000-0000-000000000000',
         scholarship_title: 'No Scholarship Selected',
+        field_of_study: null,
         fee_type: 'application',
         amount: applicationAmount,
         status: 'paid',
@@ -357,6 +365,7 @@ export function transformPaymentsToRecordsAndStats({
         university_name: 'No University Selected',
         scholarship_id: '00000000-0000-0000-0000-000000000000',
         scholarship_title: 'No Scholarship Selected',
+        field_of_study: null,
         fee_type: 'scholarship',
         amount: Math.round(parseFloat(scholarshipPayment.amount) * 100),
         status: 'paid',
@@ -384,6 +393,7 @@ export function transformPaymentsToRecordsAndStats({
         university_name: 'No University Selected',
         scholarship_id: '00000000-0000-0000-0000-000000000000',
         scholarship_title: 'No Scholarship Selected',
+        field_of_study: null,
         fee_type: 'i20_control_fee',
         amount: Math.round(parseFloat(i20Payment.amount) * 100),
         status: 'paid',
@@ -414,10 +424,12 @@ export function transformPaymentsToRecordsAndStats({
     if (hasZellePayment) return;
 
     const dependents = Number(stripeUser?.dependents) || 0;
-    const dependentCost = dependents * 150;
     const userOverrides = overridesMap[stripeUser?.user_id] || {};
     const realPaid = realPaymentAmounts?.get(stripeUser?.user_id);
     const systemType = userSystemTypesMap.get(stripeUser.user_id) || 'legacy';
+    // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
+    // Dependentes só afetam Application Fee ($100 por dependente)
+    const dependentCost = systemType === 'simplified' ? 0 : (dependents * 150);
 
     // Helper: Verifica se o valor está dentro de uma faixa razoável (50% de tolerância)
     const isValueReasonable = (realValue: number, expectedValue: number): boolean => {
@@ -533,6 +545,7 @@ export function transformPaymentsToRecordsAndStats({
         university_name: 'No University Selected',
         scholarship_id: '00000000-0000-0000-0000-000000000000',
         scholarship_title: 'No Scholarship Selected',
+        field_of_study: null,
         fee_type: 'selection_process',
         amount: selectionProcessFee,
         status: 'paid',
@@ -554,6 +567,7 @@ export function transformPaymentsToRecordsAndStats({
         university_name: 'No University Selected',
         scholarship_id: '00000000-0000-0000-0000-000000000000',
         scholarship_title: 'No Scholarship Selected',
+        field_of_study: null,
         fee_type: 'application',
         amount: applicationFee,
         status: 'paid',
@@ -575,6 +589,7 @@ export function transformPaymentsToRecordsAndStats({
         university_name: 'No University Selected',
         scholarship_id: '00000000-0000-0000-0000-000000000000',
         scholarship_title: 'No Scholarship Selected',
+        field_of_study: null,
         fee_type: 'scholarship',
         amount: scholarshipFee,
         status: 'paid',
@@ -596,6 +611,7 @@ export function transformPaymentsToRecordsAndStats({
         university_name: 'No University Selected',
         scholarship_id: '00000000-0000-0000-0000-000000000000',
         scholarship_title: 'No Scholarship Selected',
+        field_of_study: null,
         fee_type: 'i20_control_fee',
         amount: i20ControlFee,
         status: 'paid',

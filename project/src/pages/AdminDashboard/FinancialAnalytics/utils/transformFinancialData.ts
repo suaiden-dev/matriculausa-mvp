@@ -8,7 +8,8 @@ function processApplications(
   applications: any[],
   overridesMap: { [key: string]: any },
   userSystemTypesMap: Map<string, string>,
-  realPaymentAmounts: Map<string, number>,
+  realPaymentAmounts: Map<string, { selection_process?: number; scholarship?: number; i20_control?: number; application?: number }>,
+  individualPaymentDates: Map<string, Map<string, string>>,
   getFeeAmount: (key: 'i20_control_fee' | 'application_fee') => number,
   globalFeesProcessed: { [userId: string]: { selection_process: boolean; i20_control: boolean; application_fee: boolean } },
   paymentRecords: any[]
@@ -22,63 +23,145 @@ function processApplications(
     const studentName = student.full_name || 'Unknown Student';
     const studentEmail = student.email || '';
     const universityName = university.name || 'Unknown University';
+    const sellerReferralCode = student.seller_referral_code || null;
     if (!studentName || !universityName) return;
 
     const dependents = Number(student?.dependents) || 0;
-    const dependentCost = dependents * 150; // apenas selection process
     const userOverrides = overridesMap[student?.user_id] || {};
+    const realPaid = realPaymentAmounts?.get(student?.user_id);
+    const systemType = userSystemTypesMap.get(student.user_id) || 'legacy';
+    // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
+    // Dependentes só afetam Application Fee ($100 por dependente)
+    const dependentCost = systemType === 'simplified' ? 0 : (dependents * 150); // apenas selection process (legacy)
 
-    // Selection Process Fee
+    // Helper: Verifica se o valor está dentro de uma faixa razoável (50% de tolerância)
+    const isValueReasonable = (realValue: number, expectedValue: number): boolean => {
+      const tolerance = 0.5; // 50% de tolerância
+      const min = expectedValue * (1 - tolerance);
+      const max = expectedValue * (1 + tolerance);
+      return realValue >= min && realValue <= max;
+    };
+
+    // Selection Process Fee - Prioridade: valor real pago (se razoável) > override > cálculo fixo
     let selectionProcessFee: number;
+    const expectedSelectionProcess = systemType === 'simplified' ? 350 : 400;
+    const expectedSelectionProcessWithDeps = expectedSelectionProcess + dependentCost;
+    
+    if (realPaid?.selection_process !== undefined && realPaid.selection_process > 0) {
+      // Verificar se o valor está razoável (dentro de 50% do esperado)
+      if (isValueReasonable(realPaid.selection_process, expectedSelectionProcessWithDeps)) {
+        selectionProcessFee = Math.round(realPaid.selection_process * 100);
+      } else {
+        // Valor muito discrepante, usar cálculo fixo
     if (userOverrides.selection_process_fee !== undefined) {
       selectionProcessFee = Math.round(userOverrides.selection_process_fee * 100);
     } else {
-      const systemType = userSystemTypesMap.get(student.user_id) || 'legacy';
-      const baseAmount = systemType === 'simplified' ? 350 : 400;
-      selectionProcessFee = Math.round((baseAmount + dependentCost) * 100);
+          selectionProcessFee = Math.round((expectedSelectionProcess + dependentCost) * 100);
+        }
+      }
+    } else if (userOverrides.selection_process_fee !== undefined) {
+      selectionProcessFee = Math.round(userOverrides.selection_process_fee * 100);
+    } else {
+      selectionProcessFee = Math.round((expectedSelectionProcess + dependentCost) * 100);
     }
 
-    // I-20 Control Fee - EXATAMENTE igual ao Payment Management
+    // I-20 Control Fee - Prioridade: valor real pago (se razoável) > override > cálculo fixo
     let i20ControlFee: number;
+    const expectedI20Control = getFeeAmount('i20_control_fee');
+    
+    if (realPaid?.i20_control !== undefined && realPaid.i20_control > 0) {
+      // Verificar se o valor está razoável (dentro de 50% do esperado)
+      if (isValueReasonable(realPaid.i20_control, expectedI20Control)) {
+        i20ControlFee = Math.round(realPaid.i20_control * 100);
+      } else {
+        // Valor muito discrepante, usar cálculo fixo
     if (userOverrides.i20_control_fee !== undefined) {
       i20ControlFee = Math.round(userOverrides.i20_control_fee * 100);
     } else {
-      i20ControlFee = Math.round(getFeeAmount('i20_control_fee') * 100);
+          i20ControlFee = Math.round(expectedI20Control * 100);
+        }
+      }
+    } else if (userOverrides.i20_control_fee !== undefined) {
+      i20ControlFee = Math.round(userOverrides.i20_control_fee * 100);
+    } else {
+      i20ControlFee = Math.round(expectedI20Control * 100);
     }
 
-    // Scholarship Fee
+    // Scholarship Fee - Prioridade: valor real pago (se razoável) > override > cálculo fixo
     let scholarshipFee: number;
+    const expectedScholarship = systemType === 'simplified' ? 550 : 900;
+    
+    if (realPaid?.scholarship !== undefined && realPaid.scholarship > 0) {
+      // Verificar se o valor está razoável (dentro de 50% do esperado)
+      if (isValueReasonable(realPaid.scholarship, expectedScholarship)) {
+        scholarshipFee = Math.round(realPaid.scholarship * 100);
+      } else {
+        // Valor muito discrepante, usar cálculo fixo
     if (userOverrides.scholarship_fee !== undefined) {
       scholarshipFee = Math.round(userOverrides.scholarship_fee * 100);
     } else {
-      const systemType = userSystemTypesMap.get(student.user_id) || 'legacy';
-      const amount = systemType === 'simplified' ? 550 : 900;
-      scholarshipFee = Math.round(amount * 100);
+          scholarshipFee = Math.round(expectedScholarship * 100);
+        }
+      }
+    } else if (userOverrides.scholarship_fee !== undefined) {
+      scholarshipFee = Math.round(userOverrides.scholarship_fee * 100);
+    } else {
+      scholarshipFee = Math.round(expectedScholarship * 100);
     }
 
-    // Application Fee (pode vir da scholarship)
+    // Application Fee - Prioridade: valor real pago (se razoável) > scholarship.application_fee_amount > cálculo fixo
     let applicationFee: number;
+    const expectedApplicationFee = scholarship?.application_fee_amount 
+      ? (parseFloat(scholarship.application_fee_amount) > 1000 
+          ? parseFloat(scholarship.application_fee_amount) 
+          : parseFloat(scholarship.application_fee_amount) * 100)
+      : getFeeAmount('application_fee') * 100;
+    const expectedApplicationFeeWithDeps = dependents > 0
+      ? expectedApplicationFee + (dependents * 10000) // $100 por dependente (para ambos os sistemas)
+      : expectedApplicationFee;
+    
+    if (realPaid?.application !== undefined && realPaid.application > 0) {
+      // Verificar se o valor está razoável (dentro de 50% do esperado)
+      if (isValueReasonable(realPaid.application, expectedApplicationFeeWithDeps / 100)) {
+        applicationFee = Math.round(realPaid.application * 100);
+      } else {
+        // Valor muito discrepante, usar cálculo fixo
     if (scholarship?.application_fee_amount) {
       const rawValue = parseFloat(scholarship.application_fee_amount);
       applicationFee = rawValue > 1000 ? Math.round(rawValue) : Math.round(rawValue * 100);
     } else {
       applicationFee = Math.round(getFeeAmount('application_fee') * 100);
     }
-    // Adicionar $100 por dependente para ambos os sistemas (legacy e simplified)
+        if (dependents > 0) {
+          applicationFee += dependents * 10000; // $100 por dependente (para ambos os sistemas)
+        }
+      }
+    } else if (scholarship?.application_fee_amount) {
+      const rawValue = parseFloat(scholarship.application_fee_amount);
+      applicationFee = rawValue > 1000 ? Math.round(rawValue) : Math.round(rawValue * 100);
+      if (dependents > 0) {
+        applicationFee += dependents * 10000; // $100 por dependente (para ambos os sistemas)
+      }
+    } else {
+      applicationFee = Math.round(getFeeAmount('application_fee') * 100);
     if (dependents > 0) {
-      applicationFee += dependents * 10000; // $100 por dependente
+        applicationFee += dependents * 10000; // $100 por dependente (para ambos os sistemas)
+      }
     }
 
     // Selection Process (global)
     if (student.has_paid_selection_process_fee && !globalFeesProcessed[student.user_id]?.selection_process) {
       paymentRecords.push({
         id: `${student.user_id}-selection`,
+        student_id: student.user_id,
         fee_type: 'selection_process',
         amount: selectionProcessFee,
         status: 'paid',
+        payment_date: individualPaymentDates.get(student.user_id)?.get('selection_process') || student.last_payment_date || app.paid_at || app.created_at,
         payment_method: student.selection_process_fee_payment_method || 'manual',
         student_name: studentName,
         student_email: studentEmail,
+        seller_referral_code: sellerReferralCode,
         university_name: universityName,
         created_at: app.created_at
       });
@@ -90,12 +173,15 @@ function processApplications(
     if (app.is_application_fee_paid && !globalFeesProcessed[student.user_id]?.application_fee) {
       paymentRecords.push({
         id: `${student.user_id}-application`,
+        student_id: student.user_id,
         fee_type: 'application',
         amount: applicationFee,
         status: 'paid',
+        payment_date: individualPaymentDates.get(student.user_id)?.get('application') || student.last_payment_date || app.paid_at || app.created_at,
         payment_method: app.application_fee_payment_method || 'manual',
         student_name: studentName,
         student_email: studentEmail,
+        seller_referral_code: sellerReferralCode,
         university_name: universityName,
         created_at: app.created_at
       });
@@ -107,12 +193,15 @@ function processApplications(
     if (app.is_scholarship_fee_paid && scholarship.id !== '31c9b8e6-af11-4462-8494-c79854f3f66e') {
       paymentRecords.push({
         id: `${app.id}-scholarship`,
+        student_id: student.user_id,
         fee_type: 'scholarship',
         amount: scholarshipFee,
         status: 'paid',
+        payment_date: individualPaymentDates.get(student.user_id)?.get('scholarship') || student.last_payment_date || app.paid_at || app.created_at,
         payment_method: app.scholarship_fee_payment_method || 'manual',
         student_name: studentName,
         student_email: studentEmail,
+        seller_referral_code: sellerReferralCode,
         university_name: universityName,
         created_at: app.created_at
       });
@@ -122,12 +211,15 @@ function processApplications(
     if (student.has_paid_i20_control_fee && !globalFeesProcessed[student.user_id]?.i20_control) {
       paymentRecords.push({
         id: `${student.user_id}-i20`,
+        student_id: student.user_id,
         fee_type: 'i20_control_fee',
         amount: i20ControlFee,
         status: 'paid',
+        payment_date: individualPaymentDates.get(student.user_id)?.get('i20_control') || student.last_payment_date || app.paid_at || app.created_at,
         payment_method: student.i20_control_fee_payment_method || 'manual',
         student_name: studentName,
         student_email: studentEmail,
+        seller_referral_code: sellerReferralCode,
         university_name: universityName,
         created_at: app.created_at
       });
@@ -144,7 +236,8 @@ function processApplications(
 function processZellePayments(
   applications: any[],
   paymentRecords: any[],
-  zellePaymentsByUser: { [userId: string]: any[] }
+  zellePaymentsByUser: { [userId: string]: any[] },
+  individualPaymentDates: Map<string, Map<string, string>>
 ): void {
   Object.keys(zellePaymentsByUser).forEach(userId => {
     const userZellePayments = zellePaymentsByUser[userId];
@@ -153,6 +246,7 @@ function processZellePayments(
     if (!student) return;
     const studentName = student.full_name || 'Unknown Student';
     const studentEmail = student.email || '';
+    const sellerReferralCode = student.seller_referral_code || null;
     if (!studentName) return;
 
     const hasApplication = applications?.some(app => (app as any).user_profiles?.user_id === (student as any).user_id);
@@ -170,12 +264,15 @@ function processZellePayments(
       const selectionPayment = userZellePayments.find((p: any) => p.fee_type_global === 'selection_process' || p.fee_type === 'selection_process_fee');
       paymentRecords.push({
         id: `zelle-${selectionPayment.id}-selection`,
+        student_id: userId,
         fee_type: 'selection_process',
         amount: Math.round(parseFloat(selectionPayment.amount) * 100),
         status: 'paid',
+        payment_date: individualPaymentDates.get(userId)?.get('selection_process') || selectionPayment.admin_approved_at || selectionPayment.created_at,
         payment_method: 'zelle',
         student_name: studentName,
         student_email: studentEmail,
+        seller_referral_code: sellerReferralCode,
         university_name: 'No University Selected',
         created_at: selectionPayment.created_at
       });
@@ -186,12 +283,15 @@ function processZellePayments(
       const applicationAmount = Math.round(parseFloat(applicationPayment.amount) * 100);
       paymentRecords.push({
         id: `zelle-${applicationPayment.id}-application`,
+        student_id: userId,
         fee_type: 'application',
         amount: applicationAmount,
         status: 'paid',
+        payment_date: individualPaymentDates.get(userId)?.get('application') || applicationPayment.admin_approved_at || applicationPayment.created_at,
         payment_method: 'zelle',
         student_name: studentName,
         student_email: studentEmail,
+        seller_referral_code: sellerReferralCode,
         university_name: 'No University Selected',
         created_at: applicationPayment.created_at
       });
@@ -201,12 +301,15 @@ function processZellePayments(
       const scholarshipPayment = userZellePayments.find((p: any) => p.fee_type_global === 'scholarship' || p.fee_type === 'scholarship_fee');
       paymentRecords.push({
         id: `zelle-${scholarshipPayment.id}-scholarship`,
+        student_id: userId,
         fee_type: 'scholarship',
         amount: Math.round(parseFloat(scholarshipPayment.amount) * 100),
         status: 'paid',
+        payment_date: individualPaymentDates.get(userId)?.get('scholarship') || scholarshipPayment.admin_approved_at || scholarshipPayment.created_at,
         payment_method: 'zelle',
         student_name: studentName,
         student_email: studentEmail,
+        seller_referral_code: sellerReferralCode,
         university_name: 'No University Selected',
         created_at: scholarshipPayment.created_at
       });
@@ -216,12 +319,15 @@ function processZellePayments(
       const i20Payment = userZellePayments.find((p: any) => p.fee_type_global === 'i20_control_fee' || p.fee_type === 'i20_control_fee');
       paymentRecords.push({
         id: `zelle-${i20Payment.id}-i20`,
+        student_id: userId,
         fee_type: 'i20_control_fee',
         amount: Math.round(parseFloat(i20Payment.amount) * 100),
         status: 'paid',
+        payment_date: individualPaymentDates.get(userId)?.get('i20_control') || i20Payment.admin_approved_at || i20Payment.created_at,
         payment_method: 'zelle',
         student_name: studentName,
         student_email: studentEmail,
+        seller_referral_code: sellerReferralCode,
         university_name: 'No University Selected',
         created_at: i20Payment.created_at
       });
@@ -239,7 +345,8 @@ function processStripeUsers(
   zellePaymentsByUser: { [userId: string]: any[] },
   overridesMap: { [key: string]: any },
   userSystemTypesMap: Map<string, string>,
-  realPaymentAmounts: Map<string, number>,
+  realPaymentAmounts: Map<string, { selection_process?: number; scholarship?: number; i20_control?: number; application?: number }>,
+  individualPaymentDates: Map<string, Map<string, string>>,
   getFeeAmount: (key: 'i20_control_fee' | 'application_fee') => number,
   globalFeesProcessed: { [userId: string]: { selection_process: boolean; i20_control: boolean; application_fee: boolean } },
   paymentRecords: any[]
@@ -248,6 +355,7 @@ function processStripeUsers(
     if (!stripeUser) return;
     const studentName = stripeUser.full_name || 'Unknown Student';
     const studentEmail = stripeUser.email || '';
+    const sellerReferralCode = stripeUser.seller_referral_code || null;
     if (!studentName) return;
 
     const hasApplication = applications?.some(app => (app as any).user_profiles?.user_id === (stripeUser as any).user_id);
@@ -256,29 +364,62 @@ function processStripeUsers(
     if (hasZellePayment) return;
 
     const dependents = Number(stripeUser?.dependents) || 0;
-    const dependentCost = dependents * 150;
     const userOverrides = overridesMap[stripeUser?.user_id] || {};
+    const systemType = userSystemTypesMap.get(stripeUser.user_id) || 'legacy';
+    // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
+    // Dependentes só afetam Application Fee ($100 por dependente)
+    const dependentCost = systemType === 'simplified' ? 0 : (dependents * 150);
+
+    // Helper: Verifica se o valor está dentro de uma faixa razoável (50% de tolerância)
+    const isValueReasonable = (realValue: number, expectedValue: number): boolean => {
+      const tolerance = 0.5; // 50% de tolerância
+      const min = expectedValue * (1 - tolerance);
+      const max = expectedValue * (1 + tolerance);
+      return realValue >= min && realValue <= max;
+    };
 
     let selectionProcessFee: number;
-    const realAmount = realPaymentAmounts?.get(stripeUser?.user_id);
-    if (realAmount !== undefined) {
-      selectionProcessFee = Math.round(realAmount * 100);
+    const expectedSelectionProcess = systemType === 'simplified' ? 350 : 400;
+    const expectedSelectionProcessWithDeps = expectedSelectionProcess + dependentCost;
+    const realPaid = realPaymentAmounts?.get(stripeUser?.user_id);
+    
+    if (realPaid?.selection_process !== undefined && realPaid.selection_process > 0) {
+      // Verificar se o valor está razoável (dentro de 50% do esperado)
+      if (isValueReasonable(realPaid.selection_process, expectedSelectionProcessWithDeps)) {
+        selectionProcessFee = Math.round(realPaid.selection_process * 100);
+      } else {
+        // Valor muito discrepante, usar cálculo fixo
+        if (userOverrides.selection_process_fee !== undefined) {
+          selectionProcessFee = Math.round(userOverrides.selection_process_fee * 100);
+        } else {
+          selectionProcessFee = Math.round((expectedSelectionProcess + dependentCost) * 100);
+        }
+      }
     } else if (userOverrides.selection_process_fee !== undefined) {
       selectionProcessFee = Math.round(userOverrides.selection_process_fee * 100);
     } else {
-      const systemType = userSystemTypesMap.get(stripeUser.user_id) || 'legacy';
-      const baseAmount = systemType === 'simplified' ? 350 : 400;
-      selectionProcessFee = Math.round((baseAmount + dependentCost) * 100);
+      selectionProcessFee = Math.round((expectedSelectionProcess + dependentCost) * 100);
     }
 
     let i20ControlFee: number;
-    const realI20Amount = realPaymentAmounts?.get(stripeUser?.user_id);
-    if (realI20Amount !== undefined) {
-      i20ControlFee = Math.round(realI20Amount * 100);
+    const expectedI20Control = getFeeAmount('i20_control_fee');
+    
+    if (realPaid?.i20_control !== undefined && realPaid.i20_control > 0) {
+      // Verificar se o valor está razoável (dentro de 50% do esperado)
+      if (isValueReasonable(realPaid.i20_control, expectedI20Control)) {
+        i20ControlFee = Math.round(realPaid.i20_control * 100);
+      } else {
+        // Valor muito discrepante, usar cálculo fixo
+        if (userOverrides.i20_control_fee !== undefined) {
+          i20ControlFee = Math.round(userOverrides.i20_control_fee * 100);
+        } else {
+          i20ControlFee = Math.round(expectedI20Control * 100);
+        }
+      }
     } else if (userOverrides.i20_control_fee !== undefined) {
       i20ControlFee = Math.round(userOverrides.i20_control_fee * 100);
     } else {
-      i20ControlFee = Math.round(getFeeAmount('i20_control_fee') * 100);
+      i20ControlFee = Math.round(expectedI20Control * 100);
     }
 
     let scholarshipFee: number;
@@ -290,7 +431,7 @@ function processStripeUsers(
       scholarshipFee = Math.round(amount * 100);
     }
     let applicationFee = Math.round(getFeeAmount('application_fee') * 100);
-    const systemType = userSystemTypesMap.get(stripeUser.user_id) || 'legacy';
+    // systemType já foi declarado acima, reutilizar
     if (systemType === 'legacy' && dependents > 0) {
       applicationFee += dependents * 10000;
     }
@@ -298,12 +439,15 @@ function processStripeUsers(
     if (stripeUser.has_paid_selection_process_fee) {
       paymentRecords.push({
         id: `stripe-${stripeUser.user_id}-selection`,
+        student_id: stripeUser.user_id,
         fee_type: 'selection_process',
         amount: selectionProcessFee,
         status: 'paid',
+        payment_date: individualPaymentDates.get(stripeUser.user_id)?.get('selection_process') || stripeUser.last_payment_date || stripeUser.created_at,
         payment_method: stripeUser.selection_process_fee_payment_method || 'manual',
         student_name: studentName,
         student_email: studentEmail,
+        seller_referral_code: sellerReferralCode,
         university_name: 'No University Selected',
         created_at: stripeUser.created_at
       });
@@ -312,12 +456,15 @@ function processStripeUsers(
     if (stripeUser.is_application_fee_paid) {
       paymentRecords.push({
         id: `stripe-${stripeUser.user_id}-application`,
+        student_id: stripeUser.user_id,
         fee_type: 'application',
         amount: applicationFee,
         status: 'paid',
+        payment_date: individualPaymentDates.get(stripeUser.user_id)?.get('application') || stripeUser.last_payment_date || stripeUser.created_at,
         payment_method: 'manual',
         student_name: studentName,
         student_email: studentEmail,
+        seller_referral_code: sellerReferralCode,
         university_name: 'No University Selected',
         created_at: stripeUser.created_at
       });
@@ -326,12 +473,15 @@ function processStripeUsers(
     if (stripeUser.is_scholarship_fee_paid) {
       paymentRecords.push({
         id: `stripe-${stripeUser.user_id}-scholarship`,
+        student_id: stripeUser.user_id,
         fee_type: 'scholarship',
         amount: scholarshipFee,
         status: 'paid',
+        payment_date: individualPaymentDates.get(stripeUser.user_id)?.get('scholarship') || stripeUser.last_payment_date || stripeUser.created_at,
         payment_method: 'manual',
         student_name: studentName,
         student_email: studentEmail,
+        seller_referral_code: sellerReferralCode,
         university_name: 'No University Selected',
         created_at: stripeUser.created_at
       });
@@ -341,12 +491,15 @@ function processStripeUsers(
     if (stripeUser.has_paid_i20_control_fee) {
       paymentRecords.push({
         id: `stripe-${stripeUser.user_id}-i20`,
+        student_id: stripeUser.user_id,
         fee_type: 'i20_control_fee',
         amount: i20ControlFee,
         status: 'paid',
+        payment_date: individualPaymentDates.get(stripeUser.user_id)?.get('i20_control') || stripeUser.last_payment_date || stripeUser.created_at,
         payment_method: stripeUser.i20_control_fee_payment_method || 'manual',
         student_name: studentName,
         student_email: studentEmail,
+        seller_referral_code: sellerReferralCode,
         university_name: 'No University Selected',
         created_at: stripeUser.created_at
       });
@@ -367,6 +520,7 @@ export async function transformFinancialData(
     overridesMap,
     userSystemTypesMap,
     realPaymentAmounts,
+    individualPaymentDates,
     getFeeAmount
   } = inputs;
 
@@ -393,6 +547,7 @@ export async function transformFinancialData(
     overridesMap,
     userSystemTypesMap,
     realPaymentAmounts,
+    individualPaymentDates,
     getFeeAmount,
     globalFeesProcessed,
     paymentRecords
@@ -411,7 +566,7 @@ export async function transformFinancialData(
   });
   
   // Processar Zelle payments
-  processZellePayments(applications, paymentRecords, zellePaymentsByUser);
+  processZellePayments(applications, paymentRecords, zellePaymentsByUser, individualPaymentDates);
 
   // Processar Stripe users
   processStripeUsers(
@@ -421,6 +576,7 @@ export async function transformFinancialData(
     overridesMap,
     userSystemTypesMap,
     realPaymentAmounts,
+    individualPaymentDates,
     getFeeAmount,
     globalFeesProcessed,
     paymentRecords

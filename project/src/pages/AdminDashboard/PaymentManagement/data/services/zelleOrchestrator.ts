@@ -1,5 +1,6 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { recordIndividualFeePayment } from '../../../../../lib/paymentRecorder';
+import config from '../../../../../lib/config';
 
 type PaymentLike = {
   id: string;
@@ -48,6 +49,9 @@ export async function approveZelleFlow(params: {
       zellePaymentId: payment.id,
     });
     const individualFeePaymentId = individualFeePaymentResult?.paymentId || null;
+
+    // ✅ REMOVIDO: Envio de documento de aceitação de termos - agora é enviado no momento do upload do comprovante no ZelleCheckoutPage.tsx
+    // Isso garante que o documento seja enviado independentemente de aprovação automática ou manual
 
     // ✅ REMOVIDO: Registro de uso do cupom promocional - agora é feito apenas na validação (record-promotional-coupon-validation)
 
@@ -367,12 +371,21 @@ export async function approveZelleFlow(params: {
       amount: payment.amount,
       approved_by: adminName,
     };
-    await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+    console.log('📧 [zelleOrchestrator] Enviando webhook de aprovação para aluno:', approvalPayload);
+    const webhookResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(approvalPayload),
     });
-  } catch (_) {}
+    if (webhookResponse.ok) {
+      console.log('✅ [zelleOrchestrator] Webhook de aprovação para aluno enviado com sucesso');
+    } else {
+      const errorText = await webhookResponse.text();
+      console.error('❌ [zelleOrchestrator] Erro ao enviar webhook de aprovação para aluno:', webhookResponse.status, errorText);
+    }
+  } catch (error) {
+    console.error('❌ [zelleOrchestrator] Exceção ao enviar webhook de aprovação para aluno:', error);
+  }
 
   // University notifications for application/scholarship
   try {
@@ -401,26 +414,48 @@ export async function approveZelleFlow(params: {
 
   // Admin / Affiliate admin / Seller notifications (best-effort)
   try {
-    let { data: sellerData, error: sellerError } = await supabase
-      .from('sellers')
-      .select('id, user_id, name, email, referral_code, affiliate_admin_id')
+    const isDevelopment = config.isDevelopment();
+    const devBlockedEmails = [
+      'luizedmiola@gmail.com',
+      'chimentineto@gmail.com',
+      'fsuaiden@gmail.com',
+      'rayssathefuture@gmail.com',
+      'gui.reis@live.com',
+      'admin@matriculausa.com'
+    ];
+
+    // Buscar seller_referral_code do aluno
+    const { data: userProfile } = await supabase
+      .from('user_profiles')
+      .select('seller_referral_code')
       .eq('user_id', payment.user_id)
       .single();
 
-    if (sellerError && (sellerError as any).code === 'PGRST116') {
-      const { data: userProfile } = await supabase
-        .from('user_profiles')
-        .select('seller_referral_code')
-        .eq('user_id', payment.user_id)
+    let sellerData: any = null;
+    if (userProfile?.seller_referral_code) {
+      const { data: sellerByCode } = await supabase
+        .from('sellers')
+        .select('id, user_id, name, email, referral_code, affiliate_admin_id, commission_rate')
+        .eq('referral_code', userProfile.seller_referral_code)
         .single();
-      if (userProfile?.seller_referral_code) {
-        const { data: sellerByCode } = await supabase
-          .from('sellers')
-          .select('id, user_id, name, email, referral_code, affiliate_admin_id')
-          .eq('referral_code', userProfile.seller_referral_code)
-          .single();
-        if (sellerByCode) sellerData = sellerByCode;
+      if (sellerByCode) {
+        sellerData = sellerByCode;
+        console.log('✅ [zelleOrchestrator] Seller encontrado:', {
+          seller_id: sellerData.user_id,
+          seller_name: sellerData.name,
+          seller_email: sellerData.email,
+          referral_code: sellerData.referral_code,
+          affiliate_admin_id: sellerData.affiliate_admin_id,
+        });
       }
+    }
+    
+    if (!sellerData) {
+      console.warn('⚠️ [zelleOrchestrator] Nenhum seller encontrado para o aluno:', {
+        student_user_id: payment.user_id,
+        student_name: payment.student_name,
+        seller_referral_code: userProfile?.seller_referral_code || 'N/A',
+      });
     }
 
     let affiliateAdminData: any = null;
@@ -442,6 +477,97 @@ export async function approveZelleFlow(params: {
       }
     }
 
+    // 1. Notify generic admin
+    let emailAdmin = 'admin@matriculausa.com';
+    if (isDevelopment && devBlockedEmails.includes(emailAdmin)) {
+      console.log(`[NOTIFICAÇÃO] Email de admin bloqueado em desenvolvimento: ${emailAdmin}`);
+      emailAdmin = '';
+    }
+
+    if (emailAdmin) {
+      const adminPayload = {
+        tipo_notf: 'Pagamento de aluno aprovado',
+        email_admin: emailAdmin,
+        nome_admin: 'Admin MatriculaUSA',
+        email_aluno: payment.student_email,
+        nome_aluno: payment.student_name,
+        email_seller: sellerData?.email || '',
+        nome_seller: sellerData?.name || 'N/A',
+        email_affiliate_admin: affiliateAdminData?.user_profiles?.email || '',
+        nome_affiliate_admin: affiliateAdminData?.user_profiles?.full_name || 'Affiliate Admin',
+        o_que_enviar: `Pagamento de ${payment.fee_type} no valor de ${payment.amount} do aluno ${payment.student_name} foi aprovado. ${sellerData ? `Seller responsável: ${sellerData.name} (${sellerData.referral_code})` : 'Sem seller associado'}`,
+        payment_id: payment.id,
+        fee_type: payment.fee_type,
+        amount: payment.amount,
+        seller_id: sellerData?.user_id || null,
+        referral_code: sellerData?.referral_code || null,
+      };
+      console.log('📧 [zelleOrchestrator] Enviando webhook de aprovação para admin:', adminPayload);
+      const adminWebhookResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(adminPayload),
+      });
+      if (adminWebhookResponse.ok) {
+        console.log('✅ [zelleOrchestrator] Webhook de aprovação para admin enviado com sucesso');
+      } else {
+        const errorText = await adminWebhookResponse.text();
+        console.error('❌ [zelleOrchestrator] Erro ao enviar webhook de aprovação para admin:', adminWebhookResponse.status, errorText);
+      }
+    }
+
+    // 2. Notify ALL system administrators
+    try {
+      const { data: adminUsers } = await supabase
+        .from('user_profiles')
+        .select('user_id, full_name, email, phone')
+        .eq('role', 'admin');
+
+      if (adminUsers && adminUsers.length > 0) {
+        console.log(`📧 [zelleOrchestrator] Enviando notificações para ${adminUsers.length} administradores...`);
+        for (const admin of adminUsers) {
+          let adminEmail = admin.email;
+          if (isDevelopment && devBlockedEmails.includes(adminEmail)) {
+            console.log(`📧 [zelleOrchestrator] Notificação bloqueada para admin ${adminEmail} em desenvolvimento`);
+            continue;
+          }
+
+          const adminNotificationPayload = {
+            tipo_notf: 'Pagamento de aluno aprovado',
+            email_admin: adminEmail,
+            nome_admin: admin.full_name || 'Admin',
+            phone_admin: admin.phone || '',
+            email_aluno: payment.student_email,
+            nome_aluno: payment.student_name,
+            email_seller: sellerData?.email || '',
+            nome_seller: sellerData?.name || 'N/A',
+            email_affiliate_admin: affiliateAdminData?.user_profiles?.email || '',
+            nome_affiliate_admin: affiliateAdminData?.user_profiles?.full_name || 'N/A',
+            o_que_enviar: `Pagamento de ${payment.fee_type} no valor de ${payment.amount} do aluno ${payment.student_name} foi aprovado manualmente. ${sellerData ? `Seller responsável: ${sellerData.name} (${sellerData.referral_code})` : 'Sem seller associado'}`,
+            payment_id: payment.id,
+            fee_type: payment.fee_type,
+            amount: payment.amount,
+            seller_id: sellerData?.user_id || null,
+            referral_code: sellerData?.referral_code || null,
+            commission_rate: sellerData?.commission_rate || null,
+            approved_by: 'Manual Admin Approval',
+          };
+
+          console.log(`📧 [zelleOrchestrator] Enviando notificação para admin ${adminEmail}`);
+
+          await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(adminNotificationPayload),
+          }).catch(err => console.error(`❌ Erro ao notificar admin ${adminEmail}:`, err));
+        }
+        console.log(`✅ [zelleOrchestrator] Notificações concluídas para administradores`);
+      }
+    } catch (error) {
+      console.error('❌ [zelleOrchestrator] Erro ao notificar administradores:', error);
+    }
+
+    // 3. Notify affiliate admin and seller
     if (sellerData) {
       const { data: sellerProfile } = await supabase
         .from('user_profiles')
@@ -450,37 +576,18 @@ export async function approveZelleFlow(params: {
         .single();
       const sellerPhone = sellerProfile?.phone;
 
-      // Notify admin
-      await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tipo_notf: 'Pagamento de aluno aprovado',
-          email_admin: 'admin@matriculausa.com',
-          nome_admin: 'Admin MatriculaUSA',
-          email_aluno: payment.student_email,
-          nome_aluno: payment.student_name,
-          email_seller: sellerData.email,
-          nome_seller: sellerData.name,
-          email_affiliate_admin: affiliateAdminData?.user_profiles?.email || '',
-          nome_affiliate_admin: affiliateAdminData?.user_profiles?.full_name || 'Affiliate Admin',
-          o_que_enviar: `Pagamento de ${payment.fee_type} no valor de ${payment.amount} do aluno ${payment.student_name} foi aprovado. Seller responsável: ${sellerData.name} (${sellerData.referral_code})`,
-          payment_id: payment.id,
-          fee_type: payment.fee_type,
-          amount: payment.amount,
-          seller_id: sellerData.user_id,
-          referral_code: sellerData.referral_code,
-        }),
-      });
-
       // Notify affiliate admin
       if (affiliateAdminData?.user_profiles?.email) {
-        await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+        let emailAffiliateAdmin = affiliateAdminData.user_profiles.email;
+        if (isDevelopment && devBlockedEmails.includes(emailAffiliateAdmin)) {
+          console.log(`📧 [zelleOrchestrator] Notificação bloqueada para affiliate admin ${emailAffiliateAdmin} em desenvolvimento`);
+          emailAffiliateAdmin = '';
+        }
+
+        if (emailAffiliateAdmin) {
+          const affiliateAdminPayload = {
             tipo_notf: 'Pagamento de aluno do seu seller aprovado',
-            email_affiliate_admin: affiliateAdminData.user_profiles.email,
+            email_affiliate_admin: emailAffiliateAdmin,
             nome_affiliate_admin: affiliateAdminData.user_profiles.full_name || 'Affiliate Admin',
             phone_affiliate_admin: affiliateAdminData.user_profiles.phone || '',
             email_aluno: payment.student_email,
@@ -495,17 +602,33 @@ export async function approveZelleFlow(params: {
             amount: payment.amount,
             seller_id: sellerData.user_id,
             referral_code: sellerData.referral_code,
-          }),
-        });
+          };
+          console.log('📧 [zelleOrchestrator] Enviando webhook de aprovação para affiliate admin:', affiliateAdminPayload);
+          const affiliateAdminWebhookResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(affiliateAdminPayload),
+          });
+          if (affiliateAdminWebhookResponse.ok) {
+            console.log('✅ [zelleOrchestrator] Webhook de aprovação para affiliate admin enviado com sucesso');
+          } else {
+            const errorText = await affiliateAdminWebhookResponse.text();
+            console.error('❌ [zelleOrchestrator] Erro ao enviar webhook de aprovação para affiliate admin:', affiliateAdminWebhookResponse.status, errorText);
+          }
+        }
       }
 
       // Notify seller
-      await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      let emailSeller = sellerData.email;
+      if (isDevelopment && devBlockedEmails.includes(emailSeller)) {
+        console.log(`📧 [zelleOrchestrator] Notificação bloqueada para seller ${emailSeller} em desenvolvimento`);
+        emailSeller = '';
+      }
+
+      if (emailSeller) {
+        const sellerPayload = {
           tipo_notf: 'Pagamento do seu aluno aprovado',
-          email_seller: sellerData.email,
+          email_seller: emailSeller,
           nome_seller: sellerData.name,
           phone_seller: sellerPhone || '',
           email_aluno: payment.student_email,
@@ -516,10 +639,24 @@ export async function approveZelleFlow(params: {
           amount: payment.amount,
           seller_id: sellerData.user_id,
           referral_code: sellerData.referral_code,
-        }),
-      });
+        };
+        console.log('📧 [zelleOrchestrator] Enviando webhook de aprovação para seller:', sellerPayload);
+        const sellerWebhookResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(sellerPayload),
+        });
+        if (sellerWebhookResponse.ok) {
+          console.log('✅ [zelleOrchestrator] Webhook de aprovação para seller enviado com sucesso');
+        } else {
+          const errorText = await sellerWebhookResponse.text();
+          console.error('❌ [zelleOrchestrator] Erro ao enviar webhook de aprovação para seller:', sellerWebhookResponse.status, errorText);
+        }
+      }
     }
-  } catch (_) {}
+  } catch (error) {
+    console.error('❌ [zelleOrchestrator] Exceção ao enviar notificações para admin/affiliate/seller:', error);
+  }
 }
 
 export async function rejectZelleFlow(params: {

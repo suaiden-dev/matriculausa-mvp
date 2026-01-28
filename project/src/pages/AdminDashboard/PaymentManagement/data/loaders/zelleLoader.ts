@@ -5,26 +5,32 @@ export type ZelleLoadResult = { records: PaymentRecord[]; count: number };
 
 export async function loadZellePaymentsLoader(
   supabase: SupabaseClient,
-  page: number,
-  pageSize: number,
   signal?: AbortSignal
 ): Promise<ZelleLoadResult> {
-  const from = (page - 1) * pageSize;
-  const to = from + pageSize - 1;
-  
+  // Detectar ambiente para aplicar filtro de @uorak.com apenas em produção
+  // ✅ Filtro aplicado no servidor: em produção, exclui @uorak.com; em localhost, mostra tudo
+  const isDevelopment = typeof window !== 'undefined' && (
+    window.location.hostname === 'localhost' || 
+    window.location.hostname === '127.0.0.1' || 
+    window.location.hostname.includes('localhost') || 
+    window.location.hostname.includes('dev')
+  );
+
+  // ✅ BUSCAR TODOS OS REGISTROS: Sem paginação, buscar todos os pagamentos Zelle
   const query = supabase
     .from('zelle_payments')
     .select('*', { count: 'exact' })
     .gt('amount', 0)
-    .order('created_at', { ascending: false })
-    .range(from, to);
+    .order('created_at', { ascending: false });
   const { data: zellePaymentsData, error: zelleError, count } = signal
     ? await query.abortSignal(signal)
     : await query;
   if (zelleError) throw zelleError;
 
   let records: PaymentRecord[] = [];
-  if (zellePaymentsData && zellePaymentsData.length > 0) {
+
+  // Processar registros e aplicar filtro
+  if (zellePaymentsData.length > 0) {
     const userIds = zellePaymentsData.map((p: any) => p.user_id).filter(Boolean);
     const { data: userProfiles, error: usersError } = await supabase
       .from('user_profiles')
@@ -32,8 +38,15 @@ export async function loadZellePaymentsLoader(
       .in('user_id', userIds);
     if (usersError) throw usersError;
 
+    // Processar e filtrar registros
     for (const zellePayment of zellePaymentsData) {
       const student = userProfiles?.find((p) => p.user_id === zellePayment.user_id);
+      
+      // ✅ FILTRO NO SERVIDOR: Excluir @uorak.com apenas em produção
+      if (!isDevelopment && student?.email?.toLowerCase().includes('@uorak.com')) {
+        continue; // Pular este pagamento em produção
+      }
+      
       const studentName = student?.full_name && student.full_name !== student?.email
         ? student.full_name
         : student?.email || 'Unknown User';
@@ -64,7 +77,42 @@ export async function loadZellePaymentsLoader(
     }
   }
 
-  return { records, count: count || 0 };
+  // ✅ CONTAGEM PRECISA: Em produção, precisamos contar apenas os registros não filtrados
+  // Fazer uma query separada para contar registros excluindo @uorak.com
+  let finalCount = count || 0;
+  
+  if (!isDevelopment && count && count > 0) {
+    // Buscar todos os user_ids de zelle_payments para contar quantos são @uorak.com
+    const { data: allZelleUserIds, error: countError } = await supabase
+      .from('zelle_payments')
+      .select('user_id')
+      .gt('amount', 0);
+    
+    if (!countError && allZelleUserIds && allZelleUserIds.length > 0) {
+      const uniqueUserIds = [...new Set(allZelleUserIds.map((p: any) => p.user_id).filter(Boolean))];
+      const { data: allUserProfiles } = await supabase
+        .from('user_profiles')
+        .select('user_id, email')
+        .in('user_id', uniqueUserIds);
+      
+      // Contar quantos pagamentos são de @uorak.com
+      const uorakUserIds = new Set(
+        allUserProfiles
+          ?.filter((p: any) => p.email?.toLowerCase().includes('@uorak.com'))
+          .map((p: any) => p.user_id) || []
+      );
+      
+      // Contar quantos pagamentos são de usuários @uorak.com
+      const uorakPaymentsCount = allZelleUserIds.filter((p: any) => 
+        uorakUserIds.has(p.user_id)
+      ).length;
+      
+      // Ajustar o count subtraindo os @uorak.com
+      finalCount = Math.max(0, count - uorakPaymentsCount);
+    }
+  }
+  
+  return { records, count: finalCount };
 }
 
 

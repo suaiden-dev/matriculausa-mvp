@@ -97,14 +97,14 @@ export function usePaymentsQuery(enabled: boolean = true) {
 }
 
 /**
- * Hook para buscar pagamentos Zelle com paginação
+ * Hook para buscar todos os pagamentos Zelle (sem paginação)
  */
-export function useZellePaymentsQuery(page: number, pageSize: number, enabled: boolean = true) {
+export function useZellePaymentsQuery(enabled: boolean = true) {
   return useQuery({
-    queryKey: queryKeys.payments.zelle.list(page, pageSize),
+    queryKey: queryKeys.payments.zelle.list(),
     enabled,
     queryFn: async () => {
-      return await loadZellePaymentsLoader(supabase, page, pageSize);
+      return await loadZellePaymentsLoader(supabase);
     },
     staleTime: 30 * 1000, // 30 segundos - dados dinâmicos
     gcTime: 5 * 60 * 1000, // 5 minutos

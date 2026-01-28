@@ -15,7 +15,8 @@ import {
   User,
   ChevronDown,
   Activity,
-  CreditCard
+  CreditCard,
+  Link as LinkIcon
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import AffiliateAdminNotifications from '../../components/AffiliateAdminNotifications';
@@ -35,10 +36,16 @@ const AffiliateAdminDashboardLayout: React.FC<AffiliateAdminDashboardLayoutProps
 }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { logout, userProfile } = useAuth();
   const { systemType } = useSystemType();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+
+  // Função helper para obter o nome de exibição (prioriza company_name)
+  const getDisplayName = () => {
+    const companyName = (userProfile as any)?.company_name;
+    return companyName && companyName.trim() ? companyName : (user?.name || 'Admin de Afiliados');
+  };
 
   // Monitorar deadlines do I-20
   useI20DeadlineMonitor({
@@ -53,6 +60,7 @@ const AffiliateAdminDashboardLayout: React.FC<AffiliateAdminDashboardLayoutProps
     if (path.includes('/my-students')) return 'my-students';
     if (path.includes('/students')) return 'students';
     if (path.includes('/analytics')) return 'analytics';
+    if (path.includes('/utm-tracking')) return 'utm-tracking';
     if (path.includes('/profile')) return 'profile';
     return 'overview';
   };
@@ -68,6 +76,7 @@ const AffiliateAdminDashboardLayout: React.FC<AffiliateAdminDashboardLayoutProps
       { id: 'students', label: 'Seller Tracking', icon: GraduationCap, path: '/affiliate-admin/dashboard/students', badge: null },
       { id: 'my-students', label: 'My Students', icon: UserPlus, path: '/affiliate-admin/dashboard/my-students', badge: null },
       { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/affiliate-admin/dashboard/analytics', badge: null },
+      { id: 'utm-tracking', label: 'UTM Tracking', icon: LinkIcon, path: '/affiliate-admin/dashboard/utm-tracking', badge: null },
       { id: 'profile', label: 'Profile Settings', icon: Settings, path: '/affiliate-admin/dashboard/profile', badge: null }
     ];
 
@@ -243,7 +252,7 @@ const AffiliateAdminDashboardLayout: React.FC<AffiliateAdminDashboardLayoutProps
                     <User className="h-4 w-4 text-white" />
                   </div>
                   <div className="hidden md:block text-left">
-                    <p className="font-semibold text-slate-900 text-sm">{user?.name}</p>
+                    <p className="font-semibold text-slate-900 text-sm">{getDisplayName()}</p>
                     <p className="text-xs text-slate-500">Affiliate Administrator</p>
                   </div>
                   <ChevronDown className="h-4 w-4 text-slate-400" />
@@ -252,7 +261,7 @@ const AffiliateAdminDashboardLayout: React.FC<AffiliateAdminDashboardLayoutProps
                 {userMenuOpen && (
                   <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-200 py-2 z-50">
                     <div className="px-4 py-3 border-b border-slate-200">
-                      <p className="font-semibold text-slate-900">{user?.name}</p>
+                      <p className="font-semibold text-slate-900">{getDisplayName()}</p>
                       <p className="text-sm text-slate-500">{user?.email}</p>
                     </div>
                     

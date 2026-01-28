@@ -38,6 +38,12 @@ export const profileFieldsConfig: FieldSection[] = [
         type: 'text',
         required: true,
         placeholder: 'City, State, Country'
+      },
+      {
+        key: 'university_fees_page_url',
+        label: 'University Fees Page URL',
+        type: 'url',
+        placeholder: 'https://university.edu/fees'
       }
     ],
     columns: 2

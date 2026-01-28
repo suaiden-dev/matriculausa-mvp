@@ -10,7 +10,7 @@ export interface MetricsGridProps {
 
 export function MetricsGrid({ metrics }: MetricsGridProps) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       <MetricCard
         label="Student Revenue"
         value={`$${formatCentsToUSD(metrics.totalRevenue)}`}
@@ -31,34 +31,6 @@ export function MetricsGrid({ metrics }: MetricsGridProps) {
             </span>
           </>
         }
-      />
-
-      <MetricCard
-        label="Conversion Rate"
-        value={`${metrics.conversionRate.toFixed(1)}%`}
-        icon={Target}
-        gradientFrom="from-green-500"
-        gradientTo="to-green-600"
-        iconColor="text-green-200"
-        textColor="text-green-100"
-        sublabel={
-          <>
-            <Target className="h-4 w-4 text-green-300 mr-1" />
-            <span className="text-sm text-green-100">
-              {metrics.paidPayments} of {metrics.totalPayments} payments
-            </span>
-          </>
-        }
-      />
-
-      <MetricCard
-        label="Avg Transaction Value"
-        value={`$${formatCentsToUSD(metrics.averageTransactionValue)}`}
-        icon={CreditCard}
-        gradientFrom="from-purple-500"
-        gradientTo="to-purple-600"
-        iconColor="text-purple-200"
-        textColor="text-purple-100"
       />
 
       <MetricCard
@@ -91,23 +63,6 @@ export function MetricsGrid({ metrics }: MetricsGridProps) {
         }
       />
 
-      <MetricCard
-        label="Total Students"
-        value={metrics.totalStudents}
-        icon={Users}
-        gradientFrom="from-orange-500"
-        gradientTo="to-orange-600"
-        iconColor="text-orange-200"
-        textColor="text-orange-100"
-        sublabel={
-          <>
-            <Users className="h-4 w-4 text-orange-300 mr-1" />
-            <span className="text-sm text-orange-100">
-              Total registered students
-            </span>
-          </>
-        }
-      />
     </div>
   );
 }

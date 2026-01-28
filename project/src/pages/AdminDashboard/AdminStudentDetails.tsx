@@ -595,41 +595,54 @@ const AdminStudentDetails: React.FC = () => {
   };
 
   // Função para buscar valores reais pagos de individual_fee_payments
-  // IMPORTANTE: Não usa valores de pagamentos PIX (que estão em BRL), apenas valores em USD
+  // ✅ CORREÇÃO: Usar gross_amount_usd quando disponível (valor bruto em USD)
+  // Isso garante que mostramos o valor que o aluno realmente pagou, igual ao Payment Management
   const fetchRealPaidAmounts = async (userId: string) => {
     try {
       const { data: payments, error } = await supabase
         .from('individual_fee_payments')
-        .select('fee_type, amount, payment_method')
-        .eq('user_id', userId);
+        .select('fee_type, amount, gross_amount_usd, payment_method, payment_date')
+        .eq('user_id', userId)
+        .order('payment_date', { ascending: false }); // Mais recente primeiro
       
       if (error) throw error;
       
       const amounts: typeof realPaidAmounts = {};
+      
+      // Processar cada pagamento, usando o mais recente para cada fee_type
       payments?.forEach(payment => {
-        const amount = Number(payment.amount);
+        // ✅ PRIORIDADE: Usar gross_amount_usd quando disponível (valor bruto em USD)
+        // Se não tiver, usar amount (mas pode estar em BRL para PIX, então verificar)
+        let amountUSD = payment.gross_amount_usd 
+          ? Number(payment.gross_amount_usd)
+          : Number(payment.amount);
         
-        // Se o valor for muito alto (> 1000), provavelmente é BRL de um pagamento PIX
-        // Não usar esse valor, deixar undefined para usar os valores das taxas configuradas
-        const isLikelyBRL = amount > 1000;
-        
-        // Se for pagamento via stripe e o valor for alto, provavelmente é PIX (BRL)
-        // Não usar valores de PIX, apenas valores em USD
-        if (isLikelyBRL && payment.payment_method === 'stripe') {
-          console.log(`[AdminDashboard] Ignorando valor de PIX (BRL) para ${payment.fee_type}: ${amount}`);
-          return; // Não definir o valor, deixar usar os valores das taxas configuradas
+        // Se não tem gross_amount_usd e o valor é muito alto, provavelmente é BRL
+        // Não usar esse valor para evitar mostrar valores incorretos
+        if (!payment.gross_amount_usd && amountUSD > 1000 && payment.payment_method === 'stripe') {
+          console.log(`[AdminDashboard] Ignorando valor provavelmente BRL para ${payment.fee_type}: ${amountUSD}`);
+          return;
         }
         
         const feeType = payment.fee_type as keyof typeof amounts;
-        if (feeType === 'selection_process') amounts.selection_process = amount;
-        else if (feeType === 'application') amounts.application = amount;
-        else if (feeType === 'scholarship') amounts.scholarship = amount;
-        else if (feeType === 'i20_control') amounts.i20_control = amount;
+        
+        // Só definir se ainda não foi definido (usar o mais recente, que vem primeiro devido ao order)
+        if (feeType === 'selection_process' && !amounts.selection_process) {
+          amounts.selection_process = amountUSD;
+        } else if (feeType === 'application' && !amounts.application) {
+          amounts.application = amountUSD;
+        } else if (feeType === 'scholarship' && !amounts.scholarship) {
+          amounts.scholarship = amountUSD;
+        } else if (feeType === 'i20_control' && !amounts.i20_control) {
+          amounts.i20_control = amountUSD;
+        }
       });
       
+      console.log('✅ [AdminStudentDetails] Real paid amounts loaded:', amounts);
       setRealPaidAmounts(amounts);
     } catch (error) {
-      console.error('Error fetching real paid amounts:', error);
+      console.error('❌ [AdminStudentDetails] Error fetching real paid amounts:', error);
+      setRealPaidAmounts({});
     }
   };
 
@@ -719,6 +732,30 @@ const AdminStudentDetails: React.FC = () => {
             
             if (s && s.id) {
               console.log('✅ [PERFORMANCE] Usando RPC consolidada para carregar dados do estudante');
+              
+              // 🔍 LOG: Verificar se é a Stephanie quando vem do RPC
+              const isStephanieRpc = s.email === 'stephaniecriistine25@gmail.com';
+              if (isStephanieRpc) {
+                console.log('🔍 [STEPHANIE DEBUG] ==========================================');
+                console.log('🔍 [STEPHANIE DEBUG] 🚀 DADOS VINDO DO RPC');
+                console.log('🔍 [STEPHANIE DEBUG] Email:', s.email);
+                console.log('🔍 [STEPHANIE DEBUG] Profile ID:', s.id);
+                console.log('🔍 [STEPHANIE DEBUG] Tem scholarship_applications?', !!s.scholarship_applications);
+                console.log('🔍 [STEPHANIE DEBUG] Tipo de scholarship_applications:', typeof s.scholarship_applications);
+                console.log('🔍 [STEPHANIE DEBUG] Número de applications:', Array.isArray(s.scholarship_applications) ? s.scholarship_applications.length : 'NÃO É ARRAY');
+                
+                if (Array.isArray(s.scholarship_applications)) {
+                  console.log('🔍 [STEPHANIE DEBUG] Applications do RPC:', s.scholarship_applications.map((app: any) => ({
+                    id: app.id,
+                    status: app.status,
+                    is_application_fee_paid: app.is_application_fee_paid,
+                    is_scholarship_fee_paid: app.is_scholarship_fee_paid,
+                    payment_status: app.payment_status
+                  })));
+                } else {
+                  console.log('🔍 [STEPHANIE DEBUG] ⚠️ scholarship_applications NÃO É ARRAY:', s.scholarship_applications);
+                }
+              }
             } else {
               console.warn('⚠️ [PERFORMANCE] RPC retornou dados inválidos, usando fallback');
               useRpc = false;
@@ -808,9 +845,27 @@ const AdminStudentDetails: React.FC = () => {
           throw new Error('Failed to load student data');
         }
 
+        // 🔍 LOG INICIAL: Verificar se é a Stephanie ANTES de processar
+        const isStephanie = s.email === 'stephaniecriistine25@gmail.com';
+        if (isStephanie) {
+          console.log('🔍 [STEPHANIE DEBUG] ==========================================');
+          console.log('🔍 [STEPHANIE DEBUG] 🚀 INÍCIO DO PROCESSAMENTO');
+          console.log('🔍 [STEPHANIE DEBUG] Email:', s.email);
+          console.log('🔍 [STEPHANIE DEBUG] Profile ID:', s.id);
+          console.log('🔍 [STEPHANIE DEBUG] Tem scholarship_applications?', !!s.scholarship_applications);
+          console.log('🔍 [STEPHANIE DEBUG] Número de applications:', s.scholarship_applications?.length || 0);
+        }
+
         let lockedApplication = null;
         let activeApplication = null;
         if (s.scholarship_applications && s.scholarship_applications.length > 0) {
+          
+          if (isStephanie) {
+            console.log('🔍 [STEPHANIE DEBUG] ==========================================');
+            console.log('🔍 [STEPHANIE DEBUG] Email:', s.email);
+            console.log('🔍 [STEPHANIE DEBUG] Total applications:', s.scholarship_applications.length);
+          }
+          
           console.log('🔍 [ADMIN STUDENT DETAILS] scholarship_applications:', s.scholarship_applications.map((app: any) => ({
             id: app.id,
             status: app.status,
@@ -818,12 +873,37 @@ const AdminStudentDetails: React.FC = () => {
             is_scholarship_fee_paid: app.is_scholarship_fee_paid,
             scholarship_title: app.scholarships?.title
           })));
-          console.log('🔍 [ADMIN STUDENT DETAILS] Full scholarship_applications data:', JSON.stringify(s.scholarship_applications, null, 2));
+          
+          if (isStephanie) {
+            console.log('🔍 [STEPHANIE DEBUG] Full scholarship_applications data:', JSON.stringify(s.scholarship_applications, null, 2));
+          }
           
           // Priorizar aplicação enrolled, depois approved com application fee pago, depois approved
           const enrolledApp = s.scholarship_applications.find((app: any) => app.status === 'enrolled');
           const approvedWithFeeApp = s.scholarship_applications.find((app: any) => app.status === 'approved' && app.is_application_fee_paid);
           const anyApprovedApp = s.scholarship_applications.find((app: any) => app.status === 'approved');
+          
+          if (isStephanie) {
+            console.log('🔍 [STEPHANIE DEBUG] enrolledApp:', {
+              found: !!enrolledApp,
+              id: enrolledApp?.id,
+              status: enrolledApp?.status,
+              is_application_fee_paid: enrolledApp?.is_application_fee_paid,
+              is_scholarship_fee_paid: enrolledApp?.is_scholarship_fee_paid,
+              payment_status: enrolledApp?.payment_status
+            });
+            console.log('🔍 [STEPHANIE DEBUG] approvedWithFeeApp:', {
+              found: !!approvedWithFeeApp,
+              id: approvedWithFeeApp?.id,
+              status: approvedWithFeeApp?.status,
+              is_application_fee_paid: approvedWithFeeApp?.is_application_fee_paid
+            });
+            console.log('🔍 [STEPHANIE DEBUG] anyApprovedApp:', {
+              found: !!anyApprovedApp,
+              id: anyApprovedApp?.id,
+              status: anyApprovedApp?.status
+            });
+          }
           
           lockedApplication = enrolledApp || approvedWithFeeApp || anyApprovedApp;
           
@@ -833,6 +913,16 @@ const AdminStudentDetails: React.FC = () => {
             anyApprovedApp: anyApprovedApp?.id,
             finalLockedApp: lockedApplication?.id
           });
+          
+          if (isStephanie) {
+            console.log('🔍 [STEPHANIE DEBUG] final lockedApplication:', {
+              id: lockedApplication?.id,
+              status: lockedApplication?.status,
+              is_application_fee_paid: lockedApplication?.is_application_fee_paid,
+              is_scholarship_fee_paid: lockedApplication?.is_scholarship_fee_paid,
+              payment_status: lockedApplication?.payment_status
+            });
+          }
           
           // Se não há aplicação locked, buscar a aplicação mais recente para o student_process_type
           if (!lockedApplication) {
@@ -869,18 +959,66 @@ const AdminStudentDetails: React.FC = () => {
           application_status: lockedApplication?.status || null,
           applied_at: lockedApplication?.applied_at || null,
           is_application_fee_paid: (() => {
+            const isStephanie = s.email === 'stephaniecriistine25@gmail.com';
+            
+            // ✅ CORREÇÃO: Priorizar aplicação enrolled, depois verificar outras
+            if (enrolledApp && enrolledApp.is_application_fee_paid) {
+              if (isStephanie) {
+                console.log('🔍 [STEPHANIE DEBUG] is_application_fee_paid: TRUE (from enrolledApp)');
+              }
+              return true;
+            }
             // Verificar se alguma aplicação tem Application Fee pago
-            return s.scholarship_applications?.some((app: any) => app.is_application_fee_paid) || false;
+            const hasAnyPaid = s.scholarship_applications?.some((app: any) => app.is_application_fee_paid) || false;
+            if (isStephanie) {
+              console.log('🔍 [STEPHANIE DEBUG] is_application_fee_paid:', {
+                enrolledAppHasFee: enrolledApp?.is_application_fee_paid,
+                hasAnyPaid,
+                allApps: s.scholarship_applications?.map((app: any) => ({
+                  id: app.id,
+                  status: app.status,
+                  is_application_fee_paid: app.is_application_fee_paid
+                }))
+              });
+            }
+            return hasAnyPaid;
           })(),
-          is_scholarship_fee_paid: lockedApplication?.is_scholarship_fee_paid || false,
+          is_scholarship_fee_paid: (() => {
+            const isStephanie = s.email === 'stephaniecriistine25@gmail.com';
+            
+            // ✅ CORREÇÃO: Priorizar aplicação enrolled, depois usar lockedApplication
+            if (enrolledApp && enrolledApp.is_scholarship_fee_paid) {
+              if (isStephanie) {
+                console.log('🔍 [STEPHANIE DEBUG] is_scholarship_fee_paid: TRUE (from enrolledApp)');
+              }
+              return true;
+            }
+            const result = lockedApplication?.is_scholarship_fee_paid || false;
+            if (isStephanie) {
+              console.log('🔍 [STEPHANIE DEBUG] is_scholarship_fee_paid:', {
+                enrolledAppHasFee: enrolledApp?.is_scholarship_fee_paid,
+                lockedAppHasFee: lockedApplication?.is_scholarship_fee_paid,
+                lockedAppId: lockedApplication?.id,
+                lockedAppStatus: lockedApplication?.status,
+                finalResult: result,
+                allApps: s.scholarship_applications?.map((app: any) => ({
+                  id: app.id,
+                  status: app.status,
+                  is_scholarship_fee_paid: app.is_scholarship_fee_paid
+                }))
+              });
+            }
+            return result;
+          })(),
           application_fee_payment_method: lockedApplication?.application_fee_payment_method || null,
           scholarship_fee_payment_method: lockedApplication?.scholarship_fee_payment_method || null,
           acceptance_letter_status: lockedApplication?.acceptance_letter_status || null,
           student_process_type: lockedApplication?.student_process_type || activeApplication?.student_process_type || null,
           payment_status: lockedApplication?.payment_status || null,
           scholarship_title: (() => {
-            // Buscar aplicação que teve Application Fee pago
-            const paidApplication = s.scholarship_applications?.find((app: any) => app.is_application_fee_paid);
+            // ✅ CORREÇÃO: Priorizar aplicação enrolled com fee pago
+            const enrolledWithFee = s.scholarship_applications?.find((app: any) => app.status === 'enrolled' && app.is_application_fee_paid);
+            const paidApplication = enrolledWithFee || s.scholarship_applications?.find((app: any) => app.is_application_fee_paid);
             if (paidApplication?.scholarships) {
               const scholarship = Array.isArray(paidApplication.scholarships) 
                 ? paidApplication.scholarships[0] 
@@ -1693,7 +1831,10 @@ const AdminStudentDetails: React.FC = () => {
     if (!student) return;
     
     // Calcular valores atuais considerando dependentes e overrides
-    const dependentsExtra = dependents * 150; // $150 por dependente apenas no Selection Process
+    // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
+    // Dependentes só afetam Application Fee ($100 por dependente)
+    const systemType = student?.system_type || 'legacy';
+    const dependentsExtra = systemType === 'simplified' ? 0 : (dependents * 150); // $150 por dependente apenas no Selection Process (legacy)
     const baseSelectionProcess = Number(getFeeAmount('selection_process')); // Valor base dinâmico
     const currentSelectionProcess = hasOverride('selection_process') 
       ? getFeeAmount('selection_process') 
@@ -1894,7 +2035,12 @@ const AdminStudentDetails: React.FC = () => {
       if (feeType === 'selection_process') {
         // Calcular o valor do pagamento
         const base = Number(getFeeAmount('selection_process'));
-        const paymentAmount = base + (student?.dependents || 0) * 150;
+        // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
+        // Dependentes só afetam Application Fee ($100 por dependente)
+        const systemType = student?.system_type || 'legacy';
+        const paymentAmount = systemType === 'simplified' 
+          ? base 
+          : base + (student?.dependents || 0) * 150;
         const paymentDate = new Date().toISOString();
         const paymentMethod = (method || 'manual') as 'stripe' | 'zelle' | 'manual';
 
@@ -4462,21 +4608,27 @@ const AdminStudentDetails: React.FC = () => {
                                         setPendingRejectAppId(app.id);
                                         setShowRejectStudentModal(true);
                                       }}
-                                      disabled={approvingStudent || rejectingStudent || app.status === 'approved' || app.status === 'rejected'}
+                                      disabled={approvingStudent || rejectingStudent || app.status === 'approved' || app.status === 'rejected' || app.status === 'enrolled'}
                                       className={`px-4 py-2 rounded-lg font-medium border transition-colors text-center text-sm ${
                                         app.status === 'rejected' 
                                           ? 'bg-red-100 text-red-700 border-red-300 cursor-not-allowed' 
                                           : 'text-red-600 border-red-200 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed'
                                       }`}
                                     >
-                                      {app.status === 'approved' ? 'Application Approved' : app.status === 'rejected' ? 'Application Rejected' : 'Reject Application'}
+                                      {app.status === 'approved' ? 'Application Approved' : app.status === 'rejected' ? 'Application Rejected' : app.status === 'enrolled' ? 'Application Enrolled' : 'Reject Application'}
                                     </button>
                                     <button
-                                      disabled={approvingStudent || rejectingStudent || app.status === 'approved' || app.status === 'rejected'}
+                                      disabled={approvingStudent || rejectingStudent || app.status === 'approved' || app.status === 'rejected' || app.status === 'enrolled'}
                                       onClick={() => approveApplication(app.id)}
-                                      className="px-4 py-2 rounded-lg font-medium bg-[#05294E] text-white hover:bg-[#041f38] disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-center text-sm"
+                                      className={`px-4 py-2 rounded-lg font-medium text-white transition-colors text-center text-sm ${
+                                        app.status === 'approved' || app.status === 'enrolled'
+                                          ? 'bg-green-600 hover:bg-green-700 cursor-not-allowed'
+                                          : app.status === 'rejected'
+                                          ? 'bg-red-600 hover:bg-red-700 cursor-not-allowed'
+                                          : 'bg-[#05294E] hover:bg-[#041f38] disabled:opacity-50 disabled:cursor-not-allowed'
+                                      }`}
                                     >
-                                      {app.status === 'approved' ? 'Approved' : app.status === 'rejected' ? 'Rejected' : (approvingStudent ? 'Approving...' : 'Approve Application')}
+                                      {app.status === 'approved' ? 'Approved' : app.status === 'rejected' ? 'Rejected' : app.status === 'enrolled' ? 'Enrolled' : (approvingStudent ? 'Approving...' : 'Approve Application')}
                                     </button>
                                   </div>
                                 </div>
@@ -4782,7 +4934,12 @@ const AdminStudentDetails: React.FC = () => {
                       // Caso contrário, calcular valor esperado (para exibição antes do pagamento)
                       const hasCustomOverride = hasOverride('selection_process');
                       const base = Number(getFeeAmount('selection_process'));
-                      const finalAmount = hasCustomOverride ? getFeeAmount('selection_process') : base + dependents * 150;
+                      // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
+                      // Dependentes só afetam Application Fee ($100 por dependente)
+                      const systemType = student?.system_type || 'legacy';
+                      const finalAmount = hasCustomOverride 
+                        ? getFeeAmount('selection_process') 
+                        : (systemType === 'simplified' ? base : base + dependents * 150);
                       const formatted = formatFeeAmount(finalAmount);
                       
                       if (student?.user_id === '935e0eec-82c6-4a70-b013-e85dde6e63f7') {
@@ -4886,7 +5043,9 @@ const AdminStudentDetails: React.FC = () => {
                     {student.is_application_fee_paid ? (
                       <dd className="text-sm font-semibold text-slate-700 mt-1">
                         {(() => {
-                          const paidApplication = student.all_applications?.find((app: any) => app.is_application_fee_paid);
+                          // ✅ CORREÇÃO: Priorizar aplicação enrolled com fee pago
+                          const enrolledApp = student.all_applications?.find((app: any) => app.status === 'enrolled' && app.is_application_fee_paid);
+                          const paidApplication = enrolledApp || student.all_applications?.find((app: any) => app.is_application_fee_paid);
                           if (paidApplication?.scholarships) {
                             const scholarship = Array.isArray(paidApplication.scholarships)
                               ? paidApplication.scholarships[0]
@@ -4971,8 +5130,9 @@ const AdminStudentDetails: React.FC = () => {
                           <span className="text-sm font-medium text-red-600">Not Paid</span>
                         </div>
                          {isPlatformAdmin && (() => {
-                           // Buscar aplicação aprovada para application fee
-                           const approvedApp = student.all_applications?.find((app: any) => app.status === 'approved');
+                           // ✅ CORREÇÃO: Priorizar aplicação enrolled, depois approved
+                           const enrolledApp = student.all_applications?.find((app: any) => app.status === 'enrolled');
+                           const approvedApp = enrolledApp || student.all_applications?.find((app: any) => app.status === 'approved');
                            return approvedApp && (
                              <button
                                onClick={() => openPaymentModal('application', approvedApp.id)}
@@ -5015,6 +5175,20 @@ const AdminStudentDetails: React.FC = () => {
                     )}
                   </div>
                   <div className="flex flex-col gap-3">
+                    {(() => {
+                      const isStephanie = student.student_email === 'stephaniecriistine25@gmail.com';
+                      if (isStephanie) {
+                        console.log('🔍 [STEPHANIE DEBUG] Rendering Scholarship Fee:', {
+                          student_is_scholarship_fee_paid: student.is_scholarship_fee_paid,
+                          all_applications: student.all_applications?.map((app: any) => ({
+                            id: app.id,
+                            status: app.status,
+                            is_scholarship_fee_paid: app.is_scholarship_fee_paid
+                          }))
+                        });
+                      }
+                      return null;
+                    })()}
                     {student.is_scholarship_fee_paid ? (
                       <div className="flex flex-col gap-3">
                         <div className="flex items-center space-x-2">
@@ -5072,8 +5246,9 @@ const AdminStudentDetails: React.FC = () => {
                           <span className="text-sm font-medium text-red-600">Not Paid</span>
                         </div>
                          {isPlatformAdmin && (() => {
-                           // Buscar aplicação aprovada para scholarship fee
-                           const approvedApp = student.all_applications?.find((app: any) => app.status === 'approved');
+                           // ✅ CORREÇÃO: Priorizar aplicação enrolled, depois approved
+                           const enrolledApp = student.all_applications?.find((app: any) => app.status === 'enrolled');
+                           const approvedApp = enrolledApp || student.all_applications?.find((app: any) => app.status === 'approved');
                            return approvedApp && (
                              <button
                                onClick={() => openPaymentModal('scholarship', approvedApp.id)}

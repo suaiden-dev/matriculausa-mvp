@@ -1,6 +1,9 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
-import Stripe from 'npm:stripe@17.7.0';
-import { createClient } from 'npm:@supabase/supabase-js@2.49.1';
+import Stripe from 'stripe';
+import { createClient } from '@supabase/supabase-js';
+
+// @ts-ignore
+declare const Deno: any;
 import { getStripeConfig } from '../stripe-config.ts';
 import { getAllWebhookSecrets, getStripeEnvironmentVariables } from '../shared/environment-detector.ts';
 // Import jsPDF for Deno environment
@@ -26,7 +29,7 @@ const companyLogo = Deno.env.get('COMPANY_LOGO') || 'https://fitpynguasqqutuhzif
 
 const supabase = createClient(Deno.env.get('SUPABASE_URL'), Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'));
 // Function to send term acceptance notification with PDF after successful payment
-async function sendTermAcceptanceNotificationAfterPayment(userId, feeType) {
+async function sendTermAcceptanceNotificationAfterPayment(userId: string, feeType: string) {
   try {
     console.log('[NOTIFICAÇÃO] Buscando dados do usuário para notificação...');
     // Get user profile data
@@ -75,7 +78,7 @@ async function sendTermAcceptanceNotificationAfterPayment(userId, feeType) {
       const margin = 20;
       let currentY = margin;
       // Function to add wrapped text
-      const addWrappedText = (text, x, y, maxWidth, fontSize = 12)=>{
+      const addWrappedText = (text: string, x: number, y: number, maxWidth: number, fontSize = 12)=>{
         pdf.setFontSize(fontSize);
         const lines = pdf.splitTextToSize(text, maxWidth);
         for(let i = 0; i < lines.length; i++){
@@ -216,7 +219,7 @@ async function sendTermAcceptanceNotificationAfterPayment(userId, feeType) {
       const errorText = await webhookResponse.text();
       console.warn('[NOTIFICAÇÃO] Erro ao enviar notificação:', webhookResponse.status, errorText);
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('[NOTIFICAÇÃO] Erro ao enviar notificação de aceitação de termos:', error);
   // Don't throw error to avoid breaking the payment process
   }
@@ -295,7 +298,7 @@ async function sendTermAcceptanceNotificationAfterPayment(userId, feeType) {
 //   }
 // }
 // Função para buscar dados do usuário
-async function getUserData(userId) {
+async function getUserData(userId: string) {
   try {
     const { data, error } = await supabase.from('user_profiles').select('full_name, email').eq('user_id', userId).single();
     if (error) {
@@ -318,7 +321,7 @@ async function getUserData(userId) {
   }
 }
 // Função para verificar assinatura Stripe (IMPLEMENTAÇÃO MANUAL CORRETA)
-async function verifyStripeSignature(body, signature, secret) {
+async function verifyStripeSignature(body: string, signature: string | null, secret: string) {
   try {
     if (!signature) {
       console.error('[stripe-webhook] Assinatura Stripe ausente!');
@@ -362,13 +365,13 @@ async function verifyStripeSignature(body, signature, secret) {
       console.log('[stripe-webhook] Assinatura Stripe verificada com sucesso!');
     }
     return isValid;
-  } catch (err) {
+  } catch (err: any) {
     console.error('[stripe-webhook] Erro ao verificar assinatura Stripe:', err);
     return false;
   }
 }
 // Função principal do webhook
-Deno.serve(async (req)=>{
+Deno.serve(async (req: Request) => {
   try {
     const sig = req.headers.get('stripe-signature');
     const body = await req.text();
@@ -419,7 +422,7 @@ Deno.serve(async (req)=>{
     let event;
     try {
       event = JSON.parse(body);
-    } catch (err) {
+    } catch (err: any) {
       console.error('[stripe-webhook] Erro ao fazer parse do body:', err);
       return new Response(JSON.stringify({
         error: 'Invalid JSON.'
@@ -518,7 +521,7 @@ Deno.serve(async (req)=>{
               status: 200
             });
           }
-        } catch (stripeError) {
+        } catch (stripeError: any) {
           console.error('[stripe-webhook] Erro ao buscar sessão:', stripeError);
           return new Response(JSON.stringify({
             received: true,
@@ -545,7 +548,7 @@ Deno.serve(async (req)=>{
         status: 200
       });
     }
-  } catch (err) {
+  } catch (err: any) {
     console.error('[stripe-webhook] Erro inesperado no handler:', err);
     return new Response(JSON.stringify({
       error: 'Internal server error.'
@@ -556,7 +559,7 @@ Deno.serve(async (req)=>{
 });
 // Função para processar falhas de PIX
 // Função auxiliar para determinar moeda e símbolo baseado na session do Stripe
-function getCurrencyInfo(session) {
+function getCurrencyInfo(session: any) {
   const currency = session.currency?.toLowerCase() || 'usd';
   const isPix = session.payment_method_types?.includes('pix') || session.metadata?.payment_method === 'pix';
   
@@ -578,12 +581,12 @@ function getCurrencyInfo(session) {
 }
 
 // Função auxiliar para formatar valor com moeda
-function formatAmountWithCurrency(amount, session) {
+function formatAmountWithCurrency(amount: number, session: any) {
   const currencyInfo = getCurrencyInfo(session);
   return `${currencyInfo.symbol}${amount.toFixed(2)}`;
 }
 
-async function handleCheckoutSessionFailed(session) {
+async function handleCheckoutSessionFailed(session: any) {
   console.log('[stripe-webhook] handleCheckoutSessionFailed called with session:', JSON.stringify(session, null, 2));
   const metadata = session.metadata || {};
   const userId = metadata?.user_id || metadata?.student_id;
@@ -606,7 +609,7 @@ async function handleCheckoutSessionFailed(session) {
           }
         });
       }
-    } catch (logError) {
+    } catch (logError: any) {
       console.error('[stripe-webhook] Failed to log PIX payment failure:', logError);
     }
   }
@@ -618,7 +621,7 @@ async function handleCheckoutSessionFailed(session) {
   });
 }
 // Função para processar checkout.session.completed
-async function handleCheckoutSessionCompleted(session, stripe) {
+async function handleCheckoutSessionCompleted(session: any, stripe: any) {
   console.log('[stripe-webhook] handleCheckoutSessionCompleted called with session:', JSON.stringify(session, null, 2));
   const stripeData = session;
   console.log('[stripe-webhook] stripeData:', JSON.stringify(stripeData, null, 2));
@@ -655,7 +658,7 @@ async function handleCheckoutSessionCompleted(session, stripe) {
             status: 200
           });
         }
-      } catch (stripeError) {
+      } catch (stripeError: any) {
         console.error(`[stripe-webhook] Erro ao consultar Payment Intent:`, stripeError);
         return new Response(JSON.stringify({
           received: true,
@@ -891,7 +894,7 @@ async function handleCheckoutSessionCompleted(session, stripe) {
           // Se for array de strings (URLs), converter para array de objetos completos
           if (documents.length > 0 && typeof documents[0] === 'string') {
             const docTypes = ['passport', 'diploma', 'funds_proof'];
-            formattedDocuments = documents.map((url, idx) => ({
+            formattedDocuments = documents.map((url: string, idx: number) => ({
               type: docTypes[idx] || `doc${idx + 1}`,
               url,
               uploaded_at: new Date().toISOString()
@@ -922,44 +925,11 @@ async function handleCheckoutSessionCompleted(session, stripe) {
         console.log('[stripe-webhook] User profile updated - application fee paid');
       }
 
-      // Registrar pagamento na tabela individual_fee_payments
-      try {
-        const paymentDate = new Date().toISOString();
-        const paymentAmountRaw = session.amount_total ? session.amount_total / 100 : 0;
-        const currency = session.currency?.toUpperCase() || 'USD';
-        const paymentIntentId = session.payment_intent as string || '';
-        
-        // Converter BRL para USD se necessário (sempre registrar em USD)
-        let paymentAmount = paymentAmountRaw;
-        if (currency === 'BRL' && session.metadata?.exchange_rate) {
-          const exchangeRate = parseFloat(session.metadata.exchange_rate);
-          if (exchangeRate > 0) {
-            paymentAmount = paymentAmountRaw / exchangeRate;
-            console.log(`[Individual Fee Payment] Convertendo BRL para USD: ${paymentAmountRaw} BRL / ${exchangeRate} = ${paymentAmount} USD`);
-          }
-        }
-        
-        console.log('[Individual Fee Payment] Recording application fee payment via PIX/Stripe...');
-        console.log(`[Individual Fee Payment] Valor original: ${paymentAmountRaw} ${currency}, Valor em USD: ${paymentAmount} USD`);
-        const { data: insertResult, error: insertError } = await supabase.rpc('insert_individual_fee_payment', {
-          p_user_id: finalUserId,
-          p_fee_type: 'application',
-          p_amount: paymentAmount, // Sempre em USD
-          p_payment_date: paymentDate,
-          p_payment_method: 'stripe',
-          p_payment_intent_id: paymentIntentId,
-          p_stripe_charge_id: null,
-          p_zelle_payment_id: null
-        });
-        
-        if (insertError) {
-          console.warn('[Individual Fee Payment] Warning: Could not record fee payment:', insertError);
-        } else {
-          console.log('[Individual Fee Payment] Application fee recorded successfully:', insertResult);
-        }
-      } catch (recordError) {
-        console.warn('[Individual Fee Payment] Warning: Failed to record individual fee payment:', recordError);
-      }
+      // --- REGISTRO DE INDIVIDUAL_FEE_PAYMENTS REMOVIDO ---
+      // O registro de individual_fee_payments para application_fee é feito via verify-stripe-session-application-fee
+      // (chamado quando o usuário é redirecionado para a página de sucesso)
+      // para evitar duplicação e garantir que valores brutos (gross_amount_usd) e taxas (fee_amount_usd) sejam registrados corretamente
+      console.log('[Individual Fee Payment] Registro de individual_fee_payments será feito via verify-stripe-session-application-fee');
       
       // Limpar carrinho
       const { error: cartError } = await supabase.from('user_cart').delete().eq('user_id', finalUserId);
@@ -1017,15 +987,15 @@ async function handleCheckoutSessionCompleted(session, stripe) {
           console.log('💰 [TRANSFER DEBUG] Verificando saldo da plataforma...');
           const balance = await stripe.balance.retrieve();
           console.log('✅ [TRANSFER DEBUG] Saldo da plataforma:', {
-            available: balance.available.map((b)=>({
+            available: balance.available.map((b: any) => ({
                 amount: b.amount,
                 currency: b.currency
               })),
-            pending: balance.pending.map((b)=>({
+            pending: balance.pending.map((b: any) => ({
                 amount: b.amount,
                 currency: b.currency
               })),
-            instantAvailable: balance.instant_available?.map((b)=>({
+            instantAvailable: balance.instant_available?.map((b: any) => ({
                 amount: b.amount,
                 currency: b.currency
               })) || []
@@ -1089,7 +1059,7 @@ async function handleCheckoutSessionCompleted(session, stripe) {
           } else {
             console.log('✅ [TRANSFER DEBUG] Transferência salva no banco com sucesso');
           }
-        } catch (transferError) {
+        } catch (transferError: any) {
           console.error('💥 [TRANSFER DEBUG] Erro ao processar transferência:', {
             error: transferError.message,
             errorType: transferError.type,
@@ -1170,7 +1140,7 @@ async function handleCheckoutSessionCompleted(session, stripe) {
         
         // Atualizar scholarship_applications para marcar scholarship fee como pago
         if (scholarshipsIds) {
-          const scholarshipIdsArray = scholarshipsIds.split(',').map(id => id.trim());
+          const scholarshipIdsArray = scholarshipsIds.split(',').map((id: string) => id.trim());
           const { error: appError } = await supabase.from('scholarship_applications').update({
             is_scholarship_fee_paid: true,
             scholarship_fee_payment_method: metadata?.payment_method || 'stripe',
@@ -1306,7 +1276,7 @@ async function handleCheckoutSessionCompleted(session, stripe) {
           // Buscar dados das bolsas para notificações
           const scholarshipsIds = session.metadata?.scholarships_ids;
           if (scholarshipsIds) {
-            const scholarshipIdsArray = scholarshipsIds.split(',').map(id => id.trim());
+            const scholarshipIdsArray = scholarshipsIds.split(',').map((id: string) => id.trim());
             
             // Para cada scholarship, enviar notificações
             for (const scholarshipId of scholarshipIdsArray) {
@@ -1721,6 +1691,53 @@ async function handleCheckoutSessionCompleted(session, stripe) {
             console.error('[MATRICULA REWARDS] Erro ao adicionar coins:', coinsError);
           } else {
             console.log('[MATRICULA REWARDS] Coins adicionados com sucesso:', coinsResult);
+
+            // --- NOTIFICAÇÃO DE RECOMPENSA PARA O ALUNO (PADRINHO) ---
+            try {
+              console.log('📤 [MATRICULA REWARDS] Enviando notificação de recompensa para o padrinho...');
+              
+              // Buscar dados do padrinho (referrer)
+              const { data: referrerProfile } = await supabase
+                .from('user_profiles')
+                .select('full_name, email')
+                .eq('user_id', usedCode.referrer_id)
+                .single();
+              
+              // Buscar dados do aluno indicado (referred)
+              const { data: referredProfile } = await supabase
+                .from('user_profiles')
+                .select('full_name, email')
+                .eq('user_id', userId)
+                .single();
+
+              if (referrerProfile?.email) {
+                const rewardPayload = {
+                  tipo_notf: "Recompensa de MatriculaCoins por Indicacao",
+                  email_aluno: referrerProfile.email,
+                  nome_aluno: referrerProfile.full_name || "Aluno",
+                  referred_student_name: referredProfile?.full_name || "Seu amigo",
+                  referred_student_email: referredProfile?.email || "",
+                  payment_method: "Stripe",
+                  fee_type: "Selection Process Fee",
+                  reward_type: "MatriculaCoins",
+                  o_que_enviar: `Great news! Your friend ${referredProfile?.full_name || "someone"} has completed their enrollment process. 180 MatriculaCoins have been added to your account!`
+                };
+
+                console.log('📤 [MATRICULA REWARDS] Payload de recompensa:', rewardPayload);
+
+                await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'User-Agent': 'PostmanRuntime/7.36.3'
+                  },
+                  body: JSON.stringify(rewardPayload),
+                });
+                console.log('✅ [MATRICULA REWARDS] Notificação de recompensa enviada com sucesso!');
+              }
+            } catch (rewardNotifError) {
+              console.error('❌ [MATRICULA REWARDS] Erro ao enviar notificação de recompensa:', rewardNotifError);
+            }
           }
         } else {
           console.log('[MATRICULA REWARDS] Usuário não usou código de referência, não há coins para adicionar');

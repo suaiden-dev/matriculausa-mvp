@@ -37,6 +37,8 @@ interface Conversation {
   };
   unread_count?: number;
   last_message?: string;
+  last_message_sender_id?: string;
+  last_message_read_at?: string | null;
 }
 
 export const useAdminStudentChat = (conversationId?: string, recipientId?: string, updateConversationUnreadCount?: (conversationId: string, newUnreadCount: number) => void) => {
@@ -215,7 +217,7 @@ export const useAdminStudentChat = (conversationId?: string, recipientId?: strin
           uploaded_at: att.created_at,
         })) || [];
 
-        return formatMessage({
+        const formatted = formatMessage({
           id: msg.id,
           sender_id: msg.sender_id,
           recipient_id: msg.recipient_id,
@@ -226,6 +228,8 @@ export const useAdminStudentChat = (conversationId?: string, recipientId?: strin
           is_deleted: msg.is_deleted,
           attachments,
         });
+        
+        return formatted;
       });
 
       setMessages(formattedMessages);
@@ -337,7 +341,7 @@ export const useAdminStudentChat = (conversationId?: string, recipientId?: strin
           filter: `conversation_id=eq.${currentConversationId}` 
         },
         async (payload: any) => {
-          // Handle message updates (edit/delete)
+          // Handle message updates (edit/delete/read status)
           const { data: updatedMessage } = await supabase
             .from('admin_student_messages')
             .select(`
@@ -527,27 +531,87 @@ export const useAdminStudentChat = (conversationId?: string, recipientId?: strin
   const markAsRead = async (messageId: string) => {
     if (!user) return;
 
+    // ✅ SEGURANÇA: Apenas alunos podem marcar mensagens como lidas
+    // Admins não devem marcar mensagens como lidas quando visualizam conversas
+    if (userProfile?.role !== 'student') {
+      console.log('⚠️ [markAsRead] Apenas alunos podem marcar mensagens como lidas. Role atual:', userProfile?.role);
+      return;
+    }
+
     try {
       await supabase
         .from('admin_student_messages')
         .update({ read_at: new Date().toISOString() })
         .eq('id', messageId)
-        .eq('recipient_id', user.id);
+        .eq('recipient_id', user.id); // ✅ Garante que só marca mensagens onde o aluno é o destinatário
     } catch (e) {
       console.error('Failed to mark message as read:', e);
+    }
+  };
+
+  // Function for admins to mark messages as read when viewing conversation
+  const markAdminMessagesAsRead = async (conversationId: string) => {
+    if (!user || !userProfile) return;
+    
+    // Only allow admins and affiliate_admins to mark messages as read
+    if (userProfile.role !== 'admin' && userProfile.role !== 'affiliate_admin') {
+      return;
+    }
+
+    try {
+      const { error, data } = await supabase
+        .from('admin_student_messages')
+        .update({ read_at: new Date().toISOString() })
+        .eq('conversation_id', conversationId)
+        .eq('recipient_id', user.id) // ✅ Garante que só marca mensagens onde o admin é o destinatário
+        .is('read_at', null)
+        .eq('is_system_message', false) // ✅ Excluir mensagens do sistema
+        .select('id, sender_id, recipient_id, read_at');
+
+      if (error) {
+        console.error('Failed to mark admin messages as read:', error);
+        return;
+      }
+
+      // Update local state to reflect read status immediately
+      setMessages(prevMessages => 
+        prevMessages.map(msg => 
+          msg.recipientId === user.id && !msg.readAt
+            ? { ...msg, readAt: new Date().toISOString() }
+            : msg
+        )
+      );
+
+      // Update the conversation unread count to 0
+      if (updateConversationUnreadCount) {
+        updateConversationUnreadCount(conversationId, 0);
+      }
+
+      // Mark conversation notifications as read
+      markConversationAsRead(conversationId);
+    } catch (e) {
+      console.error('Failed to mark admin messages as read:', e);
     }
   };
 
   const markAllAsRead = async () => {
     if (!user || !currentConversationId) return;
 
+    // ✅ SEGURANÇA: Apenas alunos podem marcar mensagens como lidas
+    // Admins não devem marcar mensagens como lidas quando visualizam conversas
+    if (userProfile?.role !== 'student') {
+      console.log('⚠️ [markAllAsRead] Apenas alunos podem marcar mensagens como lidas. Role atual:', userProfile?.role);
+      return;
+    }
+
     try {
-      const { error } = await supabase
+      const { error, data } = await supabase
         .from('admin_student_messages')
         .update({ read_at: new Date().toISOString() })
         .eq('conversation_id', currentConversationId)
-        .eq('recipient_id', user.id)
-        .is('read_at', null);
+        .eq('recipient_id', user.id) // ✅ Garante que só marca mensagens onde o aluno é o destinatário
+        .is('read_at', null)
+        .select('id, sender_id, recipient_id, read_at');
 
       if (error) {
         console.error('Failed to mark all messages as read:', error);
@@ -656,6 +720,7 @@ export const useAdminStudentChat = (conversationId?: string, recipientId?: strin
     conversationId: currentConversationId,
     markAsRead,
     markAllAsRead,
+    markAdminMessagesAsRead,
   };
 };
 
@@ -708,7 +773,7 @@ export const useAdminStudentConversations = () => {
       if (conversationIds.length > 0) {
         const { data: messagesData } = await supabase
           .from('admin_student_messages')
-          .select('conversation_id, message, created_at, recipient_id, id, read_at')
+          .select('conversation_id, message, created_at, recipient_id, id, read_at, sender_id')
           .in('conversation_id', conversationIds)
           .order('created_at', { ascending: false });
         
@@ -732,6 +797,8 @@ export const useAdminStudentConversations = () => {
           ...conv,
           unread_count: unreadCount || 0,
           last_message: lastMessage?.message || '',
+          last_message_sender_id: lastMessage?.sender_id,
+          last_message_read_at: lastMessage?.read_at,
         };
       });
 

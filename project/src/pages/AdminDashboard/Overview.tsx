@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  Building, 
-  Users, 
-  Award, 
-  FileText, 
-  TrendingUp, 
-  AlertCircle, 
-  CheckCircle, 
+import {
+  Building,
+  Users,
+  Award,
+  FileText,
+  TrendingUp,
+  AlertCircle,
+  CheckCircle,
   Clock,
   Eye,
   ArrowUpRight,
@@ -20,6 +20,7 @@ import { UniversityPaymentRequestService } from '../../services/UniversityPaymen
 import { AffiliatePaymentRequestService } from '../../services/AffiliatePaymentRequestService';
 import { useEnvironment } from '../../hooks/useEnvironment';
 import PendingPaymentsSummary from '../../components/AdminDashboard/PendingPaymentsSummary';
+import PendingDocumentsOverview from '../../components/AdminDashboard/PendingDocumentsOverview';
 
 interface OverviewProps {
   stats: {
@@ -50,26 +51,26 @@ const Overview: React.FC<OverviewProps> = ({ stats, universities, users, applica
   const [universityRequestsAmount, setUniversityRequestsAmount] = useState(0);
   const [affiliateRequestsAmount, setAffiliateRequestsAmount] = useState(0);
   const [zellePaymentsAmount, setZellePaymentsAmount] = useState(0);
-  
+
   const UNIVERSITIES_PER_PAGE = 4; // Reduzido para caber melhor no layout compacto
 
   // Função para verificar se deve filtrar (produção, staging ou local para testes)
   const shouldFilter = useMemo(() => {
     const hostname = window.location.hostname;
     const href = window.location.href;
-    
-    const isProd = hostname === 'matriculausa.com' || 
-                   hostname.includes('matriculausa.com') ||
-                   href.includes('matriculausa.com');
-    
-    const isStaging = hostname === 'staging-matriculausa.netlify.app' || 
-                      hostname.includes('staging-matriculausa.netlify.app') ||
-                      hostname.includes('staging-matriculausa') ||
-                      href.includes('staging-matriculausa.netlify.app') ||
-                      href.includes('staging-matriculausa');
-    
+
+    const isProd = hostname === 'matriculausa.com' ||
+      hostname.includes('matriculausa.com') ||
+      href.includes('matriculausa.com');
+
+    const isStaging = hostname === 'staging-matriculausa.netlify.app' ||
+      hostname.includes('staging-matriculausa.netlify.app') ||
+      hostname.includes('staging-matriculausa') ||
+      href.includes('staging-matriculausa.netlify.app') ||
+      href.includes('staging-matriculausa');
+
     const result = isProd || isStaging;
-    
+
     console.log('🔍 [Overview] shouldFilter debug:', {
       hostname,
       href,
@@ -78,7 +79,7 @@ const Overview: React.FC<OverviewProps> = ({ stats, universities, users, applica
       isStaging,
       result
     });
-    
+
     return result;
   }, [isDevelopment]);
 
@@ -139,13 +140,13 @@ const Overview: React.FC<OverviewProps> = ({ stats, universities, users, applica
       totalApplications: filteredApplications.length
     };
   }, [stats, filteredUniversities, filteredUsers, filteredApplications]);
-  
+
   // Carregar dados de pagamentos pendentes
   useEffect(() => {
     const loadPendingPaymentsCounts = async () => {
       try {
         setLoadingPayments(true);
-        
+
         // Carregar University Payment Requests
         try {
           const universityRequests = await UniversityPaymentRequestService.listAllPaymentRequests();
@@ -228,7 +229,7 @@ const Overview: React.FC<OverviewProps> = ({ stats, universities, users, applica
 
   // Filtrar universidades pendentes usando dados filtrados
   const pendingUniversities = filteredUniversities.filter((u: any) => !u.is_approved);
-  
+
   // Calcular paginação
   const totalPages = Math.ceil(pendingUniversities.length / UNIVERSITIES_PER_PAGE);
   const startIndex = (currentPage - 1) * UNIVERSITIES_PER_PAGE;
@@ -250,32 +251,6 @@ const Overview: React.FC<OverviewProps> = ({ stats, universities, users, applica
     }
   };
 
-  const quickActions = [
-    {
-      title: 'Approve Universities',
-      description: 'Review pending university applications',
-      icon: Building,
-      color: 'bg-gradient-to-r from-blue-500 to-blue-600',
-      link: '/admin/dashboard/universities',
-      count: filteredStats.pendingUniversities
-    },
-    {
-      title: 'Manage Users',
-      description: 'View and manage user accounts',
-      icon: Users,
-      color: 'bg-gradient-to-r from-green-500 to-green-600',
-      link: '/admin/dashboard/users',
-      count: filteredUsers.length
-    },
-    {
-      title: 'Monitor Scholarships',
-      description: 'Track scholarship programs',
-      icon: Award,
-      color: 'bg-[#05294E]',
-      link: '/admin/dashboard/scholarships',
-      count: stats.totalScholarships
-    }
-  ];
 
   return (
     <div className="space-y-8">
@@ -294,7 +269,10 @@ const Overview: React.FC<OverviewProps> = ({ stats, universities, users, applica
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-lg transition-all duration-300 group">
+        <Link
+          to="/admin/dashboard/universities"
+          className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-lg transition-all duration-300 group block"
+        >
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-500 mb-1">Total Universities</p>
@@ -308,9 +286,12 @@ const Overview: React.FC<OverviewProps> = ({ stats, universities, users, applica
               <Building className="h-7 w-7 text-white" />
             </div>
           </div>
-        </div>
+        </Link>
 
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-lg transition-all duration-300 group">
+        <Link
+          to="/admin/dashboard/users"
+          className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-lg transition-all duration-300 group block"
+        >
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-500 mb-1">Total Users</p>
@@ -324,9 +305,12 @@ const Overview: React.FC<OverviewProps> = ({ stats, universities, users, applica
               <Users className="h-7 w-7 text-white" />
             </div>
           </div>
-        </div>
+        </Link>
 
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-lg transition-all duration-300 group">
+        <Link
+          to="/admin/dashboard/scholarships"
+          className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-lg transition-all duration-300 group block"
+        >
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-500 mb-1">Total Scholarships</p>
@@ -336,7 +320,7 @@ const Overview: React.FC<OverviewProps> = ({ stats, universities, users, applica
               <Award className="h-7 w-7 text-white" />
             </div>
           </div>
-        </div>
+        </Link>
 
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-lg transition-all duration-300 group">
           <div className="flex items-center justify-between">
@@ -355,36 +339,10 @@ const Overview: React.FC<OverviewProps> = ({ stats, universities, users, applica
         </div>
       </div>
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {quickActions.map((action, index) => {
-          const Icon = action.icon;
-          return (
-            <Link
-              key={index}
-              to={action.link}
-              className="group block p-6 bg-white rounded-2xl shadow-sm border border-slate-200 hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div className={`w-12 h-12 ${action.color} rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300`}>
-                  <Icon className="h-6 w-6 text-white" />
-                </div>
-                <div className="flex items-center">
-                  <span className="text-2xl font-bold text-slate-900 mr-2">{action.count}</span>
-                  <ArrowUpRight className="h-5 w-5 text-slate-400 group-hover:text-slate-600 transition-colors" />
-                </div>
-              </div>
-              <h3 className="font-bold text-slate-900 mb-2">{action.title}</h3>
-              <p className="text-slate-600 text-sm">{action.description}</p>
-            </Link>
-          );
-        })}
-      </div>
-
       {/* Pending Approvals Section - Side by Side */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Pending Payment Approvals - 2/3 width */}
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 space-y-8">
           <PendingPaymentsSummary
             universityRequestsCount={universityRequestsCount}
             affiliateRequestsCount={affiliateRequestsCount}
@@ -394,8 +352,9 @@ const Overview: React.FC<OverviewProps> = ({ stats, universities, users, applica
             zellePaymentsAmount={zellePaymentsAmount}
             loading={loadingPayments}
           />
+          <PendingDocumentsOverview />
         </div>
-        
+
         {/* Pending University Approvals - 1/3 width */}
         <div className="lg:col-span-1">
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
@@ -416,7 +375,7 @@ const Overview: React.FC<OverviewProps> = ({ stats, universities, users, applica
                 </Link>
               </div>
             </div>
-            
+
             <div className="p-6">
               {pendingUniversities.length === 0 ? (
                 <div className="text-center py-12">
@@ -431,8 +390,8 @@ const Overview: React.FC<OverviewProps> = ({ stats, universities, users, applica
                   {/* Lista de universidades - mais compacta */}
                   <div className="space-y-4 mb-6">
                     {currentUniversities.map((university) => (
-                      <div 
-                        key={university.id} 
+                      <div
+                        key={university.id}
                         className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl p-4 border border-slate-200 hover:shadow-md transition-all duration-300 group"
                       >
                         {/* Header compacto */}
@@ -462,22 +421,22 @@ const Overview: React.FC<OverviewProps> = ({ stats, universities, users, applica
 
                         {/* Ações compactas */}
                         <div className="flex items-center justify-between">
-                          <button 
+                          <button
                             onClick={() => handleApprove(university.id)}
                             className="flex items-center px-3 py-1.5 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors font-medium text-xs"
                           >
                             <CheckCircle className="h-3 w-3 mr-1" />
                             Approve
                           </button>
-                          
+
                           <div className="flex items-center space-x-1">
-                            <button 
+                            <button
                               className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded-lg transition-colors"
                               title="View Details"
                             >
                               <Eye className="h-3 w-3" />
                             </button>
-                            <button 
+                            <button
                               onClick={() => handleReject(university.id)}
                               className="p-1.5 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                               title="Reject"
@@ -496,7 +455,7 @@ const Overview: React.FC<OverviewProps> = ({ stats, universities, users, applica
                       <div className="text-sm text-slate-600">
                         Showing {startIndex + 1}-{Math.min(startIndex + UNIVERSITIES_PER_PAGE, pendingUniversities.length)} of {pendingUniversities.length} universities
                       </div>
-                      
+
                       <div className="flex items-center space-x-2">
                         <button
                           onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
@@ -506,11 +465,11 @@ const Overview: React.FC<OverviewProps> = ({ stats, universities, users, applica
                         >
                           <ChevronLeft className="h-4 w-4" />
                         </button>
-                        
+
                         <span className="px-4 py-2 text-sm font-medium text-slate-900">
                           Page {currentPage} of {totalPages}
                         </span>
-                        
+
                         <button
                           onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                           disabled={currentPage === totalPages}

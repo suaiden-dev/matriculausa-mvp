@@ -30,12 +30,14 @@ export const useStudentUnreadMessages = () => {
       const conversationIds = conversations.map(conv => conv.id);
 
       // Buscar mensagens não lidas para essas conversas
+      // Excluir mensagens do sistema (como mensagens de boas-vindas) que não devem gerar notificações
       const { data: unreadMessages, error: messagesError } = await supabase
         .from('admin_student_messages')
         .select('conversation_id, recipient_id')
         .in('conversation_id', conversationIds)
         .eq('recipient_id', user.id) // Mensagens não lidas pelo admin
-        .is('read_at', null);
+        .is('read_at', null)
+        .eq('is_system_message', false); // Excluir mensagens do sistema
 
       if (messagesError) throw messagesError;
 

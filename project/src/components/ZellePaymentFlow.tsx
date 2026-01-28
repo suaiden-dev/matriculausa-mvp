@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth';
 import { useFeeConfig } from '../hooks/useFeeConfig';
 import { usePaymentBlocked } from '../hooks/usePaymentBlocked';
+import { useSystemType } from '../hooks/useSystemType';
 import { supabase } from '../lib/supabase';
 import { PreCheckoutModal } from './PreCheckoutModal';
 import { ZelleCheckout } from './ZelleCheckout';
@@ -33,6 +34,7 @@ export const ZellePaymentFlow: React.FC<ZellePaymentFlowProps> = ({
   const { isAuthenticated, user, userProfile } = useAuth();
   const { getFeeAmount, userFeeOverrides } = useFeeConfig(user?.id);
   const { isBlocked, pendingPayment, loading: paymentBlockedLoading } = usePaymentBlocked();
+  const { systemType } = useSystemType();
   const [loading] = useState(false);
   const [showPreCheckoutModal, setShowPreCheckoutModal] = useState(false);
   const [showZelleCheckout, setShowZelleCheckout] = useState(false);
@@ -163,7 +165,9 @@ export const ZellePaymentFlow: React.FC<ZellePaymentFlowProps> = ({
       } else {
         // Se não há override, aplicar lógica de dependentes aos valores padrão
         const dependents = Number(userProfile?.dependents) || 0;
-        const dependentsCost = dependents * 150; // $150 por dependente apenas no Selection Process
+        // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
+        // Dependentes só afetam Application Fee ($100 por dependente)
+        const dependentsCost = systemType === 'simplified' ? 0 : (dependents * 150); // $150 por dependente apenas no Selection Process (legacy)
         return getFeeAmount('selection_process') + dependentsCost;
       }
     }

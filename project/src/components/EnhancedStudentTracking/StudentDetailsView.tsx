@@ -86,7 +86,9 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
       
       // Selection Process Fee
       const baseSelectionFee = isSimplified ? 350 : 400;
-      const selectionProcessFee = baseSelectionFee + (dependents * 150);
+      // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
+      // Dependentes só afetam Application Fee ($100 por dependente)
+      const selectionProcessFee = isSimplified ? baseSelectionFee : baseSelectionFee + (dependents * 150);
       
       // Criar dados do pacote baseado no desired_scholarship_range
       const desiredRange = Number(profileData.desired_scholarship_range);
@@ -752,7 +754,9 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                                 const systemType = (studentDetails as any)?.system_type || 'legacy';
                                 const isSimplified = systemType === 'simplified';
                                 const baseSelectionFee = isSimplified ? 350 : 400;
-                                const finalAmount = baseSelectionFee + (studentDependents * 150);
+                                // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
+                                // Dependentes só afetam Application Fee ($100 por dependente)
+                                const finalAmount = isSimplified ? baseSelectionFee : baseSelectionFee + (studentDependents * 150);
                                 return formatFeeAmount(finalAmount);
                               }
                             })()}

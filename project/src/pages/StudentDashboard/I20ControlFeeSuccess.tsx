@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
 import PaymentSuccessOverlay from '../../components/PaymentSuccessOverlay';
+import { dispatchCacheInvalidationEvent, CacheInvalidationEvent } from '../../utils/cacheInvalidation';
 
 
 const I20ControlFeeSuccess: React.FC = () => {
@@ -89,6 +90,9 @@ const I20ControlFeeSuccess: React.FC = () => {
           console.log('✅ [I20ControlFeeSuccess] Cupom promocional detectado:', data.promotional_coupon);
           setPromotionalCoupon(data.promotional_coupon);
         }
+        
+        // Invalidar cache
+        dispatchCacheInvalidationEvent(CacheInvalidationEvent.PAYMENT_COMPLETED);
         
         setLoading(false);
         setShowAnimation(true);

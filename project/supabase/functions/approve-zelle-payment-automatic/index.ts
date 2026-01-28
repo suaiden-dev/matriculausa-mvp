@@ -1,12 +1,15 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
+import { createClient } from '@supabase/supabase-js'
+
+// @ts-ignore
+declare const Deno: any;
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-serve(async (req) => {
+Deno.serve(async (req: Request) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -28,8 +31,32 @@ serve(async (req) => {
     // Parse request body
     const { user_id, fee_type_global, temp_payment_id, scholarship_ids } = await req.json()
 
-    // Normalizar fee_type_global para remover hífens e underscores extras
-    const normalizedFeeTypeGlobal = fee_type_global?.replace(/-/g, '').replace(/_+/g, '_');
+    // Função para mapear fee_type_global para valores aceitos pela constraint
+    // Constraint aceita: 'selection_process', 'i20_control_fee', 'application_fee', 'scholarship_fee'
+    const mapFeeTypeGlobal = (feeType: string): string => {
+      if (!feeType) return feeType;
+      
+      // Normalizar removendo hífens e underscores extras
+      const normalized = feeType.replace(/-/g, '').replace(/_+/g, '_').toLowerCase();
+      
+      // Mapear valores comuns para valores aceitos pela constraint
+      const mapping: { [key: string]: string } = {
+        'i20_control': 'i20_control_fee',
+        'i20control': 'i20_control_fee',
+        'i20controlfee': 'i20_control_fee',
+        'selection_process': 'selection_process',
+        'selectionprocess': 'selection_process',
+        'application_fee': 'application_fee',
+        'applicationfee': 'application_fee',
+        'scholarship_fee': 'scholarship_fee',
+        'scholarshipfee': 'scholarship_fee'
+      };
+      
+      return mapping[normalized] || normalized;
+    };
+
+    // Normalizar e mapear fee_type_global
+    const normalizedFeeTypeGlobal = mapFeeTypeGlobal(fee_type_global);
 
     console.log('🔍 [approve-zelle-payment-automatic] Parâmetros recebidos:', {
       user_id,
@@ -51,17 +78,29 @@ serve(async (req) => {
     let paymentAmount: number = 0;
     
     // Primeiro, tentar buscar um pagamento pendente do usuário
+    // Buscar tanto pelo valor normalizado quanto pelo original (para compatibilidade)
+    const searchValues = [normalizedFeeTypeGlobal];
+    if (fee_type_global && fee_type_global !== normalizedFeeTypeGlobal) {
+      searchValues.push(fee_type_global);
+    }
+    // Também buscar por valores alternativos comuns (ex: i20_control vs i20_control_fee)
+    if (normalizedFeeTypeGlobal === 'i20_control_fee') {
+      searchValues.push('i20_control');
+    } else if (fee_type_global === 'i20_control') {
+      searchValues.push('i20_control_fee');
+    }
+    
     const { data: existingPayment, error: searchError } = await supabaseClient
       .from('zelle_payments')
-      .select('id, status, amount')
+      .select('id, status, amount, fee_type_global')
       .eq('user_id', user_id)
-      .eq('fee_type_global', normalizedFeeTypeGlobal)
+      .in('fee_type_global', searchValues.length > 0 ? searchValues : [normalizedFeeTypeGlobal])
       .eq('status', 'pending')
       .order('created_at', { ascending: false })
       .limit(1)
-      .single()
+      .maybeSingle()
 
-    if (searchError && searchError.code !== 'PGRST116') {
+    if (searchError) {
       console.error('❌ [approve-zelle-payment-automatic] Erro ao buscar pagamento existente:', searchError)
       throw searchError
     }
@@ -72,11 +111,12 @@ serve(async (req) => {
       paymentAmount = existingPayment.amount || 0;
       console.log('✅ [approve-zelle-payment-automatic] Pagamento existente encontrado:', paymentId, 'Amount:', paymentAmount)
       
-      // Atualizar o status do pagamento para aprovado
+      // Atualizar o status do pagamento para aprovado e garantir fee_type_global correto
       const { error: paymentError } = await supabaseClient
         .from('zelle_payments')
         .update({
           status: 'approved',
+          fee_type_global: normalizedFeeTypeGlobal, // Garantir que está com o valor correto
           admin_approved_at: new Date().toISOString(),
           admin_notes: 'Automatically approved by n8n system'
         })
@@ -232,6 +272,45 @@ serve(async (req) => {
             console.error('❌ [approve-zelle-payment-automatic] Erro ao adicionar coins:', coinsError);
           } else {
             console.log('✅ [approve-zelle-payment-automatic] 180 coins adicionados com sucesso:', coinsResult);
+            
+            // --- NOTIFICAÇÃO DE RECOMPENSA PARA O ALUNO (PADRINHO) ---
+            try {
+              console.log('📤 [approve-zelle-payment-automatic] Enviando notificação de recompensa para o padrinho...');
+              
+              // Buscar dados do padrinho (referrer)
+              const { data: referrerProfile } = await supabaseClient
+                .from('user_profiles')
+                .select('full_name, email')
+                .eq('user_id', usedCode.referrer_id)
+                .single();
+              
+              if (referrerProfile?.email) {
+                const rewardPayload = {
+                  tipo_notf: "Recompensa de MatriculaCoins por Indicacao",
+                  email_aluno: referrerProfile.email,
+                  nome_aluno: referrerProfile.full_name || "Aluno",
+                  referred_student_name: referredDisplayName,
+                  referred_student_email: referredUserProfile?.email || "",
+                  payment_method: "Zelle",
+                  fee_type: "Selection Process Fee",
+                  reward_type: "MatriculaCoins",
+                  o_que_enviar: `Great news! Your friend ${referredDisplayName} has completed their enrollment process. 180 MatriculaCoins have been added to your account!`
+                };
+
+                console.log('📤 [approve-zelle-payment-automatic] Payload de recompensa:', rewardPayload);
+
+                await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify(rewardPayload),
+                });
+                console.log('✅ [approve-zelle-payment-automatic] Notificação de recompensa enviada com sucesso!');
+              }
+            } catch (rewardNotifError) {
+              console.error('❌ [approve-zelle-payment-automatic] Erro ao enviar notificação de recompensa:', rewardNotifError);
+            }
           }
         } else {
           console.log('ℹ️ [approve-zelle-payment-automatic] Usuário não usou código de referência, não há coins para adicionar');
@@ -241,7 +320,7 @@ serve(async (req) => {
       }
       // --- FIM MATRICULA REWARDS ---
 
-    } else if (normalizedFeeTypeGlobal === 'i20_control_fee') {
+    } else if (normalizedFeeTypeGlobal === 'i20_control_fee' || normalizedFeeTypeGlobal === 'i20_control') {
       console.log('🎯 [approve-zelle-payment-automatic] Atualizando has_paid_i20_control_fee...')
       
       const { data: updateData, error: profileError } = await supabaseClient
@@ -328,7 +407,7 @@ serve(async (req) => {
       // Converter scholarship_ids para array se for string
       const scholarshipIdsArray = Array.isArray(scholarship_ids) 
         ? scholarship_ids 
-        : scholarship_ids.split(',').map(id => id.trim())
+        : scholarship_ids.split(',').map((id: string) => id.trim())
 
       console.log('🔍 [approve-zelle-payment-automatic] scholarship_ids processados:', scholarshipIdsArray)
 
@@ -618,7 +697,7 @@ serve(async (req) => {
       console.log(`📤 [approve-zelle-payment-automatic] Buscando informações do seller e affiliate admin...`)
       
       // Buscar informações do seller relacionado ao pagamento
-      const { data: sellerData, error: sellerError } = await supabase
+      const { data: sellerData, error: sellerError } = await supabaseClient
         .from('sellers')
         .select(`
           id,
@@ -633,7 +712,7 @@ serve(async (req) => {
             user_profiles!affiliate_admins_user_id_fkey(full_name, email)
           )
         `)
-        .eq('user_id', userId)
+        .eq('user_id', user_id)
         .single()
 
       if (sellerData && !sellerError) {
@@ -642,22 +721,49 @@ serve(async (req) => {
         const { data: sellerProfile, error: sellerProfileError } = await supabaseClient.from('user_profiles').select('phone').eq('user_id', sellerData.user_id).single();
         const sellerPhone = sellerProfile?.phone;
 
+        // Helper logic to safely extract Affiliate Admin data (handling array/object ambiguity)
+        const affiliateAdminRaw = Array.isArray(sellerData.affiliate_admin) 
+          ? sellerData.affiliate_admin[0] 
+          : (sellerData.affiliate_admin as any);
+        
+        const affiliateUserInfo = affiliateAdminRaw?.user_profiles 
+          ? (Array.isArray(affiliateAdminRaw.user_profiles) 
+              ? affiliateAdminRaw.user_profiles[0] 
+              : affiliateAdminRaw.user_profiles)
+          : null;
+            
+        const affiliateAdminEmail = affiliateUserInfo?.email || "";
+        const affiliateAdminName = affiliateUserInfo?.full_name || "Affiliate Admin";
+        const affiliateAdminId = affiliateAdminRaw?.user_id;
+        
+        // Define userProfile here to ensure it's available in all scopes if previously defined in if blocks
+        let userProfileData = null;
+        if (normalizedFeeTypeGlobal === 'application_fee' || normalizedFeeTypeGlobal === 'scholarship_fee') {
+             // It was processed in the loop above, but we need fresh data for notifications if it wasn't fetched in step 3
+             const { data: userData } = await supabaseClient.from('user_profiles').select('full_name, email, phone').eq('user_id', user_id).single();
+             userProfileData = userData;
+        } else {
+             // Try to use the one from step 3 if available
+             const { data: userData } = await supabaseClient.from('user_profiles').select('full_name, email, phone').eq('user_id', user_id).single();
+             userProfileData = userData;
+        }
+
         // NOTIFICAÇÃO PARA ADMIN
         try {
           const adminNotificationPayload = {
             tipo_notf: "Pagamento de aluno aprovado automaticamente",
             email_admin: "admin@matriculausa.com",
             nome_admin: "Admin MatriculaUSA",
-            email_aluno: userProfile?.email || "",
-            nome_aluno: userProfile?.full_name || "Aluno",
+            email_aluno: userProfileData?.email || "",
+            nome_aluno: userProfileData?.full_name || "Aluno",
             email_seller: sellerData.email,
             nome_seller: sellerData.name,
-            email_affiliate_admin: sellerData.affiliate_admin?.user_profiles?.email || "",
-            nome_affiliate_admin: sellerData.affiliate_admin?.user_profiles?.full_name || "Affiliate Admin",
-            o_que_enviar: `Pagamento de ${normalizedFeeTypeGlobal} no valor de ${amount} do aluno ${userProfile?.full_name || "Aluno"} foi aprovado automaticamente pelo sistema. Seller responsável: ${sellerData.name} (${sellerData.referral_code})`,
+            email_affiliate_admin: affiliateAdminEmail,
+            nome_affiliate_admin: affiliateAdminName,
+            o_que_enviar: `Pagamento de ${normalizedFeeTypeGlobal} no valor de ${paymentAmount} do aluno ${userProfileData?.full_name || "Aluno"} foi aprovado automaticamente pelo sistema. Seller responsável: ${sellerData.name} (${sellerData.referral_code})`,
             payment_id: paymentId,
             fee_type: normalizedFeeTypeGlobal,
-            amount: amount,
+            amount: paymentAmount,
             seller_id: sellerData.user_id,
             referral_code: sellerData.referral_code,
             commission_rate: sellerData.commission_rate,
@@ -684,27 +790,30 @@ serve(async (req) => {
         }
 
         // NOTIFICAÇÃO PARA AFFILIATE ADMIN
-        if (sellerData.affiliate_admin?.user_profiles?.email) {
+        if (affiliateAdminEmail) {
           try {
             // Buscar telefone do affiliate admin
-            const { data: affiliateAdminProfile, error: affiliateAdminProfileError } = await supabaseClient.from('user_profiles').select('phone').eq('user_id', sellerData.affiliate_admin.user_id).single();
-            const affiliateAdminPhone = affiliateAdminProfile?.phone || "";
+            let affiliateAdminPhone = "";
+            if (affiliateAdminId) {
+                const { data: affiliateAdminProfile } = await supabaseClient.from('user_profiles').select('phone').eq('user_id', affiliateAdminId).single();
+                affiliateAdminPhone = affiliateAdminProfile?.phone || "";
+            }
             
             const affiliateAdminNotificationPayload = {
               tipo_notf: "Pagamento de aluno do seu seller aprovado automaticamente",
-              email_affiliate_admin: sellerData.affiliate_admin.user_profiles.email,
-              nome_affiliate_admin: sellerData.affiliate_admin.user_profiles.full_name || "Affiliate Admin",
+              email_affiliate_admin: affiliateAdminEmail,
+              nome_affiliate_admin: affiliateAdminName,
               phone_affiliate_admin: affiliateAdminPhone,
-              email_aluno: userProfile?.email || "",
-              nome_aluno: userProfile?.full_name || "Aluno",
-              phone_aluno: userProfile?.phone || "",
+              email_aluno: userProfileData?.email || "",
+              nome_aluno: userProfileData?.full_name || "Aluno",
+              phone_aluno: userProfileData?.phone || "",
               email_seller: sellerData.email,
               nome_seller: sellerData.name,
               phone_seller: sellerPhone || "",
-              o_que_enviar: `Pagamento de ${normalizedFeeTypeGlobal} no valor de ${amount} do aluno ${userProfile?.full_name || "Aluno"} foi aprovado automaticamente pelo sistema. Seller responsável: ${sellerData.name} (${sellerData.referral_code})`,
+              o_que_enviar: `Pagamento de ${normalizedFeeTypeGlobal} no valor de ${paymentAmount} do aluno ${userProfileData?.full_name || "Aluno"} foi aprovado automaticamente pelo sistema. Seller responsável: ${sellerData.name} (${sellerData.referral_code})`,
               payment_id: paymentId,
               fee_type: normalizedFeeTypeGlobal,
-              amount: amount,
+              amount: paymentAmount,
               seller_id: sellerData.user_id,
               referral_code: sellerData.referral_code,
               commission_rate: sellerData.commission_rate,
@@ -738,17 +847,17 @@ serve(async (req) => {
             email_seller: sellerData.email,
             nome_seller: sellerData.name,
             phone_seller: sellerPhone || "",
-            email_aluno: userProfile?.email || "",
-            nome_aluno: userProfile?.full_name || "Aluno",
-            phone_aluno: userProfile?.phone || "",
-            o_que_enviar: `Parabéns! O pagamento de ${normalizedFeeTypeGlobal} no valor de ${amount} do seu aluno ${userProfile?.full_name || "Aluno"} foi aprovado automaticamente pelo sistema. Você ganhará comissão sobre este pagamento!`,
+            email_aluno: userProfileData?.email || "",
+            nome_aluno: userProfileData?.full_name || "Aluno",
+            phone_aluno: userProfileData?.phone || "",
+            o_que_enviar: `Parabéns! O pagamento de ${normalizedFeeTypeGlobal} no valor de ${paymentAmount} do seu aluno ${userProfileData?.full_name || "Aluno"} foi aprovado automaticamente pelo sistema. Você ganhará comissão sobre este pagamento!`,
             payment_id: paymentId,
             fee_type: normalizedFeeTypeGlobal,
-            amount: amount,
+            amount: paymentAmount,
             seller_id: sellerData.user_id,
             referral_code: sellerData.referral_code,
             commission_rate: sellerData.commission_rate,
-            estimated_commission: amount * sellerData.commission_rate,
+            estimated_commission: paymentAmount * sellerData.commission_rate,
             approved_by: "Automatic System"
           }
 
@@ -772,7 +881,7 @@ serve(async (req) => {
         }
 
       } else {
-        console.log(`ℹ️ [approve-zelle-payment-automatic] Nenhum seller encontrado para o usuário ${userId}`)
+        console.log(`ℹ️ [approve-zelle-payment-automatic] Nenhum seller encontrado para o usuário ${user_id}`)
       }
     } catch (sellerLookupError) {
       console.error('❌ [approve-zelle-payment-automatic] Erro ao buscar informações do seller:', sellerLookupError)
@@ -794,7 +903,7 @@ serve(async (req) => {
       }
     )
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ [approve-zelle-payment-automatic] Erro:', error)
     
     return new Response(

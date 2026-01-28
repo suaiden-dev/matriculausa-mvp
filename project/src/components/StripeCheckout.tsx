@@ -344,9 +344,13 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
       // Obter valor final (com dependentes se aplicável)
       let finalAmount: number;
       
+      // Verificar se há desconto já aplicado no valor
+      const hasDiscountApplied = (window as any).__checkout_final_amount && typeof (window as any).__checkout_final_amount === 'number';
+      
       // Se há um valor do PreCheckoutModal, usar ele
-      if ((window as any).__checkout_final_amount && typeof (window as any).__checkout_final_amount === 'number') {
+      if (hasDiscountApplied) {
         finalAmount = (window as any).__checkout_final_amount;
+        console.log('🔍 [StripeCheckout] ✅ Usando valor com desconto do PreCheckoutModal:', finalAmount);
       } else {
         // Calcular valor baseado no feeType
         if (feeType === 'selection_process') {
@@ -407,9 +411,12 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
         });
       }
 
+      // Verificar se o desconto já foi aplicado no valor (via activeDiscount do PreCheckoutModal)
+      const discountAlreadyApplied = hasDiscountApplied && (window as any).__checkout_discount_applied === true;
+      
       const requestBody = {
         price_id: product.priceId,
-        amount: finalAmount, // Incluir valor final calculado
+        amount: finalAmount, // Incluir valor final calculado (já com desconto se aplicável)
         success_url: (successUrl || `${window.location.origin}/checkout/success`).replace(/\?.*/, '') + '?session_id={CHECKOUT_SESSION_ID}',
         cancel_url: cancelUrl || `${window.location.origin}/checkout/cancel`,
         mode: product.mode,
@@ -422,6 +429,8 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
           application_id: applicationId,
           student_process_type: studentProcessType,
           final_amount: finalAmount, // Incluir no metadata também
+          // Flag para indicar que o desconto já foi aplicado no frontend
+          discount_already_applied: discountAlreadyApplied ? 'true' : 'false',
           // Incluir taxa de câmbio se for PIX e estiver disponível (priorizar currentExchangeRate do PaymentMethodSelector, senão usar prop exchangeRate)
           ...(exchangeRateToSend ? { 
             exchange_rate: exchangeRateToSend.toString() 
