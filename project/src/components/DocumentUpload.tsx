@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
+import { getN8nProxyUrl } from '../utils/storageProxy';
 import { useCartStore } from '../stores/applicationStore';
 
 interface DocumentUploadProps {
@@ -87,9 +88,9 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onUploadSuccess }) => {
       const webhookBody = {
         user_id: user.id,
         student_name: userProfile?.full_name || (user as any)?.user_metadata?.full_name || (user as any)?.user_metadata?.name || user.email || '',
-        passport_url: docUrls['passport'],
-        diploma_url: docUrls['diploma'],
-        funds_proof_url: docUrls['funds_proof'],
+        passport_url: getN8nProxyUrl(docUrls['passport']),
+        diploma_url: getN8nProxyUrl(docUrls['diploma']),
+        funds_proof_url: getN8nProxyUrl(docUrls['funds_proof']),
       };
       const SUPABASE_FUNCTIONS_URL = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL || 'https://fitpynguasqqutuhzifx.supabase.co/functions/v1';
       const { data: { session } } = await supabase.auth.getSession();
