@@ -62,7 +62,7 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
   const navigate = useNavigate();
   const { user, userProfile } = useAuth();
   const { getFeeAmount: getFeeAmountFromConfig } = useFeeConfig(user?.id);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'stripe' | 'zelle' | 'pix' | null>(null);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'stripe' | 'zelle' | 'pix' | 'parcelow' | null>(null);
   const { t } = useTranslation();
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [spinnerVisible, setSpinnerVisible] = useState<boolean>(false);
@@ -458,7 +458,7 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
 
   const modalContent = getModalContent();
 
-  const handlePaymentMethodSelect = (method: 'stripe' | 'zelle' | 'pix') => {
+  const handlePaymentMethodSelect = (method: 'stripe' | 'zelle' | 'pix' | 'parcelow') => {
     setSelectedPaymentMethod(method);
   };
 
