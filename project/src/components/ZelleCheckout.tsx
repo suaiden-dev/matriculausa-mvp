@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Upload, DollarSign, CheckCircle, AlertCircle, X } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
+import { getN8nProxyUrl } from '../utils/storageProxy';
 
 interface ZelleCheckoutProps {
   feeType: 'selection_process' | 'application_fee' | 'enrollment_fee' | 'scholarship_fee';
@@ -145,7 +146,7 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
       // Payload para o n8n
       const webhookPayload = {
         user_id: user?.id,
-        image_url: comprovanteUrl,
+        image_url: getN8nProxyUrl(comprovanteUrl),
         value: amount.toString(),
         currency: 'USD',
         fee_type: feeType,

@@ -19,6 +19,7 @@ import { getDisplayAmounts } from '../../utils/paymentConverter';
 import SelectedScholarshipCard from '../../components/AdminDashboard/StudentDetails/SelectedScholarshipCard';
 import StudentScholarshipsList from '../../components/EnhancedStudentTracking/StudentScholarshipsList';
 import ApplicationProgressCard from '../../components/AdminDashboard/StudentDetails/ApplicationProgressCard';
+import { handleDownloadDocument as centralizedHandleDownloadDocument } from '../../components/EnhancedStudentTracking/utils/documentUtils';
 
 interface StudentInfo {
   student_id: string;
@@ -1029,198 +1030,16 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
     return { step: steps[steps.length - 1], index: steps.length - 1, status: 'completed' };
   }, [studentInfo, steps, getStepStatus]);
 
-  // Função para buscar o documento mais recente por tipo
-  const latestDocByType = (type: string) => {
-    console.log('=== DEBUG latestDocByType ===');
-    console.log('Tipo buscado:', type);
-    console.log('scholarshipApplication?.documents:', scholarshipApplication?.documents);
-    console.log('studentDocuments:', studentDocuments);
-    console.log('Loading state:', loading);
-    console.log('DocumentsLoaded state:', documentsLoaded);
-    
-    // Se ainda está carregando ou documentos não foram carregados, retornar null
-    if (loading || !documentsLoaded) {
-      console.log('Ainda carregando ou documentos não carregados, retornando null');
-      console.log('Loading:', loading, 'DocumentsLoaded:', documentsLoaded);
-      return null;
-    }
-    
-    // Primeiro, tentar buscar nos documentos da aplicação
-    const docs = (scholarshipApplication as any)?.documents as any[] | undefined;
-    console.log('Documentos da aplicação:', docs);
-    
-    if (Array.isArray(docs) && docs.length > 0) {
-      // Buscar por document_type (campo principal)
-      let appDoc = docs.find((d) => d.document_type === type);
-      
-      // Se não encontrar, tentar por outros campos
-      if (!appDoc) {
-        appDoc = docs.find((d) => 
-          d.type === type ||
-          d.title?.toLowerCase().includes(type.toLowerCase()) ||
-          d.description?.toLowerCase().includes(type.toLowerCase())
-        );
-      }
-      
-      if (appDoc) {
-        console.log('Documento encontrado na aplicação:', appDoc);
-        return { 
-          id: appDoc.id || `${type}`, 
-          type, 
-          file_url: appDoc.file_url || appDoc.document_url || appDoc.url, 
-          status: appDoc.status || 'under_review',
-          uploaded_at: appDoc.uploaded_at || appDoc.created_at || null
-        };
-      }
-    }
-    
-    // Fallback: buscar nos documentos do estudante
-    if (Array.isArray(studentDocuments) && studentDocuments.length > 0) {
-      const fallbackDoc = studentDocuments.find((d) => 
-        d.document_type === type ||
-        d.type === type ||
-        d.title?.toLowerCase().includes(type.toLowerCase()) ||
-        d.description?.toLowerCase().includes(type.toLowerCase())
-      );
-      
-      if (fallbackDoc) {
-        console.log('Documento encontrado no fallback:', fallbackDoc);
-        return {
-          ...fallbackDoc,
-          type,
-          file_url: fallbackDoc.file_url || fallbackDoc.document_url,
-          uploaded_at: fallbackDoc.uploaded_at || fallbackDoc.created_at || null
-        };
-      }
-    }
-    
-    console.log('Nenhum documento encontrado para o tipo:', type);
-    return null;
-  };
-
-  // Informações dos documentos principais
-  const DOCUMENTS_INFO = [
-    {
-      key: 'passport',
-      label: 'Passport',
-      description: 'A valid copy of the student\'s passport. Used for identification and visa purposes.'
-    },
-    {
-      key: 'diploma',
-      label: 'High School Diploma',
-      description: 'Proof of high school graduation. Required for university admission.'
-    },
-    {
-      key: 'funds_proof',
-      label: 'Proof of Funds',
-      description: 'A bank statement or financial document showing sufficient funds for study.'
-    }
-  ];
-
-  // Funções para manipular documentos
+  // handleViewDocument redefinido para usar o centralizado mas manter setPreviewUrl se necessário
+  // handleViewDocument redefinido para usar o centralizado mas manter setPreviewUrl se necessário
   const handleViewDocument = (doc: any) => {
-    console.log('=== DEBUG handleViewDocument ===');
-    console.log('Documento recebido:', doc);
-    
-    // Verificar se o documento existe e tem file_url
-    if (!doc || !doc.file_url) {
-      console.log('Documento ou file_url está vazio ou undefined');
-      console.log('Documento:', doc);
-      console.log('file_url:', doc?.file_url);
-      return;
-    }
-    
-    console.log('file_url:', doc.file_url);
-    console.log('Tipo de file_url:', typeof doc.file_url);
-    
-    // Converter a URL do storage para URL pública
-    try {
-      // Se file_url é um path do storage, converter para URL pública
-      if (doc.file_url && !doc.file_url.startsWith('http')) {
-        // Determinar o bucket correto baseado no tipo de documento
-        // Documentos normais (passport, diploma, funds_proof) SEMPRE vão para student-documents
-        // Transfer forms e acceptance letters podem estar em document-attachments
-        let bucket = 'student-documents'; // default
-        
-        // Verificar se é um documento de aplicação normal (passport, diploma, funds_proof)
-        // Se for, SEMPRE usar student-documents, independente do filename
-        const isNormalDoc = doc.type && ['passport', 'diploma', 'funds_proof'].includes(doc.type);
-        
-        // Apenas se NÃO for um documento normal, verificar filename para transfer/acceptance
-        if (!isNormalDoc && doc.filename) {
-          const filenameLower = doc.filename.toLowerCase();
-          // Apenas usar document-attachments se o filename claramente indicar transfer ou acceptance
-          // E não for um dos documentos normais
-          if ((filenameLower.includes('transfer') || filenameLower.includes('acceptance')) && 
-              !filenameLower.includes('passport') && 
-              !filenameLower.includes('diploma') && 
-              !filenameLower.includes('funds')) {
-            bucket = 'document-attachments';
-          }
-        }
-        
-        // Gerar URL pública com o bucket determinado
-        const publicUrl = supabase.storage
-          .from(bucket)
-          .getPublicUrl(doc.file_url)
-          .data.publicUrl;
-        
-        console.log(`URL pública gerada com bucket ${bucket}:`, publicUrl);
-        setPreviewUrl(publicUrl);
-      } else {
-        // Se já é uma URL completa, usar diretamente
-        console.log('Usando URL existente:', doc.file_url);
-        setPreviewUrl(doc.file_url);
-      }
-    } catch (error) {
-      console.error('Erro ao gerar URL pública:', error);
-      // Fallback: tentar usar a URL original
-      setPreviewUrl(doc.file_url);
-    }
+    // Se o componente usa DocumentViewerModal, apenas definimos a URL
+    // O modal agora é "proxy-aware" e vai converter a URL internamente
+    setPreviewUrl(doc.file_url || doc.url);
   };
 
   const handleDownloadDocument = (doc: any) => {
-    if (doc?.file_url) {
-      try {
-        // Se file_url é um path do storage, converter para URL pública
-        let downloadUrl = doc.file_url;
-        if (!doc.file_url.startsWith('http')) {
-          // Determinar o bucket correto baseado no tipo de documento
-          let bucket = 'student-documents'; // default
-          
-          // Se for transfer form, usar document-attachments
-          if (doc.filename && doc.filename.toLowerCase().includes('transfer')) {
-            bucket = 'document-attachments';
-          }
-          // Se for acceptance letter, usar document-attachments
-          else if (doc.filename && doc.filename.toLowerCase().includes('acceptance')) {
-            bucket = 'document-attachments';
-          }
-          
-          const publicUrl = supabase.storage
-            .from(bucket)
-            .getPublicUrl(doc.file_url)
-            .data.publicUrl;
-          downloadUrl = publicUrl;
-        }
-        
-        const link = document.createElement('a');
-        link.href = downloadUrl;
-        link.download = `${doc.type || doc.document_type || 'document'}.pdf`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      } catch (error) {
-        console.error('Erro ao fazer download:', error);
-        // Fallback: tentar usar a URL original
-        const link = document.createElement('a');
-        link.href = doc.file_url;
-        link.download = `${doc.type || doc.document_type || 'document'}.pdf`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      }
-    }
+    centralizedHandleDownloadDocument(doc);
   };
 
   if (loading) {

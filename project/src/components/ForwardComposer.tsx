@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Send, Save, Paperclip, Eye, EyeOff } from 'lucide-react';
+import { X, Send, Paperclip, Eye, EyeOff } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { Email } from '../types';
 
@@ -16,19 +16,19 @@ interface SendResult {
   error?: string;
 }
 
-const ForwardComposer: React.FC<ForwardComposerProps> = ({ 
-  originalEmail, 
-  onSend, 
-  onClose, 
-  isOpen 
+const ForwardComposer: React.FC<ForwardComposerProps> = ({
+  originalEmail,
+  onSend,
+  onClose,
+  isOpen
 }) => {
   const [to, setTo] = useState('');
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
-  const [isHtmlMode, setIsHtmlMode] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [sendResult, setSendResult] = useState<SendResult | null>(null);
   const [attachments, setAttachments] = useState<File[]>([]);
+  const [isHtmlMode, setIsHtmlMode] = useState(true);
 
   // Initialize form when original email changes
   useEffect(() => {
@@ -41,7 +41,7 @@ const ForwardComposer: React.FC<ForwardComposerProps> = ({
       htmlBodyLength: originalEmail?.htmlBody?.length || 0,
       bodyLength: originalEmail?.body?.length || 0
     });
-    
+
     if (originalEmail) {
       console.log('📧 ForwardComposer: Setting up forward for email:', {
         id: originalEmail.id,
@@ -49,26 +49,26 @@ const ForwardComposer: React.FC<ForwardComposerProps> = ({
         subject: originalEmail.subject,
         hasHtmlBody: !!originalEmail.htmlBody,
         hasBody: !!originalEmail.body,
-        htmlBodyLength: originalEmail.htmlBody?.length || 0,
+        htmlBodyLength: originalEmail?.htmlBody?.length || 0,
         bodyLength: originalEmail.body?.length || 0,
         htmlBodyPreview: originalEmail.htmlBody?.substring(0, 100) + '...',
         bodyPreview: originalEmail.body?.substring(0, 100) + '...'
       });
-      
+
       // Set forward fields
       setTo('');
       setSubject(`Fwd: ${originalEmail.subject || ''}`);
-      
+
       // Prepare forward content
       const originalEmailContent = originalEmail.htmlBody || originalEmail.body || originalEmail.snippet || '';
-      
+
       console.log('📧 ForwardComposer: Content selection:', {
         usingHtmlBody: !!originalEmail.htmlBody,
         usingBody: !originalEmail.htmlBody && !!originalEmail.body,
         usingSnippet: !originalEmail.htmlBody && !originalEmail.body && !!originalEmail.snippet,
         finalContentLength: originalEmailContent.length
       });
-      
+
       // Se temos HTML, criar um forward HTML formatado
       const hasHtmlContent = originalEmail.htmlBody || (originalEmail.body && originalEmail.body.includes('<'));
       console.log('📧 ForwardComposer: HTML detection:', {
@@ -78,7 +78,7 @@ const ForwardComposer: React.FC<ForwardComposerProps> = ({
         htmlBodyFirstChars: originalEmail.htmlBody?.substring(0, 50) || 'N/A',
         bodyFirstChars: originalEmail.body?.substring(0, 50) || 'N/A'
       });
-      
+
       if (hasHtmlContent) {
         const forwardHtml = `
 <div style="border-left: 3px solid #ccc; padding-left: 15px; margin: 20px 0; color: #666;">
@@ -128,16 +128,15 @@ const ForwardComposer: React.FC<ForwardComposerProps> = ({
     try {
       // Get current user session
       const { data: { session } } = await supabase.auth.getSession();
-      
+
       if (!session) {
         throw new Error('User not authenticated. Please log in again.');
       }
 
       // Prepare email content
-      const emailContent = isHtmlMode ? body : body.replace(/\n/g, '<br>');
-      
+      const emailContent = body;
+
       console.log('📧 ForwardComposer: Preparing email content:', {
-        isHtmlMode,
         bodyLength: body.length,
         emailContentLength: emailContent.length,
         emailContentPreview: emailContent.substring(0, 200) + '...'
@@ -164,7 +163,7 @@ const ForwardComposer: React.FC<ForwardComposerProps> = ({
           to: to,
           subject: subject,
           htmlBody: emailContent,
-          textBody: !isHtmlMode ? body : undefined,
+          textBody: body.replace(/<[^>]*>/g, ''), // Strip HTML for text body
           attachments: emailAttachments
         }
       });
@@ -172,16 +171,16 @@ const ForwardComposer: React.FC<ForwardComposerProps> = ({
       if (response.error) {
         throw new Error(response.error.message || 'Failed to send email');
       }
-      
+
       if (response.data?.success) {
         setSendResult({
           success: true,
           messageId: response.data.messageId
         });
-        
+
         // Call onSend callback
         onSend?.(response.data);
-        
+
         // Close composer after successful send
         setTimeout(() => {
           onClose?.();
@@ -305,7 +304,7 @@ const ForwardComposer: React.FC<ForwardComposerProps> = ({
                   </div>
                   <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
                     <h4 className="text-sm font-medium text-slate-700 mb-2">Preview</h4>
-                    <div 
+                    <div
                       className="prose prose-sm max-w-none"
                       dangerouslySetInnerHTML={{ __html: body }}
                     />

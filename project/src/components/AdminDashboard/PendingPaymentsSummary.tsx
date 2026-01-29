@@ -131,11 +131,10 @@ const PendingPaymentsSummary: React.FC<PendingPaymentsSummaryProps> = ({
               className="group flex items-center justify-between p-4 rounded-xl border border-slate-200 hover:border-slate-300 hover:shadow-md transition-all duration-300 bg-gradient-to-r from-white to-slate-50"
             >
               <div className="flex items-center space-x-4">
-                <div className={`w-12 h-12 bg-gradient-to-br ${
-                  type.color === 'blue' ? 'from-blue-500 to-blue-600' :
+                <div className={`w-12 h-12 bg-gradient-to-br ${type.color === 'blue' ? 'from-blue-500 to-blue-600' :
                   type.color === 'purple' ? 'from-purple-500 to-purple-600' :
-                  'from-orange-500 to-orange-600'
-                } rounded-xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform duration-300`}>
+                    'from-orange-500 to-orange-600'
+                  } rounded-xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform duration-300`}>
                   <Icon className="h-6 w-6 text-white" />
                 </div>
                 <div>
@@ -146,11 +145,10 @@ const PendingPaymentsSummary: React.FC<PendingPaymentsSummaryProps> = ({
 
               <div className="text-right">
                 <div className="flex items-center justify-end space-x-3 mb-2">
-                  <div className={`px-3 py-1 ${
-                    type.color === 'blue' ? 'bg-blue-100 text-blue-700' :
+                  <div className={`px-3 py-1 ${type.color === 'blue' ? 'bg-blue-100 text-blue-700' :
                     type.color === 'purple' ? 'bg-purple-100 text-purple-700' :
-                    'bg-orange-100 text-orange-700'
-                  } rounded-full text-sm font-medium`}>
+                      'bg-orange-100 text-orange-700'
+                    } rounded-full text-sm font-medium`}>
                     {type.count} pending
                   </div>
                   <div className="text-lg font-bold text-slate-900">

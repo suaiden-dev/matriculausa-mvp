@@ -462,7 +462,7 @@ export function useAffiliateCodeQuery(userId?: string) {
 
       // Se não existe código, cria um
       if (!data) {
-        const { data: newCode, error: createError } = await supabase
+        const { error: createError } = await supabase
           .rpc('create_affiliate_code_for_user', { user_id_param: userId });
         
         if (createError) {
@@ -551,29 +551,69 @@ export function useAffiliateReferralsQuery(userId?: string) {
 
       const { data: referralsData, error } = await supabase
         .from('affiliate_referrals')
-        .select('*')
+        .select(`
+          *,
+          referred_student_status,
+          selection_process_paid_at,
+          application_fee_paid_at,
+          scholarship_fee_paid_at,
+          i20_paid_at
+        `)
         .eq('referrer_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(5);
+        .order('created_at', { ascending: false });
+
 
       if (error) {
         console.error('Erro ao buscar indicações:', error);
         return [];
       }
 
-      // Buscar nomes dos usuários indicados
+      // Buscar nomes dos usuários indicados e suas aplicações de bolsa
       if (referralsData && referralsData.length > 0) {
         const referredIds = referralsData.map(r => r.referred_id).filter(Boolean);
+        
+        // Buscar perfis para obter nomes, IDs internos e timestamps de processo seletivo
         const { data: userProfiles } = await supabase
           .from('user_profiles')
-          .select('user_id, full_name, email')
+          .select('id, user_id, full_name, email, selection_process_paid_at')
           .in('user_id', referredIds);
+
+        // Obter os IDs internos dos perfis para buscar as aplicações correspondentes
+        const profileIds = userProfiles?.map(p => p.id).filter(Boolean) || [];
+
+        // Buscar aplicações de bolsa (source of truth para application_fee e scholarship_fee)
+        const { data: applications } = await supabase
+          .from('scholarship_applications')
+          .select('student_id, is_application_fee_paid, is_scholarship_fee_paid, updated_at')
+          .in('student_id', profileIds);
+
         
-        // Adicionar dados do usuário a cada referral
-        return referralsData.map(referral => ({
-          ...referral,
-          referred_user: userProfiles?.find(up => up.user_id === referral.referred_id)
-        }));
+        // Adicionar dados do usuário e status real das aplicações a cada referral
+        return referralsData.map(referral => {
+          const profile = userProfiles?.find(up => (up as any).user_id === referral.referred_id);
+          const studentApps = applications?.filter(app => app.student_id === profile?.id) || [];
+          
+          // Verificar se alguma aplicação desse aluno está paga
+          const isAppFeePaid = studentApps.some(app => app.is_application_fee_paid);
+          const isSchFeePaid = studentApps.some(app => app.is_scholarship_fee_paid);
+          
+          // Pegar o timestamp da aplicação mais recente que foi paga
+          const appFeePaidAt = isAppFeePaid 
+            ? studentApps.filter(app => app.is_application_fee_paid).sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())[0]?.updated_at 
+            : null;
+          const schFeePaidAt = isSchFeePaid 
+            ? studentApps.filter(app => app.is_scholarship_fee_paid).sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())[0]?.updated_at 
+            : null;
+
+          return {
+            ...referral,
+            referred_user: profile,
+            // Sincronizar timestamps reais se estiverem faltando no registro de referral
+            selection_process_paid_at: referral.selection_process_paid_at || (profile as any)?.selection_process_paid_at,
+            application_fee_paid_at: referral.application_fee_paid_at || appFeePaidAt,
+            scholarship_fee_paid_at: referral.scholarship_fee_paid_at || schFeePaidAt
+          };
+        });
       }
 
       return [];
@@ -608,7 +648,105 @@ export function useMatriculacoinTransactionsQuery(userId?: string) {
         return [];
       }
 
-      return data || [];
+      // Processar os dados para incluir o nome do usuário referido quando for transação de referral
+      const processedData = await Promise.all((data || []).map(async (tx) => {
+        let referredUserName: string | undefined;
+        
+        // Método 1: Buscar através de reference_id e reference_type
+        if ((tx.reference_type === 'referral' || tx.reference_type === 'matricula_rewards') && tx.reference_id) {
+          // Buscar o affiliate_referral para obter o referred_id
+          const { data: referral } = await supabase
+            .from('affiliate_referrals')
+            .select('referred_id')
+            .eq('id', tx.reference_id)
+            .maybeSingle();
+          
+          if (referral?.referred_id) {
+            // Buscar o nome do usuário referido
+            const { data: userProfile } = await supabase
+              .from('user_profiles')
+              .select('full_name')
+              .eq('user_id', referral.referred_id)
+              .maybeSingle();
+            
+            if (userProfile?.full_name) {
+              referredUserName = userProfile.full_name;
+            }
+          }
+        }
+        
+        // Método 2: Se não encontrou pelo método 1 e a descrição contém \"Referral reward\", extrair email da descrição
+        if (!referredUserName && tx.description && tx.description.includes('Referral reward')) {
+          // Extrair email da descrição usando regex
+          const emailMatch = tx.description.match(/\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b/);
+          if (emailMatch && emailMatch[0]) {
+            const email = emailMatch[0].toLowerCase().trim();
+            // Buscar o nome do usuário por email (case insensitive)
+            const { data: userProfile } = await supabase
+              .from('user_profiles')
+              .select('full_name, user_id')
+              .ilike('email', email)
+              .maybeSingle();
+            
+            if (userProfile?.full_name) {
+              referredUserName = userProfile.full_name;
+            } else if (userProfile?.user_id) {
+              // Se não tem full_name, tentar buscar pelo user_id diretamente
+              const { data: profileById } = await supabase
+                .from('user_profiles')
+                .select('full_name')
+                .eq('user_id', userProfile.user_id)
+                .maybeSingle();
+              
+              if (profileById?.full_name) {
+                referredUserName = profileById.full_name;
+              }
+            }
+          }
+        }
+        
+        // Método 3: Buscar affiliate_referral pelo referrer_id e data aproximada (quando reference_id não está definido)
+        if (!referredUserName && tx.description && tx.description.includes('Referral reward') && tx.user_id) {
+          // Buscar affiliate_referrals do referrer criados próximo à data da transação
+          const txDate = new Date(tx.created_at);
+          const startDate = new Date(txDate.getTime() - 24 * 60 * 60 * 1000); // 24 horas antes
+          const endDate = new Date(txDate.getTime() + 24 * 60 * 60 * 1000); // 24 horas depois
+          
+          const { data: referral } = await supabase
+            .from('affiliate_referrals')
+            .select('referred_id')
+            .eq('referrer_id', tx.user_id)
+            .gte('created_at', startDate.toISOString())
+            .lte('created_at', endDate.toISOString())
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          
+          if (referral?.referred_id) {
+            const { data: userProfile } = await supabase
+              .from('user_profiles')
+              .select('full_name')
+              .eq('user_id', referral.referred_id)
+              .maybeSingle();
+            
+            if (userProfile?.full_name) {
+              referredUserName = userProfile.full_name;
+            }
+          }
+        }
+        
+        // Retornar transação com nome se encontrado
+        if (referredUserName) {
+          return {
+            ...tx,
+            referred_user_name: referredUserName
+          };
+        }
+        
+        return tx;
+      }));
+
+      return processedData;
     },
     enabled: !!userId,
     staleTime: 3 * 60 * 1000, // 3 minutos
