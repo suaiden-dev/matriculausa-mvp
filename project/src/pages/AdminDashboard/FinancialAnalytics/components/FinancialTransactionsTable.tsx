@@ -978,6 +978,7 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
                         <div className={`p-1.5 rounded-full ${
                           transaction.payment_method === 'stripe' ? 'bg-indigo-50 text-indigo-600' : 
                           transaction.payment_method === 'zelle' ? 'bg-purple-50 text-purple-600' : 
+                          transaction.payment_method === 'parcelow' ? 'bg-teal-50 text-teal-600' :
                           'bg-gray-100 text-gray-600'
                         }`}>
                           <CreditCard className="w-3 h-3" />

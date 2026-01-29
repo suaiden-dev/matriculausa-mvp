@@ -150,12 +150,11 @@ function FiltersBarBase(props: FiltersBarProps) {
 			methods.add('pix');
 		}
 		
-		// Se não houver nenhum método, adicionar os principais para garantir que sempre há opções
-		if (methods.size === 0) {
-			methods.add('stripe');
-			methods.add('zelle');
-			methods.add('outside');
-		}
+		// Garantir que os métodos principais sempre apareçam como opções de filtro
+		methods.add('stripe');
+		methods.add('zelle');
+		methods.add('outside');
+		methods.add('parcelow');
 		
 		return Array.from(methods).sort();
 	}, [payments]);
