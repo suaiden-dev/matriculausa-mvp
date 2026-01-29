@@ -1,6 +1,6 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
-import Stripe from 'stripe';
-import { createClient } from '@supabase/supabase-js';
+import Stripe from 'npm:stripe@17.7.0';
+import { createClient } from 'npm:@supabase/supabase-js@2.49.1';
 
 // @ts-ignore
 declare const Deno: any;
@@ -1674,27 +1674,26 @@ async function handleCheckoutSessionCompleted(session: any, stripe: any) {
       // Todas as notificações (PIX e cartão) são enviadas via verify-stripe-session-selection-process-fee
       // para evitar duplicação e centralizar a lógica de notificações
       console.log('[NOTIFICAÇÃO] Notificações de selection_process serão enviadas via verify-stripe-session-selection-process-fee');
-      // --- MATRICULA REWARDS - ADICIONAR COINS ---
+      // --- MATRICULA REWARDS - TRACKING DE STATUS ---
       try {
         console.log('[MATRICULA REWARDS] Verificando se usuário usou código de referência...');
         // Buscar se o usuário usou algum código de referência
         const { data: usedCode, error: codeError } = await supabase.from('used_referral_codes').select('referrer_id, affiliate_code').eq('user_id', userId).single();
         if (!codeError && usedCode) {
-          console.log('[MATRICULA REWARDS] Usuário usou código de referência, adicionando 180 coins para:', usedCode.referrer_id);
-          // Adicionar 180 coins para o usuário que fez a indicação
-          const { data: coinsResult, error: coinsError } = await supabase.rpc('add_coins_to_user_matricula', {
-            user_id_param: usedCode.referrer_id,
-            coins_to_add: 180,
-            reason: `Referral reward: Selection Process Fee paid by ${userId}`
-          });
-          if (coinsError) {
-            console.error('[MATRICULA REWARDS] Erro ao adicionar coins:', coinsError);
-          } else {
-            console.log('[MATRICULA REWARDS] Coins adicionados com sucesso:', coinsResult);
+          console.log('[MATRICULA REWARDS] Usuário usou código de referência, atualizando status para:', usedCode.referrer_id);
+          
+          // ✅ NOVO: Atualizar status ao invés de creditar coins
+          try {
+            await supabase.rpc('update_referral_status', {
+              p_referred_user_id: userId,
+              p_new_status: 'selection_process_paid',
+              p_timestamp: new Date().toISOString()
+            });
+            console.log('[MATRICULA REWARDS] ✅ Status atualizado para selection_process_paid');
 
-            // --- NOTIFICAÇÃO DE RECOMPENSA PARA O ALUNO (PADRINHO) ---
+            // --- NOTIFICAÇÃO DE PROGRESSO PARA O ALUNO (PADRINHO) ---
             try {
-              console.log('📤 [MATRICULA REWARDS] Enviando notificação de recompensa para o padrinho...');
+              console.log('📤 [MATRICULA REWARDS] Enviando notificação de progresso para o padrinho...');
               
               // Buscar dados do padrinho (referrer)
               const { data: referrerProfile } = await supabase
@@ -1711,19 +1710,18 @@ async function handleCheckoutSessionCompleted(session: any, stripe: any) {
                 .single();
 
               if (referrerProfile?.email) {
-                const rewardPayload = {
-                  tipo_notf: "Recompensa de MatriculaCoins por Indicacao",
+                const progressPayload = {
+                  tipo_notf: "Progresso de Indicacao - Selection Process Fee Pago",
                   email_aluno: referrerProfile.email,
                   nome_aluno: referrerProfile.full_name || "Aluno",
                   referred_student_name: referredProfile?.full_name || "Seu amigo",
                   referred_student_email: referredProfile?.email || "",
                   payment_method: "Stripe",
                   fee_type: "Selection Process Fee",
-                  reward_type: "MatriculaCoins",
-                  o_que_enviar: `Great news! Your friend ${referredProfile?.full_name || "someone"} has completed their enrollment process. 180 MatriculaCoins have been added to your account!`
+                  o_que_enviar: `Good news! Your friend ${referredProfile?.full_name || "someone"} has paid the Selection Process Fee. You'll receive 180 MatriculaCoins when they complete the I20 payment!`
                 };
 
-                console.log('📤 [MATRICULA REWARDS] Payload de recompensa:', rewardPayload);
+                console.log('📤 [MATRICULA REWARDS] Payload de progresso:', progressPayload);
 
                 await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
                   method: 'POST',
@@ -1731,16 +1729,18 @@ async function handleCheckoutSessionCompleted(session: any, stripe: any) {
                     'Content-Type': 'application/json',
                     'User-Agent': 'PostmanRuntime/7.36.3'
                   },
-                  body: JSON.stringify(rewardPayload),
+                  body: JSON.stringify(progressPayload),
                 });
-                console.log('✅ [MATRICULA REWARDS] Notificação de recompensa enviada com sucesso!');
+                console.log('✅ [MATRICULA REWARDS] Notificação de progresso enviada com sucesso!');
               }
-            } catch (rewardNotifError) {
-              console.error('❌ [MATRICULA REWARDS] Erro ao enviar notificação de recompensa:', rewardNotifError);
+            } catch (progressNotifError) {
+              console.error('❌ [MATRICULA REWARDS] Erro ao enviar notificação de progresso:', progressNotifError);
             }
+          } catch (statusError) {
+            console.error('[MATRICULA REWARDS] ❌ Erro ao atualizar status:', statusError);
           }
         } else {
-          console.log('[MATRICULA REWARDS] Usuário não usou código de referência, não há coins para adicionar');
+          console.log('[MATRICULA REWARDS] Usuário não usou código de referência, nenhum tracking necessário');
         }
       } catch (rewardsError) {
         console.error('[MATRICULA REWARDS] Erro ao processar Matricula Rewards:', rewardsError);
@@ -1748,57 +1748,8 @@ async function handleCheckoutSessionCompleted(session: any, stripe: any) {
     // --- FIM MATRICULA REWARDS ---
     }
   }
-  if (paymentType === 'i20_control_fee') {
-    const userId = metadata?.user_id || metadata?.student_id;
-    console.log('[NOTIFICAÇÃO] Processando i20_control_fee para userId:', userId);
-    if (userId) {
-      // Atualizar o status da i20 control fee no perfil do usuário
-      const { error } = await supabase.from('user_profiles').update({
-        has_paid_i20_control_fee: true,
-        updated_at: new Date().toISOString()
-      }).eq('user_id', userId);
-      if (error) {
-        console.error('Error updating i20 control fee status:', error);
-      } else {
-        console.log('I-20 control fee payment processed successfully for user:', userId);
-      // Note: Term acceptance notification with PDF is only sent for selection_process_fee
-      }
-      // Registrar pagamento na tabela affiliate_referrals para faturamento
-      try {
-        // Buscar se o usuário usou algum código de referência
-        const { data: usedCode, error: codeError } = await supabase.from('used_referral_codes').select('referrer_id, affiliate_code').eq('user_id', userId).single();
-        if (!codeError && usedCode) {
-          console.log('[FATURAMENTO] Registrando i20_control_fee para faturamento do seller:', usedCode.referrer_id);
-          const { error: upsertRefError } = await supabase.from('affiliate_referrals').upsert({
-            referrer_id: usedCode.referrer_id,
-            referred_id: userId,
-            affiliate_code: usedCode.affiliate_code,
-            payment_amount: Number(amount_total ? amount_total / 100 : 0),
-            credits_earned: 0,
-            status: 'completed',
-            payment_session_id: session.id,
-            completed_at: new Date().toISOString()
-          }, {
-            onConflict: 'referred_id'
-          });
-          if (upsertRefError) {
-            console.error('[FATURAMENTO] Erro ao registrar i20_control_fee no faturamento:', upsertRefError);
-          } else {
-            console.log('[FATURAMENTO] I20 control fee registrada no faturamento com sucesso');
-          }
-        } else {
-          console.log('[FATURAMENTO] Usuário não usou código de referência, não há faturamento para registrar');
-        }
-      } catch (billingError) {
-        console.error('[FATURAMENTO] Erro ao processar faturamento da i20_control_fee:', billingError);
-      }
-      // --- NOTIFICAÇÃO VIA WEBHOOK N8N ---
-      // REMOVIDO: Notificação duplicada para aluno via webhook
-      // A notificação será enviada apenas pela edge function verify-stripe-session-i20-control-fee
-      console.log('[NOTIFICAÇÃO] Notificação de I-20 Control Fee será enviada apenas via edge function para evitar duplicação');
-    // --- FIM DA NOTIFICAÇÃO ---
-    }
-  }
+  // BLOCO DUPLICADO REMOVIDO - i20_control_fee já é processado nas linhas 1528-1615
+  // Este bloco estava causando duplicação de créditos de MatriculaCoins (trigger executado 2x)
   
   // Log já foi criado no início da função para evitar duplicação
 

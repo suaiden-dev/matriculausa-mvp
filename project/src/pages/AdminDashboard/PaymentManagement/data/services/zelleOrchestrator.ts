@@ -90,67 +90,14 @@ export async function approveZelleFlow(params: {
       amount_param: correctAmount,
       payment_session_id_param: `zelle_${payment.id}`,
       payment_method_param: 'zelle',
-    });
+    })
 
-    // Rewards (coins for referrer)
-    try {
-      const { data: userProfile } = await supabase
-        .from('user_profiles')
-        .select('referral_code_used')
-        .eq('user_id', payment.user_id)
-        .single();
-      if (userProfile?.referral_code_used) {
-        const { data: affiliateCode } = await supabase
-          .from('affiliate_codes')
-          .select('user_id, code')
-          .eq('code', userProfile.referral_code_used)
-          .eq('is_active', true)
-          .single();
-        if (affiliateCode && affiliateCode.user_id !== payment.user_id) {
-          const { data: referredUserProfile } = await supabase
-            .from('user_profiles')
-            .select('full_name, email')
-            .eq('user_id', payment.user_id)
-            .single();
-          const referredDisplayName =
-            referredUserProfile?.full_name || referredUserProfile?.email || payment.user_id;
-
-          await supabase.rpc('add_coins_to_user_matricula', {
-            user_id_param: affiliateCode.user_id,
-            coins_to_add: 180,
-          });
-
-          // Notify referrer via webhook (best-effort)
-          try {
-            const { data: referrerProfile } = await supabase
-              .from('user_profiles')
-              .select('full_name, email')
-              .eq('user_id', affiliateCode.user_id)
-              .single();
-            const referrerName = referrerProfile?.full_name || referrerProfile?.email || 'Unknown User';
-            const referrerEmail = referrerProfile?.email || '';
-            const mensagem = `Você recebeu 180 MatriculaCoins como recompensa por indicação! O aluno ${referredDisplayName} pagou a taxa de Selection Process Fee via Zelle (aprovado pelo admin) usando seu código de referência.`;
-            await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', 'User-Agent': 'MatriculaUSA/1.0' },
-              body: JSON.stringify({
-                tipo_notf: 'Recompensa de MatriculaCoins por Indicação',
-                email_aluno: referrerEmail,
-                nome_aluno: referrerName,
-                o_que_enviar: mensagem,
-                coins_amount: 180,
-                referred_student_name: referredDisplayName,
-                referred_student_email: referredUserProfile?.email || '',
-                payment_method: 'zelle_admin',
-                fee_type: 'selection_process',
-                reward_type: 'referral',
-              }),
-            });
-          } catch (_) {}
-        }
-      }
-    } catch (_) {}
+;
+    // ✅ REMOVIDO: Recompensa de coins para referrer - agora é feito apenas no pagamento I20 via trigger
+    // Os triggers handle_i20_payment_rewards() e handle_selection_process_payment_tracking() 
+    // cuidam automaticamente de creditar coins e atualizar status
   }
+
 
   // I-20 Control logic
   const feeTypeSafe = String(payment.fee_type || '');
