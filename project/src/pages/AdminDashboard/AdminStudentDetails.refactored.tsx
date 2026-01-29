@@ -240,6 +240,9 @@ const AdminStudentDetails: React.FC = () => {
   /**
    * Valida e normaliza valores pagos usando a mesma lógica do Payment Management
    * Se o valor estiver muito discrepante (provavelmente BRL não convertido), usa valores fixos em dólar
+   * 
+   * ✅ NOVO: Se não há valores em realPaidAmounts MAS a flag de pagamento está marcada,
+   * calcula o valor esperado baseado na configuração de taxas (para pagamentos legados)
    */
   const validateAndNormalizePaidAmounts = React.useCallback((
     realPaidAmounts: Record<string, number>,
@@ -248,7 +251,14 @@ const AdminStudentDetails: React.FC = () => {
     feeAmountFn: (feeType: string) => number,
     dependents: number = 0,
     hasMatriculaRewardsDiscount: boolean = false,
-    studentHasSellerCode: boolean = false
+    studentHasSellerCode: boolean = false,
+    // ✅ NOVO: Receber as flags de pagamento para fallback
+    paymentFlags?: {
+      has_paid_selection: boolean;
+      has_paid_application: boolean;
+      has_paid_scholarship: boolean;
+      has_paid_i20: boolean;
+    }
   ): Record<string, number> => {
     const normalized: Record<string, number> = {};
     
@@ -292,6 +302,22 @@ const AdminStudentDetails: React.FC = () => {
           normalized.selection_process = expectedSelectionProcess + dependentCost;
         }
       }
+    } else if (paymentFlags?.has_paid_selection) {
+      // ✅ NOVO: Fallback para pagamentos legados sem registro em individual_fee_payments
+      console.log(`[AdminStudentDetails] 💡 Pagamento legado detectado para selection_process - calculando valor esperado`);
+      const hasMatrDiscount = hasMatriculaRewardsDiscount || studentHasSellerCode;
+      let expectedSelectionProcess: number;
+      if (hasMatrDiscount) {
+        expectedSelectionProcess = 350; // $400 - $50 desconto
+      } else {
+        expectedSelectionProcess = sysType === 'simplified' ? 350 : 400;
+      }
+      
+      if (feeOverrides?.selection_process_fee !== undefined) {
+        normalized.selection_process = feeOverrides.selection_process_fee;
+      } else {
+        normalized.selection_process = expectedSelectionProcess + dependentCost;
+      }
     }
 
     // Scholarship Fee
@@ -309,6 +335,15 @@ const AdminStudentDetails: React.FC = () => {
           normalized.scholarship = expectedScholarship;
         }
       }
+    } else if (paymentFlags?.has_paid_scholarship) {
+      // ✅ NOVO: Fallback para pagamentos legados
+      console.log(`[AdminStudentDetails] 💡 Pagamento legado detectado para scholarship - calculando valor esperado`);
+      const expectedScholarship = sysType === 'simplified' ? 550 : 900;
+      if (feeOverrides?.scholarship_fee !== undefined) {
+        normalized.scholarship = feeOverrides.scholarship_fee;
+      } else {
+        normalized.scholarship = expectedScholarship;
+      }
     }
 
     // I-20 Control Fee
@@ -325,6 +360,15 @@ const AdminStudentDetails: React.FC = () => {
         } else {
           normalized.i20_control = expectedI20Control;
         }
+      }
+    } else if (paymentFlags?.has_paid_i20) {
+      // ✅ NOVO: Fallback para pagamentos legados
+      console.log(`[AdminStudentDetails] 💡 Pagamento legado detectado para i20_control - calculando valor esperado`);
+      const expectedI20Control = feeAmountFn('i20_control_fee');
+      if (feeOverrides?.i20_control_fee !== undefined) {
+        normalized.i20_control = feeOverrides.i20_control_fee;
+      } else {
+        normalized.i20_control = expectedI20Control;
       }
     }
 
@@ -344,6 +388,14 @@ const AdminStudentDetails: React.FC = () => {
         if (dependents > 0) {
           normalized.application += dependents * 100;
         }
+      }
+    } else if (paymentFlags?.has_paid_application) {
+      // ✅ NOVO: Fallback para pagamentos legados
+      console.log(`[AdminStudentDetails] 💡 Pagamento legado detectado para application - calculando valor esperado`);
+      const expectedApplicationFee = feeAmountFn('application_fee');
+      normalized.application = expectedApplicationFee;
+      if (dependents > 0) {
+        normalized.application += dependents * 100;
       }
     }
 
@@ -642,9 +694,42 @@ const AdminStudentDetails: React.FC = () => {
       try {
         const amounts = await getGrossPaidAmounts(student.user_id, ['selection_process', 'scholarship', 'i20_control', 'application']);
         
+        // ✅ DEBUG: Log detalhado dos valores ANTES da normalização
+        console.log(`[AdminStudentDetails] 🔍 DEBUG - Valores BRUTOS retornados por getGrossPaidAmounts para ${student.student_email}:`, {
+          user_id: student.user_id,
+          email: student.student_email,
+          amounts_raw: amounts,
+          amounts_raw_keys: Object.keys(amounts),
+          amounts_raw_values: Object.values(amounts),
+          amounts_raw_selection: amounts.selection_process,
+          amounts_raw_application: amounts.application,
+          amounts_raw_scholarship: amounts.scholarship,
+          amounts_raw_i20: amounts.i20_control,
+          has_paid_selection: student.has_paid_selection_process_fee,
+          has_paid_application: student.is_application_fee_paid,
+          has_paid_scholarship: student.is_scholarship_fee_paid,
+          has_paid_i20: student.has_paid_i20_control_fee
+        });
+        
         // ✅ APLICAR VALIDAÇÃO: Usar a mesma lógica do Payment Management
         // Se valores estiverem muito discrepantes (provavelmente BRL não convertido), usar valores fixos em dólar
         const hasMatrFromSellerCode = !!(student?.seller_referral_code && /^MATR/i.test(student.seller_referral_code));
+        
+        console.log(`[AdminStudentDetails] 🔍 DEBUG - Parâmetros para validateAndNormalizePaidAmounts:`, {
+          amounts,
+          userSystemType,
+          userFeeOverrides,
+          dependents: student?.dependents || 0,
+          hasMatriculaRewardsDiscount,
+          hasMatrFromSellerCode,
+          paymentFlags: {
+            has_paid_selection: student.has_paid_selection_process_fee,
+            has_paid_application: student.is_application_fee_paid,
+            has_paid_scholarship: student.is_scholarship_fee_paid,
+            has_paid_i20: student.has_paid_i20_control_fee
+          }
+        });
+        
         const normalizedAmounts = validateAndNormalizePaidAmounts(
           amounts,
           userSystemType,
@@ -652,8 +737,21 @@ const AdminStudentDetails: React.FC = () => {
           getFeeAmount,
           student?.dependents || 0,
           hasMatriculaRewardsDiscount,
-          hasMatrFromSellerCode
+          hasMatrFromSellerCode,
+          // ✅ NOVO: Passar flags de pagamento para fallback de pagamentos legados
+          {
+            has_paid_selection: student.has_paid_selection_process_fee,
+            has_paid_application: student.is_application_fee_paid,
+            has_paid_scholarship: student.is_scholarship_fee_paid,
+            has_paid_i20: student.has_paid_i20_control_fee
+          }
         );
+        
+        console.log('[AdminStudentDetails] 🔍 DEBUG - Resultado da normalização:', {
+          input_amounts: amounts,
+          output_normalized: normalizedAmounts,
+          was_empty: Object.keys(normalizedAmounts).length === 0
+        });
         
         setRealPaidAmounts(normalizedAmounts);
         console.log('[AdminStudentDetails] ✅ realPaidAmounts carregado e normalizado:', normalizedAmounts);
@@ -674,7 +772,19 @@ const AdminStudentDetails: React.FC = () => {
     loadRealPaidAmounts();
     // Remover validateAndNormalizePaidAmounts das dependências pois é estável (useCallback com [] vazio)
     // Remover getFeeAmount também, pois pode mudar a cada render mas não afeta a lógica de quando carregar
-  }, [student?.user_id, userSystemType, userFeeOverrides, student?.dependents, hasMatriculaRewardsDiscount, student?.seller_referral_code]);
+  }, [
+    student?.user_id, 
+    userSystemType, 
+    userFeeOverrides, 
+    student?.dependents, 
+    hasMatriculaRewardsDiscount, 
+    student?.seller_referral_code,
+    // ✅ NOVO: Adicionar flags de pagamento para recarregar quando status mudar
+    student?.has_paid_selection_process_fee,
+    student?.is_application_fee_paid,
+    student?.is_scholarship_fee_paid,
+    student?.has_paid_i20_control_fee
+  ]);
 
   // Função para recarregar realPaidAmounts (força recarregamento mesmo se dependências não mudaram)
   const reloadRealPaidAmounts = React.useCallback(async () => {
@@ -704,7 +814,14 @@ const AdminStudentDetails: React.FC = () => {
         getFeeAmount,
         student?.dependents || 0,
         hasMatriculaRewardsDiscount,
-        hasMatrFromSellerCode
+        hasMatrFromSellerCode,
+        // ✅ NOVO: Passar flags de pagamento para fallback de pagamentos legados
+        {
+          has_paid_selection: student.has_paid_selection_process_fee,
+          has_paid_application: student.is_application_fee_paid,
+          has_paid_scholarship: student.is_scholarship_fee_paid,
+          has_paid_i20: student.has_paid_i20_control_fee
+        }
       );
       
       setRealPaidAmounts(normalizedAmounts);
@@ -720,7 +837,21 @@ const AdminStudentDetails: React.FC = () => {
         application: false,
       });
     }
-  }, [student?.user_id, student?.dependents, student?.seller_referral_code, userSystemType, userFeeOverrides, hasMatriculaRewardsDiscount, getFeeAmount, validateAndNormalizePaidAmounts]);
+  }, [
+    student?.user_id, 
+    student?.dependents, 
+    student?.seller_referral_code, 
+    userSystemType, 
+    userFeeOverrides, 
+    hasMatriculaRewardsDiscount, 
+    getFeeAmount, 
+    validateAndNormalizePaidAmounts,
+    // ✅ NOVO: Adicionar flags de pagamento
+    student?.has_paid_selection_process_fee,
+    student?.is_application_fee_paid,
+    student?.is_scholarship_fee_paid,
+    student?.has_paid_i20_control_fee
+  ]);
 
   // Carregar referral info quando necessário (ainda é local pois depende de seller_referral_code)
   React.useEffect(() => {
@@ -1077,8 +1208,8 @@ const AdminStudentDetails: React.FC = () => {
     }
   }, [student, dependents, saveProfile, profileId, queryClient, user, logAction]);
 
-  const handleMarkAsPaid = useCallback((feeType: string) => {
-    setPendingPayment({ fee_type: feeType });
+  const handleMarkAsPaid = useCallback((feeType: 'selection_process' | 'application' | 'scholarship' | 'i20_control') => {
+    setPendingPayment({ fee_type: feeType, payment_method: 'manual' });
     setPaymentAmount(getFeeAmount(feeType));
     setShowPaymentModal(true);
   }, [getFeeAmount]);
