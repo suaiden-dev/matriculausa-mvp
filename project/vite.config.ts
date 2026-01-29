@@ -20,8 +20,11 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src")
-    }
+      "@": path.resolve(__dirname, "./src"),
+      "react": path.resolve(__dirname, "./node_modules/react"),
+      "react-dom": path.resolve(__dirname, "./node_modules/react-dom")
+    },
+    dedupe: ["react", "react-dom"]
   },
   build: {
     // Otimizações para reduzir uso de memória
@@ -49,7 +52,7 @@ export default defineConfig({
             if (id.includes('date-fns') || id.includes('dayjs')) return 'dates';
             if (id.includes('framer-motion')) return 'animations';
             if (id.includes('lodash') || id.includes('ramda')) return 'utils';
-            if (id.includes('axios') || id.includes('fetch')) return 'http';
+            if (id.includes('axios') || id.includes('fetch')) return 'vendor';
             // Agrupar React e React-DOM no mesmo chunk para evitar erros de internals
             if (id.includes('react')) return 'vendor-react';
             // Microsoft fica no vendor para carregar depois do React
