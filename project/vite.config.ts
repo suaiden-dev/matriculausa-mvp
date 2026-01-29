@@ -50,9 +50,8 @@ export default defineConfig({
             if (id.includes('framer-motion')) return 'animations';
             if (id.includes('lodash') || id.includes('ramda')) return 'utils';
             if (id.includes('axios') || id.includes('fetch')) return 'http';
-            // Dividir React em chunks menores
-            if (id.includes('react-dom')) return 'react-dom';
-            if (id.includes('react')) return 'react';
+            // Agrupar React e React-DOM no mesmo chunk para evitar erros de internals
+            if (id.includes('react')) return 'vendor-react';
             // Microsoft fica no vendor para carregar depois do React
             if (id.includes('@azure') || id.includes('msal')) return 'vendor';
             // Resto fica em vendor
@@ -68,7 +67,6 @@ export default defineConfig({
     reportCompressedSize: false
   },
   optimizeDeps: {
-    exclude: ['lucide-react'],
     include: [
       'react',
       'react-dom',

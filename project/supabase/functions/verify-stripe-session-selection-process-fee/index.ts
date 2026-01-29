@@ -1135,7 +1135,8 @@ Deno.serve(async (req: Request) => {
       }
       if (usedCode && usedCode.referrer_id) {
         const referrerId = usedCode.referrer_id;
-        console.log('[Referral Reward] Found referrer:', referrerId, 'affiliate_code:', usedCode.affiliate_code);
+        console.log('[Referral Tracking] Found referrer:', referrerId, 'affiliate_code:', usedCode.affiliate_code);
+        
         // Obter nome/email do usuário que pagou (referred)
         let referredDisplayName = '';
         try {
@@ -1147,49 +1148,28 @@ Deno.serve(async (req: Request) => {
             referredDisplayName = authUser?.user?.email || userId;
           }
         } catch (e) {
-          console.warn('[Referral Reward] Could not resolve referred user name, using ID. Error:', e);
+          console.warn('[Referral Tracking] Could not resolve referred user name, using ID. Error:', e);
           referredDisplayName = userId;
         }
-        // Upsert affiliate_referrals (1 por referred_id) com créditos de 200 e dados do pagamento
-        const { error: upsertRefError } = await supabase.from('affiliate_referrals').upsert({
-          referrer_id: referrerId,
-          referred_id: userId,
-          affiliate_code: usedCode.affiliate_code,
-          payment_amount: Number(session.amount_total ? session.amount_total / 100 : 0),
-          credits_earned: 180,
-          status: 'completed',
-          payment_session_id: sessionId,
-          completed_at: new Date().toISOString()
-        }, {
-          onConflict: 'referred_id'
-        });
-        if (upsertRefError) {
-          console.error('[Referral Reward] Failed to upsert affiliate_referrals:', upsertRefError);
-        }
-        console.log('[Referral Reward] Crediting 180 MatriculaCoins to referrer...');
-        const description = `Referral reward: Selection Process Fee paid by ${referredDisplayName}`;
-        const { error: rewardError } = await supabase.rpc('add_coins_to_user_matricula', {
-          user_id_param: referrerId,
-          coins_to_add: 180,
-          reason: description
-        });
-        if (rewardError) {
-          console.error('[Referral Reward] Failed to add credits:', rewardError);
-        } else {
-          console.log('[Referral Reward] 180 MatriculaCoins credited successfully');
-
-          // --- NOTIFICAÇÃO DE RECOMPENSA PARA O ALUNO (PADRINHO) ---
+        
+        // ✅ NOVO: Atualizar status para 'selection_process_paid' ao invés de creditar coins
+        console.log('[Referral Tracking] Updating referral status to selection_process_paid...');
+        try {
+          await supabase.rpc('update_referral_status', {
+            p_referred_user_id: userId,
+            p_new_status: 'selection_process_paid',
+            p_timestamp: new Date().toISOString()
+          });
+          console.log('[Referral Tracking] ✅ Status updated successfully');
+          
+          // Enviar notificação de progresso para o padrinho
           try {
-            console.log('📤 [Referral Reward] Enviando notificação de recompensa para o padrinho...');
-            
-            // Buscar dados do padrinho (referrer)
             const { data: referrerProfile } = await supabase
               .from('user_profiles')
               .select('full_name, email')
               .eq('user_id', referrerId)
               .single();
             
-            // Buscar email do aluno indicado (referred) se ainda não tivermos
             const { data: referredProfileData } = await supabase
               .from('user_profiles')
               .select('email')
@@ -1197,35 +1177,35 @@ Deno.serve(async (req: Request) => {
               .single();
 
             if (referrerProfile?.email) {
-              const rewardPayload = {
-                tipo_notf: "Recompensa de MatriculaCoins por Indicacao",
+              const progressPayload = {
+                tipo_notf: "Progresso de Indicacao - Selection Process Fee Pago",
                 email_aluno: referrerProfile.email,
                 nome_aluno: referrerProfile.full_name || "Aluno",
                 referred_student_name: referredDisplayName,
                 referred_student_email: referredProfileData?.email || "",
                 payment_method: "Stripe",
                 fee_type: "Selection Process Fee",
-                reward_type: "MatriculaCoins",
-                o_que_enviar: `Great news! Your friend ${referredDisplayName} has completed their enrollment process. 180 MatriculaCoins have been added to your account!`
+                o_que_enviar: `Good news! Your friend ${referredDisplayName} has paid the Selection Process Fee. You'll receive 180 MatriculaCoins when they complete the I20 payment!`
               };
 
-              console.log('📤 [Referral Reward] Payload de recompensa:', rewardPayload);
-
+              console.log('📤 [Referral Tracking] Enviando notificação de progresso para o padrinho...');
               await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(rewardPayload),
+                body: JSON.stringify(progressPayload),
               });
-              console.log('✅ [Referral Reward] Notificação de recompensa enviada com sucesso!');
+              console.log('✅ [Referral Tracking] Notificação de progresso enviada com sucesso!');
             }
-          } catch (rewardNotifError) {
-            console.error('❌ [Referral Reward] Erro ao enviar notificação de recompensa:', rewardNotifError);
+          } catch (progressNotifError) {
+            console.error('❌ [Referral Tracking] Erro ao enviar notificação de progresso:', progressNotifError);
           }
+        } catch (statusError) {
+          console.error('[Referral Tracking] ❌ Failed to update referral status:', statusError);
         }
       } else {
-        console.log('[Referral Reward] No used referral code found for this user.');
+        console.log('[Referral Tracking] No used referral code found for this user.');
       }
       // Limpa carrinho
       const { error: cartError } = await supabase.from('user_cart').delete().eq('user_id', userId);
