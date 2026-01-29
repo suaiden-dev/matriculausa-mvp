@@ -2447,6 +2447,8 @@
       "academicLevel": "Academic Level",
       "gpa": "GPA",
       "englishProficiency": "English Proficiency",
+      "cpfDocument": "CPF (Brazilian Tax ID)",
+      "cpfHelper": "Used for validation and payments in Brazil (format 000.000.000-00).",
       "placeholders": {
         "enterFullName": "Enter your full name",
         "phoneExample": "Ex: +55 11 99999-8888",
@@ -2504,6 +2506,7 @@
       "profileUpdated": "Profile updated successfully!",
       "uploadError": "Failed to upload avatar. Please try again.",
       "saveError": "Failed to save profile changes. Please try again.",
+      "invalidCPF": "Invalid CPF. Please check and try again.",
       "invalidImageFile": "Please select an image file",
       "fileTooLarge": "File size must be less than 5MB",
       "imageUrlError": "Could not get image URL",
@@ -2698,13 +2701,34 @@
         "title": "PIX",
         "description": "Instant payment system for Brazilian users"
       },
+      "parcelow": {
+        "title": "Parcelow (21x)",
+        "description": "Pay in up to 21 installments on your credit card"
+      },
       "zelle": {
         "title": "Zelle",
         "description": "Pay via Zelle transfer",
-        "descriptionDetailed": "Pay via Zelle and upload the receipt."
+        "descriptionDetailed": "Pay via Zelle and upload the receipt (24-48h)."
       }
     },
     "includesProcessingFees": "* Includes processing fees",
+    "promotionalCoupon": {
+      "title": "Promotional Coupon",
+      "placeholder": "Enter code",
+      "validate": "Validate",
+      "validating": "Validating...",
+      "validated": "Validated",
+      "remove": "Remove coupon",
+      "original": "original",
+      "withDiscount": "with discount",
+      "discountAmount": "discount",
+      "applied": "Coupon {{code}} applied! ${{amount}} discount applied.",
+      "errors": {
+        "invalid": "Invalid coupon code",
+        "generic": "Error validating coupon. Check your connection and try again.",
+        "cpfRequired": "CPF is required for Parcelow payment. Please update your profile."
+      }
+    },
     "pix": {
       "baseAmount": "Base amount",
       "iofFee": "IOF Fee",
@@ -3702,111 +3726,5 @@
     "3800Expired": "Not Available for application",
     "3800Expiring": "Last hours to apply! Deadline expires tomorrow (November 6th)",
     "3800ExpiringShort": "Deadline expires tomorrow"
-  },
-  "scholarshipsPage": {
-    "filters": {
-      "levels": {
-        "all": "All Levels",
-        "graduate": "Graduate",
-        "doctorate": "Doctorate",
-        "undergraduate": "Undergraduate"
-      },
-      "courseModalities": {
-        "online": "Online",
-        "inPerson": "In-Person",
-        "hybrid": "Hybrid",
-        "mixed": "Mixed"
-      },
-      "allFields": "All Fields",
-      "allLevels": "All Levels",
-      "allModes": "All Modes",
-      "allPermissions": "All Permissions",
-      "allUniversities": "All Universities",
-      "anyField": "Any Field",
-      "business": "Business",
-      "engineering": "Engineering",
-      "stem": "STEM",
-      "online": "Online",
-      "inPerson": "In-Person",
-      "hybrid": "Hybrid",
-      "opt": "OPT",
-      "cpt": "CPT",
-      "f1": "F1 Visa",
-      "min": "Min",
-      "max": "Max",
-      "loading": "Loading...",
-      "scholarshipsFound": "scholarships found",
-      "university": "University",
-      "universityTooltip": "Create an account and pay the Selection Process Fee to filter by university"
-    },
-    "featuredSection": {
-      "title": "Featured Scholarships",
-      "subtitle": "Top Opportunities This Season",
-      "description": "Hand-picked scholarships with the best value and highest approval rates"
-    },
-    "allScholarships": {
-      "title": "All Scholarships",
-      "description": "Browse all available scholarship opportunities"
-    },
-    "noResults": {
-      "title": "No Scholarships Found",
-      "description": "Try adjusting your filters or search terms to find more opportunities.",
-      "clearFilters": "Clear Filters"
-    },
-    "pagination": {
-      "page": "Page",
-      "of": "of",
-      "previous": "Previous",
-      "next": "Next"
-    },
-    "modal": {
-      "exclusive": "Exclusive",
-      "expired": "Expired",
-      "annualSavings": "Annual Savings",
-      "coverage": "Coverage",
-      "deadline": "Deadline",
-      "days": "days",
-      "financialBreakdown": "Financial Details",
-      "originalAnnualCost": "Original Annual Cost",
-      "withScholarship": "With Scholarship",
-      "costPerCredit": "Cost per Credit",
-      "additionalBenefits": "Benefits",
-      "programDescription": "Scholarship Description",
-      "programInformation": "Scholarship Information",
-      "academicLevel": "Academic Level",
-      "studyMode": "Study Mode",
-      "programDuration": "Scholarship Duration",
-      "language": "Language",
-      "workAuthorization": "Work Authorization",
-      "requirements": "Requirements",
-      "applicationDeadline": "Application Deadline",
-      "internalFeesNote": "Internal fees are shown only after payment of the selection process fee",
-      "internalFeesTitle": "Internal University Fees",
-      "internalFeesDisclaimer": "These fees are paid directly to the university, not through our platform",
-      "internalFeesAvailable": "University Internal Fees Available",
-      "internalFeesNotice": "This scholarship may have additional internal fees from the university. These fees will be visible after payment of the Selection Process Fee.",
-      "anyField": "Any Field",
-      "inPerson": "In-Person",
-      "universityInternalFees": "University Internal Fees",
-      "viewUniversityFeesPage": "View University Fees Page"
-    },
-    "scholarshipCard": {
-      "applicationFee": "Application Fee",
-      "customFee": "Custom fee",
-      "standardFee": "Standard fee",
-      "days": "days",
-      "expired": "Expired",
-      "university": "University",
-      "studyMode": "Study Mode",
-      "workAuthorization": "Work Authorization",
-      "financialOverview": "Financial Overview",
-      "originalPrice": "Original Price",
-      "withScholarship": "With Scholarship",
-      "perCredit": "per credit",
-      "scholarshipDiscount": "Scholarship Discount",
-      "notAvailable": "N/A",
-      "details": "View Details",
-      "applyNow": "Apply Now"
-    }
   }
 }

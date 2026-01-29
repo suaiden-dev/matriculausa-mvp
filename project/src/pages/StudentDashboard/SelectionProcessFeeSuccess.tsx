@@ -5,12 +5,16 @@ import PaymentSuccessOverlay from '../../components/PaymentSuccessOverlay';
 import { useDynamicFees } from '../../hooks/useDynamicFees';
 import { useTranslation } from 'react-i18next';
 import { dispatchCacheInvalidationEvent, CacheInvalidationEvent } from '../../utils/cacheInvalidation';
+import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../hooks/useAuth';
 
 const SelectionProcessFeeSuccess: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const params = new URLSearchParams(location.search);
   const sessionId = params.get('session_id');
+  const reference = params.get('reference'); // Parcelow
+  const paymentMethod = params.get('payment_method'); // 'parcelow' ou undefined
   const isPixPayment = params.get('pix_payment') === 'true';
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -23,6 +27,7 @@ const SelectionProcessFeeSuccess: React.FC = () => {
   const { t } = useTranslation();
   const [paidAmount, setPaidAmount] = useState<number | null>(null);
   const [promotionalCoupon, setPromotionalCoupon] = useState<string | null>(null);
+  const { user } = useAuth();
 
   // Função para fazer polling do status do PIX (otimizada para webhook)
   const pollPixPaymentStatus = async () => {
@@ -158,20 +163,115 @@ const SelectionProcessFeeSuccess: React.FC = () => {
     poll();
   };
 
+  // Função para verificar pagamento Parcelow
+  const verifyParcelowPayment = async () => {
+    if (!user?.id || !reference) {
+      setError('Invalid Parcelow payment reference.');
+      setLoading(false);
+      return;
+    }
+
+    const maxAttempts = 30; // 5 minutos
+    let attempts = 0;
+
+    const poll = async () => {
+      if (hasVerified) {
+        console.log('[Parcelow] Já foi verificado, parando polling');
+        return;
+      }
+
+      attempts++;
+      console.log(`[Parcelow] Tentativa ${attempts}/${maxAttempts} - Verificando status do pagamento...`);
+
+      try {
+        // Buscar pagamento mais recente do usuário para selection_process
+        const { data: payment, error: paymentError } = await supabase
+          .from('individual_fee_payments')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('fee_type', 'selection_process')
+          .eq('payment_method', 'parcelow')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (paymentError) {
+          console.error('[Parcelow] Erro ao buscar pagamento:', paymentError);
+        }
+
+        if (payment) {
+          console.log('[Parcelow] Pagamento encontrado, status:', payment.parcelow_status);
+          setPaidAmount(payment.amount);
+
+          if (payment.parcelow_status === 'paid') {
+            console.log('[Parcelow] ✅ Pagamento confirmado!');
+            dispatchCacheInvalidationEvent(CacheInvalidationEvent.PAYMENT_COMPLETED);
+            setLoading(false);
+            setAnimationSuccess(true);
+            setShowAnimation(true);
+            setHasVerified(true);
+
+            setTimeout(() => {
+              navigate('/student/dashboard/scholarships');
+            }, 6000);
+            return;
+          }
+        }
+
+        if (attempts >= maxAttempts) {
+          console.log('[Parcelow] ⏰ Timeout - Mostrando erro...');
+          setLoading(false);
+          setAnimationSuccess(false);
+          setShowAnimation(true);
+
+          setTimeout(() => {
+            navigate('/student/dashboard/scholarships');
+          }, 6000);
+          return;
+        }
+
+        console.log(`[Parcelow] ⏳ Aguardando webhook processar... (${attempts}/${maxAttempts})`);
+        setTimeout(poll, 10000);
+      } catch (error) {
+        console.error('[Parcelow] ❌ Erro no polling:', error);
+        if (attempts >= maxAttempts) {
+          setLoading(false);
+          setAnimationSuccess(false);
+          setShowAnimation(true);
+
+          setTimeout(() => {
+            navigate('/student/dashboard/scholarships');
+          }, 6000);
+        } else {
+          setTimeout(poll, 10000);
+        }
+      }
+    };
+
+    poll();
+  };
+
   useEffect(() => {
     // Prevenir múltiplas execuções (React Strict Mode executa useEffect duas vezes em desenvolvimento)
     if (hasRunRef.current) {
-      console.log('[PIX] Verificação já foi executada, ignorando chamada duplicada do React Strict Mode');
+      console.log('[Payment] Verificação já foi executada, ignorando chamada duplicada do React Strict Mode');
       return;
     }
     
     // Prevenir múltiplas execuções simultâneas
     if (isVerifying) {
-      console.log('[PIX] Verificação já em andamento, ignorando chamada duplicada');
+      console.log('[Payment] Verificação já em andamento, ignorando chamada duplicada');
       return;
     }
     
     hasRunRef.current = true;
+
+    // Detectar se é pagamento Parcelow ou Stripe
+    if (paymentMethod === 'parcelow' && reference) {
+      console.log('[Parcelow] Pagamento Parcelow detectado, iniciando verificação...');
+      verifyParcelowPayment();
+      return;
+    }
     
     const verifySession = async () => {
       if (!sessionId) {
@@ -290,7 +390,7 @@ const SelectionProcessFeeSuccess: React.FC = () => {
       }
     };
     verifySession();
-  }, [sessionId, isPixPayment]);
+  }, [sessionId, isPixPayment, paymentMethod, reference, user]);
 
   // Debug: Log das mudanças de estado
   useEffect(() => {

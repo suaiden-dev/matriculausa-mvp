@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { XCircle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
@@ -18,7 +18,8 @@ const ApplicationFeeSuccess: React.FC = () => {
   const [applicationFeeAmount, setApplicationFeeAmount] = useState<number>(0);
   const [showAnimation, setShowAnimation] = useState(false);
   const { t } = useTranslation();
-  const { userProfile } = useAuth();
+  const { userProfile, user } = useAuth();
+  const hasRunRef = useRef(false);
 
   // Helper: calcular Application Fee exibida considerando dependentes (legacy) - mesma lógica do MyApplications
   const getApplicationFeeWithDependents = (base: number): number => {
@@ -27,7 +28,80 @@ const ApplicationFeeSuccess: React.FC = () => {
     return deps > 0 ? base + deps * 100 : base;
   };
 
+  // Função para verificar pagamento Parcelow
+  const verifyParcelowPayment = async (reference: string) => {
+    if (!user?.id) {
+      setError('User not authenticated.');
+      setStatus('error');
+      return;
+    }
+
+    const maxAttempts = 30;
+    let attempts = 0;
+
+    const poll = async () => {
+      attempts++;
+      console.log(`[Parcelow] Tentativa ${attempts}/${maxAttempts}`);
+
+      try {
+        const { data: payment, error: paymentError } = await supabase
+          .from('individual_fee_payments')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('fee_type', 'application_fee')
+          .eq('payment_method', 'parcelow')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (payment && payment.parcelow_status === 'paid') {
+          console.log('[Parcelow] ✅ Pagamento confirmado!');
+          setApplicationFeeAmount(payment.amount);
+          dispatchCacheInvalidationEvent(CacheInvalidationEvent.PAYMENT_COMPLETED);
+          setStatus('success');
+          setShowAnimation(true);
+
+          setTimeout(() => {
+            navigate('/student/dashboard/applications');
+          }, 6000);
+          return;
+        }
+
+        if (attempts >= maxAttempts) {
+          setError('Payment verification timeout');
+          setStatus('error');
+          return;
+        }
+
+        setTimeout(poll, 10000);
+      } catch (err) {
+        console.error('[Parcelow] Erro:', err);
+        if (attempts >= maxAttempts) {
+          setError('Payment verification failed');
+          setStatus('error');
+        } else {
+          setTimeout(poll, 10000);
+        }
+      }
+    };
+
+    poll();
+  };
+
   useEffect(() => {
+    if (hasRunRef.current) return;
+    hasRunRef.current = true;
+
+    const reference = searchParams.get('reference');
+    const paymentMethod = searchParams.get('payment_method');
+
+    // Detectar se é pagamento Parcelow
+    if (paymentMethod === 'parcelow' && reference) {
+      console.log('[Parcelow] Pagamento Parcelow detectado');
+      verifyParcelowPayment(reference);
+      return;
+    }
+
     const verifySession = async () => {
       const sessionId = searchParams.get('session_id');
       if (!sessionId) {

@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import React, { useEffect, useState, useRef } from 'react';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
 import PaymentSuccessOverlay from '../../components/PaymentSuccessOverlay';
 import { dispatchCacheInvalidationEvent, CacheInvalidationEvent } from '../../utils/cacheInvalidation';
+import { supabase } from '../../lib/supabase';
 
 
 const I20ControlFeeSuccess: React.FC = () => {
@@ -15,15 +16,89 @@ const I20ControlFeeSuccess: React.FC = () => {
   const [promotionalCoupon, setPromotionalCoupon] = useState<string | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const params = new URLSearchParams(location.search);
   const { user } = useAuth();
   const { getFeeAmount } = useFeeConfig(user?.id);
   const sessionId = params.get('session_id');
+  const reference = searchParams.get('reference');
+  const paymentMethod = searchParams.get('payment_method');
   const { t } = useTranslation();
+  const hasRunRef = useRef(false);
 
-  console.log('🔍 [I20ControlFeeSuccess] Componente renderizado com sessionId:', sessionId);
+  console.log('🔍 [I20ControlFeeSuccess] Componente renderizado com sessionId:', sessionId, 'reference:', reference);
+
+  // Função para verificar pagamento Parcelow
+  const verifyParcelowPayment = async (reference: string) => {
+    if (!user?.id) {
+      setError('User not authenticated.');
+      setLoading(false);
+      return;
+    }
+
+    const maxAttempts = 30;
+    let attempts = 0;
+
+    const poll = async () => {
+      attempts++;
+      console.log(`[Parcelow] Tentativa ${attempts}/${maxAttempts}`);
+
+      try {
+        const { data: payment, error: paymentError } = await supabase
+          .from('individual_fee_payments')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('fee_type', 'i20_control')
+          .eq('payment_method', 'parcelow')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (payment && payment.parcelow_status === 'paid') {
+          console.log('[Parcelow] ✅ Pagamento confirmado!');
+          setPaidAmount(payment.amount);
+          dispatchCacheInvalidationEvent(CacheInvalidationEvent.PAYMENT_COMPLETED);
+          setLoading(false);
+          setShowAnimation(true);
+
+          setTimeout(() => {
+            navigate('/student/dashboard/applications');
+          }, 6000);
+          return;
+        }
+
+        if (attempts >= maxAttempts) {
+          setError('Payment verification timeout');
+          setLoading(false);
+          return;
+        }
+
+        setTimeout(poll, 10000);
+      } catch (err) {
+        console.error('[Parcelow] Erro:', err);
+        if (attempts >= maxAttempts) {
+          setError('Payment verification failed');
+          setLoading(false);
+        } else {
+          setTimeout(poll, 10000);
+        }
+      }
+    };
+
+    poll();
+  };
 
   useEffect(() => {
+    if (hasRunRef.current) return;
+    hasRunRef.current = true;
+
+    // Detectar se é pagamento Parcelow
+    if (paymentMethod === 'parcelow' && reference) {
+      console.log('[Parcelow] Pagamento Parcelow detectado');
+      verifyParcelowPayment(reference);
+      return;
+    }
+
     const verifySession = async () => {
       if (!sessionId) {
         setError('Session ID not found in URL.');
@@ -149,7 +224,7 @@ const I20ControlFeeSuccess: React.FC = () => {
     };
 
     verifySession();
-  }, [sessionId]);
+  }, [sessionId, reference, paymentMethod, user]);
 
   if (loading) {
     return (

@@ -21,8 +21,10 @@ import {
 } from 'lucide-react';
 import PhoneInput from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
+import InputMask from 'react-input-mask';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
+import { validateCPF } from '../../utils/cpfValidation';
 
 interface ProfileManagementProps {
   profile: any;
@@ -50,8 +52,10 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
     field_of_interest: profile?.field_of_interest || '',
     academic_level: profile?.academic_level || '',
     gpa: profile?.gpa?.toString() || '',
-    english_proficiency: profile?.english_proficiency || ''
+    english_proficiency: profile?.english_proficiency || '',
+    cpf_document: profile?.cpf_document || ''
   });
+  const [cpfError, setCpfError] = useState<string | null>(null);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
@@ -61,6 +65,9 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
     
     // Clear error messages when user starts typing
     if (saveError) setSaveError(null);
+    if (field === 'cpf_document') {
+      setCpfError(null);
+    }
   };
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -144,8 +151,15 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
     setSaving(true);
     setSaveError(null);
     setSuccessMessage(null);
+    setCpfError(null);
 
     try {
+      // Validate CPF if provided
+      if (formData.cpf_document && !validateCPF(formData.cpf_document)) {
+        setCpfError(t('profileManagement.messages.invalidCPF'));
+        setSaving(false);
+        return;
+      }
       // Normaliza o GPA: permite vazio (null), e se numérico, limita a 0-4 e 2 casas decimais
       const parsedGpa = formData.gpa === '' ? null : Number.parseFloat(formData.gpa);
       const normalizedGpa =
@@ -183,10 +197,12 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
       field_of_interest: profile?.field_of_interest || '',
       academic_level: profile?.academic_level || '',
       gpa: profile?.gpa?.toString() || '',
-      english_proficiency: profile?.english_proficiency || ''
+      english_proficiency: profile?.english_proficiency || '',
+      cpf_document: profile?.cpf_document || ''
     });
     setSaveError(null);
     setSuccessMessage(null);
+    setCpfError(null);
     setIsEditing(false);
   };
 
@@ -198,7 +214,8 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
       profile?.field_of_interest,
       profile?.academic_level,
       profile?.gpa,
-      profile?.english_proficiency
+      profile?.english_proficiency,
+      profile?.cpf_document
     ];
     const completedFields = fields.filter(field => field && field !== '').length;
     return Math.round((completedFields / fields.length) * 100);
@@ -396,6 +413,23 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
                   <option value="ielts">{t('profileManagement.form.fields.ielts')}</option>
                 </select>
               </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">{t('profileManagement.form.cpfDocument')}</label>
+                <InputMask
+                  mask="999.999.999-99"
+                  value={formData.cpf_document}
+                  onChange={(e) => handleInputChange('cpf_document', e.target.value)}
+                  className={`w-full px-4 py-3 bg-slate-50 border rounded-xl focus:outline-none focus:ring-2 transition-all duration-200 ${
+                    cpfError ? 'border-red-500 focus:ring-red-600 focus:border-red-600' : 'border-slate-200 focus:ring-blue-600 focus:border-blue-600'
+                  }`}
+                  placeholder="000.000.000-00"
+                />
+                {cpfError && (
+                  <p className="mt-1 text-sm text-red-600">{cpfError}</p>
+                )}
+                <p className="mt-1 text-xs text-slate-500">{t('profileManagement.form.cpfHelper')}</p>
+              </div>
             </div>
           </div>
         ) : (
@@ -515,6 +549,14 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
                     <div>
                       <label className="text-sm font-medium text-slate-500">{t('profileManagement.labels.country')}</label>
                       <p className="text-slate-900">{profile?.country || t('profileManagement.status.notProvided')}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center">
+                    <User className="h-5 w-5 text-slate-400 mr-3" />
+                    <div>
+                      <label className="text-sm font-medium text-slate-500">{t('profileManagement.form.cpfDocument')}</label>
+                      <p className="text-slate-900">{profile?.cpf_document || t('profileManagement.status.notProvided')}</p>
                     </div>
                   </div>
                 </div>

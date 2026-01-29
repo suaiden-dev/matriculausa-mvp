@@ -48,6 +48,7 @@ interface StudentProfile {
   academic_level?: string;
   gpa?: number;
   english_proficiency?: string;
+  cpf_document?: string;
   created_at: string;
   updated_at: string;
 }
@@ -185,6 +186,7 @@ const StudentDashboard: React.FC = () => {
           academic_level: profileData.academic_level || '',
           gpa: profileData.gpa || 0,
           english_proficiency: profileData.english_proficiency || '',
+          cpf_document: profileData.cpf_document || '',
           created_at: profileData.created_at,
           updated_at: profileData.updated_at
         });
@@ -271,6 +273,7 @@ const StudentDashboard: React.FC = () => {
           // Envia null quando vazio; limita a 2 casas decimais para evitar overflow de precisão
           gpa: updatedData.gpa === undefined ? null : updatedData.gpa,
           english_proficiency: updatedData.english_proficiency,
+          cpf_document: (updatedData as any).cpf_document || null,
           updated_at: new Date().toISOString()
         })
         .eq('user_id', user.id);
