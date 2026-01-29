@@ -2553,7 +2553,20 @@
     "step2Title": "They pay the selection process fee",
     "step2Description": "When they use your code and pay the selection process fee, you earn coins",
     "step3Title": "Redeem your rewards",
-    "step3Description": "Use your coins to get tuition discounts at participating universities",
+    "step3Description": "When referred pays the I-20 Control Fee, you earn 180 coins.",
+    "notificationSent": "Notification sent successfully!",
+    "stages": {
+      "selection": "Selection Process",
+      "application": "Application Fee",
+      "scholarship": "Scholarship Fee",
+      "i20": "I-20 Control"
+    },
+    "referralProgress": "Referral Progress",
+    "notifyFriend": "Notify Friend",
+    "inProgress": "In Progress",
+    "completed": "Completed",
+    "invitedOn": "Invited on {{date}}",
+    "nudgeCooldown": "Please wait {{minutes}} min before notifying again",
     "participatingUniversities": "Participating Universities",
     "universitiesDescription": "These universities accept Matricula coins as tuition discounts. Click on a university to see more details.",
     "loadingUniversities": "Loading universities...",
@@ -2879,7 +2892,7 @@
         },
         "accumulateCoins": {
           "title": "Earn Rewards",
-          "description": "180 coins per successful referral - that's $180 off your tuition"
+          "description": "180 coins per referral that completes the I-20 payment"
         },
         "payLess": {
           "title": "Save Money",
@@ -2937,7 +2950,7 @@
         "step2": {
           "title": "Friends Sign Up",
           "description": "When your friends register using your code, you both earn Matricula Coins",
-          "details": "180 coins for each successful referral"
+          "details": "180 coins after I-20 Control Fee is paid"
         },
         "step3": {
           "title": "Redeem Fee Discount",

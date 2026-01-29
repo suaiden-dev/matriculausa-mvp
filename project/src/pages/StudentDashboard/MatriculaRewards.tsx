@@ -9,7 +9,11 @@ import {
   Clock,
   ArrowUpRight,
   Mail,
-  GraduationCap
+  GraduationCap,
+  Bell,
+  Check,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
@@ -30,6 +34,7 @@ import {
 } from '../../hooks/useStudentDashboardQueries';
 import { useQueryClient } from '@tanstack/react-query';
 import { invalidateStudentDashboardRewards } from '../../lib/queryKeys';
+import NotificationService from '../../services/NotificationService';
 
 const MatriculaRewards: React.FC = () => {
   const { t } = useTranslation();
@@ -55,36 +60,51 @@ const MatriculaRewards: React.FC = () => {
   const { data: transactions = [], isPending: transactionsLoading } = useMatriculacoinTransactionsQuery(user?.id);
   const { data: participatingUniversities = [], isPending: universitiesLoading } = useParticipatingUniversitiesQuery();
   
-  const [stats, setStats] = useState<AffiliateStats | null>(null);
+  
   const [copied, setCopied] = useState(false);
+  const [notificationStatus, setNotificationStatus] = useState<Record<string, 'loading' | 'success' | 'none'>>({});
+  const [cooldownRemaining, setCooldownRemaining] = useState<Record<string, number>>({});
   const [currentPage, setCurrentPage] = useState(1);
   const [universitiesPerPage] = useState(9); // 3x3 grid
   const [searchTerm, setSearchTerm] = useState('');
+  const [referralsPage, setReferralsPage] = useState(1);
+  const referralsPerPage = 5;
   
   // Computed values
   const loading = affiliateCodeLoading || creditsLoading || referralsLoading || transactionsLoading;
 
-  useEffect(() => {
-    // Calcula estatísticas quando os dados estiverem disponíveis
-    if (credits && referrals) {
-      const totalReferrals = referrals.length || 0;
-      const totalEarnings = credits.total_earned || 0;
-      const currentBalance = credits.balance || 0;
-
-      setStats({
-        totalReferrals,
-        totalEarnings,
-        currentBalance,
-        recentTransactions: transactions || [],
-        recentReferrals: referrals || []
-      });
-    }
-  }, [credits, referrals, transactions]);
 
   useEffect(() => {
     // Reset to first page when search changes
     setCurrentPage(1);
   }, [searchTerm]);
+
+  // Efeito para gerenciar os cronômetros de cooldown
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const now = Date.now();
+      const COOLDOWN_MS = 5 * 60 * 1000;
+      const updatedCooldowns: Record<string, number> = {};
+      let hasUpdates = false;
+
+      referrals.forEach(ref => {
+        const lastSent = localStorage.getItem(`nudge_cooldown_${ref.id}`);
+        if (lastSent) {
+          const elapsed = now - parseInt(lastSent);
+          if (elapsed < COOLDOWN_MS) {
+            updatedCooldowns[ref.id] = Math.ceil((COOLDOWN_MS - elapsed) / 1000);
+            hasUpdates = true;
+          }
+        }
+      });
+
+      if (hasUpdates || Object.keys(cooldownRemaining).length > 0) {
+        setCooldownRemaining(updatedCooldowns);
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [referrals, cooldownRemaining]);
 
   const copyToClipboard = async (text: string) => {
     try {
@@ -185,6 +205,146 @@ const MatriculaRewards: React.FC = () => {
       month: 'short',
       day: 'numeric'
     });
+  };
+
+  const handleNotifyStudent = async (referral: any) => {
+    if (!referral.referred_id) return;
+
+    try {
+      const studentName = referral.referred_user?.full_name || 'Student';
+      const studentEmail = referral.referred_user?.email;
+
+      if (!studentEmail) {
+        alert(t('common.error'));
+        return;
+      }
+
+      // 🕒 Controle de Cooldown (5 minutos) - Silencioso, pois o botão estará desabilitado
+      const cooldownKey = `nudge_cooldown_${referral.id}`;
+      const lastSent = localStorage.getItem(cooldownKey);
+      const now = Date.now();
+      const COOLDOWN_MS = 5 * 60 * 1000;
+
+      if (lastSent && (now - parseInt(lastSent)) < COOLDOWN_MS) {
+        return;
+      }
+
+      // Payload para a função de notificação do n8n
+      const payload = {
+        tipo_notf: "Nudge to complete enrollment",
+        email_aluno: studentEmail,
+        nome_aluno: studentName,
+        nome_bolsa: "",
+        nome_universidade: "Matrícula USA",
+        email_universidade: "contato@matriculausa.com",
+        o_que_enviar: `Your friend ${(user && user.name) || 'who referred you'} is cheering for you! \n\nYou're almost there! Complete your current pending step in Matrícula USA to move forward in your journey to study in the USA.`,
+        contact_name: (user && user.name) || 'Your Friend',
+        contact_position: "Friend",
+        location: "student/dashboard",
+        website: "matriculausa.com",
+        notification_target: "student",
+        next_step: !referral.selection_process_paid_at ? "Selection Process Fee" :
+                   !referral.application_fee_paid_at ? "Application Fee" :
+                   !referral.scholarship_fee_paid_at ? "Scholarship Fee" : "I-20 Control Fee"
+      };
+
+      setNotificationStatus(prev => ({ ...prev, [referral.id]: 'loading' }));
+
+      const result = await NotificationService.sendUniversityNotification(payload);
+
+      if (!result.success) throw new Error(result.error || 'Failed to send notification');
+
+      // 🕒 Atualizar cooldown apenas em caso de sucesso
+      localStorage.setItem(cooldownKey, Date.now().toString());
+
+      setNotificationStatus(prev => ({ ...prev, [referral.id]: 'success' }));
+      
+      // Voltar ao estado inicial após 3 segundos
+      setTimeout(() => {
+        setNotificationStatus(prev => ({ ...prev, [referral.id]: 'none' }));
+      }, 3000);
+    } catch (err) {
+      console.error('Error sending notification:', err);
+      alert(t('common.error'));
+      setNotificationStatus(prev => ({ ...prev, [referral.id]: 'none' }));
+    }
+  };
+
+  const StepProgress = ({ referral }: { referral: any }) => {
+    const stages = [
+      { id: 'selection_process_paid', label: t('matriculaRewards.stages.selection'), date: referral.selection_process_paid_at },
+      { id: 'application_fee_paid', label: t('matriculaRewards.stages.application'), date: referral.application_fee_paid_at },
+      { id: 'scholarship_fee_paid', label: t('matriculaRewards.stages.scholarship'), date: referral.scholarship_fee_paid_at },
+      { id: 'i20_paid', label: t('matriculaRewards.stages.i20'), date: referral.i20_paid_at },
+    ];
+
+    return (
+      <div className="mt-4 w-full">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{t('matriculaRewards.referralProgress')}</span>
+          {!referral.i20_paid_at && (
+            <button
+              onClick={() => handleNotifyStudent(referral)}
+              disabled={notificationStatus[referral.id] === 'loading' || notificationStatus[referral.id] === 'success' || !!cooldownRemaining[referral.id]}
+              className={`flex items-center gap-1.5 text-xs font-bold px-2 py-1 rounded-md transition-all duration-300 min-w-[100px] justify-center ${
+                cooldownRemaining[referral.id]
+                  ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
+                  : notificationStatus[referral.id] === 'success' 
+                    ? 'text-green-600 bg-green-50 border border-green-200 shadow-sm' 
+                    : 'text-blue-600 hover:text-blue-700 bg-blue-50 hover:shadow-sm'
+              }`}
+            >
+              {notificationStatus[referral.id] === 'loading' ? (
+                <div className="h-3 w-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+              ) : notificationStatus[referral.id] === 'success' ? (
+                <CheckCircle className="h-3 w-3 animate-in zoom-in duration-300" />
+              ) : cooldownRemaining[referral.id] ? (
+                <Clock className="h-3 w-3" />
+              ) : (
+                <Bell className="h-3 w-3" />
+              )}
+              
+              {cooldownRemaining[referral.id] ? (
+                <span>
+                  {Math.floor(cooldownRemaining[referral.id] / 60)}:{(cooldownRemaining[referral.id] % 60).toString().padStart(2, '0')}
+                </span>
+              ) : notificationStatus[referral.id] === 'success' ? (
+                t('matriculaRewards.notificationSent')
+              ) : (
+                t('matriculaRewards.notifyFriend')
+              )}
+            </button>
+          )}
+        </div>
+        <div className="relative flex justify-between">
+          <div className="absolute top-4 left-0 w-full h-0.5 bg-slate-200 -z-10" />
+          {stages.map((stage, idx) => {
+            const isCompleted = !!stage.date;
+            return (
+              <div key={stage.id} className="flex flex-col items-center">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${isCompleted ? 'bg-green-600 border-green-600 shadow-sm' : 'bg-white border-slate-300'}`}>
+                  {isCompleted ? (
+                    <Check className="h-4 w-4 text-white" />
+                  ) : (
+                    <span className="text-[10px] font-bold text-slate-400">{idx + 1}</span>
+                  )}
+                </div>
+                <div className="mt-2 text-center">
+                  <p className={`text-[10px] font-bold max-w-[60px] leading-tight ${isCompleted ? 'text-green-700' : 'text-slate-400'}`}>
+                    {stage.label}
+                  </p>
+                  {stage.date && (
+                    <p className="text-[8px] text-slate-400 mt-0.5">
+                      {new Date(stage.date).toLocaleDateString()}
+                    </p>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
   };
 
   const removeEmailFromDescription = (description: string, referredUserName?: string): string => {
@@ -304,14 +464,14 @@ const MatriculaRewards: React.FC = () => {
                     <span className="text-sm text-slate-600">{t('matriculaRewards.totalReferrals')}</span>
                     <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 text-blue-600"><Users className="h-4 w-4"/></span>
                   </div>
-                  <div className="mt-2 text-2xl font-bold text-slate-900">{stats?.totalReferrals || 0}</div>
+                  <div className="mt-2 text-2xl font-bold text-slate-900">{referrals?.length || 0}</div>
                 </Card>
                 <Card className="p-4 gap-0">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-slate-600">{t('matriculaRewards.totalEarnings')}</span>
                     <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-purple-100 text-purple-600"><TrendingUp className="h-4 w-4"/></span>
                   </div>
-                  <div className="mt-2 text-2xl font-bold text-slate-900">{formatCoins(stats?.totalEarnings || 0)}</div>
+                  <div className="mt-2 text-2xl font-bold text-slate-900">{formatCoins(credits?.total_earned || 0)}</div>
                 </Card>
               </div>
             </div>
@@ -393,28 +553,67 @@ const MatriculaRewards: React.FC = () => {
           <Card className="p-6">
             <h2 className="text-lg font-semibold text-slate-900 mb-4">{t('matriculaRewards.recentReferrals')}</h2>
             {referrals.length ? (
-              <ul className="space-y-3">
-                {referrals.slice(0,5).map(referral => (
-                  <li key={referral.id} className="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50 p-3">
-                    <div className="flex items-center gap-3">
-                      <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-green-100 text-green-600"><Users className="h-4 w-4"/></span>
-                      <div>
-                        <p className="font-medium text-slate-900">
-                          {referral.referred_user?.full_name 
-                            ? referral.referred_user.full_name
-                            : t('matriculaRewards.referralNumber', { id: referral.id.slice(0,8) })
-                          }
-                        </p>
-                        <p className="text-xs text-slate-500">{formatDate(referral.created_at)}</p>
+              <div className="space-y-4">
+                {referrals.slice((referralsPage - 1) * referralsPerPage, referralsPage * referralsPerPage).map(referral => (
+                  <div key={referral.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:shadow-md transition-shadow">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-full bg-blue-50 flex items-center justify-center">
+                          <Users className="h-5 w-5 text-blue-600" />
+                        </div>
+                        <div>
+                          <p className="font-bold text-slate-900">
+                            {referral.referred_user?.full_name 
+                              ? referral.referred_user.full_name
+                              : t('matriculaRewards.referralNumber', { id: referral.id.slice(0, 8) })
+                            }
+                          </p>
+                          <p className="text-xs text-slate-500">{t('matriculaRewards.invitedOn', { date: formatDate(referral.created_at) })}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${referral.i20_paid_at ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                          {referral.i20_paid_at ? (
+                            <>
+                              <CheckCircle className="h-3 w-3" />
+                              {t('matriculaRewards.completed')} (+180)
+                            </>
+                          ) : (
+                            <>
+                              <Clock className="h-3 w-3" />
+                              {t('matriculaRewards.inProgress')}
+                            </>
+                          )}
+                        </div>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="font-semibold text-green-600">+{formatCoins(referral.credits_earned)}</p>
-                      <p className="text-xs text-slate-500">{referral.status === 'completed' ? t('matriculaRewards.earned') : referral.status === 'cancelled' ? t('matriculaRewards.spent') : t('matriculaRewards.pending')}</p>
-                    </div>
-                  </li>
+                    
+                    <StepProgress referral={referral} />
+                  </div>
                 ))}
-              </ul>
+
+                {referrals.length > referralsPerPage && (
+                  <div className="flex items-center justify-center gap-2 mt-4 pt-4 border-t border-slate-100">
+                    <button
+                      onClick={() => setReferralsPage(p => Math.max(1, p - 1))}
+                      disabled={referralsPage === 1}
+                      className="p-1.5 rounded-lg border border-slate-200 disabled:opacity-30 hover:bg-slate-50 transition-colors"
+                    >
+                      <ChevronLeft className="h-4 w-4 text-slate-600" />
+                    </button>
+                    <span className="text-[12px] font-semibold text-slate-500 uppercase tracking-wider">
+                      {referralsPage} / {Math.ceil(referrals.length / referralsPerPage)}
+                    </span>
+                    <button
+                      onClick={() => setReferralsPage(p => Math.min(Math.ceil(referrals.length / referralsPerPage), p + 1))}
+                      disabled={referralsPage === Math.ceil(referrals.length / referralsPerPage)}
+                      className="p-1.5 rounded-lg border border-slate-200 disabled:opacity-30 hover:bg-slate-50 transition-colors"
+                    >
+                      <ChevronRight className="h-4 w-4 text-slate-600" />
+                    </button>
+                  </div>
+                )}
+              </div>
             ) : (
               <Alert className="py-4">
                 <AlertTitle>{t('matriculaRewards.noReferralsYet')}</AlertTitle>
