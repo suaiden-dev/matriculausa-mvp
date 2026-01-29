@@ -7,8 +7,9 @@ import { useAuth } from '../hooks/useAuth';
 interface I20ControlFeeModalProps {
   isOpen: boolean;
   onClose: () => void;
-  selectedPaymentMethod: 'stripe' | 'zelle' | 'pix' | null;
-  onPaymentMethodSelect: (method: 'stripe' | 'zelle' | 'pix', exchangeRate?: number) => void;
+  selectedPaymentMethod: 'stripe' | 'zelle' | 'pix' | 'parcelow' | null;
+  onPaymentMethodSelect: (method: 'stripe' | 'zelle' | 'pix' | 'parcelow', exchangeRate?: number) => void;
+  isLoading?: boolean;
 }
 
 export const I20ControlFeeModal: React.FC<I20ControlFeeModalProps> = ({
@@ -16,6 +17,7 @@ export const I20ControlFeeModal: React.FC<I20ControlFeeModalProps> = ({
   onClose,
   selectedPaymentMethod,
   onPaymentMethodSelect,
+  isLoading = false,
 }) => {
   const { user } = useAuth();
   const { getFeeAmount } = useFeeConfig(user?.id);
@@ -34,6 +36,7 @@ export const I20ControlFeeModal: React.FC<I20ControlFeeModalProps> = ({
       onMethodSelect={onPaymentMethodSelect}
       feeType="i20_control_fee"
       amount={amount}
+      isLoading={isLoading}
     />
   );
 };
