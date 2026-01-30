@@ -133,8 +133,10 @@ Deno.serve(async (req) => {
     
     console.log('[parcelow-checkout-selection-process] 🔗 Origin determinado:', origin);
     
-    const redirectSuccess = `${origin}/student/dashboard/selection-process-fee-success?reference=${encodeURIComponent(reference)}`;
-    const redirectFailed = `${origin}/student/dashboard/selection-process-fee-error?reference=${encodeURIComponent(reference)}`;
+    // URLs encurtadas para evitar truncamento pela Parcelow
+    // ref = reference, pm=p = payment_method=parcelow
+    const redirectSuccess = `${origin}/student/dashboard/selection-process-fee-success?ref=${encodeURIComponent(reference)}&pm=p`;
+    const redirectFailed = `${origin}/student/dashboard/selection-process-fee-error?ref=${encodeURIComponent(reference)}&pm=p`;
 
     // URL do webhook
     const webhookUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/parcelow-webhook`;

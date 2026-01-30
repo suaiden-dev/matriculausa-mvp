@@ -161,8 +161,10 @@ Deno.serve(async (req) => {
     
     console.log('[parcelow-checkout-i20-control-fee] 🔗 Origin determinado:', origin);
     
-    const redirectSuccess = `${origin}/student/dashboard/i20-control-fee-success?reference=${encodeURIComponent(reference)}&payment_method=parcelow`;
-    const redirectFailed = `${origin}/student/dashboard/i20-control-fee-error?reference=${encodeURIComponent(reference)}&payment_method=parcelow`;
+    // URLs encurtadas para evitar truncamento pela Parcelow
+    // ref = reference, pm=p = payment_method=parcelow
+    const redirectSuccess = `${origin}/student/dashboard/i20-control-fee-success?ref=${encodeURIComponent(reference)}&pm=p`;
+    const redirectFailed = `${origin}/student/dashboard/i20-control-fee-error?ref=${encodeURIComponent(reference)}&pm=p`;
 
     // URL do webhook
     const webhookUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/parcelow-webhook`;

@@ -2,7 +2,6 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
-import { useFeeConfig } from '../../hooks/useFeeConfig';
 import PaymentSuccessOverlay from '../../components/PaymentSuccessOverlay';
 import { dispatchCacheInvalidationEvent, CacheInvalidationEvent } from '../../utils/cacheInvalidation';
 import { supabase } from '../../lib/supabase';
@@ -17,9 +16,8 @@ const I20ControlFeeSuccess: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
-  const params = new URLSearchParams(location.search);
   const { user } = useAuth();
-  const { getFeeAmount } = useFeeConfig(user?.id);
+  const params = new URLSearchParams(location.search);
   const sessionId = params.get('session_id');
   const reference = searchParams.get('reference');
   const paymentMethod = searchParams.get('payment_method');
@@ -44,14 +42,11 @@ const I20ControlFeeSuccess: React.FC = () => {
       console.log(`[Parcelow] Tentativa ${attempts}/${maxAttempts}`);
 
       try {
-        const { data: payment, error: paymentError } = await supabase
+        const { data: payment } = await supabase
           .from('individual_fee_payments')
           .select('*')
-          .eq('user_id', user.id)
-          .eq('fee_type', 'i20_control')
+          .eq('parcelow_reference', reference)
           .eq('payment_method', 'parcelow')
-          .order('created_at', { ascending: false })
-          .limit(1)
           .maybeSingle();
 
         if (payment && payment.parcelow_status === 'paid') {
@@ -93,8 +88,17 @@ const I20ControlFeeSuccess: React.FC = () => {
     hasRunRef.current = true;
 
     // Detectar se é pagamento Parcelow
+    // Se houver reference e NÃO houver sessionId, é Parcelow
+    // (A Parcelow trunca a URL, então não podemos depender do payment_method)
+    if (reference && !sessionId) {
+      console.log('[Parcelow] Pagamento Parcelow detectado (via reference)');
+      verifyParcelowPayment(reference);
+      return;
+    }
+    
+    // Fallback: se tiver payment_method=parcelow explicitamente
     if (paymentMethod === 'parcelow' && reference) {
-      console.log('[Parcelow] Pagamento Parcelow detectado');
+      console.log('[Parcelow] Pagamento Parcelow detectado (via payment_method)');
       verifyParcelowPayment(reference);
       return;
     }
