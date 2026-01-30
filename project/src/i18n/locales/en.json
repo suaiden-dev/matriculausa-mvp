@@ -3434,6 +3434,10 @@
         "description": "Pay via Zelle transfer",
         "descriptionDetailed": "Pay via Zelle transfer"
       },
+      "parcelow": {
+        "title": "Parcelow",
+        "description": "Pay with Brazilian card in up to 21x"
+      },
       "cancel": "Cancel"
     },
     "loading": {

@@ -3422,6 +3422,10 @@
       "zelle": {
         "title": "Zelle",
         "description": "Pague via transferência Zelle"
+      },
+      "parcelow": {
+        "title": "Parcelow",
+        "description": "Pague com cartão brasileiro em até 21x"
       }
     }
   },
@@ -3463,6 +3467,10 @@
         "title": "Zelle",
         "description": "Pague via transferência Zelle",
         "descriptionDetailed": "Pague via Zelle"
+      },
+      "parcelow": {
+        "title": "Parcelow",
+        "description": "Pague com cartão brasileiro em até 21x"
       },
       "cancel": "Cancelar"
     },
