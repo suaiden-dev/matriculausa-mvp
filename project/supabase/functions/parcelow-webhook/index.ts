@@ -8,6 +8,16 @@ const supabase = createClient(
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 );
 
+// Emails a serem filtrados em ambiente de desenvolvimento
+const devBlockedEmails = [
+  'luizedmiola@gmail.com',
+  'chimentineto@gmail.com',
+  'fsuaiden@gmail.com',
+  'rayssathefuture@gmail.com',
+  'gui.reis@live.com',
+  'admin@matriculausa.com'
+];
+
 /**
  * Busca todos os usuários admin do sistema
  * Retorna array com email, nome e telefone de cada admin
@@ -19,16 +29,6 @@ async function getAllAdmins(supabase: SupabaseClient, isDevelopment: boolean = f
   full_name: string;
   phone: string;
 }>> {
-  // Emails a serem filtrados em ambiente de desenvolvimento
-  const devBlockedEmails = [
-    'luizedmiola@gmail.com',
-    'chimentineto@gmail.com',
-    'fsuaiden@gmail.com',
-    'rayssathefuture@gmail.com',
-    'gui.reis@live.com',
-    'admin@matriculausa.com'
-  ];
-  
   try {
     // Buscar todos os admins da tabela user_profiles onde role = 'admin'
     const { data: adminProfiles, error: profileError } = await supabase
@@ -412,14 +412,34 @@ async function sendTermAcceptanceNotificationAfterPayment(userId: string, feeTyp
       console.warn('[NOTIFICAÇÃO] Continuando sem PDF devido ao erro');
     }
     
+    // Filtrar emails em ambiente de desenvolvimento
+    let emailAluno = userProfile.email;
+    let emailSellerAcceptance = sellerData?.email || "";
+    let emailAffiliateAdminAcceptance = affiliateAdminData?.email || "";
+    
+    if (isDevelopment) {
+      if (devBlockedEmails.includes(emailAluno)) {
+        console.log(`[NOTIFICAÇÃO] Email de aluno bloqueado em desenvolvimento: ${emailAluno}`);
+        emailAluno = "";
+      }
+      if (emailSellerAcceptance && devBlockedEmails.includes(emailSellerAcceptance)) {
+        console.log(`[NOTIFICAÇÃO] Email de seller bloqueado em desenvolvimento: ${emailSellerAcceptance}`);
+        emailSellerAcceptance = "";
+      }
+      if (emailAffiliateAdminAcceptance && devBlockedEmails.includes(emailAffiliateAdminAcceptance)) {
+        console.log(`[NOTIFICAÇÃO] Email de affiliate admin bloqueado em desenvolvimento: ${emailAffiliateAdminAcceptance}`);
+        emailAffiliateAdminAcceptance = "";
+      }
+    }
+
     // Preparar payload de notificação
     const webhookPayload = {
       tipo_notf: "Student Term Acceptance",
-      email_aluno: userProfile.email,
+      email_aluno: emailAluno,
       nome_aluno: userProfile.full_name,
-      email_seller: sellerData?.email || "",
+      email_seller: emailSellerAcceptance,
       nome_seller: sellerData?.name || "N/A",
-      email_affiliate_admin: affiliateAdminData?.email || "",
+      email_affiliate_admin: emailAffiliateAdminAcceptance,
       nome_affiliate_admin: affiliateAdminData?.full_name || "N/A",
       o_que_enviar: `Student ${userProfile.full_name} has accepted the Student Checkout Terms & Conditions and completed ${feeType} payment via Parcelow. This shows the student is progressing through the enrollment process.`,
       term_title: termData.title,
@@ -505,12 +525,39 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Invalid payload' }), { status: 400 });
     }
 
-    // 1. Buscar pagamento original (tentar por order_id primeiro, depois por reference)
+    // 1. Extrair userId do email do cliente (Parcelow sempre envia o email)
+    const clientEmail = parcelowOrder.client?.email;
+    
+    if (!clientEmail) {
+      console.error('[parcelow-webhook] ❌ Email do cliente não encontrado no payload');
+      return new Response(JSON.stringify({ error: 'Client email not found in payload' }), { status: 400 });
+    }
+    
+    console.log('[parcelow-webhook] 📧 Email do cliente:', clientEmail);
+    
+    // Buscar usuário por email
+    const { data: authUser, error: authError } = await supabase.auth.admin.listUsers();
+    
+    if (authError || !authUser) {
+      console.error('[parcelow-webhook] ❌ Erro ao buscar usuários:', authError);
+      return new Response(JSON.stringify({ error: 'Failed to find user' }), { status: 500 });
+    }
+    
+    const user = authUser.users.find(u => u.email === clientEmail);
+    
+    if (!user) {
+      console.error('[parcelow-webhook] ❌ Usuário não encontrado para email:', clientEmail);
+      return new Response(JSON.stringify({ error: 'User not found' }), { status: 404 });
+    }
+    
+    const userId = user.id;
+    console.log('[parcelow-webhook] ✅ Usuário encontrado:', userId);
+    
+    // 2. Buscar payment record (opcional - pode não existir ainda para alguns eventos)
     let payment = null;
-    let paymentError = null;
-
+    
     // Tentar buscar por parcelow_order_id
-    const { data: paymentById, error: errorById } = await supabase
+    const { data: paymentById } = await supabase
       .from('individual_fee_payments')
       .select('*')
       .eq('parcelow_order_id', String(parcelowOrder.id))
@@ -528,12 +575,12 @@ Deno.serve(async (req) => {
       if (reference) {
         console.log('[parcelow-webhook] 🔍 Buscando por reference:', reference);
         
-        // Buscar pagamento por parcelow_reference
-        const { data: paymentByReference, error: errorByReference } = await supabase
+        const { data: paymentByReference } = await supabase
           .from('individual_fee_payments')
           .select('*')
           .eq('parcelow_reference', reference)
           .eq('payment_method', 'parcelow')
+          .eq('user_id', userId) // Adicionar filtro por userId
           .order('created_at', { ascending: false })
           .limit(1)
           .maybeSingle();
@@ -547,71 +594,19 @@ Deno.serve(async (req) => {
             .from('individual_fee_payments')
             .update({ parcelow_order_id: String(parcelowOrder.id) })
             .eq('id', payment.id);
-          console.log('[parcelow-webhook] ✅ parcelow_order_id atualizado para:', parcelowOrder.id);
+          console.log('[parcelow-webhook] ✅ parcelow_order_id atualizado');
         } else {
-          paymentError = errorByReference;
-          console.error('[parcelow-webhook] ❌ Pagamento não encontrado por reference');
-        }
-      } else {
-        console.error('[parcelow-webhook] ❌ Reference não encontrado no payload');
-      }
-    }
-
-    if (!payment) {
-      // Tentar buscar por metadata (fallback final)
-      console.log('[parcelow-webhook] ⚠️ Pagamento não encontrado por order_id ou reference, tentando por metadata...');
-      
-      const metadata = parcelowOrder.metadata || {};
-      const userId = metadata.user_id;
-      const feeType = metadata.fee_type;
-
-      if (userId && feeType) {
-        console.log(`[parcelow-webhook] 🔍 Buscando por metadata: user_id=${userId}, fee_type=${feeType}`);
-        
-        const { data: paymentByMetadata, error: errorByMetadata } = await supabase
-          .from('individual_fee_payments')
-          .select('*')
-          .eq('user_id', userId)
-          .eq('fee_type', feeType)
-          .eq('payment_method', 'parcelow')
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (paymentByMetadata) {
-          payment = paymentByMetadata;
-          console.log('[parcelow-webhook] ✅ Pagamento encontrado por metadata:', payment.id);
-          
-          // Atualizar o parcelow_order_id para futuras buscas
-          await supabase
-            .from('individual_fee_payments')
-            .update({ 
-              parcelow_order_id: String(parcelowOrder.id),
-              parcelow_reference: parcelowOrder.reference || payment.parcelow_reference
-            })
-            .eq('id', payment.id);
-          console.log('[parcelow-webhook] ✅ parcelow_order_id/reference atualizados');
-        }
-      } else {
-        console.error('[parcelow-webhook] ❌ Metadata incompleto ou ausente:', { userId, feeType });
-        
-        // Tentativa desesperada: parse do reference
-        const reference = parcelowOrder.reference;
-        if (reference && reference.startsWith('sel_proc_')) {
-          console.log('[parcelow-webhook] ⚠️ Tentando identificar pagamento pelo prefixo do reference: sel_proc');
-          // Infelizmente sem o userId não podemos buscar com segurança.
+          console.log('[parcelow-webhook] ⚠️ Payment record não encontrado - será processado quando o evento paid chegar');
         }
       }
     }
 
-    if (!payment) {
-      console.error('[parcelow-webhook] ❌ Pagamento não encontrado para order_id:', parcelowOrder.id);
-      console.error('[parcelow-webhook] ❌ Reference do pedido:', parcelowOrder.reference);
-      return new Response(JSON.stringify({ error: 'Payment not found' }), { status: 404 });
-    }
+    // 3. Extrair amount do pedido Parcelow (em centavos USD)
+    const paymentAmount = parcelowOrder.order_amount ? (parcelowOrder.order_amount / 100) : (payment?.amount || 0);
+    console.log('[parcelow-webhook] 💰 Valor do pagamento:', paymentAmount, 'USD');
 
-    // 2. Mapear status
-    let newStatus = payment.parcelow_status || 'pending';
+    // 4. Mapear status
+    let newStatus = payment?.parcelow_status || 'pending';
     let isPaid = false;
 
     switch (event) {
@@ -624,38 +619,106 @@ Deno.serve(async (req) => {
       case 'event_order_expired':
         newStatus = 'failed';
         break;
+      case 'event_order_antifraud_review':
+        newStatus = 'processing';
+        console.log('[parcelow-webhook] 🔍 Pagamento em análise antifraude');
+        break;
+      case 'event_order_confirmed':
+        newStatus = 'confirmed';
+        console.log('[parcelow-webhook] ✅ Pedido confirmado, aguardando pagamento');
+        break;
       case 'event_order_waiting':
       case 'event_order_waiting_payment':
       case 'event_order_waiting_docs':
         newStatus = 'pending';
         break;
+      default:
+        console.warn('[parcelow-webhook] ⚠️ Evento não mapeado:', event);
+        newStatus = 'pending';
     }
 
-    console.log(`[parcelow-webhook] 🔄 Atualizando status: ${payment.parcelow_status} -> ${newStatus}`);
+    console.log(`[parcelow-webhook] 🔄 Status mapeado: ${newStatus} (isPaid: ${isPaid})`);
 
-    // 3. Atualizar record de pagamento
-    const { error: updateError } = await supabase
-      .from('individual_fee_payments')
-      .update({
-        parcelow_status: newStatus,
-        parcelow_checkout_url: parcelowOrder.checkout_url || payment.parcelow_checkout_url,
-        payment_date: isPaid ? new Date().toISOString() : payment.payment_date,
-      })
-      .eq('id', payment.id);
-
-    if (updateError) {
-      console.error('[parcelow-webhook] ❌ Erro ao atualizar pagamento:', updateError);
-      throw updateError;
+    // Determinar fee_type pelo reference ANTES de criar o registro
+    const reference = parcelowOrder.reference || '';
+    let feeType = 'unknown';
+    
+    if (reference.startsWith('app_fee_') || reference.startsWith('applicatio_') || reference.startsWith('app_')) {
+      feeType = 'application_fee';
+    } else if (reference.startsWith('sp_') || reference.startsWith('selection_')) {
+      feeType = 'selection_process_fee';
+    } else if (reference.startsWith('sf_') || reference.startsWith('scholarship_') || reference.startsWith('scholarshi_')) {
+      feeType = 'scholarship_fee';
+    } else if (reference.startsWith('i20_')) {
+      feeType = 'i20_control_fee';
+    } else {
+      // Fallback para metadata se existir
+      const metaFee = parcelowOrder.metadata?.fee_type;
+      if (metaFee) {
+        if (metaFee === 'application_fee' || metaFee === 'selection_process' || metaFee === 'scholarship_fee' || metaFee === 'i20_control_fee') {
+          feeType = metaFee === 'selection_process' ? 'selection_process_fee' : metaFee;
+        }
+      }
     }
 
-    // 4. Se pago, processar lógica completa (igual ao Stripe)
-    if (isPaid && payment.parcelow_status !== 'paid') {
+    console.log('[parcelow-webhook] 📋 Fee type detectado inicialmente:', feeType);
+
+    // 4. Atualizar ou criar record de pagamento
+    if (payment) {
+      console.log(`[parcelow-webhook] 🔄 Atualizando payment record: ${payment.parcelow_status} -> ${newStatus}`);
+      
+      const { error: updateError } = await supabase
+        .from('individual_fee_payments')
+        .update({
+          parcelow_status: newStatus,
+          parcelow_checkout_url: parcelowOrder.checkout_url || payment.parcelow_checkout_url,
+          payment_date: isPaid ? new Date().toISOString() : payment.payment_date,
+        })
+        .eq('id', payment.id);
+
+      if (updateError) {
+        console.error('[parcelow-webhook] ❌ Erro ao atualizar pagamento:', updateError);
+        throw updateError;
+      }
+      
+      console.log('[parcelow-webhook] ✅ Payment record atualizado');
+    } else if (isPaid) {
+      // Se o pagamento foi confirmado mas o record não existe, criar agora
+      console.log('[parcelow-webhook] 📝 Criando payment record (não existia)...');
+      
+      const { error: insertError } = await supabase
+        .from('individual_fee_payments')
+        .insert({
+          user_id: userId,
+          fee_type: feeType !== 'unknown' ? feeType : 'application_fee', // Usa o tipo detectado
+          amount: paymentAmount,
+          payment_date: new Date().toISOString(),
+          payment_method: 'parcelow',
+          parcelow_order_id: String(parcelowOrder.id),
+          parcelow_reference: parcelowOrder.reference,
+          parcelow_status: 'paid',
+          parcelow_checkout_url: parcelowOrder.checkout_url
+        });
+      
+      if (insertError) {
+        console.error('[parcelow-webhook] ❌ Erro ao criar payment record:', insertError);
+      } else {
+        console.log('[parcelow-webhook] ✅ Payment record criado com sucesso');
+      }
+    } else {
+      console.log('[parcelow-webhook] ⚠️ Payment record não existe e pagamento não foi confirmado ainda');
+    }
+
+    // 4.0. Detectar ambiente (dev ou prod) - verificar redirect_success URL
+    const redirectUrl = parcelowOrder.redirect_success || '';
+    const isDevelopment = redirectUrl.includes('localhost') || redirectUrl.includes('127.0.0.1');
+    console.log('[parcelow-webhook] 🌍 Ambiente detectado:', isDevelopment ? 'DESENVOLVIMENTO' : 'PRODUÇÃO');
+
+    // 5. Se pago, processar lógica completa (igual ao Stripe)
+    if (isPaid) {
       console.log('[parcelow-webhook] ✅ Pagamento CONFIRMADO! Processando lógica completa...');
-
-      const userId = payment.user_id;
-      const feeType = payment.fee_type;
-
-      // 4.0. Verificar duplicação de processamento
+      
+      // 4.1. Verificar duplicação de processamento
       const { data: existingLogs } = await supabase
         .from('student_action_logs')
         .select('id, metadata')
@@ -701,7 +764,7 @@ Deno.serve(async (req) => {
             fee_type: feeType,
             payment_method: 'parcelow',
             order_id: String(parcelowOrder.id),
-            amount: payment.amount,
+            amount: paymentAmount,
             processing_started: true
           }
         });
@@ -719,7 +782,8 @@ Deno.serve(async (req) => {
             .from('user_profiles')
             .update({ 
               has_paid_selection_process_fee: true,
-              selection_process_fee_payment_method: 'parcelow'
+              selection_process_fee_payment_method: 'parcelow',
+              selection_process_paid_at: new Date().toISOString()
             })
             .eq('user_id', userId);
           
@@ -730,47 +794,124 @@ Deno.serve(async (req) => {
           }
           break;
 
+        case 'application':
         case 'application_fee':
           console.log('[parcelow-webhook] 🔄 Processando application_fee...');
           
-          const appMetadata = parcelowOrder.metadata || {};
-          const applicationId = appMetadata.application_id;
+          // IMPORTANTE: Parcelow NÃO retorna metadata no webhook!
+          // Solução: Buscar a aplicação mais recente do usuário que ainda não foi paga
+          // (mesmo approach que o Stripe, mas sem depender de metadata)
           
-          if (applicationId) {
-            const { error: appUpdateError } = await supabase
-              .from('scholarship_applications')
-              .update({ status: 'application_fee_paid' })
-              .eq('id', applicationId);
-            
-            if (appUpdateError) {
-              console.error('[parcelow-webhook] ❌ Erro ao atualizar application:', appUpdateError);
-            } else {
-              console.log('[parcelow-webhook] ✅ Application status atualizado para: application_fee_paid');
-            }
-          } else {
-            console.warn('[parcelow-webhook] ⚠️ application_id não encontrado no metadata');
+          const { data: userProfile } = await supabase
+            .from('user_profiles')
+            .select('id')
+            .eq('user_id', userId)
+            .single();
+          
+          if (!userProfile) {
+            console.error('[parcelow-webhook] ❌ user_profile não encontrado para userId:', userId);
+            break;
           }
+          
+          // Buscar a aplicação mais recente que ainda não foi paga
+          const { data: application, error: appFetchError } = await supabase
+            .from('scholarship_applications')
+            .select('id, student_id, scholarship_id, student_process_type, status')
+            .eq('student_id', userProfile.id)
+            .eq('is_application_fee_paid', false)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
+          
+          if (appFetchError || !application) {
+            console.error('[parcelow-webhook] ❌ Nenhuma aplicação não paga encontrada para o usuário:', userId);
+            console.error('[parcelow-webhook] ❌ Error:', appFetchError);
+            break;
+          }
+          
+          console.log('[parcelow-webhook] ✅ Aplicação encontrada:', application.id);
+          
+          // Atualizar a aplicação (mesmo código do Stripe)
+          const updateData: any = {
+            payment_status: 'paid',
+            paid_at: new Date().toISOString(),
+            is_application_fee_paid: true,
+            application_fee_payment_method: 'parcelow'
+          };
+          
+          // Preservar o status atual se já estiver 'approved'
+          if (application.status !== 'approved') {
+            updateData.status = 'under_review';
+            console.log('[parcelow-webhook] ✅ Application status set to under_review');
+          } else {
+            console.log('[parcelow-webhook] ✅ Preserving approved status');
+          }
+          
+          const { error: appUpdateError } = await supabase
+            .from('scholarship_applications')
+            .update(updateData)
+            .eq('id', application.id)
+            .eq('student_id', userProfile.id);
+          
+          if (appUpdateError) {
+            console.error('[parcelow-webhook] ❌ Erro ao atualizar application:', appUpdateError);
+          } else {
+            console.log('[parcelow-webhook] ✅ Application atualizada com sucesso');
+          }
+
+          // Atualizar perfil do usuário por redundância
+          await supabase
+            .from('user_profiles')
+            .update({ 
+              is_application_fee_paid: true,
+              application_fee_paid_at: new Date().toISOString()
+            })
+            .eq('user_id', userId);
           break;
 
+        case 'scholarship':
         case 'scholarship_fee':
           console.log('[parcelow-webhook] 🔄 Processando scholarship_fee...');
           
           const scholarshipMetadata = parcelowOrder.metadata || {};
-          const scholarshipsIds = scholarshipMetadata.scholarships_ids;
+          let scholarshipsIds = scholarshipMetadata.scholarships_ids || scholarshipMetadata.scholarship_id;
           
+          if (!scholarshipsIds) {
+            console.log('[parcelow-webhook] 🔍 Metadata scholarships_ids não encontrado, buscando aplicação mais recente não paga...');
+            const { data: latestApp } = await supabase
+              .from('scholarship_applications')
+              .select('id, scholarship_id')
+              .eq('student_id', userProfile.id)
+              .eq('is_scholarship_fee_paid', false)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .single();
+            
+            if (latestApp) {
+              console.log('[parcelow-webhook] ✅ Aplicação encontrada via busca:', latestApp.id);
+              scholarshipsIds = latestApp.scholarship_id;
+            }
+          }
+
           if (scholarshipsIds) {
             const idsArray = typeof scholarshipsIds === 'string' 
               ? scholarshipsIds.split(',').map((id: string) => id.trim())
-              : scholarshipsIds;
+              : (Array.isArray(scholarshipsIds) ? scholarshipsIds : [scholarshipsIds]);
             
             console.log('[parcelow-webhook] 📚 Processando bolsas:', idsArray);
             
             for (const scholarshipId of idsArray) {
               const { error: scholarshipUpdateError } = await supabase
                 .from('scholarship_applications')
-                .update({ status: 'scholarship_fee_paid' })
+                .update({ 
+                  status: 'scholarship_fee_paid',
+                  is_scholarship_fee_paid: true,
+                  scholarship_fee_payment_method: 'parcelow',
+                  scholarship_fee_paid_at: new Date().toISOString()
+                })
                 .eq('scholarship_id', scholarshipId)
-                .eq('student_id', userProfile.id);
+                .eq('student_id', userProfile.id)
+                .is('is_scholarship_fee_paid', false); // Só atualizar se não estiver pago
               
               if (scholarshipUpdateError) {
                 console.error(`[parcelow-webhook] ❌ Erro ao atualizar scholarship ${scholarshipId}:`, scholarshipUpdateError);
@@ -778,7 +919,18 @@ Deno.serve(async (req) => {
                 console.log(`[parcelow-webhook] ✅ Scholarship ${scholarshipId} atualizada`);
               }
             }
+          } else {
+            console.error('[parcelow-webhook] ❌ Nenhum ID de bolsa encontrado para processar');
           }
+
+          // Atualizar perfil do usuário por redundância
+          await supabase
+            .from('user_profiles')
+            .update({ 
+              is_scholarship_fee_paid: true,
+              scholarship_fee_paid_at: new Date().toISOString()
+            })
+            .eq('user_id', userId);
           break;
 
         case 'i20_control':
@@ -787,7 +939,11 @@ Deno.serve(async (req) => {
           
           const { error: i20UpdateError } = await supabase
             .from('user_profiles')
-            .update({ has_paid_i20_control_fee: true })
+            .update({ 
+              has_paid_i20_control_fee: true,
+              i20_control_fee_payment_method: 'parcelow',
+              i20_paid_at: new Date().toISOString()
+            })
             .eq('user_id', userId);
           
           if (i20UpdateError) {
@@ -830,7 +986,7 @@ Deno.serve(async (req) => {
               referrer_id: referrerId,
               referred_id: userId,
               affiliate_code: usedCode.affiliate_code,
-              payment_amount: Number(payment.amount || 0),
+              payment_amount: Number(paymentAmount || 0),
               credits_earned: 180,
               status: 'completed',
               payment_session_id: String(parcelowOrder.id),
@@ -873,11 +1029,16 @@ Deno.serve(async (req) => {
                 .select('email')
                 .eq('user_id', userId)
                 .single();
-
               if (referrerProfile?.email) {
+                let emailReferrerFinal = referrerProfile.email;
+                if (isDevelopment && devBlockedEmails.includes(emailReferrerFinal)) {
+                  console.log('[parcelow-webhook] 🚫 Email de padrinho bloqueado em desenvolvimento:', emailReferrerFinal);
+                  emailReferrerFinal = "";
+                }
+
                 const rewardPayload = {
                   tipo_notf: "Recompensa de MatriculaCoins por Indicacao",
-                  email_aluno: referrerProfile.email,
+                  email_aluno: emailReferrerFinal,
                   nome_aluno: referrerProfile.full_name || "Aluno",
                   referred_student_name: referredDisplayName,
                   referred_student_email: referredProfileData?.email || "",
@@ -887,14 +1048,17 @@ Deno.serve(async (req) => {
                   o_que_enviar: `Great news! Your friend ${referredDisplayName} has completed their enrollment process via Parcelow. 180 MatriculaCoins have been added to your account!`
                 };
 
-                await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify(rewardPayload),
-                });
-                
-                console.log('[parcelow-webhook] ✅ Notificação de recompensa enviada!');
-              }
+                if (emailReferrerFinal) {
+                  await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(rewardPayload),
+                  });
+                    console.log('[parcelow-webhook] ✅ Notificação de recompensa enviada!');
+                  } else {
+                    console.log('[parcelow-webhook] ℹ️ Pulando notificação de recompensa (email bloqueado ou vazio)');
+                  }
+                }
             } catch (rewardNotifError) {
               console.error('[parcelow-webhook] ❌ Erro ao enviar notificação de recompensa:', rewardNotifError);
             }
@@ -922,12 +1086,6 @@ Deno.serve(async (req) => {
         console.error('[parcelow-webhook] ❌ Erro ao limpar carrinho:', cartCleanError);
       }
 
-      // 4.6. Detectar ambiente (dev ou prod)
-      const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
-      const isDevelopment = supabaseUrl.includes('localhost') || supabaseUrl.includes('127.0.0.1');
-      
-      console.log('[parcelow-webhook] 🌍 Ambiente detectado:', isDevelopment ? 'DESENVOLVIMENTO' : 'PRODUÇÃO');
-
       // 4.7. Buscar todos os admins
       const admins = await getAllAdmins(supabase, isDevelopment);
 
@@ -943,7 +1101,7 @@ Deno.serve(async (req) => {
             fee_type: feeType,
             payment_method: 'parcelow',
             order_id: String(parcelowOrder.id),
-            amount: payment.amount,
+            amount: paymentAmount,
             notifications_sending: true
           }
         });
@@ -965,17 +1123,33 @@ Deno.serve(async (req) => {
       try {
         console.log('[parcelow-webhook] 📧 Iniciando envio de notificações...');
 
-        const formattedAmount = formatAmountWithCurrency(payment.amount, 'USD');
+        const formattedAmount = formatAmountWithCurrency(paymentAmount, 'USD');
 
         // 1. NOTIFICAÇÃO PARA O ALUNO
+        // Define tipo_notf baseado no fee_type para consistência com Stripe
+        let tipoNotfAluno = 'Pagamento de ' + feeType + ' confirmado';
+        if (feeType === 'scholarship_fee') {
+          tipoNotfAluno = 'Pagamento de taxa de bolsa confirmado';
+        } else if (feeType === 'i20_control' || feeType === 'i20_control_fee') {
+          tipoNotfAluno = 'Pagamento de I-20 control fee confirmado';
+        } else if (feeType === 'application_fee' || feeType === 'application') {
+          tipoNotfAluno = 'Novo pagamento de application fee';
+        }
+        
+        let emailAlunoFinal = userProfile.email;
+        if (isDevelopment && devBlockedEmails.includes(emailAlunoFinal)) {
+          console.log('[parcelow-webhook] 🚫 Email de aluno bloqueado em desenvolvimento:', emailAlunoFinal);
+          emailAlunoFinal = "";
+        }
+
         const alunoNotificationPayload = {
-          tipo_notf: 'Pagamento de ' + feeType + ' confirmado',
-          email_aluno: userProfile.email,
+          tipo_notf: tipoNotfAluno,
+          email_aluno: emailAlunoFinal,
           nome_aluno: userProfile.full_name,
           o_que_enviar: `O pagamento da taxa ${feeType} foi confirmado via Parcelow no valor de ${formattedAmount}. Agora você pode prosseguir com o processo de matrícula.`,
           payment_id: String(parcelowOrder.id),
           fee_type: feeType,
-          amount: payment.amount,
+          amount: paymentAmount,
           currency: 'USD',
           currency_symbol: '$',
           formatted_amount: formattedAmount,
@@ -1079,8 +1253,20 @@ Deno.serve(async (req) => {
 
             // a) NOTIFICAÇÃO PARA TODOS OS ADMINS
             const adminNotificationPromises = admins.map(async (admin) => {
+              // Define tipo_notf para admin baseado no fee_type
+              let tipoNotfAdmin = `Pagamento Parcelow de ${feeType} confirmado - Admin`;
+              if (feeType === 'scholarship_fee') {
+                tipoNotfAdmin = 'Pagamento Parcelow de scholarship_fee confirmado - Admin';
+              } else if (feeType === 'i20_control' || feeType === 'i20_control_fee') {
+                tipoNotfAdmin = 'Pagamento Parcelow de i20_control_fee confirmado - Admin';
+              } else if (feeType === 'application_fee' || feeType === 'application') {
+                tipoNotfAdmin = 'Pagamento Parcelow de application_fee confirmado - Admin';
+              } else if (feeType === 'selection_process') {
+                tipoNotfAdmin = 'Pagamento Parcelow de selection_process confirmado - Admin';
+              }
+              
               const adminNotificationPayload = {
-                tipo_notf: feeType === 'selection_process' ? "Student Selection Process Fee Payment" : feeType === 'scholarship_fee' ? "Student Scholarship Fee Payment" : "Student Application Fee Payment",
+                tipo_notf: tipoNotfAdmin,
                 email_admin: admin.email,
                 nome_admin: admin.full_name,
                 phone_admin: admin.phone,
@@ -1089,7 +1275,7 @@ Deno.serve(async (req) => {
                 o_que_enviar: `Pagamento Parcelow de ${feeType} no valor de ${formattedAmount} do aluno ${userProfile.full_name} foi processado com sucesso. Seller responsável: ${sellerData.name} (${sellerData.referral_code}). Affiliate: ${affiliateAdminData.name}`,
                 payment_id: String(parcelowOrder.id),
                 fee_type: feeType,
-                amount: payment.amount,
+                amount: paymentAmount,
                 currency: 'USD',
                 currency_symbol: '$',
                 formatted_amount: formattedAmount,
@@ -1128,7 +1314,7 @@ Deno.serve(async (req) => {
                     metadata: {
                       student_id: userProfile.id,
                       student_name: userProfile.full_name,
-                      amount: payment.amount,
+                      amount: paymentAmount,
                       fee_type: feeType,
                       payment_id: String(parcelowOrder.id)
                     }
@@ -1143,9 +1329,27 @@ Deno.serve(async (req) => {
             await Promise.allSettled(adminNotificationPromises);
 
             // b) NOTIFICAÇÃO PARA SELLER
+            // Define tipo_notf para seller baseado no fee_type
+            let tipoNotfSeller = `Pagamento Parcelow de ${feeType} confirmado - Seller`;
+            if (feeType === 'scholarship_fee') {
+              tipoNotfSeller = 'Pagamento Parcelow de scholarship_fee confirmado - Seller';
+            } else if (feeType === 'i20_control' || feeType === 'i20_control_fee') {
+              tipoNotfSeller = 'Pagamento Parcelow de i20_control_fee confirmado - Seller';
+            } else if (feeType === 'application_fee' || feeType === 'application') {
+              tipoNotfSeller = 'Pagamento Parcelow de application_fee confirmado - Seller';
+            } else if (feeType === 'selection_process') {
+              tipoNotfSeller = 'Pagamento Parcelow de selection_process confirmado - Seller';
+            }
+            
+            let emailSellerFinal = sellerData.email;
+            if (isDevelopment && devBlockedEmails.includes(emailSellerFinal)) {
+              console.log('[parcelow-webhook] 🚫 Email de seller bloqueado em desenvolvimento:', emailSellerFinal);
+              emailSellerFinal = "";
+            }
+
             const sellerNotificationPayload = {
-              tipo_notf: feeType === 'selection_process' ? "Student Selection Process Fee Payment" : feeType === 'scholarship_fee' ? "Student Scholarship Fee Payment" : "Student Application Fee Payment",
-              email_seller: sellerData.email,
+              tipo_notf: tipoNotfSeller,
+              email_seller: emailSellerFinal,
               nome_seller: sellerData.name,
               phone_seller: sellerPhone,
               email_aluno: userProfile.email,
@@ -1153,7 +1357,7 @@ Deno.serve(async (req) => {
               o_que_enviar: `Parabéns! Seu aluno ${userProfile.full_name} pagou a taxa ${feeType} no valor de ${formattedAmount} via Parcelow. Sua comissão será calculada em breve.`,
               payment_id: String(parcelowOrder.id),
               fee_type: feeType,
-              amount: payment.amount,
+              amount: paymentAmount,
               currency: 'USD',
               currency_symbol: '$',
               formatted_amount: formattedAmount,
@@ -1192,7 +1396,7 @@ Deno.serve(async (req) => {
                   metadata: {
                     student_id: userProfile.id,
                     student_name: userProfile.full_name,
-                    amount: payment.amount,
+                    amount: paymentAmount,
                     fee_type: feeType,
                     payment_id: String(parcelowOrder.id)
                   }
@@ -1205,9 +1409,27 @@ Deno.serve(async (req) => {
 
             // c) NOTIFICAÇÃO PARA AFFILIATE ADMIN (se houver)
             if (affiliateAdminData.email) {
+              // Define tipo_notf para affiliate admin baseado no fee_type
+              let tipoNotfAffiliate = `Pagamento Parcelow de ${feeType} confirmado - Affiliate Admin`;
+              if (feeType === 'scholarship_fee') {
+                tipoNotfAffiliate = 'Pagamento Parcelow de scholarship_fee confirmado - Affiliate Admin';
+              } else if (feeType === 'i20_control' || feeType === 'i20_control_fee') {
+                tipoNotfAffiliate = 'Pagamento Parcelow de i20_control_fee confirmado - Affiliate Admin';
+              } else if (feeType === 'application_fee' || feeType === 'application') {
+                tipoNotfAffiliate = 'Pagamento Parcelow de application_fee confirmado - Affiliate Admin';
+              } else if (feeType === 'selection_process') {
+                tipoNotfAffiliate = 'Pagamento Parcelow de selection_process confirmado - Affiliate Admin';
+              }
+              
+              let emailAffiliateFinal = affiliateAdminData.email;
+              if (isDevelopment && devBlockedEmails.includes(emailAffiliateFinal)) {
+                console.log('[parcelow-webhook] 🚫 Email de affiliate admin bloqueado em desenvolvimento:', emailAffiliateFinal);
+                emailAffiliateFinal = "";
+              }
+
               const affiliateNotificationPayload = {
-                tipo_notf: feeType === 'selection_process' ? "Student Selection Process Fee Payment" : feeType === 'scholarship_fee' ? "Student Scholarship Fee Payment" : "Student Application Fee Payment",
-                email_affiliate_admin: affiliateAdminData.email,
+                tipo_notf: tipoNotfAffiliate,
+                email_affiliate_admin: emailAffiliateFinal,
                 nome_affiliate_admin: affiliateAdminData.name,
                 phone_affiliate_admin: affiliateAdminData.phone,
                 email_aluno: userProfile.email,
@@ -1217,7 +1439,7 @@ Deno.serve(async (req) => {
                 o_que_enviar: `O seller ${sellerData.name} (${sellerData.referral_code}) do seu afiliado teve um pagamento de ${feeType} no valor de ${formattedAmount} do aluno ${userProfile.full_name} via Parcelow.`,
                 payment_id: String(parcelowOrder.id),
                 fee_type: feeType,
-                amount: payment.amount,
+                amount: paymentAmount,
                 currency: 'USD',
                 currency_symbol: '$',
                 formatted_amount: formattedAmount,
@@ -1256,7 +1478,7 @@ Deno.serve(async (req) => {
                     metadata: {
                       student_id: userProfile.id,
                       student_name: userProfile.full_name,
-                      amount: payment.amount,
+                      amount: paymentAmount,
                       fee_type: feeType,
                       payment_id: String(parcelowOrder.id)
                     }
@@ -1282,7 +1504,7 @@ Deno.serve(async (req) => {
                 o_que_enviar: `Pagamento Parcelow de ${feeType} no valor de ${formattedAmount} do aluno ${userProfile.full_name} foi processado com sucesso.`,
                 payment_id: String(parcelowOrder.id),
                 fee_type: feeType,
-                amount: payment.amount,
+                amount: paymentAmount,
                 currency: 'USD',
                 currency_symbol: '$',
                 formatted_amount: formattedAmount,
@@ -1318,7 +1540,7 @@ Deno.serve(async (req) => {
                     metadata: {
                       student_id: userProfile.id,
                       student_name: userProfile.full_name,
-                      amount: payment.amount,
+                      amount: paymentAmount,
                       fee_type: feeType,
                       payment_id: String(parcelowOrder.id)
                     }
@@ -1347,7 +1569,7 @@ Deno.serve(async (req) => {
               o_que_enviar: `Pagamento Parcelow de ${feeType} no valor de ${formattedAmount} do aluno ${userProfile.full_name} foi processado com sucesso.`,
               payment_id: String(parcelowOrder.id),
               fee_type: feeType,
-              amount: payment.amount,
+              amount: paymentAmount,
               currency: 'USD',
               currency_symbol: '$',
               formatted_amount: formattedAmount,
@@ -1383,7 +1605,7 @@ Deno.serve(async (req) => {
                   metadata: {
                     student_id: userProfile.id,
                     student_name: userProfile.full_name,
-                    amount: payment.amount,
+                    amount: paymentAmount,
                     fee_type: feeType,
                     payment_id: String(parcelowOrder.id)
                   }
@@ -1413,7 +1635,7 @@ Deno.serve(async (req) => {
             fee_type: feeType,
             payment_method: 'parcelow',
             order_id: String(parcelowOrder.id),
-            amount: payment.amount,
+            amount: paymentAmount,
             notifications_sent: true
           }
         });
