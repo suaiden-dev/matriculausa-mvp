@@ -48,10 +48,8 @@ const ApplicationFeeSuccess: React.FC = () => {
           .from('individual_fee_payments')
           .select('*')
           .eq('user_id', user.id)
-          .eq('fee_type', 'application_fee')
+          .eq('parcelow_reference', reference)
           .eq('payment_method', 'parcelow')
-          .order('created_at', { ascending: false })
-          .limit(1)
           .maybeSingle();
 
         if (payment && payment.parcelow_status === 'paid') {
@@ -92,18 +90,28 @@ const ApplicationFeeSuccess: React.FC = () => {
     if (hasRunRef.current) return;
     hasRunRef.current = true;
 
-    const reference = searchParams.get('reference');
-    const paymentMethod = searchParams.get('payment_method');
+    // Aceitar tanto parâmetros encurtados (ref, pm) quanto completos (reference, payment_method)
+    const reference = searchParams.get('ref') || searchParams.get('reference');
+    const paymentMethod = searchParams.get('pm') || searchParams.get('payment_method');
+    const sessionId = searchParams.get('session_id');
 
     // Detectar se é pagamento Parcelow
-    if (paymentMethod === 'parcelow' && reference) {
-      console.log('[Parcelow] Pagamento Parcelow detectado');
+    // Se houver reference e NÃO houver session_id, é Parcelow
+    // pm=p significa payment_method=parcelow
+    if (reference && !sessionId) {
+      console.log('[Parcelow] Pagamento Parcelow detectado (via reference)');
+      verifyParcelowPayment(reference);
+      return;
+    }
+    
+    // Fallback: se tiver payment_method=parcelow ou pm=p explicitamente
+    if ((paymentMethod === 'parcelow' || paymentMethod === 'p') && reference) {
+      console.log('[Parcelow] Pagamento Parcelow detectado (via payment_method)');
       verifyParcelowPayment(reference);
       return;
     }
 
     const verifySession = async () => {
-      const sessionId = searchParams.get('session_id');
       if (!sessionId) {
         setError('No session ID found in URL.');
         setStatus('error');

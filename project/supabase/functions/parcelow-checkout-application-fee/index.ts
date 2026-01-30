@@ -202,8 +202,10 @@ Deno.serve(async (req) => {
     
     console.log('[parcelow-checkout-application-fee] 🔗 Origin determinado:', origin);
     
-    const redirectSuccess = `${origin}/student/dashboard/application-fee-success?reference=${encodeURIComponent(reference)}&payment_method=parcelow`;
-    const redirectFailed = `${origin}/student/dashboard/application-fee-error?reference=${encodeURIComponent(reference)}&payment_method=parcelow`;
+    // URLs encurtadas para evitar truncamento pela Parcelow
+    // pm=p significa payment_method=parcelow
+    const redirectSuccess = `${origin}/student/dashboard/application-fee-success?ref=${encodeURIComponent(reference)}&pm=p`;
+    const redirectFailed = `${origin}/student/dashboard/application-fee-error?ref=${encodeURIComponent(reference)}&pm=p`;
 
     // URL do webhook
     const webhookUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/parcelow-webhook`;
@@ -292,7 +294,7 @@ Deno.serve(async (req) => {
       p_payment_method: 'parcelow',
       p_parcelow_order_id: String(orderId),
       p_parcelow_checkout_url: checkoutUrl,
-      p_parcelow_reference: reference // Salvar reference para buscar no webhook
+      p_parcelow_reference: reference
     });
 
     if (insertError) {
