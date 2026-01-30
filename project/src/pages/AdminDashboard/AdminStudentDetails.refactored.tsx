@@ -3143,6 +3143,8 @@ const AdminStudentDetails: React.FC = () => {
               />
 
               <StudentDocumentsCard
+                studentId={student.student_id}
+                documentsStatus={student.documents_status}
                 applications={student.all_applications || []}
                 expandedApps={expandedApps}
                 canPlatformAdmin={isPlatformAdmin}
