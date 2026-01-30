@@ -4,6 +4,7 @@ import { useCartStore } from '../../stores/applicationStore';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useTranslation } from 'react-i18next';
+import { getN8nProxyUrl } from '../../utils/storageProxy';
 import { 
   Upload, 
   CheckCircle, 
@@ -322,9 +323,9 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
         user_id: user.id,
         student_name: userProfile?.full_name || (user as any)?.user_metadata?.full_name || 
                      (user as any)?.user_metadata?.name || user.email || '',
-        passport_url: supabase.storage.from('student-documents').getPublicUrl(docUrls['passport']).data.publicUrl,
-        diploma_url: supabase.storage.from('student-documents').getPublicUrl(docUrls['diploma']).data.publicUrl,
-        funds_proof_url: supabase.storage.from('student-documents').getPublicUrl(docUrls['funds_proof']).data.publicUrl,
+        passport_url: getN8nProxyUrl(supabase.storage.from('student-documents').getPublicUrl(docUrls['passport']).data.publicUrl),
+        diploma_url: getN8nProxyUrl(supabase.storage.from('student-documents').getPublicUrl(docUrls['diploma']).data.publicUrl),
+        funds_proof_url: getN8nProxyUrl(supabase.storage.from('student-documents').getPublicUrl(docUrls['funds_proof']).data.publicUrl),
       };
       
       const SUPABASE_FUNCTIONS_URL = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL || 
