@@ -1,18 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Menu, X, User, LogOut, BookOpen, Zap, Shield, ChevronDown, Settings } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Menu, X, User, LogOut, BookOpen, ChevronDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth';
 import { usePageTranslationStatus } from '../hooks/usePageTranslationStatus';
 import { supabase } from '../lib/supabase';
-import StepByStepButton from './OnboardingTour/StepByStepButton';
+// import StepByStepButton from './OnboardingTour/StepByStepButton';
 import LanguageSelector from './LanguageSelector';
 
 const Header: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const { user, userProfile, logout, isAuthenticated } = useAuth();
-  const navigate = useNavigate();
+  // const navigate = useNavigate();
   const { t } = useTranslation();
   const { hasTranslation } = usePageTranslationStatus();
   const [schoolImageUrl, setSchoolImageUrl] = useState<string | null>(null);

@@ -7,7 +7,6 @@ import {
   CreditCard,
   ArrowUpRight,
   AlertCircle,
-  Eye,
 } from 'lucide-react';
 
 interface PendingPaymentsSummaryProps {
@@ -115,10 +114,10 @@ const PendingPaymentsSummary: React.FC<PendingPaymentsSummaryProps> = ({
           </div>
           <Link
             to="/admin/dashboard/payments"
-            className="inline-flex items-center px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors font-medium text-sm shadow-sm"
+            className="text-purple-600 hover:text-purple-700 font-medium text-sm flex items-center"
           >
-            <Eye className="h-4 w-4 mr-2" />
-            {totalPending > 0 ? 'Review All' : 'View Payments'}
+            {totalPending > 0 ? 'Review All' : 'View All'}
+            <ArrowUpRight className="h-4 w-4 ml-1" />
           </Link>
         </div>
       </div>
