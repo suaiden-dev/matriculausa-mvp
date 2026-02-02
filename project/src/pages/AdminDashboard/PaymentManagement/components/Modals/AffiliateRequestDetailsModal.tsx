@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { XCircle, CreditCard, Mail, User } from 'lucide-react';
-import { supabase } from '../../../../lib/supabase';
+import { supabase } from '../../../../../lib/supabase';
 
 interface AffiliateRequestDetailsModalProps {
   isOpen: boolean;
