@@ -601,9 +601,19 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 3. Extrair amount do pedido Parcelow (em centavos USD)
-    const paymentAmount = parcelowOrder.order_amount ? (parcelowOrder.order_amount / 100) : (payment?.amount || 0);
-    console.log('[parcelow-webhook] 💰 Valor do pagamento:', paymentAmount, 'USD');
+    // 3. Extrair amounts do pedido Parcelow (em centavos USD)
+    const netAmount = parcelowOrder.order_amount ? (parcelowOrder.order_amount / 100) : (payment?.amount || 0);
+    const grossAmount = parcelowOrder.total_usd ? (parcelowOrder.total_usd / 100) : netAmount;
+    const feeAmountUSD = Math.max(0, grossAmount - netAmount);
+    
+    // Manter paymentAmount para compatibilidade com o resto do código
+    const paymentAmount = netAmount;
+
+    console.log('[parcelow-webhook] 💰 Valores:', {
+      liquido: netAmount,
+      bruto: grossAmount,
+      taxas: feeAmountUSD
+    });
 
     // 4. Mapear status
     let newStatus = payment?.parcelow_status || 'pending';
@@ -673,6 +683,9 @@ Deno.serve(async (req) => {
           parcelow_status: newStatus,
           parcelow_checkout_url: parcelowOrder.checkout_url || payment.parcelow_checkout_url,
           payment_date: isPaid ? new Date().toISOString() : payment.payment_date,
+          gross_amount_usd: grossAmount,
+          fee_amount_usd: feeAmountUSD,
+          amount: netAmount // Garantir que o valor líquido está correto
         })
         .eq('id', payment.id);
 
@@ -691,7 +704,9 @@ Deno.serve(async (req) => {
         .insert({
           user_id: userId,
           fee_type: feeType !== 'unknown' ? feeType : 'application_fee', // Usa o tipo detectado
-          amount: paymentAmount,
+          amount: netAmount,
+          gross_amount_usd: grossAmount,
+          fee_amount_usd: feeAmountUSD,
           payment_date: new Date().toISOString(),
           payment_method: 'parcelow',
           parcelow_order_id: String(parcelowOrder.id),
@@ -802,17 +817,6 @@ Deno.serve(async (req) => {
           // Solução: Buscar a aplicação mais recente do usuário que ainda não foi paga
           // (mesmo approach que o Stripe, mas sem depender de metadata)
           
-          const { data: userProfile } = await supabase
-            .from('user_profiles')
-            .select('id')
-            .eq('user_id', userId)
-            .single();
-          
-          if (!userProfile) {
-            console.error('[parcelow-webhook] ❌ user_profile não encontrado para userId:', userId);
-            break;
-          }
-          
           // Buscar a aplicação mais recente que ainda não foi paga
           const { data: application, error: appFetchError } = await supabase
             .from('scholarship_applications')
@@ -904,10 +908,10 @@ Deno.serve(async (req) => {
               const { error: scholarshipUpdateError } = await supabase
                 .from('scholarship_applications')
                 .update({ 
-                  status: 'scholarship_fee_paid',
+                  // Removido status: 'scholarship_fee_paid' pois não é um valor válido na constraint (CHECK status IN ...)
                   is_scholarship_fee_paid: true,
-                  scholarship_fee_payment_method: 'parcelow',
-                  scholarship_fee_paid_at: new Date().toISOString()
+                  scholarship_fee_payment_method: 'parcelow'
+                  // nota: scholarship_fee_paid_at não existe nesta tabela, apenas em user_profiles
                 })
                 .eq('scholarship_id', scholarshipId)
                 .eq('student_id', userProfile.id)
@@ -957,117 +961,66 @@ Deno.serve(async (req) => {
           console.warn('[parcelow-webhook] ⚠️ Fee type não reconhecido:', feeType);
       }
 
-      // 4.4. Processar recompensas de referência (MatriculaCoins)
-      try {
-        const { data: usedCode, error: usedError } = await supabase
-          .from('used_referral_codes')
-          .select('*')
-          .eq('user_id', userId)
-          .order('applied_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
+      // 4.4. Processar notificações de recompensa (MatriculaCoins) apenas para I20
+      // Nota: A lógica de crédito de moedas e atualização de status do referral 
+      // agora é gerenciada pelo trigger 'handle_i20_payment_rewards' no banco de dados.
+      // Aqui apenas enviamos a notificação para o padrinho.
+      if (feeType === 'i20_control' || feeType === 'i20_control_fee') {
+        try {
+          const { data: usedCode, error: usedError } = await supabase
+            .from('used_referral_codes')
+            .select('*')
+            .eq('user_id', userId)
+            .order('applied_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
 
-        if (usedError) {
-          console.error('[parcelow-webhook] Erro ao buscar código de referência:', usedError);
-        }
+          if (!usedError && usedCode && usedCode.referrer_id) {
+            const referrerId = usedCode.referrer_id;
+            console.log('[parcelow-webhook] 🎁 Enviando notificação de recompensa para o padrinho...');
 
-        if (usedCode && usedCode.referrer_id) {
-          const referrerId = usedCode.referrer_id;
-          console.log('[parcelow-webhook] 🎁 Código de referência encontrado, processando recompensa...');
-          console.log('[parcelow-webhook] Referrer:', referrerId, 'Código:', usedCode.affiliate_code);
+            const { data: referrerProfile } = await supabase
+              .from('user_profiles')
+              .select('full_name, email')
+              .eq('user_id', referrerId)
+              .single();
 
-          // Obter nome do usuário que pagou
-          let referredDisplayName = userProfile.full_name || userId;
+            if (referrerProfile?.email) {
+              let emailReferrerFinal = referrerProfile.email;
+              if (isDevelopment && devBlockedEmails.includes(emailReferrerFinal)) {
+                console.log('[parcelow-webhook] 🚫 Email de padrinho bloqueado em desenvolvimento:', emailReferrerFinal);
+                emailReferrerFinal = "";
+              }
 
-          // Upsert affiliate_referrals
-          const { error: upsertRefError } = await supabase
-            .from('affiliate_referrals')
-            .upsert({
-              referrer_id: referrerId,
-              referred_id: userId,
-              affiliate_code: usedCode.affiliate_code,
-              payment_amount: Number(paymentAmount || 0),
-              credits_earned: 180,
-              status: 'completed',
-              payment_session_id: String(parcelowOrder.id),
-              completed_at: new Date().toISOString()
-            }, {
-              onConflict: 'referred_id'
-            });
-
-          if (upsertRefError) {
-            console.error('[parcelow-webhook] ❌ Erro ao upsert affiliate_referrals:', upsertRefError);
-          } else {
-            console.log('[parcelow-webhook] ✅ affiliate_referrals atualizado');
-          }
-
-          // Adicionar 180 MatriculaCoins ao padrinho
-          console.log('[parcelow-webhook] 💰 Creditando 180 MatriculaCoins ao padrinho...');
-          const description = `Referral reward: ${feeType} paid by ${referredDisplayName}`;
-          
-          const { error: rewardError } = await supabase.rpc('add_coins_to_user_matricula', {
-            user_id_param: referrerId,
-            coins_to_add: 180,
-            reason: description
-          });
-
-          if (rewardError) {
-            console.error('[parcelow-webhook] ❌ Erro ao adicionar créditos:', rewardError);
-          } else {
-            console.log('[parcelow-webhook] ✅ 180 MatriculaCoins creditados com sucesso!');
-
-            // Enviar notificação de recompensa para o padrinho
-            try {
-              const { data: referrerProfile } = await supabase
-                .from('user_profiles')
-                .select('full_name, email')
-                .eq('user_id', referrerId)
-                .single();
-
-              const { data: referredProfileData } = await supabase
-                .from('user_profiles')
-                .select('email')
-                .eq('user_id', userId)
-                .single();
-              if (referrerProfile?.email) {
-                let emailReferrerFinal = referrerProfile.email;
-                if (isDevelopment && devBlockedEmails.includes(emailReferrerFinal)) {
-                  console.log('[parcelow-webhook] 🚫 Email de padrinho bloqueado em desenvolvimento:', emailReferrerFinal);
-                  emailReferrerFinal = "";
-                }
-
+              if (emailReferrerFinal) {
+                let referredDisplayName = userProfile.full_name || userId;
+                
                 const rewardPayload = {
                   tipo_notf: "Recompensa de MatriculaCoins por Indicacao",
                   email_aluno: emailReferrerFinal,
                   nome_aluno: referrerProfile.full_name || "Aluno",
                   referred_student_name: referredDisplayName,
-                  referred_student_email: referredProfileData?.email || "",
-                  payment_method: "Parcelow",
-                  fee_type: feeType,
+                  referred_student_email: userProfile.email || "",
+                  payment_method: "parcelow",
+                  fee_type: "I20 Control Fee",
                   reward_type: "MatriculaCoins",
-                  o_que_enviar: `Great news! Your friend ${referredDisplayName} has completed their enrollment process via Parcelow. 180 MatriculaCoins have been added to your account!`
+                  o_que_enviar: `Congratulations! Your friend ${referredDisplayName} has completed the I20 payment. 180 MatriculaCoins have been added to your account!`
                 };
 
-                if (emailReferrerFinal) {
-                  await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(rewardPayload),
-                  });
-                    console.log('[parcelow-webhook] ✅ Notificação de recompensa enviada!');
-                  } else {
-                    console.log('[parcelow-webhook] ℹ️ Pulando notificação de recompensa (email bloqueado ou vazio)');
-                  }
-                }
-            } catch (rewardNotifError) {
-              console.error('[parcelow-webhook] ❌ Erro ao enviar notificação de recompensa:', rewardNotifError);
+                await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(rewardPayload),
+                });
+                console.log('✅ [parcelow-webhook] Notificação de recompensa enviada!');
+              }
             }
           }
-        } else {
-          console.log('[parcelow-webhook] ⚠️ Nenhum código de referência encontrado');
+        } catch (rewardError) {
+          console.error('[parcelow-webhook] ❌ Erro ao processar recompensas de referência:', rewardError);
         }
-      } catch (referralError) {
-        console.error('[parcelow-webhook] ❌ Erro ao processar recompensas de referência:', referralError);
+      } else {
+        console.log(`[parcelow-webhook] ℹ️ Recompensas ignoradas para fee_type: ${feeType} (recompensas são vinculadas apenas ao I20)`);
       }
 
       // 4.5. Limpar carrinho

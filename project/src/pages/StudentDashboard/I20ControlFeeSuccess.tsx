@@ -19,8 +19,8 @@ const I20ControlFeeSuccess: React.FC = () => {
   const { user } = useAuth();
   const params = new URLSearchParams(location.search);
   const sessionId = params.get('session_id');
-  const reference = searchParams.get('reference');
-  const paymentMethod = searchParams.get('payment_method');
+  const reference = searchParams.get('ref') || searchParams.get('reference');
+  const paymentMethod = searchParams.get('pm') || searchParams.get('payment_method');
   const { t } = useTranslation();
   const hasRunRef = useRef(false);
 

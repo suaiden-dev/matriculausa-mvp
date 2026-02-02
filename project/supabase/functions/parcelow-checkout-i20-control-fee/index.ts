@@ -142,9 +142,11 @@ Deno.serve(async (req) => {
     // Obter token de acesso
     const accessToken = await getParcelowAccessToken(config);
 
-    // Gerar ID de referência único (curto para evitar truncamento pela Parcelow)
+    // Gerar ID de referência único (MUITO curto para evitar truncamento pela Parcelow)
+    // Usar base36 para encurtar o timestamp
     const timestamp = Date.now();
-    const reference = `i20_fee_${timestamp}`;
+    const shortTimestamp = timestamp.toString(36); // Converte para base36 (muito mais curto)
+    const reference = `i20_${shortTimestamp}`;
 
     // Determinar URLs de redirect baseado no ambiente
     // Usar o reference como identificador para buscar o pagamento depois
