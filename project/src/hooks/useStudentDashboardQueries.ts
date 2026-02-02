@@ -57,14 +57,7 @@ export function useStudentDocumentsQuery(userId?: string) {
     queryFn: async () => {
       if (!userId) return [];
 
-      // Tentar cache primeiro
-      const cached = requestCache.get('student_documents', { userId });
-      if (cached) {
-        console.log('[useStudentDocumentsQuery] Cache HIT para userId:', userId);
-        return cached;
-      }
-
-      console.log('[useStudentDocumentsQuery] Cache MISS - fetching para userId:', userId);
+      console.log('[useStudentDocumentsQuery] Fetching para userId:', userId);
 
       const { data, error } = await supabase
         .from('student_documents')
@@ -77,12 +70,7 @@ export function useStudentDocumentsQuery(userId?: string) {
         return [];
       }
 
-      const documents = data || [];
-
-      // Armazenar no cache
-      requestCache.set('student_documents', documents, { userId }, 3 * 60 * 1000); // 3 minutos
-
-      return documents;
+      return data || [];
     },
     enabled: !!userId,
     staleTime: 3 * 60 * 1000, // 3 minutos
@@ -102,14 +90,7 @@ export function useStudentApplicationsQuery(userProfileId?: string) {
     queryFn: async () => {
       if (!userProfileId) return [];
 
-      // Tentar cache primeiro
-      const cached = requestCache.get('scholarship_applications', { userProfileId });
-      if (cached) {
-        console.log('[useStudentApplicationsQuery] Cache HIT para userProfileId:', userProfileId);
-        return cached;
-      }
-
-      console.log('[useStudentApplicationsQuery] Cache MISS - fetching para userProfileId:', userProfileId);
+      console.log('[useStudentApplicationsQuery] Fetching para userProfileId:', userProfileId);
 
       const { data, error } = await supabase
         .from('scholarship_applications')
@@ -135,18 +116,13 @@ export function useStudentApplicationsQuery(userProfileId?: string) {
         return [];
       }
 
-      const applications = data || [];
-
-      // Armazenar no cache
-      requestCache.set('scholarship_applications', applications, { userProfileId }, 3 * 60 * 1000); // 3 minutos
-
-      return applications;
+      return data || [];
     },
     enabled: !!userProfileId,
-    staleTime: 3 * 60 * 1000, // 3 minutos
+    staleTime: 1 * 60 * 1000, // Reduzido para 1 minuto para dados mais frescos
     gcTime: 5 * 60 * 1000, // 5 minutos
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
+    refetchOnWindowFocus: true, // Habilitado para atualizar ao voltar para a aba
+    refetchOnMount: true,
   });
 }
 
