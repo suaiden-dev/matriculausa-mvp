@@ -85,24 +85,31 @@ const PendingPaymentsSummary: React.FC<PendingPaymentsSummaryProps> = ({
     );
   }
 
-  // Se não há pagamentos pendentes, não exibe nada ou exibe uma mensagem muito discreta
-  if (totalPending === 0) {
-    return null; // Ou mostrar uma mensagem muito pequena se preferir
-  }
+
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
       {/* Header */}
-      <div className="bg-gradient-to-r from-slate-50 to-slate-100 border-b border-slate-200 p-6">
+      <div className={`${totalPending > 0 ? 'bg-gradient-to-r from-slate-50 to-slate-100' : 'bg-gradient-to-r from-green-50 to-emerald-50'} border-b border-slate-200 p-6`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-orange-400 to-orange-500 rounded-xl flex items-center justify-center shadow-sm">
-              <AlertCircle className="h-6 w-6 text-white" />
+            <div className={`w-10 h-10 ${totalPending > 0 ? 'bg-gradient-to-br from-orange-400 to-orange-500' : 'bg-gradient-to-br from-green-400 to-green-500'} rounded-xl flex items-center justify-center shadow-sm`}>
+              {totalPending > 0 ? (
+                <AlertCircle className="h-6 w-6 text-white" />
+              ) : (
+                <Clock className="h-6 w-6 text-white" />
+              )}
             </div>
             <div>
-              <h3 className="text-lg font-bold text-slate-900">Pending Payment Approvals</h3>
+              <h3 className="text-lg font-bold text-slate-900">
+                {totalPending > 0 ? 'Pending Payment Approvals' : 'Payment Approvals'}
+              </h3>
               <p className="text-sm text-slate-600">
-                {totalPending} payment{totalPending !== 1 ? 's' : ''} requiring approval • {formatCurrency(totalAmount)} total
+                {totalPending > 0 ? (
+                  <>{totalPending} payment{totalPending !== 1 ? 's' : ''} requiring approval • {formatCurrency(totalAmount)} total</>
+                ) : (
+                  <>All payments are up to date</>
+                )}
               </p>
             </div>
           </div>
@@ -111,59 +118,69 @@ const PendingPaymentsSummary: React.FC<PendingPaymentsSummaryProps> = ({
             className="inline-flex items-center px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors font-medium text-sm shadow-sm"
           >
             <Eye className="h-4 w-4 mr-2" />
-            Review All
+            {totalPending > 0 ? 'Review All' : 'View Payments'}
           </Link>
         </div>
       </div>
 
-      {/* Payment Types List */}
+      {/* Payment Types List or Empty State */}
       <div className="p-6 space-y-4">
-        {paymentTypes.map((type, index) => {
-          const Icon = type.icon;
-          const hasItems = type.count > 0;
+        {totalPending > 0 ? (
+          paymentTypes.map((type, index) => {
+            const Icon = type.icon;
+            const hasItems = type.count > 0;
 
-          if (!hasItems) return null; // Só mostra tipos que têm itens pendentes
+            if (!hasItems) return null; // Só mostra tipos que têm itens pendentes
 
-          return (
-            <Link
-              key={index}
-              to={type.link}
-              className="group flex items-center justify-between p-4 rounded-xl border border-slate-200 hover:border-slate-300 hover:shadow-md transition-all duration-300 bg-gradient-to-r from-white to-slate-50"
-            >
-              <div className="flex items-center space-x-4">
-                <div className={`w-12 h-12 bg-gradient-to-br ${type.color === 'blue' ? 'from-blue-500 to-blue-600' :
-                  type.color === 'purple' ? 'from-purple-500 to-purple-600' :
-                    'from-orange-500 to-orange-600'
-                  } rounded-xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform duration-300`}>
-                  <Icon className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <h4 className="font-bold text-slate-900 mb-1">{type.title}</h4>
-                  <p className="text-sm text-slate-600">{type.description}</p>
-                </div>
-              </div>
-
-              <div className="text-right">
-                <div className="flex items-center justify-end space-x-3 mb-2">
-                  <div className={`px-3 py-1 ${type.color === 'blue' ? 'bg-blue-100 text-blue-700' :
-                    type.color === 'purple' ? 'bg-purple-100 text-purple-700' :
-                      'bg-orange-100 text-orange-700'
-                    } rounded-full text-sm font-medium`}>
-                    {type.count} pending
+            return (
+              <Link
+                key={index}
+                to={type.link}
+                className="group flex items-center justify-between p-4 rounded-xl border border-slate-200 hover:border-slate-300 hover:shadow-md transition-all duration-300 bg-gradient-to-r from-white to-slate-50"
+              >
+                <div className="flex items-center space-x-4">
+                  <div className={`w-12 h-12 bg-gradient-to-br ${type.color === 'blue' ? 'from-blue-500 to-blue-600' :
+                    type.color === 'purple' ? 'from-purple-500 to-purple-600' :
+                      'from-orange-500 to-orange-600'
+                    } rounded-xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform duration-300`}>
+                    <Icon className="h-6 w-6 text-white" />
                   </div>
-                  <div className="text-lg font-bold text-slate-900">
-                    {formatCurrency(type.amount)}
+                  <div>
+                    <h4 className="font-bold text-slate-900 mb-1">{type.title}</h4>
+                    <p className="text-sm text-slate-600">{type.description}</p>
                   </div>
                 </div>
-                <div className="flex items-center justify-end text-xs text-slate-500 uppercase tracking-wide font-medium">
-                  <Clock className="h-3 w-3 mr-1" />
-                  Requires Action
-                  <ArrowUpRight className="h-4 w-4 ml-2 group-hover:text-slate-700 transition-colors" />
+
+                <div className="text-right">
+                  <div className="flex items-center justify-end space-x-3 mb-2">
+                    <div className={`px-3 py-1 ${type.color === 'blue' ? 'bg-blue-100 text-blue-700' :
+                      type.color === 'purple' ? 'bg-purple-100 text-purple-700' :
+                        'bg-orange-100 text-orange-700'
+                      } rounded-full text-sm font-medium`}>
+                      {type.count} pending
+                    </div>
+                    <div className="text-lg font-bold text-slate-900">
+                      {formatCurrency(type.amount)}
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-end text-xs text-slate-500 uppercase tracking-wide font-medium">
+                    <Clock className="h-3 w-3 mr-1" />
+                    Requires Action
+                    <ArrowUpRight className="h-4 w-4 ml-2 group-hover:text-slate-700 transition-colors" />
+                  </div>
                 </div>
-              </div>
-            </Link>
-          );
-        })}
+              </Link>
+            );
+          })
+        ) : (
+          <div className="text-center py-8">
+            <div className="w-16 h-16 bg-green-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <Clock className="h-8 w-8 text-green-600" />
+            </div>
+            <h4 className="text-lg font-bold text-slate-900 mb-2">All Caught Up!</h4>
+            <p className="text-slate-600">No pending payment approvals at the moment</p>
+          </div>
+        )}
       </div>
     </div>
   );

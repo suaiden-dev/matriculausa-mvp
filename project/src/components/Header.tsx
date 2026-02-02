@@ -107,9 +107,9 @@ const Header: React.FC = () => {
         <div className="flex justify-between items-center h-20">
           {/* Logo */}
           <Link to="/" className="flex items-center group">
-            <img 
-              src="/logo.png.png" 
-              alt="Matrícula USA" 
+            <img
+              src="/logo.png.png"
+              alt="Matrícula USA"
               className="h-12 w-auto group-hover:scale-105 transition-transform duration-300"
             />
           </Link>
@@ -120,15 +120,15 @@ const Header: React.FC = () => {
               {t('nav.home')}
               <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-[#05294E] group-hover:w-full transition-all duration-300"></span>
             </Link>
-            <Link 
-              to="/schools" 
+            <Link
+              to="/schools"
               className="text-slate-700 hover:text-[#05294E] transition-colors font-medium relative group"
             >
               Universities
               <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-[#05294E] group-hover:w-full transition-all duration-300"></span>
             </Link>
-            <Link 
-              to="/eb3-jobs" 
+            <Link
+              to="/eb3-jobs"
               className="text-slate-700 hover:text-[#05294E] transition-colors font-medium relative group"
             >
               EB-3 Jobs
@@ -148,7 +148,7 @@ const Header: React.FC = () => {
           <div className="hidden lg:flex items-center space-x-4">
             {/* Language Selector - Only show on pages with translations */}
             {hasTranslation && <LanguageSelector variant="header" />}
-            
+
             {isAuthenticated && user ? (
               <div className="relative flex items-center gap-2">
                 <button
@@ -190,16 +190,18 @@ const Header: React.FC = () => {
                         {getDashboardLabel()}
                       </Link>
                     </div>
-                    <div className="py-2">
-                      <Link
-                        to={getDashboardPath() + '/profile'}
-                        className="flex items-center px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
-                        onClick={() => setIsUserMenuOpen(false)}
-                      >
-                        <User className="h-4 w-4 mr-3" />
-                        Profile Settings
-                      </Link>
-                    </div>
+                    {user.role !== 'admin' && (
+                      <div className="py-2">
+                        <Link
+                          to={getDashboardPath() + '/profile'}
+                          className="flex items-center px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                          onClick={() => setIsUserMenuOpen(false)}
+                        >
+                          <User className="h-4 w-4 mr-3" />
+                          Profile Settings
+                        </Link>
+                      </div>
+                    )}
                     <div className="border-t border-slate-100 pt-2">
                       <button
                         onClick={handleLogout}
@@ -250,18 +252,18 @@ const Header: React.FC = () => {
                 <LanguageSelector variant="compact" />
               </div>
             )}
-            
+
             <Link to="/" className="block px-4 py-3 text-slate-700 hover:bg-[#05294E]/5 rounded-xl font-medium transition-all duration-200" onClick={() => setIsMenuOpen(false)}>{t('nav.home')}</Link>
-            <Link 
-              to="/schools" 
-              className="block px-4 py-3 text-slate-700 hover:bg-[#05294E]/5 rounded-xl font-medium transition-all duration-200" 
+            <Link
+              to="/schools"
+              className="block px-4 py-3 text-slate-700 hover:bg-[#05294E]/5 rounded-xl font-medium transition-all duration-200"
               onClick={() => setIsMenuOpen(false)}
             >
               Universities
             </Link>
-            <Link 
-              to="/eb3-jobs" 
-              className="block px-4 py-3 text-slate-700 hover:bg-[#05294E]/5 rounded-xl font-medium transition-all duration-200" 
+            <Link
+              to="/eb3-jobs"
+              className="block px-4 py-3 text-slate-700 hover:bg-[#05294E]/5 rounded-xl font-medium transition-all duration-200"
               onClick={() => setIsMenuOpen(false)}
             >
               EB-3 Jobs
@@ -270,7 +272,7 @@ const Header: React.FC = () => {
               {t('nav.scholarships')}
             </Link>
             <Link to="/how-it-works" className="block px-4 py-3 text-slate-700 hover:bg-[#05294E]/5 rounded-xl font-medium transition-all duration-200" onClick={() => setIsMenuOpen(false)}>{t('nav.howItWorks')}</Link>
-            
+
             {isAuthenticated && user ? (
               <div className="border-t border-slate-200 pt-4 mt-4">
                 <div className="flex items-center px-4 py-3 mb-2">
@@ -286,7 +288,7 @@ const Header: React.FC = () => {
                 </div>
 
                 <Link to={getDashboardPath()} className="block px-4 py-3 text-slate-700 hover:bg-[#05294E]/5 rounded-xl font-medium transition-all duration-200" onClick={() => setIsMenuOpen(false)}>{getDashboardLabel()}</Link>
-                
+
                 <button onClick={handleLogout} className="block w-full text-left px-4 py-3 text-slate-700 hover:bg-[#D0151C]/5 rounded-xl font-medium transition-all duration-200">Logout</button>
               </div>
             ) : (
