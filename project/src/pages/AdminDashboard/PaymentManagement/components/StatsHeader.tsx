@@ -24,9 +24,10 @@ function StatsHeaderBase({ stats, payments }: StatsHeaderProps) {
 
 	const stripeData = totalsByMethod.stripe || { count: 0, amount: 0 };
 	const zelleData = totalsByMethod.zelle || { count: 0, amount: 0 };
+	const parcelowData = totalsByMethod.parcelow || { count: 0, amount: 0 };
 
 	return (
-		<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+		<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
 			<div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-6 text-white">
 				<div className="flex items-center justify-between">
 					<div>
@@ -56,6 +57,17 @@ function StatsHeaderBase({ stats, payments }: StatsHeaderProps) {
 						<p className="text-purple-200 text-xs">{zelleData.count} payments</p>
 					</div>
 					<CheckCircle size={32} className="text-purple-200" />
+				</div>
+			</div>
+
+			<div className="bg-gradient-to-r from-teal-500 to-teal-600 rounded-xl p-6 text-white">
+				<div className="flex items-center justify-between">
+					<div>
+						<p className="text-teal-100 text-sm font-medium">Parcelow Payments</p>
+						<p className="text-2xl font-bold">${formatCentsToDollars(parcelowData.amount).toLocaleString()}</p>
+						<p className="text-teal-200 text-xs">{parcelowData.count} payments</p>
+					</div>
+					<DollarSign size={32} className="text-teal-200" />
 				</div>
 			</div>
 

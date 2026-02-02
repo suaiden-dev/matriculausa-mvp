@@ -2447,6 +2447,8 @@
       "academicLevel": "Nível Acadêmico",
       "gpa": "GPA",
       "englishProficiency": "Proficiência em Inglês",
+      "cpfDocument": "CPF",
+      "cpfHelper": "Usado para validação e pagamentos no Brasil (formato 000.000.000-00).",
       "placeholders": {
         "enterFullName": "Digite seu nome completo",
         "phoneExample": "Ex: +55 11 99999-8888",
@@ -2504,6 +2506,7 @@
       "profileUpdated": "Perfil atualizado com sucesso!",
       "uploadError": "Falha ao fazer upload do avatar. Tente novamente.",
       "saveError": "Falha ao salvar alterações do perfil. Tente novamente.",
+      "invalidCPF": "CPF inválido. Verifique e tente novamente.",
       "invalidImageFile": "Por favor, selecione um arquivo de imagem",
       "fileTooLarge": "O arquivo deve ter menos de 5MB",
       "imageUrlError": "Não foi possível obter a URL da imagem",
@@ -2727,12 +2730,32 @@
     "i20ControlFee": "Taxa de Controle I-20 - Processamento e validação de documentos"
   },
   "paymentSelector": {
-    "title": "Escolher Método de Pagamento",
-    "subtitle": "Selecione como deseja pagar sua {{feeType}}",
+    "title": "Escolha o Método de Pagamento",
+    "subtitle": "Selecione como você deseja pagar sua taxa de {{feeType}}",
     "amount": "Valor",
     "loading": {
       "message": "Carregando métodos de pagamento...",
-      "processing": "Processando..."
+      "processing": "Processando pagamento..."
+    },
+    "promotionalCoupon": {
+      "label": "Cupom Promocional",
+      "placeholder": "INSIRA O CÓDIGO",
+      "validate": "Validar",
+      "validating": "Validando...",
+      "success": "Cupom aplicado com sucesso!",
+      "invalid": "Cupom inválido ou expirado.",
+      "error": "Erro ao validar cupom.",
+      "validated": "Validado",
+      "remove": "Remover cupom",
+      "original": "original",
+      "withDiscount": "com desconto",
+      "discountAmount": "de desconto",
+      "applied": "Cupom {{code}} aplicado! Desconto de ${{amount}} aplicado.",
+      "errors": {
+        "invalid": "Código de cupom inválido",
+        "generic": "Erro ao validar cupom. Verifique sua conexão e tente novamente.",
+        "cpfRequired": "CPF é obrigatório para pagamento via Parcelow. Por favor, atualize seu perfil."
+      }
     },
     "methods": {
       "stripe": {
@@ -2743,17 +2766,21 @@
         "title": "PIX",
         "description": "Sistema de pagamento instantâneo para usuários brasileiros"
       },
+      "parcelow": {
+        "title": "Parcelow (21x)",
+        "description": "Parcele em até 21x no cartão de crédito"
+      },
       "zelle": {
         "title": "Zelle",
         "description": "Pague via Zelle e envie o comprovante.",
-        "descriptionDetailed": "Pague via Zelle e envie o comprovante."
+        "descriptionDetailed": "Pague via Zelle e envie o comprovante (24-48h)"
       }
     },
     "feeTypes": {
-      "selection_process": "taxa de processo de seleção",
-      "application_fee": "taxa de matrícula",
-      "scholarship_fee": "taxa de bolsa",
-      "enrollment_fee": "taxa de matrícula",
+      "selection_process": "processo seletivo",
+      "application_fee": "matrícula",
+      "enrollment_fee": "matrícula",
+      "scholarship_fee": "bolsa",
       "i20_control_fee": "taxa de controle I-20"
     },
     "manualVerification": "Processamento pode levar até 48 horas",
@@ -3398,6 +3425,10 @@
       "zelle": {
         "title": "Zelle",
         "description": "Pague via transferência Zelle"
+      },
+      "parcelow": {
+        "title": "Parcelow",
+        "description": "Pague com cartão brasileiro em até 21x"
       }
     }
   },
@@ -3439,6 +3470,10 @@
         "title": "Zelle",
         "description": "Pague via transferência Zelle",
         "descriptionDetailed": "Pague via Zelle"
+      },
+      "parcelow": {
+        "title": "Parcelow",
+        "description": "Pague com cartão brasileiro em até 21x"
       },
       "cancel": "Cancelar"
     },
@@ -3745,111 +3780,5 @@
     "3800Expired": "Esta bolsa não está mais aceitando candidaturas",
     "3800Expiring": "Últimas horas para se candidatar! Prazo expira amanhã (6 de novembro)",
     "3800ExpiringShort": "Prazo expira amanhã"
-  },
-  "scholarshipsPage": {
-    "filters": {
-      "levels": {
-        "all": "Todos os Níveis",
-        "graduate": "Pós-Graduação",
-        "doctorate": "Doutorado",
-        "undergraduate": "Graduação"
-      },
-      "courseModalities": {
-        "online": "Online",
-        "inPerson": "Presencial",
-        "hybrid": "Híbrido",
-        "mixed": "Misto"
-      },
-      "allFields": "Todas as Áreas",
-      "allLevels": "Todos os Níveis",
-      "allModes": "Todos os Modos",
-      "allPermissions": "Todas as Permissões",
-      "allUniversities": "Todas as Universidades",
-      "anyField": "Qualquer Área",
-      "business": "Negócios",
-      "engineering": "Engenharia",
-      "stem": "STEM",
-      "online": "Online",
-      "inPerson": "Presencial",
-      "hybrid": "Híbrido",
-      "opt": "OPT",
-      "cpt": "CPT",
-      "f1": "Visto F1",
-      "min": "Mín",
-      "max": "Máx",
-      "loading": "Carregando...",
-      "scholarshipsFound": "bolsas encontradas",
-      "university": "Universidade",
-      "universityTooltip": "Crie uma conta e pague a Taxa do Processo Seletivo para filtrar por universidade"
-    },
-    "featuredSection": {
-      "title": "Bolsas em Destaque",
-      "subtitle": "Melhores Oportunidades da Temporada",
-      "description": "Bolsas selecionadas com o melhor valor e maiores taxas de aprovação"
-    },
-    "allScholarships": {
-      "title": "Todas as Bolsas",
-      "description": "Navegue por todas as oportunidades de bolsas disponíveis"
-    },
-    "noResults": {
-      "title": "Nenhuma Bolsa Encontrada",
-      "description": "Tente ajustar seus filtros ou termos de busca para encontrar mais oportunidades.",
-      "clearFilters": "Limpar Filtros"
-    },
-    "pagination": {
-      "page": "Página",
-      "of": "de",
-      "previous": "Anterior",
-      "next": "Próximo"
-    },
-    "modal": {
-      "exclusive": "Exclusiva",
-      "expired": "Expirada",
-      "annualSavings": "Economia Anual",
-      "coverage": "Cobertura",
-      "deadline": "Prazo",
-      "days": "dias",
-      "financialBreakdown": "Detalhes Financeiros",
-      "originalAnnualCost": "Custo Anual Original",
-      "withScholarship": "Com a Bolsa",
-      "costPerCredit": "Custo por Crédito",
-      "additionalBenefits": "Benefícios Adicionais",
-      "programDescription": "Descrição da Bolsa",
-      "programInformation": "Informações da Bolsa",
-      "academicLevel": "Nível Acadêmico",
-      "studyMode": "Modo de Estudo",
-      "programDuration": "Duração da Bolsa",
-      "language": "Idioma",
-      "workAuthorization": "Autorização de Trabalho",
-      "requirements": "Requisitos",
-      "applicationDeadline": "Prazo de Candidatura",
-      "internalFeesNote": "As taxas internas são mostradas apenas após o pagamento da taxa de processo de seleção",
-      "internalFeesTitle": "Taxas Internas da Universidade",
-      "internalFeesDisclaimer": "Estas taxas são pagas diretamente à universidade, não através da nossa plataforma",
-      "internalFeesAvailable": "Taxas Internas da Universidade Disponíveis",
-      "internalFeesNotice": "Esta bolsa pode ter taxas internas adicionais da universidade. Essas taxas serão visíveis após o pagamento da Taxa de Processo de Seleção.",
-      "anyField": "Qualquer Área",
-      "inPerson": "Presencial",
-      "universityInternalFees": "Taxas Internas da Universidade",
-      "viewUniversityFeesPage": "Ver Página de Taxas da Universidade"
-    },
-    "scholarshipCard": {
-      "applicationFee": "Taxa de Matrícula",
-      "customFee": "Taxa personalizada",
-      "standardFee": "Taxa padrão",
-      "days": "dias",
-      "expired": "Expirada",
-      "university": "Universidade",
-      "studyMode": "Modo de Estudo",
-      "workAuthorization": "Autorização de Trabalho",
-      "financialOverview": "Visão Financeira",
-      "originalPrice": "Preço Original",
-      "withScholarship": "Com a Bolsa",
-      "perCredit": "por crédito",
-      "scholarshipDiscount": "Desconto da Bolsa",
-      "notAvailable": "N/D",
-      "details": "Ver Detalhes",
-      "applyNow": "Candidatar-se"
-    }
   }
 }

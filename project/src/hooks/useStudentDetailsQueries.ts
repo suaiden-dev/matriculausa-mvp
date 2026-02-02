@@ -69,6 +69,7 @@ export function useStudentDetailsQuery(profileId: string | undefined) {
             role,
             seller_referral_code,
             admin_notes,
+            documents_status,
             scholarship_applications (
               id,
               scholarship_id,
@@ -218,6 +219,7 @@ export function useStudentDetailsQuery(profileId: string | undefined) {
         is_locked: applications.some((app: any) => app.status === 'approved'),
         all_applications: applications,
         admin_notes: s.admin_notes,
+        documents_status: s.documents_status || null,
       };
 
       return formatted;

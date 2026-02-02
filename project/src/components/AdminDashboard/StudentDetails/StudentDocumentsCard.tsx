@@ -1,5 +1,6 @@
 import React from 'react';
-import { FileText, Eye, CheckCircle, XCircle } from 'lucide-react';
+import { FileText, Eye, CheckCircle, XCircle, ChevronDown, ChevronUp, Bot } from 'lucide-react';
+import { useDocumentRejectionDetails } from '../../../hooks/useDocumentRejectionDetails';
 
 interface Document {
   type: string;
@@ -28,6 +29,8 @@ interface Application {
 }
 
 interface StudentDocumentsCardProps {
+  studentId?: string;
+  documentsStatus?: string | null;
   applications: Application[];
   expandedApps: Record<string, boolean>;
   canPlatformAdmin: boolean;
@@ -51,6 +54,7 @@ interface StudentDocumentsCardProps {
  * Shows all applications with expandable document lists
  */
 const StudentDocumentsCard: React.FC<StudentDocumentsCardProps> = React.memo(({
+  studentId,
   applications,
   expandedApps,
   canPlatformAdmin,
@@ -68,6 +72,12 @@ const StudentDocumentsCard: React.FC<StudentDocumentsCardProps> = React.memo(({
   onApproveApplication,
   onRejectApplication,
 }) => {
+  const [expandedAI, setExpandedAI] = React.useState<Record<string, boolean>>({});
+  const { rejectionDetails } = useDocumentRejectionDetails(studentId);
+
+  const toggleAI = (id: string) => {
+    setExpandedAI(prev => ({ ...prev, [id]: !prev[id] }));
+  };
   if (applications.length === 0) {
     return (
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
@@ -308,6 +318,43 @@ const StudentDocumentsCard: React.FC<StudentDocumentsCardProps> = React.memo(({
                               )}
                             </div>
 
+                            {/* Detalhes de Rejeição da IA - Dropdown em Cinza */}
+                            {(() => {
+                              const docTypeKey = doc.type.toLowerCase() as keyof typeof rejectionDetails;
+                              const aiError = rejectionDetails ? (rejectionDetails[docTypeKey] as string) : null;
+                              
+                              if (!aiError) return null;
+                              
+                              const aiId = `${app.id}-${doc.type}-ai`;
+                              const isAIExpanded = expandedAI[aiId];
+
+                              return (
+                                <div className="mt-2 border border-slate-200 rounded-md overflow-hidden bg-slate-50/50">
+                                  <button 
+                                    onClick={() => toggleAI(aiId)}
+                                    className="w-full flex items-center justify-between px-3 py-1.5 hover:bg-slate-100 transition-colors"
+                                  >
+                                    <div className="flex items-center space-x-2 text-slate-500">
+                                      <Bot className="w-3 h-3" />
+                                      <span className="text-[10px] font-medium uppercase tracking-wider">AI Analysis</span>
+                                    </div>
+                                    {isAIExpanded ? (
+                                      <ChevronUp className="w-3 h-3 text-slate-400" />
+                                    ) : (
+                                      <ChevronDown className="w-3 h-3 text-slate-400" />
+                                    )}
+                                  </button>
+                                  {isAIExpanded && (
+                                    <div className="px-3 py-2 border-t border-slate-200 bg-white">
+                                      <p className="text-xs text-slate-500 leading-relaxed italic">
+                                        "{aiError}"
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })()}
+
                             {/* Exibir justificativa quando status for "changes_requested" */}
                             {doc.status === 'changes_requested' && doc.review_notes && (
                               <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
@@ -430,6 +477,8 @@ const StudentDocumentsCard: React.FC<StudentDocumentsCardProps> = React.memo(({
   
   return (
     !appsChanged &&
+    prevProps.studentId === nextProps.studentId &&
+    prevProps.documentsStatus === nextProps.documentsStatus &&
     JSON.stringify(prevProps.expandedApps) === JSON.stringify(nextProps.expandedApps) &&
     JSON.stringify(prevProps.uploadingDocs) === JSON.stringify(nextProps.uploadingDocs) &&
     JSON.stringify(prevProps.approvingDocs) === JSON.stringify(nextProps.approvingDocs) &&

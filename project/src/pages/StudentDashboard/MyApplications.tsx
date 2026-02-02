@@ -2059,6 +2059,7 @@ const MyApplications: React.FC = () => {
           onStripeCheckout={handleStripeCheckout}
           onPixCheckout={handlePixCheckout}
           isProcessing={isProcessingCheckout}
+          applicationId={pendingApplication.id}
         />
       )}
 
@@ -2072,6 +2073,7 @@ const MyApplications: React.FC = () => {
           onPixCheckout={handleScholarshipFeePixCheckout}
           isProcessing={isProcessingScholarshipFeeCheckout}
           feeType="scholarship_fee"
+          applicationId={pendingScholarshipFeeApplication.id}
         />
       )}
       </div>

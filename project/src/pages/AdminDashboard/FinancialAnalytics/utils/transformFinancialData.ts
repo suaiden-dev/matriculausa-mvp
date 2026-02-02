@@ -526,9 +526,11 @@ export async function transformFinancialData(
 
   const paymentRecords: any[] = [];
   
+  // Inicializar métodos fixos para garantis que apareçam mesmo que zerados
   const paymentsByMethod: Record<string, { count: number; revenue: number }> = {
     'stripe': { count: 0, revenue: 0 },
     'zelle': { count: 0, revenue: 0 },
+    'parcelow': { count: 0, revenue: 0 },
     'manual': { count: 0, revenue: 0 }
   };
 
@@ -586,18 +588,18 @@ export async function transformFinancialData(
   const paidRecords = paymentRecords.filter(p => p.status === 'paid');
   const studentRevenue = paidRecords.reduce((sum, p) => sum + p.amount, 0);
 
-  // Processar dados por método de pagamento
+  // Processar dados por método de pagamento (dinamicamente)
   paidRecords.forEach(record => {
     const method = record.payment_method || 'manual';
     // Mapear 'pix' para 'stripe' (Pix é processado via Stripe)
     const normalizedMethod = method === 'pix' ? 'stripe' : method;
-    if (paymentsByMethod[normalizedMethod]) {
-      paymentsByMethod[normalizedMethod].count++;
-      paymentsByMethod[normalizedMethod].revenue += record.amount;
-    } else {
-      paymentsByMethod['manual'].count++;
-      paymentsByMethod['manual'].revenue += record.amount;
+    
+    if (!paymentsByMethod[normalizedMethod]) {
+      paymentsByMethod[normalizedMethod] = { count: 0, revenue: 0 };
     }
+    
+    paymentsByMethod[normalizedMethod].count++;
+    paymentsByMethod[normalizedMethod].revenue += record.amount;
   });
 
   // Processar dados por tipo de taxa
@@ -634,12 +636,32 @@ export async function transformFinancialData(
       universityPayouts: 0,
       affiliatePayouts: 0
     },
-    paymentMethodData: Object.entries(paymentsByMethod).map(([method, data]) => ({
-      method: method === 'stripe' ? 'Stripe' : method === 'zelle' ? 'Zelle' : 'Outside',
-      count: data.count,
-      revenue: data.revenue,
-      percentage: totalMethodRevenue > 0 ? (data.revenue / totalMethodRevenue) * 100 : 0
-    })),
+    paymentMethodData: Object.entries(paymentsByMethod).map(([method, data]) => {
+      let displayName: string;
+      switch (method) {
+        case 'stripe':
+          displayName = 'Stripe';
+          break;
+        case 'zelle':
+          displayName = 'Zelle';
+          break;
+        case 'parcelow':
+          displayName = 'Parcelow';
+          break;
+        case 'manual':
+          displayName = 'Outside';
+          break;
+        default:
+          displayName = method.charAt(0).toUpperCase() + method.slice(1);
+      }
+      
+      return {
+        method: displayName,
+        count: data.count,
+        revenue: data.revenue,
+        percentage: totalMethodRevenue > 0 ? (data.revenue / totalMethodRevenue) * 100 : 0
+      };
+    }),
     feeTypeData: Object.entries(paymentsByFeeType).map(([feeType, data]) => ({
       feeType: feeType === 'selection_process' ? 'Selection Process' :
                feeType === 'application' ? 'Application Fee' :
