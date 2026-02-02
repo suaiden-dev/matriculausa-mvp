@@ -1692,7 +1692,7 @@ const MyApplications: React.FC = () => {
                       const statusInfo = getStatusDescription(application);
                       
                       return (
-                        <div key={application.id} className="bg-white rounded-3xl hover:-translate-y-1 transition-all duration-300 border border-slate-100 overflow-hidden group w-full">
+                        <div key={application.id} className="bg-white rounded-3xl hover:-translate-y-1 transition-all duration-300 border border-slate-100 group w-full max-w-full">
                           <div className="p-4 sm:p-6">
                             {/* Compact Mobile Header */}
                             <div className="mb-4">
@@ -1816,13 +1816,13 @@ const MyApplications: React.FC = () => {
                                       <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clipRule="evenodd"/>
                                     </svg>
                                   </button>
-                                  
-                                                                     <div 
-                                     className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                                       openChecklists[application.id] 
-                                         ? 'max-h-[2000px] opacity-100' 
-                                         : 'max-h-0 opacity-0'
-                                     }`}
+
+                                                                     <div
+                                      className={`transition-all duration-300 ease-in-out ${
+                                        openChecklists[application.id]
+                                          ? 'max-h-[5000px] opacity-100'
+                                          : 'max-h-0 opacity-0 overflow-hidden'
+                                      }`}
                                    >
                                      <div className="space-y-3 pt-2">
                                        {/* Required Documents */}
@@ -1834,19 +1834,19 @@ const MyApplications: React.FC = () => {
                                          const isPending = !isApproved && !isRejected && !isUnderReview;
 
                                          return (
-                                           <div key={doc.type} className="bg-white rounded-xl border-2 border-slate-200 p-4 hover:border-slate-300 transition-all duration-200">
-                                             <div className="flex items-start justify-between">
-                                               <div className="flex items-start flex-1">
+                                            <div key={doc.type} className={`bg-white rounded-xl border-2 p-2 sm:p-4 hover:border-slate-300 transition-all duration-200 w-full max-w-full overflow-visible ${isRejected ? 'border-red-500' : 'border-slate-200'}`}>
+                                             <div className="flex items-start justify-between min-w-0 w-full">
+                                               <div className="flex items-start flex-1 min-w-0 w-full">
                                                  {/* Check Icon */}
-                                                 <div className={`flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center mr-3 mt-0.5 transition-all duration-200 ${
-                                                   isApproved 
-                                                     ? 'bg-green-100 border-green-400 text-green-600' 
-                                                     : isRejected 
-                                                       ? 'bg-red-100 border-red-400 text-red-600'
-                                                       : isUnderReview
-                                                         ? 'bg-amber-100 border-amber-400 text-amber-600'
-                                                         : 'bg-slate-100 border-slate-300 text-slate-400'
-                                                 }`}>
+                                                  <div className={`flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center mr-3 mt-0.5 transition-all duration-200 ${
+                                                    isApproved 
+                                                      ? 'bg-green-100 border-green-400 text-green-600' 
+                                                      : isRejected 
+                                                        ? 'bg-red-100 border-red-400 text-red-600'
+                                                        : isUnderReview
+                                                          ? 'bg-amber-100 border-amber-400 text-amber-600'
+                                                          : 'bg-slate-100 border-slate-300 text-slate-400'
+                                                  }`}>
                                                    {isApproved ? (
                                                      <CheckCircle className="h-4 w-4" />
                                                    ) : isRejected ? (
@@ -1859,18 +1859,19 @@ const MyApplications: React.FC = () => {
                                                  </div>
                                                  
                                                  {/* Document Info */}
-                                                 <div className="flex-1 min-w-0 overflow-hidden">
-                                                   <div className="flex items-center justify-between mb-1">
-                                                     <h5 className="font-semibold text-slate-900 text-sm">
+                                                  <div className="flex-1 min-w-0">
+                                                    <div className="flex flex-col gap-1.5 mb-2">
+                                                     <h5 className="font-semibold text-slate-900 text-sm w-full break-words">
                                                        <TruncatedText
                                                          text={doc.label}
                                                          maxLength={30}
                                                          className="font-semibold text-slate-900 text-sm"
                                                          showTooltip={true}
                                                          tooltipPosition="top"
+                                                         breakWords={true}
                                                        />
                                                      </h5>
-                                                     <span className={`px-2 py-1 rounded-full text-xs font-bold border ${
+                                                      <span className={`px-2 py-1 rounded-full text-xs font-bold border break-words inline-block max-w-full ${
                                                        isApproved 
                                                          ? 'bg-green-50 text-green-700 border-green-200' 
                                                          : isRejected 
@@ -1884,35 +1885,37 @@ const MyApplications: React.FC = () => {
                                                    </div>
                                                    
                                                    {/* Review Notes / Rejection Reason */}
-                                                   {isRejected && (doc.rejection_reason || doc.review_notes) && (
-                                                     <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-lg">
-                                                       <p className="text-xs text-red-700">
-                                                         <strong className="block mb-1">{t('studentDashboard.myApplications.documents.review')}</strong>
-                                                         <TruncatedText
-                                                           text={doc.rejection_reason || doc.review_notes || ''}
-                                                           maxLength={120}
-                                                           className="text-xs text-red-700 leading-relaxed"
-                                                           showTooltip={true}
-                                                           tooltipPosition="top"
-                                                         />
-                                                       </p>
-                                                     </div>
-                                                   )}
+                                                    {isRejected && (doc.rejection_reason || doc.review_notes) && (
+                                                      <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-lg w-full max-w-full overflow-hidden">
+                                                        <div className="text-xs text-red-700">
+                                                          <strong className="block mb-1">{t('studentDashboard.myApplications.documents.review')}</strong>
+                                                          <TruncatedText
+                                                            text={doc.rejection_reason || doc.review_notes || ''}
+                                                            maxLength={150}
+                                                            className="text-xs text-red-700 leading-relaxed"
+                                                            showTooltip={true}
+                                                            tooltipPosition="top"
+                                                            breakWords={true}
+                                                          />
+                                                        </div>
+                                                      </div>
+                                                    )}
                                                    
                                                    {/* Upload Action for Rejected Docs */}
                                                    {isRejected && (
                                                      <div className="mt-3 space-y-2">
-                                                       <div className="flex flex-col sm:flex-row gap-2">
+                                                       <div className="flex flex-col gap-2">
                                                          <label className="cursor-pointer bg-gradient-to-r from-blue-50 to-blue-100 text-blue-700 border-2 border-blue-200 hover:from-blue-100 hover:to-blue-200 px-3 py-2 rounded-lg font-semibold transition-all duration-200 flex-1 text-center text-xs hover:shadow-md">
-                                                           <span className="block">
-                                                             <TruncatedText
-                                                               text={`${t('studentDashboard.myApplications.documents.sendNew')} ${doc.label}`}
-                                                               maxLength={40}
-                                                               className="text-xs font-semibold"
-                                                               showTooltip={true}
-                                                               tooltipPosition="top"
-                                                             />
-                                                           </span>
+                                                            <span className="block break-words">
+                                                              <TruncatedText
+                                                                text={`${t('studentDashboard.myApplications.documents.sendNew')} ${doc.label}`}
+                                                                maxLength={50}
+                                                                className="text-xs font-semibold"
+                                                                showTooltip={true}
+                                                                tooltipPosition="top"
+                                                                breakWords={true}
+                                                              />
+                                                            </span>
                                                            <input
                                                              type="file"
                                                              className="sr-only"
@@ -1920,8 +1923,8 @@ const MyApplications: React.FC = () => {
                                                              onChange={(e) => handleSelectDocFile(application.id, doc.type, e.target.files ? e.target.files[0] : null)}
                                                            />
                                                          </label>
-                                                         <button
-                                                           className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 text-white px-3 py-2 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:from-blue-700 hover:to-blue-800 text-xs whitespace-nowrap"
+                                                          <button
+                                                            className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 text-white px-3 py-2 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:from-blue-700 hover:to-blue-800 text-xs break-words"
                                                            disabled={!selectedFiles[docKey(application.id, doc.type)] || uploading[docKey(application.id, doc.type)]}
                                                            onClick={() => handleUploadDoc(application.id, doc.type)}
                                                          >
@@ -1975,8 +1978,8 @@ const MyApplications: React.FC = () => {
                                                
                                                return (
                                                  <div key={idx} className="bg-white rounded-lg border border-slate-200 p-3">
-                                                   <div className="flex items-center justify-between">
-                                                     <div className="flex items-center">
+                                                    <div className="flex flex-col gap-1.5">
+                                                      <div className="flex items-center">
                                                        <div className={`w-4 h-4 rounded-full border flex items-center justify-center mr-2 ${
                                                          isApproved 
                                                            ? 'bg-green-100 border-green-400' 
