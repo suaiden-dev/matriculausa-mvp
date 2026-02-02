@@ -12,9 +12,9 @@ const SelectionProcessFeeSuccess: React.FC = () => {
   const location = useLocation();
   const params = new URLSearchParams(location.search);
   const sessionId = params.get('session_id');
-  const reference = params.get('reference'); // Parcelow
-  const paymentMethod = params.get('payment_method'); // 'parcelow' ou undefined
-  const isPixPayment = params.get('pix_payment') === 'true';
+  const reference = params.get('reference') || params.get('ref'); // Parcelow
+  const paymentMethod = params.get('payment_method') || (params.get('pm') === 'p' ? 'parcelow' : params.get('pm')); // 'parcelow'
+  const isPixPayment = params.get('pix_payment') === 'true' || params.get('pm') === 'pix';
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAnimation, setShowAnimation] = useState(false);
@@ -23,8 +23,8 @@ const SelectionProcessFeeSuccess: React.FC = () => {
   const [hasVerified, setHasVerified] = useState(false);
   const { t } = useTranslation();
   const [paidAmount, setPaidAmount] = useState<number | null>(null);
-  const [promotionalCoupon, setPromotionalCoupon] = useState<string | null>(null);
   const { user } = useAuth();
+  const hasRunRef = useRef(false);
 
   // Função para fazer polling do status do PIX (otimizada para webhook)
   const pollPixPaymentStatus = async () => {
@@ -75,9 +75,6 @@ const SelectionProcessFeeSuccess: React.FC = () => {
           setPaidAmount(data.final_amount);
         } else if (data.amount_paid) {
           setPaidAmount(data.amount_paid);
-        }
-        if (data.promotional_coupon) {
-          setPromotionalCoupon(data.promotional_coupon);
         }
         
         // Verificar se há erro de sessão não encontrada
@@ -331,9 +328,6 @@ const SelectionProcessFeeSuccess: React.FC = () => {
         } else if (data.amount_paid) {
           setPaidAmount(data.amount_paid);
         }
-        if (data.promotional_coupon) {
-          setPromotionalCoupon(data.promotional_coupon);
-        }
         
         // Verificar se há erro de sessão não encontrada
         if (data.error && data.error.includes('Session not found')) {
@@ -437,7 +431,7 @@ const SelectionProcessFeeSuccess: React.FC = () => {
             : t('successPages.selectionProcessFee.errorTitle')
           }
           message={animationSuccess
-            ? t('successPages.common.paymentProcessedAmount')
+            ? t('successPages.selectionProcessFee.description', { amount: paidAmount ? `$${paidAmount}` : '' })
             : t('successPages.common.paymentError')
           }
         />

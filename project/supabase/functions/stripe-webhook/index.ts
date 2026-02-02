@@ -916,6 +916,7 @@ async function handleCheckoutSessionCompleted(session: any, stripe: any) {
       // Atualizar também o perfil do usuário para manter consistência
       const { error: profileUpdateError } = await supabase.from('user_profiles').update({
         is_application_fee_paid: true,
+        application_fee_paid_at: new Date().toISOString(),
         last_payment_date: new Date().toISOString(),
         updated_at: new Date().toISOString()
       }).eq('user_id', finalUserId);
@@ -1159,6 +1160,7 @@ async function handleCheckoutSessionCompleted(session: any, stripe: any) {
         // Atualizar também o perfil do usuário para manter consistência
         const { error: profileUpdateError } = await supabase.from('user_profiles').update({
           is_scholarship_fee_paid: true,
+          scholarship_fee_paid_at: new Date().toISOString(),
           last_payment_date: new Date().toISOString(),
           updated_at: new Date().toISOString()
         }).eq('user_id', userId);
@@ -1538,24 +1540,13 @@ async function handleCheckoutSessionCompleted(session: any, stripe: any) {
         console.log(`[stripe-webhook] User profile found: ${userProfile.id} for auth user: ${userId}`);
         
         // Atualizar scholarship_applications para marcar I20 control fee como pago
-        const { error: appError } = await supabase.from('scholarship_applications').update({
-          is_i20_control_fee_paid: true,
-          payment_status: 'paid',
-          paid_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }).eq('student_id', userProfile.id);
-        
-        if (appError) {
-          console.error('[stripe-webhook] Error updating scholarship_applications for I20 control fee:', appError);
-        } else {
-          console.log('[stripe-webhook] Scholarship applications updated - I20 control fee paid');
-        }
+        console.log('[stripe-webhook] I20 control fee payment processed for user:', userId);
         
         // Atualizar também o perfil do usuário para manter consistência
         const i20PaymentMethod = metadata?.payment_method || 'stripe';
         const { error: profileUpdateError } = await supabase.from('user_profiles').update({
           has_paid_i20_control_fee: true,
-          i20_control_fee_due_date: new Date().toISOString(),
+          i20_paid_at: new Date().toISOString(),
           i20_control_fee_payment_intent_id: sessionData.payment_intent,
           i20_control_fee_payment_method: i20PaymentMethod,
           last_payment_date: new Date().toISOString(),
@@ -1620,6 +1611,7 @@ async function handleCheckoutSessionCompleted(session: any, stripe: any) {
       const selectionPaymentMethod = metadata?.payment_method || 'stripe';
       const { error } = await supabase.from('user_profiles').update({
         has_paid_selection_process_fee: true,
+        selection_process_paid_at: new Date().toISOString(),
         selection_process_fee_payment_method: selectionPaymentMethod,
         updated_at: new Date().toISOString()
       }).eq('user_id', userId);

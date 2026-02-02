@@ -66,6 +66,7 @@ const ApplicationChatPage: React.FC = () => {
   } | null>(null);
   // Estado para valor real pago do I-20 (incluindo descontos)
   const [realI20PaidAmount, setRealI20PaidAmount] = useState<number | null>(null);
+  const [realI20PaymentDate, setRealI20PaymentDate] = useState<string | null>(null);
   
   // Estados para controlar document requests (removidos - não mais utilizados)
 
@@ -258,7 +259,7 @@ const ApplicationChatPage: React.FC = () => {
       try {
         const { data: payments, error } = await supabase
           .from('individual_fee_payments')
-          .select('amount, gross_amount_usd')
+          .select('amount, gross_amount_usd, payment_date, created_at')
           .eq('user_id', user.id)
           .eq('fee_type', 'i20_control')
           .order('created_at', { ascending: false })
@@ -277,8 +278,10 @@ const ApplicationChatPage: React.FC = () => {
             ? parseFloat(payments.gross_amount_usd.toString())
             : parseFloat(payments.amount.toString());
           setRealI20PaidAmount(displayAmount);
+          setRealI20PaymentDate(payments.payment_date || payments.created_at || null);
         } else {
           setRealI20PaidAmount(null);
+          setRealI20PaymentDate(null);
         }
       } catch (error) {
         console.error('[ApplicationChatPage] Erro inesperado ao buscar valor pago do I-20:', error);
@@ -316,7 +319,7 @@ const ApplicationChatPage: React.FC = () => {
   // Lógica de exibição do card
   const hasPaid = !!(userProfile && (userProfile as any).has_paid_i20_control_fee);
   const dueDate = (userProfile && (userProfile as any).i20_control_fee_due_date) || null;
-  const paymentDate = (userProfile && (userProfile as any).i20_control_fee_due_date) || null;
+  const paymentDate = realI20PaymentDate || (userProfile && (userProfile as any).i20_paid_at) || null;
 
   // Função para iniciar o pagamento do I-20 Control Fee
   const handlePayI20 = async () => {

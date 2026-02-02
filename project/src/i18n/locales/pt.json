@@ -2730,12 +2730,32 @@
     "i20ControlFee": "Taxa de Controle I-20 - Processamento e validação de documentos"
   },
   "paymentSelector": {
-    "title": "Escolher Método de Pagamento",
-    "subtitle": "Selecione como deseja pagar sua {{feeType}}",
+    "title": "Escolha o Método de Pagamento",
+    "subtitle": "Selecione como você deseja pagar sua taxa de {{feeType}}",
     "amount": "Valor",
     "loading": {
       "message": "Carregando métodos de pagamento...",
-      "processing": "Processando..."
+      "processing": "Processando pagamento..."
+    },
+    "promotionalCoupon": {
+      "label": "Cupom Promocional",
+      "placeholder": "INSIRA O CÓDIGO",
+      "validate": "Validar",
+      "validating": "Validando...",
+      "success": "Cupom aplicado com sucesso!",
+      "invalid": "Cupom inválido ou expirado.",
+      "error": "Erro ao validar cupom.",
+      "validated": "Validado",
+      "remove": "Remover cupom",
+      "original": "original",
+      "withDiscount": "com desconto",
+      "discountAmount": "de desconto",
+      "applied": "Cupom {{code}} aplicado! Desconto de ${{amount}} aplicado.",
+      "errors": {
+        "invalid": "Código de cupom inválido",
+        "generic": "Erro ao validar cupom. Verifique sua conexão e tente novamente.",
+        "cpfRequired": "CPF é obrigatório para pagamento via Parcelow. Por favor, atualize seu perfil."
+      }
     },
     "methods": {
       "stripe": {
@@ -2757,33 +2777,16 @@
       }
     },
     "feeTypes": {
-      "selection_process": "taxa de processo de seleção",
-      "application_fee": "taxa de matrícula",
-      "scholarship_fee": "taxa de bolsa",
-      "enrollment_fee": "taxa de matrícula",
+      "selection_process": "processo seletivo",
+      "application_fee": "matrícula",
+      "enrollment_fee": "matrícula",
+      "scholarship_fee": "bolsa",
       "i20_control_fee": "taxa de controle I-20"
     },
     "manualVerification": "Processamento pode levar até 48 horas",
     "important": "Importante:",
     "zelleUploadNote": "Após o pagamento via Zelle, você precisará enviar o comprovante para verificação manual.",
-    "includesProcessingFees": "* Inclui taxas de processamento",
-    "promotionalCoupon": {
-      "title": "Cupom Promocional",
-      "placeholder": "Digite o código",
-      "validate": "Validar",
-      "validating": "Validando...",
-      "validated": "Validado",
-      "remove": "Remover cupom",
-      "original": "original",
-      "withDiscount": "com desconto",
-      "discountAmount": "de desconto",
-      "applied": "Cupom {{code}} aplicado! Desconto de ${{amount}} aplicado.",
-      "errors": {
-        "invalid": "Código de cupom inválido",
-        "generic": "Erro ao validar cupom. Verifique sua conexão e tente novamente.",
-        "cpfRequired": "CPF é obrigatório para pagamento via Parcelow. Por favor, atualize seu perfil."
-      }
-    }
+    "includesProcessingFees": "* Inclui taxas de processamento"
   },
   "preCheckoutModal": {
     "securePayment": "Pagamento Seguro",

@@ -2691,19 +2691,30 @@
   "paymentSelector": {
     "title": "Choose Payment Method",
     "subtitle": "Select how you would like to pay your {{feeType}} fee",
-    "manualVerification": "Processing may take up to 48 hours",
-    "important": "Important:",
-    "zelleUploadNote": "After making the Zelle payment, you'll need to upload a screenshot of the confirmation showing the confirmation code, date, amount, and recipient.",
+    "amount": "Amount",
     "loading": {
       "message": "Loading payment methods...",
-      "processing": "Processing..."
+      "processing": "Processing payment..."
     },
-    "feeTypes": {
-      "selection_process": "selection process",
-      "application_fee": "application",
-      "enrollment_fee": "enrollment",
-      "scholarship_fee": "scholarship",
-      "i20_control_fee": "I-20 control"
+    "promotionalCoupon": {
+      "label": "Promotional Coupon",
+      "placeholder": "ENTER CODE",
+      "validate": "Validate",
+      "validating": "Validating...",
+      "success": "Coupon applied successfully!",
+      "invalid": "Invalid or expired coupon.",
+      "error": "Error validating coupon.",
+      "validated": "Validated",
+      "remove": "Remove coupon",
+      "original": "original",
+      "withDiscount": "with discount",
+      "discountAmount": "discount",
+      "applied": "Coupon {{code}} applied! ${{amount}} discount applied.",
+      "errors": {
+        "invalid": "Invalid coupon code",
+        "generic": "Error validating coupon. Check your connection and try again.",
+        "cpfRequired": "CPF is required for Parcelow payment. Please update your profile."
+      }
     },
     "methods": {
       "stripe": {
@@ -2724,30 +2735,17 @@
         "descriptionDetailed": "Pay via Zelle and upload the receipt (24-48h)."
       }
     },
-    "includesProcessingFees": "* Includes processing fees",
-    "promotionalCoupon": {
-      "title": "Promotional Coupon",
-      "placeholder": "Enter code",
-      "validate": "Validate",
-      "validating": "Validating...",
-      "validated": "Validated",
-      "remove": "Remove coupon",
-      "original": "original",
-      "withDiscount": "with discount",
-      "discountAmount": "discount",
-      "applied": "Coupon {{code}} applied! ${{amount}} discount applied.",
-      "errors": {
-        "invalid": "Invalid coupon code",
-        "generic": "Error validating coupon. Check your connection and try again.",
-        "cpfRequired": "CPF is required for Parcelow payment. Please update your profile."
-      }
+    "feeTypes": {
+      "selection_process": "selection process",
+      "application_fee": "enrollment",
+      "enrollment_fee": "enrollment",
+      "scholarship_fee": "scholarship",
+      "i20_control_fee": "I-20 control fee"
     },
-    "pix": {
-      "baseAmount": "Base amount",
-      "iofFee": "IOF Fee",
-      "totalDue": "Total due",
-      "iofNote": "This is an international purchase. IOF of 3.5% will be added by Stripe."
-    }
+    "manualVerification": "Processing may take up to 48 hours",
+    "important": "Important:",
+    "zelleUploadNote": "After making the Zelle payment, you'll need to upload a screenshot of the confirmation showing the confirmation code, date, amount, and recipient.",
+    "includesProcessingFees": "* Includes processing fees"
   },
   "preCheckoutModal": {
     "securePayment": "Secure Payment",

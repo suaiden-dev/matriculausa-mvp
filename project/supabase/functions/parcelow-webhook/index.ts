@@ -499,7 +499,7 @@ function formatAmountWithCurrency(amount: number, currency: string = 'USD'): str
   return `${symbol}${amount.toFixed(2)}`;
 }
 
-Deno.serve(async (req) => {
+Deno.serve(async (req: Request) => {
   try {
     console.log('[parcelow-webhook] 🚀 Recebido webhook da Parcelow');
     
@@ -543,7 +543,7 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Failed to find user' }), { status: 500 });
     }
     
-    const user = authUser.users.find(u => u.email === clientEmail);
+    const user = authUser.users.find((u: any) => u.email === clientEmail);
     
     if (!user) {
       console.error('[parcelow-webhook] ❌ Usuário não encontrado para email:', clientEmail);
@@ -602,17 +602,52 @@ Deno.serve(async (req) => {
     }
 
     // 3. Extrair amounts do pedido Parcelow (em centavos USD)
-    const netAmount = parcelowOrder.order_amount ? (parcelowOrder.order_amount / 100) : (payment?.amount || 0);
-    const grossAmount = parcelowOrder.total_usd ? (parcelowOrder.total_usd / 100) : netAmount;
-    const feeAmountUSD = Math.max(0, grossAmount - netAmount);
+    const netAmount = (parcelowOrder.order_amount || parcelowOrder.net_amount || (parcelowOrder.items?.[0]?.amount)) 
+      ? ((parcelowOrder.order_amount || parcelowOrder.net_amount || parcelowOrder.items?.[0]?.amount) / 100) 
+      : (payment?.amount || 0);
+    
+    // O total_usd da Parcelow inclui as taxas cobradas do merchant (nós).
+    // Para registrar o valor que o aluno REALMENTE pagou (bruto no checkout),
+    // subtraímos a service_tax e merchant_tax do total_usd.
+    const rawTotalUsd = parcelowOrder.total_usd || parcelowOrder.totalUsd || parcelowOrder.total_amount_usd || 0;
+    const rawGrossAmount = rawTotalUsd ? (rawTotalUsd / 100) : netAmount;
+    
+    const serviceFee = (
+      parcelowOrder.service_tax || 
+      parcelowOrder.service_tax_usd || 
+      parcelowOrder.service_fee || 
+      parcelowOrder.serviceTax || 
+      0
+    ) / 100;
+    
+    const merchantFee = (
+      parcelowOrder.merchant_tax || 
+      parcelowOrder.merchant_tax_usd || 
+      parcelowOrder.merchant_fee || 
+      parcelowOrder.merchantTax || 
+      0
+    ) / 100;
+    
+    // Valor bruto que o aluno viu na tela (Preço + IOF + Taxas de Serviço)
+    // Subtraímos apenas as taxas que são custo exclusivo do merchant/plataforma
+    const grossAmount = rawTotalUsd 
+      ? Number((rawGrossAmount - merchantFee).toFixed(2))
+      : netAmount;
+      
+    const feeAmountUSD = Number(Math.max(0, grossAmount - netAmount).toFixed(2));
     
     // Manter paymentAmount para compatibilidade com o resto do código
     const paymentAmount = netAmount;
 
-    console.log('[parcelow-webhook] 💰 Valores:', {
-      liquido: netAmount,
-      bruto: grossAmount,
-      taxas: feeAmountUSD
+    console.log('[parcelow-webhook] 💰 Valores detalhados:', {
+      raw_total_usd: rawTotalUsd,
+      raw_gross_amount: rawGrossAmount,
+      service_fee: serviceFee,
+      merchant_fee: merchantFee,
+      liquido_final: netAmount,
+      bruto_final: grossAmount,
+      taxa_aluno: feeAmountUSD,
+      order_id: parcelowOrder.id || parcelowOrder.order_id
     });
 
     // 4. Mapear status
@@ -656,17 +691,20 @@ Deno.serve(async (req) => {
     if (reference.startsWith('app_fee_') || reference.startsWith('applicatio_') || reference.startsWith('app_')) {
       feeType = 'application_fee';
     } else if (reference.startsWith('sp_') || reference.startsWith('selection_')) {
-      feeType = 'selection_process_fee';
+      feeType = 'selection_process';
     } else if (reference.startsWith('sf_') || reference.startsWith('scholarship_') || reference.startsWith('scholarshi_')) {
       feeType = 'scholarship_fee';
     } else if (reference.startsWith('i20_')) {
-      feeType = 'i20_control_fee';
+      feeType = 'i20_control';
     } else {
       // Fallback para metadata se existir
       const metaFee = parcelowOrder.metadata?.fee_type;
       if (metaFee) {
-        if (metaFee === 'application_fee' || metaFee === 'selection_process' || metaFee === 'scholarship_fee' || metaFee === 'i20_control_fee') {
-          feeType = metaFee === 'selection_process' ? 'selection_process_fee' : metaFee;
+        if (metaFee === 'application_fee' || metaFee === 'selection_process' || metaFee === 'scholarship_fee' || metaFee === 'i20_control' || metaFee === 'i20_control_fee') {
+           // Normalizar para nomes padrão
+           if (metaFee === 'i20_control_fee') feeType = 'i20_control';
+           else if (metaFee === 'selection_process_fee') feeType = 'selection_process';
+           else feeType = metaFee;
         }
       }
     }
@@ -1284,10 +1322,13 @@ Deno.serve(async (req) => {
             // b) NOTIFICAÇÃO PARA SELLER
             // Define tipo_notf para seller baseado no fee_type
             let tipoNotfSeller = `Pagamento Parcelow de ${feeType} confirmado - Seller`;
+            let oQueEnviarSeller = `Parabéns! Seu aluno ${userProfile.full_name} pagou a taxa ${feeType} no valor de ${formattedAmount} via Parcelow. Sua comissão será calculada em breve.`;
+
             if (feeType === 'scholarship_fee') {
               tipoNotfSeller = 'Pagamento Parcelow de scholarship_fee confirmado - Seller';
             } else if (feeType === 'i20_control' || feeType === 'i20_control_fee') {
-              tipoNotfSeller = 'Pagamento Parcelow de i20_control_fee confirmado - Seller';
+              tipoNotfSeller = "Pagamento Parcelow de I-20 Control Fee confirmado - Seller";
+              oQueEnviarSeller = `Parabéns! Seu aluno ${userProfile.full_name} pagou a taxa I-20 Control Fee no valor de ${formattedAmount} via Parcelow. Sua comissão será calculada em breve.`;
             } else if (feeType === 'application_fee' || feeType === 'application') {
               tipoNotfSeller = 'Pagamento Parcelow de application_fee confirmado - Seller';
             } else if (feeType === 'selection_process') {
@@ -1307,7 +1348,7 @@ Deno.serve(async (req) => {
               phone_seller: sellerPhone,
               email_aluno: userProfile.email,
               nome_aluno: userProfile.full_name,
-              o_que_enviar: `Parabéns! Seu aluno ${userProfile.full_name} pagou a taxa ${feeType} no valor de ${formattedAmount} via Parcelow. Sua comissão será calculada em breve.`,
+              o_que_enviar: oQueEnviarSeller,
               payment_id: String(parcelowOrder.id),
               fee_type: feeType,
               amount: paymentAmount,
@@ -1364,10 +1405,13 @@ Deno.serve(async (req) => {
             if (affiliateAdminData.email) {
               // Define tipo_notf para affiliate admin baseado no fee_type
               let tipoNotfAffiliate = `Pagamento Parcelow de ${feeType} confirmado - Affiliate Admin`;
+              let oQueEnviarAffiliate = `O seller ${sellerData.name} (${sellerData.referral_code}) do seu afiliado teve um pagamento de ${feeType} no valor de ${formattedAmount} do aluno ${userProfile.full_name} via Parcelow.`;
+
               if (feeType === 'scholarship_fee') {
                 tipoNotfAffiliate = 'Pagamento Parcelow de scholarship_fee confirmado - Affiliate Admin';
               } else if (feeType === 'i20_control' || feeType === 'i20_control_fee') {
-                tipoNotfAffiliate = 'Pagamento Parcelow de i20_control_fee confirmado - Affiliate Admin';
+                tipoNotfAffiliate = "Pagamento Parcelow de I-20 Control Fee confirmado - Affiliate Admin";
+                oQueEnviarAffiliate = `O seller ${sellerData.name} (${sellerData.referral_code}) do seu afiliado teve um pagamento de I-20 Control Fee no valor de ${formattedAmount} do aluno ${userProfile.full_name} via Parcelow.`;
               } else if (feeType === 'application_fee' || feeType === 'application') {
                 tipoNotfAffiliate = 'Pagamento Parcelow de application_fee confirmado - Affiliate Admin';
               } else if (feeType === 'selection_process') {
