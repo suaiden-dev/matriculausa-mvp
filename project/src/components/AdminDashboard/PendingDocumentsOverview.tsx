@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
+import { channelManager } from '../../lib/supabaseChannelManager';
 import {
     FileText,
     Files,
@@ -126,6 +127,55 @@ const PendingDocumentsOverview: React.FC = () => {
         return `/admin/dashboard/student/${fallbackId}`;
     };
 
+    // Real-time subscriptions para atualizar automaticamente quando novos documentos chegam
+    useEffect(() => {
+        const channelName = 'admin-pending-documents';
+
+        channelManager.subscribe(channelName)
+            // Escutar mudanças em student_documents
+            .on(
+                'postgres_changes',
+                {
+                    event: '*', // INSERT, UPDATE, DELETE
+                    schema: 'public',
+                    table: 'student_documents',
+                    filter: 'status=eq.pending'
+                },
+                () => {
+                    // Recarregar documentos quando houver mudanças
+                    fetchStudentDocuments();
+                }
+            )
+            // Escutar mudanças em document_request_uploads
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'document_request_uploads'
+                },
+                (payload: any) => {
+                    // Só recarregar se o status for pending ou under_review
+                    const newStatus = payload.new?.status;
+                    const oldStatus = payload.old?.status;
+
+                    if (
+                        newStatus === 'pending' ||
+                        newStatus === 'under_review' ||
+                        oldStatus === 'pending' ||
+                        oldStatus === 'under_review'
+                    ) {
+                        fetchDocumentRequests();
+                    }
+                }
+            );
+
+        // Cleanup: remover subscription quando componente desmontar
+        return () => {
+            channelManager.unsubscribe(channelName);
+        };
+    }, []); // Array vazio = executar apenas uma vez ao montar
+
     const currentLoading = activeTab === 'student_documents' ? loading.studentDocuments : loading.documentRequests;
     const currentCount = activeTab === 'student_documents' ? studentDocuments.length : documentRequests.length;
 
@@ -148,8 +198,8 @@ const PendingDocumentsOverview: React.FC = () => {
                         <button
                             onClick={() => setActiveTab('student_documents')}
                             className={`pb-4 text-sm font-medium border-b-2 transition-colors flex items-center ${activeTab === 'student_documents'
-                                    ? 'border-indigo-600 text-indigo-600'
-                                    : 'border-transparent text-slate-500 hover:text-slate-700'
+                                ? 'border-indigo-600 text-indigo-600'
+                                : 'border-transparent text-slate-500 hover:text-slate-700'
                                 }`}
                         >
                             Student Documents
@@ -162,8 +212,8 @@ const PendingDocumentsOverview: React.FC = () => {
                         <button
                             onClick={() => setActiveTab('document_requests')}
                             className={`pb-4 text-sm font-medium border-b-2 transition-colors flex items-center ${activeTab === 'document_requests'
-                                    ? 'border-indigo-600 text-indigo-600'
-                                    : 'border-transparent text-slate-500 hover:text-slate-700'
+                                ? 'border-indigo-600 text-indigo-600'
+                                : 'border-transparent text-slate-500 hover:text-slate-700'
                                 }`}
                         >
                             Documents Requests
