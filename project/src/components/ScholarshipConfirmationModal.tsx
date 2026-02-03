@@ -170,9 +170,6 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
     return final;
   }, [feeType, scholarship, getFeeAmountFromConfig, userProfile]);
   
-  // Verificar se o usuário pode usar cupom promocional
-  const hasSellerReferralCode = userProfile?.seller_referral_code && userProfile.seller_referral_code.trim() !== '';
-  const isLegacySystem = userProfile?.system_type === 'legacy';
   // ✅ SEMPRE permitir uso de cupom promocional (campo sempre visível)
   const canUsePromotionalCoupon = true;
   
@@ -932,13 +929,29 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
                     <ParcelowIcon className="w-10 h-10 sm:w-11 sm:h-11 shadow-sm" />
                   </div>
                   <div className="min-w-0">
-                    <div className="font-medium text-gray-900 text-sm sm:text-base">{t('scholarshipConfirmationModal.payment.parcelow.title')}</div>
-                    <div className="text-xs sm:text-sm text-gray-600">{t('scholarshipConfirmationModal.payment.parcelow.description')}</div>
+                    <div className="font-medium text-gray-900 text-sm sm:text-base">
+                      {t('scholarshipConfirmationModal.payment.parcelow.title')}
+                    </div>
+                    <div className="text-xs sm:text-sm text-gray-600">
+                      {t('scholarshipConfirmationModal.payment.parcelow.description')}
+                    </div>
+                    <div className="text-xs text-gray-400 mt-0.5">
+                      {t('paymentSelector.parcelowFeesNote')}
+                    </div>
                   </div>
                 </div>
-                <span className="text-sm font-semibold text-blue-700 whitespace-nowrap">
-                  ${feeAmount.toFixed(2)}
-                </span>
+                <div className="flex flex-col items-end flex-shrink-0 ml-auto">
+                  <span className="text-sm font-semibold text-blue-700 whitespace-nowrap">
+                    ${feeAmount.toFixed(2)}
+                  </span>
+                  {exchangeRate && feeAmount > 0 && (
+                    <span className="text-[10px] font-medium text-blue-600 whitespace-nowrap">
+                      {t('paymentSelector.parcelowInstallmentPreview', {
+                        count: feeAmount >= 250 ? 21 : 12
+                      })}
+                    </span>
+                  )}
+                </div>
               </div>
             </label>
           </div>
