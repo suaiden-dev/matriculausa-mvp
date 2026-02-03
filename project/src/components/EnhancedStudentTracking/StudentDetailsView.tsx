@@ -769,12 +769,12 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                     <div className="w-full flex items-center justify-between p-3 rounded-lg border border-slate-200">
                       <div className="flex items-center justify-between w-full">
                         <div className="flex items-center space-x-3">
-                          <div className={`w-3 h-3 rounded-full ${scholarshipApplication?.is_application_fee_paid ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                          <div className={`w-3 h-3 rounded-full ${studentDetails?.is_application_fee_paid ? 'bg-green-500' : 'bg-red-500'}`}></div>
                           <span className="text-sm font-medium text-slate-900">Application Fee</span>
                         </div>
                         <div className="flex flex-col items-end">
-                          <span className={`text-sm font-medium ${scholarshipApplication?.is_application_fee_paid ? 'text-green-700' : 'text-red-700'}`}>
-                            {scholarshipApplication?.is_application_fee_paid ? 'Paid' : 'Pending'}
+                          <span className={`text-sm font-medium ${studentDetails?.is_application_fee_paid ? 'text-green-700' : 'text-red-700'}`}>
+                            {studentDetails?.is_application_fee_paid ? 'Paid' : 'Pending'}
                           </span>
                            {scholarshipApplication?.is_application_fee_paid ? (
                              <span className="text-xs text-slate-500">
@@ -808,12 +808,12 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                     <div className="w-full flex items-center justify-between p-3 rounded-lg border border-slate-200">
                       <div className="flex items-center justify-between w-full">
                         <div className="flex items-center space-x-3">
-                          <div className={`w-3 h-3 rounded-full ${scholarshipApplication?.is_scholarship_fee_paid ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                          <div className={`w-3 h-3 rounded-full ${studentDetails?.is_scholarship_fee_paid ? 'bg-green-500' : 'bg-red-500'}`}></div>
                           <span className="text-sm font-medium text-slate-900">Scholarship Fee</span>
                         </div>
                         <div className="flex flex-col items-end">
-                          <span className={`text-sm font-medium ${scholarshipApplication?.is_scholarship_fee_paid ? 'text-green-700' : 'text-red-700'}`}>
-                            {scholarshipApplication?.is_scholarship_fee_paid ? 'Paid' : 'Pending'}
+                          <span className={`text-sm font-medium ${studentDetails?.is_scholarship_fee_paid ? 'text-green-700' : 'text-red-700'}`}>
+                            {studentDetails?.is_scholarship_fee_paid ? 'Paid' : 'Pending'}
                           </span>
                            <span className="text-xs text-slate-500">
                              {(() => {

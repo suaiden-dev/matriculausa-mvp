@@ -125,13 +125,13 @@ const AffiliateManagement: React.FC = () => {
   const [expandedStudents, setExpandedStudents] = useState<Set<string>>(new Set());
   
   // ✅ NOVO: Estado para armazenar datas de pagamento de cada taxa individual dos estudantes
-  const [studentPaymentDates, setStudentPaymentDates] = useState<Record<string, { selection_process?: string; scholarship?: string; i20_control?: string }>>({});
+  const [studentPaymentDates, setStudentPaymentDates] = useState<Record<string, { selection_process?: string; scholarship?: string; i20_control?: string; application?: string }>>({});
 
   // ===== Overrides e Dependentes (igual EnhancedStudentTrackingRefactored) =====
   const { feeConfig } = useFeeConfig();
   const [overridesMap, setOverridesMap] = useState<Record<string, any>>({}); // por user_id
   const [dependentsMap, setDependentsMap] = useState<Record<string, number>>({}); // por profile_id
-  const [realPaidAmountsMap, setRealPaidAmountsMap] = useState<Record<string, { selection_process?: number; scholarship?: number; i20_control?: number }>>({});
+  const [realPaidAmountsMap, setRealPaidAmountsMap] = useState<Record<string, { selection_process?: number; scholarship?: number; i20_control?: number; application?: number }>>({});
   const [isLoadingRealPaidAmounts, setIsLoadingRealPaidAmounts] = useState(true); // ✅ NOVO: Estado para rastrear carregamento de valores
 
   // ===== Estados para informações de pagamento =====
@@ -201,6 +201,7 @@ const AffiliateManagement: React.FC = () => {
           dependents,
           seller_referral_code,
           system_type,
+          is_application_fee_paid,
           scholarship_applications(is_scholarship_fee_paid, scholarship_fee_payment_method)
         `)
           .in('seller_referral_code', referralCodes);
@@ -425,7 +426,7 @@ const AffiliateManagement: React.FC = () => {
 
         // Buscar valores reais pagos em batches (10 por vez)
         const BATCH_SIZE = 10;
-        const realPaidMap: Record<string, { selection_process?: number; scholarship?: number; i20_control?: number }> = {};
+        const realPaidMap: Record<string, { selection_process?: number; scholarship?: number; i20_control?: number; application?: number }> = {};
         
         for (let i = 0; i < uniqueUserIds.length; i += BATCH_SIZE) {
           const batch = uniqueUserIds.slice(i, i + BATCH_SIZE);
@@ -435,12 +436,13 @@ const AffiliateManagement: React.FC = () => {
             
             try {
               // ✅ CORREÇÃO: Usar getDisplayAmounts para exibição nos dashboards (valores "Zelle" sem taxas)
-              const amounts = await getDisplayAmounts(userId, ['selection_process', 'scholarship', 'i20_control']);
+              const amounts = await getDisplayAmounts(userId, ['selection_process', 'scholarship', 'i20_control', 'application']);
               if (mounted) {
                 realPaidMap[userId] = {
                   selection_process: amounts.selection_process,
                   scholarship: amounts.scholarship,
-                  i20_control: amounts.i20_control
+                  i20_control: amounts.i20_control,
+                  application: amounts.application
                 };
                 // Atualizar incrementalmente conforme valores são carregados
                 setRealPaidAmountsMap(prev => ({ ...prev, [userId]: realPaidMap[userId] }));
@@ -490,7 +492,7 @@ const AffiliateManagement: React.FC = () => {
           .from('individual_fee_payments')
           .select('user_id, fee_type, payment_date')
           .in('user_id', uniqueUserIds)
-          .in('fee_type', ['selection_process', 'scholarship', 'i20_control'])
+           .in('fee_type', ['selection_process', 'scholarship', 'i20_control', 'application'])
           .not('payment_date', 'is', null)
           .order('payment_date', { ascending: false }); // Mais recente primeiro
 
@@ -501,7 +503,7 @@ const AffiliateManagement: React.FC = () => {
         }
 
         // ✅ CORREÇÃO: Agrupar por user_id e fee_type, armazenando a data mais recente de cada taxa
-        const datesMap: Record<string, { selection_process?: string; scholarship?: string; i20_control?: string }> = {};
+        const datesMap: Record<string, { selection_process?: string; scholarship?: string; i20_control?: string; application?: string }> = {};
         
         (payments || []).forEach((payment: any) => {
           const userId = payment.user_id;
@@ -519,6 +521,8 @@ const AffiliateManagement: React.FC = () => {
             datesMap[userId].scholarship = paymentDate;
           } else if (feeType === 'i20_control' && !datesMap[userId].i20_control) {
             datesMap[userId].i20_control = paymentDate;
+          } else if (feeType === 'application' && !datesMap[userId].application) {
+            datesMap[userId].application = paymentDate;
           }
         });
 
@@ -1627,6 +1631,29 @@ const AffiliateManagement: React.FC = () => {
                                                 }
                                               }
                                             }
+
+                                            // Application Fee
+                                            let applicationFee = 0;
+                                            let applicationDate: string | null = null;
+                                            if (student.is_application_fee_paid) {
+                                              applicationDate = paymentDates.application || null;
+                                              if (!hasDateFilter || (applicationDate && (() => {
+                                                const paymentDateObj = new Date(applicationDate);
+                                                return (!dateFrom || paymentDateObj >= dateFrom) && (!dateTo || paymentDateObj <= dateTo);
+                                              })())) {
+                                                if (o.application_fee != null) {
+                                                  applicationFee = Number(o.application_fee);
+                                                } else if (student.application_fee_from_scholarship) {
+                                                  // Usar valor da bolsa (convertendo centavos se necessário) + dependentes
+                                                  const amount = Number(student.application_fee_from_scholarship);
+                                                  const baseAmount = amount >= 10000 ? amount / 100 : amount;
+                                                  applicationFee = baseAmount + (dependents * 100);
+                                                } else {
+                                                  // Application Fee padrão
+                                                  applicationFee = 100 + (dependents * 100);
+                                                }
+                                              }
+                                            }
                                             
                                             return (
                                             <div 
@@ -1791,7 +1818,39 @@ const AffiliateManagement: React.FC = () => {
                                                         </div>
                                                       )}
                                                       
-                                                      {/* I-20 Control Fee */}
+                                                       {/* Application Fee */}
+                                                       {student.is_application_fee_paid && (
+                                                         <div className="flex items-center justify-between p-2 bg-white rounded border border-slate-200">
+                                                           <div className="flex-1">
+                                                             <p className="text-xs font-medium text-slate-700">Application Fee</p>
+                                                             {applicationDate && (
+                                                               <p className="text-xs text-slate-500 mt-0.5">
+                                                                 Paid: {new Date(applicationDate).toLocaleDateString()}
+                                                               </p>
+                                                             )}
+                                                           </div>
+                                                           <div className="text-right">
+                                                             <p className={`text-sm font-semibold ${
+                                                               applicationFee > 0 ? 'text-green-600' : 'text-slate-400'
+                                                             }`}>
+                                                               {isLoadingRealPaidAmounts ? (
+                                                                 <div className="animate-pulse bg-slate-200 h-4 w-16 rounded"></div>
+                                                               ) : (
+                                                                 applicationFee > 0 ? formatCurrency(applicationFee) : 'N/A'
+                                                               )}
+                                                             </p>
+                                                             {hasDateFilter && applicationDate && (() => {
+                                                               const paymentDateObj = new Date(applicationDate);
+                                                               const isInPeriod = (!dateFrom || paymentDateObj >= dateFrom) && (!dateTo || paymentDateObj <= dateTo);
+                                                               return !isInPeriod ? (
+                                                                 <p className="text-xs text-amber-600 mt-0.5">Outside period</p>
+                                                               ) : null;
+                                                             })()}
+                                                           </div>
+                                                         </div>
+                                                       )}
+                                                       
+                                                       {/* I-20 Control Fee */}
                                                       {student.is_scholarship_fee_paid && student.has_paid_i20_control_fee && (
                                                         <div className="flex items-center justify-between p-2 bg-white rounded border border-slate-200">
                                                           <div className="flex-1">
