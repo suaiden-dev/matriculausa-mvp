@@ -66,9 +66,13 @@ export interface Student {
   has_paid_selection_process_fee: boolean;
   has_paid_i20_control_fee: boolean;
   is_scholarship_fee_paid: boolean;
+  is_application_fee_paid: boolean;
   scholarship_title?: string;
   university_name?: string;
   system_type?: string;
+  dependents?: number;
+  application_fee_from_scholarship?: number;
+  scholarship_fee_from_scholarship?: number;
 }
 
 export const useAffiliateData = () => {
@@ -204,6 +208,7 @@ export const useAffiliateData = () => {
                   seller_referral_code,
                   has_paid_selection_process_fee,
                   has_paid_i20_control_fee,
+                  is_application_fee_paid,
                   system_type,
                   dependents,
                   scholarship_applications (
@@ -211,6 +216,8 @@ export const useAffiliateData = () => {
                     is_scholarship_fee_paid,
                     scholarships (
                       title,
+                      application_fee_amount,
+                      scholarship_fee_amount,
                       universities (
                         name
                       )
@@ -302,9 +309,13 @@ export const useAffiliateData = () => {
                     has_paid_selection_process_fee: profile.has_paid_selection_process_fee,
                     has_paid_i20_control_fee: profile.has_paid_i20_control_fee,
                     is_scholarship_fee_paid: profile.scholarship_applications?.some((app: any) => app.is_scholarship_fee_paid) || false,
+                    is_application_fee_paid: profile.is_application_fee_paid,
                     scholarship_title: scholarshipApp?.scholarships?.title,
                     university_name: scholarshipApp?.scholarships?.universities?.name,
-                    system_type: profile.system_type
+                    system_type: profile.system_type,
+                    dependents: Number(profile.dependents || 0),
+                    application_fee_from_scholarship: scholarshipApp?.scholarships?.application_fee_amount,
+                    scholarship_fee_from_scholarship: scholarshipApp?.scholarships?.scholarship_fee_amount
                   };
                 });
 

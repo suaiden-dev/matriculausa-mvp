@@ -2817,6 +2817,7 @@
     "applyCodeAndContinue": "Aplicar código e continuar",
     "processingPayment": "Processando Pagamento...",
     "mustAcceptTerms": "Você deve aceitar os termos e condições antes de continuar",
+    "mustEnterValidCode": "Você deve inserir um código válido antes de continuar",
     "termsAndConditions": {
       "title": "Termos e Condições",
       "termsOfUse": "Termos de Uso",
@@ -2830,6 +2831,8 @@
     "acceptContractTerms": "Aceito os termos e condições do contrato",
     "cancel": "Cancelar",
     "acceptTerms": "Aceitar Termos",
+    "loading": "Carregando termos...",
+    "noTermsFound": "Nenhum termo ativo encontrado.",
     "promotionalCoupon": {
       "title": "Taxa de Processo de Seleção",
       "discountedValue": "Valor com Desconto",

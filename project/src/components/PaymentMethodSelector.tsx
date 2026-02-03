@@ -63,6 +63,7 @@ interface PaymentMethodSelectorProps {
 export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
   selectedMethod,
   onMethodSelect,
+  feeType,
   amount,
   className = ''
 }) => {
@@ -87,7 +88,7 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
       // Fallback para 5.6 se falhar
       setExchangeRate(5.6);
     });
-  }, []);
+  }, [amount, feeType]);
 
   // Reset processing state when component unmounts
   useEffect(() => {
@@ -124,7 +125,7 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
           id: 'parcelow',
           name: 'parcelow',
           display_name: t('paymentSelector.methods.parcelow.title'),
-          description: t('paymentSelector.methods.parcelow.description', { max: amount >= 250 ? 21 : 12 }),
+          description: t('paymentSelector.methods.parcelow.description', { max: 12 }),
           is_active: true,
           requires_verification: false,
           icon: ParcelowIcon
@@ -276,7 +277,7 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
                               {exchangeRate && amount > 0 && (
                                 <span className="text-[10px] font-medium text-blue-600 whitespace-nowrap">
                                   {t('paymentSelector.parcelowInstallmentPreview', {
-                                    count: amount >= 250 ? 21 : 12
+                                    count: 12
                                   })}
                                 </span>
                               )}
