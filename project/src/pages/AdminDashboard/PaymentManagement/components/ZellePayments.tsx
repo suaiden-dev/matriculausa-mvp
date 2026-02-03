@@ -1,5 +1,6 @@
 import React from 'react';
 import { CreditCard, Clock, CheckCircle2, XCircle, Grid3X3, List, Eye, CheckCircle, User, MessageSquare } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { formatCentsToDollars } from '../../../../utils/currency';
 import ZellePaymentsSkeleton from '../../../../components/ZellePaymentsSkeleton';
 
@@ -107,7 +108,12 @@ function ZellePaymentsBase(props: ZellePaymentsProps) {
 									<div key={payment.id} className="bg-gray-50 rounded-xl p-6 hover:bg-gray-100 transition-colors cursor-pointer border">
 										<div className="flex items-start justify-between mb-4">
 											<div className="flex-1">
-												<h3 className="font-semibold text-gray-900 text-lg mb-1">{payment.student_name}</h3>
+												<Link 
+													to={`/admin/dashboard/students/${payment.student_id}`}
+													className="font-semibold text-gray-900 text-lg mb-1 hover:text-blue-600 transition-colors block"
+												>
+													{payment.student_name}
+												</Link>
 												<p className="text-sm text-gray-500">{payment.student_email}</p>
 												<p className="text-sm text-gray-500">{payment.university_name}</p>
 											</div>
@@ -180,7 +186,12 @@ function ZellePaymentsBase(props: ZellePaymentsProps) {
 																</div>
 															</div>
 															<div className="ml-4">
-																<div className="text-sm font-medium text-gray-900">{payment.student_name}</div>
+																<Link 
+																	to={`/admin/dashboard/students/${payment.student_id}`}
+																	className="text-sm font-medium text-gray-900 hover:text-blue-600 transition-colors"
+																>
+																	{payment.student_name}
+																</Link>
 																<div className="text-sm text-gray-500">{payment.student_email}</div>
 															</div>
 														</div>

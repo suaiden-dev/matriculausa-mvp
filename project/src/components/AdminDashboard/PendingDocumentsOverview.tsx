@@ -19,10 +19,10 @@ interface LoadingState {
 
 interface StudentDocument {
     id: string;
-    student_id: string;
-    document_type: string;
+    user_id: string;
+    type: string;
     status: string;
-    created_at: string;
+    uploaded_at: string;
     user_profiles?: {
         full_name: string;
         email: string;
@@ -67,10 +67,10 @@ const PendingDocumentsOverview: React.FC = () => {
                 .from('student_documents')
                 .select(`
           *,
-          user_profiles:student_id (full_name, email, id, user_id)
+          user_profiles:user_id (full_name, email, id, user_id)
         `)
                 .eq('status', 'pending')
-                .order('created_at', { ascending: false })
+                .order('uploaded_at', { ascending: false })
                 .limit(10); // Limite inicial
 
             if (!error && data) {
@@ -121,10 +121,10 @@ const PendingDocumentsOverview: React.FC = () => {
     const getProfileLink = (profileData: any, fallbackId: string) => {
         // Se temos os dados do profile populados
         if (profileData && profileData.id) {
-            return `/admin/dashboard/student/${profileData.id}`;
+            return `/admin/dashboard/students/${profileData.id}?tab=documents`;
         }
         // Caso contrário, fallback para o ID que temos na foreign key
-        return `/admin/dashboard/student/${fallbackId}`;
+        return `/admin/dashboard/students/${fallbackId}?tab=documents`;
     };
 
     // Real-time subscriptions para atualizar automaticamente quando novos documentos chegam
@@ -176,8 +176,59 @@ const PendingDocumentsOverview: React.FC = () => {
         };
     }, []); // Array vazio = executar apenas uma vez ao montar
 
+    // Grupar documentos por estudante
+    const groupedStudentDocuments = Array.from(
+        studentDocuments.reduce((acc, doc) => {
+            const userId = doc.user_id;
+            if (!acc.has(userId)) {
+                acc.set(userId, {
+                    user_profiles: doc.user_profiles,
+                    user_id: userId,
+                    count: 0,
+                    last_uploaded: doc.uploaded_at,
+                    types: [] as string[]
+                });
+            }
+            const group = acc.get(userId)!;
+            group.count += 1;
+            if (new Date(doc.uploaded_at) > new Date(group.last_uploaded)) {
+                group.last_uploaded = doc.uploaded_at;
+            }
+            if (!group.types.includes(doc.type)) {
+                group.types.push(doc.type);
+            }
+            return acc;
+        }, new Map<string, any>()).values()
+    ).sort((a, b) => new Date(b.last_uploaded).getTime() - new Date(a.last_uploaded).getTime());
+
+    // Grupar requests por estudante
+    const groupedDocumentRequests = Array.from(
+        documentRequests.reduce((acc, req) => {
+            const userId = req.uploaded_by;
+            if (!acc.has(userId)) {
+                acc.set(userId, {
+                    user_profiles: req.user_profiles,
+                    user_id: userId,
+                    count: 0,
+                    last_uploaded: req.uploaded_at,
+                    titles: [] as string[]
+                });
+            }
+            const group = acc.get(userId)!;
+            group.count += 1;
+            if (new Date(req.uploaded_at) > new Date(group.last_uploaded)) {
+                group.last_uploaded = req.uploaded_at;
+            }
+            const title = req.document_requests?.title || 'Document Request';
+            if (!group.titles.includes(title)) {
+                group.titles.push(title);
+            }
+            return acc;
+        }, new Map<string, any>()).values()
+    ).sort((a, b) => new Date(b.last_uploaded).getTime() - new Date(a.last_uploaded).getTime());
+
     const currentLoading = activeTab === 'student_documents' ? loading.studentDocuments : loading.documentRequests;
-    const currentCount = activeTab === 'student_documents' ? studentDocuments.length : documentRequests.length;
+    const currentCount = activeTab === 'student_documents' ? groupedStudentDocuments.length : groupedDocumentRequests.length;
 
     return (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
@@ -254,65 +305,80 @@ const PendingDocumentsOverview: React.FC = () => {
                 ) : (
                     <div className="space-y-3">
                         {activeTab === 'student_documents' ? (
-                            // Lista de Student Documents
-                            studentDocuments.map((doc) => (
-                                <div key={doc.id} className="flex items-center justify-between p-4 border border-slate-100 rounded-xl hover:border-indigo-100 hover:bg-indigo-50/30 transition-all group">
+                            // Lista de Student Documents Agrupados
+                            groupedStudentDocuments.map((group) => (
+                                <div key={group.user_id} className="flex items-center justify-between p-4 border border-slate-100 rounded-xl hover:border-indigo-100 hover:bg-indigo-50/30 transition-all group">
                                     <div className="flex items-center space-x-4">
                                         <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center text-slate-500 group-hover:bg-indigo-100 group-hover:text-indigo-600 transition-colors">
-                                            <FileText className="h-5 w-5" />
-                                        </div>
-                                        <div>
-                                            <h4 className="text-sm font-semibold text-slate-900 capitalize">
-                                                {doc.document_type.replace(/_/g, ' ')}
-                                            </h4>
-                                            <div className="flex items-center text-xs text-slate-500 mt-0.5">
-                                                <User className="h-3 w-3 mr-1" />
-                                                <span className="mr-3 font-medium">{doc.user_profiles?.full_name || 'Unknown Student'}</span>
-                                                <Clock className="h-3 w-3 mr-1" />
-                                                <span>{formatDate(doc.created_at)}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <Link
-                                        to={getProfileLink(doc.user_profiles, doc.student_id)}
-                                        className="px-3 py-1.5 text-xs font-medium text-indigo-600 bg-indigo-50 rounded-lg group-hover:bg-indigo-100 transition-colors flex items-center"
-                                    >
-                                        Review
-                                        <ExternalLink className="h-3 w-3 ml-1" />
-                                    </Link>
-                                </div>
-                            ))
-                        ) : (
-                            // Lista de Document Requests
-                            documentRequests.map((req) => (
-                                <div key={req.id} className="flex items-center justify-between p-4 border border-slate-100 rounded-xl hover:border-indigo-100 hover:bg-indigo-50/30 transition-all group">
-                                    <div className="flex items-center space-x-4">
-                                        <div className="w-10 h-10 bg-purple-50 rounded-full flex items-center justify-center text-purple-500 group-hover:bg-purple-100 group-hover:text-purple-600 transition-colors">
-                                            <FileText className="h-5 w-5" />
+                                            <User className="h-5 w-5" />
                                         </div>
                                         <div>
                                             <h4 className="text-sm font-semibold text-slate-900">
-                                                {req.document_requests?.title || 'Document Request'}
+                                                {group.user_profiles?.full_name || 'Unknown Student'}
                                             </h4>
                                             <div className="flex items-center text-xs text-slate-500 mt-0.5">
-                                                <User className="h-3 w-3 mr-1" />
-                                                <span className="mr-3 font-medium">{req.user_profiles?.full_name || 'Unknown Student'}</span>
                                                 <Clock className="h-3 w-3 mr-1" />
-                                                <span>{formatDate(req.uploaded_at)}</span>
+                                                <span className="mr-3">Last: {formatDate(group.last_uploaded)}</span>
+                                                <FileText className="h-3 w-3 mr-1" />
+                                                <span className="text-slate-500">
+                                                    <span className="font-medium text-slate-700 mr-1">Documents Pending:</span>
+                                                    {group.types.map((t: string) => t.replace(/_/g, ' ')).join(', ')}
+                                                </span>
                                             </div>
                                         </div>
                                     </div>
-                                    <Link
-                                        to={getProfileLink(req.user_profiles, req.uploaded_by)}
-                                        className="px-3 py-1.5 text-xs font-medium text-purple-600 bg-purple-50 rounded-lg group-hover:bg-purple-100 transition-colors flex items-center"
-                                    >
-                                        Review
-                                        <ExternalLink className="h-3 w-3 ml-1" />
-                                    </Link>
+                                    <div className="flex items-center space-x-4">
+                                        <span className="flex items-center justify-center bg-indigo-100 text-indigo-700 font-bold text-xs h-6 min-w-[24px] px-1.5 rounded-full">
+                                            {group.count}
+                                        </span>
+                                        <Link
+                                            to={getProfileLink(group.user_profiles, group.user_id)}
+                                            className="px-3 py-1.5 text-xs font-medium text-indigo-600 bg-indigo-50 rounded-lg group-hover:bg-indigo-100 transition-colors flex items-center"
+                                        >
+                                            Review
+                                            <ExternalLink className="h-3 w-3 ml-1" />
+                                        </Link>
+                                    </div>
+                                </div>
+                            ))
+                        ) : (
+                            // Lista de Document Requests Agrupados
+                            groupedDocumentRequests.map((group) => (
+                                <div key={group.user_id} className="flex items-center justify-between p-4 border border-slate-100 rounded-xl hover:border-indigo-100 hover:bg-indigo-50/30 transition-all group">
+                                    <div className="flex items-center space-x-4">
+                                        <div className="w-10 h-10 bg-purple-50 rounded-full flex items-center justify-center text-purple-500 group-hover:bg-purple-100 group-hover:text-purple-600 transition-colors">
+                                            <User className="h-5 w-5" />
+                                        </div>
+                                        <div>
+                                            <h4 className="text-sm font-semibold text-slate-900">
+                                                {group.user_profiles?.full_name || 'Unknown Student'}
+                                            </h4>
+                                            <div className="flex items-center text-xs text-slate-500 mt-0.5">
+                                                <Clock className="h-3 w-3 mr-1" />
+                                                <span className="mr-3">Last: {formatDate(group.last_uploaded)}</span>
+                                                <FileText className="h-3 w-3 mr-1" />
+                                                <span className="text-slate-500">
+                                                    <span className="font-medium text-slate-700 mr-1">Documents Pending:</span>
+                                                    {group.titles.join(', ')}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center space-x-4">
+                                        <span className="flex items-center justify-center bg-purple-100 text-purple-700 font-bold text-xs h-6 min-w-[24px] px-1.5 rounded-full">
+                                            {group.count}
+                                        </span>
+                                        <Link
+                                            to={getProfileLink(group.user_profiles, group.user_id)}
+                                            className="px-3 py-1.5 text-xs font-medium text-purple-600 bg-purple-50 rounded-lg group-hover:bg-purple-100 transition-colors flex items-center"
+                                        >
+                                            Review
+                                            <ExternalLink className="h-3 w-3 ml-1" />
+                                        </Link>
+                                    </div>
                                 </div>
                             ))
                         )}
-
                     </div>
                 )}
             </div>
