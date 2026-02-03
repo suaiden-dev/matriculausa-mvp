@@ -869,7 +869,10 @@ export function useFinancialStatsQuery(userId?: string) {
           id,
           created_at,
           selection_process_fee_payment_method,
+          selection_process_fee_paid_at,
           i20_control_fee_payment_method,
+          i20_control_fee_paid_at,
+          scholarship_fee_paid_at,
           scholarship_applications (
             id,
             is_scholarship_fee_paid,
@@ -885,6 +888,7 @@ export function useFinancialStatsQuery(userId?: string) {
       // Criar mapas
       const paymentMethodsMap: Record<string, any> = {};
       const createdAtMap: Record<string, string> = {};
+      const datesMap: Record<string, any> = {};
       (userProfilesData || []).forEach((p: any) => {
         paymentMethodsMap[p.id] = {
           selection_process: p.selection_process_fee_payment_method,
@@ -899,6 +903,11 @@ export function useFinancialStatsQuery(userId?: string) {
         if (p.created_at) {
           createdAtMap[p.id] = p.created_at;
         }
+        datesMap[p.id] = {
+          selection_process_fee_paid_at: p.selection_process_fee_paid_at,
+          scholarship_fee_paid_at: p.scholarship_fee_paid_at,
+          i20_control_fee_paid_at: p.i20_control_fee_paid_at
+        };
       });
 
       // 5. Preparar overrides
@@ -1168,7 +1177,10 @@ export function useFinancialStatsQuery(userId?: string) {
         },
         enrichedProfiles: profiles.map((p: any) => ({
           ...p,
-          created_at: createdAtMap[p.profile_id] || null
+          created_at: createdAtMap[p.profile_id] || null,
+          selection_process_fee_paid_at: datesMap[p.profile_id]?.selection_process_fee_paid_at || null,
+          scholarship_fee_paid_at: datesMap[p.profile_id]?.scholarship_fee_paid_at || null,
+          i20_control_fee_paid_at: datesMap[p.profile_id]?.i20_control_fee_paid_at || null
         })),
         overridesMap,
         realPaidAmountsMap,

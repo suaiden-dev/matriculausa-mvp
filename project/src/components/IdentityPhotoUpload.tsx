@@ -49,6 +49,15 @@ export const IdentityPhotoUpload: React.FC<IdentityPhotoUploadProps> = ({
       if (isRemoved) {
         return;
       }
+
+      // ✅ SUPORTE PARA MOCK/URL: Se o path é uma URL, data URI ou mock, usar diretamente
+      if (initialPhotoPath.startsWith('http') || initialPhotoPath.startsWith('data:') || initialPhotoPath.startsWith('mock_')) {
+        console.log('🔍 [IdentityPhotoUpload] Usando path direto (mock/URL):', initialPhotoPath);
+        const actualUrl = initialPhotoPath.startsWith('mock_') ? '/helpselfie.png' : initialPhotoPath;
+        setPreview(actualUrl);
+        setUploadedFilePath(initialPhotoPath);
+        return;
+      }
       
       // Se há initialPhotoPath e ainda não carregou (ou é diferente do atual), carregar
       if (initialPhotoPath && uploadedFilePath !== initialPhotoPath) {
@@ -74,7 +83,7 @@ export const IdentityPhotoUpload: React.FC<IdentityPhotoUploadProps> = ({
     };
     
     loadPhotoPreview();
-  }, [initialPhotoPath, isRemoved, preview, uploadedFilePath]);
+  }, [initialPhotoPath, isRemoved, uploadedFilePath]);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

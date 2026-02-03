@@ -43,6 +43,7 @@ export interface StudentRecord {
   is_locked: boolean;
   all_applications?: any[];
   admin_notes?: string | null;
+  documents_status?: 'pending' | 'analyzing' | 'approved' | 'rejected' | 'under_review' | null;
 }
 
 /**
@@ -118,6 +119,7 @@ export const useStudentDetails = (profileId: string | undefined) => {
             role,
             seller_referral_code,
             admin_notes,
+            documents_status,
             scholarship_applications (
               id,
               scholarship_id,
@@ -209,6 +211,7 @@ export const useStudentDetails = (profileId: string | undefined) => {
         is_locked: applications.some((app: any) => app.status === 'approved'),
         all_applications: applications,
         admin_notes: s.admin_notes,
+        documents_status: s.documents_status || null,
       };
 
       setStudent(formatted);

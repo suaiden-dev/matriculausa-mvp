@@ -24,13 +24,13 @@ interface ModalProviderProps {
 export const ModalProvider: React.FC<ModalProviderProps> = ({ children }) => {
   const [modalCount, setModalCount] = useState(0);
 
-  const openModal = () => {
+  const openModal = React.useCallback(() => {
     setModalCount(prev => prev + 1);
-  };
+  }, []);
 
-  const closeModal = () => {
+  const closeModal = React.useCallback(() => {
     setModalCount(prev => Math.max(0, prev - 1));
-  };
+  }, []);
 
   const isModalOpen = modalCount > 0;
 

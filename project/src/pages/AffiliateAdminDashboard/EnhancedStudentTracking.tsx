@@ -355,7 +355,11 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
                   referral_code_used: student.referral_code_used,
                   total_paid: realRevenue, // Usar receita real calculada
                   created_at: student.created_at,
-                  status: student.status
+                  status: student.status,
+                  has_paid_selection_process_fee: student.has_paid_selection_process_fee,
+                  has_paid_i20_control_fee: student.has_paid_i20_control_fee,
+                  is_scholarship_fee_paid: student.is_scholarship_fee_paid,
+                  is_application_fee_paid: student.is_application_fee_paid
                 };
               })
             );
@@ -493,7 +497,11 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
               referral_code_used: studentProfile.seller_referral_code || '',
               total_paid: realRevenue, // Usar receita real calculada
               created_at: studentProfile.created_at || new Date().toISOString(),
-              status: studentProfile.status || 'active'
+              status: studentProfile.status || 'active',
+              has_paid_selection_process_fee: studentProfile.has_paid_selection_process_fee,
+              has_paid_i20_control_fee: studentProfile.has_paid_i20_control_fee,
+              is_scholarship_fee_paid: studentProfile.is_scholarship_fee_paid,
+              is_application_fee_paid: studentProfile.is_application_fee_paid
             };
           })
       );
@@ -817,6 +825,9 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
         
         console.log('🔍 Found user_id for student:', profileData.user_id);
         
+        // Segundo, buscar a aplicação de bolsa usando o profile_id (que é o id na tabela user_profiles)
+        const profileId = studentId.length > 30 ? studentId : studentData.profile_id;
+        
         const { data: applicationData, error: applicationError } = await supabase
           .from('scholarship_applications')
           .select(`
@@ -832,10 +843,10 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
               )
             )
           `)
-          .eq('student_id', profileData.user_id)
+          .eq('student_id', studentId.length > 30 && studentId === profileData.user_id ? studentData.profile_id : studentId)
           .order('created_at', { ascending: false })
           .limit(1)
-          .single();
+          .maybeSingle();
 
         console.log('🔍 Application Data Debug:', {
           applicationData,

@@ -276,7 +276,8 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
     const recentActivity: Array<{date: string, type: string, amount: number, description: string}> = [];
 
     // Montar eventos por taxa paga usando valores reais pagos
-    referralsData?.slice(0, 10).forEach((row: any) => {
+    // ✅ CORREÇÃO: Iterar sobre TODOS os dados para encontrar pagamentos recentes, não apenas os 10 primeiros alunos
+    referralsData?.forEach((row: any) => {
       const deps = Number(row?.dependents || 0);
       const ov = overridesMap[row?.user_id] || {};
       const realPaid = realPaidAmountsMap[row?.user_id] || {};
@@ -305,7 +306,7 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
             : baseSelDefault + (deps * 150);
         }
         recentActivity.push({
-          date: row.created_at,
+          date: row.selection_process_fee_paid_at || row.created_at,
           type: 'commission',
           amount: selectionFeeAmount,
           description: 'Selection Process Fee paid'
@@ -324,7 +325,7 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
           scholarshipAmount = row?.system_type === 'simplified' ? 550 : 900;
         }
         recentActivity.push({
-          date: row.created_at,
+          date: row.scholarship_fee_paid_at || row.created_at,
           type: 'commission',
           amount: scholarshipAmount,
           description: 'Scholarship Fee paid'
@@ -343,26 +344,18 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
           i20Amount = 900; // Sempre 900 para ambos os sistemas
         }
         recentActivity.push({
-          date: row.created_at,
+          date: row.i20_control_fee_paid_at || row.created_at,
           type: 'commission',
           amount: i20Amount,
           description: 'I20 Control Fee paid'
         });
       }
 
-      // Se nenhum fee pago ainda, manter como pendente
-      if (!paidSelection && !hasAnyScholarshipPaid && !paidI20Control) {
-        recentActivity.push({
-          date: row.created_at,
-          type: 'pending',
-          amount: 0,
-          description: 'Pending student fees'
-        });
-      }
+
     });
 
     // Adicionar transações recentes de créditos
-    transactionsData?.slice(0, 5).forEach(transaction => {
+    transactionsData?.forEach(transaction => {
       recentActivity.push({
         date: transaction.created_at,
         type: transaction.type,
@@ -373,7 +366,10 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
 
     // Ordenar por data e pegar os 10 mais recentes
     recentActivity.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    recentActivity.splice(10);
+    
+    // Agora sim, pegar apenas os 10 primeiros APÓS ordenar tudo
+    const finalRecentActivity = recentActivity.slice(0, 10);
+
 
     setFinancialAnalytics({
       dailyRevenue,
@@ -385,7 +381,7 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
         averageCommission
       },
       paymentMethodBreakdown,
-      recentActivity
+      recentActivity: finalRecentActivity
     });
   };
 

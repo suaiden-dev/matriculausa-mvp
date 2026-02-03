@@ -20,6 +20,8 @@ const ApplicationFeePage: React.FC = () => {
   // NOVOS estados para o modal
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
   const [selectedScholarship, setSelectedScholarship] = useState<Scholarship | null>(null);
+  const [applicationId, setApplicationId] = useState<string | null>(null);
+  const [isOpeningModal, setIsOpeningModal] = useState(false);
 
   // Auto-selecionar primeira bolsa se apenas uma disponível
   useEffect(() => {
@@ -88,8 +90,9 @@ const ApplicationFeePage: React.FC = () => {
       }
 
       // Preparar dados para notificação
-      const universityName = scholarship.universities.name;
-      const universityContact = scholarship.universities.contact || {};
+      const university = scholarship.universities as any;
+      const universityName = university?.name || 'University';
+      const universityContact = university?.contact || {};
       const universityEmail = universityContact.admissionsEmail || universityContact.email || '';
 
       if (!universityEmail) {
@@ -187,13 +190,25 @@ const ApplicationFeePage: React.FC = () => {
   };
 
   // NOVA função para abrir o modal
-  const handleApplyScholarship = () => {
+  const handleApplyScholarship = async () => {
     if (!selectedScholarshipId) return;
     
-    const scholarship = cart.find(item => item.scholarships.id === selectedScholarshipId)?.scholarships;
-    if (scholarship) {
-      setSelectedScholarship(scholarship);
-      setShowConfirmationModal(true);
+    setIsOpeningModal(true);
+    try {
+      const result = await createOrGetApplication();
+      if (result?.applicationId) {
+        setApplicationId(result.applicationId);
+      }
+
+      const scholarship = cart.find(item => item.scholarships.id === selectedScholarshipId)?.scholarships;
+      if (scholarship) {
+        setSelectedScholarship(scholarship);
+        setShowConfirmationModal(true);
+      }
+    } catch (error) {
+      console.error('Erro ao preparar aplicação:', error);
+    } finally {
+      setIsOpeningModal(false);
     }
   };
 
@@ -288,13 +303,20 @@ const ApplicationFeePage: React.FC = () => {
           {/* SUBSTITUIR StripeCheckout por este botão */}
           <button
             onClick={handleApplyScholarship}
-            disabled={!selectedScholarshipId}
+            disabled={!selectedScholarshipId || isOpeningModal}
             className="w-full bg-green-600 text-white py-3 px-6 rounded-xl font-bold hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
           >
-            {`Pay Application Fee ($${selectedScholarshipId && cart.find(item => item.scholarships.id === selectedScholarshipId)?.scholarships.application_fee_amount 
-              ? formatCentsToDollars(cart.find(item => item.scholarships.id === selectedScholarshipId)?.scholarships.application_fee_amount)
-              : '350.00'
-            })`}
+            {isOpeningModal ? (
+              <div className="flex items-center justify-center gap-2">
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                Processing...
+              </div>
+            ) : (
+              `Pay Application Fee ($${selectedScholarshipId && cart.find(item => item.scholarships.id === selectedScholarshipId)?.scholarships.application_fee_amount 
+                ? formatCentsToDollars(cart.find(item => item.scholarships.id === selectedScholarshipId)?.scholarships.application_fee_amount)
+                : '350.00'
+              })`
+            )}
           </button>
         </div>
       </div>
@@ -306,6 +328,7 @@ const ApplicationFeePage: React.FC = () => {
           onClose={() => setShowConfirmationModal(false)}
           scholarship={selectedScholarship}
           onStripeCheckout={handleStripeCheckout}
+          applicationId={applicationId || undefined}
         />
       )}
 

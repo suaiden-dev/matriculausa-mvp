@@ -41,6 +41,28 @@ function PaymentsGridBase({ currentPayments, FEE_TYPES, handleViewDetails, isLoa
 						</div>
 						<div className="flex items-center gap-2 mb-1">
 							<span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${payment.status === 'paid' ? 'bg-green-100 text-green-800' : payment.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>{payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}</span>
+							{(() => {
+								const paymentMethod = payment.payment_method || 'manual';
+								const chipClass = paymentMethod === 'zelle'
+									? 'bg-purple-100 text-purple-800'
+									: paymentMethod === 'stripe'
+									? 'bg-blue-100 text-blue-800'
+									: paymentMethod === 'parcelow'
+									? 'bg-emerald-100 text-emerald-800'
+									: paymentMethod === 'pix'
+									? 'bg-cyan-100 text-cyan-800'
+									: 'bg-gray-100 text-gray-800';
+								const label = paymentMethod === 'manual'
+									? 'Outside'
+									: paymentMethod
+										? paymentMethod.charAt(0).toUpperCase() + paymentMethod.slice(1)
+										: 'N/A';
+								return (
+									<span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${chipClass}`}>
+										{label}
+									</span>
+								);
+							})()}
 						</div>
 					</div>
 					<button

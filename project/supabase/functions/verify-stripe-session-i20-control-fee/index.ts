@@ -530,7 +530,7 @@ Deno.serve(async (req)=>{
       const { error: profileError } = await supabase.from('user_profiles').update({
         has_paid_i20_control_fee: true,
         i20_control_fee_payment_method: paymentMethodForUserProfile, // 'pix' ou 'stripe'
-        i20_control_fee_due_date: new Date().toISOString(),
+        i20_paid_at: new Date().toISOString(),
         i20_control_fee_payment_intent_id: paymentIntentId
       }).eq('user_id', userId);
       if (profileError) throw new Error(`Failed to update user_profiles: ${profileError.message}`);

@@ -21,6 +21,8 @@ import { AffiliatePaymentRequestService } from '../../services/AffiliatePaymentR
 import { useEnvironment } from '../../hooks/useEnvironment';
 import PendingPaymentsSummary from '../../components/AdminDashboard/PendingPaymentsSummary';
 import PendingDocumentsOverview from '../../components/AdminDashboard/PendingDocumentsOverview';
+import PendingConversationsOverview from '../../components/AdminDashboard/PendingConversationsOverview';
+import { useAuth } from '../../hooks/useAuth';
 
 interface OverviewProps {
   stats: {
@@ -51,6 +53,9 @@ const Overview: React.FC<OverviewProps> = ({ stats, universities, users, applica
   const [universityRequestsAmount, setUniversityRequestsAmount] = useState(0);
   const [affiliateRequestsAmount, setAffiliateRequestsAmount] = useState(0);
   const [zellePaymentsAmount, setZellePaymentsAmount] = useState(0);
+  const [pendingConversations, setPendingConversations] = useState<any[]>([]);
+  const [loadingConversations, setLoadingConversations] = useState(true);
+  const { user } = useAuth();
 
   const UNIVERSITIES_PER_PAGE = 4; // Reduzido para caber melhor no layout compacto
 
@@ -226,6 +231,36 @@ const Overview: React.FC<OverviewProps> = ({ stats, universities, users, applica
 
     loadPendingPaymentsCounts();
   }, [shouldFilter]);
+
+  // Carregar conversas pendentes
+  useEffect(() => {
+    const loadPendingConversations = async () => {
+      if (!user) return;
+
+      try {
+        setLoadingConversations(true);
+
+        const { data, error } = await supabase
+          .rpc('get_unread_admin_student_chat_notifications', {
+            user_id_param: user.id
+          });
+
+        if (error) {
+          console.error('Error loading pending conversations:', error);
+          setPendingConversations([]);
+        } else {
+          setPendingConversations(data || []);
+        }
+      } catch (error) {
+        console.error('Error loading pending conversations:', error);
+        setPendingConversations([]);
+      } finally {
+        setLoadingConversations(false);
+      }
+    };
+
+    loadPendingConversations();
+  }, [user]);
 
   // Filtrar universidades pendentes usando dados filtrados
   const pendingUniversities = filteredUniversities.filter((u: any) => !u.is_approved);
@@ -485,6 +520,12 @@ const Overview: React.FC<OverviewProps> = ({ stats, universities, users, applica
               )}
             </div>
           </div>
+
+          {/* Pending Conversations */}
+          <PendingConversationsOverview
+            conversations={pendingConversations}
+            loading={loadingConversations}
+          />
         </div>
       </div>
     </div>

@@ -30,6 +30,16 @@ const StripeIcon = ({ className }: { className?: string }) => (
     <path d="M6 8h12M6 12h8M6 16h4" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
   </svg>
 );
+
+// Componente para o logo do Parcelow (oficial)
+const ParcelowIcon = ({ className }: { className?: string }) => (
+  <img 
+    src="/parcelow_share.webp" 
+    alt="Parcelow" 
+    className={className} 
+    style={{ objectFit: 'contain' }}
+  />
+);
 import { useTranslation } from 'react-i18next';
 
 export interface PaymentMethod {
@@ -43,8 +53,8 @@ export interface PaymentMethod {
 }
 
 interface PaymentMethodSelectorProps {
-  selectedMethod: 'stripe' | 'zelle' | 'pix' | null;
-  onMethodSelect: (method: 'stripe' | 'zelle' | 'pix', exchangeRate?: number) => void;
+  selectedMethod: 'stripe' | 'zelle' | 'pix' | 'parcelow' | null;
+  onMethodSelect: (method: 'stripe' | 'zelle' | 'pix' | 'parcelow', exchangeRate?: number) => void;
   feeType: 'selection_process' | 'application_fee' | 'enrollment_fee' | 'scholarship_fee' | 'i20_control_fee';
   amount: number;
   className?: string;
@@ -78,7 +88,7 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
       // Fallback para 5.6 se falhar
       setExchangeRate(5.6);
     });
-  }, []);
+  }, [amount, feeType]);
 
   // Reset processing state when component unmounts
   useEffect(() => {
@@ -112,6 +122,15 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
           icon: PixIcon
         },
         {
+          id: 'parcelow',
+          name: 'parcelow',
+          display_name: t('paymentSelector.methods.parcelow.title'),
+          description: t('paymentSelector.methods.parcelow.description', { max: 12 }),
+          is_active: true,
+          requires_verification: false,
+          icon: ParcelowIcon
+        },
+        {
           id: 'zelle',
           name: 'zelle',
           display_name: t('paymentSelector.methods.zelle.title'),
@@ -133,7 +152,7 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
     }
   };
 
-  const handleMethodSelect = async (method: 'stripe' | 'zelle' | 'pix') => {
+  const handleMethodSelect = async (method: 'stripe' | 'zelle' | 'pix' | 'parcelow') => {
     if (processingSelection) return;
     
     console.log('🔍 [PaymentMethodSelector] Iniciando seleção:', method);
@@ -212,7 +231,7 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
                     ? 'border-blue-500 bg-blue-50'
                     : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                 } ${processingSelection ? 'pointer-events-none opacity-60' : ''}`}
-                onClick={() => handleMethodSelect(method.id as 'stripe' | 'zelle' | 'pix')}
+                onClick={() => handleMethodSelect(method.id as 'stripe' | 'zelle' | 'pix' | 'parcelow')}
               >
                 <div className="flex items-start space-x-3">
                   <div className="flex-shrink-0">
@@ -250,12 +269,30 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
                               ${amount.toFixed(2)}
                             </span>
                           )}
+                          {method.id === 'parcelow' && (
+                            <div className="flex flex-col items-end flex-shrink-0 ml-auto">
+                              <span className="text-sm font-semibold text-blue-700 whitespace-nowrap">
+                                ${amount.toFixed(2)}
+                              </span>
+                              {exchangeRate && amount > 0 && (
+                                <span className="text-[10px] font-medium text-blue-600 whitespace-nowrap">
+                                  {t('paymentSelector.parcelowInstallmentPreview', {
+                                    count: 12
+                                  })}
+                                </span>
+                              )}
+                            </div>
+                          )}
                         </div>
                         <p className="text-sm text-gray-500 mt-1">
                           {method.description}
                         </p>
-                        {/* Tag "inclui taxa de processamento" para Stripe e PIX */}
-                        {(method.id === 'stripe' || method.id === 'pix') && (
+                        {/* Tag de taxas para Stripe, PIX e Parcelow (com texto específico para Parcelow) */}
+                        {method.id === 'parcelow' ? (
+                          <p className="text-xs text-gray-400 mt-1">
+                            {t('paymentSelector.parcelowFeesNote')}
+                          </p>
+                        ) : (method.id === 'stripe' || method.id === 'pix') && (
                           <p className="text-xs text-gray-400 mt-1">
                             {t('paymentSelector.includesProcessingFees')}
                           </p>
