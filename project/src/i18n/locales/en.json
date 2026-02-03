@@ -2781,6 +2781,7 @@
     "applyCodeAndContinue": "Apply code and continue",
     "processingPayment": "Processing Payment...",
     "mustAcceptTerms": "You must accept the terms and conditions before continuing",
+    "mustEnterValidCode": "You must enter a valid code before continuing",
     "termsAndConditions": {
       "title": "Terms and Conditions",
       "termsOfUse": "Terms of Use",
@@ -2794,6 +2795,8 @@
     "acceptContractTerms": "I accept the contract terms and conditions",
     "cancel": "Cancel",
     "acceptTerms": "Accept Terms",
+    "loading": "Loading terms...",
+    "noTermsFound": "No active terms found.",
     "promotionalCoupon": {
       "title": "Selection Process Fee",
       "discountedValue": "Discounted Value",

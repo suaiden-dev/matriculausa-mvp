@@ -947,7 +947,7 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
                   {exchangeRate && feeAmount > 0 && (
                     <span className="text-[10px] font-medium text-blue-600 whitespace-nowrap">
                       {t('paymentSelector.parcelowInstallmentPreview', {
-                        count: feeAmount >= 250 ? 21 : 12
+                        count: 12
                       })}
                     </span>
                   )}
