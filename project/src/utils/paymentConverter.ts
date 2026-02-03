@@ -217,9 +217,10 @@ export async function getDisplayAmounts(
     }
 
     // 4. Buscar valores reais pagos (para casos onde o aluno pagou um valor diferente do padrão)
+    // Parcelow: só considerar parcelow_status = 'paid' (ignorar failed, processing, etc.)
     const { data: payments, error: paymentsError } = await supabase
       .from('individual_fee_payments')
-      .select('fee_type, gross_amount_usd, payment_method')
+      .select('fee_type, gross_amount_usd, payment_method, parcelow_status')
       .eq('user_id', userId)
       .in('fee_type', feeTypes)
       .order('payment_date', { ascending: false, nullsFirst: false })
@@ -229,6 +230,8 @@ export async function getDisplayAmounts(
     const realPaidMap: Record<string, number> = {};
     if (!paymentsError && payments) {
       for (const payment of payments) {
+        // Ignorar pagamentos Parcelow que não estão com status 'paid'
+        if (payment.payment_method === 'parcelow' && payment.parcelow_status && payment.parcelow_status !== 'paid') continue;
         const feeTypeKey = payment.fee_type === 'selection_process' ? 'selection_process' :
                           payment.fee_type === 'scholarship' ? 'scholarship' :
                           payment.fee_type === 'i20_control' ? 'i20_control' :
@@ -238,6 +241,10 @@ export async function getDisplayAmounts(
           // Para Zelle, usar diretamente (sem taxas)
           // Para Stripe, usar gross_amount_usd como referência (mas vamos usar valores esperados)
           if (payment.payment_method === 'zelle') {
+            realPaidMap[feeTypeKey] = Number(payment.gross_amount_usd);
+          }
+          // Parcelow com status paid: usar gross_amount_usd para exibição
+          if (payment.payment_method === 'parcelow' && payment.parcelow_status === 'paid') {
             realPaidMap[feeTypeKey] = Number(payment.gross_amount_usd);
           }
           // Para Stripe, não usar gross_amount_usd diretamente, vamos usar valores esperados
@@ -342,10 +349,10 @@ export async function getRealPaidAmounts(
   feeTypes: ('selection_process' | 'scholarship' | 'i20_control' | 'application')[]
 ): Promise<Record<string, number>> {
   try {
-    // ✅ CORREÇÃO: Buscar também payment_date e gross_amount_usd para determinar se deve remover taxas
+    // ✅ CORREÇÃO: Buscar também payment_date, gross_amount_usd e parcelow_status (Parcelow failed não conta como pago)
     const { data: payments, error } = await supabase
       .from('individual_fee_payments')
-      .select('fee_type, amount, payment_method, payment_intent_id, payment_date, gross_amount_usd')
+      .select('fee_type, amount, payment_method, payment_intent_id, payment_date, gross_amount_usd, parcelow_status')
       .eq('user_id', userId)
       .in('fee_type', feeTypes);
 
@@ -361,6 +368,8 @@ export async function getRealPaidAmounts(
 
     // Processar cada pagamento
     for (const payment of payments || []) {
+      // Ignorar pagamentos Parcelow que não estão com status 'paid'
+      if (payment.payment_method === 'parcelow' && (payment as any).parcelow_status && (payment as any).parcelow_status !== 'paid') continue;
       let amountUSD = Number(payment.amount);
       
       // ✅ NOVO: Verificar data do pagamento
@@ -492,7 +501,7 @@ export async function getGrossPaidAmounts(
   try {
     const { data: payments, error } = await supabase
       .from('individual_fee_payments')
-      .select('fee_type, amount, gross_amount_usd, payment_method, payment_date')
+      .select('fee_type, amount, gross_amount_usd, payment_method, payment_date, parcelow_status')
       .eq('user_id', userId)
       .in('fee_type', feeTypes)
       .order('payment_date', { ascending: false }); // ✅ CORREÇÃO: Ordenar por data mais recente primeiro
@@ -506,6 +515,8 @@ export async function getGrossPaidAmounts(
 
     // Processar cada pagamento
     for (const payment of payments || []) {
+      // Ignorar pagamentos Parcelow que não estão com status 'paid'
+      if (payment.payment_method === 'parcelow' && payment.parcelow_status && payment.parcelow_status !== 'paid') continue;
       // Usar gross_amount_usd quando disponível, senão usar amount
       const amountUSD = payment.gross_amount_usd 
         ? Number(payment.gross_amount_usd) 

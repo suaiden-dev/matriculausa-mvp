@@ -1564,6 +1564,21 @@
     "amount": "Amount",
     "support": "Support"
   },
+  "profileRequiredModal": {
+    "cpfMissing": {
+      "title": "CPF Requerido",
+      "description": "Para pagar vía Parcelow/PIX, debe registrar su CPF en su perfil.",
+      "details": "El CPF es obligatorio para procesar pagos vía Parcelow. Esto garantiza la seguridad de su transacción y cumple con las regulaciones brasileñas.",
+      "buttonGoToProfile": "Ir al Perfil"
+    },
+    "profileIncomplete": {
+      "title": "Complete su Perfil",
+      "description": "Su perfil está incompleto. Por favor, complete toda la información necesaria antes de continuar con el pago.",
+      "details": "Necesitamos información adicional para procesar su pago de forma segura. ¡Solo toma unos minutos!",
+      "buttonCompleteProfile": "Completar Perfil"
+    },
+    "notNow": "Ahora No"
+  },
   "studentDashboard": {
     "title": "Panel del Estudiante",
     "subtitle": "Gestiona tus solicitudes de beca",

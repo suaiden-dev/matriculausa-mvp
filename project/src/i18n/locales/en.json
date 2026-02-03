@@ -1469,6 +1469,21 @@
     "amount": "Amount",
     "support": "Support"
   },
+  "profileRequiredModal": {
+    "cpfMissing": {
+      "title": "CPF Required",
+      "description": "To pay via Parcelow/PIX, you need to add your CPF (Brazilian tax ID) to your profile.",
+      "details": "CPF is required to process payments via Parcelow. This ensures the security of your transaction and complies with Brazilian regulations.",
+      "buttonGoToProfile": "Go to Profile"
+    },
+    "profileIncomplete": {
+      "title": "Complete Your Profile",
+      "description": "Your profile is incomplete. Please fill in all required information before proceeding with payment.",
+      "details": "We need some additional information to process your payment securely. This only takes a few minutes!",
+      "buttonCompleteProfile": "Complete Profile"
+    },
+    "notNow": "Not Now"
+  },
   "studentDashboard": {
     "title": "Student Dashboard",
     "subtitle": "Manage your scholarship applications",

@@ -28,8 +28,10 @@ export interface StudentInfo {
   application_status: string;
   documents: any[];
   dependents?: number;
-  selection_process_fee_amount?: number; // ✅ Adicionar campo para valor da taxa de seleção
-  acceptance_letter_sent_at?: string | null; // ✅ Adicionar campo faltante
+  selection_process_fee_amount?: number;
+  scholarship_fee_amount?: number;
+  i20_control_fee_amount?: number;
+  acceptance_letter_sent_at?: string | null;
   scholarship?: {
     application_fee_amount: number;
     scholarship_fee_amount: number;

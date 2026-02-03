@@ -66,6 +66,49 @@ export function detectEnvironment(req: Request): EnvironmentInfo {
   };
 }
 
+const PRODUCTION_ORIGIN = 'https://matriculausa.com';
+const STAGING_ORIGIN = 'https://staging-matriculausa.netlify.app';
+const LOCALHOST_ORIGIN = 'http://localhost:5173';
+
+/**
+ * Retorna o origin base para URLs de callback/redirect (Parcelow, etc.).
+ * Garante que requisições vindas de matriculausa.com ou staging nunca redirecionem para localhost.
+ * Usa referer e origin da requisição para detectar o host de origem.
+ */
+export function getRedirectOrigin(req: Request): string {
+  const referer = req.headers.get('referer') || '';
+  const originHeader = req.headers.get('origin') || '';
+
+  // Staging primeiro: se qualquer header indicar staging, usar staging
+  if (
+    referer.includes('staging-matriculausa.netlify.app') ||
+    originHeader.includes('staging-matriculausa.netlify.app')
+  ) {
+    return STAGING_ORIGIN;
+  }
+
+  // Produção: matriculausa.com (não staging)
+  if (
+    referer.includes('matriculausa.com') ||
+    originHeader.includes('matriculausa.com')
+  ) {
+    return PRODUCTION_ORIGIN;
+  }
+
+  // Se o header Origin for uma URL válida (ex.: localhost), usar
+  if (originHeader && (originHeader.startsWith('http://') || originHeader.startsWith('https://'))) {
+    try {
+      const u = new URL(originHeader);
+      return u.origin;
+    } catch {
+      // ignorar
+    }
+  }
+
+  // Fallback para dev local
+  return LOCALHOST_ORIGIN;
+}
+
 /**
  * Obtém as variáveis de ambiente do Stripe baseadas no ambiente detectado
  */
