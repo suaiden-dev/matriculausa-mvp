@@ -7,6 +7,7 @@ import { useModal } from '../contexts/ModalContext';
 import { useAuth } from '../hooks/useAuth';
 import { useReferralCode } from '../hooks/useReferralCode';
 import { supabase } from '../lib/supabase';
+import { config } from '../lib/config';
 import {
   Drawer,
   DrawerContent,
@@ -53,7 +54,12 @@ export const PaymentMethodSelectorDrawer: React.FC<PaymentMethodSelectorDrawerPr
   
   // ✅ Mostrar cupom promocional apenas se o usuário NÃO tiver usado o referral code do Matricula Rewards
   const shouldShowPromotionalCoupon = !activeDiscount?.has_discount;
-  
+
+  // Parcelow só em desenvolvimento/staging: em produção não exibir como selecionado
+  const effectiveSelectedMethod = config.showParcelowPaymentMethod()
+    ? selectedMethod
+    : (selectedMethod === 'parcelow' ? null : selectedMethod);
+
   // Valor final considerando desconto promocional
   const finalAmount = promotionalCouponValidation?.isValid && promotionalCouponValidation.finalAmount
     ? promotionalCouponValidation.finalAmount
@@ -238,7 +244,7 @@ export const PaymentMethodSelectorDrawer: React.FC<PaymentMethodSelectorDrawerPr
             )}
             
             <PaymentMethodSelector
-              selectedMethod={selectedMethod}
+              selectedMethod={effectiveSelectedMethod}
               onMethodSelect={onMethodSelect}
               feeType={feeType}
               amount={finalAmount}
@@ -334,7 +340,7 @@ export const PaymentMethodSelectorDrawer: React.FC<PaymentMethodSelectorDrawerPr
             )}
 
             <PaymentMethodSelector
-              selectedMethod={selectedMethod}
+              selectedMethod={effectiveSelectedMethod}
               onMethodSelect={onMethodSelect}
               feeType={feeType}
               amount={finalAmount}
