@@ -1472,6 +1472,21 @@
     "deadline": "Prazo",
     "amount": "Valor"
   },
+  "profileRequiredModal": {
+    "cpfMissing": {
+      "title": "CPF Necessário",
+      "description": "Para pagar via Parcelow/PIX, é necessário cadastrar seu CPF no seu perfil.",
+      "details": "O CPF é obrigatório para processar pagamentos via Parcelow. Isso garante a segurança da sua transação e está de acordo com as regulamentações brasileiras.",
+      "buttonGoToProfile": "Ir para Perfil"
+    },
+    "profileIncomplete": {
+      "title": "Complete seu Perfil",
+      "description": "Seu perfil está incompleto. Por favor, preencha todas as informações necessárias antes de prosseguir com o pagamento.",
+      "details": "Precisamos de algumas informações adicionais para processar seu pagamento com segurança. Isso leva apenas alguns minutos!",
+      "buttonCompleteProfile": "Completar Perfil"
+    },
+    "notNow": "Agora Não"
+  },
   "studentDashboard": {
     "title": "Painel do Estudante",
     "subtitle": "Gerencie suas candidaturas de bolsa",
