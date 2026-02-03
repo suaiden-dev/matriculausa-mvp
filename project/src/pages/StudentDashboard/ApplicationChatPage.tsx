@@ -257,11 +257,13 @@ const ApplicationChatPage: React.FC = () => {
       }
 
       try {
+        // Só considerar pagamentos efetivamente concluídos: Parcelow deve ter parcelow_status = 'paid'
         const { data: payments, error } = await supabase
           .from('individual_fee_payments')
-          .select('amount, gross_amount_usd, payment_date, created_at')
+          .select('amount, gross_amount_usd, payment_date, created_at, payment_method, parcelow_status')
           .eq('user_id', user.id)
           .eq('fee_type', 'i20_control')
+          .or('parcelow_status.is.null,parcelow_status.eq.paid')
           .order('created_at', { ascending: false })
           .limit(1)
           .maybeSingle();
