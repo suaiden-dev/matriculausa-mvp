@@ -1,6 +1,7 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.49.1';
 import { getParcelowConfig } from '../parcelow-config.ts';
+import { getRedirectOrigin } from '../shared/environment-detector.ts';
 
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL') ?? '',
@@ -111,8 +112,8 @@ Deno.serve(async (req) => {
     const timestamp = Date.now();
     const reference = `${fee_type.substring(0, 10)}_${timestamp}`;
 
-    // Determinar URLs de redirect
-    let origin = config.environment.origin || 'https://matriculausa.com';
+    // URLs de redirect dinâmicas conforme ambiente (matriculausa.com, staging ou localhost)
+    const origin = getRedirectOrigin(req);
     const redirectSuccess = `${origin}/student/dashboard/payment-success?reference=${encodeURIComponent(reference)}&payment_method=parcelow`;
     const redirectFailed = `${origin}/student/dashboard/payment-error?reference=${encodeURIComponent(reference)}&payment_method=parcelow`;
 

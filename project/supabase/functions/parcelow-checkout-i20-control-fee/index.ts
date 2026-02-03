@@ -1,6 +1,7 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.49.1';
 import { getParcelowConfig } from '../shared/parcelow/config.ts';
+import { getRedirectOrigin } from '../shared/environment-detector.ts';
 import { getParcelowAccessToken } from '../shared/parcelow/auth.ts';
 
 const supabase = createClient(
@@ -148,19 +149,8 @@ Deno.serve(async (req) => {
     const shortTimestamp = timestamp.toString(36); // Converte para base36 (muito mais curto)
     const reference = `i20_${shortTimestamp}`;
 
-    // Determinar URLs de redirect baseado no ambiente
-    // Usar o reference como identificador para buscar o pagamento depois
-    let origin = 'https://matriculausa.com';
-    
-    if (config.environment.isProduction) {
-      origin = 'https://matriculausa.com';
-    } else if (config.environment.isStaging) {
-      origin = 'https://staging-matriculausa.netlify.app';
-    } else if (config.environment.isTest) {
-      // Usar o origin do header da requisição (localhost, etc)
-      origin = config.environment.origin || 'http://localhost:5173';
-    }
-    
+    // URLs de redirect dinâmicas conforme ambiente (matriculausa.com, staging ou localhost)
+    const origin = getRedirectOrigin(req);
     console.log('[parcelow-checkout-i20-control-fee] 🔗 Origin determinado:', origin);
     
     // URLs encurtadas para evitar truncamento pela Parcelow
@@ -233,8 +223,19 @@ Deno.serve(async (req) => {
     }
 
     const parcelowOrder = await orderResponse.json();
+
+    // Parcelow pode retornar 200 com success: false (ex.: email do cliente já existente)
+    if (parcelowOrder.success === false && parcelowOrder.message) {
+      const msg = String(parcelowOrder.message);
+      const isEmailExists = /email.*existente|já existe|already exists/i.test(msg);
+      return corsResponse({
+        error: isEmailExists ? 'parcelow_client_email_exists' : 'parcelow_order_rejected',
+        message: msg,
+        details: msg
+      }, 400);
+    }
+
     console.log('[parcelow-checkout-i20-control-fee] ✅ Pedido criado na Parcelow');
-    console.log('[parcelow-checkout-i20-control-fee] 🔍 Parcelow Order Response:', JSON.stringify(parcelowOrder, null, 2));
 
     // A resposta da Parcelow pode ter diferentes formatos, vamos extrair os dados corretamente
     const orderId = parcelowOrder.data?.order_id || parcelowOrder.order_id || parcelowOrder.id;

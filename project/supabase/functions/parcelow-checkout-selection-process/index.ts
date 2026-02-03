@@ -1,6 +1,7 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.49.1';
 import { getParcelowConfig } from '../shared/parcelow/config.ts';
+import { getRedirectOrigin } from '../shared/environment-detector.ts';
 import { getParcelowAccessToken } from '../shared/parcelow/auth.ts';
 
 const supabase = createClient(
@@ -118,19 +119,8 @@ Deno.serve(async (req) => {
     const shortTimestamp = timestamp.toString(36); // Converte para base36 (muito mais curto)
     const reference = `sp_${shortTimestamp}`; // sp = selection_process
 
-    // Determinar URLs de redirect baseado no ambiente
-    // Usar o reference como identificador para buscar o pagamento depois
-    let origin = 'https://matriculausa.com';
-    
-    if (config.environment.isProduction) {
-      origin = 'https://matriculausa.com';
-    } else if (config.environment.isStaging) {
-      origin = 'https://staging-matriculausa.netlify.app';
-    } else if (config.environment.isTest) {
-      // Usar o origin do header da requisição (localhost, etc)
-      origin = config.environment.origin || 'http://localhost:5173';
-    }
-    
+    // URLs de redirect dinâmicas conforme ambiente (matriculausa.com, staging ou localhost)
+    const origin = getRedirectOrigin(req);
     console.log('[parcelow-checkout-selection-process] 🔗 Origin determinado:', origin);
     
     // URLs encurtadas para evitar truncamento pela Parcelow
