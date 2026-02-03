@@ -88,7 +88,7 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
       // Fallback para 5.6 se falhar
       setExchangeRate(5.6);
     });
-  }, []);
+  }, [amount, feeType]);
 
   // Reset processing state when component unmounts
   useEffect(() => {
@@ -125,7 +125,7 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
           id: 'parcelow',
           name: 'parcelow',
           display_name: t('paymentSelector.methods.parcelow.title'),
-          description: t('paymentSelector.methods.parcelow.description'),
+          description: t('paymentSelector.methods.parcelow.description', { max: 12 }),
           is_active: true,
           requires_verification: false,
           icon: ParcelowIcon
@@ -270,22 +270,29 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
                             </span>
                           )}
                           {method.id === 'parcelow' && (
-                            <span className="text-sm font-semibold text-blue-700 whitespace-nowrap">
-                              ${amount.toFixed(2)}
-                            </span>
+                            <div className="flex flex-col items-end flex-shrink-0 ml-auto">
+                              <span className="text-sm font-semibold text-blue-700 whitespace-nowrap">
+                                ${amount.toFixed(2)}
+                              </span>
+                              {exchangeRate && amount > 0 && (
+                                <span className="text-[10px] font-medium text-blue-600 whitespace-nowrap">
+                                  {t('paymentSelector.parcelowInstallmentPreview', {
+                                    count: 12
+                                  })}
+                                </span>
+                              )}
+                            </div>
                           )}
                         </div>
                         <p className="text-sm text-gray-500 mt-1">
                           {method.description}
                         </p>
-                        {/* Badge 21x para Parcelow */}
-                        {method.id === 'parcelow' && (
-                          <span className="inline-block mt-1 text-[10px] font-bold bg-green-500 text-white px-2 py-0.5 rounded">
-                            21x
-                          </span>
-                        )}
-                        {/* Tag "inclui taxa de processamento" para Stripe e PIX */}
-                        {(method.id === 'stripe' || method.id === 'pix') && (
+                        {/* Tag de taxas para Stripe, PIX e Parcelow (com texto específico para Parcelow) */}
+                        {method.id === 'parcelow' ? (
+                          <p className="text-xs text-gray-400 mt-1">
+                            {t('paymentSelector.parcelowFeesNote')}
+                          </p>
+                        ) : (method.id === 'stripe' || method.id === 'pix') && (
                           <p className="text-xs text-gray-400 mt-1">
                             {t('paymentSelector.includesProcessingFees')}
                           </p>

@@ -1472,6 +1472,21 @@
     "deadline": "Prazo",
     "amount": "Valor"
   },
+  "profileRequiredModal": {
+    "cpfMissing": {
+      "title": "CPF Necessário",
+      "description": "Para pagar via Parcelow/PIX, é necessário cadastrar seu CPF no seu perfil.",
+      "details": "O CPF é obrigatório para processar pagamentos via Parcelow. Isso garante a segurança da sua transação e está de acordo com as regulamentações brasileiras.",
+      "buttonGoToProfile": "Ir para Perfil"
+    },
+    "profileIncomplete": {
+      "title": "Complete seu Perfil",
+      "description": "Seu perfil está incompleto. Por favor, preencha todas as informações necessárias antes de prosseguir com o pagamento.",
+      "details": "Precisamos de algumas informações adicionais para processar seu pagamento com segurança. Isso leva apenas alguns minutos!",
+      "buttonCompleteProfile": "Completar Perfil"
+    },
+    "notNow": "Agora Não"
+  },
   "studentDashboard": {
     "title": "Painel do Estudante",
     "subtitle": "Gerencie suas candidaturas de bolsa",
@@ -2767,8 +2782,8 @@
         "description": "Sistema de pagamento instantâneo para usuários brasileiros"
       },
       "parcelow": {
-        "title": "Parcelow (21x)",
-        "description": "Parcele em até 21x no cartão de crédito"
+        "title": "Parcelow",
+        "description": "Parcele no cartão de crédito"
       },
       "zelle": {
         "title": "Zelle",
@@ -2786,7 +2801,9 @@
     "manualVerification": "Processamento pode levar até 48 horas",
     "important": "Importante:",
     "zelleUploadNote": "Após o pagamento via Zelle, você precisará enviar o comprovante para verificação manual.",
-    "includesProcessingFees": "* Inclui taxas de processamento"
+    "includesProcessingFees": "* Inclui taxas de processamento",
+    "parcelowFeesNote": "* Taxas da operadora e processamento da plataforma serão aplicadas",
+    "parcelowInstallmentPreview": "ou em até {{count}}x"
   },
   "preCheckoutModal": {
     "securePayment": "Pagamento Seguro",
@@ -2815,6 +2832,7 @@
     "applyCodeAndContinue": "Aplicar código e continuar",
     "processingPayment": "Processando Pagamento...",
     "mustAcceptTerms": "Você deve aceitar os termos e condições antes de continuar",
+    "mustEnterValidCode": "Você deve inserir um código válido antes de continuar",
     "termsAndConditions": {
       "title": "Termos e Condições",
       "termsOfUse": "Termos de Uso",
@@ -2828,6 +2846,8 @@
     "acceptContractTerms": "Aceito os termos e condições do contrato",
     "cancel": "Cancelar",
     "acceptTerms": "Aceitar Termos",
+    "loading": "Carregando termos...",
+    "noTermsFound": "Nenhum termo ativo encontrado.",
     "promotionalCoupon": {
       "title": "Taxa de Processo de Seleção",
       "discountedValue": "Valor com Desconto",
@@ -3473,7 +3493,7 @@
       },
       "parcelow": {
         "title": "Parcelow",
-        "description": "Pague com cartão brasileiro em até 21x"
+        "description": "Pague com cartão brasileiro"
       },
       "cancel": "Cancelar"
     },

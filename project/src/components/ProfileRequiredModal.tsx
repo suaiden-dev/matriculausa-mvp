@@ -3,6 +3,7 @@ import { Dialog, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
 import { UserCircle, AlertCircle, ArrowRight, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 interface ProfileRequiredModalProps {
   isOpen: boolean;
@@ -16,6 +17,7 @@ export const ProfileRequiredModal: React.FC<ProfileRequiredModalProps> = ({
   errorType,
 }) => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const handleGoToProfile = () => {
     onClose();
@@ -27,19 +29,19 @@ export const ProfileRequiredModal: React.FC<ProfileRequiredModalProps> = ({
       case 'cpf_missing':
         return {
           icon: <AlertCircle className="w-16 h-16 text-amber-500" />,
-          title: 'CPF Necessário',
-          description: 'Para pagar via Parcelow/PIX, é necessário cadastrar seu CPF no seu perfil.',
-          details: 'O CPF é obrigatório para processar pagamentos via Parcelow. Isso garante a segurança da sua transação e está de acordo com as regulamentações brasileiras.',
-          buttonText: 'Ir para Perfil',
+          title: t('profileRequiredModal.cpfMissing.title'),
+          description: t('profileRequiredModal.cpfMissing.description'),
+          details: t('profileRequiredModal.cpfMissing.details'),
+          buttonText: t('profileRequiredModal.cpfMissing.buttonGoToProfile'),
           buttonIcon: <ArrowRight className="w-5 h-5" />,
         };
       case 'profile_incomplete':
         return {
           icon: <UserCircle className="w-16 h-16 text-blue-500" />,
-          title: 'Complete seu Perfil',
-          description: 'Seu perfil está incompleto. Por favor, preencha todas as informações necessárias antes de prosseguir com o pagamento.',
-          details: 'Precisamos de algumas informações adicionais para processar seu pagamento com segurança. Isso leva apenas alguns minutos!',
-          buttonText: 'Completar Perfil',
+          title: t('profileRequiredModal.profileIncomplete.title'),
+          description: t('profileRequiredModal.profileIncomplete.description'),
+          details: t('profileRequiredModal.profileIncomplete.details'),
+          buttonText: t('profileRequiredModal.profileIncomplete.buttonCompleteProfile'),
           buttonIcon: <ArrowRight className="w-5 h-5" />,
         };
       default:
@@ -53,7 +55,7 @@ export const ProfileRequiredModal: React.FC<ProfileRequiredModalProps> = ({
 
   return (
     <Transition appear show={isOpen} as={Fragment}>
-      <Dialog as="div" className="relative z-[9999]" onClose={onClose}>
+      <Dialog as="div" className="relative z-[10030]" onClose={onClose}>
         <Transition.Child
           as={Fragment}
           enter="ease-out duration-300"
@@ -120,7 +122,7 @@ export const ProfileRequiredModal: React.FC<ProfileRequiredModalProps> = ({
                     className="flex-1 px-4 py-3 text-sm font-semibold text-slate-700 bg-white border-2 border-slate-200 rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all duration-200"
                     onClick={onClose}
                   >
-                    Agora Não
+                    {t('profileRequiredModal.notNow')}
                   </button>
                   <button
                     type="button"
