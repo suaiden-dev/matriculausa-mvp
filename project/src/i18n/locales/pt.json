@@ -2767,8 +2767,8 @@
         "description": "Sistema de pagamento instantâneo para usuários brasileiros"
       },
       "parcelow": {
-        "title": "Parcelow (21x)",
-        "description": "Parcele em até 21x no cartão de crédito"
+        "title": "Parcelow",
+        "description": "Parcele no cartão de crédito"
       },
       "zelle": {
         "title": "Zelle",
@@ -2786,7 +2786,9 @@
     "manualVerification": "Processamento pode levar até 48 horas",
     "important": "Importante:",
     "zelleUploadNote": "Após o pagamento via Zelle, você precisará enviar o comprovante para verificação manual.",
-    "includesProcessingFees": "* Inclui taxas de processamento"
+    "includesProcessingFees": "* Inclui taxas de processamento",
+    "parcelowFeesNote": "* Taxas da operadora e processamento da plataforma serão aplicadas",
+    "parcelowInstallmentPreview": "ou em até {{count}}x"
   },
   "preCheckoutModal": {
     "securePayment": "Pagamento Seguro",
@@ -3473,7 +3475,7 @@
       },
       "parcelow": {
         "title": "Parcelow",
-        "description": "Pague com cartão brasileiro em até 21x"
+        "description": "Pague com cartão brasileiro"
       },
       "cancel": "Cancelar"
     },

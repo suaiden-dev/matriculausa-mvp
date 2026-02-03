@@ -2726,8 +2726,8 @@
         "description": "Instant payment system for Brazilian users"
       },
       "parcelow": {
-        "title": "Parcelow (21x)",
-        "description": "Pay in up to 21 installments on your credit card"
+        "title": "Parcelow",
+        "description": "Pay with your credit card"
       },
       "zelle": {
         "title": "Zelle",
@@ -2745,7 +2745,9 @@
     "manualVerification": "Processing may take up to 48 hours",
     "important": "Important:",
     "zelleUploadNote": "After making the Zelle payment, you'll need to upload a screenshot of the confirmation showing the confirmation code, date, amount, and recipient.",
-    "includesProcessingFees": "* Includes processing fees"
+    "includesProcessingFees": "* Includes processing fees",
+    "parcelowFeesNote": "* Provider and platform processing fees will be applied",
+    "parcelowInstallmentPreview": "or in up to {{count}} installments"
   },
   "preCheckoutModal": {
     "securePayment": "Secure Payment",
@@ -3434,7 +3436,7 @@
       },
       "parcelow": {
         "title": "Parcelow",
-        "description": "Pay with Brazilian card in up to 21x"
+        "description": "Pay with Brazilian card"
       },
       "cancel": "Cancel"
     },
