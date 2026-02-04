@@ -947,6 +947,9 @@ Deno.serve(async (req: Request) => {
         return new Response(JSON.stringify({ error: 'User profile not found' }), { status: 404 });
       }
 
+      let nomeBolsa = "";
+      let nomeUniversidade = "";
+
       // 4.2. Criar log de início de processamento (proteção contra duplicação)
       try {
         await supabase.rpc('log_student_action', {
@@ -1043,6 +1046,21 @@ Deno.serve(async (req: Request) => {
             console.log('[parcelow-webhook] ✅ Application atualizada com sucesso');
           }
 
+          // Buscar nome da bolsa e universidade para notificação
+          if (application?.scholarship_id) {
+            const { data: scholarshipData } = await supabase
+              .from('scholarships')
+              .select('title, universities(name)')
+              .eq('id', application.scholarship_id)
+              .single();
+            
+            if (scholarshipData) {
+              nomeBolsa = scholarshipData.title;
+              nomeUniversidade = scholarshipData.universities?.name || "";
+              console.log(`[parcelow-webhook] 🎓 Bolsa: ${nomeBolsa}, Universidade: ${nomeUniversidade}`);
+            }
+          }
+
           // Atualizar perfil do usuário por redundância
           await supabase
             .from('user_profiles')
@@ -1088,19 +1106,32 @@ Deno.serve(async (req: Request) => {
               const { error: scholarshipUpdateError } = await supabase
                 .from('scholarship_applications')
                 .update({ 
-                  // Removido status: 'scholarship_fee_paid' pois não é um valor válido na constraint (CHECK status IN ...)
                   is_scholarship_fee_paid: true,
                   scholarship_fee_payment_method: 'parcelow'
-                  // nota: scholarship_fee_paid_at não existe nesta tabela, apenas em user_profiles
                 })
                 .eq('scholarship_id', scholarshipId)
                 .eq('student_id', userProfile.id)
-                .is('is_scholarship_fee_paid', false); // Só atualizar se não estiver pago
+                .is('is_scholarship_fee_paid', false);
               
               if (scholarshipUpdateError) {
                 console.error(`[parcelow-webhook] ❌ Erro ao atualizar scholarship ${scholarshipId}:`, scholarshipUpdateError);
               } else {
                 console.log(`[parcelow-webhook] ✅ Scholarship ${scholarshipId} atualizada`);
+                
+                // Buscar nome da bolsa e universidade (do primeiro ID encontrado se estiverem vazios)
+                if (!nomeBolsa) {
+                  const { data: scholarshipData } = await supabase
+                    .from('scholarships')
+                    .select('title, universities(name)')
+                    .eq('id', scholarshipId)
+                    .single();
+                  
+                  if (scholarshipData) {
+                    nomeBolsa = scholarshipData.title;
+                    nomeUniversidade = scholarshipData.universities?.name || "";
+                    console.log(`[parcelow-webhook] 🎓 Bolsa recuperada: ${nomeBolsa}`);
+                  }
+                }
               }
             }
           } else {
@@ -1386,16 +1417,17 @@ Deno.serve(async (req: Request) => {
 
             // a) NOTIFICAÇÃO PARA TODOS OS ADMINS
             const adminNotificationPromises = admins.map(async (admin) => {
-              // Define tipo_notf para admin baseado no fee_type
-              let tipoNotfAdmin = `Pagamento Parcelow de ${feeType} confirmado - Admin`;
+              // Define tipo_notf para admin baseado no fee_type (usando 'Stripe' para consistência com n8n - Strings Exatas)
+              let tipoNotfAdmin = `Pagamento Stripe de selection process confirmado - Admin`; // Default fallback
+              
               if (feeType === 'scholarship_fee') {
-                tipoNotfAdmin = 'Pagamento Parcelow de scholarship_fee confirmado - Admin';
+                tipoNotfAdmin = 'Pagamento Stripe de scholarship fee confirmado - Admin';
               } else if (feeType === 'i20_control' || feeType === 'i20_control_fee') {
-                tipoNotfAdmin = 'Pagamento Parcelow de i20_control_fee confirmado - Admin';
-              } else if (feeType === 'application_fee' || feeType === 'application') {
-                tipoNotfAdmin = 'Pagamento Parcelow de application_fee confirmado - Admin';
+                tipoNotfAdmin = 'Pagamento Stripe de I-20 control fee confirmado - Admin';
+              } else if (feeType === 'application_fee' || feeType === 'application' || feeType === 'application_fee_payment') {
+                tipoNotfAdmin = 'Pagamento Stripe de application fee confirmado - Admin';
               } else if (feeType === 'selection_process') {
-                tipoNotfAdmin = 'Pagamento Parcelow de selection_process confirmado - Admin';
+                tipoNotfAdmin = 'Pagamento Stripe de selection process confirmado - Admin';
               }
               
               const adminNotificationPayload = {
@@ -1405,16 +1437,18 @@ Deno.serve(async (req: Request) => {
                 phone_admin: admin.phone,
                 email_aluno: userProfile.email,
                 nome_aluno: userProfile.full_name,
-                o_que_enviar: `Pagamento Parcelow de ${feeType} no valor de ${formattedAmount} do aluno ${userProfile.full_name} foi processado com sucesso. Seller responsável: ${sellerData.name} (${sellerData.referral_code}). Affiliate: ${affiliateAdminData.name}`,
+                o_que_enviar: `Pagamento Parcelow de ${feeType} no valor de ${formattedAmount} do aluno ${userProfile.full_name} foi processado com sucesso.${sellerData.user_id ? ` Seller responsável: ${sellerData.name} (${sellerData.referral_code}).` : ''}${affiliateAdminData.user_id ? ` Affiliate: ${affiliateAdminData.name}` : ''}`,
                 payment_id: String(parcelowOrder.id),
                 fee_type: feeType,
                 amount: paymentAmount,
                 currency: 'USD',
                 currency_symbol: '$',
                 formatted_amount: formattedAmount,
+                nome_bolsa: nomeBolsa,
+                nome_universidade: nomeUniversidade,
+                nome_seller: sellerData.name || "",
+                referral_code: sellerData.referral_code || "",
                 seller_id: sellerData.user_id,
-                referral_code: sellerData.referral_code,
-                commission_rate: sellerData.commission_rate,
                 payment_method: 'parcelow',
                 notification_type: "admin"
               };
@@ -1461,20 +1495,19 @@ Deno.serve(async (req: Request) => {
 
             await Promise.allSettled(adminNotificationPromises);
 
-            // b) NOTIFICAÇÃO PARA SELLER
-            // Define tipo_notf para seller baseado no fee_type
-            let tipoNotfSeller = `Pagamento Parcelow de ${feeType} confirmado - Seller`;
+            // b) NOTIFICAÇÃO PARA SELLER (Strings Exatas com 'Stripe' para consistência)
+            let tipoNotfSeller = `Pagamento Stripe de selection process confirmado - Seller`; // Default
             let oQueEnviarSeller = `Parabéns! Seu aluno ${userProfile.full_name} pagou a taxa ${feeType} no valor de ${formattedAmount} via Parcelow. Sua comissão será calculada em breve.`;
 
             if (feeType === 'scholarship_fee') {
-              tipoNotfSeller = 'Pagamento Parcelow de scholarship_fee confirmado - Seller';
+              tipoNotfSeller = 'Pagamento Stripe de scholarship fee confirmado - Seller';
             } else if (feeType === 'i20_control' || feeType === 'i20_control_fee') {
-              tipoNotfSeller = "Pagamento Parcelow de I-20 Control Fee confirmado - Seller";
+              tipoNotfSeller = "Pagamento Stripe de I-20 control fee confirmado - Seller";
               oQueEnviarSeller = `Parabéns! Seu aluno ${userProfile.full_name} pagou a taxa I-20 Control Fee no valor de ${formattedAmount} via Parcelow. Sua comissão será calculada em breve.`;
             } else if (feeType === 'application_fee' || feeType === 'application') {
-              tipoNotfSeller = 'Pagamento Parcelow de application_fee confirmado - Seller';
+              tipoNotfSeller = 'Pagamento Stripe de application fee confirmado - Seller';
             } else if (feeType === 'selection_process') {
-              tipoNotfSeller = 'Pagamento Parcelow de selection_process confirmado - Seller';
+              tipoNotfSeller = 'Pagamento Stripe de selection process confirmado - Seller';
             }
             
             let emailSellerFinal = sellerData.email;
@@ -1545,19 +1578,17 @@ Deno.serve(async (req: Request) => {
 
             // c) NOTIFICAÇÃO PARA AFFILIATE ADMIN (se houver)
             if (affiliateAdminData.email) {
-              // Define tipo_notf para affiliate admin baseado no fee_type
-              let tipoNotfAffiliate = `Pagamento Parcelow de ${feeType} confirmado - Affiliate Admin`;
-              let oQueEnviarAffiliate = `O seller ${sellerData.name} (${sellerData.referral_code}) do seu afiliado teve um pagamento de ${feeType} no valor de ${formattedAmount} do aluno ${userProfile.full_name} via Parcelow.`;
-
+              // Define tipo_notf para affiliate admin baseado no fee_type (usando 'Stripe' para consistência - Strings Exatas)
+              let tipoNotfAffiliate = `Pagamento Stripe de selection process confirmado - Affiliate Admin`; // Default fallback
+              
               if (feeType === 'scholarship_fee') {
-                tipoNotfAffiliate = 'Pagamento Parcelow de scholarship_fee confirmado - Affiliate Admin';
+                tipoNotfAffiliate = 'Pagamento Stripe de scholarship fee confirmado - Affiliate Admin';
               } else if (feeType === 'i20_control' || feeType === 'i20_control_fee') {
-                tipoNotfAffiliate = "Pagamento Parcelow de I-20 Control Fee confirmado - Affiliate Admin";
-                oQueEnviarAffiliate = `O seller ${sellerData.name} (${sellerData.referral_code}) do seu afiliado teve um pagamento de I-20 Control Fee no valor de ${formattedAmount} do aluno ${userProfile.full_name} via Parcelow.`;
-              } else if (feeType === 'application_fee' || feeType === 'application') {
-                tipoNotfAffiliate = 'Pagamento Parcelow de application_fee confirmado - Affiliate Admin';
+                tipoNotfAffiliate = "Pagamento Stripe de I-20 control fee confirmado - Affiliate Admin";
+              } else if (feeType === 'application_fee' || feeType === 'application' || feeType === 'application_fee_payment') {
+                tipoNotfAffiliate = 'Pagamento Stripe de application fee confirmado - Affiliate Admin';
               } else if (feeType === 'selection_process') {
-                tipoNotfAffiliate = 'Pagamento Parcelow de selection_process confirmado - Affiliate Admin';
+                tipoNotfAffiliate = 'Pagamento Stripe de selection process confirmado - Affiliate Admin';
               }
               
               let emailAffiliateFinal = affiliateAdminData.email;
@@ -1574,7 +1605,6 @@ Deno.serve(async (req: Request) => {
                 email_aluno: userProfile.email,
                 nome_aluno: userProfile.full_name,
                 email_seller: sellerData.email,
-                nome_seller: sellerData.name,
                 o_que_enviar: `O seller ${sellerData.name} (${sellerData.referral_code}) do seu afiliado teve um pagamento de ${feeType} no valor de ${formattedAmount} do aluno ${userProfile.full_name} via Parcelow.`,
                 payment_id: String(parcelowOrder.id),
                 fee_type: feeType,
@@ -1582,9 +1612,11 @@ Deno.serve(async (req: Request) => {
                 currency: 'USD',
                 currency_symbol: '$',
                 formatted_amount: formattedAmount,
+                nome_bolsa: nomeBolsa,
+                nome_universidade: nomeUniversidade,
+                nome_seller: sellerData.name || "",
+                referral_code: sellerData.referral_code || "",
                 seller_id: sellerData.user_id,
-                referral_code: sellerData.referral_code,
-                commission_rate: sellerData.commission_rate,
                 payment_method: 'parcelow',
                 notification_type: "affiliate_admin"
               };
@@ -1633,8 +1665,20 @@ Deno.serve(async (req: Request) => {
 
             // Notificar apenas admins quando não há seller
             const adminNotificationPromises = admins.map(async (admin) => {
+              // Define tipo_notf para admin sem seller (usando 'Stripe' para consistência - Strings Exatas)
+              let tipoNotfAdminNoSeller = `Pagamento Stripe de selection process confirmado - Admin`; // Default fallback
+              if (feeType === 'scholarship_fee') {
+                tipoNotfAdminNoSeller = 'Pagamento Stripe de scholarship fee confirmado - Admin';
+              } else if (feeType === 'i20_control' || feeType === 'i20_control_fee') {
+                tipoNotfAdminNoSeller = 'Pagamento Stripe de I-20 control fee confirmado - Admin';
+              } else if (feeType === 'application_fee' || feeType === 'application' || feeType === 'application_fee_payment') {
+                tipoNotfAdminNoSeller = 'Pagamento Stripe de application fee confirmado - Admin';
+              } else if (feeType === 'selection_process') {
+                tipoNotfAdminNoSeller = 'Pagamento Stripe de selection process confirmado - Admin';
+              }
+
               const adminNotificationPayload = {
-                tipo_notf: feeType === 'selection_process' ? "Student Selection Process Fee Payment" : feeType === 'scholarship_fee' ? "Student Scholarship Fee Payment" : "Student Application Fee Payment",
+                tipo_notf: tipoNotfAdminNoSeller,
                 email_admin: admin.email,
                 nome_admin: admin.full_name,
                 phone_admin: admin.phone,
@@ -1647,6 +1691,10 @@ Deno.serve(async (req: Request) => {
                 currency: 'USD',
                 currency_symbol: '$',
                 formatted_amount: formattedAmount,
+                nome_bolsa: nomeBolsa,
+                nome_universidade: nomeUniversidade,
+                nome_seller: "",
+                referral_code: "",
                 payment_method: 'parcelow',
                 notification_type: 'admin'
               };
@@ -1698,8 +1746,21 @@ Deno.serve(async (req: Request) => {
 
           // Notificar apenas admins quando não há seller_referral_code
           const adminNotificationPromises = admins.map(async (admin) => {
+            // Define tipo_notf para admin (Strings Exatas com 'Stripe' para consistência)
+            let tipoNotfAdminNoReferral = `Pagamento Stripe de selection process confirmado - Admin`; // Default
+            
+            if (feeType === 'scholarship_fee') {
+              tipoNotfAdminNoReferral = 'Pagamento Stripe de scholarship fee confirmado - Admin';
+            } else if (feeType === 'i20_control' || feeType === 'i20_control_fee') {
+              tipoNotfAdminNoReferral = 'Pagamento Stripe de I-20 control fee confirmado - Admin';
+            } else if (feeType === 'application_fee' || feeType === 'application') {
+              tipoNotfAdminNoReferral = 'Pagamento Stripe de application fee confirmado - Admin';
+            } else if (feeType === 'selection_process') {
+              tipoNotfAdminNoReferral = 'Pagamento Stripe de selection process confirmado - Admin';
+            }
+
             const adminNotificationPayload = {
-              tipo_notf: "Pagamento Parcelow de " + feeType + " confirmado - Admin",
+              tipo_notf: tipoNotfAdminNoReferral,
               email_admin: admin.email,
               nome_admin: admin.full_name,
               phone_admin: admin.phone,
@@ -1712,6 +1773,10 @@ Deno.serve(async (req: Request) => {
               currency: 'USD',
               currency_symbol: '$',
               formatted_amount: formattedAmount,
+              nome_bolsa: nomeBolsa,
+              nome_universidade: nomeUniversidade,
+              nome_seller: "",
+              referral_code: "",
               payment_method: 'parcelow',
               notification_type: 'admin'
             };
