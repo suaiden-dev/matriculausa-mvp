@@ -289,7 +289,7 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
                         <p className="text-sm text-gray-500 mt-1">
                           {method.description}
                         </p>
-                        {/* Tag de taxas para Stripe, PIX e Parcelow (com texto específico para Parcelow) */}
+                        {/* Tag de taxas para Stripe, PIX e Parcelow (homologado em produção) */}
                         {method.id === 'parcelow' ? (
                           <p className="text-xs text-gray-400 mt-1">
                             {t('paymentSelector.parcelowFeesNote')}

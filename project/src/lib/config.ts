@@ -17,10 +17,9 @@ export const config = {
            window.location.hostname.includes('staging-matriculausa.netlify.app');
   },
 
-  /** Parcelow só aparece em desenvolvimento/staging; em produção (matriculausa.com) fica oculto. */
+  /** Parcelow agora disponível em todos os ambientes (Homologado) */
   showParcelowPaymentMethod: () => {
-    if (typeof window === 'undefined') return false;
-    return !config.isProduction();
+    return true;
   },
 
   // URLs dinâmicas baseadas no ambiente
