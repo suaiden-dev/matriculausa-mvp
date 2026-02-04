@@ -87,6 +87,12 @@ const ApplicationFeeSuccess: React.FC = () => {
   };
 
   useEffect(() => {
+    // Aguardar usuário estar carregado
+    if (!user) {
+      console.log('[ApplicationFeeSuccess] Aguardando autenticação do usuário...');
+      return;
+    }
+
     if (hasRunRef.current) return;
     hasRunRef.current = true;
 

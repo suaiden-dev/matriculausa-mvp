@@ -243,15 +243,20 @@ const SelectionProcessFeeSuccess: React.FC = () => {
   };
 
   useEffect(() => {
-    // Prevenir múltiplas execuções (React Strict Mode executa useEffect duas vezes em desenvolvimento)
-    if (hasRunRef.current) {
-      console.log('[Payment] Verificação já foi executada, ignorando chamada duplicada do React Strict Mode');
-      return;
-    }
-    
     // Prevenir múltiplas execuções simultâneas
     if (isVerifying) {
       console.log('[Payment] Verificação já em andamento, ignorando chamada duplicada');
+      return;
+    }
+    
+    // Aguardar usuário estar carregado
+    if (!user) {
+      console.log('[Payment] Aguardando autenticação do usuário...');
+      return;
+    }
+
+    if (hasRunRef.current) {
+      console.log('[Payment] Verificação já foi executada, ignorando chamada duplicada do React Strict Mode');
       return;
     }
     

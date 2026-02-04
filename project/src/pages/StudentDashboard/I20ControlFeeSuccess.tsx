@@ -84,6 +84,12 @@ const I20ControlFeeSuccess: React.FC = () => {
   };
 
   useEffect(() => {
+    // Aguardar usuário estar carregado
+    if (!user) {
+      console.log('[I20ControlFeeSuccess] Aguardando autenticação do usuário...');
+      return;
+    }
+
     if (hasRunRef.current) return;
     hasRunRef.current = true;
 

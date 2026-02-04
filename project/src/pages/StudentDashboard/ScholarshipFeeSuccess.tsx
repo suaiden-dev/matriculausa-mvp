@@ -80,6 +80,12 @@ const ScholarshipFeeSuccess: React.FC = () => {
   };
 
   useEffect(() => {
+    // Aguardar usuário estar carregado
+    if (!user) {
+      console.log('[ScholarshipFeeSuccess] Aguardando autenticação do usuário...');
+      return;
+    }
+
     if (verificationRef.current) {
       console.log('[ScholarshipFeeSuccess] Verificação já foi executada, pulando chamada duplicada.');
       return;
