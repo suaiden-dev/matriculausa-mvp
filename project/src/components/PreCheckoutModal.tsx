@@ -386,7 +386,8 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
       setUserClickedCheckbox(false); // Reset user interaction flag
       setShowPhotoUploadStep(false); // Reset photo upload step
       
-      // ✅ LOGICA DE FOTO AUTOMÁTICA
+      // ✅ LOGICA DE FOTO AUTOMÁTICA (Comentado para permitir testes reais com foto no localhost)
+      /*
       const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
       if (isLocalhost) {
         console.log('🔍 [PreCheckoutModal] Ambiente localhost detectado. Usando foto mock.');
@@ -398,6 +399,12 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
         setIdentityPhotoName(null);
         fetchExistingPhoto();
       }
+      */
+      
+      // Fluxo normal: tentar buscar foto existente no bucket
+      setIdentityPhotoPath(null);
+      setIdentityPhotoName(null);
+      fetchExistingPhoto();
 
       // ✅ CORREÇÃO: Se não tem seller_referral_code, mostrar campo diretamente (sem checkbox)
       // Não resetar hasReferralCode e showCodeStep se não tem seller_referral_code

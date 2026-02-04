@@ -1,5 +1,6 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient, SupabaseClient } from 'npm:@supabase/supabase-js@2.49.1';
+import { encode as base64Encode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
 // @ts-ignore
 import jsPDF from "https://esm.sh/jspdf@2.5.1?target=deno";
 
@@ -130,6 +131,30 @@ async function sendTermAcceptanceNotificationAfterPayment(userId: string, feeTyp
       console.warn('[NOTIFICAÇÃO] Nenhuma aceitação de termos encontrada para o usuário');
       return;
     }
+
+    // ✅ MELHORIA: Tentar encontrar uma foto real se o aceite atual tiver mock ou for nulo
+    let finalPhotoPath = termAcceptance.identity_photo_path;
+    let finalPhotoName = termAcceptance.identity_photo_name;
+
+    if (!finalPhotoPath || finalPhotoPath === 'mock_localhost_photo.png') {
+      console.log('[NOTIFICAÇÃO] Foto no aceite atual é nula ou mock. Buscando foto real em outros aceites...');
+      const { data: altTerm } = await supabase
+        .from('comprehensive_term_acceptance')
+        .select('identity_photo_path, identity_photo_name')
+        .eq('user_id', userId)
+        .not('identity_photo_path', 'is', null)
+        .neq('identity_photo_path', '')
+        .neq('identity_photo_path', 'mock_localhost_photo.png')
+        .order('accepted_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      if (altTerm) {
+        finalPhotoPath = altTerm.identity_photo_path;
+        finalPhotoName = altTerm.identity_photo_name;
+        console.log('[NOTIFICAÇÃO] ✅ Foto real encontrada em outro aceite:', finalPhotoPath);
+      }
+    }
     
     // Buscar conteúdo do termo
     const { data: termData, error: termDataError } = await supabase
@@ -257,29 +282,123 @@ async function sendTermAcceptanceNotificationAfterPayment(userId: string, feeTyp
         pdf.setFont('helvetica', 'bold');
         pdf.text('TERM CONTENT', margin, currentY);
         currentY += 12;
+
+        // Função para formatar conteúdo HTML do termo (baseada no pdfGenerator.ts)
+        const formatTermContent = (content: string): number => {
+          const elements: Array<{text: string, type: 'h1' | 'h2' | 'h3' | 'p' | 'strong'}> = [];
+          
+          // Replace HTML entities first
+          let processedHtml = content
+            .replace(/&nbsp;/g, ' ')
+            .replace(/&amp;/g, '&')
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&quot;/g, '"')
+            .replace(/&#39;/g, "'");
+
+          // Remove HTML tags but preserve line breaks for block elements
+          // This ensures that <p>Title</p><p>Text</p> becomes "Title\n\nText"
+          const cleanText = processedHtml
+            .replace(/<\/p>/g, '\n\n')
+            .replace(/<br\s*\/?>/g, '\n')
+            .replace(/<\/h[1-6]>/g, '\n\n')
+            .replace(/<[^>]*>/g, '')
+            .trim();
+          
+          // Split into paragraphs by double line breaks or single line breaks that look like separate items
+          const paragraphs = cleanText.split(/\n\s*\n/).map(p => p.trim()).filter(p => p.length > 0);
+          
+          paragraphs.forEach((paragraph, paragraphIndex) => {
+            const lines = paragraph.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+            
+            lines.forEach((line, lineIndex) => {
+              let type: 'h1' | 'h2' | 'h3' | 'p' | 'strong' = 'p';
+              
+              // Main titles (first line of document or standalone short lines that look like titles)
+              if ((paragraphIndex === 0 && lineIndex === 0) || 
+                  (lines.length === 1 && line.length < 60 && line.match(/^[A-Z\s]+$/) && !line.match(/^\d+\./))) {
+                type = 'h1';
+              }
+              // Section headers (numbered like "1. Purpose")
+              else if (line.match(/^\d+\.\s+[A-Z\s]+/) || line.match(/^\d+\.\s+[A-Z][a-z]+/)) {
+                type = 'h2';
+              }
+              // Subsection headers (lines ending with colon or all caps short lines)
+              else if (line.endsWith(':') || (line.match(/^[A-Z\s&/()]{3,}$/) && line.length < 80)) {
+                type = 'h3';
+              }
+              else {
+                type = 'p';
+              }
+              
+              elements.push({ text: line, type });
+            });
+            
+            if (paragraphIndex < paragraphs.length - 1) {
+              elements.push({ text: '', type: 'p' });
+            }
+          });
+
+          elements.forEach((element) => {
+            if (element.text === '') {
+              currentY += 3;
+              return;
+            }
+            
+            if (currentY > pdf.internal.pageSize.getHeight() - 30) {
+              pdf.addPage();
+              currentY = margin;
+            }
+            
+            switch (element.type) {
+              case 'h1':
+                currentY += 2;
+                pdf.setFontSize(13);
+                pdf.setFont('helvetica', 'bold');
+                currentY = addWrappedText(element.text, margin, currentY, pageWidth - margin - 20, 13);
+                currentY += 2;
+                break;
+                
+              case 'h2':
+                currentY += 2;
+                pdf.setFontSize(11);
+                pdf.setFont('helvetica', 'bold');
+                currentY = addWrappedText(element.text, margin, currentY, pageWidth - margin - 20, 11);
+                currentY += 3;
+                break;
+                
+              case 'h3':
+              case 'strong':
+                currentY += 2;
+                pdf.setFontSize(10);
+                pdf.setFont('helvetica', 'bold');
+                currentY = addWrappedText(element.text, margin, currentY, pageWidth - margin - 20, 10);
+                currentY += 2;
+                break;
+                
+              case 'p':
+              default:
+                pdf.setFontSize(9);
+                pdf.setFont('helvetica', 'normal');
+                currentY = addWrappedText(element.text, margin, currentY, pageWidth - margin - 20, 9);
+                currentY += 2;
+                break;
+            }
+          });
+          
+          return currentY;
+        };
+
+        try {
+          currentY = formatTermContent(termData.content);
+        } catch (error) {
+          console.error('[NOTIFICAÇÃO] Erro ao formatar conteúdo do termo:', error);
+          // Fallback to simple text
+          const fallbackText = termData.content.replace(/<[^>]*>/g, '').substring(0, 3000);
+          currentY = addWrappedText(fallbackText, margin, currentY, pageWidth - margin - 20, 9);
+        }
         
-        // Processar conteúdo HTML do termo
-        const cleanText = termData.content
-          .replace(/<[^>]*>/g, '')
-          .replace(/&nbsp;/g, ' ')
-          .replace(/&amp;/g, '&')
-          .replace(/&lt;/g, '<')
-          .replace(/&gt;/g, '>')
-          .replace(/&quot;/g, '"')
-          .replace(/&#39;/g, "'")
-          .replace(/\s+/g, ' ')
-          .trim();
-        
-        const maxTermContentLength = 3000;
-        const termContent = cleanText.length > maxTermContentLength 
-          ? cleanText.substring(0, maxTermContentLength) + '...'
-          : cleanText;
-        
-        pdf.setFontSize(10);
-        pdf.setFont('helvetica', 'normal');
-        currentY = addWrappedText(termContent, margin, currentY, pageWidth - margin - 20, 10);
         currentY += 8;
-        
         pdf.setLineWidth(0.5);
         pdf.line(margin, currentY, pageWidth - margin, currentY);
         currentY += 10;
@@ -288,6 +407,11 @@ async function sendTermAcceptanceNotificationAfterPayment(userId: string, feeTyp
       // Detalhes da aceitação
       pdf.setFontSize(14);
       pdf.setFont('helvetica', 'bold');
+      currentY += 5;
+      if (currentY > pdf.internal.pageSize.getHeight() - 40) {
+        pdf.addPage();
+        currentY = margin;
+      }
       pdf.text('TERM ACCEPTANCE DETAILS', margin, currentY);
       currentY += 12;
       
@@ -310,97 +434,97 @@ async function sendTermAcceptanceNotificationAfterPayment(userId: string, feeTyp
       pdf.text('IP Address:', margin, currentY);
       pdf.setFont('helvetica', 'normal');
       pdf.text(termAcceptance.ip_address || 'N/A', margin + 50, currentY);
-      currentY += 10;
+      currentY += 12;
       
       // Incluir foto de identidade (se houver)
-      if (termAcceptance.identity_photo_path && termAcceptance.identity_photo_path.trim() !== '') {
+      if (finalPhotoPath && finalPhotoPath.trim() !== '') {
         try {
-          console.log('[NOTIFICAÇÃO] Foto de identidade encontrada, incluindo no PDF:', termAcceptance.identity_photo_path);
+          console.log('[NOTIFICAÇÃO] Foto de identidade para inclusão no PDF:', finalPhotoPath);
           
-          // Verificar se precisa de nova página
-          const pageHeight = pdf.internal.pageSize.getHeight();
-          if (currentY > pageHeight - margin - 80) {
-            pdf.addPage();
-            currentY = margin;
-          }
-          
-          // Download da foto do Storage
-          const { data: imageData, error: imageError } = await supabase.storage
-            .from('identity-photos')
-            .download(termAcceptance.identity_photo_path);
-          
-          if (!imageError && imageData) {
-            try {
-              // Converter para ArrayBuffer
-              const imageArrayBuffer = await imageData.arrayBuffer();
-              const imageBytes = new Uint8Array(imageArrayBuffer);
-              
-              // Converter para base64
-              let binary = '';
-              for (let i = 0; i < imageBytes.length; i++) {
-                binary += String.fromCharCode(imageBytes[i]);
-              }
-              const imageBase64 = btoa(binary);
-              
-              // Determinar formato da imagem
-              const fileExtension = termAcceptance.identity_photo_path.split('.').pop()?.toLowerCase() || 'jpg';
-              const imageFormat = fileExtension === 'png' ? 'PNG' : 'JPEG';
-              const mimeType = fileExtension === 'png' ? 'image/png' : 'image/jpeg';
-              const imageDataUrl = `data:${mimeType};base64,${imageBase64}`;
-              
-              // Adicionar seção de foto
-              currentY += 10;
-              pdf.setFontSize(14);
-              pdf.setFont('helvetica', 'bold');
-              pdf.text('IDENTITY PHOTO WITH DOCUMENT', margin, currentY);
-              currentY += 12;
-              
-              // Calcular dimensões mantendo proporção
-              const maxWidth = 280;
-              const maxHeight = 320;
-              const availableWidth = pageWidth - (2 * margin);
-              
-              const maxWidthUnits = maxWidth * 0.264583;
-              const maxHeightUnits = maxHeight * 0.264583;
-              const imageWidth = Math.min(maxWidthUnits, availableWidth * 0.9);
-              
-              let finalWidth = imageWidth;
-              let finalHeight = 0;
-              
+          if (finalPhotoPath === 'mock_localhost_photo.png') {
+             // Fallback informativo para ambiente localhost
+             currentY += 10;
+             pdf.setFontSize(10);
+              pdf.setFont('helvetica', 'italic');
+              pdf.text('[Localhost Mock Photo]', margin, currentY);
+              currentY += 8;
+          } else {
+            // Download da foto do Storage
+            const { data: imageData, error: imageError } = await supabase.storage
+              .from('identity-photos')
+              .download(finalPhotoPath);
+            
+            if (!imageError && imageData) {
               try {
-                const imgProps = pdf.getImageProperties(imageDataUrl);
-                const imgWidth = imgProps.width;
-                const imgHeight = imgProps.height;
-                const aspectRatio = imgHeight / imgWidth;
+                // Converter para ArrayBuffer e Base64 usando o encoder seguro
+                const imageArrayBuffer = await imageData.arrayBuffer();
+                const imageBytes = new Uint8Array(imageArrayBuffer);
+                const base64Image = base64Encode(imageBytes);
                 
-                finalHeight = imageWidth * aspectRatio;
+                // Determinar formato da imagem
+                const fileExtension = finalPhotoPath.split('.').pop()?.toLowerCase() || 'jpg';
+                const imageFormat = fileExtension === 'png' ? 'PNG' : 'JPEG';
+                const mimeType = fileExtension === 'png' ? 'image/png' : 'image/jpeg';
+                const imageDataUrl = `data:${mimeType};base64,${base64Image}`;
                 
-                if (finalHeight > maxHeightUnits) {
-                  finalHeight = maxHeightUnits;
-                  finalWidth = finalHeight / aspectRatio;
+                // Adicionar seção de foto com conferência de página
+                currentY += 10;
+                if (currentY > pdf.internal.pageSize.getHeight() - 40) {
+                  pdf.addPage();
+                  currentY = margin;
                 }
                 
-                pdf.addImage(imageDataUrl, imageFormat, margin, currentY, finalWidth, finalHeight, undefined, 'FAST');
-                currentY += finalHeight + 10;
-              } catch (propError) {
-                console.warn('[NOTIFICAÇÃO] Erro ao obter dimensões da imagem:', propError);
-                finalHeight = imageWidth * 1.33;
-                pdf.addImage(imageDataUrl, imageFormat, margin, currentY, finalWidth, finalHeight, undefined, 'FAST');
-                currentY += finalHeight + 10;
+                pdf.setFontSize(14);
+                pdf.setFont('helvetica', 'bold');
+                pdf.text('IDENTITY PHOTO WITH DOCUMENT', margin, currentY);
+                currentY += 12;
+                
+                // Calcular dimensões (limitar largura e altura proporcionalmente)
+                const availableWidth = pageWidth - (2 * margin);
+                const targetWidth = Math.min(120, availableWidth * 0.9);
+                const maxHeightAllowed = 160;
+                
+                let renderWidth = targetWidth;
+                let renderHeight = 0;
+                
+                try {
+                  const props = pdf.getImageProperties(imageDataUrl);
+                  const ratio = props.height / props.width;
+                  renderHeight = renderWidth * ratio;
+                  
+                  if (renderHeight > maxHeightAllowed) {
+                    renderHeight = maxHeightAllowed;
+                    renderWidth = renderHeight / ratio;
+                  }
+                  
+                  if (currentY + renderHeight > pdf.internal.pageSize.getHeight() - margin) {
+                    pdf.addPage();
+                    currentY = margin;
+                  }
+                  
+                  pdf.addImage(imageDataUrl, imageFormat, margin, currentY, renderWidth, renderHeight, undefined, 'FAST');
+                  currentY += renderHeight + 10;
+                } catch (pErr) {
+                  console.warn('[NOTIFICAÇÃO] Erro ao obter props da imagem, usando fallback:', pErr);
+                  renderHeight = renderWidth * 1.33;
+                  if (currentY + renderHeight > pdf.internal.pageSize.getHeight() - margin) {
+                    pdf.addPage();
+                    currentY = margin;
+                  }
+                  pdf.addImage(imageDataUrl, imageFormat, margin, currentY, renderWidth, renderHeight, undefined, 'FAST');
+                  currentY += renderHeight + 10;
+                }
+                console.log('[NOTIFICAÇÃO] ✅ Foto de identidade incluída no PDF!');
+              } catch (convErr) {
+                console.error('[NOTIFICAÇÃO] Erro na conversão/processamento da imagem:', convErr);
               }
-              
-              console.log('[NOTIFICAÇÃO] ✅ Foto de identidade incluída no PDF com sucesso!');
-            } catch (conversionError) {
-              console.error('[NOTIFICAÇÃO] Erro ao converter foto para base64:', conversionError);
+            } else {
+              console.warn('[NOTIFICAÇÃO] Falha ao baixar foto real do storage:', imageError?.message);
             }
-          } else {
-            console.warn('[NOTIFICAÇÃO] Erro ao carregar foto:', imageError?.message);
           }
-        } catch (photoError) {
-          console.error('[NOTIFICAÇÃO] Erro ao processar foto:', photoError);
+        } catch (photoErr) {
+          console.error('[NOTIFICAÇÃO] Erro geral ao processar foto:', photoErr);
         }
-      } else {
-        console.log('[NOTIFICAÇÃO] Nenhuma foto de identidade encontrada');
       }
       
       // Gerar PDF blob
