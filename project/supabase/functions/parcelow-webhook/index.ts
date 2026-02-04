@@ -770,8 +770,11 @@ Deno.serve(async (req: Request) => {
 
     // 4.0. Detectar ambiente (dev ou prod) - verificar redirect_success URL
     const redirectUrl = parcelowOrder.redirect_success || '';
-    const isDevelopment = redirectUrl.includes('localhost') || redirectUrl.includes('127.0.0.1');
-    console.log('[parcelow-webhook] 🌍 Ambiente detectado:', isDevelopment ? 'DESENVOLVIMENTO' : 'PRODUÇÃO');
+    const isDevelopment = 
+      redirectUrl.includes('localhost') || 
+      redirectUrl.includes('127.0.0.1') || 
+      redirectUrl.includes('staging-matriculausa.netlify.app');
+    console.log('[parcelow-webhook] 🌍 Ambiente detectado:', isDevelopment ? 'DESENVOLVIMENTO/STAGING' : 'PRODUÇÃO');
 
     // 5. Se pago, processar lógica completa (igual ao Stripe)
     if (isPaid) {
