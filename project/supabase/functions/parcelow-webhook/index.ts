@@ -815,26 +815,35 @@ Deno.serve(async (req: Request) => {
 
     console.log(`[parcelow-webhook] 🔄 Status mapeado: ${newStatus} (isPaid: ${isPaid})`);
 
-    // Determinar fee_type pelo reference ANTES de criar o registro (reference já definido no início)
+    // Determinar fee_type:
+    // 1. Pelo registro no banco (mais confiável)
+    // 2. Pelo prefixo da reference (resiliência)
+    // 3. Pelo metadata (último recurso)
     let feeType = 'unknown';
-    
-    if (reference.startsWith('app_fee_') || reference.startsWith('applicatio_') || reference.startsWith('app_')) {
-      feeType = 'application_fee';
-    } else if (reference.startsWith('sp_') || reference.startsWith('selection_')) {
-      feeType = 'selection_process';
-    } else if (reference.startsWith('sf_') || reference.startsWith('scholarship_') || reference.startsWith('scholarshi_')) {
-      feeType = 'scholarship_fee';
-    } else if (reference.startsWith('i20_')) {
-      feeType = 'i20_control';
+
+    if (payment?.fee_type) {
+      feeType = payment.fee_type;
+      console.log('[parcelow-webhook] 📋 Fee type recuperado do banco de dados:', feeType);
     } else {
-      // Fallback para metadata se existir
-      const metaFee = parcelowOrder.metadata?.fee_type;
-      if (metaFee) {
-        if (metaFee === 'application_fee' || metaFee === 'selection_process' || metaFee === 'scholarship_fee' || metaFee === 'i20_control' || metaFee === 'i20_control_fee') {
-           // Normalizar para nomes padrão
-           if (metaFee === 'i20_control_fee') feeType = 'i20_control';
-           else if (metaFee === 'selection_process_fee') feeType = 'selection_process';
-           else feeType = metaFee;
+      // Tentar detectar pelo prefixo da reference
+      if (reference.startsWith('app_fee_') || reference.startsWith('applicatio_') || reference.startsWith('app_') || reference.startsWith('ap_')) {
+        feeType = 'application_fee';
+      } else if (reference.startsWith('sp_') || reference.startsWith('selection_')) {
+        feeType = 'selection_process';
+      } else if (reference.startsWith('sf_') || reference.startsWith('scholarship_') || reference.startsWith('scholarshi_')) {
+        feeType = 'scholarship_fee';
+      } else if (reference.startsWith('i20_')) {
+        feeType = 'i20_control';
+      } else {
+        // Fallback para metadata se existir (Parcelow Sandbox às vezes retorna, Produção raramente)
+        const metaFee = parcelowOrder.metadata?.fee_type;
+        if (metaFee) {
+          if (metaFee === 'application_fee' || metaFee === 'selection_process' || metaFee === 'scholarship_fee' || metaFee === 'i20_control' || metaFee === 'i20_control_fee') {
+             // Normalizar para nomes padrão
+             if (metaFee === 'i20_control_fee') feeType = 'i20_control';
+             else if (metaFee === 'selection_process_fee') feeType = 'selection_process';
+             else feeType = metaFee;
+          }
         }
       }
     }
