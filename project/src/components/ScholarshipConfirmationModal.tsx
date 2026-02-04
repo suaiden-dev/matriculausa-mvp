@@ -18,6 +18,7 @@ import { useTranslation } from 'react-i18next';
 import { convertCentsToDollars } from '../utils/currency';
 import { calculateCardAmountWithFees, calculatePIXAmountWithFees, getExchangeRate } from '../utils/stripeFeeCalculator';
 import { supabase } from '../lib/supabase';
+import { config } from '../lib/config';
 
 // Componente SVG para o logo do PIX
 const PixIcon = ({ className }: { className?: string }) => (
@@ -903,57 +904,59 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
               </label>
             )}
 
-            {/* Parcelow Option */}
-            <label className="relative flex items-center p-3 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-300 hover:bg-blue-50">
-              <input
-                type="radio"
-                name="payment-method"
-                value="parcelow"
-                checked={selectedPaymentMethod === 'parcelow'}
-                onChange={() => handlePaymentMethodSelect('parcelow')}
-                className="sr-only"
-              />
-              <div className={`w-4 h-4 sm:w-5 sm:h-5 border-2 rounded-full mr-2 sm:mr-3 flex items-center justify-center flex-shrink-0 ${
-                selectedPaymentMethod === 'parcelow' 
-                  ? 'border-blue-600 bg-blue-600' 
-                  : 'border-gray-300'
-              }`}>
-                {selectedPaymentMethod === 'parcelow' && (
-                  <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white rounded-full"></div>
-                )}
-              </div>
-              
-              <div className="flex items-center justify-between gap-2 sm:gap-3 min-w-0 flex-1">
-                <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-                  <div className="flex-shrink-0 overflow-hidden rounded-lg">
-                    <ParcelowIcon className="w-10 h-10 sm:w-11 sm:h-11 shadow-sm" />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="font-medium text-gray-900 text-sm sm:text-base">
-                      {t('scholarshipConfirmationModal.payment.parcelow.title')}
-                    </div>
-                    <div className="text-xs sm:text-sm text-gray-600">
-                      {t('scholarshipConfirmationModal.payment.parcelow.description')}
-                    </div>
-                    <div className="text-xs text-gray-400 mt-0.5">
-                      {t('paymentSelector.parcelowFeesNote')}
-                    </div>
-                  </div>
-                </div>
-                <div className="flex flex-col items-end flex-shrink-0 ml-auto">
-                  <span className="text-sm font-semibold text-blue-700 whitespace-nowrap">
-                    ${feeAmount.toFixed(2)}
-                  </span>
-                  {exchangeRate && feeAmount > 0 && (
-                    <span className="text-[10px] font-medium text-blue-600 whitespace-nowrap">
-                      {t('paymentSelector.parcelowInstallmentPreview', {
-                        count: 12
-                      })}
-                    </span>
+            {/* Parcelow Option - apenas em desenvolvimento/staging, oculto em produção */}
+            {config.showParcelowPaymentMethod() && (
+              <label className="relative flex items-center p-3 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-300 hover:bg-blue-50">
+                <input
+                  type="radio"
+                  name="payment-method"
+                  value="parcelow"
+                  checked={selectedPaymentMethod === 'parcelow'}
+                  onChange={() => handlePaymentMethodSelect('parcelow')}
+                  className="sr-only"
+                />
+                <div className={`w-4 h-4 sm:w-5 sm:h-5 border-2 rounded-full mr-2 sm:mr-3 flex items-center justify-center flex-shrink-0 ${
+                  selectedPaymentMethod === 'parcelow'
+                    ? 'border-blue-600 bg-blue-600'
+                    : 'border-gray-300'
+                }`}>
+                  {selectedPaymentMethod === 'parcelow' && (
+                    <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white rounded-full"></div>
                   )}
                 </div>
-              </div>
-            </label>
+
+                <div className="flex items-center justify-between gap-2 sm:gap-3 min-w-0 flex-1">
+                  <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                    <div className="flex-shrink-0 overflow-hidden rounded-lg">
+                      <ParcelowIcon className="w-10 h-10 sm:w-11 sm:h-11 shadow-sm" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="font-medium text-gray-900 text-sm sm:text-base">
+                        {t('scholarshipConfirmationModal.payment.parcelow.title')}
+                      </div>
+                      <div className="text-xs sm:text-sm text-gray-600">
+                        {t('scholarshipConfirmationModal.payment.parcelow.description')}
+                      </div>
+                      <div className="text-xs text-gray-400 mt-0.5">
+                        {t('paymentSelector.parcelowFeesNote')}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end flex-shrink-0 ml-auto">
+                    <span className="text-sm font-semibold text-blue-700 whitespace-nowrap">
+                      ${feeAmount.toFixed(2)}
+                    </span>
+                    {exchangeRate && feeAmount > 0 && (
+                      <span className="text-[10px] font-medium text-blue-600 whitespace-nowrap">
+                        {t('paymentSelector.parcelowInstallmentPreview', {
+                          count: 12
+                        })}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </label>
+            )}
           </div>
         </div>
         </div>

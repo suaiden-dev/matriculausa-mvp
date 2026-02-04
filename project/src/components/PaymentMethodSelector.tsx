@@ -41,6 +41,7 @@ const ParcelowIcon = ({ className }: { className?: string }) => (
   />
 );
 import { useTranslation } from 'react-i18next';
+import { config } from '../lib/config';
 
 export interface PaymentMethod {
   id: string;
@@ -100,8 +101,7 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
   const loadPaymentMethods = async () => {
     try {
       setLoading(true);
-      // Por enquanto, vamos usar métodos hardcoded
-      // Depois podemos buscar do banco de dados
+      const showParcelow = config.showParcelowPaymentMethod();
       const methods: PaymentMethod[] = [
         {
           id: 'stripe',
@@ -121,15 +121,17 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
           requires_verification: false,
           icon: PixIcon
         },
-        {
-          id: 'parcelow',
-          name: 'parcelow',
-          display_name: t('paymentSelector.methods.parcelow.title'),
-          description: t('paymentSelector.methods.parcelow.description', { max: 12 }),
-          is_active: true,
-          requires_verification: false,
-          icon: ParcelowIcon
-        },
+        ...(showParcelow
+          ? [{
+              id: 'parcelow',
+              name: 'parcelow',
+              display_name: t('paymentSelector.methods.parcelow.title'),
+              description: t('paymentSelector.methods.parcelow.description', { max: 12 }),
+              is_active: true,
+              requires_verification: false,
+              icon: ParcelowIcon
+            }]
+          : []),
         {
           id: 'zelle',
           name: 'zelle',
@@ -140,7 +142,7 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
           icon: ZelleIcon
         }
       ];
-      
+
       setPaymentMethods(methods);
       
       // NÃO selecionar método automaticamente - deixar usuário escolher

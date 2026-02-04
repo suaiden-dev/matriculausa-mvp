@@ -387,45 +387,27 @@ export function useAdjustedStudentsCalculation(
   const { data: dependentsMap = {} } = useStudentDependentsQuery(profileIds);
   const { data: realPaidAmountsMap = {} } = useRealPaidAmountsQuery(uniqueUserIds);
 
-  // Função para calcular receita de um estudante
+  // Função para calcular receita de um estudante (affiliate admin: sempre valor ORIGINAL da taxa, não valor real pago com taxas do gateway)
   const calculateStudentRevenue = useMemo(() => {
     return (student: any) => {
       const dependents = dependentsMap[student.profile_id] || 0;
-      const realPaid = realPaidAmountsMap[student.user_id] || {};
+      const ov = overridesMap[student.user_id] || {};
+      const systemType = student.system_type || 'legacy';
+      const isSimplified = systemType === 'simplified';
 
       let total = 0;
-      
-      // Selection Process Fee
-      if (student.has_paid_selection_process_fee) {
-        if (realPaid.selection_process !== undefined && realPaid.selection_process > 0) {
-          total += realPaid.selection_process;
-        } else {
-          const systemType = student.system_type || 'legacy';
-          const baseSelectionFee = systemType === 'simplified' ? 350 : 400;
-          total += systemType === 'simplified' ? baseSelectionFee : baseSelectionFee + (dependents * 150);
-        }
-      }
-      
-      // Scholarship Fee
-      const hasAnyScholarshipPaid = student.is_scholarship_fee_paid || false;
-      if (hasAnyScholarshipPaid) {
-        if (realPaid.scholarship !== undefined && realPaid.scholarship > 0) {
-          total += realPaid.scholarship;
-        } else {
-          const systemType = student.system_type || 'legacy';
-          const scholarshipFee = systemType === 'simplified' ? 550 : 900;
-          total += scholarshipFee;
-        }
-      }
-      
-      // I-20 Control Fee
-      if (hasAnyScholarshipPaid && student.has_paid_i20_control_fee) {
-        if (realPaid.i20_control !== undefined && realPaid.i20_control > 0) {
-          total += realPaid.i20_control;
-        } else {
-          total += 900;
-        }
-      }
+      const baseSelection = isSimplified ? 350 : 400;
+      const selectionOriginal = ov.selection_process_fee != null
+        ? Number(ov.selection_process_fee)
+        : (isSimplified ? baseSelection : baseSelection + dependents * 150);
+      const scholarshipOriginal = ov.scholarship_fee != null
+        ? Number(ov.scholarship_fee)
+        : (isSimplified ? 550 : 900);
+      const i20Original = ov.i20_control_fee != null ? Number(ov.i20_control_fee) : 900;
+
+      if (student.has_paid_selection_process_fee) total += selectionOriginal;
+      if (student.is_scholarship_fee_paid) total += scholarshipOriginal;
+      if (student.is_scholarship_fee_paid && student.has_paid_i20_control_fee) total += i20Original;
 
       return {
         ...student,
@@ -435,7 +417,7 @@ export function useAdjustedStudentsCalculation(
         allApplications: student.allApplications
       };
     };
-  }, [overridesMap, dependentsMap, realPaidAmountsMap]);
+  }, [overridesMap, dependentsMap]);
 
   // Calcular estudantes ajustados (todos)
   const allAdjustedStudents = useMemo(() => {
@@ -450,7 +432,7 @@ export function useAdjustedStudentsCalculation(
   return {
     allAdjustedStudents,
     adjustedStudents,
-    isLoading: !overridesMap || !dependentsMap || !realPaidAmountsMap,
+    isLoading: !overridesMap || !dependentsMap,
     overridesMap,
     dependentsMap,
     realPaidAmountsMap
@@ -475,7 +457,7 @@ export function useAffiliateRevenueCalculationQuery(userId?: string) {
   return useQuery({
     queryKey: queryKeys.affiliateAdmin.revenueCalculation(userId, profiles?.length || 0),
     queryFn: async () => {
-      if (!profiles || !overridesMap || !realPaidAmountsMap) {
+      if (!profiles || !overridesMap) {
         return {
           totalRevenue: 0,
           adjustedRevenueByReferral: {},
@@ -489,50 +471,22 @@ export function useAffiliateRevenueCalculationQuery(userId?: string) {
       // Filtrar apenas estudantes que pagaram Selection Process Fee
       const paidProfiles = profiles.filter((p: any) => p.has_paid_selection_process_fee);
 
-      // Função para calcular revenue de um perfil
+      // Affiliate admin: revenue com valor ORIGINAL da taxa (override ou base), não valor real pago
       const calculateProfileRevenue = (p: any) => {
         const deps = Number(p?.dependents || 0);
         const ov = overridesMap[p?.user_id] || {};
-        const realPaid = realPaidAmountsMap[p?.user_id] || {};
-
-        // Selection Process
-        let selPaid = 0;
-        if (p?.has_paid_selection_process_fee) {
-          if (realPaid.selection_process !== undefined) {
-            selPaid = realPaid.selection_process;
-          } else {
-            const baseSelDefault = p?.system_type === 'simplified' ? 350 : 400;
-            const baseSel = ov.selection_process_fee != null ? Number(ov.selection_process_fee) : baseSelDefault;
-            selPaid = ov.selection_process_fee != null 
-              ? baseSel 
-              : (p?.system_type === 'simplified' ? baseSel : baseSel + (deps * 150));
-          }
-        }
-
-        // Scholarship Fee
+        const isSimplified = p?.system_type === 'simplified';
+        const baseSel = isSimplified ? 350 : 400;
+        const selPaid = p?.has_paid_selection_process_fee
+          ? (ov.selection_process_fee != null ? Number(ov.selection_process_fee) : (isSimplified ? baseSel : baseSel + deps * 150))
+          : 0;
         const hasAnyScholarshipPaid = p?.is_scholarship_fee_paid || false;
-        let schPaid = 0;
-        if (hasAnyScholarshipPaid) {
-          if (realPaid.scholarship !== undefined) {
-            schPaid = realPaid.scholarship;
-          } else {
-            const schBaseDefault = p?.system_type === 'simplified' ? 550 : 900;
-            const schBase = ov.scholarship_fee != null ? Number(ov.scholarship_fee) : schBaseDefault;
-            schPaid = schBase;
-          }
-        }
-
-        // I-20 Control Fee
-        let i20Paid = 0;
-        if (hasAnyScholarshipPaid && p?.has_paid_i20_control_fee) {
-          if (realPaid.i20_control !== undefined) {
-            i20Paid = realPaid.i20_control;
-          } else {
-            const i20Base = ov.i20_control_fee != null ? Number(ov.i20_control_fee) : 900;
-            i20Paid = i20Base;
-          }
-        }
-
+        const schPaid = hasAnyScholarshipPaid
+          ? (ov.scholarship_fee != null ? Number(ov.scholarship_fee) : (isSimplified ? 550 : 900))
+          : 0;
+        const i20Paid = hasAnyScholarshipPaid && p?.has_paid_i20_control_fee
+          ? (ov.i20_control_fee != null ? Number(ov.i20_control_fee) : 900)
+          : 0;
         return { selPaid, schPaid, i20Paid, total: selPaid + schPaid + i20Paid };
       };
 
@@ -569,7 +523,7 @@ export function useAffiliateRevenueCalculationQuery(userId?: string) {
         paidStudentsCount: paidProfiles.length
       };
     },
-    enabled: !!(profiles && overridesMap && realPaidAmountsMap),
+    enabled: !!(profiles && overridesMap),
     staleTime: 2 * 60 * 1000, // 2 minutos
     gcTime: 8 * 60 * 1000, // 8 minutos
     refetchOnWindowFocus: false,
@@ -911,7 +865,7 @@ export function useFinancialStatsQuery(userId?: string) {
       });
 
       // 5. Preparar overrides
-      const uniqueUserIds = Array.from(new Set((profiles || []).map((p) => p.user_id).filter(Boolean)));
+      const uniqueUserIds = Array.from(new Set((profiles || []).map((p: any) => p.user_id).filter(Boolean)));
       const overrideEntries = await Promise.allSettled(uniqueUserIds.map(async (uid) => {
         const { data, error } = await supabase.rpc('get_user_fee_overrides', { target_user_id: uid });
         return [uid, error ? null : data];
@@ -946,47 +900,22 @@ export function useFinancialStatsQuery(userId?: string) {
         }
       }));
 
-      // 7. Calcular total revenue
-      const totalRevenue = (profiles || []).reduce((sum, p) => {
+      // 7. Calcular total revenue (affiliate admin: valor ORIGINAL da taxa, não valor real pago)
+      const totalRevenue = (profiles || []).reduce((sum: number, p: any) => {
         const deps = Number(p?.dependents || 0);
         const ov = overridesMap[p?.user_id] || {};
-        const realPaid = realPaidAmountsMap[p?.user_id] || {};
-
-        let selPaid = 0;
-        if (p?.has_paid_selection_process_fee) {
-          if (realPaid.selection_process !== undefined) {
-            selPaid = realPaid.selection_process;
-          } else {
-            const baseSelDefault = p?.system_type === 'simplified' ? 350 : 400;
-            const baseSel = ov.selection_process_fee != null ? Number(ov.selection_process_fee) : baseSelDefault;
-            selPaid = ov.selection_process_fee != null 
-              ? baseSel 
-              : (p?.system_type === 'simplified' ? baseSel : baseSel + (deps * 150));
-          }
-        }
-
+        const isSimplified = p?.system_type === 'simplified';
+        const baseSel = isSimplified ? 350 : 400;
+        const selPaid = p?.has_paid_selection_process_fee
+          ? (ov.selection_process_fee != null ? Number(ov.selection_process_fee) : (isSimplified ? baseSel : baseSel + deps * 150))
+          : 0;
         const hasAnyScholarshipPaid = p?.is_scholarship_fee_paid || false;
-        let schPaid = 0;
-        if (hasAnyScholarshipPaid) {
-          if (realPaid.scholarship !== undefined) {
-            schPaid = realPaid.scholarship;
-          } else {
-            const schBaseDefault = p?.system_type === 'simplified' ? 550 : 900;
-            const schBase = ov.scholarship_fee != null ? Number(ov.scholarship_fee) : schBaseDefault;
-            schPaid = schBase;
-          }
-        }
-
-        let i20Paid = 0;
-        if (hasAnyScholarshipPaid && p?.has_paid_i20_control_fee) {
-          if (realPaid.i20_control !== undefined) {
-            i20Paid = realPaid.i20_control;
-          } else {
-            const i20Base = ov.i20_control_fee != null ? Number(ov.i20_control_fee) : 900;
-            i20Paid = i20Base;
-          }
-        }
-
+        const schPaid = hasAnyScholarshipPaid
+          ? (ov.scholarship_fee != null ? Number(ov.scholarship_fee) : (isSimplified ? 550 : 900))
+          : 0;
+        const i20Paid = hasAnyScholarshipPaid && p?.has_paid_i20_control_fee
+          ? (ov.i20_control_fee != null ? Number(ov.i20_control_fee) : 900)
+          : 0;
         return sum + selPaid + schPaid + i20Paid;
       }, 0);
 
@@ -1028,7 +957,7 @@ export function useFinancialStatsQuery(userId?: string) {
       }));
 
       // 9. Calcular receita manual
-      const manualRevenue = (profiles || []).reduce((sum, p) => {
+      const manualRevenue = (profiles || []).reduce((sum: number, p: any) => {
         const deps = Number(p?.dependents || 0);
         const ov = overridesMap[p?.user_id] || {};
         const methods = paymentMethodsMap[p?.profile_id] || {};
@@ -1102,43 +1031,18 @@ export function useFinancialStatsQuery(userId?: string) {
         .reduce((sum: number, p: any) => {
           const deps = Number(p?.dependents || 0);
           const ov = overridesMap[p?.user_id] || {};
-          const realPaid = realPaidAmountsMap[p?.user_id] || {};
-
-          let selPaid = 0;
-          if (p?.has_paid_selection_process_fee) {
-            if (realPaid.selection_process !== undefined) {
-              selPaid = realPaid.selection_process;
-            } else {
-              const baseSelDefault = p?.system_type === 'simplified' ? 350 : 400;
-              const baseSel = ov.selection_process_fee != null ? Number(ov.selection_process_fee) : baseSelDefault;
-              selPaid = ov.selection_process_fee != null 
-                ? baseSel 
-                : (p?.system_type === 'simplified' ? baseSel : baseSel + (deps * 150));
-            }
-          }
-
+          const isSimplified = p?.system_type === 'simplified';
+          const baseSel = isSimplified ? 350 : 400;
+          const selPaid = p?.has_paid_selection_process_fee
+            ? (ov.selection_process_fee != null ? Number(ov.selection_process_fee) : (isSimplified ? baseSel : baseSel + deps * 150))
+            : 0;
           const hasAnyScholarshipPaid = p?.is_scholarship_fee_paid || false;
-          let schPaid = 0;
-          if (hasAnyScholarshipPaid) {
-            if (realPaid.scholarship !== undefined) {
-              schPaid = realPaid.scholarship;
-            } else {
-              const schBaseDefault = p?.system_type === 'simplified' ? 550 : 900;
-              const schBase = ov.scholarship_fee != null ? Number(ov.scholarship_fee) : schBaseDefault;
-              schPaid = schBase;
-            }
-          }
-
-          let i20Paid = 0;
-          if (hasAnyScholarshipPaid && p?.has_paid_i20_control_fee) {
-            if (realPaid.i20_control !== undefined) {
-              i20Paid = realPaid.i20_control;
-            } else {
-              const i20Base = ov.i20_control_fee != null ? Number(ov.i20_control_fee) : 900;
-              i20Paid = i20Base;
-            }
-          }
-
+          const schPaid = hasAnyScholarshipPaid
+            ? (ov.scholarship_fee != null ? Number(ov.scholarship_fee) : (isSimplified ? 550 : 900))
+            : 0;
+          const i20Paid = hasAnyScholarshipPaid && p?.has_paid_i20_control_fee
+            ? (ov.i20_control_fee != null ? Number(ov.i20_control_fee) : 900)
+            : 0;
           return sum + selPaid + schPaid + i20Paid;
         }, 0);
 

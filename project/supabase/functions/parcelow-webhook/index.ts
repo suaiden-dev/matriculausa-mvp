@@ -515,8 +515,6 @@ Deno.serve(async (req: Request) => {
     }
 
     const payload = await req.json();
-    console.log('[parcelow-webhook] 📥 Payload:', JSON.stringify(payload, null, 2));
-
     const event = payload.event;
     const parcelowOrder = payload.order;
 
@@ -525,38 +523,15 @@ Deno.serve(async (req: Request) => {
       return new Response(JSON.stringify({ error: 'Invalid payload' }), { status: 400 });
     }
 
-    // 1. Extrair userId do email do cliente (Parcelow sempre envia o email)
-    const clientEmail = parcelowOrder.client?.email;
-    
-    if (!clientEmail) {
-      console.error('[parcelow-webhook] ❌ Email do cliente não encontrado no payload');
-      return new Response(JSON.stringify({ error: 'Client email not found in payload' }), { status: 400 });
-    }
-    
-    console.log('[parcelow-webhook] 📧 Email do cliente:', clientEmail);
-    
-    // Buscar usuário por email
-    const { data: authUser, error: authError } = await supabase.auth.admin.listUsers();
-    
-    if (authError || !authUser) {
-      console.error('[parcelow-webhook] ❌ Erro ao buscar usuários:', authError);
-      return new Response(JSON.stringify({ error: 'Failed to find user' }), { status: 500 });
-    }
-    
-    const user = authUser.users.find((u: any) => u.email === clientEmail);
-    
-    if (!user) {
-      console.error('[parcelow-webhook] ❌ Usuário não encontrado para email:', clientEmail);
-      return new Response(JSON.stringify({ error: 'User not found' }), { status: 404 });
-    }
-    
-    const userId = user.id;
-    console.log('[parcelow-webhook] ✅ Usuário encontrado:', userId);
-    
-    // 2. Buscar payment record (opcional - pode não existir ainda para alguns eventos)
-    let payment = null;
-    
-    // Tentar buscar por parcelow_order_id
+    // 1. Identificar userId: primeiro por email do cliente; se não encontrar, por reference/order_id do pedido
+    // (Parcelow pode enviar email vinculado ao CPF de outro pagamento fora do sistema)
+    const clientEmail = parcelowOrder.client?.email ?? '';
+    const reference = parcelowOrder.reference || '';
+
+    let userId: string | null = null;
+    let payment: any = null;
+
+    // 1a. Buscar pagamento por order_id ou reference (registro criado no checkout tem o user_id correto)
     const { data: paymentById } = await supabase
       .from('individual_fee_payments')
       .select('*')
@@ -565,38 +540,68 @@ Deno.serve(async (req: Request) => {
 
     if (paymentById) {
       payment = paymentById;
-      console.log('[parcelow-webhook] ✅ Pagamento encontrado por order_id:', payment.id);
-    } else {
-      // Tentar buscar por reference
-      console.log('[parcelow-webhook] ⚠️ Pagamento não encontrado por order_id, tentando por reference...');
-      
-      const reference = parcelowOrder.reference;
-      
-      if (reference) {
-        console.log('[parcelow-webhook] 🔍 Buscando por reference:', reference);
-        
-        const { data: paymentByReference } = await supabase
-          .from('individual_fee_payments')
-          .select('*')
-          .eq('parcelow_reference', reference)
-          .eq('payment_method', 'parcelow')
-          .eq('user_id', userId) // Adicionar filtro por userId
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        
-        if (paymentByReference) {
-          payment = paymentByReference;
-          console.log('[parcelow-webhook] ✅ Pagamento encontrado por reference:', payment.id);
-          
-          // Atualizar o parcelow_order_id para futuras buscas
+      userId = payment.user_id;
+    }
+
+    if (!userId && reference) {
+      const { data: paymentByRef } = await supabase
+        .from('individual_fee_payments')
+        .select('*')
+        .eq('parcelow_reference', reference)
+        .eq('payment_method', 'parcelow')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (paymentByRef) {
+        payment = paymentByRef;
+        userId = payment.user_id;
+        if (!payment.parcelow_order_id || payment.parcelow_order_id !== String(parcelowOrder.id)) {
           await supabase
             .from('individual_fee_payments')
             .update({ parcelow_order_id: String(parcelowOrder.id) })
             .eq('id', payment.id);
-          console.log('[parcelow-webhook] ✅ parcelow_order_id atualizado');
-        } else {
-          console.log('[parcelow-webhook] ⚠️ Payment record não encontrado - será processado quando o evento paid chegar');
+        }
+      }
+    }
+
+    // 1b. Se ainda não temos userId, tentar por email (comportamento original)
+    if (!userId && clientEmail) {
+      const { data: authUser, error: authError } = await supabase.auth.admin.listUsers();
+      if (!authError && authUser?.users) {
+        const user = authUser.users.find((u: any) => u.email === clientEmail);
+        if (user) userId = user.id;
+      }
+    }
+
+    if (!userId) {
+      console.error('[parcelow-webhook] ❌ Usuário não encontrado (email:', clientEmail, ', reference:', reference, ')');
+      return new Response(JSON.stringify({ error: 'User not found' }), { status: 404 });
+    }
+
+    // Garantir que temos o payment record para este pedido (para eventos que chegam antes do insert)
+    if (!payment) {
+      const { data: paymentById2 } = await supabase
+        .from('individual_fee_payments')
+        .select('*')
+        .eq('parcelow_order_id', String(parcelowOrder.id))
+        .maybeSingle();
+      if (paymentById2) payment = paymentById2;
+      else if (reference) {
+        const { data: paymentByRef2 } = await supabase
+          .from('individual_fee_payments')
+          .select('*')
+          .eq('parcelow_reference', reference)
+          .eq('user_id', userId)
+          .eq('payment_method', 'parcelow')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (paymentByRef2) {
+          payment = paymentByRef2;
+          await supabase
+            .from('individual_fee_payments')
+            .update({ parcelow_order_id: String(parcelowOrder.id) })
+            .eq('id', payment.id);
         }
       }
     }
@@ -666,7 +671,9 @@ Deno.serve(async (req: Request) => {
         break;
       case 'event_order_antifraud_review':
         newStatus = 'processing';
-        console.log('[parcelow-webhook] 🔍 Pagamento em análise antifraude');
+        break;
+      case 'event_order_in_review':
+        newStatus = 'processing';
         break;
       case 'event_order_confirmed':
         newStatus = 'confirmed';
@@ -684,8 +691,7 @@ Deno.serve(async (req: Request) => {
 
     console.log(`[parcelow-webhook] 🔄 Status mapeado: ${newStatus} (isPaid: ${isPaid})`);
 
-    // Determinar fee_type pelo reference ANTES de criar o registro
-    const reference = parcelowOrder.reference || '';
+    // Determinar fee_type pelo reference ANTES de criar o registro (reference já definido no início)
     let feeType = 'unknown';
     
     if (reference.startsWith('app_fee_') || reference.startsWith('applicatio_') || reference.startsWith('app_')) {

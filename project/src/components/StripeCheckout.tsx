@@ -491,24 +491,35 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
         });
 
         if (!response.ok) {
-          const errorData = await response.json();
-          console.error('🔍 [StripeCheckout] Erro Parcelow:', errorData);
-          
+          let errorData: { error?: string; message?: string } = {};
+          try {
+            errorData = await response.json();
+          } catch {
+            setError(t('errors.genericPaymentError', 'Unable to start checkout. Please try again.'));
+            setLoading(false);
+            return;
+          }
+          setShowPaymentMethodSelector(false);
           if (errorData.error === 'document_number_required') {
             setProfileErrorType('cpf_missing');
             setShowProfileRequiredModal(true);
             setLoading(false);
             return;
           }
-          
           if (errorData.error === 'User profile not found') {
             setProfileErrorType('profile_incomplete');
             setShowProfileRequiredModal(true);
             setLoading(false);
             return;
           }
-          
-          throw new Error(errorData.error || 'Erro ao criar sessão Parcelow');
+          if (errorData.error === 'parcelow_client_email_exists' || errorData.error === 'parcelow_order_rejected') {
+            setError(errorData.message || errorData.error || 'Parcelow recusou o pedido. Tente novamente ou use outro método.');
+            setLoading(false);
+            return;
+          }
+          setError(errorData.message || errorData.error || 'Erro ao criar sessão Parcelow');
+          setLoading(false);
+          return;
         }
 
         const data = await response.json();
