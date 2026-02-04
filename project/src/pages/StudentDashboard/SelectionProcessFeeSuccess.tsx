@@ -179,11 +179,15 @@ const SelectionProcessFeeSuccess: React.FC = () => {
 
       try {
         // Buscar pagamento mais recente do usuário para selection_process
+        // Usamos ilike com % para lidar com truncamento de URL pela Parcelow
         const { data: payment, error: paymentError } = await supabase
           .from('individual_fee_payments')
           .select('*')
-          .eq('parcelow_reference', reference)
+          .eq('user_id', user.id) // ✅ Segurança: filtrar pelo usuárioLogado
+          .ilike('parcelow_reference', `${reference}%`) // ✅ Resiliência: lidar com truncamento
           .eq('payment_method', 'parcelow')
+          .order('created_at', { ascending: false })
+          .limit(1)
           .maybeSingle();
 
         if (paymentError) {

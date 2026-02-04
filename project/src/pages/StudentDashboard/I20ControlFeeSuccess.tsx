@@ -42,11 +42,15 @@ const I20ControlFeeSuccess: React.FC = () => {
       console.log(`[Parcelow] Tentativa ${attempts}/${maxAttempts}`);
 
       try {
+        // Buscar o pagamento pelo reference (que pode estar truncado)
         const { data: payment } = await supabase
           .from('individual_fee_payments')
           .select('*')
-          .eq('parcelow_reference', reference)
+          .eq('user_id', user.id)
+          .ilike('parcelow_reference', `${reference}%`)
           .eq('payment_method', 'parcelow')
+          .order('created_at', { ascending: false })
+          .limit(1)
           .maybeSingle();
 
         if (payment && payment.parcelow_status === 'paid') {

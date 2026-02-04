@@ -184,9 +184,9 @@ Deno.serve(async (req) => {
     // Obter token de acesso
     const accessToken = await getParcelowAccessToken(config);
 
-    // Gerar ID de referência único (curto para evitar truncamento pela Parcelow)
-    const timestamp = Date.now();
-    const reference = `app_fee_${timestamp}`;
+    // Gerar ID de referência único (MUITO curto para evitar truncamento pela Parcelow)
+    // Usar uma string aleatória curta de 6 caracteres
+    const reference = `ap_${Math.random().toString(36).substring(2, 8)}`; // ap = application_fee (total 9 chars)
 
     // URLs de redirect dinâmicas conforme ambiente (matriculausa.com, staging ou localhost)
     const origin = getRedirectOrigin(req);
@@ -231,7 +231,7 @@ Deno.serve(async (req) => {
         scholarship_id: application.scholarship_id,
         student_process_type: application.student_process_type || null,
         application_fee_amount: applicationFeeAmount.toString(),
-        timestamp: timestamp.toString(),
+        timestamp: Date.now().toString(),
         ...(metadata || {})
       }
     };
