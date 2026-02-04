@@ -904,7 +904,7 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
               </label>
             )}
 
-            {/* Parcelow Option - apenas em desenvolvimento/staging, oculto em produção */}
+            {/* Opção Parcelow - Disponível em todos os ambientes */}
             {config.showParcelowPaymentMethod() && (
               <label className="relative flex items-center p-3 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-300 hover:bg-blue-50">
                 <input

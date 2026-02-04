@@ -161,10 +161,8 @@ Deno.serve(async (req) => {
       : (scholarships_ids || undefined);
 
     // Gerar ID de referência único (MUITO curto para evitar truncamento pela Parcelow)
-    // Usar base36 para encurtar o timestamp
-    const timestamp = Date.now();
-    const shortTimestamp = timestamp.toString(36); // Converte para base36 (muito mais curto)
-    const reference = `sf_${shortTimestamp}`; // sf = scholarship_fee
+    // Usar uma string aleatória curta de 6 caracteres
+    const reference = `sf_${Math.random().toString(36).substring(2, 8)}`; // sf = scholarship_fee (total 9 chars)
 
     // URLs de redirect dinâmicas conforme ambiente (matriculausa.com, staging ou localhost)
     const origin = getRedirectOrigin(req);
@@ -205,7 +203,7 @@ Deno.serve(async (req) => {
       metadata: {
         user_id: user.id,
         fee_type: 'scholarship_fee',
-        timestamp: timestamp.toString(),
+        timestamp: Date.now().toString(),
         ...(normalizedScholarshipsIds ? { scholarships_ids: normalizedScholarshipsIds } : {}),
         ...(userPackageFees ? {
           user_has_package: 'true',

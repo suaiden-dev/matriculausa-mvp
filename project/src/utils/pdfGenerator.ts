@@ -124,7 +124,13 @@ export const generateTermAcceptancePDF = async (data: StudentTermAcceptanceData)
             .replace(/&#39;/g, "'");
 
           // Remove HTML tags completely and work with plain text
-          const cleanText = processedHtml.replace(/<[^>]*>/g, '').trim();
+          // Remove HTML tags but preserve line breaks for block elements
+          const cleanText = processedHtml
+            .replace(/<\/p>/g, '\n\n')
+            .replace(/<br\s*\/?>/g, '\n')
+            .replace(/<\/h[1-6]>/g, '\n\n')
+            .replace(/<[^>]*>/g, '')
+            .trim();
           
           // Split into paragraphs by double line breaks, then by single line breaks
           const paragraphs = cleanText.split(/\n\s*\n/).map(p => p.trim()).filter(p => p.length > 0);
@@ -541,7 +547,13 @@ export const generateTermAcceptancePDFBlob = (data: StudentTermAcceptanceData): 
             .replace(/&#39;/g, "'");
 
           // Remove HTML tags completely and work with plain text
-          const cleanText = processedHtml.replace(/<[^>]*>/g, '').trim();
+          // Remove HTML tags but preserve line breaks for block elements
+          const cleanText = processedHtml
+            .replace(/<\/p>/g, '\n\n')
+            .replace(/<br\s*\/?>/g, '\n')
+            .replace(/<\/h[1-6]>/g, '\n\n')
+            .replace(/<[^>]*>/g, '')
+            .trim();
           
           // Split into paragraphs by double line breaks, then by single line breaks
           const paragraphs = cleanText.split(/\n\s*\n/).map(p => p.trim()).filter(p => p.length > 0);

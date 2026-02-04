@@ -114,10 +114,8 @@ Deno.serve(async (req) => {
     const accessToken = await getParcelowAccessToken(config);
 
     // Gerar ID de referência único (MUITO curto para evitar truncamento pela Parcelow)
-    // Usar base36 para encurtar o timestamp
-    const timestamp = Date.now();
-    const shortTimestamp = timestamp.toString(36); // Converte para base36 (muito mais curto)
-    const reference = `sp_${shortTimestamp}`; // sp = selection_process
+    // Usar uma string aleatória curta de 6 caracteres
+    const reference = `sp_${Math.random().toString(36).substring(2, 8)}`; // sp = selection_process (total 9 chars)
 
     // URLs de redirect dinâmicas conforme ambiente (matriculausa.com, staging ou localhost)
     const origin = getRedirectOrigin(req);
@@ -159,7 +157,7 @@ Deno.serve(async (req) => {
         user_id: user.id,
         fee_type: 'selection_process',
         reference: reference,
-        timestamp: timestamp.toString(), // Salvar timestamp para buscar depois
+        timestamp: Date.now().toString(), // Salvar timestamp para buscar depois
         ...(metadata || {}),
         ...(promotionalCouponData ? {
           promotional_coupon: promotionalCouponData.coupon_code,

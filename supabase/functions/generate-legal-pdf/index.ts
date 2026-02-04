@@ -446,6 +446,28 @@ serve(async (req) => {
       const selectionProcessFee = paymentInfo?.gross_amount_usd || paymentInfo?.amount || 600;
       const paymentMethodName = paymentInfo?.payment_method === 'stripe' ? 'Stripe' : paymentInfo?.payment_method === 'zelle' ? 'Zelle' : 'Stripe/Zelle';
 
+      // ✅ MELHORIA: Tentar encontrar uma foto real se o aceite atual tiver mock ou for nulo
+      let finalPhotoPath = recentTerm?.identity_photo_path;
+      let finalPhotoName = recentTerm?.identity_photo_name;
+
+      if (!finalPhotoPath || finalPhotoPath === 'mock_localhost_photo.png') {
+        const { data: altTerm } = await supabase
+          .from('comprehensive_term_acceptance')
+          .select('identity_photo_path, identity_photo_name')
+          .eq('user_id', user_id)
+          .not('identity_photo_path', 'is', null)
+          .neq('identity_photo_path', '')
+          .neq('identity_photo_path', 'mock_localhost_photo.png')
+          .order('accepted_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        
+        if (altTerm) {
+          finalPhotoPath = altTerm.identity_photo_path;
+          finalPhotoName = altTerm.identity_photo_name;
+        }
+      }
+
       studentData = {
         student_name: userProfile.full_name || 'N/A',
         student_email: userProfile.email || 'N/A',
@@ -455,8 +477,8 @@ serve(async (req) => {
         term_title: 'Selection Process Service Agreement',
         term_content: recentTerm?.application_terms?.content || '',
         accepted_at: recentTerm?.accepted_at || userProfile.updated_at,
-        identity_photo_path: recentTerm?.identity_photo_path,
-        identity_photo_name: recentTerm?.identity_photo_name,
+        identity_photo_path: finalPhotoPath,
+        identity_photo_name: finalPhotoName,
         payment_amount: selectionProcessFee,
         payment_method: paymentMethodName,
         payment_date: paymentInfo?.payment_date || userProfile.updated_at,
@@ -582,7 +604,13 @@ serve(async (req) => {
           .replace(/&quot;/g, '"')
           .replace(/&#39;/g, "'");
 
-        const cleanText = processedHtml.replace(/<[^>]*>/g, '').trim();
+        // Remove HTML tags but preserve line breaks for block elements
+        const cleanText = processedHtml
+          .replace(/<\/p>/g, '\n\n')
+          .replace(/<br\s*\/?>/g, '\n')
+          .replace(/<\/h[1-6]>/g, '\n\n')
+          .replace(/<[^>]*>/g, '')
+          .trim();
         const paragraphs = cleanText.split(/\n\s*\n/).map(p => p.trim()).filter(p => p.length > 0);
         
         paragraphs.forEach((paragraph) => {
@@ -727,64 +755,92 @@ serve(async (req) => {
     currentY += 8;
 
     // ===== IDENTITY PHOTO (if available) =====
-    if (studentData.identity_photo_path) {
+    if (studentData.identity_photo_path && studentData.identity_photo_path.trim() !== '') {
       try {
-        console.log(`[generate-legal-pdf] Buscando foto de identidade: ${studentData.identity_photo_path}`);
+        console.log(`[generate-legal-pdf] Foto para inclusão no PDF: ${studentData.identity_photo_path}`);
         
-        // Download image from storage
-        const { data: photoBlob, error: photoError } = await supabase.storage
-          .from('identity-photos')
-          .download(studentData.identity_photo_path);
+        if (studentData.identity_photo_path === 'mock_localhost_photo.png') {
+            // Indicação de mock para testes locais
+            currentY += 10;
+            pdf.setFontSize(10);
+            pdf.setFont('helvetica', 'italic');
+            pdf.text('[Localhost Mock Photo Placeholder]', margin, currentY);
+            currentY += 8;
+        } else {
+            // Download image from storage
+            const { data: photoBlob, error: photoError } = await supabase.storage
+              .from('identity-photos')
+              .download(studentData.identity_photo_path);
 
-        if (photoError) {
-          throw photoError;
-        }
+            if (photoError) {
+              console.error(`[generate-legal-pdf] Erro ao baixar foto do storage: ${photoError.message}`);
+              throw photoError;
+            }
 
-        if (photoBlob) {
-          // Convert Blob to ArrayBuffer then to base64
-          const arrayBuffer = await photoBlob.arrayBuffer();
-          const bytes = new Uint8Array(arrayBuffer);
-          let binary = '';
-          for (let i = 0; i < bytes.byteLength; i++) {
-            binary += String.fromCharCode(bytes[i]);
-          }
-          const base64Image = btoa(binary);
-          
-          // Determine format
-          const ext = studentData.identity_photo_path.split('.').pop()?.toLowerCase();
-          const format = ext === 'png' ? 'PNG' : 'JPEG';
+            if (photoBlob) {
+              // Convert Blob to ArrayBuffer then to base64
+              const arrayBuffer = await photoBlob.arrayBuffer();
+              const bytes = new Uint8Array(arrayBuffer);
+              const base64Image = base64Encode(bytes);
+              
+              // Determine format
+              const ext = studentData.identity_photo_path.split('.').pop()?.toLowerCase();
+              const format = ext === 'png' ? 'PNG' : 'JPEG';
+              const mimeType = ext === 'png' ? 'image/png' : 'image/jpeg';
+              const imageDataUrl = `data:${mimeType};base64,${base64Image}`;
 
-          // Add to PDF
-          currentY += 15;
-          pdf.setFontSize(14);
-          pdf.setFont('helvetica', 'bold');
-          pdf.text('IDENTITY PHOTO', margin, currentY);
-          currentY += 10;
+              // Título da seção
+              currentY += 10;
+              if (currentY > pdf.internal.pageSize.getHeight() - 40) {
+                pdf.addPage();
+                currentY = margin;
+              }
+              
+              pdf.setFontSize(14);
+              pdf.setFont('helvetica', 'bold');
+              pdf.text('IDENTITY PHOTO WITH DOCUMENT', margin, currentY);
+              currentY += 12;
 
-          // Check for page break
-          if (currentY + 60 > pdf.internal.pageSize.getHeight() - margin) {
-            pdf.addPage();
-            currentY = margin;
-          }
+              // Calcular dimensões proporcionais
+              const availableWidth = pageWidth - (2 * margin);
+              const targetWidth = Math.min(120, availableWidth * 0.9);
+              const maxHeight = 160;
 
-          // Add image (scaled to max 80x60)
-          pdf.addImage(base64Image, format, margin, currentY, 80, 60);
-          currentY += 65;
-          
-          console.log('[generate-legal-pdf] Foto de identidade incorporada com sucesso');
+              let renderWidth = targetWidth;
+              let renderHeight = 0;
+
+              try {
+                const imgProps = pdf.getImageProperties(imageDataUrl);
+                const ratio = imgProps.height / imgProps.width;
+                renderHeight = renderWidth * ratio;
+
+                if (renderHeight > maxHeight) {
+                  renderHeight = maxHeight;
+                  renderWidth = renderHeight / ratio;
+                }
+
+                if (currentY + renderHeight > pdf.internal.pageSize.getHeight() - margin) {
+                  pdf.addPage();
+                  currentY = margin;
+                }
+
+                pdf.addImage(imageDataUrl, format, margin, currentY, renderWidth, renderHeight, undefined, 'FAST');
+                currentY += renderHeight + 10;
+                console.log('[generate-legal-pdf] ✅ Foto incorporada com sucesso');
+              } catch (propError) {
+                console.warn('[generate-legal-pdf] Erro ao obter dimensões, usando fallback:', propError);
+                renderHeight = renderWidth * 1.33;
+                if (currentY + renderHeight > pdf.internal.pageSize.getHeight() - margin) {
+                  pdf.addPage();
+                  currentY = margin;
+                }
+                pdf.addImage(imageDataUrl, format, margin, currentY, renderWidth, renderHeight, undefined, 'FAST');
+                currentY += renderHeight + 10;
+              }
+            }
         }
       } catch (error) {
-        console.error('[generate-legal-pdf] Erro ao incorporar foto de identidade:', error);
-        // Fallback to text info if image fails
-        currentY += 8;
-        pdf.setFontSize(11);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('Identity Photo (Link):', margin, currentY);
-        pdf.setFont('helvetica', 'normal');
-        currentY += 6;
-        pdf.setFontSize(9);
-        pdf.text(`Path: ${studentData.identity_photo_path}`, margin, currentY);
-        currentY += 8;
+        console.error('[generate-legal-pdf] Erro no processamento da foto:', error);
       }
     }
 
