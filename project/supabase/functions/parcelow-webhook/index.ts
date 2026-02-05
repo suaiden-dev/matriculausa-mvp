@@ -1,5 +1,6 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient, SupabaseClient } from 'npm:@supabase/supabase-js@2.49.1';
+import { encode as base64Encode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
 // @ts-ignore
 import jsPDF from "https://esm.sh/jspdf@2.5.1?target=deno";
 
@@ -130,6 +131,30 @@ async function sendTermAcceptanceNotificationAfterPayment(userId: string, feeTyp
       console.warn('[NOTIFICAÇÃO] Nenhuma aceitação de termos encontrada para o usuário');
       return;
     }
+
+    // ✅ MELHORIA: Tentar encontrar uma foto real se o aceite atual tiver mock ou for nulo
+    let finalPhotoPath = termAcceptance.identity_photo_path;
+    let finalPhotoName = termAcceptance.identity_photo_name;
+
+    if (!finalPhotoPath || finalPhotoPath === 'mock_localhost_photo.png') {
+      console.log('[NOTIFICAÇÃO] Foto no aceite atual é nula ou mock. Buscando foto real em outros aceites...');
+      const { data: altTerm } = await supabase
+        .from('comprehensive_term_acceptance')
+        .select('identity_photo_path, identity_photo_name')
+        .eq('user_id', userId)
+        .not('identity_photo_path', 'is', null)
+        .neq('identity_photo_path', '')
+        .neq('identity_photo_path', 'mock_localhost_photo.png')
+        .order('accepted_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      if (altTerm) {
+        finalPhotoPath = altTerm.identity_photo_path;
+        finalPhotoName = altTerm.identity_photo_name;
+        console.log('[NOTIFICAÇÃO] ✅ Foto real encontrada em outro aceite:', finalPhotoPath);
+      }
+    }
     
     // Buscar conteúdo do termo
     const { data: termData, error: termDataError } = await supabase
@@ -257,29 +282,123 @@ async function sendTermAcceptanceNotificationAfterPayment(userId: string, feeTyp
         pdf.setFont('helvetica', 'bold');
         pdf.text('TERM CONTENT', margin, currentY);
         currentY += 12;
+
+        // Função para formatar conteúdo HTML do termo (baseada no pdfGenerator.ts)
+        const formatTermContent = (content: string): number => {
+          const elements: Array<{text: string, type: 'h1' | 'h2' | 'h3' | 'p' | 'strong'}> = [];
+          
+          // Replace HTML entities first
+          let processedHtml = content
+            .replace(/&nbsp;/g, ' ')
+            .replace(/&amp;/g, '&')
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&quot;/g, '"')
+            .replace(/&#39;/g, "'");
+
+          // Remove HTML tags but preserve line breaks for block elements
+          // This ensures that <p>Title</p><p>Text</p> becomes "Title\n\nText"
+          const cleanText = processedHtml
+            .replace(/<\/p>/g, '\n\n')
+            .replace(/<br\s*\/?>/g, '\n')
+            .replace(/<\/h[1-6]>/g, '\n\n')
+            .replace(/<[^>]*>/g, '')
+            .trim();
+          
+          // Split into paragraphs by double line breaks or single line breaks that look like separate items
+          const paragraphs = cleanText.split(/\n\s*\n/).map(p => p.trim()).filter(p => p.length > 0);
+          
+          paragraphs.forEach((paragraph, paragraphIndex) => {
+            const lines = paragraph.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+            
+            lines.forEach((line, lineIndex) => {
+              let type: 'h1' | 'h2' | 'h3' | 'p' | 'strong' = 'p';
+              
+              // Main titles (first line of document or standalone short lines that look like titles)
+              if ((paragraphIndex === 0 && lineIndex === 0) || 
+                  (lines.length === 1 && line.length < 60 && line.match(/^[A-Z\s]+$/) && !line.match(/^\d+\./))) {
+                type = 'h1';
+              }
+              // Section headers (numbered like "1. Purpose")
+              else if (line.match(/^\d+\.\s+[A-Z\s]+/) || line.match(/^\d+\.\s+[A-Z][a-z]+/)) {
+                type = 'h2';
+              }
+              // Subsection headers (lines ending with colon or all caps short lines)
+              else if (line.endsWith(':') || (line.match(/^[A-Z\s&/()]{3,}$/) && line.length < 80)) {
+                type = 'h3';
+              }
+              else {
+                type = 'p';
+              }
+              
+              elements.push({ text: line, type });
+            });
+            
+            if (paragraphIndex < paragraphs.length - 1) {
+              elements.push({ text: '', type: 'p' });
+            }
+          });
+
+          elements.forEach((element) => {
+            if (element.text === '') {
+              currentY += 3;
+              return;
+            }
+            
+            if (currentY > pdf.internal.pageSize.getHeight() - 30) {
+              pdf.addPage();
+              currentY = margin;
+            }
+            
+            switch (element.type) {
+              case 'h1':
+                currentY += 2;
+                pdf.setFontSize(13);
+                pdf.setFont('helvetica', 'bold');
+                currentY = addWrappedText(element.text, margin, currentY, pageWidth - margin - 20, 13);
+                currentY += 2;
+                break;
+                
+              case 'h2':
+                currentY += 2;
+                pdf.setFontSize(11);
+                pdf.setFont('helvetica', 'bold');
+                currentY = addWrappedText(element.text, margin, currentY, pageWidth - margin - 20, 11);
+                currentY += 3;
+                break;
+                
+              case 'h3':
+              case 'strong':
+                currentY += 2;
+                pdf.setFontSize(10);
+                pdf.setFont('helvetica', 'bold');
+                currentY = addWrappedText(element.text, margin, currentY, pageWidth - margin - 20, 10);
+                currentY += 2;
+                break;
+                
+              case 'p':
+              default:
+                pdf.setFontSize(9);
+                pdf.setFont('helvetica', 'normal');
+                currentY = addWrappedText(element.text, margin, currentY, pageWidth - margin - 20, 9);
+                currentY += 2;
+                break;
+            }
+          });
+          
+          return currentY;
+        };
+
+        try {
+          currentY = formatTermContent(termData.content);
+        } catch (error) {
+          console.error('[NOTIFICAÇÃO] Erro ao formatar conteúdo do termo:', error);
+          // Fallback to simple text
+          const fallbackText = termData.content.replace(/<[^>]*>/g, '').substring(0, 3000);
+          currentY = addWrappedText(fallbackText, margin, currentY, pageWidth - margin - 20, 9);
+        }
         
-        // Processar conteúdo HTML do termo
-        const cleanText = termData.content
-          .replace(/<[^>]*>/g, '')
-          .replace(/&nbsp;/g, ' ')
-          .replace(/&amp;/g, '&')
-          .replace(/&lt;/g, '<')
-          .replace(/&gt;/g, '>')
-          .replace(/&quot;/g, '"')
-          .replace(/&#39;/g, "'")
-          .replace(/\s+/g, ' ')
-          .trim();
-        
-        const maxTermContentLength = 3000;
-        const termContent = cleanText.length > maxTermContentLength 
-          ? cleanText.substring(0, maxTermContentLength) + '...'
-          : cleanText;
-        
-        pdf.setFontSize(10);
-        pdf.setFont('helvetica', 'normal');
-        currentY = addWrappedText(termContent, margin, currentY, pageWidth - margin - 20, 10);
         currentY += 8;
-        
         pdf.setLineWidth(0.5);
         pdf.line(margin, currentY, pageWidth - margin, currentY);
         currentY += 10;
@@ -288,6 +407,11 @@ async function sendTermAcceptanceNotificationAfterPayment(userId: string, feeTyp
       // Detalhes da aceitação
       pdf.setFontSize(14);
       pdf.setFont('helvetica', 'bold');
+      currentY += 5;
+      if (currentY > pdf.internal.pageSize.getHeight() - 40) {
+        pdf.addPage();
+        currentY = margin;
+      }
       pdf.text('TERM ACCEPTANCE DETAILS', margin, currentY);
       currentY += 12;
       
@@ -310,97 +434,97 @@ async function sendTermAcceptanceNotificationAfterPayment(userId: string, feeTyp
       pdf.text('IP Address:', margin, currentY);
       pdf.setFont('helvetica', 'normal');
       pdf.text(termAcceptance.ip_address || 'N/A', margin + 50, currentY);
-      currentY += 10;
+      currentY += 12;
       
       // Incluir foto de identidade (se houver)
-      if (termAcceptance.identity_photo_path && termAcceptance.identity_photo_path.trim() !== '') {
+      if (finalPhotoPath && finalPhotoPath.trim() !== '') {
         try {
-          console.log('[NOTIFICAÇÃO] Foto de identidade encontrada, incluindo no PDF:', termAcceptance.identity_photo_path);
+          console.log('[NOTIFICAÇÃO] Foto de identidade para inclusão no PDF:', finalPhotoPath);
           
-          // Verificar se precisa de nova página
-          const pageHeight = pdf.internal.pageSize.getHeight();
-          if (currentY > pageHeight - margin - 80) {
-            pdf.addPage();
-            currentY = margin;
-          }
-          
-          // Download da foto do Storage
-          const { data: imageData, error: imageError } = await supabase.storage
-            .from('identity-photos')
-            .download(termAcceptance.identity_photo_path);
-          
-          if (!imageError && imageData) {
-            try {
-              // Converter para ArrayBuffer
-              const imageArrayBuffer = await imageData.arrayBuffer();
-              const imageBytes = new Uint8Array(imageArrayBuffer);
-              
-              // Converter para base64
-              let binary = '';
-              for (let i = 0; i < imageBytes.length; i++) {
-                binary += String.fromCharCode(imageBytes[i]);
-              }
-              const imageBase64 = btoa(binary);
-              
-              // Determinar formato da imagem
-              const fileExtension = termAcceptance.identity_photo_path.split('.').pop()?.toLowerCase() || 'jpg';
-              const imageFormat = fileExtension === 'png' ? 'PNG' : 'JPEG';
-              const mimeType = fileExtension === 'png' ? 'image/png' : 'image/jpeg';
-              const imageDataUrl = `data:${mimeType};base64,${imageBase64}`;
-              
-              // Adicionar seção de foto
-              currentY += 10;
-              pdf.setFontSize(14);
-              pdf.setFont('helvetica', 'bold');
-              pdf.text('IDENTITY PHOTO WITH DOCUMENT', margin, currentY);
-              currentY += 12;
-              
-              // Calcular dimensões mantendo proporção
-              const maxWidth = 280;
-              const maxHeight = 320;
-              const availableWidth = pageWidth - (2 * margin);
-              
-              const maxWidthUnits = maxWidth * 0.264583;
-              const maxHeightUnits = maxHeight * 0.264583;
-              const imageWidth = Math.min(maxWidthUnits, availableWidth * 0.9);
-              
-              let finalWidth = imageWidth;
-              let finalHeight = 0;
-              
+          if (finalPhotoPath === 'mock_localhost_photo.png') {
+             // Fallback informativo para ambiente localhost
+             currentY += 10;
+             pdf.setFontSize(10);
+              pdf.setFont('helvetica', 'italic');
+              pdf.text('[Localhost Mock Photo]', margin, currentY);
+              currentY += 8;
+          } else {
+            // Download da foto do Storage
+            const { data: imageData, error: imageError } = await supabase.storage
+              .from('identity-photos')
+              .download(finalPhotoPath);
+            
+            if (!imageError && imageData) {
               try {
-                const imgProps = pdf.getImageProperties(imageDataUrl);
-                const imgWidth = imgProps.width;
-                const imgHeight = imgProps.height;
-                const aspectRatio = imgHeight / imgWidth;
+                // Converter para ArrayBuffer e Base64 usando o encoder seguro
+                const imageArrayBuffer = await imageData.arrayBuffer();
+                const imageBytes = new Uint8Array(imageArrayBuffer);
+                const base64Image = base64Encode(imageBytes);
                 
-                finalHeight = imageWidth * aspectRatio;
+                // Determinar formato da imagem
+                const fileExtension = finalPhotoPath.split('.').pop()?.toLowerCase() || 'jpg';
+                const imageFormat = fileExtension === 'png' ? 'PNG' : 'JPEG';
+                const mimeType = fileExtension === 'png' ? 'image/png' : 'image/jpeg';
+                const imageDataUrl = `data:${mimeType};base64,${base64Image}`;
                 
-                if (finalHeight > maxHeightUnits) {
-                  finalHeight = maxHeightUnits;
-                  finalWidth = finalHeight / aspectRatio;
+                // Adicionar seção de foto com conferência de página
+                currentY += 10;
+                if (currentY > pdf.internal.pageSize.getHeight() - 40) {
+                  pdf.addPage();
+                  currentY = margin;
                 }
                 
-                pdf.addImage(imageDataUrl, imageFormat, margin, currentY, finalWidth, finalHeight, undefined, 'FAST');
-                currentY += finalHeight + 10;
-              } catch (propError) {
-                console.warn('[NOTIFICAÇÃO] Erro ao obter dimensões da imagem:', propError);
-                finalHeight = imageWidth * 1.33;
-                pdf.addImage(imageDataUrl, imageFormat, margin, currentY, finalWidth, finalHeight, undefined, 'FAST');
-                currentY += finalHeight + 10;
+                pdf.setFontSize(14);
+                pdf.setFont('helvetica', 'bold');
+                pdf.text('IDENTITY PHOTO WITH DOCUMENT', margin, currentY);
+                currentY += 12;
+                
+                // Calcular dimensões (limitar largura e altura proporcionalmente)
+                const availableWidth = pageWidth - (2 * margin);
+                const targetWidth = Math.min(120, availableWidth * 0.9);
+                const maxHeightAllowed = 160;
+                
+                let renderWidth = targetWidth;
+                let renderHeight = 0;
+                
+                try {
+                  const props = pdf.getImageProperties(imageDataUrl);
+                  const ratio = props.height / props.width;
+                  renderHeight = renderWidth * ratio;
+                  
+                  if (renderHeight > maxHeightAllowed) {
+                    renderHeight = maxHeightAllowed;
+                    renderWidth = renderHeight / ratio;
+                  }
+                  
+                  if (currentY + renderHeight > pdf.internal.pageSize.getHeight() - margin) {
+                    pdf.addPage();
+                    currentY = margin;
+                  }
+                  
+                  pdf.addImage(imageDataUrl, imageFormat, margin, currentY, renderWidth, renderHeight, undefined, 'FAST');
+                  currentY += renderHeight + 10;
+                } catch (pErr) {
+                  console.warn('[NOTIFICAÇÃO] Erro ao obter props da imagem, usando fallback:', pErr);
+                  renderHeight = renderWidth * 1.33;
+                  if (currentY + renderHeight > pdf.internal.pageSize.getHeight() - margin) {
+                    pdf.addPage();
+                    currentY = margin;
+                  }
+                  pdf.addImage(imageDataUrl, imageFormat, margin, currentY, renderWidth, renderHeight, undefined, 'FAST');
+                  currentY += renderHeight + 10;
+                }
+                console.log('[NOTIFICAÇÃO] ✅ Foto de identidade incluída no PDF!');
+              } catch (convErr) {
+                console.error('[NOTIFICAÇÃO] Erro na conversão/processamento da imagem:', convErr);
               }
-              
-              console.log('[NOTIFICAÇÃO] ✅ Foto de identidade incluída no PDF com sucesso!');
-            } catch (conversionError) {
-              console.error('[NOTIFICAÇÃO] Erro ao converter foto para base64:', conversionError);
+            } else {
+              console.warn('[NOTIFICAÇÃO] Falha ao baixar foto real do storage:', imageError?.message);
             }
-          } else {
-            console.warn('[NOTIFICAÇÃO] Erro ao carregar foto:', imageError?.message);
           }
-        } catch (photoError) {
-          console.error('[NOTIFICAÇÃO] Erro ao processar foto:', photoError);
+        } catch (photoErr) {
+          console.error('[NOTIFICAÇÃO] Erro geral ao processar foto:', photoErr);
         }
-      } else {
-        console.log('[NOTIFICAÇÃO] Nenhuma foto de identidade encontrada');
       }
       
       // Gerar PDF blob
@@ -691,26 +815,35 @@ Deno.serve(async (req: Request) => {
 
     console.log(`[parcelow-webhook] 🔄 Status mapeado: ${newStatus} (isPaid: ${isPaid})`);
 
-    // Determinar fee_type pelo reference ANTES de criar o registro (reference já definido no início)
+    // Determinar fee_type:
+    // 1. Pelo registro no banco (mais confiável)
+    // 2. Pelo prefixo da reference (resiliência)
+    // 3. Pelo metadata (último recurso)
     let feeType = 'unknown';
-    
-    if (reference.startsWith('app_fee_') || reference.startsWith('applicatio_') || reference.startsWith('app_')) {
-      feeType = 'application_fee';
-    } else if (reference.startsWith('sp_') || reference.startsWith('selection_')) {
-      feeType = 'selection_process';
-    } else if (reference.startsWith('sf_') || reference.startsWith('scholarship_') || reference.startsWith('scholarshi_')) {
-      feeType = 'scholarship_fee';
-    } else if (reference.startsWith('i20_')) {
-      feeType = 'i20_control';
+
+    if (payment?.fee_type) {
+      feeType = payment.fee_type;
+      console.log('[parcelow-webhook] 📋 Fee type recuperado do banco de dados:', feeType);
     } else {
-      // Fallback para metadata se existir
-      const metaFee = parcelowOrder.metadata?.fee_type;
-      if (metaFee) {
-        if (metaFee === 'application_fee' || metaFee === 'selection_process' || metaFee === 'scholarship_fee' || metaFee === 'i20_control' || metaFee === 'i20_control_fee') {
-           // Normalizar para nomes padrão
-           if (metaFee === 'i20_control_fee') feeType = 'i20_control';
-           else if (metaFee === 'selection_process_fee') feeType = 'selection_process';
-           else feeType = metaFee;
+      // Tentar detectar pelo prefixo da reference
+      if (reference.startsWith('app_fee_') || reference.startsWith('applicatio_') || reference.startsWith('app_') || reference.startsWith('ap_')) {
+        feeType = 'application_fee';
+      } else if (reference.startsWith('sp_') || reference.startsWith('selection_')) {
+        feeType = 'selection_process';
+      } else if (reference.startsWith('sf_') || reference.startsWith('scholarship_') || reference.startsWith('scholarshi_')) {
+        feeType = 'scholarship_fee';
+      } else if (reference.startsWith('i20_')) {
+        feeType = 'i20_control';
+      } else {
+        // Fallback para metadata se existir (Parcelow Sandbox às vezes retorna, Produção raramente)
+        const metaFee = parcelowOrder.metadata?.fee_type;
+        if (metaFee) {
+          if (metaFee === 'application_fee' || metaFee === 'selection_process' || metaFee === 'scholarship_fee' || metaFee === 'i20_control' || metaFee === 'i20_control_fee') {
+             // Normalizar para nomes padrão
+             if (metaFee === 'i20_control_fee') feeType = 'i20_control';
+             else if (metaFee === 'selection_process_fee') feeType = 'selection_process';
+             else feeType = metaFee;
+          }
         }
       }
     }
@@ -770,8 +903,11 @@ Deno.serve(async (req: Request) => {
 
     // 4.0. Detectar ambiente (dev ou prod) - verificar redirect_success URL
     const redirectUrl = parcelowOrder.redirect_success || '';
-    const isDevelopment = redirectUrl.includes('localhost') || redirectUrl.includes('127.0.0.1');
-    console.log('[parcelow-webhook] 🌍 Ambiente detectado:', isDevelopment ? 'DESENVOLVIMENTO' : 'PRODUÇÃO');
+    const isDevelopment = 
+      redirectUrl.includes('localhost') || 
+      redirectUrl.includes('127.0.0.1') || 
+      redirectUrl.includes('staging-matriculausa.netlify.app');
+    console.log('[parcelow-webhook] 🌍 Ambiente detectado:', isDevelopment ? 'DESENVOLVIMENTO/STAGING' : 'PRODUÇÃO');
 
     // 5. Se pago, processar lógica completa (igual ao Stripe)
     if (isPaid) {
@@ -810,6 +946,9 @@ Deno.serve(async (req: Request) => {
         console.error('[parcelow-webhook] ❌ Erro ao buscar perfil:', profileFetchError);
         return new Response(JSON.stringify({ error: 'User profile not found' }), { status: 404 });
       }
+
+      let nomeBolsa = "";
+      let nomeUniversidade = "";
 
       // 4.2. Criar log de início de processamento (proteção contra duplicação)
       try {
@@ -907,6 +1046,21 @@ Deno.serve(async (req: Request) => {
             console.log('[parcelow-webhook] ✅ Application atualizada com sucesso');
           }
 
+          // Buscar nome da bolsa e universidade para notificação
+          if (application?.scholarship_id) {
+            const { data: scholarshipData } = await supabase
+              .from('scholarships')
+              .select('title, universities(name)')
+              .eq('id', application.scholarship_id)
+              .single();
+            
+            if (scholarshipData) {
+              nomeBolsa = scholarshipData.title;
+              nomeUniversidade = scholarshipData.universities?.name || "";
+              console.log(`[parcelow-webhook] 🎓 Bolsa: ${nomeBolsa}, Universidade: ${nomeUniversidade}`);
+            }
+          }
+
           // Atualizar perfil do usuário por redundância
           await supabase
             .from('user_profiles')
@@ -952,19 +1106,32 @@ Deno.serve(async (req: Request) => {
               const { error: scholarshipUpdateError } = await supabase
                 .from('scholarship_applications')
                 .update({ 
-                  // Removido status: 'scholarship_fee_paid' pois não é um valor válido na constraint (CHECK status IN ...)
                   is_scholarship_fee_paid: true,
                   scholarship_fee_payment_method: 'parcelow'
-                  // nota: scholarship_fee_paid_at não existe nesta tabela, apenas em user_profiles
                 })
                 .eq('scholarship_id', scholarshipId)
                 .eq('student_id', userProfile.id)
-                .is('is_scholarship_fee_paid', false); // Só atualizar se não estiver pago
+                .is('is_scholarship_fee_paid', false);
               
               if (scholarshipUpdateError) {
                 console.error(`[parcelow-webhook] ❌ Erro ao atualizar scholarship ${scholarshipId}:`, scholarshipUpdateError);
               } else {
                 console.log(`[parcelow-webhook] ✅ Scholarship ${scholarshipId} atualizada`);
+                
+                // Buscar nome da bolsa e universidade (do primeiro ID encontrado se estiverem vazios)
+                if (!nomeBolsa) {
+                  const { data: scholarshipData } = await supabase
+                    .from('scholarships')
+                    .select('title, universities(name)')
+                    .eq('id', scholarshipId)
+                    .single();
+                  
+                  if (scholarshipData) {
+                    nomeBolsa = scholarshipData.title;
+                    nomeUniversidade = scholarshipData.universities?.name || "";
+                    console.log(`[parcelow-webhook] 🎓 Bolsa recuperada: ${nomeBolsa}`);
+                  }
+                }
               }
             }
           } else {
@@ -1250,16 +1417,17 @@ Deno.serve(async (req: Request) => {
 
             // a) NOTIFICAÇÃO PARA TODOS OS ADMINS
             const adminNotificationPromises = admins.map(async (admin) => {
-              // Define tipo_notf para admin baseado no fee_type
-              let tipoNotfAdmin = `Pagamento Parcelow de ${feeType} confirmado - Admin`;
+              // Define tipo_notf para admin baseado no fee_type (usando 'Stripe' para consistência com n8n - Strings Exatas)
+              let tipoNotfAdmin = `Pagamento Stripe de selection process confirmado - Admin`; // Default fallback
+              
               if (feeType === 'scholarship_fee') {
-                tipoNotfAdmin = 'Pagamento Parcelow de scholarship_fee confirmado - Admin';
+                tipoNotfAdmin = 'Pagamento Stripe de scholarship fee confirmado - Admin';
               } else if (feeType === 'i20_control' || feeType === 'i20_control_fee') {
-                tipoNotfAdmin = 'Pagamento Parcelow de i20_control_fee confirmado - Admin';
-              } else if (feeType === 'application_fee' || feeType === 'application') {
-                tipoNotfAdmin = 'Pagamento Parcelow de application_fee confirmado - Admin';
+                tipoNotfAdmin = 'Pagamento Stripe de I-20 control fee confirmado - Admin';
+              } else if (feeType === 'application_fee' || feeType === 'application' || feeType === 'application_fee_payment') {
+                tipoNotfAdmin = 'Pagamento Stripe de application fee confirmado - Admin';
               } else if (feeType === 'selection_process') {
-                tipoNotfAdmin = 'Pagamento Parcelow de selection_process confirmado - Admin';
+                tipoNotfAdmin = 'Pagamento Stripe de selection process confirmado - Admin';
               }
               
               const adminNotificationPayload = {
@@ -1269,16 +1437,18 @@ Deno.serve(async (req: Request) => {
                 phone_admin: admin.phone,
                 email_aluno: userProfile.email,
                 nome_aluno: userProfile.full_name,
-                o_que_enviar: `Pagamento Parcelow de ${feeType} no valor de ${formattedAmount} do aluno ${userProfile.full_name} foi processado com sucesso. Seller responsável: ${sellerData.name} (${sellerData.referral_code}). Affiliate: ${affiliateAdminData.name}`,
+                o_que_enviar: `Pagamento Parcelow de ${feeType} no valor de ${formattedAmount} do aluno ${userProfile.full_name} foi processado com sucesso.${sellerData.user_id ? ` Seller responsável: ${sellerData.name} (${sellerData.referral_code}).` : ''}${affiliateAdminData.user_id ? ` Affiliate: ${affiliateAdminData.name}` : ''}`,
                 payment_id: String(parcelowOrder.id),
                 fee_type: feeType,
                 amount: paymentAmount,
                 currency: 'USD',
                 currency_symbol: '$',
                 formatted_amount: formattedAmount,
+                nome_bolsa: nomeBolsa,
+                nome_universidade: nomeUniversidade,
+                nome_seller: sellerData.name || "",
+                referral_code: sellerData.referral_code || "",
                 seller_id: sellerData.user_id,
-                referral_code: sellerData.referral_code,
-                commission_rate: sellerData.commission_rate,
                 payment_method: 'parcelow',
                 notification_type: "admin"
               };
@@ -1325,20 +1495,19 @@ Deno.serve(async (req: Request) => {
 
             await Promise.allSettled(adminNotificationPromises);
 
-            // b) NOTIFICAÇÃO PARA SELLER
-            // Define tipo_notf para seller baseado no fee_type
-            let tipoNotfSeller = `Pagamento Parcelow de ${feeType} confirmado - Seller`;
+            // b) NOTIFICAÇÃO PARA SELLER (Strings Exatas com 'Stripe' para consistência)
+            let tipoNotfSeller = `Pagamento Stripe de selection process confirmado - Seller`; // Default
             let oQueEnviarSeller = `Parabéns! Seu aluno ${userProfile.full_name} pagou a taxa ${feeType} no valor de ${formattedAmount} via Parcelow. Sua comissão será calculada em breve.`;
 
             if (feeType === 'scholarship_fee') {
-              tipoNotfSeller = 'Pagamento Parcelow de scholarship_fee confirmado - Seller';
+              tipoNotfSeller = 'Pagamento Stripe de scholarship fee confirmado - Seller';
             } else if (feeType === 'i20_control' || feeType === 'i20_control_fee') {
-              tipoNotfSeller = "Pagamento Parcelow de I-20 Control Fee confirmado - Seller";
+              tipoNotfSeller = "Pagamento Stripe de I-20 control fee confirmado - Seller";
               oQueEnviarSeller = `Parabéns! Seu aluno ${userProfile.full_name} pagou a taxa I-20 Control Fee no valor de ${formattedAmount} via Parcelow. Sua comissão será calculada em breve.`;
             } else if (feeType === 'application_fee' || feeType === 'application') {
-              tipoNotfSeller = 'Pagamento Parcelow de application_fee confirmado - Seller';
+              tipoNotfSeller = 'Pagamento Stripe de application fee confirmado - Seller';
             } else if (feeType === 'selection_process') {
-              tipoNotfSeller = 'Pagamento Parcelow de selection_process confirmado - Seller';
+              tipoNotfSeller = 'Pagamento Stripe de selection process confirmado - Seller';
             }
             
             let emailSellerFinal = sellerData.email;
@@ -1409,19 +1578,17 @@ Deno.serve(async (req: Request) => {
 
             // c) NOTIFICAÇÃO PARA AFFILIATE ADMIN (se houver)
             if (affiliateAdminData.email) {
-              // Define tipo_notf para affiliate admin baseado no fee_type
-              let tipoNotfAffiliate = `Pagamento Parcelow de ${feeType} confirmado - Affiliate Admin`;
-              let oQueEnviarAffiliate = `O seller ${sellerData.name} (${sellerData.referral_code}) do seu afiliado teve um pagamento de ${feeType} no valor de ${formattedAmount} do aluno ${userProfile.full_name} via Parcelow.`;
-
+              // Define tipo_notf para affiliate admin baseado no fee_type (usando 'Stripe' para consistência - Strings Exatas)
+              let tipoNotfAffiliate = `Pagamento Stripe de selection process confirmado - Affiliate Admin`; // Default fallback
+              
               if (feeType === 'scholarship_fee') {
-                tipoNotfAffiliate = 'Pagamento Parcelow de scholarship_fee confirmado - Affiliate Admin';
+                tipoNotfAffiliate = 'Pagamento Stripe de scholarship fee confirmado - Affiliate Admin';
               } else if (feeType === 'i20_control' || feeType === 'i20_control_fee') {
-                tipoNotfAffiliate = "Pagamento Parcelow de I-20 Control Fee confirmado - Affiliate Admin";
-                oQueEnviarAffiliate = `O seller ${sellerData.name} (${sellerData.referral_code}) do seu afiliado teve um pagamento de I-20 Control Fee no valor de ${formattedAmount} do aluno ${userProfile.full_name} via Parcelow.`;
-              } else if (feeType === 'application_fee' || feeType === 'application') {
-                tipoNotfAffiliate = 'Pagamento Parcelow de application_fee confirmado - Affiliate Admin';
+                tipoNotfAffiliate = "Pagamento Stripe de I-20 control fee confirmado - Affiliate Admin";
+              } else if (feeType === 'application_fee' || feeType === 'application' || feeType === 'application_fee_payment') {
+                tipoNotfAffiliate = 'Pagamento Stripe de application fee confirmado - Affiliate Admin';
               } else if (feeType === 'selection_process') {
-                tipoNotfAffiliate = 'Pagamento Parcelow de selection_process confirmado - Affiliate Admin';
+                tipoNotfAffiliate = 'Pagamento Stripe de selection process confirmado - Affiliate Admin';
               }
               
               let emailAffiliateFinal = affiliateAdminData.email;
@@ -1438,7 +1605,6 @@ Deno.serve(async (req: Request) => {
                 email_aluno: userProfile.email,
                 nome_aluno: userProfile.full_name,
                 email_seller: sellerData.email,
-                nome_seller: sellerData.name,
                 o_que_enviar: `O seller ${sellerData.name} (${sellerData.referral_code}) do seu afiliado teve um pagamento de ${feeType} no valor de ${formattedAmount} do aluno ${userProfile.full_name} via Parcelow.`,
                 payment_id: String(parcelowOrder.id),
                 fee_type: feeType,
@@ -1446,9 +1612,11 @@ Deno.serve(async (req: Request) => {
                 currency: 'USD',
                 currency_symbol: '$',
                 formatted_amount: formattedAmount,
+                nome_bolsa: nomeBolsa,
+                nome_universidade: nomeUniversidade,
+                nome_seller: sellerData.name || "",
+                referral_code: sellerData.referral_code || "",
                 seller_id: sellerData.user_id,
-                referral_code: sellerData.referral_code,
-                commission_rate: sellerData.commission_rate,
                 payment_method: 'parcelow',
                 notification_type: "affiliate_admin"
               };
@@ -1497,8 +1665,20 @@ Deno.serve(async (req: Request) => {
 
             // Notificar apenas admins quando não há seller
             const adminNotificationPromises = admins.map(async (admin) => {
+              // Define tipo_notf para admin sem seller (usando 'Stripe' para consistência - Strings Exatas)
+              let tipoNotfAdminNoSeller = `Pagamento Stripe de selection process confirmado - Admin`; // Default fallback
+              if (feeType === 'scholarship_fee') {
+                tipoNotfAdminNoSeller = 'Pagamento Stripe de scholarship fee confirmado - Admin';
+              } else if (feeType === 'i20_control' || feeType === 'i20_control_fee') {
+                tipoNotfAdminNoSeller = 'Pagamento Stripe de I-20 control fee confirmado - Admin';
+              } else if (feeType === 'application_fee' || feeType === 'application' || feeType === 'application_fee_payment') {
+                tipoNotfAdminNoSeller = 'Pagamento Stripe de application fee confirmado - Admin';
+              } else if (feeType === 'selection_process') {
+                tipoNotfAdminNoSeller = 'Pagamento Stripe de selection process confirmado - Admin';
+              }
+
               const adminNotificationPayload = {
-                tipo_notf: feeType === 'selection_process' ? "Student Selection Process Fee Payment" : feeType === 'scholarship_fee' ? "Student Scholarship Fee Payment" : "Student Application Fee Payment",
+                tipo_notf: tipoNotfAdminNoSeller,
                 email_admin: admin.email,
                 nome_admin: admin.full_name,
                 phone_admin: admin.phone,
@@ -1511,6 +1691,10 @@ Deno.serve(async (req: Request) => {
                 currency: 'USD',
                 currency_symbol: '$',
                 formatted_amount: formattedAmount,
+                nome_bolsa: nomeBolsa,
+                nome_universidade: nomeUniversidade,
+                nome_seller: "",
+                referral_code: "",
                 payment_method: 'parcelow',
                 notification_type: 'admin'
               };
@@ -1562,8 +1746,21 @@ Deno.serve(async (req: Request) => {
 
           // Notificar apenas admins quando não há seller_referral_code
           const adminNotificationPromises = admins.map(async (admin) => {
+            // Define tipo_notf para admin (Strings Exatas com 'Stripe' para consistência)
+            let tipoNotfAdminNoReferral = `Pagamento Stripe de selection process confirmado - Admin`; // Default
+            
+            if (feeType === 'scholarship_fee') {
+              tipoNotfAdminNoReferral = 'Pagamento Stripe de scholarship fee confirmado - Admin';
+            } else if (feeType === 'i20_control' || feeType === 'i20_control_fee') {
+              tipoNotfAdminNoReferral = 'Pagamento Stripe de I-20 control fee confirmado - Admin';
+            } else if (feeType === 'application_fee' || feeType === 'application') {
+              tipoNotfAdminNoReferral = 'Pagamento Stripe de application fee confirmado - Admin';
+            } else if (feeType === 'selection_process') {
+              tipoNotfAdminNoReferral = 'Pagamento Stripe de selection process confirmado - Admin';
+            }
+
             const adminNotificationPayload = {
-              tipo_notf: "Pagamento Parcelow de " + feeType + " confirmado - Admin",
+              tipo_notf: tipoNotfAdminNoReferral,
               email_admin: admin.email,
               nome_admin: admin.full_name,
               phone_admin: admin.phone,
@@ -1576,6 +1773,10 @@ Deno.serve(async (req: Request) => {
               currency: 'USD',
               currency_symbol: '$',
               formatted_amount: formattedAmount,
+              nome_bolsa: nomeBolsa,
+              nome_universidade: nomeUniversidade,
+              nome_seller: "",
+              referral_code: "",
               payment_method: 'parcelow',
               notification_type: 'admin'
             };

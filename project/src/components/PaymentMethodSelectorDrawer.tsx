@@ -53,7 +53,10 @@ export const PaymentMethodSelectorDrawer: React.FC<PaymentMethodSelectorDrawerPr
   
   // ✅ Mostrar cupom promocional apenas se o usuário NÃO tiver usado o referral code do Matricula Rewards
   const shouldShowPromotionalCoupon = !activeDiscount?.has_discount;
-  
+
+  // Método selecionado efetivo
+  const effectiveSelectedMethod = selectedMethod;
+
   // Valor final considerando desconto promocional
   const finalAmount = promotionalCouponValidation?.isValid && promotionalCouponValidation.finalAmount
     ? promotionalCouponValidation.finalAmount
@@ -238,7 +241,7 @@ export const PaymentMethodSelectorDrawer: React.FC<PaymentMethodSelectorDrawerPr
             )}
             
             <PaymentMethodSelector
-              selectedMethod={selectedMethod}
+              selectedMethod={effectiveSelectedMethod}
               onMethodSelect={onMethodSelect}
               feeType={feeType}
               amount={finalAmount}
@@ -334,7 +337,7 @@ export const PaymentMethodSelectorDrawer: React.FC<PaymentMethodSelectorDrawerPr
             )}
 
             <PaymentMethodSelector
-              selectedMethod={selectedMethod}
+              selectedMethod={effectiveSelectedMethod}
               onMethodSelect={onMethodSelect}
               feeType={feeType}
               amount={finalAmount}

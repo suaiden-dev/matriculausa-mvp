@@ -18,8 +18,8 @@ export interface ParcelowConfig {
 export function getParcelowConfig(req: Request): ParcelowConfig {
   const envInfo = detectEnvironment(req);
   
-  // Determinar se usa Staging ou Production
-  const isStaging = envInfo.isTest || envInfo.environment === 'test';
+  // Use sandbox for both local development and staging environment
+  const isStaging = envInfo.isTest || envInfo.isStaging;
   
   const clientId = isStaging 
     ? '214' 

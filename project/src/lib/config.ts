@@ -17,6 +17,11 @@ export const config = {
            window.location.hostname.includes('staging-matriculausa.netlify.app');
   },
 
+  /** Parcelow agora disponível em todos os ambientes (Homologado) */
+  showParcelowPaymentMethod: () => {
+    return true;
+  },
+
   // URLs dinâmicas baseadas no ambiente
   getFrontendUrl: () => {
     if (config.isDevelopment()) {

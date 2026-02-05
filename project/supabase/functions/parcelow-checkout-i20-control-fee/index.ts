@@ -144,10 +144,8 @@ Deno.serve(async (req) => {
     const accessToken = await getParcelowAccessToken(config);
 
     // Gerar ID de referência único (MUITO curto para evitar truncamento pela Parcelow)
-    // Usar base36 para encurtar o timestamp
-    const timestamp = Date.now();
-    const shortTimestamp = timestamp.toString(36); // Converte para base36 (muito mais curto)
-    const reference = `i20_${shortTimestamp}`;
+    // Usar uma string aleatória curta de 6 caracteres
+    const reference = `i20_${Math.random().toString(36).substring(2, 8)}`; // i20 = i20_control_fee (total 10 chars)
 
     // URLs de redirect dinâmicas conforme ambiente (matriculausa.com, staging ou localhost)
     const origin = getRedirectOrigin(req);
@@ -188,7 +186,7 @@ Deno.serve(async (req) => {
       metadata: {
         user_id: user.id,
         fee_type: 'i20_control_fee',
-        timestamp: timestamp.toString(),
+        timestamp: Date.now().toString(),
         ...(userPackageFees ? {
           user_has_package: 'true',
           package_name: userPackageFees.package_name
