@@ -651,7 +651,7 @@
       "expired": "Expirada",
       "days": "dias",
       "details": "Detalhes",
-      "applyNow": "Candidatar-se Agora",
+      "applyNow": "Candidatar-se",
       "notAvailable": "Não Disponível para Aplicação"
     },
     "noResults": {
@@ -1434,7 +1434,7 @@
     "programs": "Programas",
     "website": "Website",
     "viewProfile": "Ver Perfil",
-    "applyNow": "Candidatar-se Agora"
+    "applyNow": "Candidatar-se"
   },
   "common": {
     "loading": "Carregando...",
@@ -1499,7 +1499,7 @@
       "scholarshipFee": "Taxa de Bolsa",
       "i20ControlFee": "Taxa de Controle I-20",
       "completed": "Completo!",
-      "payApplicationFee": "Pague a Taxa de Matrícula para se candidatar a uma bolsa específica.",
+      "payApplicationFee": "Pague a Taxa de Matrícula para garantir a sua bolsa.",
       "payScholarshipFee": "Pague a Taxa de Bolsa para confirmar sua candidatura de bolsa.",
       "payI20Fee": "Pague a Taxa de Controle I-20 para iniciar seu processo de validação I-20 e documentos.",
       "daysRemaining": "Você tem 10 dias após a taxa de bolsa."
@@ -3571,7 +3571,7 @@
           "• Todos os salários listados são os <strong>valores mínimos estabelecidos pelo PWD</strong>"
         ]
       },
-      "applyNow": "Candidatar-se Agora",
+      "applyNow": "Candidatar-se",
       "learnMore": "Saiba Mais"
     },
     "whatIsEb3": {
@@ -3739,7 +3739,7 @@
       "badge": "Junte-se a milhares de brasileiros",
       "title": "Pronto para começar sua <span class=\"text-[#D0151C]\">jornada</span>?",
       "subtitle": "Preencha o formulário abaixo e nossa equipe entrará em contato para revisar seu perfil e guiá-lo através do processo.",
-      "applyNow": "Candidatar-se Agora",
+      "applyNow": "Candidatar-se",
       "contactUs": "Entre em Contato",
       "features": [
         "Processo 100% legal",
