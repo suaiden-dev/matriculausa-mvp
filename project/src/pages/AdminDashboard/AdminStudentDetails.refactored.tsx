@@ -2165,6 +2165,32 @@ const AdminStudentDetails: React.FC = () => {
   const approveApplication = useCallback(async (applicationId: string) => {
     if (!student || !isPlatformAdmin) return;
     
+    // Validar se todos os documentos estão aprovados
+    const currentApp = (student.all_applications || []).find((a: any) => a.id === applicationId);
+    if (!currentApp) {
+      alert('Application not found.');
+      return;
+    }
+
+    const appDocuments = currentApp.documents || [];
+    const requiredTypes = ['passport', 'funds_proof', 'diploma'];
+    
+    // 1. Verificar se os documentos obrigatórios básicos estão presentes
+    const presentTypes = appDocuments.map((d: any) => (d.type || '').toLowerCase());
+    const missingRequired = requiredTypes.filter(type => !presentTypes.includes(type));
+    
+    if (missingRequired.length > 0) {
+      alert(`Cannot approve: Missing required documents (${missingRequired.join(', ')}).`);
+      return;
+    }
+
+    // 2. Verificar se todos os documentos da aplicação estão aprovados
+    const allDocsApproved = appDocuments.length > 0 && appDocuments.every((doc: any) => (doc.status || '').toLowerCase() === 'approved');
+    if (!allDocsApproved) {
+      alert('Cannot approve: All documents in the application must be approved first.');
+      return;
+    }
+
     try {
       setApprovingStudent(true);
       

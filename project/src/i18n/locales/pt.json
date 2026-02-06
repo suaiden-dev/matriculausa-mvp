@@ -651,7 +651,7 @@
       "expired": "Expirada",
       "days": "dias",
       "details": "Detalhes",
-      "applyNow": "Candidatar-se Agora",
+      "applyNow": "Candidatar-se",
       "notAvailable": "Não Disponível para Aplicação"
     },
     "noResults": {
@@ -1434,7 +1434,7 @@
     "programs": "Programas",
     "website": "Website",
     "viewProfile": "Ver Perfil",
-    "applyNow": "Candidatar-se Agora"
+    "applyNow": "Candidatar-se"
   },
   "common": {
     "loading": "Carregando...",
@@ -3571,7 +3571,7 @@
           "• Todos os salários listados são os <strong>valores mínimos estabelecidos pelo PWD</strong>"
         ]
       },
-      "applyNow": "Candidatar-se Agora",
+      "applyNow": "Candidatar-se",
       "learnMore": "Saiba Mais"
     },
     "whatIsEb3": {
@@ -3739,7 +3739,7 @@
       "badge": "Junte-se a milhares de brasileiros",
       "title": "Pronto para começar sua <span class=\"text-[#D0151C]\">jornada</span>?",
       "subtitle": "Preencha o formulário abaixo e nossa equipe entrará em contato para revisar seu perfil e guiá-lo através do processo.",
-      "applyNow": "Candidatar-se Agora",
+      "applyNow": "Candidatar-se",
       "contactUs": "Entre em Contato",
       "features": [
         "Processo 100% legal",
