@@ -12,7 +12,8 @@ import {
   Activity,
   Edit,
   X,
-  Plus
+  Plus,
+  Eye
 } from 'lucide-react';
 import { Dialog } from '@headlessui/react';
 import { supabase } from '../../lib/supabase';
@@ -127,6 +128,9 @@ const NewsletterManagement: React.FC = () => {
   
   // Estado para processamento manual
   const [processingManually, setProcessingManually] = useState(false);
+
+  // Estado para preview de e-mail no modal de edição
+  const [showPreview, setShowPreview] = useState(false);
 
 
   useEffect(() => {
@@ -553,6 +557,7 @@ const NewsletterManagement: React.FC = () => {
       isActive: true,
       sendOnce: false
     });
+    setShowPreview(false);
   };
 
   const saveCampaign = async () => {
@@ -1420,16 +1425,51 @@ const NewsletterManagement: React.FC = () => {
 
                 {/* Email Body Template */}
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Email Body Template (HTML) *
-                  </label>
-                  <textarea
-                    value={editFormData.email_body_template}
-                    onChange={(e) => setEditFormData({ ...editFormData, email_body_template: e.target.value })}
-                    rows={12}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-transparent resize-none font-mono text-sm"
-                    placeholder="Enter HTML email body template"
-                  />
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-sm font-medium text-slate-700">
+                      Email Body Template (HTML) *
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowPreview(!showPreview)}
+                      className={`flex items-center gap-2 px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                        showPreview 
+                          ? 'bg-[#05294E] text-white' 
+                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      }`}
+                    >
+                      <Eye className="w-4 h-4" />
+                      {showPreview ? 'Hide Preview' : 'Show Preview'}
+                    </button>
+                  </div>
+                  
+                  {showPreview ? (
+                    <div className="border border-slate-300 rounded-lg overflow-hidden bg-white">
+                      <div className="bg-slate-50 border-b border-slate-200 px-4 py-2 text-xs text-slate-500 flex justify-between items-center">
+                        <span>Preview Mode (placeholders applied)</span>
+                        <div className="flex gap-4">
+                          <span>Subject: {editFormData.email_subject_template.replace(/\{\{full_name\}\}/g, 'John Doe')}</span>
+                        </div>
+                      </div>
+                      <iframe
+                        srcDoc={editFormData.email_body_template
+                          .replace(/\{\{full_name\}\}/g, 'John Doe')
+                          .replace(/\{\{email\}\}/g, 'john.doe@example.com')
+                          .replace(/\{\{unsubscribe_url\}\}/g, '#')
+                        }
+                        title="Email Preview"
+                        className="w-full min-h-[400px] border-none"
+                      />
+                    </div>
+                  ) : (
+                    <textarea
+                      value={editFormData.email_body_template}
+                      onChange={(e) => setEditFormData({ ...editFormData, email_body_template: e.target.value })}
+                      rows={12}
+                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-transparent resize-none font-mono text-sm"
+                      placeholder="Enter HTML email body template"
+                    />
+                  )}
                   <p className="text-xs text-slate-500 mt-1">
                     HTML format. You can use placeholders like {'{{full_name}}'}, {'{{unsubscribe_url}}'}, etc.
                   </p>

@@ -18,7 +18,9 @@ import {
   CreditCard,
   Award,
   BookOpen,
-  Sparkles
+  Sparkles,
+  LayoutGrid,
+  Table
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
@@ -36,8 +38,9 @@ import dayjs from 'dayjs';
 import DocumentViewerModal from '../DocumentViewerModal';
 import { toast } from 'react-hot-toast';
 import BulkDocumentActionsBar from './BulkDocumentActionsBar';
+import StudentApplicationsKanbanView from './StudentApplicationsKanbanView';
 
-interface StudentRecord {
+export interface StudentRecord {
   // Dados do estudante (sempre presentes)
   student_id: string;
   user_id: string;
@@ -86,6 +89,22 @@ const StudentApplicationsView: React.FC = () => {
   const [pendingZelleByUser, setPendingZelleByUser] = useState<{ [userId: string]: number }>({});
   const [blackCouponUsers, setBlackCouponUsers] = useState<Set<string>>(new Set());
   
+  // View mode toggle (table ou kanban) com persistência
+  const [viewMode, setViewMode] = useState<'table' | 'kanban'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('student_view_mode');
+      return (saved === 'table' || saved === 'kanban') ? saved : 'table';
+    }
+    return 'table';
+  });
+
+  // Atualizar localStorage quando mudar o modo de visualização
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('student_view_mode', viewMode);
+    }
+  }, [viewMode]);
+  
   // Estados para geração em massa de documentos
   const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set());
   const [selectAll, setSelectAll] = useState(false);
@@ -133,7 +152,8 @@ const StudentApplicationsView: React.FC = () => {
   };
 
   // Evitar mostrar usuários de teste em produção
-  const isProductionHost = typeof window !== 'undefined' && window.location.origin === 'https://matriculausa.com';
+  const isProductionHost = typeof window !== 'undefined' && 
+    (window.location.hostname === 'matriculausa.com' || window.location.hostname === 'www.matriculausa.com');
   
   // Hook para configurações dinâmicas de taxas
   const { getFeeAmount, formatFeeAmount, hasOverride } = useFeeConfig(selectedStudent?.user_id);
@@ -960,15 +980,43 @@ const StudentApplicationsView: React.FC = () => {
           <h2 className="text-2xl font-bold text-gray-900">Student Application Tracking</h2>
           <p className="text-gray-600">Monitor the complete application journey of all students</p>
         </div>
-        <div className="flex items-center space-x-2">
-          <span className="text-sm text-gray-500">
-            {filteredStudents.length} students found
-          </span>
-          <RefreshButton
-            onClick={handleRefresh}
-            isRefreshing={isRefreshing}
-            title="Refresh student data"
-          />
+        <div className="flex items-center space-x-4">
+          {/* View Mode Toggle */}
+          <div className="flex items-center bg-gray-100 rounded-lg p-1">
+            <button
+              onClick={() => setViewMode('table')}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                viewMode === 'table'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <Table className="w-4 h-4" />
+              Table
+            </button>
+            <button
+              onClick={() => setViewMode('kanban')}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                viewMode === 'kanban'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <LayoutGrid className="w-4 h-4" />
+              Kanban
+            </button>
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <span className="text-sm text-gray-500">
+              {filteredStudents.length} students found
+            </span>
+            <RefreshButton
+              onClick={handleRefresh}
+              isRefreshing={isRefreshing}
+              title="Refresh student data"
+            />
+          </div>
         </div>
       </div>
 
@@ -1275,7 +1323,11 @@ const StudentApplicationsView: React.FC = () => {
         />
       )}
 
-      {/* Applications List */}
+      {/* Conditional Rendering: Table View or Kanban View */}
+      {viewMode === 'kanban' ? (
+        <StudentApplicationsKanbanView students={filteredStudents} />
+      ) : (
+      /* Applications List - Table View */
       <div className="bg-white rounded-xl shadow-sm border border-gray-200">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
@@ -1479,6 +1531,7 @@ const StudentApplicationsView: React.FC = () => {
           </div>
         )}
       </div>
+      )}
 
       {/* Detailed View Modal */}
       {/* Modal removido */}
