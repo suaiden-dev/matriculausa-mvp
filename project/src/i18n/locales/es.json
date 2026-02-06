@@ -1394,21 +1394,22 @@
       }
     },
     "messages": {
-      "checkEmail": "Check your email!",
-      "studentVerification": "A confirmation link has been sent to your email. Please check your inbox (and spam folder) to activate your account.",
-      "passwordsNotMatch": "Passwords do not match",
-      "invalidPasswordChars": "Password contains invalid characters. Only letters, numbers, and @ # $ ! are allowed.",
-      "invalidPhone": "Please enter a valid phone number with country code",
-      "mustAcceptTerms": "You must accept the Terms of Use and Privacy Policy to continue",
-      "mustAnswerReferralCode": "Please answer whether you have a referral code to continue",
-      "authenticationFailed": "Authentication failed. Please try again.",
-      "invalidCredentials": "Invalid email or password. Please check your credentials and try again.",
-      "emailNotConfirmed": "Please check your email and click the confirmation link before signing in.",
-      "tooManyRequests": "Too many login attempts. Please wait a few minutes before trying again.",
-      "userNotFound": "No account found with this email address. Please check your email or create a new account.",
-      "weakPassword": "Password is too weak. Please choose a stronger password.",
-      "invalidEmail": "Please enter a valid email address.",
-      "signupDisabled": "New registrations are currently disabled. Please contact support.",
+      "invalidDependents": "Por favor, seleccione entre 0 y 5 dependientes.",
+      "checkEmail": "¡Verifica tu correo electrónico!",
+      "studentVerification": "Se ha enviado un enlace de confirmación a tu correo electrónico. Por favor, revisa tu bandeja de entrada (y la carpeta de correo no deseado) para activar tu cuenta.",
+      "passwordsNotMatch": "Las contraseñas no coinciden",
+      "invalidPasswordChars": "La contraseña contiene caracteres no válidos. Solo se permiten letras, números y @ # $ !.",
+      "invalidPhone": "Por favor, introduce un número de teléfono válido con prefijo de país",
+      "mustAcceptTerms": "Debes aceptar los Términos de Uso y la Política de Privacidad para continuar",
+      "mustAnswerReferralCode": "Por favor, responde si tienes un código de referido para continuar",
+      "authenticationFailed": "Error de autenticación. Por favor, inténtalo de nuevo.",
+      "invalidCredentials": "Email o contraseña no válidos. Por favor, verifica tus credenciales e inténtalo de nuevo.",
+      "emailNotConfirmed": "Por favor, verifica tu correo electrónico y haz clic en el enlace de confirmación antes de iniciar sesión.",
+      "tooManyRequests": "Demasiados intentos de inicio de sesión. Por favor, espera unos minutos antes de volver a intentarlo.",
+      "userNotFound": "No se encontró ninguna cuenta con esta dirección de correo electrónico. Por favor, verifica tu correo o crea una nueva cuenta.",
+      "weakPassword": "La contraseña es demasiado débil. Por favor, elige una contraseña más fuerte.",
+      "invalidEmail": "Por favor, introduce una dirección de correo electrónico válida.",
+      "signupDisabled": "Los nuevos registros están deshabilitados actualmente. Por favor, ponte en contacto con el soporte.",
       "preCheckoutModal": {
         "securePayment": "Pago Seguro",
         "closeModal": "Cerrar modal",
@@ -1458,8 +1459,8 @@
         "invalidCoupon": "Cupón inválido",
         "connectionError": "Error al validar cupón. Verifique su conexión e intente nuevamente."
       },
-      "registrationFailed": "Registration Failed",
-      "emailAlreadyRegistered": "This email is already registered. Please sign in or use another email."
+      "registrationFailed": "Registro fallido",
+      "emailAlreadyRegistered": "Este correo electrónico ya está registrado. Por favor, inicia sesión o utiliza otro correo electrónico."
     }
   },
   "ssoCallback": {

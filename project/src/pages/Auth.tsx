@@ -451,7 +451,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
          
           // Validar dependents para todos os estudantes (deve ser entre 0 e 5)
           if (activeTab === 'student' && (formData.dependents < 0 || formData.dependents > 5)) {
-            setError('Please select between 0 and 5 dependents.');
+            setError(t('authPage.messages.invalidDependents'));
             setLoading(false);
             return;
           }

@@ -1298,8 +1298,9 @@
         }
       }
     }
-  },
-  "messages": {
+    ,
+    "messages": {
+      "invalidDependents": "Por favor, selecione entre 0 e 5 dependentes.",
     "checkEmail": "Verifique seu email!",
     "studentVerification": "Um link de confirmação foi enviado para seu email. Verifique sua caixa de entrada (e pasta de spam) para ativar sua conta.",
     "passwordsNotMatch": "As senhas não coincidem",
@@ -1370,6 +1371,7 @@
     "signupDisabled": "Novos registros estão atualmente desabilitados. Entre em contato com o suporte.",
     "registrationFailed": "Falha no Registro",
     "emailAlreadyRegistered": "Este email já está cadastrado. Faça login ou use outro email."
+    }
   },
   "ssoCallback": {
     "processing": {

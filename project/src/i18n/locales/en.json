@@ -1299,6 +1299,7 @@
       }
     },
     "messages": {
+      "invalidDependents": "Please select between 0 and 5 dependents.",
       "checkEmail": "Check your email!",
       "studentVerification": "A confirmation link has been sent to your email. Please check your inbox (and spam folder) to activate your account.",
       "passwordsNotMatch": "Passwords do not match",
