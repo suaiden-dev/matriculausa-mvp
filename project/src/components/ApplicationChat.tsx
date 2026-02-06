@@ -288,11 +288,14 @@ const ApplicationChat: React.FC<ApplicationChatProps & {
             const isAdminContext = !!adminSenders;
             const isSenderAdmin = isAdminContext && !!(adminSenders && adminSenders[msg.senderId]);
             const isViewerAdmin = isAdminContext && !!(adminSenders && adminSenders[_currentUserId]);
+            
+            const isOwn = msg.isOwn || (msg.senderId === _currentUserId);
+            const isOtherAdmin = isViewerAdmin && isSenderAdmin && !isOwn;
 
             // Alinhar à direita se:
             // 1. For minha própria mensagem (isOwn ou ID match)
             // 2. EU sou admin E a mensagem é de outro admin (Contexto de Suporte Staff)
-            const alignRight = msg.isOwn || (msg.senderId === _currentUserId) || (isViewerAdmin && isSenderAdmin);
+            const alignRight = isOwn || isOtherAdmin;
 
             // Se NÃO está na direita, mas é de um admin, marcamos como isAdminMessage para o estilo diferenciado (bolha azul clara para o aluno)
             const isAdminMessage = isSenderAdmin && !alignRight;
@@ -309,8 +312,10 @@ const ApplicationChat: React.FC<ApplicationChatProps & {
                   animationDelay: `${index * 0.1}s`
                 }}
               >
-                <div className={`p-3 rounded-2xl shadow-lg border relative ${alignRight
+                <div className={`p-3 rounded-2xl shadow-lg border relative ${isOwn
                   ? 'bg-[#05294E] text-white shadow-[#05294E]/20'
+                  : isOtherAdmin
+                    ? 'bg-white text-[#05294E] border-blue-200 border-2 shadow-blue-50' // Message from another admin
                   : isAdminMessage
                     ? 'bg-blue-50 text-gray-800 border-blue-300 shadow-blue-100' // ✅ Cor diferenciada para mensagens de admins
                     : 'bg-white text-gray-800 border-gray-200 shadow-gray-100'
@@ -319,9 +324,11 @@ const ApplicationChat: React.FC<ApplicationChatProps & {
                     <div className="flex items-center gap-2 mb-2">
 
                       <span className="font-semibold text-xs truncate flex-1">
-                        {alignRight
+                        {isOwn
                           ? 'You'
-                          : otherPartyLabel}
+                          : isOtherAdmin 
+                            ? (adminSenders && adminSenders[msg.senderId]) || 'Admin'
+                            : otherPartyLabel}
                       </span>
                       <div className="flex items-center gap-2">
                         {msg.editedAt && (
@@ -439,15 +446,17 @@ const ApplicationChat: React.FC<ApplicationChatProps & {
 
                   {/* Status indicators */}
                   {alignRight && (
-                    <div className="flex items-center justify-end gap-1 mt-1 pt-1 border-t border-white/10">
+                    <div className={`flex items-center justify-end gap-1 mt-1 pt-1 border-t ${isOwn ? 'border-white/10' : 'border-blue-100'}`}>
                       <MessageReadStatus
                         isRead={!!msg.readAt}
                         isSent={true}
-                        className={!!msg.readAt ? '' : 'text-white/70'}
+                        className={!!msg.readAt 
+                          ? (isOwn ? '' : 'text-blue-500') 
+                          : (isOwn ? 'text-white/70' : 'text-slate-400')}
                       />
                       {msg.readAt && (
                         <span
-                          className="text-xs text-white/60 ml-0.5 font-medium"
+                          className={`text-xs ${isOwn ? 'text-white/60' : 'text-slate-500'} ml-0.5 font-medium`}
                           title={`Visualizado em ${new Date(msg.readAt).toLocaleString('pt-BR')}`}
                         >
                           {new Date(msg.readAt).toLocaleTimeString('pt-BR', {

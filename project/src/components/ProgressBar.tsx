@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle, DollarSign, Award, FileText, ArrowRight, Lock, Clock } from 'lucide-react';
+import { CheckCircle, DollarSign, Award, FileText, Lock, Clock } from 'lucide-react';
 import { useFeeConfig } from '../hooks/useFeeConfig';
 import { useAuth } from '../hooks/useAuth';
 import { useDynamicFees } from '../hooks/useDynamicFees';
