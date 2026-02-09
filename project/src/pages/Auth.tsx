@@ -178,34 +178,41 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
     // Detectar tipo se não fornecido
     let detectedType = type;
     if (!detectedType) {
-      const directSalesCodes = ['SUAIDEN', 'BRANT'];
-      const codeUpper = code.toUpperCase();
-      const isDirectSalesCode = directSalesCodes.includes(codeUpper);
-      
-      // Verificar se é seller (incluindo Direct Sales)
-      let isSeller = isDirectSalesCode || code.startsWith('SELLER_') || code.length > 8;
-      
-      // Se não for claramente um seller, verificar na tabela sellers
-      if (!isSeller && !code.startsWith('MATR')) {
-        try {
-          const { data: sellerCheck } = await supabase
-            .from('sellers')
-            .select('id')
-            .eq('referral_code', codeUpper)
-            .eq('is_active', true)
-            .maybeSingle();
-          
-          if (sellerCheck) {
-            isSeller = true;
+      // ✅ NOVO: Priorizar tipo seller se vier do localStorage de landing page
+      const fromLandingPage = localStorage.getItem('pending_seller_referral_code');
+      if (fromLandingPage === code.toUpperCase()) {
+        console.log('[AUTH] Código detectado do localStorage de landing page, definindo como seller');
+        detectedType = 'seller';
+      } else {
+        const directSalesCodes = ['SUAIDEN', 'BRANT'];
+        const codeUpper = code.toUpperCase();
+        const isDirectSalesCode = directSalesCodes.includes(codeUpper);
+        
+        // Verificar se é seller (incluindo Direct Sales)
+        let isSeller = isDirectSalesCode || code.startsWith('SELLER_') || code.length > 8;
+        
+        // Se não for claramente um seller, verificar na tabela sellers
+        if (!isSeller && !code.startsWith('MATR')) {
+          try {
+            const { data: sellerCheck } = await supabase
+              .from('sellers')
+              .select('id')
+              .eq('referral_code', codeUpper)
+              .eq('is_active', true)
+              .maybeSingle();
+            
+            if (sellerCheck) {
+              isSeller = true;
+            }
+          } catch (err) {
+            // Ignorar erro, continuar com detecção padrão
           }
-        } catch (err) {
-          // Ignorar erro, continuar com detecção padrão
         }
+        
+        const isRewards = !isDirectSalesCode && !isSeller && (code.startsWith('MATR') || (code.length <= 8 && /^[A-Z0-9]+$/.test(code)));
+        
+        detectedType = isSeller ? 'seller' : isRewards ? 'rewards' : null;
       }
-      
-      const isRewards = !isDirectSalesCode && !isSeller && (code.startsWith('MATR') || (code.length <= 8 && /^[A-Z0-9]+$/.test(code)));
-      
-      detectedType = isSeller ? 'seller' : isRewards ? 'rewards' : null;
     }
 
     setFormData(prev => ({ ...prev, referralCode: code }));

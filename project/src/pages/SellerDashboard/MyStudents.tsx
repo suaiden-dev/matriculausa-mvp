@@ -634,27 +634,20 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
     const deps = studentDependents[student.id] || 0;
     const overrides = studentFeeOverrides[student.id];
     
-    // Verificar Selection Process Fee (primeira taxa a ser paga)
+    // Selection Process Fee (primeira taxa na ordem do funil)
     if (!student.has_paid_selection_process_fee) {
       let selectionProcessFee;
-      
-      // ✅ CORREÇÃO: Se há override, usar exatamente o valor do override
       if (overrides && overrides.selection_process_fee !== undefined && overrides.selection_process_fee !== null) {
         selectionProcessFee = Number(overrides.selection_process_fee);
       } else {
-        // Sem override: usar taxa baseada no system_type + dependentes
         const systemType = studentSystemTypes[student.id] || 'legacy';
         const baseSelectionFee = systemType === 'simplified' ? 350 : 400;
-        // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
-        // Dependentes só afetam Application Fee ($100 por dependente)
         selectionProcessFee = systemType === 'simplified' ? baseSelectionFee : baseSelectionFee + (deps * 150);
       }
-      
       missingFees.push({ name: 'Selection Process', amount: selectionProcessFee, color: 'red' });
-      return missingFees; // Se não pagou essa, não mostra as outras
     }
-    
-    // Após Selection Process pago, listar todas as pendências restantes (Application, Scholarship, I-20)
+
+    // Application Fee
     if (!student.is_application_fee_paid) {
       // ✅ CORREÇÃO: Usar lógica consistente para application fee
       let applicationFee;

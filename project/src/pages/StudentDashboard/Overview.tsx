@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect, useState, useRef } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { 
   Award, 
   FileText, 
@@ -64,6 +64,8 @@ const Overview: React.FC<OverviewProps> = ({
 }) => {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const paymentButtonRef = useRef<HTMLButtonElement>(null);
 
   const { user, userProfile, refetchUserProfile } = useAuth();
   const { activeDiscount } = useReferralCode();
@@ -162,6 +164,33 @@ const Overview: React.FC<OverviewProps> = ({
       window.removeEventListener('promotionalCouponRemoved', handleCouponRemoved);
     };
   }, [queryClient]);
+
+  // Abertura automática do modal de pagamento via query param (vindo das landing pages)
+  useEffect(() => {
+    const shouldOpenModal = searchParams.get('openModal');
+    
+    if (shouldOpenModal === 'selection_process' && !paymentBlockedLoading && paymentButtonRef.current) {
+      console.log('[Overview] Query param detectado: abrindo modal de pagamento automaticamente');
+      
+      // Aguardar um momento para garantir que o componente está totalmente renderizado
+      const timer = setTimeout(() => {
+        // Simular clique no botão de pagamento
+        paymentButtonRef.current?.click();
+        
+        // Limpar o parâmetro da URL
+        searchParams.delete('openModal');
+        setSearchParams(searchParams, { replace: true });
+        
+        // Scroll suave até o card de pagamento
+        const paymentCard = document.getElementById('selection-process-payment');
+        if (paymentCard) {
+          paymentCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 800);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [searchParams, setSearchParams, paymentBlockedLoading]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -627,6 +656,7 @@ const Overview: React.FC<OverviewProps> = ({
                 </div>
               ) : (
                 <StripeCheckout 
+                  ref={paymentButtonRef}
                   productId="selectionProcess"
                   feeType="selection_process"
                   paymentType="selection_process"
